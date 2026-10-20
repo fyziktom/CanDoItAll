@@ -17,7 +17,9 @@ internal static class ProcessDecisionReceiptCodec {
             return null;
         }
         Validate(receipt);
-        var json = JsonSerializer.Serialize(new Document(receipt.Command.InheritedScope is not null ? 3 : receipt.Command.Material is null ? 1 : 2,
+        var version = receipt.Command is ProcessDecisionClosure { Completion: not null } ? 4
+            : receipt.Command.InheritedScope is not null ? 3 : receipt.Command.Material is null ? 1 : 2;
+        var json = JsonSerializer.Serialize(new Document(version,
             ToDocument(receipt.Command) with { Material = receipt.Command.Material, InheritedScope = receipt.Command.InheritedScope }, receipt.Changed, ToDocument(receipt.Current),
             receipt.Previous is { } previous ? ToDocument(previous) : null, receipt.Child is { } child ? ToDocument(child) : null), Options);
         RequireBound(json);
@@ -30,8 +32,11 @@ internal static class ProcessDecisionReceiptCodec {
         }
         RequireBound(json);
         var document = JsonSerializer.Deserialize<Document>(json, Options) ?? throw new InvalidDataException("The Process decision receipt is empty.");
-        if (document.Version is not (1 or 2 or 3) || document.Command is null || document.Current is null ||
-                (document.Version != 1) != (document.Command.Material is not null) || (document.Version == 3) != (document.Command.InheritedScope is not null)) {
+        if (document.Version is not (1 or 2 or 3 or 4) || document.Command is null || document.Current is null ||
+                (document.Version is 2 or 3) != (document.Command.Material is not null) ||
+                (document.Version == 3) != (document.Command.InheritedScope is not null) ||
+                (document.Version == 4) != (document.Command.Completion is not null) ||
+                document.Command.Completion is not null && document.Command.Kind != CommandKind.Close) {
             throw new InvalidDataException("The Process decision receipt has an unsupported version or missing command.");
         }
         var command = FromDocument(document.Command) with { Material = document.Command.Material, InheritedScope = document.Command.InheritedScope };
@@ -52,7 +57,9 @@ internal static class ProcessDecisionReceiptCodec {
     private static CommandDocument ToDocument(ProcessDecisionCommand command) => command switch {
         ProcessDecisionStart start => new(CommandKind.Start, start.StepInstanceId.Value, start.DecisionId, MaterialId: start.MaterialId),
         ProcessDecisionEnrollment enrollment => new(CommandKind.Enroll, enrollment.StepInstanceId.Value, Expected: enrollment.Expectation, Child: ToDocument(enrollment.Child)),
-        ProcessDecisionClosure closure => new(CommandKind.Close, closure.StepInstanceId.Value, Expected: closure.Expectation, ChildId: closure.ChildId, Closure: closure.Closure),
+        ProcessDecisionClosure closure => new(CommandKind.Close, closure.StepInstanceId.Value, Expected: closure.Expectation, ChildId: closure.ChildId, Closure: closure.Closure) {
+            Completion = closure.Completion
+        },
         ProcessDecisionChangePhase phase => new(CommandKind.ChangePhase, phase.StepInstanceId.Value, Expected: phase.Expectation, PhaseChange: phase.Change),
         ProcessDecisionRefresh refresh => new(CommandKind.Refresh, refresh.StepInstanceId.Value, Expected: refresh.Expectation, MaterialId: refresh.MaterialId, RefreshKind: refresh.Kind),
         _ => throw new InvalidDataException("The Process decision command is unsupported.")
@@ -61,7 +68,8 @@ internal static class ProcessDecisionReceiptCodec {
     private static ProcessDecisionCommand FromDocument(CommandDocument document) => document.Kind switch {
         CommandKind.Start when document.DecisionId is { } id && document.MaterialId is { } material => new ProcessDecisionStart(new(document.StepId), id, material),
         CommandKind.Enroll when document.Expected is { } expected && document.Child is { } child => new ProcessDecisionEnrollment(new(document.StepId), expected, FromDocument(child)),
-        CommandKind.Close when document.Expected is { } expected && document.ChildId is { } child && document.Closure is { } closure => new ProcessDecisionClosure(new(document.StepId), expected, child, closure),
+        CommandKind.Close when document.Expected is { } expected && document.ChildId is { } child && document.Closure is { } closure
+            => new ProcessDecisionClosure(new(document.StepId), expected, child, closure) { Completion = document.Completion },
         CommandKind.ChangePhase when document.Expected is { } expected && document.PhaseChange is { } change => new ProcessDecisionChangePhase(new(document.StepId), expected, change),
         CommandKind.Refresh when document.Expected is { } expected && document.MaterialId is { } material && document.RefreshKind is { } kind => new ProcessDecisionRefresh(new(document.StepId), expected, material, kind),
         _ => throw new InvalidDataException("The Process decision receipt has an invalid command shape.")
@@ -104,7 +112,10 @@ internal static class ProcessDecisionReceiptCodec {
                 enrollment.Child == (child with { Closure = null }) && (!receipt.Changed || child.Closure is null),
             ProcessDecisionClosure closure => receipt.Previous is null && child is not null &&
                 current.Reference == closure.Expectation.Reference && child.Reference == current.Reference &&
-                child.ChildId == closure.ChildId && child.Closure == closure.Closure,
+                child.ChildId == closure.ChildId && child.Closure == closure.Closure &&
+                (closure.Completion is null || current.UnclosedChildCount == 0 &&
+                    current.Phase == (closure.Completion == ProcessDecisionCompletion.Complete
+                        ? ProcessDecisionPhase.Completed : ProcessDecisionPhase.Cancelled)),
             ProcessDecisionChangePhase phase => receipt.Changed && receipt.Previous is null && child is null &&
                 current.Reference == phase.Expectation.Reference && current.Phase == ResultPhase(phase.Change),
             ProcessDecisionRefresh refresh => receipt.Changed && child is null && receipt.Previous is { } previous &&
@@ -142,6 +153,8 @@ internal static class ProcessDecisionReceiptCodec {
         public ProcessDecisionMaterialStamp? Material { get; init; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public ProcessDecisionRunScopeExpectation? InheritedScope { get; init; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public ProcessDecisionCompletion? Completion { get; init; }
     }
     private sealed record GenerationDocument(ProcessDecisionReference Reference, long Revision, ProcessDecisionPhase Phase,
         ProcessDecisionMaterialId MaterialId, Guid BudgetId, int ChildCount, int UnclosedChildCount);

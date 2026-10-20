@@ -33,22 +33,40 @@ public static class ProcessDecisionTransitions {
     }
 
     public static ProcessDecisionChildChange CloseChild(ProcessDecisionGeneration current, ProcessDecisionExpectation expectation,
-        ProcessDecisionChild child, ProcessDecisionChildClosure closure) {
+        ProcessDecisionChild child, ProcessDecisionChildClosure closure, ProcessDecisionCompletion? completion = null) {
         RequireExpected(current, expectation);
         RequireChild(current, child);
         RequireRetainedChild(current, child);
         ArgumentNullException.ThrowIfNull(closure);
         closure.Validate();
+        var finalPhase = completion switch {
+            null => current.Phase,
+            ProcessDecisionCompletion.Complete => ProcessDecisionPhase.Completed,
+            ProcessDecisionCompletion.Cancel => ProcessDecisionPhase.Cancelled,
+            _ => throw new InvalidDataException("The Process child completion is unsupported.")
+        };
         if (child.Closure is not null) {
             if (child.Closure != closure) {
                 throw new ProcessDecisionException(ProcessDecisionRefusal.OriginalClosureChanged);
             }
+            if (completion is not null && current.Phase != finalPhase) {
+                throw new ProcessDecisionException(ProcessDecisionRefusal.InvalidPhase);
+            }
             return new(false, current, child);
         }
-        if (current.Phase is not (ProcessDecisionPhase.Active or ProcessDecisionPhase.WaitingForReview or ProcessDecisionPhase.Reconciling)) {
+        var allowed = completion switch {
+            ProcessDecisionCompletion.Complete => current.Phase is ProcessDecisionPhase.Active or ProcessDecisionPhase.WaitingForReview,
+            ProcessDecisionCompletion.Cancel => current.Phase == ProcessDecisionPhase.Reconciling,
+            _ => current.Phase is ProcessDecisionPhase.Active or ProcessDecisionPhase.WaitingForReview or ProcessDecisionPhase.Reconciling
+        };
+        if (!allowed) {
             throw new ProcessDecisionException(ProcessDecisionRefusal.InvalidPhase);
         }
-        return new(true, current with { Revision = checked(current.Revision + 1), UnclosedChildCount = current.UnclosedChildCount - 1 },
+        if (completion is not null && current.UnclosedChildCount != 1) {
+            throw new ProcessDecisionException(ProcessDecisionRefusal.UnclosedChildren);
+        }
+        return new(true, current with { Revision = checked(current.Revision + 1),
+            UnclosedChildCount = current.UnclosedChildCount - 1, Phase = finalPhase },
             child with { Closure = closure });
     }
 

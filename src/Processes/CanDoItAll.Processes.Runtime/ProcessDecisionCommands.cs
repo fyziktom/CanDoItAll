@@ -4,6 +4,7 @@ namespace CanDoItAll.Processes.Runtime;
 
 public enum ProcessDecisionPhaseChange { WaitForReview, BeginReconciliation, Complete, Cancel }
 public enum ProcessDecisionRefreshKind { ManagerRefresh, AutomaticReplan, ParentRefresh }
+public enum ProcessDecisionCompletion { Complete, Cancel }
 
 public abstract record ProcessDecisionCommand(ProcessStepInstanceId StepInstanceId) {
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
@@ -47,6 +48,9 @@ public abstract record ProcessDecisionCommand(ProcessStepInstanceId StepInstance
             case ProcessDecisionClosure closure when closure.Expectation is not null && closure.ChildId.Value != Guid.Empty && closure.Closure is not null:
                 closure.Expectation.Validate();
                 closure.Closure.Validate();
+                if (closure.Completion is { } completion && !Enum.IsDefined(completion)) {
+                    throw new InvalidDataException("The Process child completion is unsupported.");
+                }
                 return;
             case ProcessDecisionChangePhase phase when phase.Expectation is not null && Enum.IsDefined(phase.Change):
                 phase.Expectation.Validate();
@@ -74,7 +78,10 @@ public sealed record ProcessDecisionStart(ProcessStepInstanceId StepInstanceId, 
 public sealed record ProcessDecisionEnrollment(ProcessStepInstanceId StepInstanceId, ProcessDecisionExpectation Expectation,
     ProcessDecisionChild Child) : ProcessDecisionCommand(StepInstanceId);
 public sealed record ProcessDecisionClosure(ProcessStepInstanceId StepInstanceId, ProcessDecisionExpectation Expectation,
-    ProcessDecisionChildId ChildId, ProcessDecisionChildClosure Closure) : ProcessDecisionCommand(StepInstanceId);
+    ProcessDecisionChildId ChildId, ProcessDecisionChildClosure Closure) : ProcessDecisionCommand(StepInstanceId) {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionCompletion? Completion { get; init; }
+}
 public sealed record ProcessDecisionChangePhase(ProcessStepInstanceId StepInstanceId, ProcessDecisionExpectation Expectation,
     ProcessDecisionPhaseChange Change) : ProcessDecisionCommand(StepInstanceId);
 public sealed record ProcessDecisionRefresh(ProcessStepInstanceId StepInstanceId, ProcessDecisionExpectation Expectation,

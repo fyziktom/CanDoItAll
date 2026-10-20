@@ -1,0 +1,1365 @@
+{
+  "candidate": "c4-process-atomic-outcome-final",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T16:52:44.7976083+00:00",
+      "State": "Completed",
+      "RunnerPid": 61784,
+      "ChildPid": 61236,
+      "ChildStartedUtc": "2026-10-20T16:52:44.8336746Z",
+      "ExitCode": 0,
+      "Seconds": 97.8604895,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 180717,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T16:56:16.1145609+00:00",
+      "State": "Completed",
+      "RunnerPid": 59464,
+      "ChildPid": 53264,
+      "ChildStartedUtc": "2026-10-20T16:56:16.1210321Z",
+      "ExitCode": 0,
+      "Seconds": 0.0646987,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 287,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-atomic-outcome",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessDecisionCompletionPersistenceTests"
+      ],
+      "StartedUtc": "2026-10-20T16:54:32.0235739+00:00",
+      "State": "Completed",
+      "RunnerPid": 8720,
+      "ChildPid": 53292,
+      "ChildStartedUtc": "2026-10-20T16:54:32.0619085Z",
+      "ExitCode": 0,
+      "Seconds": 2.1851002,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3458,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T16:56:08.0572121+00:00",
+      "State": "Completed",
+      "RunnerPid": 59464,
+      "ChildPid": 62320,
+      "ChildStartedUtc": "2026-10-20T16:56:08.0639386Z",
+      "ExitCode": 0,
+      "Seconds": 8.0134385,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-atomic-outcome",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessDecisionCompletionPersistenceTests",
+        "--logger",
+        "trx;LogFileName=atomic-outcome.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-final"
+      ],
+      "StartedUtc": "2026-10-20T17:00:03.0956644+00:00",
+      "State": "Completed",
+      "RunnerPid": 47748,
+      "ChildPid": 35416,
+      "ChildStartedUtc": "2026-10-20T17:00:03.1313477Z",
+      "ExitCode": 1,
+      "Seconds": 95.8475472,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 96436,
+      "StderrRetainedBytes": 3836,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "freeze-candidate-reviewed",
+      "Arguments": [
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-final/Freeze-Browser.py",
+        "freeze"
+      ],
+      "StartedUtc": "2026-10-20T16:57:34.3963378+00:00",
+      "State": "Completed",
+      "RunnerPid": 61956,
+      "ChildPid": 61528,
+      "ChildStartedUtc": "2026-10-20T16:57:34.4311929Z",
+      "ExitCode": 1,
+      "Seconds": 32.8481004,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 1558,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "freeze-candidate-verified",
+      "Arguments": [
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-final/Freeze-Browser.py",
+        "freeze"
+      ],
+      "StartedUtc": "2026-10-20T16:58:57.4042584+00:00",
+      "State": "Completed",
+      "RunnerPid": 44932,
+      "ChildPid": 25408,
+      "ChildStartedUtc": "2026-10-20T16:58:57.4392685Z",
+      "ExitCode": 0,
+      "Seconds": 33.110334,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 233,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "freeze-candidate",
+      "Arguments": [
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-final/Freeze-Browser.py",
+        "freeze"
+      ],
+      "StartedUtc": "2026-10-20T16:56:17.0686005+00:00",
+      "State": "Completed",
+      "RunnerPid": 23040,
+      "ChildPid": 9376,
+      "ChildStartedUtc": "2026-10-20T16:56:17.1057918Z",
+      "ExitCode": 1,
+      "Seconds": 32.9597616,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 529,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-atomic-outcome-final/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T16:59:56.1188443+00:00",
+      "State": "Completed",
+      "RunnerPid": 54912,
+      "ChildPid": 52804,
+      "ChildStartedUtc": "2026-10-20T16:59:56.1574268Z",
+      "ExitCode": 0,
+      "Seconds": 103.1950392,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T16:53:42.1935170+00:00",
+      "State": "Completed",
+      "RunnerPid": 59464,
+      "ChildPid": 47616,
+      "ChildStartedUtc": "2026-10-20T16:53:42.2349147Z",
+      "ExitCode": 0,
+      "Seconds": 0.1520234,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-final/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T16:56:07.5454787+00:00",
+      "State": "Completed",
+      "RunnerPid": 59464,
+      "ChildPid": 2148,
+      "ChildStartedUtc": "2026-10-20T16:56:07.5594708Z",
+      "ExitCode": 0,
+      "Seconds": 0.4903672,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-final/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T16:53:45.8690744+00:00",
+      "State": "Completed",
+      "RunnerPid": 59464,
+      "ChildPid": 45512,
+      "ChildStartedUtc": "2026-10-20T16:53:45.8956787Z",
+      "ExitCode": 0,
+      "Seconds": 141.6345201,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 445,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T16:53:42.4281471+00:00",
+      "State": "Completed",
+      "RunnerPid": 59464,
+      "ChildPid": 26116,
+      "ChildStartedUtc": "2026-10-20T16:53:42.4320823Z",
+      "ExitCode": 0,
+      "Seconds": 0.5199278,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T16:53:43.0963949+00:00",
+      "State": "Completed",
+      "RunnerPid": 59464,
+      "ChildPid": 20244,
+      "ChildStartedUtc": "2026-10-20T16:53:43.0991761Z",
+      "ExitCode": 0,
+      "Seconds": 2.5249234,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T16:53:42.9621485+00:00",
+      "State": "Completed",
+      "RunnerPid": 59464,
+      "ChildPid": 38068,
+      "ChildStartedUtc": "2026-10-20T16:53:42.9648751Z",
+      "ExitCode": 0,
+      "Seconds": 0.1206247,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "verify-candidate",
+      "Arguments": [
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-final/Freeze-Browser.py",
+        "verify"
+      ],
+      "StartedUtc": "2026-10-20T17:01:45.4375534+00:00",
+      "State": "Completed",
+      "RunnerPid": 49616,
+      "ChildPid": 36884,
+      "ChildStartedUtc": "2026-10-20T17:01:45.4744594Z",
+      "ExitCode": 0,
+      "Seconds": 31.0183116,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 40,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "d40064e7-df5d-46cf-9157-7fc4686cea94",
+      "testId": "1a7f9ad8-dc09-ddd1-f696-2bcbf6d18635",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Completed, accepted: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.9371858",
+      "startTime": "2026-10-20T13:01:09.2776942-04:00",
+      "endTime": "2026-10-20T13:01:13.2137009-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d40064e7-df5d-46cf-9157-7fc4686cea94",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nSystem.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 27\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "8b1e3912-729a-4c44-a313-526aeeb6a3fe",
+      "testId": "7b185c8a-420b-eeb9-72de-65cec0097c3d",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: StepClaim)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8431405",
+      "startTime": "2026-10-20T13:00:35.4809154-04:00",
+      "endTime": "2026-10-20T13:00:39.3256653-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "8b1e3912-729a-4c44-a313-526aeeb6a3fe",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Contains() Failure: Sub-string not found\r\nString:    \"Process strategy result receipt is invali\"···\r\nNot found: \"release its dispatch claim\"\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 102\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "65e7ab63-e9f7-40ec-a2e3-682af193d658",
+      "testId": "8fdfbd4e-0611-d3d0-7f2d-debf265ee927",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: RetainedClaim)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.8899627",
+      "startTime": "2026-10-20T13:00:39.3277122-04:00",
+      "endTime": "2026-10-20T13:00:44.2168760-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "65e7ab63-e9f7-40ec-a2e3-682af193d658",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Contains() Failure: Sub-string not found\r\nString:    \"Process strategy result receipt is invali\"···\r\nNot found: \"release its dispatch claim\"\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 102\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "31e62f78-00a5-492d-9c00-cbe7bbd2f275",
+      "testId": "44efa81d-1c83-e055-7d52-a63cd9513e99",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(accepted: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.1007897",
+      "startTime": "2026-10-20T13:01:25.9363732-04:00",
+      "endTime": "2026-10-20T13:01:30.0367476-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "31e62f78-00a5-492d-9c00-cbe7bbd2f275",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Throws() Failure: Exception type was not an exact match\r\nExpected: typeof(System.IO.IOException)\r\nActual:   typeof(System.InvalidOperationException)\r\n---- System.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 124\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 126\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 135\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 135\r\n--- End of stack trace from previous location ---\r\n----- Inner Stack Trace -----\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\n\n        "
+    },
+    {
+      "executionId": "6bd45730-d329-4dcb-ad58-3285a038be01",
+      "testId": "dd53232b-1e1e-f75a-429c-da5e67577c9a",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Cancelled, accepted: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.6525907",
+      "startTime": "2026-10-20T13:01:04.6253393-04:00",
+      "endTime": "2026-10-20T13:01:09.2755750-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6bd45730-d329-4dcb-ad58-3285a038be01",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nSystem.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 27\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "53f17fb3-5c2a-4b7b-9f07-9604535b08d9",
+      "testId": "448d7a85-4e45-d203-005f-9915314c28eb",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Failed, accepted: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.0058407",
+      "startTime": "2026-10-20T13:01:13.2156144-04:00",
+      "endTime": "2026-10-20T13:01:17.2208036-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "53f17fb3-5c2a-4b7b-9f07-9604535b08d9",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nSystem.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 27\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "ee952a38-f072-4080-8482-5780573fc199",
+      "testId": "21d46cd4-627d-f741-3762-4c32def70e25",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.A_completed_command_cannot_replay_without_its_original_completion",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.4591414",
+      "startTime": "2026-10-20T13:01:21.4756078-04:00",
+      "endTime": "2026-10-20T13:01:25.9344018-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ee952a38-f072-4080-8482-5780573fc199",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nSystem.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.A_completed_command_cannot_replay_without_its_original_completion() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 164\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.A_completed_command_cannot_replay_without_its_original_completion() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 171\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.A_completed_command_cannot_replay_without_its_original_completion() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 171\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "4c57e350-a3dc-46db-86af-7e7a6fa84574",
+      "testId": "f4304594-18a5-9ca4-3037-c571ced1a4aa",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Cancelled, accepted: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8222351",
+      "startTime": "2026-10-20T13:00:57.1939531-04:00",
+      "endTime": "2026-10-20T13:01:01.0150568-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4c57e350-a3dc-46db-86af-7e7a6fa84574",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nSystem.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 27\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "7fd03dd9-2a4e-4bdd-aa6c-fe96cd88d694",
+      "testId": "b786c12e-8a71-38c9-41f0-7d6b2a027814",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: OwnerRevision)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.0661032",
+      "startTime": "2026-10-20T13:00:25.0973461-04:00",
+      "endTime": "2026-10-20T13:00:31.1331220-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7fd03dd9-2a4e-4bdd-aa6c-fe96cd88d694",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Contains() Failure: Sub-string not found\r\nString:    \"Process strategy result receipt is invali\"···\r\nNot found: \"exact owner revision\"\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 102\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "565183ae-6697-4026-a70f-1cacd665e767",
+      "testId": "a0a6ed40-e87a-0ee1-5e16-73a19ed4b239",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: UnclosedSibling)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.4824773",
+      "startTime": "2026-10-20T13:00:44.2192419-04:00",
+      "endTime": "2026-10-20T13:00:48.7003220-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "565183ae-6697-4026-a70f-1cacd665e767",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.IsType() Failure: Value is not the exact type\r\nExpected: typeof(CanDoItAll.Processes.Runtime.ProcessDecisionException)\r\nActual:   typeof(System.InvalidOperationException)\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 99\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "339c0c26-e2dd-44d7-b590-a14216bc43a1",
+      "testId": "63e8df90-882c-bc7a-49e1-00f9f2af8967",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: WrongTerminalStep)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.3453104",
+      "startTime": "2026-10-20T13:00:31.1361555-04:00",
+      "endTime": "2026-10-20T13:00:35.4788299-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "339c0c26-e2dd-44d7-b590-a14216bc43a1",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Contains() Failure: Sub-string not found\r\nString:    \"Process strategy result receipt is invali\"···\r\nNot found: \"release its dispatch claim\"\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 102\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "da32dc13-d447-401c-8cff-ac592b1f09a7",
+      "testId": "469e369e-68fa-6d58-11c2-ff8c921e8774",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_completion_does_not_trust_a_corrupted_open_child_counter",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.0129719",
+      "startTime": "2026-10-20T13:01:34.4195718-04:00",
+      "endTime": "2026-10-20T13:01:38.4317511-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "da32dc13-d447-401c-8cff-ac592b1f09a7",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Throws() Failure: Exception type was not an exact match\r\nExpected: typeof(System.IO.InvalidDataException)\r\nActual:   typeof(System.InvalidOperationException)\r\n---- System.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_completion_does_not_trust_a_corrupted_open_child_counter() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 190\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_completion_does_not_trust_a_corrupted_open_child_counter() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 192\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_completion_does_not_trust_a_corrupted_open_child_counter() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 192\r\n--- End of stack trace from previous location ---\r\n----- Inner Stack Trace -----\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\n\n        "
+    },
+    {
+      "executionId": "7830978c-f40f-4245-93b0-c6e80446279c",
+      "testId": "3c7ed3f0-e20a-cdde-f178-89898363998c",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Failed, accepted: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.6060228",
+      "startTime": "2026-10-20T13:01:01.0178201-04:00",
+      "endTime": "2026-10-20T13:01:04.6221049-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7830978c-f40f-4245-93b0-c6e80446279c",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nSystem.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 27\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "909e91be-0330-4b2a-bb21-dbe524c9faf9",
+      "testId": "0fc0a082-86b1-bfc4-e53d-fbc08da68505",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(accepted: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.3789888",
+      "startTime": "2026-10-20T13:01:30.0393816-04:00",
+      "endTime": "2026-10-20T13:01:34.4171763-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "909e91be-0330-4b2a-bb21-dbe524c9faf9",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Throws() Failure: Exception type was not an exact match\r\nExpected: typeof(System.IO.IOException)\r\nActual:   typeof(System.InvalidOperationException)\r\n---- System.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 124\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 126\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 135\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 135\r\n--- End of stack trace from previous location ---\r\n----- Inner Stack Trace -----\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\n\n        "
+    },
+    {
+      "executionId": "028319f1-6f3e-437e-9a4a-84fe5247f88a",
+      "testId": "269008d3-a133-9928-8c21-aa489934bd08",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Lost_commit_acknowledgement_replays_original_receipt_without_another_work_charge",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.2522715",
+      "startTime": "2026-10-20T13:01:17.2228357-04:00",
+      "endTime": "2026-10-20T13:01:21.4743057-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "028319f1-6f3e-437e-9a4a-84fe5247f88a",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Throws() Failure: Exception type was not an exact match\r\nExpected: typeof(System.IO.IOException)\r\nActual:   typeof(System.InvalidOperationException)\r\n---- System.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Lost_commit_acknowledgement_replays_original_receipt_without_another_work_charge() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 145\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Lost_commit_acknowledgement_replays_original_receipt_without_another_work_charge() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 145\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Lost_commit_acknowledgement_replays_original_receipt_without_another_work_charge() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 155\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Lost_commit_acknowledgement_replays_original_receipt_without_another_work_charge() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 155\r\n--- End of stack trace from previous location ---\r\n----- Inner Stack Trace -----\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\n\n        "
+    },
+    {
+      "executionId": "36a0c974-bea7-4ae1-8375-a21ecda4b478",
+      "testId": "b7fcc100-f11c-c78a-9b24-5bbc27bc35f0",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Completed, accepted: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.4991667",
+      "startTime": "2026-10-20T13:00:52.6921124-04:00",
+      "endTime": "2026-10-20T13:00:57.1917326-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "36a0c974-bea7-4ae1-8375-a21ecda4b478",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nSystem.InvalidOperationException : Process strategy result receipt is invalid or exceeds the bounded contract.\n\n          \n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.EnsureValidStrategyResultReceipt(StrategyResultReceipt receipt) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 997\r\n   at CanDoItAll.Processes.Persistence.ProcessPersistenceMappers.ToEntity(ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\ProcessPersistenceMappers.cs:line 79\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.ReplaceState(ProcessRuntimeStateEntity existing, ProcessRuntimeStateSnapshot state) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 1005\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitCoreAsync(ProcessRuntimeCommitRequest request, IProcessLaunchAuthorityLease authorityLease, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 310\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 226\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\Processes\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:line 237\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 27\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(ProcessRuntimeStepStatus status, Boolean accepted) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 52\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "01f27cdf-be5d-47be-8155-6bebd537fd8b",
+      "testId": "f630a83e-3169-df88-6ff7-8c8ea38e3ab6",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: NonterminalStep)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.9846373",
+      "startTime": "2026-10-20T13:00:48.7023501-04:00",
+      "endTime": "2026-10-20T13:00:52.6859619-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "01f27cdf-be5d-47be-8155-6bebd537fd8b",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Contains() Failure: Sub-string not found\r\nString:    \"Process strategy result receipt is invali\"···\r\nNot found: \"release its dispatch claim\"\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 102\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "b8792e29-e5d2-4cd6-a55d-8c77ec90945b",
+      "testId": "3caa397f-bc9c-21e0-67d1-420518029d27",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: Allocation)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:19.4338830",
+      "startTime": "2026-10-20T13:00:05.6058729-04:00",
+      "endTime": "2026-10-20T13:00:25.0646026-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b8792e29-e5d2-4cd6-a55d-8c77ec90945b",
+      "trx": "atomic-outcome.trx",
+      "error": "\n          \nAssert.Contains() Failure: Sub-string not found\r\nString:    \"Process strategy result receipt is invali\"···\r\nNot found: \"exact owner revision\"\n\n          \n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 102\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessDecisionCompletionPersistenceTests.cs:line 110\r\n--- End of stack trace from previous location ---\n\n        "
+    }
+  ],
+  "evidence": {
+    "candidate-freeze-review.json": {
+      "firstFreeze": "Refused before any test or observer start",
+      "reason": "The guard expected ignored proof JSON in git-discovered source inputs. git check-ignore confirms the proof directory is excluded.",
+      "correction": "Require exactly four changed source paths and independently verify the retained proof SHA256; no source/runtime inputs or test selection changed.",
+      "secondFreeze": "Exact source/runtime comparison passed; proof helper refused a relative path. Resolve the exact proof file to its absolute path before hashing. No tests started."
+    },
+    "architecture-before.json": {
+      "snapshotId": "snap-20261020160906-8e205a26",
+      "projects": [
+        {
+          "name": "CanDoItAll.Processes.Application",
+          "projectId": "proj-candoitall-processes-application"
+        },
+        {
+          "name": "CanDoItAll.Processes.Persistence",
+          "projectId": "proj-candoitall-processes-persistence"
+        },
+        {
+          "name": "CanDoItAll.Processes.Runtime",
+          "projectId": "proj-candoitall-processes-runtime"
+        }
+      ],
+      "counts": {
+        "documents": 221,
+        "types": 728,
+        "members": 6651,
+        "findings": 208,
+        "diagnostics": 189
+      },
+      "types": [
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-c4dd107dbe25",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessDecisionStore",
+          "members": 24,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessDecisionStore.cs",
+            "line": 10,
+            "column": 1,
+            "endLine": 318,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-5ee7958f0864",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork",
+          "members": 43,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 13,
+            "column": 1,
+            "endLine": 1116,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-4184aa083c85",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.LinkedChildRun",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 1107,
+            "column": 5,
+            "endLine": 1109,
+            "endColumn": 42
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-268df69e2acd",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.LinkedChildStateRow",
+          "members": 5,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 1111,
+            "column": 5,
+            "endLine": 1115,
+            "endColumn": 38
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-74fac6df6056",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.PreparedLaunchMutationAuthority",
+          "members": 4,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 388,
+            "column": 5,
+            "endLine": 389,
+            "endColumn": 88
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-04e7f20991b0",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec",
+          "members": 14,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 152,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-9dff49ed0d39",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.ChildDocument",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 148,
+            "column": 5,
+            "endLine": 149,
+            "endColumn": 99
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-94786217f2ca",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.CommandDocument",
+          "members": 13,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 137,
+            "column": 5,
+            "endLine": 145,
+            "endColumn": 6
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-c1ae03788721",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.CommandKind",
+          "members": 5,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 136,
+            "column": 5,
+            "endLine": 136,
+            "endColumn": 76
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-21a7043e4105",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.Document",
+          "members": 7,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 150,
+            "column": 5,
+            "endLine": 151,
+            "endColumn": 61
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-04ddcbf64f97",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.GenerationDocument",
+          "members": 8,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 146,
+            "column": 5,
+            "endLine": 147,
+            "endColumn": 102
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-b5201002f7bd",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionCommand",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 70,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-3210bac0defe",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionTransitions",
+          "members": 15,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionTransitions.cs",
+            "line": 5,
+            "column": 1,
+            "endLine": 163,
+            "endColumn": 2
+          }
+        }
+      ],
+      "findings": [
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-persistenc-2d3564c13e24",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessDecisionStore.cs",
+            "line": 10,
+            "column": 1,
+            "endLine": 318,
+            "endColumn": 2
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-persistenc-6e8d4c84459d",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 13,
+            "column": 1,
+            "endLine": 1116,
+            "endColumn": 2
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-persistenc-cee9ec3da8e0",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 152,
+            "endColumn": 2
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-persistenc-1fb48e16c11e",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 137,
+            "column": 5,
+            "endLine": 145,
+            "endColumn": 6
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-runtime-ca-c1efec01c3ee",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionTransitions.cs",
+            "line": 5,
+            "column": 1,
+            "endLine": 163,
+            "endColumn": 2
+          }
+        }
+      ],
+      "cycles": []
+    },
+    "architecture-after.json": {
+      "snapshotId": "snap-20261020164303-8e205a26",
+      "counts": {
+        "projects": 3,
+        "documents": 221,
+        "types": 729,
+        "members": 6655,
+        "findings": 208,
+        "diagnostics": 189
+      },
+      "types": [
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-c4dd107dbe25",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessDecisionStore",
+          "members": 24,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessDecisionStore.cs",
+            "line": 10,
+            "column": 1,
+            "endLine": 325,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-04e7f20991b0",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec",
+          "members": 14,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 165,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-9dff49ed0d39",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.ChildDocument",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 161,
+            "column": 5,
+            "endLine": 162,
+            "endColumn": 99
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-94786217f2ca",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.CommandDocument",
+          "members": 14,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 148,
+            "column": 5,
+            "endLine": 158,
+            "endColumn": 6
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-c1ae03788721",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.CommandKind",
+          "members": 5,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 147,
+            "column": 5,
+            "endLine": 147,
+            "endColumn": 76
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-21a7043e4105",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.Document",
+          "members": 7,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 163,
+            "column": 5,
+            "endLine": 164,
+            "endColumn": 61
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-04ddcbf64f97",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.GenerationDocument",
+          "members": 8,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 159,
+            "column": 5,
+            "endLine": 160,
+            "endColumn": 102
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-b8d847f6c290",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionChangePhase",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 85,
+            "column": 1,
+            "endLine": 86,
+            "endColumn": 81
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-31967730571e",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionClosure",
+          "members": 5,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 80,
+            "column": 1,
+            "endLine": 84,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-b5201002f7bd",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionCommand",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 9,
+            "column": 1,
+            "endLine": 74,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-830519fed06e",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionCompletion",
+          "members": 2,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 7,
+            "column": 1,
+            "endLine": 7,
+            "endColumn": 59
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-202905617218",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionEnrollment",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 78,
+            "column": 1,
+            "endLine": 79,
+            "endColumn": 74
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-36ae6e9c31ea",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionPhaseChange",
+          "members": 4,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 5,
+            "column": 1,
+            "endLine": 5,
+            "endColumn": 96
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-74256f8565e2",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionReceipt",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 90,
+            "column": 1,
+            "endLine": 91,
+            "endColumn": 85
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-94a5886ff90c",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionReconciliation",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 92,
+            "column": 1,
+            "endLine": 92,
+            "endColumn": 136
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-8e08dd7e0447",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionRefresh",
+          "members": 4,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 87,
+            "column": 1,
+            "endLine": 88,
+            "endColumn": 117
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-312cebdf4e9b",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionRefreshKind",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 6,
+            "column": 1,
+            "endLine": 6,
+            "endColumn": 90
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-6522cf149a4c",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionStart",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 76,
+            "column": 1,
+            "endLine": 77,
+            "endColumn": 84
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-3210bac0defe",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionTransitions",
+          "members": 15,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionTransitions.cs",
+            "line": 5,
+            "column": 1,
+            "endLine": 181,
+            "endColumn": 2
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-processes-applicat-fce782ac5116",
+          "kind": "ProjectReference",
+          "fromId": "proj-candoitall-processes-application",
+          "toId": "proj-candoitall-processes-runtime",
+          "weight": 1
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-processes-persiste-9acbe0d8d422",
+          "kind": "ProjectReference",
+          "fromId": "proj-candoitall-processes-persistence",
+          "toId": "proj-candoitall-processes-application",
+          "weight": 1
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-processes-persiste-73d917e4f5f7",
+          "kind": "ProjectReference",
+          "fromId": "proj-candoitall-processes-persistence",
+          "toId": "proj-candoitall-processes-runtime",
+          "weight": 1
+        }
+      ],
+      "cycles": [],
+      "newFindings": [],
+      "review": "Four existing owners, typed completion enum/property, no new service/interface/runtime partial/project reference/migration. Current bounded child validation remains in persistence. Unit-of-work unchanged. Existing diagnostics require direct build evidence. Full selected outcome proof pending."
+    },
+    "prerequisite-reference.json": {
+      "previous": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-atomic-outcome",
+      "retainedProofSha256": "EBD98D11B3C71C2DDDBB638ED12E2A07B7B388935E2F60D0561A23C5250CC61E",
+      "reusedPassedCases": 82,
+      "repeatedCases": 18,
+      "review": "Actual prior production/Unit commands with unchanged source/runtime inputs; current Integration build and full static gate. Failed initial SQL cases remain recorded."
+    },
+    "discovery-review.json": {
+      "lane": {
+        "id": "atomic-outcome",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "filter": "FullyQualifiedName~ProcessDecisionCompletionPersistenceTests",
+        "expectedDiscovery": 18
+      },
+      "actualDiscovery": 18,
+      "testNames": [
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Completed, accepted: False)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Completed, accepted: True)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Failed, accepted: False)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Failed, accepted: True)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Cancelled, accepted: False)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Cancelled, accepted: True)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: NonterminalStep)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: WrongTerminalStep)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: StepClaim)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: RetainedClaim)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: UnclosedSibling)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: OwnerRevision)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: Allocation)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(accepted: False)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(accepted: True)",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Lost_commit_acknowledgement_replays_original_receipt_without_another_work_charge",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.A_completed_command_cannot_replay_without_its_original_completion",
+        "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_completion_does_not_trust_a_corrupted_open_child_counter"
+      ]
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9708,
+      "runtimeFiles": 2915,
+      "sourceSha256": "BD777F07B4F956DBB2EFA56A0EC8E0587EAC6874BD11760EC28CD1F2D9045E3A",
+      "runtimeSha256": "65C05C2270D6AAA8199696F99D339682EE30AC7C7E9ADAF8DDE18C75D821083B"
+    },
+    "final-resource-reconciliation.json": {
+      "recordedUtc": "2026-10-20T17:02:20.3825041+00:00",
+      "postgres": [
+        "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "remainingObservedProcesses": [],
+      "outcome": "All18 repeated SQL cases still fail at existing receipt validation: the test digest also needs the sha256 protocol prefix. No production inputs changed. Retain this run before correcting the same fixture value. Historical cleanup blockers unchanged.",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\.tmpUldcbx",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\.tmp2THuHu",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\vmwj4du5.sfp",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\.tmpKmjslo",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_35416_20261020_130003_329.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\.tmp9Wk6XK",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\.tmpJS05JB",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\.tmptv9lgu",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\odzg5knp.xip",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "databaseNameDelta": []
+    },
+    "production-bridge.json": {
+      "previousCandidate": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-atomic-outcome",
+      "sourceChanges": [
+        "codex/bundles/concurrent-mutations/plan/execution-plan.md",
+        "codex/bundles/concurrent-mutations/readme.md",
+        "codex/bundles/concurrent-mutations/validation/2026-10-20-atomic-process-outcome.md",
+        "tests/integration/candoitall.tests.integration/processdecisioncompletionpersistencetests.cs"
+      ],
+      "runtimeChanges": [
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.dll",
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.pdb"
+      ],
+      "productionAndUnitInputsUnchanged": true,
+      "review": "One invalid arranged result hash is corrected to the existing required SHA-256 shape. All18 affected SQL cases repeat; unchanged55 Unit and27 legacy/material/scope SQL cases retain exact reviewed production/helper inputs. No assertions weakened or production change."
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T16:59:56.1188443+00:00",
+      "observerSeconds": 103.1950392,
+      "commands": [
+        {
+          "command": "execute-atomic-outcome",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T17:00:03.0956644+00:00",
+          "seconds": 95.8475472
+        }
+      ]
+    },
+    "portability-review.json": {
+      "enforcement": "RESULT: PASS (15651 reviewed executable-source findings unchanged)",
+      "baselineChanged": false,
+      "reviewedFindings": 15651,
+      "added": 0,
+      "stale": 0
+    },
+    "observer-start-confirmation.json": {
+      "observerPid": 52804,
+      "confirmedUtc": "2026-10-20T17:00:02.5375506+00:00",
+      "observerStartedUtc": "2026-10-20T16:59:56.1574268Z",
+      "identityConfirmed": true
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

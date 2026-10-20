@@ -185,7 +185,10 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
                 accounting.Command.AllocationId.Value != entity.AllocationId || settlement.Settlement.OwnerWorkRevision != command.Closure.OwnerRevision) {
             throw new InvalidOperationException("Child closure requires settlement of its exact owner revision and original allocation.");
         }
-        var change = ProcessDecisionTransitions.CloseChild(current, command.Expectation, ReadChild(entity), command.Closure);
+        if (command.Completion is not null) {
+            _ = RequireCompleteChildren(current, await ReadBoundedChildrenAsync(current.Reference, cancellationToken).ConfigureAwait(false));
+        }
+        var change = ProcessDecisionTransitions.CloseChild(current, command.Expectation, ReadChild(entity), command.Closure, command.Completion);
         if (change.Changed) {
             entity.OwnerRevision = command.Closure.OwnerRevision;
             entity.Outcome = command.Closure.Outcome;
@@ -291,10 +294,14 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
                 => step.Status is ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.WaitingApproval or ProcessRuntimeStepStatus.Blocked,
             ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.Complete } => step.Status == ProcessRuntimeStepStatus.Completed,
             ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.Cancel } => step.Status == ProcessRuntimeStepStatus.Cancelled,
+            ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Complete }
+                => step.Status is ProcessRuntimeStepStatus.Completed or ProcessRuntimeStepStatus.Failed,
+            ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Cancel } => step.Status == ProcessRuntimeStepStatus.Cancelled,
             ProcessDecisionRefresh => step.Status == ProcessRuntimeStepStatus.Ready,
             _ => true
         };
-        if (!valid || command is ProcessDecisionChangePhase or ProcessDecisionRefresh &&
+        var releasesClaim = command is ProcessDecisionChangePhase or ProcessDecisionRefresh or ProcessDecisionClosure { Completion: not null };
+        if (!valid || releasesClaim &&
                 (step.ActiveClaimToken is not null || proposed.Claims.Any(claim => claim.StepInstanceId == step.StepInstanceId &&
                     claim.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed))) {
             throw new InvalidOperationException("The decision transition must atomically update its runtime step and release its dispatch claim.");
