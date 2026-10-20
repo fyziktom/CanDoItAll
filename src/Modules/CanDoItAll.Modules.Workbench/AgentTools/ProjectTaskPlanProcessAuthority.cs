@@ -12,7 +12,7 @@ internal sealed class ProjectTaskPlanProcessAuthority(ProjectTaskPlanProcessComm
     IAgentCatalogReadLeaseStore catalog, AgentPlanningPublicationExpectation expectedSnapshot,
     AgentPlanningLiveWork work, AgentToolApprovalBinding binding, ProjectProcessLaunchAuthorityService source,
     IProcessDecisionPublicationFence fence, IAgentExecutionProfileGenerationSource generations)
-    : IProjectTaskPlanPublicationAuthority, IProjectTaskPlanActiveWorkAuthority {
+    : IProjectTaskPlanSavedEffectAuthority, IProjectTaskPlanActiveWorkAuthority {
     private IAgentPlanningPublicationSnapshotLease? held;
     private ProcessDecisionChildMaterialBinding? parent;
     private int disposed;

@@ -1,0 +1,70 @@
+{
+  "candidate": "c4-inherited-task-participant-regression",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-final-authority-history",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanProcessAuthorityTests|FullyQualifiedName~ProjectTaskPlanProcessHistoryTests"
+      ],
+      "StartedUtc": "2026-10-20T15:15:58.1978884+00:00",
+      "State": "Completed",
+      "RunnerPid": 51784,
+      "ChildPid": 49432,
+      "ChildStartedUtc": "2026-10-20T15:15:58.2047245Z",
+      "ExitCode": 0,
+      "Seconds": 2.7031977,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 8405,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [],
+  "evidence": {
+    "discovery-review.json": {
+      "lanes": [
+        {
+          "lane": "authority-history",
+          "expected": 48,
+          "actual": 48,
+          "displayNamesMayRepeat": true
+        }
+      ],
+      "total": 48,
+      "review": "All expected source cases discovered; count executions, not deduplicated display names."
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9695,
+      "runtimeFiles": 2850,
+      "sourceSha256": "9FCE3655EB987F833BA9E9D6A3072F39584BD31E8B76204BF611DE0BA19B0864",
+      "runtimeSha256": "B872CC4CEDD5391E36FBBBF81EFDEC1467194F36C1298CB5CFB7A1D665827E76"
+    },
+    "prerequisite-reference.json": {
+      "candidate": "c4-inherited-task-participant",
+      "review": "Uses actual successful final serialized builds/static/docs records in that root; no copied command outcomes. Full source/runtime independently frozen and verified."
+    },
+    "execution-not-started.json": {
+      "state": "NotExecuted",
+      "reason": "Main candidate failed at registered runtime fixture before the separate regression group. Discovery48 and independent frozen source verification retained; no execution/observer claim."
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

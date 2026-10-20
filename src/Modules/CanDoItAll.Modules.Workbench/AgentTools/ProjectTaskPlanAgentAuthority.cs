@@ -9,7 +9,7 @@ namespace CanDoItAll.Modules.Workbench;
 internal sealed class ProjectTaskPlanAgentAuthority(ProjectTaskPlanAgentCommand original,
     IAgentCatalogReadLeaseStore catalog, AgentPlanningPublicationExpectation expectedSnapshot,
     AgentPlanningLiveWork work, AgentToolApprovalBinding binding, ProjectAgentSourceMutationAuthority source)
-    : IProjectTaskPlanPublicationAuthority, IProjectTaskPlanActiveWorkAuthority {
+    : IProjectTaskPlanSavedEffectAuthority, IProjectTaskPlanActiveWorkAuthority {
     private IAgentPlanningPublicationSnapshotLease? held;
     private int disposed;
     private int acquired;

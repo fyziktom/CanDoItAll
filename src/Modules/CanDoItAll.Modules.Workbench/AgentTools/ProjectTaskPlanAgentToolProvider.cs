@@ -2,21 +2,21 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
-using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectTaskPlanAgentToolProvider(IAgentToolAdmissionVerifier verifier,
-    IAgentCatalogReadLeaseStore catalog, ProjectAgentSourceMutationAuthority source,
-    ProjectWriteAdmissionService projects, ProjectTaskPlanAgentParticipant participant,
+    ProjectTaskPlanSavedPublicationResolver publications,
     ProjectTaskPlanPublisher publisher, ProjectTaskPlanReceiptReader receipts)
     : IAgentRuntimeToolProvider, IAgentToolReceiptReconciliationProvider {
     private const string ProviderKey = "workbench.task-planning";
     public int Order => 901;
     public AgentRuntimeToolProviderDescriptor Descriptor { get; } = new(ProviderKey, "Task plan publication",
         "Publishes one original approved task plan against its captured basis.", ["project-structure"],
-        [AgentRuntimeToolProviderPurpose.InteractiveChat]) { AttachmentPhase = AgentRuntimeToolAttachmentPhase.RuntimeProviders };
+        [AgentRuntimeToolProviderPurpose.InteractiveChat, AgentRuntimeToolProviderPurpose.GovernedProcessAutomation]) {
+            AttachmentPhase = AgentRuntimeToolAttachmentPhase.RuntimeProviders
+        };
     public bool Supports(string toolName) => toolName == ProjectStructureToolPolicy.ProjectTaskPlanPublish;
     public bool SupportsSavedEffect(AgentToolPreparedPayload original) => Supports(original.ToolName);
     public ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(AgentRuntimeToolProviderContext context, CancellationToken cancellationToken)
@@ -28,16 +28,16 @@ internal sealed class ProjectTaskPlanAgentToolProvider(IAgentToolAdmissionVerifi
         if (!SupportsSavedEffect(original)) {
             throw ProjectTaskPlanAgentCodec.Denied("This provider cannot restore another module's effect.");
         }
-        ProjectTaskPlanAgentAuthority? authorized = null;
-        ProjectTaskPlanAgentCommand? command = null;
+        IProjectTaskPlanSavedEffectAuthority? authorized = null;
+        ProjectTaskPlanSavedPublication? command = null;
         var function = AIFunctionFactory.Create(async (ProjectTaskPlanDraft draft, CancellationToken token) => {
             var held = authorized ?? throw ProjectTaskPlanAgentCodec.Denied("The original publication has no held authorization.");
             var arguments = JsonSerializer.SerializeToElement(new ProjectTaskPlanAgentArguments(draft), ProjectTaskPlanAgentCodec.Json);
             if (ProjectTaskPlanAgentCodec.Restore(arguments, original.SourcePreparation!) != original) {
                 throw ProjectTaskPlanAgentCodec.Denied("The invocation changed the original approved draft.");
             }
-            var read = new ReceiptAccess(command!, new(command!.Target.Admission, catalog, projects));
-            var outcome = await publisher.PublishAsync(command.Command, new(command.Target.Caller, held, read), token);
+            var originalCommand = command ?? throw ProjectTaskPlanAgentCodec.Denied("The original publication was not resolved.");
+            var outcome = await publisher.PublishAsync(originalCommand.Command, new(originalCommand.Caller, held, originalCommand.ReceiptAccess), token);
             var result = ProjectTaskPlanAgentResult.From(outcome);
             if (result.EffectState == AgentToolEffectState.Committed) {
                 AgentToolInvocationEffectScope.RecordCommitted(ProjectTaskPlanAgentCodec.EffectSourceKind, result.OperationId.ToString("D"));
@@ -59,12 +59,9 @@ internal sealed class ProjectTaskPlanAgentToolProvider(IAgentToolAdmissionVerifi
                 var observation = await verifier.RequireSessionObservationAsync(context.Session.Reference, token);
                 var planning = observation.Planning ?? throw ProjectTaskPlanAgentCodec.Denied("The original planning decision is missing.");
                 var binding = new AgentToolApprovalBinding(invocation.BatchId, invocation.IntentId, payload.SemanticVersion, payload.Digest);
-                command = ProjectTaskPlanAgentCodec.Resolve(planning, context.Session, payload, binding);
+                command = publications.Resolve(planning, context.Session, payload, binding);
                 var work = AgentToolRunLease.Current?.PlanningWork ?? throw ProjectTaskPlanAgentCodec.Denied("The original live work interval is missing.");
-                var expected = new AgentPlanningPublicationExpectation(
-                    WorkspaceScopeDescriptor.Organization(context.Session.Profile.ProfileId.ToString("N")), context.Session,
-                    planning.Expected.RunRevision, planning.Expected.JournalRevision);
-                authorized = new(command, catalog, expected, work, binding, source);
+                authorized = command.CreateAuthority(work);
                 return authorized;
             },
             AuthorizeResultDisclosureAsync = async (result, token) => {
@@ -72,7 +69,7 @@ internal sealed class ProjectTaskPlanAgentToolProvider(IAgentToolAdmissionVerifi
                     throw new AgentToolReceiptAccessDeniedException();
                 }
                 var observed = await verifier.RequireSessionObservationAsync(context.Session.Reference, token);
-                if (!await participant.CanReadAsync(observed, token)) {
+                if (!await publications.CanReadAsync(observed, token)) {
                     throw new AgentToolReceiptAccessDeniedException();
                 }
                 return null;
@@ -85,13 +82,12 @@ internal sealed class ProjectTaskPlanAgentToolProvider(IAgentToolAdmissionVerifi
         CancellationToken cancellationToken = default) {
         var admitted = await claim.RequireAsync(cancellationToken);
         var planning = admitted.Planning ?? throw ProjectTaskPlanAgentCodec.Denied("The original receipt has no planning decision.");
-        var original = ProjectTaskPlanAgentCodec.Resolve(planning, admitted.Session, admitted.Payload, admitted.Binding);
-        await participant.RequireCurrentReadAsync(planning.Decision, cancellationToken);
-        var access = new ReceiptAccess(original, new(original.Target.Admission, catalog, projects));
-        var lookup = await receipts.LookupAsync(original.Command.Operation, new(original.Target.Caller, access), cancellationToken);
+        var original = publications.Resolve(planning, admitted.Session, admitted.Payload, admitted.Binding);
+        await publications.RequireReadAsync(planning.Decision, cancellationToken);
+        var lookup = await receipts.LookupAsync(original.Command.Operation, new(original.Caller, original.ReceiptAccess), cancellationToken);
         await claim.RequireAsync(cancellationToken);
         if (lookup is { Status: ProjectTaskPlanLookupStatus.Found, Accepted: { } accepted }) {
-            return ProjectTaskPlanAgentResult.Receipt(original, accepted);
+            return ProjectTaskPlanAgentResult.Receipt(original.Command, accepted);
         }
         return lookup.Status switch {
             ProjectTaskPlanLookupStatus.Open or ProjectTaskPlanLookupStatus.Draining or ProjectTaskPlanLookupStatus.ClosedAbsent
@@ -100,12 +96,5 @@ internal sealed class ProjectTaskPlanAgentToolProvider(IAgentToolAdmissionVerifi
                 => throw new AgentToolReceiptAccessDeniedException(),
             _ => throw new InvalidDataException("The original task-plan receipt could not be observed; dispatch remains refused.")
         };
-    }
-
-    private sealed class ReceiptAccess(ProjectTaskPlanAgentCommand original, ProjectDefinitionAgentReceiptAccess access)
-        : IProjectTaskPlanReceiptAccess {
-        public Task<bool> CanReadAsync(ProjectTaskPlanSource expected, ProjectWriteAdmission target, CancellationToken cancellationToken)
-            => expected == original.Command.Source && target == original.Target.Project ? access.CanReadAsync(target, cancellationToken)
-                : Task.FromResult(false);
     }
 }

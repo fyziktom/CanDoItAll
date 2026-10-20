@@ -18,16 +18,7 @@ internal sealed class ProjectTaskPlanAgentParticipant(IAgentCatalogReadLeaseStor
         => ProjectTaskPlanAgentResult.Classify(original, payload, result);
     public Task<AgentPlanningRunAdmission> PrepareRunAsync(AgentPlanningRunPreparation preparation, CancellationToken cancellationToken)
         => admission.PrepareAsync(preparation, cancellationToken);
-    public AgentPlanningPromptContract Prompt { get; } = new(
-        "Plan new flat manual tasks using the original request and supplied complete task basis. Return only the schema object. " +
-        "Do not repeat existing tasks. Do not add assignments, dependencies, estimates, parent changes or executable commands.",
-        "project_task_plan", """
-        {"type":"object","additionalProperties":false,"properties":{"version":{"type":"integer","const":1},
-        "tasks":{"type":"array","minItems":1,"maxItems":100,"items":{"type":"object","additionalProperties":false,
-        "properties":{"title":{"type":"string","minLength":1,"maxLength":200},"description":{"type":"string"},
-        "notes":{"type":"string"},"priority":{"type":"integer","minimum":0,"maximum":6}},
-        "required":["title","description","notes","priority"]}}},"required":["version","tasks"]}
-        """);
+    public AgentPlanningPromptContract Prompt => ProjectTaskPlanPlanningContent.Prompt;
 
     internal async Task<AgentToolProtocolEnvelope> CaptureTargetAsync(AgentToolSessionAdmission session,
         AgentExecutionGovernanceSnapshot governance, ProjectWriteAdmission project, CancellationToken cancellationToken) {
@@ -80,8 +71,7 @@ internal sealed class ProjectTaskPlanAgentParticipant(IAgentCatalogReadLeaseStor
     public string DescribePublication(AgentToolSessionObservation original, AgentToolPreparedPayload payload, AgentToolApprovalBinding binding) {
         var planning = original.Planning ?? throw ProjectTaskPlanAgentCodec.Denied("The original planning observation is missing.");
         var command = ProjectTaskPlanAgentCodec.Resolve(planning, original.Session, payload, binding);
-        return $"Original project: {command.Target.Project.ProjectId:D}\n\n" + string.Join("\n\n", command.Command.Proposal.Tasks.Select((task, index) =>
-            $"{index + 1}. {task.Title}\nDescription: {task.Description}\nNotes: {task.Notes}\nPriority: {task.Priority}"));
+        return ProjectTaskPlanPlanningContent.Describe(command.Command);
     }
 
     internal async ValueTask<bool> CanReadAsync(AgentToolSessionObservation observation, CancellationToken cancellationToken) {
@@ -99,18 +89,8 @@ internal sealed class ProjectTaskPlanAgentParticipant(IAgentCatalogReadLeaseStor
     }
 
     public AgentPlanningResponsePreparation PreparePublication(AgentPlanningDecisionRecord decision,
-        AgentPlanningBasisRecord basis, string responseText) {
-        try {
-            return new AgentPlanningResponsePreparation.Publication(ProjectTaskPlanAgentCodec.Prepare(decision, basis, responseText));
-        } catch (JsonException) {
-            return new AgentPlanningResponsePreparation.Refused(AgentPlanningOutputRefusal.InvalidShape);
-        } catch (ArgumentException) {
-            return new AgentPlanningResponsePreparation.Refused(AgentPlanningOutputRefusal.LimitExceeded);
-        } catch (ProjectTaskPlanBasisException exception) {
-            return new AgentPlanningResponsePreparation.Refused(exception.Reason == ProjectTaskPlanBasisRefusal.LimitExceeded
-                ? AgentPlanningOutputRefusal.LimitExceeded : AgentPlanningOutputRefusal.InvalidShape);
-        }
-    }
+        AgentPlanningBasisRecord basis, string responseText)
+        => ProjectTaskPlanPlanningContent.Prepare(() => ProjectTaskPlanAgentCodec.Prepare(decision, basis, responseText));
 
     internal static ProjectMutationTarget MutationTarget(ProjectTaskPlanAgentTarget target)
         => new(ProjectMutationPurpose.ExistingWrite, target.Project.ProjectId, [target.Project]);

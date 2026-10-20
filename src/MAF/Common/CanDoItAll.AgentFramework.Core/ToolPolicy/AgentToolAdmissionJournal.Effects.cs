@@ -97,7 +97,8 @@ public sealed partial class AgentToolAdmissionJournal {
             var lease = new AgentToolRunLease(this, reference, Guid.NewGuid(), handle, AgentToolRunLeaseMode.InterruptedEffectReconciliation, started);
             var admitted = await writer.UpdateExecutionRunDetailAsync(reference.ExecutionRunId, detail => {
                 var journal = RequireJournal(detail.Run);
-                if (journal.SchemaVersion is not (AgentToolJournalRecord.EffectJournalSchemaVersion or AgentToolJournalRecord.PlanningSchemaVersion) ||
+                if (journal.SchemaVersion is not (AgentToolJournalRecord.EffectJournalSchemaVersion or AgentToolJournalRecord.PlanningSchemaVersion or
+                    AgentToolJournalRecord.InheritedPlanningSchemaVersion) ||
                     journal.Support != AgentToolAdmissionSupport.EffectJournalOnly || journal.Session.Reference != reference) {
                     throw Failure("Interrupted reconciliation requires the exact retained effects-only session.");
                 }

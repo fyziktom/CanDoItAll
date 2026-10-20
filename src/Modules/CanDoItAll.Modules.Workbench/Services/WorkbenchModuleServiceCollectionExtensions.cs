@@ -55,6 +55,11 @@ public static class WorkbenchModuleServiceCollectionExtensions
             ProjectTaskPlanAgentParticipant.Capabilities.BudgetCeiling, provider.GetRequiredService<ILogger<ProjectTaskPlanPublisher>>()));
         services.AddScoped<ProjectTaskPlanAgentParticipant>();
         services.AddScoped<ProjectTaskPlanAgentAdmission>();
+        services.AddScoped<ProjectTaskPlanProcessReadAuthority>();
+        services.AddScoped<ProjectTaskPlanAgentPublication>();
+        services.AddScoped<ProjectTaskPlanProcessPublication>();
+        services.AddScoped<ProjectTaskPlanSavedPublicationResolver>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentInheritedPlanningParticipant, ProjectTaskPlanProcessParticipant>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentPlanningParticipant, ProjectTaskPlanAgentParticipant>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProjectTaskPlanAgentToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentToolReceiptReconciliationProvider, ProjectTaskPlanAgentToolProvider>());

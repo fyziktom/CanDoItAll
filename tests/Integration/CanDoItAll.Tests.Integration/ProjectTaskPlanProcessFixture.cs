@@ -21,7 +21,7 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
     private readonly IAgentToolBackgroundSourcePolicy policy;
     private ProjectTaskPlanProcessFixture(ProjectTaskPlanOperationFixture sql, FileSandboxWorkspaceStore store,
         AgentToolProfileBinding profile, AgentDefinition executor, AgentDefinition? launcher,
-        ProjectTaskPlanProcessAdmissionFixture process, ExecutionRunRecord original,
+        ProjectTaskPlanProcessAdmissionFixture process, ExecutionRunRecord original, ProviderProfile provider,
         AgentPlanningLiveOwnerFixture.PlanningClock clock, IAgentToolBackgroundSourcePolicy policy, MutableGenerations generations) {
         Sql = sql;
         Store = store;
@@ -30,6 +30,7 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
         Launcher = launcher;
         Process = process;
         Original = original;
+        Provider = provider;
         Clock = clock;
         Generations = generations;
         this.policy = policy;
@@ -41,6 +42,7 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
     internal FileSandboxWorkspaceStore Store { get; }
     internal AgentToolProfileBinding Profile { get; }
     internal AgentDefinition Executor { get; }
+    internal ProviderProfile Provider { get; }
     internal AgentDefinition? Launcher { get; }
     internal ProjectTaskPlanProcessAdmissionFixture Process { get; }
     internal ExecutionRunRecord Original { get; }
@@ -56,7 +58,9 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
     internal WorkspaceScopeDescriptor Scope => WorkspaceScopeDescriptor.Organization(Profile.ProfileId.ToString("N"));
 
     internal static async Task<ProjectTaskPlanProcessFixture> CreateAsync(bool agentSource = true, bool sameExecutor = false,
-        IInterceptor? processReadProbe = null, bool registeredSource = false) {
+        IInterceptor? processReadProbe = null, bool registeredSource = false,
+        Func<AgentDefinition, ProviderProfile, IAgentInheritedPlanningParticipant, AgentToolSemanticDigest>? runtimeContract = null,
+        bool includeOperationContract = true) {
         var clock = new AgentPlanningLiveOwnerFixture.PlanningClock(DateTimeOffset.UtcNow);
         var generations = new MutableGenerations();
         var sql = await ProjectTaskPlanOperationFixture.CreateAsync(configureServices: services => {
@@ -87,9 +91,10 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
                 Id = Guid.NewGuid(), Name = "Task-plan Process executor",
                 ConfigurationJson = AgentProjectStructureAccessMetadata.Write("{}", new() { CanWriteTasks = true })
             };
+            var provider = seed.Provider with { Kind = ProviderKind.OpenAi, Transport = ProviderTransportKind.ChatCompletions };
             await store.UpdateCatalogAsync(current => current with {
                 Agents = agentSource && !sameExecutor ? [.. current.Agents, launcher, executor] : [.. current.Agents, executor],
-                Providers = current.Providers.Where(item => item.Id != seed.Provider.Id).Append(seed.Provider).ToArray()
+                Providers = current.Providers.Where(item => item.Id != provider.Id).Append(provider).ToArray()
             });
             var authority = services.GetRequiredService<ProjectProcessLaunchAuthorityService>();
             var source = agentSource ? await authority.CaptureAgentAsync(
@@ -103,12 +108,18 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
                 ? services.GetServices<IAgentToolBackgroundSourcePolicy>().OfType<ProcessToolBackgroundSourcePolicy>().Single()
                 : new SelectedSourcePolicy(services.GetRequiredService<IProcessDecisionDispatchAuthorityQuery>(), process, profile);
             var journal = new AgentToolAdmissionJournal(store, profile, clock, backgroundSources: [policy]);
-            var metadata = new Dictionary<string, object>();
-            ProcessDispatchClaimExecutionMetadata.Add(metadata, new(process.Source.Evidence.DispatchClaimToken));
+            var assignment = await services.GetRequiredService<IProcessRuntimeStepAssignmentStore>()
+                .LoadAsync(process.State.RunId, process.Parent.Child.Address.StepInstanceId)
+                ?? throw new InvalidOperationException("The original Process assignment is missing.");
+            var metadata = services.GetRequiredService<ProcessExecutionMetadataComposer>().ComposeClaimedExecution(
+                includeOperationContract ? assignment : assignment with { AllowedOperations = [] },
+                new(process.Source.Evidence.DispatchClaimToken));
+            var contract = runtimeContract?.Invoke(executor, provider, services.GetServices<IAgentInheritedPlanningParticipant>()
+                .Single(item => item.Owner == AgentPlanningOwner.ProjectTaskPlan)) ?? AgentToolProtocolEnvelope.ComputeDigest("task-authority-fixture");
             var run = seed.Detail.Run with {
                 Id = process.Parent.Child.Address.ChildId.Value, AgentId = executor.Id, ChatSessionId = null, ToolAdmission = null,
-                MetadataJson = AgentPlanningRunMetadata.ApplyInherited(System.Text.Json.JsonSerializer.Serialize(metadata), AgentPlanningOwner.ProjectTaskPlan,
-                    AgentToolProtocolEnvelope.ComputeDigest("task-authority-fixture"), scope),
+                MetadataJson = AgentPlanningRunMetadata.ApplyInherited(metadata, AgentPlanningOwner.ProjectTaskPlan,
+                    contract, scope),
                 SourceKind = ProjectTaskPlanProcessContract.SourceKind, SourceId = process.Source.Evidence.StepKey,
                 ProcessRunId = process.Source.Evidence.RunId.Value.ToString("D"),
                 ProcessStepId = process.Source.Evidence.StepInstanceId.Value.ToString("D"),
@@ -134,7 +145,7 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
                     return new(ProjectTaskPlanProcessCodec.WriteTarget(target), origin);
                 });
             var saved = await store.SaveExecutionRunDetailAsync(new(run with { ToolAdmission = admission }, null, [], []));
-            return new(sql, store, profile, executor, agentSource ? launcher : null, process, saved.Run, clock, policy, generations);
+            return new(sql, store, profile, executor, agentSource ? launcher : null, process, saved.Run, provider, clock, policy, generations);
         } catch {
             await sql.DisposeAsync();
             throw;
