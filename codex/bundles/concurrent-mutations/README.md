@@ -294,3 +294,8 @@ The [shared inherited planning coordinator checkpoint](validation/2026-10-19-inh
 passes all 170 selected cases. The common loop, exact inherited startup, original material
 and project history are proved; concrete Process/Workflow activation and publication
 remain governed by the [integration design](plan/P07-process-planning-integration.md).
+
+The [canonical child/material reader](validation/2026-10-19-canonical-child-material.md)
+has 169 passing selected cases across an exact test-only repair. It resolves original
+policy, grant and material through three bounded reads without new module dependencies.
+The actual workspace lifecycle and Process producer integration continue next.

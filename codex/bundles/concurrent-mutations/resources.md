@@ -673,3 +673,14 @@ The 298.8655941- and 289.5316435-second observers covered both complete commands
 candidate. Reconciliation found zero surviving observed process identities and zero
 new database names. Nine initial and eight final unattributed temporary paths were
 preserved. Existing cleanup denials and ordinary port 5032 remain unchanged.
+
+## Canonical child/material resolution
+
+The c4-canonical-child-material and c4-canonical-child-material-final roots record ownership
+before creation and reuse the existing isolated PostgreSQL fixture and standard Release
+outputs. The initial 151/169 result and repaired 18/18 result retain an exact single-test-file
+bridge. Their 469.3336321- and 100.0683851-second observers cover all test commands, with
+zero remaining observed processes and zero database-name delta. Seven and five unattributed
+TEMP entries respectively were preserved. Exact identity checks pass before release.
+See the [validation record](validation/2026-10-19-canonical-child-material.md); historical
+cleanup denials remain unresolved.

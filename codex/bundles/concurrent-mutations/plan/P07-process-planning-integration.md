@@ -4,6 +4,8 @@ Status: architecture refinement after signed exact-admission checkpoint `90ba351
 Step 1 now has [170 passing selected cases](../validation/2026-10-19-inherited-planning-coordinator.md).
 The shared loop, explicit inherited participant/coordinator and original history scope
 are implemented. SDK construction uses the existing compatibility options factory.
+Step 2 now has [169 passing selected cases](../validation/2026-10-19-canonical-child-material.md)
+for the neutral canonical child/material binding and reader, including bounded real SQL.
 Existing Process/Workflow executor guards stay closed until the complete selected path
 passes its owner, restart, publication and manager-authority proof.
 

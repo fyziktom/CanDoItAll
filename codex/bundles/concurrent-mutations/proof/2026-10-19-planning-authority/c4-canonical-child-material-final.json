@@ -1,0 +1,811 @@
+{
+  "candidate": "c4-canonical-child-material-final",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--verbosity",
+        "quiet"
+      ],
+      "StartedUtc": "2026-10-20T01:51:40.2288904+00:00",
+      "State": "Completed",
+      "RunnerPid": 28484,
+      "ChildPid": 57000,
+      "ChildStartedUtc": "2026-10-20T01:51:40.2607575Z",
+      "ExitCode": 0,
+      "Seconds": 48.369973,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 143226,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T01:53:31.7145780+00:00",
+      "State": "Completed",
+      "RunnerPid": 48072,
+      "ChildPid": 43764,
+      "ChildStartedUtc": "2026-10-20T01:53:31.7201289Z",
+      "ExitCode": 0,
+      "Seconds": 0.0960429,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-child-material-runtime",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessDecisionChildMaterialReaderTests"
+      ],
+      "StartedUtc": "2026-10-20T01:52:46.9153570+00:00",
+      "State": "Completed",
+      "RunnerPid": 51224,
+      "ChildPid": 54948,
+      "ChildStartedUtc": "2026-10-20T01:52:46.9478726Z",
+      "ExitCode": 0,
+      "Seconds": 2.1518154,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3466,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T01:53:26.3138673+00:00",
+      "State": "Completed",
+      "RunnerPid": 48072,
+      "ChildPid": 34500,
+      "ChildStartedUtc": "2026-10-20T01:53:26.3165138Z",
+      "ExitCode": 0,
+      "Seconds": 5.3844275,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-child-material-runtime",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessDecisionChildMaterialReaderTests",
+        "--logger",
+        "trx;LogFileName=child-material-runtime.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-canonical-child-material-final"
+      ],
+      "StartedUtc": "2026-10-20T01:54:53.9878121+00:00",
+      "State": "Completed",
+      "RunnerPid": 51308,
+      "ChildPid": 51632,
+      "ChildStartedUtc": "2026-10-20T01:54:54.0308801Z",
+      "ExitCode": 0,
+      "Seconds": 80.7131953,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4428,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-canonical-child-material-final/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T01:54:35.8802750+00:00",
+      "State": "Completed",
+      "RunnerPid": 8068,
+      "ChildPid": 39948,
+      "ChildStartedUtc": "2026-10-20T01:54:35.9000872Z",
+      "ExitCode": 0,
+      "Seconds": 100.0683851,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 54,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T01:51:56.3142629+00:00",
+      "State": "Completed",
+      "RunnerPid": 48072,
+      "ChildPid": 59664,
+      "ChildStartedUtc": "2026-10-20T01:51:56.3513807Z",
+      "ExitCode": 0,
+      "Seconds": 0.1386248,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-canonical-child-material-final/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T01:53:25.8346040+00:00",
+      "State": "Completed",
+      "RunnerPid": 48072,
+      "ChildPid": 4164,
+      "ChildStartedUtc": "2026-10-20T01:53:25.8371428Z",
+      "ExitCode": 0,
+      "Seconds": 0.4660202,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-canonical-child-material-final/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T01:51:59.6373058+00:00",
+      "State": "Completed",
+      "RunnerPid": 48072,
+      "ChildPid": 48064,
+      "ChildStartedUtc": "2026-10-20T01:51:59.6426356Z",
+      "ExitCode": 0,
+      "Seconds": 86.1841121,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 451,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T01:51:56.5107725+00:00",
+      "State": "Completed",
+      "RunnerPid": 48072,
+      "ChildPid": 55912,
+      "ChildStartedUtc": "2026-10-20T01:51:56.5144744Z",
+      "ExitCode": 0,
+      "Seconds": 0.4895842,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T01:51:57.1520912+00:00",
+      "State": "Completed",
+      "RunnerPid": 48072,
+      "ChildPid": 28008,
+      "ChildStartedUtc": "2026-10-20T01:51:57.1552698Z",
+      "ExitCode": 0,
+      "Seconds": 2.4700607,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T01:51:57.0192750+00:00",
+      "State": "Completed",
+      "RunnerPid": 48072,
+      "ChildPid": 22588,
+      "ChildStartedUtc": "2026-10-20T01:51:57.0224662Z",
+      "ExitCode": 0,
+      "Seconds": 0.1184619,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "f76c79ce-5582-4d01-a070-f6a4fb4f8e7b",
+      "testId": "9dcbcccf-54d6-4a74-8330-3911630a45aa",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"stamp\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8285196",
+      "startTime": "2026-10-19T21:55:30.0998306-04:00",
+      "endTime": "2026-10-19T21:55:33.9281346-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f76c79ce-5582-4d01-a070-f6a4fb4f8e7b",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "366397bc-47ec-4537-bbd8-573be4b22f12",
+      "testId": "9f37b2e3-275e-12e6-7ef6-cd93eafc01db",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Exact_resolution_uses_three_bounded_reads_independent_of_sibling_count(siblings: 0)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.5285808",
+      "startTime": "2026-10-19T21:56:10.9965526-04:00",
+      "endTime": "2026-10-19T21:56:14.5251160-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "366397bc-47ec-4537-bbd8-573be4b22f12",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "cb1458ce-3ac9-417d-b761-8667f8a944fc",
+      "testId": "dee8cd95-8974-0251-2370-5e6d59e62e34",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"profile\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.4033427",
+      "startTime": "2026-10-19T21:55:51.9259473-04:00",
+      "endTime": "2026-10-19T21:55:55.3290765-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "cb1458ce-3ac9-417d-b761-8667f8a944fc",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "5e129a41-374e-4ef0-b20d-0ed7bd9fab7e",
+      "testId": "fed808d5-e182-1b81-6ae5-53f474ed3ebb",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"supported-contract\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.5962626",
+      "startTime": "2026-10-19T21:55:26.5037269-04:00",
+      "endTime": "2026-10-19T21:55:30.0992625-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5e129a41-374e-4ef0-b20d-0ed7bd9fab7e",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "2edd1156-2791-4f62-9298-2d92fc9fdf25",
+      "testId": "d550dfaf-70a8-0f28-5685-35e64acb2700",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"namespace\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8456413",
+      "startTime": "2026-10-19T21:55:55.3294644-04:00",
+      "endTime": "2026-10-19T21:55:59.1750034-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "2edd1156-2791-4f62-9298-2d92fc9fdf25",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "5aad7427-70c8-45b7-a786-88d7d7432a2a",
+      "testId": "9143fe55-a349-b8af-7b5f-9bd9b4eda464",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Historical_read_preserves_closed_or_reconciling_child_without_restoring_dispatch(close: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8463567",
+      "startTime": "2026-10-19T21:56:02.7857897-04:00",
+      "endTime": "2026-10-19T21:56:06.6320874-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5aad7427-70c8-45b7-a786-88d7d7432a2a",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "e35b1776-f4dd-478c-9456-5d4d9a70417e",
+      "testId": "53bb4f7d-f660-136e-c90b-9fb41bb92e8d",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"grant\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.9947084",
+      "startTime": "2026-10-19T21:55:40.7898532-04:00",
+      "endTime": "2026-10-19T21:55:44.7843377-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e35b1776-f4dd-478c-9456-5d4d9a70417e",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "38231136-bed2-491a-94e9-49b93ccd98c3",
+      "testId": "84c64122-ff7f-7060-b0e1-5448e5a69034",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Composed_reader_reopens_original_material_policy_and_grant_without_new_allocations(mode: StepSnapshot, descendant: False, executor: Agent)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8162158",
+      "startTime": "2026-10-19T21:55:19.0716606-04:00",
+      "endTime": "2026-10-19T21:55:22.8876995-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "38231136-bed2-491a-94e9-49b93ccd98c3",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "5ea96182-38b2-4f47-b5db-7a9fb2821527",
+      "testId": "1f514703-971e-0201-d549-3e3ad904ded3",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"contract\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.1448766",
+      "startTime": "2026-10-19T21:55:37.6443834-04:00",
+      "endTime": "2026-10-19T21:55:40.7892980-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5ea96182-38b2-4f47-b5db-7a9fb2821527",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "1424fcd8-35e7-45ac-a6cb-0088648b1868",
+      "testId": "f10769cd-3da9-1d14-4a6f-b24c0c5644dc",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"child\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.5159061",
+      "startTime": "2026-10-19T21:55:44.7852181-04:00",
+      "endTime": "2026-10-19T21:55:48.3005463-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1424fcd8-35e7-45ac-a6cb-0088648b1868",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "da7736e1-ae40-46ca-9d14-3c42e190c389",
+      "testId": "b2d1b965-c7bd-3b53-ee42-b688f76a0e73",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Composed_reader_reopens_original_material_policy_and_grant_without_new_allocations(mode: RunSnapshot, descendant: False, executor: Agent)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.6133871",
+      "startTime": "2026-10-19T21:55:22.8884174-04:00",
+      "endTime": "2026-10-19T21:55:26.5014524-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "da7736e1-ae40-46ca-9d14-3c42e190c389",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "888ecea5-13b0-4cbe-9177-da878f4177ca",
+      "testId": "2cc75ae8-dc43-c88d-a7e6-58547853d4fc",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Composed_reader_reopens_original_material_policy_and_grant_without_new_allocations(mode: StepSnapshot, descendant: False, executor: Workflow)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:13.3141578",
+      "startTime": "2026-10-19T21:54:56.0952033-04:00",
+      "endTime": "2026-10-19T21:55:09.4167196-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "888ecea5-13b0-4cbe-9177-da878f4177ca",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "e96d158f-ede4-4931-b19a-45e0ea18ea86",
+      "testId": "00a109ab-b57b-aea7-07f3-0db7c6c5685f",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Historical_read_preserves_closed_or_reconciling_child_without_restoring_dispatch(close: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.6100187",
+      "startTime": "2026-10-19T21:55:59.1755746-04:00",
+      "endTime": "2026-10-19T21:56:02.7853437-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e96d158f-ede4-4931-b19a-45e0ea18ea86",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "fcd6ba37-5a70-4773-b7cb-ca4ab0a19f35",
+      "testId": "35a243ba-a2b2-5ffc-793a-aca31001b660",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Exact_resolution_uses_three_bounded_reads_independent_of_sibling_count(siblings: 12)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.3636765",
+      "startTime": "2026-10-19T21:56:06.6325158-04:00",
+      "endTime": "2026-10-19T21:56:10.9961288-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fcd6ba37-5a70-4773-b7cb-ca4ab0a19f35",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "99d474a7-00ed-4858-9fe4-8146e55862cd",
+      "testId": "8e472988-f4f2-135e-5e07-019c062be2c2",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Composed_reader_reopens_original_material_policy_and_grant_without_new_allocations(mode: RunSnapshot, descendant: True, executor: Agent)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.2891429",
+      "startTime": "2026-10-19T21:55:09.4394875-04:00",
+      "endTime": "2026-10-19T21:55:14.7068272-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "99d474a7-00ed-4858-9fe4-8146e55862cd",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "89e08539-28b8-4448-8667-b29786fa1f7b",
+      "testId": "0650bb93-a99f-cfea-41ac-33878f0bc030",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Composed_reader_reopens_original_material_policy_and_grant_without_new_allocations(mode: RunSnapshot, descendant: True, executor: Workflow)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.3640815",
+      "startTime": "2026-10-19T21:55:14.7085217-04:00",
+      "endTime": "2026-10-19T21:55:19.0710463-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "89e08539-28b8-4448-8667-b29786fa1f7b",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "bec408f9-9d27-4b70-bd0f-cae159d81e7f",
+      "testId": "6578bfe0-4ac6-fcde-1908-9b084a6eef8e",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"content-contract\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.6246166",
+      "startTime": "2026-10-19T21:55:48.3010628-04:00",
+      "endTime": "2026-10-19T21:55:51.9254846-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bec408f9-9d27-4b70-bd0f-cae159d81e7f",
+      "trx": "child-material-runtime.trx"
+    },
+    {
+      "executionId": "9166fdf3-ba45-46bb-9509-11b3c4bf264f",
+      "testId": "194e0df6-7c09-07b2-a14f-bee39b1de02f",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionChildMaterialReaderTests.Canonical_resolution_refuses_substituted_original_data(change: \"material\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.7154045",
+      "startTime": "2026-10-19T21:55:33.9286179-04:00",
+      "endTime": "2026-10-19T21:55:37.6438525-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9166fdf3-ba45-46bb-9509-11b3c4bf264f",
+      "trx": "child-material-runtime.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "beforeSnapshot": "snap-20261020012439-809c058b",
+      "afterSnapshot": "snap-20261020013511-809c058b",
+      "before": {
+        "projectCount": 5,
+        "typeCount": 2198,
+        "memberCount": 19367,
+        "serviceRegistrationCount": 107,
+        "entityCount": 31,
+        "findingCount": 741,
+        "openQuestionCount": 16,
+        "diagnosticCount": 205
+      },
+      "after": {
+        "projectCount": 5,
+        "typeCount": 2204,
+        "memberCount": 19410,
+        "serviceRegistrationCount": 107,
+        "entityCount": 31,
+        "findingCount": 742,
+        "openQuestionCount": 16,
+        "diagnosticCount": 205
+      },
+      "newFindings": [
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-applicatio-20e12c7811ee",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "category": "Complexity",
+          "title": "Type with many members",
+          "description": "CanDoItAll.Processes.Application.ProcessDecisionChildMaterialBindingCodec.Wire exposes 23 source members.",
+          "rationale": "Large types often become aggregation points for unrelated behavior.",
+          "confidence": 0.71,
+          "relatedIds": [
+            "type-proj-candoitall-processes-application-candoitall-pr-9b32449eac07"
+          ],
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDecisionChildMaterialBinding.cs",
+            "line": 87,
+            "column": 5,
+            "endLine": 90,
+            "endColumn": 83
+          }
+        }
+      ],
+      "changedFindings": [
+        {
+          "findingId": "finding-file-size-doc-src-modules-candoitall-modules-proces-3ad37339c9e2",
+          "ruleId": "COMPLEXITY-001",
+          "severity": "Warning",
+          "category": "Complexity",
+          "title": "Large source file detected",
+          "description": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs has 374 lines.",
+          "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+          "confidence": 0.88,
+          "relatedIds": [
+            "doc-src-modules-candoitall-modules-processes-services-p-12a119bf2dca"
+          ],
+          "source": {
+            "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs"
+          }
+        }
+      ],
+      "newCycles": [],
+      "cycles": [
+        {
+          "level": "Module",
+          "nodeIds": [
+            "mod-proj-candoitall-modules-workbench-candoitall-module-0f477a149fbd",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-719c9c04c259",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-8728e66eb823",
+            "mod-proj-candoitall-modules-workbench-candoitall-modules-workbench"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-02c9ba5465b1",
+            "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-0f41c602b1fe",
+            "type-proj-candoitall-modules-workbench-candoitall-module-4b7d2fcd61a3"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-52c32b619f41",
+            "type-proj-candoitall-modules-workbench-candoitall-module-8069c738a25d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-60d3a4551568",
+            "type-proj-candoitall-modules-workbench-candoitall-module-b68d6311eb55",
+            "type-proj-candoitall-modules-workbench-candoitall-module-c69b5db5dd23"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-683329e17440",
+            "type-proj-candoitall-modules-workbench-candoitall-module-96caa8516513"
+          ]
+        }
+      ],
+      "review": {
+        "status": "Pass for the neutral reader boundary; product activation remains open",
+        "newFinding": "The 23-member Wire record is a flat protocol DTO preserving exact readonly ID wrappers and 64-bit grant values, not a behavioral abstraction.",
+        "dependencies": "No project references changed. Application declares the read boundary, Persistence implements it, and Modules.Processes composes it. No new project/module/type cycles.",
+        "partialClasses": "None added.",
+        "testability": "All18 new composed reader cases pass after explicit test provider scopes. Exact source bridge preserves 151 initial passing regression cases. No production edits between candidates."
+      }
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9544,
+      "runtimeFiles": 3976,
+      "sourceSha256": "12D18A065584E9D39CF3FA33B22ACFA47340E3FF558BA7C8020608C0961898B7",
+      "runtimeSha256": "6298CAA4EAB618B0CD6E5943B477D34DABC2A203775963B24D4B6B863B86FB50"
+    },
+    "final-resource-reconciliation.json": {
+      "outcome": "All 18 repaired canonical reader integration cases pass. Exact single-test-file bridge retains 151 unaffected passes, for 169 distinct selected passing cases. Original 18 fixture failures retained. Historical cleanup denials remain unchanged.",
+      "databaseNameDelta": [],
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_51632_20261019_215454_224.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\06352aa8-bc76-4fdb-aa5e-8310112920b8.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\qhpl3enr.x1a",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\gvytn42o.b0x",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\5f7a8567-69ac-4974-aaa9-1059ad1be70b.tmp",
+          "family": "anonymous-and-package-temp-files"
+        }
+      ],
+      "recordedUtc": "2026-10-20T01:56:59.8395252+00:00",
+      "remainingObservedProcesses": []
+    },
+    "production-bridge.json": {
+      "originalCandidate": "c4-canonical-child-material",
+      "originalSourceSha256": "62F02694394950728C65A164EA514C14104C1838633AB4449D1A383AF5BCC7FC",
+      "allProductionInputsUnchanged": true,
+      "onlyChangedInputs": [
+        {
+          "path": "tests/integration/candoitall.tests.integration/processdecisionchildmaterialreadertests.cs",
+          "before": [
+            "tests/Integration/CanDoItAll.Tests.Integration/ProcessDecisionChildMaterialReaderTests.cs",
+            true,
+            "13A5A0EA802EC9911540862CE875CEA52657C22441D9FFC008D856D2E77C53D5"
+          ],
+          "after": [
+            "tests/Integration/CanDoItAll.Tests.Integration/ProcessDecisionChildMaterialReaderTests.cs",
+            true,
+            "8CE0329141E6ECE7237930AD3035254CBFCFC148477A8789970AB3E11FE5F2D5"
+          ]
+        }
+      ],
+      "review": "Only explicit scoped service-provider lifetime in the 18 new integration cases changed. No fixture, production, timeout, authority or grant changes. Repeat all 18 cases and retain 151 unaffected passing regressions."
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T01:54:35.8802750+00:00",
+      "observerSeconds": 100.0683851,
+      "commands": [
+        {
+          "command": "execute-child-material-runtime",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T01:54:53.9878121+00:00",
+          "seconds": 80.7131953
+        }
+      ]
+    },
+    "portability-review.json": {
+      "added": [
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDecisionChildMaterialReader.cs",
+          "category": "case-policy",
+          "fingerprint": "6b2c8fc5c4bcc40106a15243abf27950ed8e19b180981292d649ae981adc3e34",
+          "count": 1,
+          "rationale": "Ordinal case-insensitive comparison applies to the external Process executor-kind protocol, matching the existing authority query. No filesystem path or culture-sensitive identity comparison. Typed child/execution owner and exact contract equality remain mandatory."
+        }
+      ],
+      "expectedRemoved": [],
+      "scope": "Complete final source scan, including untracked protected files. Intentional reviewed baseline addition; final no-write enforcement required.",
+      "recordedUtc": "2026-10-20T01:39:50.6508939+00:00",
+      "inspectedBaselineDiff": "Exactly one reviewed case-policy allowance added; count15639->15640 and generated timestamp only."
+    },
+    "observer-start-confirmation.json": {
+      "observerPid": 39948,
+      "confirmed": true,
+      "recordedUtc": "2026-10-20T01:55:23.6526707+00:00",
+      "observerStartedUtc": "2026-10-20T01:54:35.9000872Z",
+      "note": "Initial confirmation used an incorrect startup filename. Correct retained startup identity confirmed during execution; full interval coverage must also pass."
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

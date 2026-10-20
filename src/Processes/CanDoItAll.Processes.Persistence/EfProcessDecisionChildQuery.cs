@@ -1,9 +1,10 @@
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Processes.Persistence;
 
-public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersistenceDbContext> factory) {
+public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersistenceDbContext> factory) : IProcessDecisionChildReader {
     public async Task<ProcessDecisionChildObservation?> ReadAsync(ProcessDecisionChildAddress address, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(address);
         address.Validate();

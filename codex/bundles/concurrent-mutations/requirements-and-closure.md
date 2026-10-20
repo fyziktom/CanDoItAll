@@ -162,3 +162,9 @@ local proposals remain conditional on integration, migration where applicable, b
 static, native/API/browser and restart proof. The Resource browser release at
 2026-10-17T11:20:36.0215536Z permits the reviewed next transfer only; it is not end-to-end,
 capacity or activation acceptance. Imported architect inputs remain immutable evidence.
+
+The [canonical child/material reader](validation/2026-10-19-canonical-child-material.md)
+adds 169 passing selected cases across an exact test-only repair. It exposes canonical
+originals through the Process Application boundary with three bounded SQL reads. Actual
+workspace lifecycle, producer activation, inherited publication and manager paths remain
+open under R5/R6; historical read is not dispatch authority.

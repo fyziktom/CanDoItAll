@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-19T23:15:01.062899+00:00",
+  "generated_utc": "2026-10-20T01:39:21.427381+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15639,
+  "allowance_count": 15640,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -68003,6 +68003,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessBlockedStepPacket.cs",
       "category": "case-policy",
       "source_fingerprint": "221556bb8c9bd8798347f1062aaec5930bc2db077990c1a4d07ad901400c4252",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDecisionChildMaterialReader.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6b2c8fc5c4bcc40106a15243abf27950ed8e19b180981292d649ae981adc3e34",
       "count": 1
     },
     {
