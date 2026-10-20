@@ -107,3 +107,7 @@ P07 continuation: [asynchronous original binding](../validation/2026-10-19-async
 P07 continuation: [selected child dispatch authority](../validation/2026-10-19-selected-child-dispatch.md) passes 86 cases. Continue with registered source routing and inherited publication, preserving legacy denial and avoiding nested source/executor catalog leases.
 
 The [inherited snapshot prerequisite](../validation/2026-10-20-inherited-publication-snapshot.md) passes 238 corrected cases. No Process/Workflow activation is implied. Next resolve the complete initial Process Project/root gate ordering while preserving original duplicate receipts, then implement held-source authorization, the enlisted publication fence and parent-owned effects/outcomes.
+
+## Process Project/root ordering checkpoint
+
+The [reviewed design](P07-process-project-lock-order.md) is implemented and [validated](../validation/2026-10-20-process-project-lock-order.md): 194 distinct selected passing cases across an exact test-only bridge, complete portability enforcement, unchanged production during fixture repair and retained initial failures. Next connect canonical selected-source reads and the enlisted publication fence, then actual Workbench/Agent continuation and atomic parent outcomes. Keep Workflow/manager/settings activation gated on their own integration proof.

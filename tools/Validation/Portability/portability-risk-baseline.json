@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-20T03:30:19.255601+00:00",
+  "generated_utc": "2026-10-20T04:40:14.412652+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15641,
+  "allowance_count": 15642,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -70079,6 +70079,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessWorkflowDispatchAuthority.cs",
       "category": "case-policy",
       "source_fingerprint": "cdbb2e6a9633aea0f1f2c7057f4ae292f5481aadbafa6f7a3eb82b5e36dd1e33",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessInitialProjectGates.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "c6d21fbe226c04b39433dbd0c9dcc1c57e98bf22f709320806dd47441bd5947c",
       "count": 1
     },
     {

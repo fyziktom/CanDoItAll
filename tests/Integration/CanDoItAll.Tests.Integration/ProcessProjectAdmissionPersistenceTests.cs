@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
@@ -45,7 +46,7 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
         var foreignRun = await CommitRunAsync(foreign);
         var legacyRun = await CommitRunAsync(null);
         var projects = services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(original.ProjectId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(original.ProjectId);
         Assert.True((await projects.CreateAsync(original.ProjectId, new() { Name = "Projection successor" })).IsSuccess);
         var admission = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId));
         Assert.NotEqual(original.LifetimeId, admission.LifetimeId);
@@ -152,7 +153,7 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
             coordinatedTransaction: withCoordinator ? coordinator : null,
             projectAdmissionPolicy: withPolicy ? Policy(services, coordinator) : null);
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.CommitAsync(request));
-        Assert.Contains("configured transaction coordination", error.Message, StringComparison.Ordinal);
+        Assert.Contains("coordinated Project mutation gates", error.Message, StringComparison.Ordinal);
         await AssertRowsAsync(owner, request, expected: 0);
     }
 
@@ -166,7 +167,7 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
         var admission = await CreateProjectAsync(services);
         var request = ProcessProjectAdmissionFixture.Initial(admission);
         var projects = services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(admission.ProjectId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(admission.ProjectId);
         if (recreate) {
             Assert.True((await projects.CreateAsync(admission.ProjectId, new() { Name = "New lifetime" })).IsSuccess);
         }
@@ -208,12 +209,13 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
         var coordinator = Coordinator(services);
         var commands = new CommandProbe();
         var pause = new BeforeCommitPause();
+        var originalDelete = await new ProjectLifecycleTestDriver(deletionScope.ServiceProvider).CaptureDeleteAsync(admission.ProjectId);
         await using var owner = Context(services, commands, pause);
         var unitOfWork = new EfProcessRuntimeUnitOfWork(owner, coordinatedTransaction: coordinator,
             projectAdmissionPolicy: Policy(services, coordinator, commands));
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var commit = unitOfWork.CommitAsync(request, timeout.Token);
-        Task<ProjectDeletionResult>? deletion = null;
+        Task<ProjectLifecycleOutcome>? deletion = null;
         try {
             var transaction = await pause.Entered.Task.WaitAsync(timeout.Token);
             await using var observer = Context(services);
@@ -227,9 +229,9 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
             });
             var deletionProbe = new LockWaitProbe();
             var deleteOptions = ProjectOptions(services, deletionProbe);
-            var projects = ActivatorUtilities.CreateInstance<ProjectsService>(deletionScope.ServiceProvider,
-                new ProjectFactory(deleteOptions));
-            deletion = projects.DeleteAsync(admission.ProjectId, timeout.Token);
+            var writer = ActivatorUtilities.CreateInstance<ProjectLifecycleWriter>(deletionScope.ServiceProvider, new ProjectFactory(deleteOptions));
+            var lifecycle = ActivatorUtilities.CreateInstance<ProjectNativeLifecycleOperations>(deletionScope.ServiceProvider, writer);
+            deletion = lifecycle.DispatchAsync(originalDelete, timeout.Token);
             var backendPid = await deletionProbe.BackendPid.Task.WaitAsync(timeout.Token);
             await WaitForAdvisoryWaitAsync(services, backendPid, timeout.Token);
             Assert.False(deletion.IsCompleted);
@@ -238,7 +240,7 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
         }
         Assert.True((await commit).Succeeded);
         Assert.NotNull(deletion);
-        await deletion;
+        Assert.IsType<ProjectLifecycleOutcome.Accepted>(await deletion);
         await using var restarted = Context(services);
         var stored = Assert.IsType<ProcessRuntimeStateSnapshot>(await new EfProcessRuntimeUnitOfWork(restarted).LoadAsync(request.Mutation.State.RunId));
         Assert.Equal(admission, stored.ProjectAdmission);
@@ -291,9 +293,11 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
         await using var restarted = await TestApplication.CreateAsync(harness);
         await using var restartedScope = restarted.Services.CreateAsyncScope();
         var currentServices = restartedScope.ServiceProvider;
-        await currentServices.GetRequiredService<ProjectsService>().DeleteAsync(admission.ProjectId);
+        await new ProjectLifecycleTestDriver(currentServices).DeleteAsync(admission.ProjectId);
         await using var context = Context(currentServices);
-        var reader = new EfProcessRuntimeUnitOfWork(context);
+        var replayCoordinator = Coordinator(currentServices);
+        var reader = new EfProcessRuntimeUnitOfWork(context, coordinatedTransaction: replayCoordinator,
+            projectAdmissionPolicy: Policy(currentServices, replayCoordinator));
         var loaded = Assert.IsType<ProcessRuntimeStateSnapshot>(await reader.LoadAsync(request.Mutation.State.RunId));
         Assert.Equal(admission, loaded.ProjectAdmission);
         var replay = await reader.CommitAsync(request);
@@ -462,7 +466,8 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
         public TaskCompletionSource<int> BackendPid { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default) {
-            if (command.CommandText.Contains("pg_advisory_xact_lock", StringComparison.Ordinal)) {
+            if (command.CommandText.Contains("pg_advisory_xact_lock", StringComparison.Ordinal) ||
+                    command.CommandText.Contains("pg_advisory_lock", StringComparison.Ordinal)) {
                 BackendPid.TrySetResult(((NpgsqlConnection)command.Connection!).ProcessID);
             }
             return ValueTask.FromResult(result);

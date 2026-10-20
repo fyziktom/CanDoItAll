@@ -182,3 +182,7 @@ The [asynchronous child binding](validation/2026-10-19-asynchronous-child-bindin
 The [selected Process dispatch query](validation/2026-10-19-selected-child-dispatch.md) passes 86 cases. It binds original child/grant/policy/material and exact current claim without loading the material payload. Producer routing, inherited business effects and manager continuation remain open.
 
 The [inherited publication snapshot](validation/2026-10-20-inherited-publication-snapshot.md) passes 238 corrected cases, including two-Agent ordering, cancellation, current revocation and the selected SQL-wait reference. The initial fixture failures and coarse lease responsiveness failure are retained. R5/R6 remain open: resolve the initial Process Project/root lock inversion before adding the business fence and actual continuation.
+
+## Process initial lock ordering, 2026-10-20
+
+The [lock-order checkpoint](validation/2026-10-20-process-project-lock-order.md) closes the observed Root-to-Project advisory inversion for initial Process commits, including subprocesses and original executable/source admissions. It has 194 distinct passing selected behaviors across an exact two-test-file repair bridge. Scoped replay retains its original receipt after Project retirement through configured lock-only admission. This is a publication prerequisite; R5/R6 and actual inherited producer/publication/manager paths remain open. Root semaphore retention and capacity/fairness remain review items.

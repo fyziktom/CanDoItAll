@@ -319,3 +319,5 @@ with unexpired lifetime after the root lock; historical read and manager review 
 separate. Concrete producer/publication integration and R5/R6 closure remain open.
 
 The [inherited publication snapshot checkpoint](validation/2026-10-20-inherited-publication-snapshot.md) passes 238 corrected selected cases. It holds the executor and optional launching Agent in one ordered key set without retaining the workspace gate. The coarse SQL-wait comparison remains negative evidence. Actual inherited publication and Process/Workflow activation remain open.
+
+The [Process Project/root lock-order repair](validation/2026-10-20-process-project-lock-order.md) has 194 distinct passing selected cases across an exact test-only bridge. Initial and child commits take original Project gates before Process roots; accepted receipts still recover after retirement. All six new ordering/cancellation races pass. Inherited publication and R5/R6 activation remain open.
