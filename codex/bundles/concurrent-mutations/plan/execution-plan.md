@@ -1,5 +1,13 @@
 # Execution plan
 
+The [capture ownership prerequisite](../validation/2026-10-20-process-capture-ownership.md)
+passes 127 distinct behaviors under an exact test-only repair. Next, prepare the root's
+shared RunSnapshot before dispatch claims, then integrate StepSnapshot capture and
+actual child enrollment/binding. Keep the existing shared-scope claim prohibition.
+Fresh commit observation and exact step-claim attachment are available; current source
+authorization and registered business capture still require concrete integration.
+Manager continuation, Workflow and activation gates remain open.
+
 Current next work follows the passing [Process result/accounting integration](../validation/2026-10-20-process-result-accounting.md):
 369 distinct passing behaviors, required coordinator wiring for dispatch and recovery,
 atomic persisted-result acceptance, exact original child settlement and durable replay.

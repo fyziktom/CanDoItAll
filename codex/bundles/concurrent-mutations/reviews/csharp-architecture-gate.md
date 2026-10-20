@@ -1,5 +1,21 @@
 # C# architecture entry review
 
+## Process capture ownership closure (2026-10-20)
+
+Status: PASS for the commit/claim prerequisite. [Validation](../validation/2026-10-20-process-capture-ownership.md)
+has 127 distinct passing behaviors and unchanged production source/outputs across the
+test repair. A Runtime contract and typed refusal carry exact identities; the cohesive
+Persistence guard validates already-loaded claim state and delegates to the existing
+transaction owner. No interface, partial, project reference or DI service was added.
+Architecture retains six edges, zero cycles and 352 findings, with no added advisory.
+Existing workspace diagnostics remain explicit.
+
+The failed SQL candidate reopened the initial RunSnapshot ordering assumption.
+The accepted correction keeps root capture before dispatch claims; step capture uses
+the exact claim guard. The positive SQL flows prove both boundaries, and the negative
+cases preserve original reservations and roll back flushed material on expiry.
+Actual registered producers and manager continuation remain separate open gates.
+
 ## Process result/accounting integration closure (2026-10-20)
 
 Status: PASS for this checkpoint only. [Validation](../validation/2026-10-20-process-result-accounting.md)

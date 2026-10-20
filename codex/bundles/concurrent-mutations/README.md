@@ -4,7 +4,16 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest checkpoint: [Process result/accounting integration](validation/2026-10-20-process-result-accounting.md)
+Latest checkpoint: [Process capture ownership](validation/2026-10-20-process-capture-ownership.md)
+has 127 distinct passing behaviors under an exact test-only correction. Durable replay
+cannot grant fresh capture ownership, and exact dispatch attachment rejects expired,
+replaced or cancelled authority, including rollback after SQL flush. The initial test
+candidate exposed and corrected the design ordering: RunSnapshot capture precedes claims;
+StepSnapshot capture uses its claim. Production scope admission was preserved.
+Builds, full portability, architecture and source/runtime/resource checks pass.
+The actual producer and manager paths remain next.
+
+The [Process result/accounting integration](validation/2026-10-20-process-result-accounting.md)
 has 369 distinct passing behaviors: 111 final cases and 258 unaffected passes retained
 under an exact source comparison. Dispatcher and interrupted-execution recovery now use
 original child evidence and atomically commit runtime results with work accounting.

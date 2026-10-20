@@ -29,6 +29,7 @@ public sealed class ProcessPersistenceStoreTests
         var result = await unitOfWork.CommitAsync(request);
 
         Assert.Equal(ProcessRuntimeTransitionOutcome.Applied, result.Outcome);
+        Assert.True(result.CommittedNow);
         Assert.Equal(1, await dbContext.RuntimeStates.CountAsync());
         Assert.Equal(1, await dbContext.RuntimeSteps.CountAsync());
         Assert.Equal(1, await dbContext.RuntimeEvents.CountAsync());
@@ -1183,10 +1184,12 @@ public sealed class ProcessPersistenceStoreTests
         var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
         var request = NewCommitRequest(includeArtifactLedger: false);
 
-        await unitOfWork.CommitAsync(request);
+        Assert.True((await unitOfWork.CommitAsync(request)).CommittedNow);
         var duplicate = await unitOfWork.CommitAsync(request);
 
         Assert.Equal(ProcessRuntimeTransitionOutcome.Applied, duplicate.Outcome);
+        Assert.False(duplicate.CommittedNow);
+        Assert.False((await unitOfWork.FindCompletedCommandAsync(request.CommandId))!.CommittedNow);
         Assert.Equal(1, await dbContext.RuntimeEvents.CountAsync());
         Assert.Equal(1, await dbContext.OutboxMessages.CountAsync());
         Assert.Equal(1, await dbContext.IdempotencyKeys.CountAsync());

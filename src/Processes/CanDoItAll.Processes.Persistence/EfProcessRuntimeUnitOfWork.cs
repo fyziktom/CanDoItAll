@@ -163,6 +163,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        request.DispatchPrecondition?.Validate();
+
         if (request.InitialRunDecisionAdmission is not null && (request.InitialPlan is null || request.InitialAssignments is null ||
                 request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {
             throw new InvalidOperationException("Root decision admission must accompany the initial real Process plan and assignments.");
@@ -270,6 +272,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
             request.Mutation.State.RunId.Value,
             trackChanges: true,
             cancellationToken).ConfigureAwait(false);
+        var dispatchExpiresAtUtc = await ProcessRuntimeDispatchGuard.RequireAsync(
+            dbContext, request, existing, clock, cancellationToken).ConfigureAwait(false);
         if (await ValidateParentStepPreconditionAsync(
                 request,
                 isNewState: existing is null,
@@ -354,8 +358,12 @@ public sealed class EfProcessRuntimeUnitOfWork(
             ?? throw new InvalidOperationException("The Process runtime state was not found after its mutation was saved.");
         await ProcessDecisionResultAcceptance.RequireAsync(dbContext,
             request with { Mutation = request.Mutation with { State = persistedState } }, cancellationToken).ConfigureAwait(false);
+        if (dispatchExpiresAtUtc is not null) {
+            ProcessRuntimeDispatchGuard.RequireUnexpired(request, dispatchExpiresAtUtc, clock.GetUtcNow());
+        }
         return ProcessRuntimeCommitResult.FromMutation(request.Mutation) with {
-            State = persistedState, DecisionBudget = decisionBudget, Decision = decision, DecisionRunScope = decisionScope
+            State = persistedState, DecisionBudget = decisionBudget, Decision = decision, DecisionRunScope = decisionScope,
+            CommittedNow = true
         };
     }
 

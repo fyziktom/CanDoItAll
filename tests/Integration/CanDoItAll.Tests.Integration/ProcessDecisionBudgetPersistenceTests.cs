@@ -123,7 +123,7 @@ public sealed class ProcessDecisionBudgetPersistenceTests {
         if (!initialCommit) {
             Assert.Equal(request.OriginalState.UpdatedAtUtc, (await owner.LoadAsync(request.OriginalState.RunId))!.UpdatedAtUtc);
         }
-        Assert.True((await owner.CommitAsync(request)).Succeeded);
+        Assert.True((await owner.CommitAsync(request)).CommittedNow);
     }
 
     [Fact]
@@ -267,6 +267,8 @@ public sealed class ProcessDecisionBudgetPersistenceTests {
             Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => new EfProcessRuntimeUnitOfWork(interrupted).CommitAsync(request)));
         }
         var replay = await owner.CommitAsync(request);
+        Assert.False(replay.CommittedNow);
+        Assert.False((await owner.FindCompletedCommandAsync(request.CommandId))!.CommittedNow);
         Assert.Equal(100, replay.DecisionBudget!.Change.Balance.ReservedWorkTicks);
         Assert.Equal(1, replay.DecisionBudget.Change.Balance.AllocationCount);
         Assert.Equal(replay.DecisionBudget.Change.Balance, await BalanceAsync(context, state));

@@ -1,5 +1,11 @@
 # Requirements and closure ledger
 
+Current capture ownership evidence: [127 distinct passing behaviors](validation/2026-10-20-process-capture-ownership.md).
+Original Applied receipts cannot grant another capture invocation; the new exact claim
+precondition protects StepSnapshot attachment. Shared RunSnapshot preparation retains
+its existing root owner and must precede dispatch. This closes the commit/claim
+prerequisite only. Registered producer capture, manager actions and full R5 remain open.
+
 Current Process result/accounting evidence: [369 distinct passing behaviors](validation/2026-10-20-process-result-accounting.md),
 including 111 final cases and 258 unaffected cases under an exact repair comparison.
 Normal dispatch and interrupted recovery share original-child reads, stable result

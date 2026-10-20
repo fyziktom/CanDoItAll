@@ -1,5 +1,20 @@
 # Resource ownership and cleanup
 
+## Process capture ownership checkpoint (2026-10-20)
+
+The initial and repaired `c4-process-capture-ownership` candidates released test
+execution with complete source/runtime verification and whole-command observation.
+Initial 104/127 and final 29/29 results are retained, with an exact test-only comparison
+preserving 98 passing regressions and 1725 production outputs. Each run leaves zero
+observed processes and database-name delta; fourteen initial and eight final TEMP
+entries without proven ownership remain untouched.
+
+The directories contain small validation inputs/logs and reusable helpers. Retain
+their identity manifests for the proof comparison and following producer integration.
+No new server or compiled output root was created. The shared PG18 fixture remains
+needed, and ordinary 5032 and unrelated resources remain outside ownership. Earlier
+automatic-review cleanup denials remain blocked and were not retried.
+
 ## Process result/accounting checkpoint (2026-10-20)
 
 The initial, repaired and optional-join `c4-process-result-accounting` candidates have

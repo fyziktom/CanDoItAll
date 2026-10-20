@@ -5,6 +5,14 @@ This prerequisite does not activate the Process or Workflow executor.
 Proof tier: Behavioral, with retained exact discovery/results, resource ownership,
 source/runtime identities and full portability evidence.
 
+Validation refinement: the first SQL candidate contradicted the initial shared-capture
+ordering below. RunSnapshot must be captured before dispatch claims; the existing shared
+scope correctly rejects claims while AwaitingCapture/Capturing. Keep that rule.
+The dispatch guard applies to StepSnapshot capture and subsequent claimed child work.
+Initial shared capture uses the root's existing exact scope/reservation owner and current
+source authorization, with CommittedNow determining its single local capture invocation.
+No production shared-scope rule was weakened to make a fixture pass.
+
 ## Observed responsibility and failure
 
 `EfProcessRuntimeUnitOfWork.CommitCoreAsync` returns the original Applied outcome on
@@ -51,7 +59,9 @@ existing run-scope capture.
 Add an optional typed precondition containing StepInstanceId, ClaimToken and OwnerId.
 It applies only to a new commit; a historical receipt can still be read after claim expiry
 without acquiring work authority. Reject malformed default identities before mutation.
-The producer must provide it for capture reservation, material attachment and enrollment.
+The producer must provide it for StepSnapshot capture reservation, material attachment
+and claimed child enrollment. Initial RunSnapshot capture precedes dispatch and uses its
+existing root scope expectation, atomic reservation and stopped-root checks instead.
 Existing unguarded command semantics remain unchanged until that caller is integrated.
 
 Under the already-held root lock and transaction, the focused guard checks:
@@ -86,17 +96,20 @@ coordinator and a registered business capture port implemented by Workbench:
 
 1. Read original immutable accepted-source policy before a child/material exists, with
    current read authority. Do not use the child query circularly or decode a whole launch.
-2. Reserve a bounded capture allocation under the exact dispatch precondition. Stable
-   command/allocation identity includes original owner and logical generation.
+2. Reserve a bounded capture allocation under the exact dispatch precondition for
+   StepSnapshot, or the original root scope expectation before dispatch for RunSnapshot.
+   Stable command/allocation identity includes original owner and logical generation.
 3. Only the invocation observing CommittedNow may capture. Duplicate/incomplete work
    returns a typed pending result and retains the winning claim and reservation.
 4. Capture the coherent business basis under the existing bounded Project transaction
    (five-second transaction, two-second statement/lock limits), outside the Process lock.
-5. Attach material and settle measured closed work under the exact claim fence. Failure
+5. Attach material and settle measured closed work under the applicable claim/root scope fence. Failure
    or unknown acknowledgement retains work until original evidence can reconcile it;
    do not substitute the granted amount as measured actual work.
 6. StepSnapshot uses its own scope. RunSnapshot is owned by the root's existing shared
-   scope; descendants inherit active material and cannot capture on the parent's behalf.
+   scope and becomes Active before any step claim. Descendants inherit active material
+   and cannot capture on the parent's behalf. Refresh first releases/reconciles old
+   dispatch work; it cannot require a live claim that the shared scope has frozen.
 7. Enroll the actual child before Core's inherited workspace admission. Bind the candidate
    and authorized background session through the existing inherited participant seam.
    Process Application must not reference Agent Core; Workbench must not reference
