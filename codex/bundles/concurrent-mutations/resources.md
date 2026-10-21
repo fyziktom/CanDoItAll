@@ -1180,3 +1180,30 @@ That successor passed all 172 cases. All 13 commands were observed, source/runti
 identities stayed unchanged, and reconciliation found zero new resource deltas.
 Its 281,941-byte reviewed proof is retained; ownership is `RetainedQualifiedProof`.
 Historical denied resources remain baseline-only.
+
+`c4-manager-review-http` is reserved before creation for the Process planning review
+HTTP boundary. It reuses the isolated PostgreSQL server, standard Release outputs
+and fixture-issued leases. The `candoitall-api-tests` temporary family is included
+for real API hosts and their restart cases; no standalone server is provisioned.
+The transferred continuation files have exact ownership and source pins. Preserve
+the continuation's unrelated work and every historically denied cleanup target.
+
+That HTTP candidate retained 66 passes and a host abort before its four SQL cases
+reported; three cases were unstarted. Source/runtime identity and all four command
+observation windows passed. The crash-owned database
+`cditall_primary_40a332c695a94161a74b78718c28b907` and workspace
+`C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\069475322dcc45a2816c596f2d8beb24`
+remain: automatic approval review rejected the exact removal with “blocked by policy.”
+Ownership was proven from original run metadata and the recorded isolated server;
+no alternative cleanup will be attempted.
+
+`c4-manager-review-http-clock` is reserved before creation for the scenario-clock
+repair and its three regression cases. It repeats the 73 selected HTTP/owner cases
+after that three-case gate, reuses standard Release outputs and the same isolated
+server and fixture families, and preserves every prior denied resource as baseline.
+
+The successor passed all 76 cases. All seven commands were observed; source/runtime
+identity passed and reconciliation found zero new surviving processes, database
+names or temporary entries. Its 150,610-byte reviewed proof is retained and ownership
+is `RetainedQualifiedProof`. Earlier denied resources, including the aborted HTTP
+fixture, remain excluded from cleanup. No new server or custom build output exists.

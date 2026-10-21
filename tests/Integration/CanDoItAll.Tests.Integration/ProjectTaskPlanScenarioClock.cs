@@ -50,7 +50,7 @@ internal sealed class ProjectTaskPlanScenarioClock : TimeProvider {
             timestamp = checked(timestamp + duration.Ticks);
             due = timers.Where(timer => timer.Due <= timestamp).ToList();
             foreach (var timer in due) {
-                timer.Due = long.MaxValue;
+                timer.Reschedule(timestamp);
             }
         }
         foreach (var timer in due) {
@@ -61,22 +61,36 @@ internal sealed class ProjectTaskPlanScenarioClock : TimeProvider {
     private sealed class ScenarioTimer(ProjectTaskPlanScenarioClock owner, TimerCallback callback, object? state) : ITimer {
         internal long Due { get; set; } = long.MaxValue;
         private bool disposed;
+        private long periodTicks;
 
         public bool Change(TimeSpan dueTime, TimeSpan period) {
-            if (period != Timeout.InfiniteTimeSpan) {
-                throw new NotSupportedException("This scenario clock supports one-shot work deadlines only.");
+            if (dueTime < TimeSpan.Zero && dueTime != Timeout.InfiniteTimeSpan) {
+                throw new ArgumentOutOfRangeException(nameof(dueTime));
             }
-            ArgumentOutOfRangeException.ThrowIfLessThan(dueTime, Timeout.InfiniteTimeSpan);
+            if (period < TimeSpan.Zero && period != Timeout.InfiniteTimeSpan) {
+                throw new ArgumentOutOfRangeException(nameof(period));
+            }
             lock (owner.gate) {
                 if (disposed) {
                     return false;
                 }
+                periodTicks = Math.Max(0, period.Ticks);
                 Due = dueTime == Timeout.InfiniteTimeSpan ? long.MaxValue : checked(owner.timestamp + dueTime.Ticks);
                 return true;
             }
         }
 
-        internal void Fire() => callback(state);
+        internal void Reschedule(long now)
+            => Due = periodTicks == 0 ? long.MaxValue : checked(now + periodTicks - (now - Due) % periodTicks);
+
+        internal void Fire() {
+            lock (owner.gate) {
+                if (disposed) {
+                    return;
+                }
+            }
+            callback(state);
+        }
 
         public void Dispose() {
             lock (owner.gate) {

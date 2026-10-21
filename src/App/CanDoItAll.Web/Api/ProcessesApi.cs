@@ -17,6 +17,7 @@ internal static class ProcessesApi
             .WithTags("Processes")
             .DisableAntiforgery();
         processes.MapProcessRunRecordsApi();
+        processes.MapProcessPlanningReviewApi();
 
         processes.MapGet("/contract", GetContract)
             .WithName("GetProcessesApiContract")

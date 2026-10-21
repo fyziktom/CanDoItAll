@@ -595,3 +595,11 @@ child run, with no independent replan grant. Its resolved child policy is theref
 RunSnapshot in both cases, while the original parent policy remains preserved. The
 [registered binding proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-21-initial-business-binding.md)
 checks both policies, publication permissions and waiting-child recovery.
+
+The [Process planning review API](../../process-planning-review-api.md) now exposes
+current manager actions and original-child observations through the existing Web /
+Workbench / Process Application boundaries. Its 76-case qualification includes
+strict lossless input, current access, both parent snapshot modes, host restart,
+exact retry and pending/lost Process accounting. No project references or scoped
+cycles were added. Full-runtime read scaling and saved v1 intent compatibility
+remain gates before recurring UI invalidation and executor activation.

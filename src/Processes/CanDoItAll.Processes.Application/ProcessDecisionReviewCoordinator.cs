@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,44 @@ public sealed class ProcessDecisionReviewCoordinator(IProcessAcceptedExecutionIn
     IEnumerable<IProcessDecisionChildOutcomeReader> readers, IProcessIdempotencyStore receipts,
     IProcessRuntimeUnitOfWork unitOfWork, ILogger<ProcessDecisionReviewCoordinator> logger) {
     private readonly ProcessDecisionChildOutcomes outcomes = new(readers, logger);
+
+    public async Task<ProcessDecisionReviewObservation> ObserveAsync(ProcessRuntimeStateSnapshot state,
+        ProcessStepInstanceId stepId, ProcessExecutionRunId execution, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentOutOfRangeException.ThrowIfEqual(stepId.Value, Guid.Empty);
+        ArgumentOutOfRangeException.ThrowIfEqual(execution.Value, Guid.Empty);
+        var selection = await query.ReadAsync(state.RunId, stepId, execution, cancellationToken).ConfigureAwait(false);
+        if (selection?.Child is not { } child) {
+            throw new ProcessDecisionReviewAdmissionException(new("Runtime.ReviewChildMissing", "Review requires its retained original child."));
+        }
+        selection.RequireOriginal(state, stepId, execution);
+        var input = await ReadOriginalInputAsync(state, stepId, cancellationToken).ConfigureAwait(false);
+        ProcessDecisionSingleActivityAdmission.Require(state, input, child.Original.ExecutionContract);
+        cancellationToken.ThrowIfCancellationRequested();
+        var waiting = state.AppliedResults.SingleOrDefault(item => item.StepInstanceId == stepId &&
+            item.ExecutionRunId == execution && item.Outcome == StrategyOutcome.NeedsManager);
+        if (child.Observation.Closure is not null) {
+            var completed = waiting is not null && state.AppliedResults.Any(item =>
+                item.StepInstanceId == stepId && item.ExecutionRunId == execution && item.StrategyId == waiting.StrategyId &&
+                item.AppliedSequence > waiting.AppliedSequence && item.IdempotencyKey != waiting.IdempotencyKey &&
+                ProcessStrategyReceiptValuePolicy.IsSha256Digest(item.ResultHash) &&
+                (item.Outcome, item.AppliedStepStatus) is
+                    (StrategyOutcome.Succeeded, ProcessRuntimeStepStatus.Completed) or
+                    (StrategyOutcome.Failed, ProcessRuntimeStepStatus.Failed) or
+                    (StrategyOutcome.Canceled, ProcessRuntimeStepStatus.Cancelled));
+            return new(child, null, null, completed);
+        }
+        if (waiting is null || selection.Head is not { } head) {
+            return new(child, null, new("Runtime.ReviewOriginalMissing", "The original waiting result is unavailable."));
+        }
+        var pending = new ProcessDecisionPendingReview(child.Original.Child.Address, waiting.StrategyId, waiting.IdempotencyKey,
+            head.Expectation, new(stepId, selection.Budget.BudgetId, selection.Budget.Revision));
+        if (!MatchesReview(selection, pending.Decision, pending.Budget, pending.Child)) {
+            return new(child, null, new("Runtime.ReviewExpectationChanged", "The original decision is no longer waiting for this review."));
+        }
+        return ProcessDecisionReviewCompletion.ValidatePending(state, pending.Child, pending.StrategyId, pending.WaitingResultKey) is { } refusal
+            ? new(child, null, refusal) : new(child, pending, null);
+    }
 
     public async Task<ProcessDecisionChildMaterialBinding> RequirePendingAsync(ProcessRuntimeStateSnapshot state,
         ProcessDecisionReviewRequest request, CancellationToken cancellationToken = default) {
@@ -22,11 +61,11 @@ public sealed class ProcessDecisionReviewCoordinator(IProcessAcceptedExecutionIn
         }
         selection.RequireOriginal(state, request.Child.StepInstanceId, execution);
         if (child.Original.Child.Address != request.Child || child.Observation.Closure is not null ||
-                child.Observation.Settlement is not null || !MatchesReview(selection, request)) {
+                child.Observation.Settlement is not null || !MatchesReview(selection, request.Decision, request.Budget, request.Child)) {
             throw new ProcessDecisionReviewAdmissionException(new("Runtime.ReviewExpectationChanged",
                 "The displayed decision, budget or original child work changed before review."));
         }
-        var input = await ReadOriginalInputAsync(state, request, cancellationToken).ConfigureAwait(false);
+        var input = await ReadOriginalInputAsync(state, request.Child.StepInstanceId, cancellationToken).ConfigureAwait(false);
         ProcessDecisionSingleActivityAdmission.Require(state, input, child.Original.ExecutionContract);
         if (ProcessDecisionReviewCompletion.ValidatePending(state, request.Child, request.StrategyId, request.WaitingResultKey) is { } refusal) {
             throw new ProcessDecisionReviewAdmissionException(refusal);
@@ -51,14 +90,14 @@ public sealed class ProcessDecisionReviewCoordinator(IProcessAcceptedExecutionIn
         if (child.Original.Child.Address != request.Child) {
             return Reject(state, "Runtime.ReviewChildChanged", "The requested review addresses a different original child.");
         }
-        var input = await ReadOriginalInputAsync(state, request, cancellationToken).ConfigureAwait(false);
+        var input = await ReadOriginalInputAsync(state, request.Child.StepInstanceId, cancellationToken).ConfigureAwait(false);
         context = context with { CommandId = ProcessDecisionReviewIdentity.Derive(request, input, child.Original, context.Actor) };
         if (await receipts.FindCompletedCommandAsync(context.CommandId, cancellationToken).ConfigureAwait(false) is { } replay) {
             RequireReceipt(replay, context, request, child);
             return replay with { Outcome = ProcessRuntimeTransitionOutcome.Duplicate, CommittedNow = false };
         }
         ProcessDecisionSingleActivityAdmission.Require(state, input, child.Original.ExecutionContract);
-        if (!MatchesReview(selection, request)) {
+        if (!MatchesReview(selection, request.Decision, request.Budget, request.Child)) {
             return Reject(state, "Runtime.ReviewExpectationChanged", "The displayed decision, budget or original child work changed before completion.");
         }
         if (await outcomes.ReadAsync(child, evidence: null, cancellationToken).ConfigureAwait(false) is not ProcessDecisionChildResult.Closed closed) {
@@ -87,21 +126,22 @@ public sealed class ProcessDecisionReviewCoordinator(IProcessAcceptedExecutionIn
     }
 
     private async Task<ProcessAcceptedExecutionInput> ReadOriginalInputAsync(ProcessRuntimeStateSnapshot state,
-        ProcessDecisionReviewRequest request, CancellationToken cancellationToken) {
-        var input = await inputs.ReadAsync(state.RunId, request.Child.StepInstanceId, cancellationToken).ConfigureAwait(false);
+        ProcessStepInstanceId stepId, CancellationToken cancellationToken) {
+        var input = await inputs.ReadAsync(state.RunId, stepId, cancellationToken).ConfigureAwait(false);
         if (input.RootRunId != state.RootRunId || input.AdmissionId != state.LaunchAdmissionId ||
                 input.Assignment.RunId != state.RunId || input.Assignment.PlanId != state.PlanId ||
-                input.Assignment.StepInstanceId != request.Child.StepInstanceId) {
+                input.Assignment.StepInstanceId != stepId) {
             throw new InvalidDataException("The review input does not retain its original run, plan, admission and step.");
         }
         return input;
     }
 
-    private static bool MatchesReview(ProcessDecisionResultSelection selection, ProcessDecisionReviewRequest request)
+    private static bool MatchesReview(ProcessDecisionResultSelection selection, ProcessDecisionExpectation decision,
+        ProcessDecisionBudgetExpectation budget, ProcessDecisionChildAddress address)
         => selection.Child is { Observation.IsCurrent: true } child &&
             selection.Head is { Phase: ProcessDecisionPhase.WaitingForReview } head &&
-            head.Expectation == request.Decision && selection.Budget.BudgetId == request.Budget.BudgetId &&
-            selection.Budget.Revision == request.Budget.Revision && head.Reference == request.Child.Reference &&
+            head.Expectation == decision && selection.Budget.BudgetId == budget.BudgetId &&
+            selection.Budget.Revision == budget.Revision && head.Reference == address.Reference &&
             !selection.OtherWorkPending && !selection.SharedScopePending &&
             head.UnclosedChildCount == (child.Observation.Closure is null ? 1 : 0);
 

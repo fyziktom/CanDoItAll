@@ -55,6 +55,7 @@ public static class ApiServiceCollectionExtensions
         services.TryAddScoped<MemoryProviderApiService>();
         services.TryAddScoped<WebCurrentPrincipalResolver>();
         services.TryAddScoped<ProjectDefinitionHttpAccess>();
+        services.TryAddScoped<ProcessPlanningReviewHttpAccess>();
         services.TryAddScoped<IStoragePlacementRecoveryAccess, WebStoragePlacementRecoveryAccess>();
         services.TryAddScoped<StoragePlacementRecoveryService>();
         services.TryAddScoped<IStoragePlacementRecovery>(provider => provider.GetRequiredService<StoragePlacementRecoveryService>());

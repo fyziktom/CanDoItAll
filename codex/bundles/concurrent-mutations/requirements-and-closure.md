@@ -1,5 +1,13 @@
 # Requirements and closure ledger
 
+The [Process review HTTP checkpoint](validation/2026-10-21-process-review-http.md)
+now passes all 76 cases. Current access, lossless bounded requests, original-child
+reads, restart and exact action/accounting recovery are qualified. It adds no
+project reference or scoped cycle. The initial host crash and policy-denied
+cleanup remain recorded. Intent compatibility, read scaling, parent transitions,
+executor activation, Workflow/settings/UI, remaining writers and final broad
+closure remain required; R1/R4/R5/R6 are not closed by this checkpoint.
+
 Latest prerequisites: initial business binding qualifies 177 behaviors, original input
 96 and [closed startup failure](validation/2026-10-21-closed-startup-failure.md) 202.
 The final restart correction passes with unchanged production. These close those
