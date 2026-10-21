@@ -28,13 +28,17 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
         new(ProcessEventActorKind.Manager, new("review-completion-fixture")), new("review-completion-fixture"), Clock.GetUtcNow());
 
     internal static async Task<ProjectTaskPlanReviewFixture> CreateAsync(ReadBasisMode mode = ReadBasisMode.StepSnapshot,
-        CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null) {
+        CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null,
+        Action<IServiceCollection>? configureServices = null, int steps = 1) {
         var clock = new ProjectTaskPlanScenarioClock();
         var entry = await ProjectTaskPlanExecutionEntryTests.EntryFixture.CreateAsync(testEnvironment: environment, activeProfile: profile,
-            configureServices: services => services.AddSingleton<TimeProvider>(clock));
+            configureServices: services => {
+                services.AddSingleton<TimeProvider>(clock);
+                configureServices?.Invoke(services);
+            });
         ProcessStepMaterialFixture? process = null;
         try {
-            process = await ProcessStepMaterialFixture.CreateAsync(mode, existingSql: entry.Files.Sql,
+            process = await ProcessStepMaterialFixture.CreateAsync(mode, steps, existingSql: entry.Files.Sql,
                 executorId: entry.Files.Agent.Id, allowTaskPublication: true);
             var services = entry.Files.Sql.Services;
             var produced = await services.GetRequiredService<ProcessDecisionStepPreparationCoordinator>()

@@ -34,12 +34,9 @@ public static class ProcessDecisionReviewCompletion {
                 result.Outcome is not (StrategyOutcome.Succeeded or StrategyOutcome.Failed or StrategyOutcome.Canceled)) {
             return Reject(state, "Runtime.ReviewIdentityInvalid", "Review completion requires its exact original child, strategy and distinct result identities.");
         }
-        var waiting = state.AppliedResults.SingleOrDefault(item => item.StepInstanceId == result.Child.StepInstanceId &&
-            item.StrategyId == result.StrategyId && item.IdempotencyKey == result.WaitingResultKey);
+        var waiting = FindWaiting(state, result.Child, result.StrategyId, result.WaitingResultKey);
         var execution = new ProcessExecutionRunId(result.Child.ChildId.Value);
-        if (waiting is not { Outcome: StrategyOutcome.NeedsManager, AppliedSequence: > 0 } ||
-                !IsWaiting(waiting.AppliedStepStatus) || waiting.ExecutionRunId != execution ||
-                !ProcessStrategyReceiptValuePolicy.IsSha256Digest(waiting.ResultHash)) {
+        if (waiting is null) {
             return Reject(state, "Runtime.ReviewOriginalMissing", "Review completion requires the retained NeedsManager receipt for its original child.");
         }
         var status = result.Outcome switch {
@@ -57,29 +54,10 @@ public static class ProcessDecisionReviewCompletion {
                     ? ProcessRuntimeMutation.Duplicate(state)
                     : Reject(state, "Runtime.ReviewResultChanged", "The completion key already belongs to different original review evidence.");
         }
-        if (!Enum.IsDefined(state.Status) || state.Status == ProcessRuntimeStatus.CancelRequested ||
-                ProcessRuntimeTerminalStates.IsRunTerminal(state.Status)) {
-            return Reject(state, "Runtime.ReviewRunStopped", "A terminal or cancelling run cannot acquire a new review result.");
+        if (ValidatePending(state, result.Child, result.StrategyId, result.WaitingResultKey) is { } refusal) {
+            return Reject(state, refusal.Code, refusal.Message);
         }
-        var step = state.Steps.SingleOrDefault(item => item.StepInstanceId == result.Child.StepInstanceId);
-        if (step is null || !step.IsExecutable || !IsWaiting(step.Status) || step.ActiveClaimToken is not null ||
-                step.CompletedResultKey is not null) {
-            return Reject(state, "Runtime.ReviewStepChanged", "Review completion requires the original waiting executable step without an active claim.");
-        }
-        if (state.Claims.Any(item => item.StepInstanceId == step.StepInstanceId &&
-                item.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) ||
-                state.Claims.Count(item => item.StepInstanceId == step.StepInstanceId &&
-                    item.Status == DispatchClaimStatus.Completed && item.ResultIdempotencyKey == result.WaitingResultKey &&
-                    item.AttemptNumber == step.AttemptNumber) != 1) {
-            return Reject(state, "Runtime.ReviewClaimChanged", "The original waiting claim must remain completed, with no other open claim.");
-        }
-        if (state.AppliedResults.Any(item => item.StepInstanceId == step.StepInstanceId && item != waiting &&
-                item.AppliedSequence >= waiting.AppliedSequence)) {
-            return Reject(state, "Runtime.ReviewResultSuperseded", "A later result has superseded the displayed waiting receipt.");
-        }
-        if (!SupportsRuntimeContract(step)) {
-            return Reject(state, "Runtime.ReviewContractUnsupported", "This review contract cannot discharge artifact, tool, host or subprocess obligations.");
-        }
+        var step = state.Steps.Single(item => item.StepInstanceId == result.Child.StepInstanceId);
         var receipt = new StrategyResultReceipt(step.StepInstanceId, result.StrategyId, result.CompletionKey,
             result.Outcome, status, digest) {
             AppliedSequence = StrategyResultReceipt.NextSequence(state.AppliedResults),
@@ -114,6 +92,52 @@ public static class ProcessDecisionReviewCompletion {
             events.Add(ProcessRuntimeEventFactory.Create(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, digest));
         }
         return ProcessRuntimeMutation.Applied(next, events, []);
+    }
+
+    public static ProcessValidationFailure? ValidatePending(ProcessRuntimeStateSnapshot state, ProcessDecisionChildAddress child,
+        StrategyId strategy, StrategyResultIdempotencyKey waitingKey) {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(child);
+        child.Validate();
+        if (state.RootRunId != child.RootRunId || state.RunId != child.RunId ||
+                !ProcessStrategyReceiptValuePolicy.IsStableIdentifier(strategy.Value) || waitingKey.Value == Guid.Empty) {
+            return new("Runtime.ReviewIdentityInvalid", "Review requires its exact original child, strategy and waiting result.");
+        }
+        var waiting = FindWaiting(state, child, strategy, waitingKey);
+        if (waiting is null) {
+            return new("Runtime.ReviewOriginalMissing", "Review completion requires the retained NeedsManager receipt for its original child.");
+        }
+        if (!Enum.IsDefined(state.Status) || state.Status == ProcessRuntimeStatus.CancelRequested ||
+                ProcessRuntimeTerminalStates.IsRunTerminal(state.Status)) {
+            return new("Runtime.ReviewRunStopped", "A terminal or cancelling run cannot acquire a new review result.");
+        }
+        var step = state.Steps.SingleOrDefault(item => item.StepInstanceId == child.StepInstanceId);
+        if (step is null || !step.IsExecutable || !IsWaiting(step.Status) || step.ActiveClaimToken is not null ||
+                step.CompletedResultKey is not null) {
+            return new("Runtime.ReviewStepChanged", "Review completion requires the original waiting executable step without an active claim.");
+        }
+        if (state.Claims.Any(item => item.StepInstanceId == step.StepInstanceId &&
+                item.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) ||
+                state.Claims.Count(item => item.StepInstanceId == step.StepInstanceId &&
+                    item.Status == DispatchClaimStatus.Completed && item.ResultIdempotencyKey == waitingKey &&
+                    item.AttemptNumber == step.AttemptNumber) != 1) {
+            return new("Runtime.ReviewClaimChanged", "The original waiting claim must remain completed, with no other open claim.");
+        }
+        if (state.AppliedResults.Any(item => item.StepInstanceId == step.StepInstanceId && item != waiting &&
+                item.AppliedSequence >= waiting.AppliedSequence)) {
+            return new("Runtime.ReviewResultSuperseded", "A later result has superseded the displayed waiting receipt.");
+        }
+        return SupportsRuntimeContract(step) ? null
+            : new("Runtime.ReviewContractUnsupported", "This review contract cannot discharge artifact, tool, host or subprocess obligations.");
+    }
+
+    private static StrategyResultReceipt? FindWaiting(ProcessRuntimeStateSnapshot state, ProcessDecisionChildAddress child,
+        StrategyId strategy, StrategyResultIdempotencyKey waitingKey) {
+        var waiting = state.AppliedResults.SingleOrDefault(item => item.StepInstanceId == child.StepInstanceId &&
+            item.StrategyId == strategy && item.IdempotencyKey == waitingKey);
+        return waiting is { Outcome: StrategyOutcome.NeedsManager, AppliedSequence: > 0 } &&
+            IsWaiting(waiting.AppliedStepStatus) && waiting.ExecutionRunId == new ProcessExecutionRunId(child.ChildId.Value) &&
+            ProcessStrategyReceiptValuePolicy.IsSha256Digest(waiting.ResultHash) ? waiting : null;
     }
 
     public static bool SupportsRuntimeContract(ProcessRuntimeStepState step) {

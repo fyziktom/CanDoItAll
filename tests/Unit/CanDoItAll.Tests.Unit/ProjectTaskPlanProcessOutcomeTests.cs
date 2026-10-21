@@ -37,6 +37,19 @@ public sealed class ProjectTaskPlanProcessOutcomeTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public void Cancelled_work_retains_its_effect_when_the_Agent_uses_the_failed_terminal_state(bool accepted) {
+        var fixture = ProjectTaskPlanProcessCodecFixture.Create();
+        var (run, operation) = Closed(fixture, AgentPlanningGenerationState.Cancelled, accepted);
+        var result = Assert.IsType<ProcessDecisionChildResult.Closed>(
+            ProjectTaskPlanProcessOutcome.Read(run with { State = ExecutionState.Failed }, fixture.Parent).Outcome);
+        Assert.Equal(ProcessDecisionChildTerminalStatus.Cancelled, result.Status);
+        Assert.Equal(accepted ? new ProcessDecisionEffectReceiptId(operation) : null, result.Closure.AcceptedReceipt);
+        Assert.Equal(run.ToolAdmission!.PlanningDecision!.Work.ClosedWorkTicks, result.Work.Consumed.WorkTicks);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void Confirmed_owner_and_cancellation_receipts_keep_original_task_operation(bool cancelled) {
         var fixture = ProjectTaskPlanProcessCodecFixture.Create();
         var (run, operation) = Closed(fixture, AgentPlanningGenerationState.Cancelled, true);

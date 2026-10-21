@@ -1139,3 +1139,39 @@ Final reconciliation found zero surviving observed processes, new database names
 retained temporary entries. Source/runtime identities remained unchanged. The
 267,684-byte proof is retained locally; ownership is `RetainedQualifiedProof`.
 All earlier denied resources remain baseline-only.
+
+`c4-manager-review-integration` is reserved before creation for the workspace and
+Process review connection. It will reuse the existing isolated PostgreSQL server,
+fixture-issued database/workspace leases and standard Release outputs. No server,
+application host or custom compiled output directory is authorized by this entry.
+Retain bounded architecture and validation proof; all earlier denied resources
+remain excluded from cleanup.
+
+The initial integration candidate stopped after four positive failures. Its source
+and runtime verification passed; the observer covered its one test command, with
+zero new surviving processes, database names or temporary entries. Its failed proof
+is retained, and ownership is `RetainedFailedProof`.
+
+`c4-manager-review-integration-repaired` is reserved before creation for the two
+terminal/activity transition fixes and their regression cases. It reuses the same
+server, existing fixture lease families and standard Release outputs. All historical
+denied resources remain baseline-only. No new server or application host is planned.
+
+The repaired integration candidate retained 40 passing and six failing cases,
+with 126 unstarted. Identity and three-command observation passed; reconciliation
+found zero new resource deltas. It is now `RetainedFailedProof`.
+
+`c4-manager-review-integration-boundaries` is reserved before creation for the
+explicit Process-refusal translation and sibling fixture repair. It reuses the
+same isolated server, lease families and standard outputs. Its 172-case selection
+starts with the six repaired behaviors. Historical denied resources remain
+excluded from cleanup; no new server or host is provisioned.
+
+That candidate retained four passes and two failed historical-runtime assertions.
+Its one command was fully observed; source/runtime identity and zero new resource
+deltas were verified. Its failed proof is retained.
+
+`c4-manager-review-integration-qualified` is reserved before creation for the
+test-only correction of runtime replay semantics. It reuses the isolated PostgreSQL
+server, fixture lease families and standard Release outputs, with the same 172
+cases divided into bounded groups. All earlier denied resources remain excluded.

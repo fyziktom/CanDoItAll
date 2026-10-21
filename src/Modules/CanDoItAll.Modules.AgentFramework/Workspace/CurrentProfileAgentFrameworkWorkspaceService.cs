@@ -547,6 +547,25 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         => service as IAgentInheritedPlanningWorkspaceService
             ?? throw new NotSupportedException("This workspace does not support inherited planning.");
 
+    public Task<T> ReviewInheritedPlanningAsync<T>(AgentInheritedPlanningReviewRequest request,
+        AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent, AgentExecutionOperationId activityOperationId,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(authority);
+        return ExecuteNewActivityOperationAsync(activityOperationId, authority.Original.AgentId, chatSessionId: null,
+            "Inherited planning review accepted.", (service, operation) => RequireInheritedWorkspace(service)
+                .ReviewInheritedPlanningWithinOperationAsync(operation, request, authority, ownerIntent, settleOriginal, cancellationToken));
+    }
+
+    public Task<T> ReviewInheritedPlanningWithinOperationAsync<T>(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningReviewRequest request, AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(authority);
+        return DispatchPinnedActivityOperation(operation, authority.Original.AgentId, expectedChatSessionId: null, operation.StreamId.OperationId,
+            service => RequireInheritedWorkspace(service).ReviewInheritedPlanningWithinOperationAsync(
+                operation, request, authority, ownerIntent, settleOriginal, cancellationToken));
+    }
+
     public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
         ExecutionRunSourceKey source,
         ExecutionRunRequest request,

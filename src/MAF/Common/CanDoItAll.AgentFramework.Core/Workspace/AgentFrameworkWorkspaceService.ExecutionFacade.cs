@@ -77,6 +77,22 @@ public sealed partial class AgentFrameworkWorkspaceService
         AgentInheritedPlanningWorkspaceRequest request, CancellationToken cancellationToken = default)
         => executionService.ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken);
 
+    public Task<T> ReviewInheritedPlanningAsync<T>(AgentInheritedPlanningReviewRequest request,
+        AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent, AgentExecutionOperationId activityOperationId,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(authority);
+        EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(activityOperationId, authority.Original.AgentId, chatSessionId: null,
+            "Inherited planning review accepted.", operation => ReviewInheritedPlanningWithinOperationAsync(
+                operation, request, authority, ownerIntent, settleOriginal, cancellationToken));
+    }
+
+    public Task<T> ReviewInheritedPlanningWithinOperationAsync<T>(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningReviewRequest request, AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default)
+        => executionService.ReviewInheritedPlanningWithinOperationAsync(
+            operation, request, authority, ownerIntent, settleOriginal, cancellationToken);
+
     public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
         ExecutionRunSourceKey source,
         ExecutionRunRequest request,

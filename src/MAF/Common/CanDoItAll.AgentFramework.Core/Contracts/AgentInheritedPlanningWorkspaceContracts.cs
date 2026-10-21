@@ -7,6 +7,12 @@ public interface IAgentInheritedPlanningWorkspaceService {
         CancellationToken cancellationToken = default);
     Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
         AgentInheritedPlanningWorkspaceRequest request, CancellationToken cancellationToken = default);
+    Task<T> ReviewInheritedPlanningAsync<T>(AgentInheritedPlanningReviewRequest request,
+        AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent, AgentExecutionOperationId activityOperationId,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default);
+    Task<T> ReviewInheritedPlanningWithinOperationAsync<T>(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningReviewRequest request, AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default);
 }
 
 public sealed record AgentInheritedPlanningWorkspaceRequest(Guid ExecutionRunId, AgentInheritedPlanningStart Start, Guid AgentId, string OriginalInput,

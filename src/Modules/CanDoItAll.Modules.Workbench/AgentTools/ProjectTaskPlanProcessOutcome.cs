@@ -62,7 +62,11 @@ internal static class ProjectTaskPlanProcessOutcome {
             ProcessDecisionChildTerminalStatus.Failed => RunOutcome.Failed,
             _ => RunOutcome.Cancelled
         };
-        if (run.Outcome != expectedOutcome || run.State != (expectedOutcome == RunOutcome.Failed ? ExecutionState.Failed : ExecutionState.Completed) ||
+        var terminalState = (expectedOutcome, run.State) is
+            (RunOutcome.Succeeded, ExecutionState.Completed) or
+            (RunOutcome.Failed, ExecutionState.Failed) or
+            (RunOutcome.Cancelled, ExecutionState.Completed or ExecutionState.Failed);
+        if (run.Outcome != expectedOutcome || !terminalState ||
             run.CompletedAtUtc is not { } completed || completed < decision.Work.LastObservedAtUtc || run.PendingApprovals.Count != 0 ||
             proposals.Any(proposal => proposal.EffectState is not (AgentToolEffectState.Committed or AgentToolEffectState.NotCommitted))) {
             throw Invalid();

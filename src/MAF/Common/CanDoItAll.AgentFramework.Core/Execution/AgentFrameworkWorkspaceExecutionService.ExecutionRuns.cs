@@ -260,6 +260,32 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         });
     }
 
+    public Task<T> ReviewInheritedPlanningWithinOperationAsync<T>(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningReviewRequest request, AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(authority);
+        ArgumentNullException.ThrowIfNull(settleOriginal);
+        ValidateActivityOperation(operation, authority.Original.AgentId, chatSessionId: null, operation.StreamId.OperationId);
+        return ExecuteWithinActivityBoundaryAsync(operation, async () => {
+            var runs = store as ISandboxWorkspaceExecutionRunStore
+                ?? throw new NotSupportedException("Inherited review requires exact execution storage.");
+            var inherited = RequireInheritedPlanning();
+            var original = await LoadExecutionRunAsync(request.Expected.ExecutionRunId, cancellationToken);
+            EnsureActivityRunBinding(operation, original);
+            using var registration = executionCancellationRegistry.Register(original, cancellationToken);
+            operation.Report(AgentExecutionActivityPhase.ResolvingSession, "Applying the original reviewed planning choice.");
+            var result = await new AgentInheritedPlanningReviewCoordinator(runs, toolAdmissionJournal!, inherited)
+                .ReviewWithinLifecycleAsync(request, authority, ownerIntent, continuationRuntime, (review, token) => {
+                    operation.Report(AgentExecutionActivityPhase.PersistingResult, "Accounting for the original planning choice.");
+                    return settleOriginal(review, token);
+                }, registration.Token);
+            operation.Complete("The original planning choice and its accounting were observed.");
+            return result;
+        });
+    }
+
     private async Task<AgentExecutionStartupAggregate> PrepareInheritedPlanningAsync(IAgentExecutionActivityOperationLease operation,
         ExecutionRunRequest request, ExecutionRunRecord? original, CancellationToken cancellationToken) {
         if (string.IsNullOrWhiteSpace(request.Prompt)) {

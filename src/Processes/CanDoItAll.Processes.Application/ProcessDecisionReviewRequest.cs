@@ -1,6 +1,7 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.Processes.Core;
 
 namespace CanDoItAll.Processes.Application;
 
@@ -20,4 +21,8 @@ public sealed record ProcessDecisionReviewRequest(ProcessDecisionChildAddress Ch
             throw new InvalidDataException("Review completion requires the original child, waiting result and displayed decision/budget expectations.");
         }
     }
+}
+
+public sealed class ProcessDecisionReviewAdmissionException(ProcessValidationFailure refusal) : InvalidOperationException(refusal.Message) {
+    public ProcessValidationFailure Refusal { get; } = refusal;
 }

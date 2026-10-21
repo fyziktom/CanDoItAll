@@ -5,6 +5,47 @@ The guarded aggregate write is qualified by 56 passing tests, and the durable Ag
 review owner by 147 passing cases. Implement the workspace and Process connection next.
 Executor, Workflow and SPA activation remain gated.
 
+## Workspace and Process integration refinement
+
+The qualified Agent owner is signed commit `f083ec3d0`. The next slice adds thin
+delegation to the existing workspace/activity facades and a Workbench Process review
+owner. It reuses the actual saved-effect runtime; it must not prepare a new provider
+turn. Register the selected execution for existing Process cancellation, and keep
+Process completion outside the Agent dispatch lease through the qualified lifecycle.
+
+Before accepting a fresh choice, Process Application must validate the retained
+NeedsManager result key, strategy, child, current waiting step, original accepted
+single-activity contract, displayed decision and local budget. Share the pure waiting
+checks with Runtime completion. Checking these only after publication could accept
+an effect whose requested waiting receipt never existed. Exact accepted-intent replay
+still precedes these fresh-state checks, and must retain its original completion key.
+Use the manager action ID as that completion key and bind the full Process request,
+canonical original parent and trusted actor into the Agent owner's intent digest.
+
+Workbench captures no new Project admission. Its current manager capability wraps
+an operator authority without a Project target and an explicit current-write observer.
+It rejects Agent-execution principals, binds the original profile, and derives a
+bounded stable actor digest without credential IDs or expiry. The original Process
+source grant remains independently enforced: renewing a manager credential cannot
+renew an expired source grant or substitute another Project lifetime.
+
+Completion reloads the actual runtime state and uses the existing receipt-first
+Process coordinator. Return the historical action result separately from a freshly
+loaded runtime state. A rejected or interrupted accounting attempt preserves the
+accepted Agent intent for exact retry; it never permits another effect dispatch.
+Tests must exercise both snapshot modes and choices, renewed versus changed actor,
+invalid waiting keys before intent, stale local expectations, sibling root-budget
+advancement, lost completion acknowledgement and later runtime progress.
+
+The before snapshot is `snap-20261021143730-15074043`, scoped to Core, AgentFramework
+module, Workbench, Process Application and Runtime. It has 1,005 findings, 234
+collector diagnostics and eleven existing scoped cycles. The full snapshot and
+dashboard exceed the tool's 64 MiB transport limit; bounded dependency, inventory,
+finding and selected-owner queries recover the evidence from the completed cache.
+Do not describe this as clean analysis or as a failed source build. Compare the same
+scope after implementation. Public HTTP/read views, executor activation, parent
+refresh/cancel and UI remain separate required follow-through.
+
 ## Ownership and dependency direction
 
 AgentFramework Core owns the one saved proposal, its exact displayed expectation,
@@ -195,6 +236,13 @@ authorization policies, strict unique JSON fields, finite request size and no-st
 responses. Encode all Process and Agent revisions as lossless decimal strings at
 the HTTP boundary; do not add an Agent-Core converter dependency to Process Runtime.
 
+Transport must retain the complete original pending request across an uncertain
+response. The approval's durable digest proves exact retry identity but does not
+reconstruct a lost caller request. Recovery when that request is unavailable belongs
+to explicit Process accounting reconciliation over verified closed child evidence;
+it must never reopen or dispatch the accepted saved effect. This must be covered
+with the read/UI and parent reconciliation work, including browser or worker restart.
+
 The endpoint returns the retained action/result state with the original identities.
 A committed Agent effect followed by pending Process completion remains pending,
 with the same action available for exact recovery. It cannot be represented as a
@@ -202,12 +250,13 @@ failed publication that a client may dispatch again. Missing approval intent,
 changed choice or actor, and unavailable original source produce explicit refusals.
 Read review data only after current disclosure checks, including on replay.
 
-Keep the original completion receipt separate from the latest runtime view. A
-duplicate Process command retains its historical state by design; it must not
-replace a UI's newer sibling-step progress. The endpoint should return the original
-action outcome and reload current runtime state for reconciliation, or explicitly
-require that reload in the client contract. Test replay after unrelated sibling
-progress as well as after parent-budget advancement.
+Keep original decision and budget receipts separate from runtime observations.
+`EfProcessRuntimeUnitOfWork.FindCompletedCommandAsync` retains those receipts and
+reloads current runtime state; it does not persist a historical runtime snapshot.
+Neither that observation nor a later reload is an ordering token for a UI draft.
+The endpoint returns the original action outcome and explicitly requires a current
+runtime reload for reconciliation. Test unchanged accounting receipts alongside
+preserved sibling progress after replay and parent-budget advancement.
 
 ## Validation
 
