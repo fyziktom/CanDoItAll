@@ -131,26 +131,8 @@ internal sealed class AgentPlanningCoordinator(AgentToolAdmissionJournal journal
         await using var lease = await owner.ResumeSavedEffectAsync(saved, request.Expected,
             CurrentRead(participant, original), cancellationToken);
         using var bound = lease.Bind();
-        var response = await continuation.DispatchSavedEffectAsync(new(original.ToolAdmission!.Session.Reference, binding), cancellationToken);
-        using var settlement = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        var acknowledged = (await journal.ReadPlanningSnapshotAsync(lease, settlement.Token)).Run;
-        var proposal = AgentToolJournalTransitions.RequireProposal(acknowledged.ToolAdmission!, binding);
-        if (response.Binding != binding || response.RunRevision != acknowledged.Revision ||
-            response.JournalRevision != acknowledged.ToolAdmission!.Revision || response.State != proposal.State ||
-            response.EffectState != proposal.EffectState) {
-            throw new AgentToolAdmissionException(UnsupportedCode, "The publication acknowledgement no longer matches its original journal.");
-        }
-        var assessment = participant.ClassifyPublication(AgentToolSessionObservation.From(original), proposal.Payload, response);
-        if (!Enum.IsDefined(assessment.Outcome)) {
-            throw new AgentToolAdmissionException(UnsupportedCode, "The planning participant returned an unsupported publication outcome.");
-        }
-        var work = lease.PlanningWork ?? throw new InvalidOperationException("Saved planning dispatch has no active work interval.");
-        var decision = acknowledged.ToolAdmission.PlanningDecision!;
-        var completed = assessment.Outcome == AgentPlanningPublicationOutcome.BasisChanged && decision.Policy.OnBasisChange != OnBasisChange.Fail
-            ? await owner.PauseForBasisChangeAsync(work, binding, settlement.Token)
-            : await owner.SettleTerminalAsync(work, assessment.Outcome == AgentPlanningPublicationOutcome.Committed
-                ? AgentPlanningGenerationState.Completed : AgentPlanningGenerationState.Failed, settlement.Token);
-        return new(completed, assessment);
+        return await new AgentPlanningPublicationCompletion(journal, owner).DispatchAsync(original, lease,
+            new(original.ToolAdmission!.Session.Reference, binding), participant, continuation, cancellationToken);
     }
 
     internal Task<ExecutionRunDetail> RefreshAsync(AgentDefinition agent, ProviderProfile provider, ExecutionRunRecord original,
@@ -207,4 +189,3 @@ internal sealed class AgentPlanningCoordinator(AgentToolAdmissionJournal journal
 
 internal sealed record AgentPlanningPreparedRun(AgentPlanningRunAdmission Admission,
     AgentPlanningOwner Owner, AgentToolSemanticDigest RuntimeContract);
-internal sealed record AgentPlanningPublicationResult(ExecutionRunRecord Run, AgentPlanningPublicationAssessment Assessment);

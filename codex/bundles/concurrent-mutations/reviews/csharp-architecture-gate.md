@@ -207,3 +207,16 @@ lock. No new type, dependency edge, project reference or cycle appears. File sto
 members increase from 155 to 157, the mutation interface from two to three; other
 reviewed owners are unchanged. All 277 findings and 189 collector diagnostics are
 pre-existing. Durable intent, manager integration and public transport remain required.
+
+## Durable manager review owner
+
+Status: Pass with follow-up. The [147-case owner qualification](../validation/2026-10-21-manager-review-owner.md)
+keeps intent and measured work in Core and current Project authority in Workbench.
+No new project reference or cycle appears. Shared publication completion and pure
+cancellation move out of the existing coordinator and journal. The intent validator's
+single informational member-count finding is reviewed as cohesive identity validation.
+The lifecycle callback runs after the Agent dispatch lease closes, allowing Process
+accounting without a Core dependency on Processes. Current permission still gates
+final disclosure. Existing interactive behavior, real SQL rollback, exact replay,
+open-work recovery and cancellation are covered. Workspace/Process/API integration,
+parent reconciliation and executor activation remain required.

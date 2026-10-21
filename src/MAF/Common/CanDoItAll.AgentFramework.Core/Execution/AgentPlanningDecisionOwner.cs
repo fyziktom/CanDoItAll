@@ -54,7 +54,16 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
     public Task<ExecutionRunDetail> CancelAsync(AgentPlanningDecisionExpectation expected,
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken)
         => journal.ChangeClosedPlanningAsync(expected, currentRead,
-            current => AgentToolAdmissionJournal.CancelSavedDetail(current, clock.GetUtcNow()), cancellationToken);
+            current => AgentSavedEffectCancellation.Apply(current, clock.GetUtcNow()), cancellationToken);
+
+    internal Task<ExecutionRunDetail> RejectInheritedAsync(AgentPlanningDecisionExpectation expected,
+        AgentInheritedSavedEffectContinuation parent,
+        Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken) {
+        var intent = parent.ReviewIntent
+            ?? throw new InvalidOperationException("A manager rejection requires its original review intent.");
+        return journal.ChangeClosedPlanningAsync(expected, currentRead,
+            current => AgentSavedEffectCancellation.Apply(current, clock.GetUtcNow(), intent), cancellationToken, parent);
+    }
 
     public Task<ExecutionRunRecord> PauseForBasisChangeAsync(AgentPlanningLiveWork work, AgentToolApprovalBinding binding,
         CancellationToken cancellationToken)
@@ -129,6 +138,14 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         _ = RequirePublication(work, held, binding);
         return work.Lease.RequireSavedEffect(journal).Parent?.Purpose
             ?? throw Refuse(held.OriginalRun.ToolAdmission!.PlanningDecision!, AgentPlanningAdmissionRefusal.OriginalStepChanged);
+    }
+
+    internal Task RequireCurrentManagerPublicationAsync(AgentPlanningLiveWork work,
+        IAgentPlanningPublicationSnapshotLease held, AgentToolApprovalBinding binding, CancellationToken cancellationToken) {
+        if (RequireInheritedPublicationPurpose(work, held, binding) != AgentInheritedContinuationPurpose.ManagerReview) {
+            throw Refuse(held.OriginalRun.ToolAdmission!.PlanningDecision!, AgentPlanningAdmissionRefusal.OriginalStepChanged);
+        }
+        return work.Lease.RequireSavedEffect(journal).Parent!.RequireCurrentManagerAsync(cancellationToken);
     }
 
     public async Task<AgentPlanningStepObservation> ObserveStepAsync(AgentPlanningLiveWork work, CancellationToken cancellationToken) {

@@ -226,26 +226,38 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
 
     internal async Task<ExecutionRunDetail> ChangeClosedPlanningAsync(AgentPlanningDecisionExpectation expected,
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead,
-        Func<ExecutionRunDetail, ExecutionRunDetail> change, CancellationToken cancellationToken) {
+        Func<ExecutionRunDetail, ExecutionRunDetail> change, CancellationToken cancellationToken,
+        AgentInheritedSavedEffectContinuation? parent = null) {
         ArgumentNullException.ThrowIfNull(expected);
         ArgumentNullException.ThrowIfNull(currentRead);
         var snapshot = await RequireSnapshotAsync(expected.ExecutionRunId, cancellationToken);
         var original = snapshot.Run with { PendingApprovals = snapshot.Run.PendingApprovals.ToImmutableArray() };
-        RequirePlanningExpectation(original, expected);
+        RequirePlanningExpectation(original, expected, inherited: parent is not null);
         RequireClosedPlanning(original);
-        await RequireSavedReadAsync(original, currentRead, cancellationToken);
+        await RequireSavedReadAsync(original, currentRead, cancellationToken, parent);
+        if (parent?.ReviewIntent is not null) {
+            await parent.RequireCurrentManagerAsync(cancellationToken);
+        }
         await using var handle = await leases.AcquireToolDispatchLeaseAsync(original.Id, cancellationToken);
-        return await writer.UpdateExecutionRunDetailAsync(original.Id, current => {
-            var journal = RequireSavedOriginal(original, current, compareRevision: true);
+        await RequireSavedReadAsync(original, currentRead, cancellationToken, parent);
+        if (parent?.ReviewIntent is not null) {
+            await parent.RequireCurrentManagerAsync(cancellationToken);
+        }
+        return parent?.ReviewIntent is null
+            ? await writer.UpdateExecutionRunDetailAsync(original.Id, Change, cancellationToken)
+            : await writer.UpdateExecutionRunDetailAsync(original.Id, Change, parent.RequireCurrentManagerAsync, cancellationToken);
+
+        ExecutionRunDetail Change(ExecutionRunDetail current) {
+            var journal = RequireSavedOriginal(original, current, compareRevision: true, parent);
             RequireCurrent(journal.Session, new(current.Run, current.ChatSession), AgentToolRunLeaseMode.SavedEffectDispatch);
-            RequirePlanningExpectation(current.Run, expected);
+            RequirePlanningExpectation(current.Run, expected, inherited: parent is not null);
             RequireClosedPlanning(current.Run);
             var changed = change(current);
             AgentToolJournalTransitions.ValidatePersistence(journal, changed.Run.ToolAdmission);
             return changed with { Run = changed.Run with {
                 Revision = checked(current.Run.Revision + 1), UpdatedAtUtc = clock.GetUtcNow()
             } };
-        }, cancellationToken);
+        }
     }
 
     private static void RequirePlanningExpectation(ExecutionRunRecord run, AgentPlanningDecisionExpectation expected, bool inherited = false) {

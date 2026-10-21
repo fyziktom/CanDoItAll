@@ -23,6 +23,7 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
     ProcessStepMaterialFixture Process, ProcessDecisionChildMaterialBinding Parent, ExecutionRunRecord Waiting,
     ProcessRuntimeStateSnapshot State, ProcessDecisionReviewRequest Request, ProjectTaskPlanScenarioClock Clock) : IAsyncDisposable {
     internal IServiceProvider Services => Entry.Files.Sql.Services;
+    internal bool ManagerAllowed { get; set; } = true;
     internal RuntimeCommandContext CommandContext => new(RuntimeCommandId.New(),
         new(ProcessEventActorKind.Manager, new("review-completion-fixture")), new("review-completion-fixture"), Clock.GetUtcNow());
 
@@ -126,6 +127,12 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
                         child.Generation.Phase != ProcessDecisionPhase.WaitingForReview) {
                     throw new AgentToolReceiptAccessDeniedException();
                 }
+            }, token => {
+                token.ThrowIfCancellationRequested();
+                if (!ManagerAllowed) {
+                    throw new AgentToolReceiptAccessDeniedException();
+                }
+                return Task.CompletedTask;
             });
         var request = new AgentSavedEffectContinuationRequest(Waiting.Id, null, Waiting.Revision, admission.Revision, binding,
             Waiting.PendingApprovals.Select(item => new PendingToolApprovalDecision(item.ApprovalId, true) {

@@ -34,7 +34,7 @@ public sealed class AgentInheritedPlanningCoordinator(ISandboxWorkspaceExecution
         return binder.BindInitialAsync(context, parent, sourceEvidence, cancellationToken);
     }
 
-    private IAgentInheritedPlanningParticipant RequireParticipant(AgentPlanningOwner selection, AgentToolProtocolEnvelope parent) {
+    internal IAgentInheritedPlanningParticipant RequireParticipant(AgentPlanningOwner selection, AgentToolProtocolEnvelope parent) {
         var matches = participants.Where(participant => participant.Owner == selection && participant.SupportsParent(parent))
             .Take(2).ToArray();
         return matches.Length switch {

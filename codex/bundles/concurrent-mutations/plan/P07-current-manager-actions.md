@@ -1,8 +1,8 @@
 # Current manager review actions — design review
 
 Status: reviewed for implementation after the 331-case waiting-result prerequisite.
-The guarded aggregate write is now qualified by 56 passing tests; implement the complete
-manager action next.
+The guarded aggregate write is qualified by 56 passing tests, and the durable Agent
+review owner by 147 passing cases. Implement the workspace and Process connection next.
 Executor, Workflow and SPA activation remain gated.
 
 ## Ownership and dependency direction

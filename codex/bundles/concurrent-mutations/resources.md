@@ -1129,3 +1129,13 @@ reconciliation found zero surviving observed processes, new database names or re
 temporary entries. Source/runtime identity was unchanged. The 112,113-byte proof is
 retained locally; ownership is `RetainedQualifiedProof`. All historical denied resources
 remain excluded from cleanup.
+
+`c4-manager-review-owner` ownership was recorded before creation for durable choice,
+replay and enlisted current-manager checks. It selects 147 cases in ten lanes, with
+the 26 new Core owner cases as the positive gate. It reuses the same PostgreSQL server,
+declared file fixture families and standard Release outputs. No new server or host is
+provisioned. All 147 cases passed, with all ten commands covered by observation.
+Final reconciliation found zero surviving observed processes, new database names or
+retained temporary entries. Source/runtime identities remained unchanged. The
+267,684-byte proof is retained locally; ownership is `RetainedQualifiedProof`.
+All earlier denied resources remain baseline-only.

@@ -33,9 +33,10 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
     internal AgentToolAdmissionJournal NewJournal(FileSandboxWorkspaceStore? store = null)
         => new(store ?? Files.NewStore(), Files.Profile, Clock, backgroundSources: [Policy]);
 
-    internal static Task<AgentInheritedPlanningFixture> CreateForPublicationAsync(WorkspaceScopeDescriptor? contextScope = null) {
+    internal static Task<AgentInheritedPlanningFixture> CreateForPublicationAsync(WorkspaceScopeDescriptor? contextScope = null,
+        ReadBasisMode parentMode = ReadBasisMode.StepSnapshot) {
         var profile = new AgentToolProfileBinding(Guid.NewGuid(), "inherited-saved-effect-profile", new(1));
-        return CreateAsync(scope: WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")), profile: profile,
+        return CreateAsync(parentMode, scope: WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")), profile: profile,
             contextScope: contextScope,
             configureAgent: agent => agent with {
                 Id = Guid.NewGuid(), Name = "Inherited saved effect fixture", TemplateKey = string.Empty,

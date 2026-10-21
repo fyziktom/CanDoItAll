@@ -33,6 +33,10 @@ public sealed class AgentPlanningLiveWork {
     public AgentInheritedContinuationPurpose RequireInheritedPublicationPurpose(IAgentPlanningPublicationSnapshotLease held,
         AgentToolApprovalBinding binding) => owner.RequireInheritedPublicationPurpose(this, held, binding);
 
+    public Task RequireCurrentManagerPublicationAsync(IAgentPlanningPublicationSnapshotLease held,
+        AgentToolApprovalBinding binding, CancellationToken cancellationToken)
+        => owner.RequireCurrentManagerPublicationAsync(this, held, binding, cancellationToken);
+
     internal TimeSpan RequireMutation(ExecutionRunRecord run, AgentToolApprovalBinding binding)
         => owner.RequireMutation(this, run, binding);
 

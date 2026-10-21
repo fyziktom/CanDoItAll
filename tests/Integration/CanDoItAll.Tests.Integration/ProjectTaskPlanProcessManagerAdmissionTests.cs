@@ -81,8 +81,42 @@ public sealed class ProjectTaskPlanProcessManagerAdmissionTests {
         Assert.Null(child.Settlement);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Current_manager_loss_before_staging_or_after_flush_rolls_back_tasks_and_receipt(bool afterFlush, bool unavailable) {
+        await using var fixture = await ProjectTaskPlanProcessRuntimeFixture.CreateAsync();
+        var waiting = await fixture.PrepareAsync();
+        await WaitForReviewAsync(fixture);
+        var allowed = afterFlush;
+        var flushed = false;
+        fixture.Source.Sql.Faults.Save.AfterFlush = _ => {
+            flushed = true;
+            allowed = false;
+            return Task.CompletedTask;
+        };
+        var result = await fixture.PublishAsync(waiting, Continuation(fixture, waiting, currentManager: token => {
+            token.ThrowIfCancellationRequested();
+            if (!allowed) {
+                if (unavailable) {
+                    throw new AgentToolReceiptReadUnavailableException(new IOException("Manager authority observation unavailable."));
+                }
+                throw new AgentToolReceiptAccessDeniedException();
+            }
+            return Task.CompletedTask;
+        }));
+        Assert.Equal(afterFlush, flushed);
+        Assert.Equal(AgentToolEffectState.NotCommitted, result.EffectState);
+        Assert.Equal(unavailable ? ProjectTaskPlanRefusal.Unavailable : ProjectTaskPlanRefusal.AuthorityDenied,
+            ProjectTaskPlanAgentFixture.Result(result).Refusal);
+        await fixture.Source.Sql.VerifyAsync(0, 0);
+        Assert.Single(fixture.Wire.Requests);
+    }
+
     private static AgentInheritedSavedEffectContinuation Continuation(ProjectTaskPlanProcessRuntimeFixture fixture,
-        ExecutionRunRecord run, bool requireWaiting = true)
+        ExecutionRunRecord run, bool requireWaiting = true, Func<CancellationToken, Task>? currentManager = null)
         => AgentInheritedSavedEffectContinuation.ForManagerReview(run.ToolAdmission!.PlanningDecision!.InheritedOrigin!,
             AgentPlanningDecisionExpectation.From(run), ProjectTaskPlanAgentFixture.Binding(run), async (current, token) => {
                 var parent = fixture.Source.Process.Parent;
@@ -92,7 +126,12 @@ public sealed class ProjectTaskPlanProcessManagerAdmissionTests {
                     requireWaiting && child.Generation.Phase != ProcessDecisionPhase.WaitingForReview) {
                     throw new AgentToolReceiptAccessDeniedException();
                 }
-            });
+            }, currentManager ?? AllowManager);
+
+    private static Task AllowManager(CancellationToken token) {
+        token.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
 
     private static async Task<ProcessRuntimeStateSnapshot> WaitForReviewAsync(ProjectTaskPlanProcessRuntimeFixture fixture) {
         var source = fixture.Source;

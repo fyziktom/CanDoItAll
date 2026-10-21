@@ -68,8 +68,17 @@ internal sealed class ProjectTaskPlanProcessAuthority(ProjectTaskPlanProcessComm
         try {
             await fence.RequireSelectedAsync(parent, original.Target.Source, ProjectTaskPlanProcessContract.Execution,
                 ProjectTaskPlanProcessContract.Content, RequirePublicationKind(), cancellationToken);
+            if (RequirePublicationKind() == ProcessDecisionPublicationKind.ManagerReview) {
+                await work.RequireCurrentManagerPublicationAsync(held, binding, cancellationToken);
+            }
         } catch (ProcessExecutionAuthorityMismatchException) {
             throw new ProjectTaskPlanAuthorityException(ProjectTaskPlanRefusal.SourceChanged);
+        } catch (AgentToolReceiptAccessDeniedException) {
+            throw new ProjectTaskPlanAuthorityException(ProjectTaskPlanRefusal.AuthorityDenied);
+        } catch (AgentToolReceiptReadUnavailableException) {
+            throw new ProjectTaskPlanAuthorityException(ProjectTaskPlanRefusal.Unavailable);
+        } catch (NotSupportedException) {
+            throw new ProjectTaskPlanAuthorityException(ProjectTaskPlanRefusal.Unavailable);
         }
     }
 

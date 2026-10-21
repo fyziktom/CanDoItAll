@@ -58,14 +58,21 @@ public sealed partial class AgentToolAdmissionJournal {
         var original = await RequireSavedRequestAsync(request.ExecutionRunId, request.ChatSessionId,
             request.ExpectedRunRevision, request.ExpectedJournalRevision, cancellationToken, planningExpected, parent);
         await RequireSavedReadAsync(original, currentRead, cancellationToken, parent);
+        if (parent?.ReviewIntent is not null) {
+            await parent.RequireCurrentManagerAsync(cancellationToken);
+        }
         var handle = await leases.AcquireToolDispatchLeaseAsync(request.ExecutionRunId, cancellationToken);
         try {
             await RequireSavedReadAsync(original, currentRead, cancellationToken, parent);
+            if (parent?.ReviewIntent is not null) {
+                await parent.RequireCurrentManagerAsync(cancellationToken);
+            }
             var lease = new AgentToolRunLease(this, original.ToolAdmission!.Session.Reference, Guid.NewGuid(), handle,
                 AgentToolRunLeaseMode.SavedEffectDispatch);
             long started = 0;
-            var saved = await writer.UpdateExecutionRunDetailAsync(request.ExecutionRunId, current => {
+            ExecutionRunDetail Change(ExecutionRunDetail current) {
                 var journal = RequireSavedOriginal(original, current, compareRevision: true, parent);
+                parent?.ReviewIntent?.RequirePending(current);
                 if (planningExpected is not null) {
                     RequirePlanningExpectation(current.Run, planningExpected, inherited: parent is not null);
                 }
@@ -95,7 +102,8 @@ public sealed partial class AgentToolAdmissionJournal {
                     };
                 }
                 var approvals = ExecutionRunStateTransitions.ApplyApprovalDecision(current.Approvals, current.Run,
-                    request.Decisions, now, SavedEffectDecisionSource, current.Run.Id.ToString("D")).RunApprovals;
+                    request.Decisions, now, parent?.ReviewIntent is null ? SavedEffectDecisionSource : AgentPlanningReviewIntent.SourceKind,
+                    parent?.ReviewIntent?.Digest.Value ?? current.Run.Id.ToString("D")).RunApprovals;
                 changed = changed with { Revision = checked(changed.Revision + 1), ActiveDispatchLeaseId = lease.Id };
                 AgentToolJournalTransitions.ValidatePersistence(journal, changed);
                 return current with {
@@ -105,7 +113,10 @@ public sealed partial class AgentToolAdmissionJournal {
                     },
                     Approvals = approvals
                 };
-            }, cancellationToken);
+            }
+            var saved = parent?.ReviewIntent is null
+                ? await writer.UpdateExecutionRunDetailAsync(request.ExecutionRunId, Change, cancellationToken)
+                : await writer.UpdateExecutionRunDetailAsync(request.ExecutionRunId, Change, parent.RequireCurrentManagerAsync, cancellationToken);
             lease.AdmitSavedEffect(this, new(saved.Run with { PendingApprovals = saved.Run.PendingApprovals.ToImmutableArray() },
                 request.Binding, currentRead, parent));
             if (planningOwner is not null) {
@@ -220,35 +231,8 @@ public sealed partial class AgentToolAdmissionJournal {
         return await writer.UpdateExecutionRunDetailAsync(request.ExecutionRunId, current => {
             var journal = RequireSavedOriginal(original, current, compareRevision: true);
             RequireCurrent(journal.Session, new(current.Run, current.ChatSession), AgentToolRunLeaseMode.SavedEffectDispatch);
-            return CancelSavedDetail(current, clock.GetUtcNow());
+            return AgentSavedEffectCancellation.Apply(current, clock.GetUtcNow());
         }, cancellationToken);
-    }
-
-    internal static ExecutionRunDetail CancelSavedDetail(ExecutionRunDetail current, DateTimeOffset now) {
-        var journal = current.Run.ToolAdmission!;
-        var decisions = current.Run.PendingApprovals.Select(item => new PendingToolApprovalDecision(item.ApprovalId, false) {
-            ToolAdmission = item.ToolAdmission
-        }).ToImmutableArray();
-        var approvals = ExecutionRunStateTransitions.ApplyApprovalDecision(current.Approvals, current.Run, decisions,
-            now, AgentPendingApprovalCancellation.Phase, current.Run.Id.ToString("D")).RunApprovals;
-        var changed = AgentToolJournalTransitions.RejectUndispatchedOnCancellation(journal);
-        changed = changed with { Revision = checked(changed.Revision + 1) };
-        AgentToolJournalTransitions.ValidatePersistence(journal, changed);
-        var log = new ExecutionLogEntry(Guid.NewGuid(), current.Run.AgentId, current.Run.ChatSessionId, now,
-            ExecutionState.Failed, AgentPendingApprovalCancellation.Phase, AgentPendingApprovalCancellation.Summary) {
-            ExecutionRunId = current.Run.Id
-        };
-        return current with {
-            Run = current.Run with {
-                ToolAdmission = changed, State = ExecutionState.Failed, Outcome = RunOutcome.Cancelled,
-                PendingApprovals = [], RuntimeSessionKey = string.Empty, SerializedSessionStateJson = null,
-                ResultSummary = AgentPendingApprovalCancellation.Summary, CompletedAtUtc = now,
-                Revision = checked(current.Run.Revision + 1), UpdatedAtUtc = now
-            },
-            Approvals = approvals,
-            ChatSession = current.ChatSession! with { UpdatedAtUtc = now, Compatibility = null },
-            ExecutionLog = [log, .. current.ExecutionLog]
-        };
     }
 
     private async Task<ExecutionRunRecord> RequireSavedRequestAsync(Guid runId, Guid? chatId, long runRevision,
