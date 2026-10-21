@@ -53,12 +53,16 @@ internal sealed record ProcessPlanningReviewApiView(ProcessPlanningChildApiView 
     AgentPlanningPublicationReview? Publication, IReadOnlyList<AgentPlanningReviewChoice> AvailableChoices,
     DecisionDataPolicy ParentPolicy, DecisionDataPolicy ChildPolicy, DateTimeOffset ObservedAtUtc, DateTimeOffset? BasisCapturedAtUtc,
     TimeSpan ChargedWork, TimeSpan? RemainingWork, bool HasUnsettledWork, string? RefusalCode) {
+    public ProcessPlanningReviewApiExpectation? Accounting { get; init; }
+
     internal static ProcessPlanningReviewApiView From(ProjectTaskPlanProcessReview value)
         => new(ProcessPlanningChildApiView.From(value.Run), value.State,
             value.Process is null ? null : ProcessPlanningReviewApiExpectation.From(value.Process), value.Expected,
             value.Publication, value.AvailableChoices, value.Run.ToolAdmission!.PlanningDecision!.InheritedOrigin!.ParentPolicy,
             value.Run.ToolAdmission.PlanningDecision.Policy,
-            value.ObservedAtUtc, value.BasisCapturedAtUtc, value.ChargedWork, value.RemainingWork, value.HasUnsettledWork, value.RefusalCode);
+            value.ObservedAtUtc, value.BasisCapturedAtUtc, value.ChargedWork, value.RemainingWork, value.HasUnsettledWork, value.RefusalCode) {
+                Accounting = value.Accounting is null ? null : ProcessPlanningReviewApiExpectation.From(value.Accounting)
+            };
 }
 
 internal sealed record ProcessPlanningReviewApiResult(Guid ActionId, ProcessPlanningChildApiView Agent, bool Replayed,
@@ -71,7 +75,7 @@ internal sealed record ProcessPlanningReviewApiResult(Guid ActionId, ProcessPlan
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record ProcessPlanningReviewApiSubmission(AgentInheritedPlanningReviewRequest Agent,
     ProcessPlanningReviewApiExpectation Process, AgentExecutionOperationId? ActivityOperationId = null) {
-    internal const int MaximumUtf8Bytes = 24 * 1024;
+    internal const int MaximumUtf8Bytes = ProcessPlanningReviewRequestReader.MaximumUtf8Bytes;
 
     internal ProjectTaskPlanProcessReviewRequest ToDomain(Guid runId, Guid stepInstanceId, Guid executionRunId) {
         ArgumentNullException.ThrowIfNull(Agent);

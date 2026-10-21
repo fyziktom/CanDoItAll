@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-21T20:58:29.767634+00:00",
+  "generated_utc": "2026-10-21T22:55:38.667938+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -59510,6 +59510,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProcessPlanningManagerAuthority.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "0d005c895d695083d86b7d134b2e7f808ee28e43fb56df1c5676f8047782f0c1",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectProcessAssetProposalCodec.cs",
       "category": "case-policy",
       "source_fingerprint": "0653e3fdb539f292918aba5a0bad0c124f68cdeeb5e1522bdefc7f2f35d5e53d",
@@ -59807,12 +59813,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectTaskPlanProcessCodec.cs",
       "category": "case-policy",
       "source_fingerprint": "42f97ae4c532222ef78a674caa1828842461d1e5eda73976eba13afd20b59946",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectTaskPlanProcessReviewService.cs",
-      "category": "link-reparse",
-      "source_fingerprint": "de36a880b589ade660a4b1a101fb96713c512f71840e43b907b1d46b74238a24",
       "count": 1
     },
     {

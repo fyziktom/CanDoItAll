@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -163,6 +164,42 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
         Assert.Equal(TimeSpan.FromSeconds(3).Ticks, closed.ToolAdmission!.PlanningDecision!.Work.ClosedWorkTicks);
         Assert.Single(Entry.Wire.Requests);
         await Entry.Files.Sql.VerifyAsync(1, 1);
+    }
+
+    internal async Task<ProcessPlanningManagerAuthority> ManagerAsync()
+        => new(await Services.GetRequiredService<ProjectProcessLaunchAuthorityService>()
+            .CaptureLocalAsync(null, ProcessLaunchOperatorSurface.UserInterface), null, new ManagerAccess(this));
+
+    internal async Task<ExecutionRunRecord> CloseWithoutAccountingAsync(AgentPlanningReviewChoice choice) {
+        var action = Guid.NewGuid();
+        ProjectTaskPlanProcessReviewRequest request = new(new(action, choice, AgentPlanningDecisionExpectation.From(Waiting),
+            ProjectTaskPlanAgentFixture.Binding(Waiting), Assert.Single(Waiting.PendingApprovals).ApprovalId),
+            Request with { CompletionKey = new(action) });
+        var service = ActivatorUtilities.CreateInstance<ProjectTaskPlanProcessReviewService>(Services, Coordinator(new RefusedAccounting()));
+        var reviewed = await service.ReviewAsync(request, await ManagerAsync(), AgentExecutionOperationId.New());
+        Assert.False(reviewed.Completion.Succeeded);
+        Assert.Equal(choice == AgentPlanningReviewChoice.Approve ? RunOutcome.Succeeded : RunOutcome.Cancelled, reviewed.Agent.Run.Outcome);
+        Assert.Null(reviewed.Agent.Run.ToolAdmission!.PlanningDecision!.Work.Open);
+        Assert.Single(Entry.Wire.Requests);
+        await Entry.Files.Sql.VerifyAsync(choice == AgentPlanningReviewChoice.Approve ? 1 : 0, choice == AgentPlanningReviewChoice.Approve ? 1 : 0);
+        return reviewed.Agent.Run;
+    }
+
+    private sealed class ManagerAccess(ProjectTaskPlanReviewFixture fixture) : IProjectDefinitionCurrentWriteAccess {
+        public ValueTask<ProjectDefinitionWriteAccessDecision> ObserveAsync(CancellationToken cancellationToken) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(fixture.ManagerAllowed ? ProjectDefinitionWriteAccessDecision.Allowed : ProjectDefinitionWriteAccessDecision.Denied);
+        }
+    }
+
+    private sealed class RefusedAccounting : IProcessRuntimeUnitOfWork {
+        public Task<ProcessRuntimeCommitResult> CommitAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) {
+            cancellationToken.ThrowIfCancellationRequested();
+            Assert.IsType<ProcessDecisionClosure>(request.Decision);
+            Assert.IsType<ProcessDecisionBudgetSettlement>(request.DecisionBudget);
+            return Task.FromResult(ProcessRuntimeCommitResult.FromMutation(ProcessRuntimeMutation.Rejected(request.OriginalState,
+                "Runtime.AccountingFixturePaused", "The original accounting completion is interrupted.")));
+        }
     }
 
     public async ValueTask DisposeAsync() {

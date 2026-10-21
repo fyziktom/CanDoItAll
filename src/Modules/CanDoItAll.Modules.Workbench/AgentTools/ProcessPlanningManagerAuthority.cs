@@ -1,7 +1,9 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 
@@ -38,6 +40,7 @@ public sealed class ProcessPlanningManagerAuthority {
     internal ProcessEventActor Actor { get; }
 
     internal async Task RequireCurrentAsync(CancellationToken cancellationToken) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("process.planning.manager.observe");
         cancellationToken.ThrowIfCancellationRequested();
         var decision = await currentWrite.ObserveAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -52,6 +55,27 @@ public sealed class ProcessPlanningManagerAuthority {
                 throw new AgentToolReceiptAccessDeniedException();
             default:
                 throw new InvalidOperationException("The manager authority observer returned an unsupported decision.");
+        }
+    }
+
+    internal async Task RequireCurrentAsync(AgentToolProfileBinding original, ICanonicalRuntimeDatabase database,
+        IAgentExecutionProfileGenerationSource generations, IProcessLaunchAuthorityLease authority, CancellationToken cancellationToken) {
+        RequireProfile();
+        await RequireCurrentAsync(cancellationToken);
+        try {
+            using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("process.planning.source.observe");
+            await authority.RequireForMutationAsync(linkTarget: null, cancellationToken);
+        } catch (ProcessLaunchAuthorityRejectedException) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        RequireProfile();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        void RequireProfile() {
+            if (Original.DatabaseProfileId != original.ProfileId || database.Profile.Profile.Id != original.ProfileId ||
+                    database.Profile.Profile.Runtime.Fingerprint != original.Fingerprint || generations.GetGeneration() != original.Generation) {
+                throw new AgentToolReceiptAccessDeniedException();
+            }
         }
     }
 }

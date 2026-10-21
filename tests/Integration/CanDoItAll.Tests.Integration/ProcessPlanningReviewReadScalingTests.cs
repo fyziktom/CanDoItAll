@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -53,6 +54,12 @@ public sealed class ProcessPlanningReviewReadScalingTests(ITestOutputHelper outp
         var route = $"/api/processes/runs/{fixture.State.RunId.Value:D}/steps/{fixture.Request.Child.StepInstanceId.Value:D}/planning/{fixture.Waiting.Id:D}/review";
         await using var host = await ApiTestHost.CreateAsync(true, services => {
             services.AddSingleton<TimeProvider>(fixture.Clock);
+            var review = services.Last(item => item.ServiceType == typeof(ProjectTaskPlanProcessReviewReader));
+            Assert.NotNull(review.ImplementationType);
+            services.AddScoped<ProjectTaskPlanProcessReviewReader>(provider => {
+                using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("process.planning.review.resolve");
+                return (ProjectTaskPlanProcessReviewReader)ActivatorUtilities.CreateInstance(provider, review.ImplementationType);
+            });
             services.Configure<ProcessRuntimeDispatchQueueOptions>(options => options.EnableRecovery = false);
             services.ConfigureDbContext<ProcessPersistenceDbContext>((_, options) => options.AddInterceptors(probe));
             var factory = services.Last(item => item.ServiceType == typeof(ICanDoItAllAgentWorkspaceFactory));

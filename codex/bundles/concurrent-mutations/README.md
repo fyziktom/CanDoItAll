@@ -4,14 +4,23 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest checkpoint: [scoped catalog normalization](validation/2026-10-21-scoped-catalog-normalization.md).
+Latest qualified checkpoint: [closed-child accounting recovery](validation/2026-10-21-closed-child-accounting.md).
+All 134 selected cases pass (131 correctness/compatibility and three diagnostic profiles),
+including all 55 new cases. Lost original approval requests can be recovered without
+another Agent/provider/effect operation. Source/runtime identity, full portability and
+all 12 observed commands pass with zero new resource deltas. The retained initial
+parser assertion failure required only a test correction. Current read profiles still
+exceed one second in two samples; construction and manager checks are not dominant.
+Parent stop/refresh, database/Agent read diagnosis and producer activation remain next.
+
+Preceding checkpoint: [scoped catalog normalization](validation/2026-10-21-scoped-catalog-normalization.md).
 Bounded current-input reuse reduces median measured process allocation from about
 79–81 MB to 43–46 MB. All 192 preceding correctness cases pass; across unchanged
 source, the four approval/restart cases now pass under bounded request diagnostics.
 Earlier approval timeouts remain evidence. The measured six-shape read repeat still
 fails StepSnapshot/1024 at 1.25 seconds with low observed host CPU. Existing tracing
 shows only 18–43 ms in catalog comparisons; seed construction/input validation
-also account for only 58–105 ms. Request construction/current authority are next. Failed attempts and all samples remain
+also account for only 58–105 ms. P10 subsequently measured construction/current authority. Failed attempts and all samples remain
 retained. Downstream activation and complete E2E closure remain open.
 
 Latest fully qualified prerequisite: [Process planning review HTTP](validation/2026-10-21-process-review-http.md).

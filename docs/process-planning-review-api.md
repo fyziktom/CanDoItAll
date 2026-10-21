@@ -19,7 +19,7 @@ decision. Its states mean:
 | State | Meaning |
 | --- | --- |
 | `AwaitingChoice` | The displayed original proposal has an available manager choice. POST independently rechecks it. |
-| `RecoveryRequired` | Accepted or unresolved work cannot be offered as a new approval. Retain the original request. |
+| `RecoveryRequired` | Accepted or unresolved work cannot be offered as a new approval. A separate `accounting` expectation is present only when verified closed work can be settled. |
 | `Settled` | Child work is accounted for and a terminal result is observed in the original Process runtime. |
 | `Unavailable` | The original Process no longer admits that displayed review selection. |
 
@@ -45,8 +45,26 @@ An uncertain acknowledgement or access refusal does not prove that publication
 failed. Preserve the exact request and use it for recovery; never create another
 action to repeat the effect. Exact retry reads retained intent and evidence without
 another provider call or publication. Missing evidence can keep recovery pending.
-If the original request is lost, explicit Process accounting reconciliation is
-required; the intent digest cannot reconstruct it.
+If the original approval request is lost, its digest cannot reconstruct it. Reload
+GET. When `state` is `RecoveryRequired` and `accounting` is present, the child is
+closed and the original Process still admits accounting. Retain a new request with
+`actionId`, the displayed Agent `expected`, and the displayed `accounting` copied
+into `process`. POST it to the same route with `/accounting` appended. The same
+current grants and strict body rules apply.
+
+The accounting action only settles verified original work, decision closure and
+runtime outcome in one Process transaction. It does not approve a proposal, invoke
+a provider, publish a Project effect or change the Agent record. Open work,
+unresolved effects, stale expectations and cancelling/terminal parents cannot be
+made eligible by submitting this action. The absence of `accounting` requires
+recovery of the original owner state; do not fabricate an expectation or approval.
+
+An uncertain accounting response requires the exact retained accounting request,
+including its action ID. `completion` reports the Process transition: `Applied`
+and `Duplicate` confirm that action. A refused competing action must reload current
+state; another action may already have settled it. Refusal does not prove that work
+is still pending. The compact response includes `refusalCodes` and always requests
+a runtime reload. It contains no Agent-approval replay flag.
 
 Results always set `requiresRuntimeReload=true`. Process command replay retains
 original decision/budget receipts but reloads runtime state. Neither an old response

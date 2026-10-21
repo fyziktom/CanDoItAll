@@ -1,15 +1,23 @@
 # Execution plan
 
+The [closed-child accounting checkpoint](../validation/2026-10-21-closed-child-accounting.md)
+qualifies P10 with 134 passing cases, complete identity/static/resource proof and the
+initial test-only failure retained. Continue with separately designed terminal/parent
+accounting, owner stop and snapshot refresh. Current measurements rule out DI and
+manager checks as dominant read costs; measure inherited Agent/read stages and database
+connection opening next. Keep finite/sustained capacity and producer activation gated.
+SPA remains on its existing branch for colleague consultation.
+
 The [scoped catalog normalization checkpoint](../validation/2026-10-21-scoped-catalog-normalization.md)
 reduces median measured allocation to 43–46 MB. All four actual HTTP approval/restart
 cases pass in the measured diagnostic; earlier timeouts remain recorded. A six-shape
 read repeat still fails StepSnapshot/1024 at 1.25 seconds. All 192 preceding correctness
 cases pass. Existing request spans attribute only 18–43 ms to catalog comparisons;
-seed construction/validation also account for only 58–105 ms. Retain those checks
-and inspect request construction/current authority in the independent accounting slice. Keep the
+seed construction/validation also account for only 58–105 ms. P10 retains those checks
+and measures request construction/current authority without weakening them. Keep the
 original acceptance bounds and gate executor activation, Workflow/settings/UI and
-broad closure. The reviewed accounting action can be developed independently once
-this diagnostic is retained; it does not establish capacity or enable producers.
+broad closure. The independent accounting action now qualifies as recorded above;
+it does not establish capacity or enable producers.
 Parent cancellation and refresh need their own reviewed transitions. SPA stays separate.
 
 The [Core startup accounting scope](../validation/2026-10-20-inherited-startup-accounting.md)

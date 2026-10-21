@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
@@ -35,11 +34,22 @@ internal static class ProcessPlanningReviewApi {
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden,
                 StatusCodes.Status409Conflict, StatusCodes.Status413PayloadTooLarge, StatusCodes.Status415UnsupportedMediaType,
                 StatusCodes.Status503ServiceUnavailable);
+        processes.MapPost(Route + "/accounting", ReconcileAsync)
+            .WithName("ReconcileProcessPlanningAccounting")
+            .WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
+            .WithSummary("Settle Process accounting for a verified completed original Agent child.")
+            .WithDescription("Retain the complete accounting request and action ID before sending. This action cannot approve or republish an effect. Requires the same Process, Agent and Project grants as review. The body is limited to 24576 UTF-8 bytes.")
+            .Accepts<ProcessPlanningAccountingApiSubmission>("application/json")
+            .Produces<ProcessPlanningAccountingApiResult>()
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden,
+                StatusCodes.Status409Conflict, StatusCodes.Status413PayloadTooLarge, StatusCodes.Status415UnsupportedMediaType,
+                StatusCodes.Status503ServiceUnavailable);
     }
 
     internal static async Task<IResult> ReadAsync(Guid runId, Guid stepInstanceId, Guid executionRunId, HttpContext context,
         ProcessPlanningReviewHttpAccess access, ProjectTaskPlanProcessReviewReader reader, ILoggerFactory logs,
         CancellationToken cancellationToken) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("process.planning.review.http");
         context.Response.Headers.CacheControl = "no-store";
         if (runId == Guid.Empty || stepInstanceId == Guid.Empty || executionRunId == Guid.Empty) {
             return Invalid(StatusCodes.Status400BadRequest);
@@ -62,25 +72,11 @@ internal static class ProcessPlanningReviewApi {
         ProcessPlanningReviewApiSubmission submission;
         ProjectTaskPlanProcessReviewRequest request;
         try {
-            if (!context.Request.HasJsonContentType()) {
-                return Invalid(StatusCodes.Status415UnsupportedMediaType);
-            }
-            if (context.Request.ContentLength > ProcessPlanningReviewApiSubmission.MaximumUtf8Bytes) {
-                return Invalid(StatusCodes.Status413PayloadTooLarge);
-            }
-            var bytes = new byte[ProcessPlanningReviewApiSubmission.MaximumUtf8Bytes + 1];
-            var length = await context.Request.Body.ReadAtLeastAsync(bytes, bytes.Length, throwOnEndOfStream: false, cancellationToken);
-            if (length > ProcessPlanningReviewApiSubmission.MaximumUtf8Bytes) {
-                return Invalid(StatusCodes.Status413PayloadTooLarge);
-            }
-            using var document = JsonDocument.Parse(bytes.AsMemory(0, length), new() { MaxDepth = 16 });
-            AgentApiRequestValidation.RequireUniqueMembers(document.RootElement);
-            var json = new JsonSerializerOptions(options.Value.SerializerOptions) {
-                PropertyNameCaseInsensitive = false, MaxDepth = 16, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-                RespectRequiredConstructorParameters = true, RespectNullableAnnotations = true
-            };
-            submission = document.Deserialize<ProcessPlanningReviewApiSubmission>(json) ?? throw new JsonException("A review request is required.");
+            submission = await ProcessPlanningReviewRequestReader.ReadAsync<ProcessPlanningReviewApiSubmission>(
+                context.Request, options.Value.SerializerOptions, cancellationToken);
             request = submission.ToDomain(runId, stepInstanceId, executionRunId);
+        } catch (BadHttpRequestException exception) {
+            return Invalid(exception.StatusCode);
         } catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidDataException) {
             return Invalid(StatusCodes.Status400BadRequest);
         }
@@ -95,6 +91,30 @@ internal static class ProcessPlanningReviewApi {
             throw;
         } catch (Exception exception) when (exception is not OutOfMemoryException) {
             return Failure(context, logs, exception, executionRunId, request.Agent.ActionId);
+        }
+    }
+
+    internal static async Task<IResult> ReconcileAsync(Guid runId, Guid stepInstanceId, Guid executionRunId, HttpContext context,
+        IOptions<JsonOptions> options, ProcessPlanningReviewHttpAccess access, ProjectTaskPlanProcessReconciliationService accounting,
+        ILoggerFactory logs, CancellationToken cancellationToken) {
+        context.Response.Headers.CacheControl = "no-store";
+        ProjectTaskPlanProcessReconciliationRequest request;
+        try {
+            var submission = await ProcessPlanningReviewRequestReader.ReadAsync<ProcessPlanningAccountingApiSubmission>(
+                context.Request, options.Value.SerializerOptions, cancellationToken);
+            request = submission.ToDomain(runId, stepInstanceId, executionRunId);
+        } catch (BadHttpRequestException exception) {
+            return Invalid(exception.StatusCode);
+        } catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidDataException) {
+            return Invalid(StatusCodes.Status400BadRequest);
+        }
+        try {
+            var manager = await access.CaptureAsync(context, cancellationToken);
+            return Results.Ok(ProcessPlanningAccountingApiResult.From(await accounting.ReconcileAsync(request, manager, cancellationToken)));
+        } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        } catch (Exception exception) when (exception is not OutOfMemoryException) {
+            return Failure(context, logs, exception, executionRunId, request.Process.CompletionKey.Value);
         }
     }
 

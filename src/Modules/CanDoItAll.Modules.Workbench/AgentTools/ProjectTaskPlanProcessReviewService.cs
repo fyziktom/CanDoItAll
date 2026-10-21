@@ -67,24 +67,8 @@ public sealed class ProjectTaskPlanProcessReviewService(IAgentFrameworkWorkspace
             => await states.LoadAsync(request.Process.Child.RunId, token)
                 ?? throw new InvalidDataException("The original Process runtime state is unavailable.");
 
-        void RequireProfile() {
-            if (manager.Original.DatabaseProfileId != origin.Profile.ProfileId || database.Profile.Profile.Id != origin.Profile.ProfileId ||
-                    database.Profile.Profile.Runtime.Fingerprint != origin.Profile.Fingerprint || generations.GetGeneration() != origin.Profile.Generation) {
-                throw new AgentToolReceiptAccessDeniedException();
-            }
-        }
-
-        async Task RequireManagerAsync(CancellationToken token) {
-            RequireProfile();
-            await manager.RequireCurrentAsync(token);
-            try {
-                await authority.RequireForMutationAsync(linkTarget: null, token);
-            } catch (ProcessLaunchAuthorityRejectedException) {
-                throw new AgentToolReceiptAccessDeniedException();
-            }
-            RequireProfile();
-            token.ThrowIfCancellationRequested();
-        }
+        Task RequireManagerAsync(CancellationToken token)
+            => manager.RequireCurrentAsync(origin.Profile, database, generations, authority, token);
     }
 
     internal static AgentToolSemanticDigest ComputeIntent(ProcessDecisionReviewRequest process,

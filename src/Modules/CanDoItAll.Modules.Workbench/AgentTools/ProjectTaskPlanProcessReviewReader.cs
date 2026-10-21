@@ -14,7 +14,9 @@ public sealed record ProjectTaskPlanProcessReview(ExecutionRunRecord Run, Proces
     ProcessDecisionPendingReview? Process, AgentPlanningDecisionExpectation Expected,
     AgentPlanningPublicationReview? Publication, ImmutableArray<AgentPlanningReviewChoice> AvailableChoices,
     DateTimeOffset ObservedAtUtc, DateTimeOffset? BasisCapturedAtUtc, TimeSpan ChargedWork,
-    TimeSpan? RemainingWork, bool HasUnsettledWork, string? RefusalCode);
+    TimeSpan? RemainingWork, bool HasUnsettledWork, string? RefusalCode) {
+    public ProcessDecisionPendingReview? Accounting { get; init; }
+}
 
 public sealed class ProjectTaskPlanProcessReviewReader(AgentInheritedPlanningRunReader runs,
     IProcessRuntimeStateStore states, ProcessDecisionReviewCoordinator reviews, ProjectProcessLaunchAuthorityService sources,
@@ -23,6 +25,7 @@ public sealed class ProjectTaskPlanProcessReviewReader(AgentInheritedPlanningRun
 
     public async Task<ProjectTaskPlanProcessReview> ReadAsync(ProcessRunId runId, ProcessStepInstanceId stepId, Guid executionRunId,
         ProcessPlanningManagerAuthority manager, CancellationToken cancellationToken = default) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("process.planning.review.read");
         ArgumentNullException.ThrowIfNull(manager);
         ArgumentOutOfRangeException.ThrowIfEqual(runId.Value, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(stepId.Value, Guid.Empty);
@@ -85,24 +88,11 @@ public sealed class ProjectTaskPlanProcessReviewReader(AgentInheritedPlanningRun
         if (current.Run.Revision != run.Revision) {
             throw new AgentToolAdmissionException(ObservationChangedCode, "The original child changed while its review was read.");
         }
-        RequireProfile();
-        await manager.RequireCurrentAsync(cancellationToken);
-        try {
-            await authority.RequireForMutationAsync(null, cancellationToken);
-        } catch (ProcessLaunchAuthorityRejectedException) {
-            throw new AgentToolReceiptAccessDeniedException();
-        }
-        RequireProfile();
-        cancellationToken.ThrowIfCancellationRequested();
+        await manager.RequireCurrentAsync(origin.Profile, database, generations, authority, cancellationToken);
+        var accounting = status == ProcessPlanningReviewState.RecoveryRequired && observed.Pending is not null &&
+            ProjectTaskPlanProcessOutcome.Read(run, original).Outcome is ProcessDecisionChildResult.Closed ? observed.Pending : null;
         return new(run, status, status == ProcessPlanningReviewState.AwaitingChoice ? observed.Pending : null,
             AgentPlanningDecisionExpectation.From(run), publication, [.. choices], now, basis?.CapturedAtUtc,
-            TimeSpan.FromTicks(decision.Work.ClosedWorkTicks), remaining, unsettled, observed.Refusal?.Code);
-
-        void RequireProfile() {
-            if (manager.Original.DatabaseProfileId != origin.Profile.ProfileId || database.Profile.Profile.Id != origin.Profile.ProfileId ||
-                    database.Profile.Profile.Runtime.Fingerprint != origin.Profile.Fingerprint || generations.GetGeneration() != origin.Profile.Generation) {
-                throw new AgentToolReceiptAccessDeniedException();
-            }
-        }
+            TimeSpan.FromTicks(decision.Work.ClosedWorkTicks), remaining, unsettled, observed.Refusal?.Code) { Accounting = accounting };
     }
 }

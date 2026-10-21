@@ -1,11 +1,20 @@
 # Requirements and closure ledger
 
+The [closed-child accounting checkpoint](validation/2026-10-21-closed-child-accounting.md)
+qualifies recovery after loss of an original approval request, with 131 correctness
+cases and three diagnostic profiles passing. Exact work and receipts settle through
+the existing Process owner without another Agent mutation or business effect. The
+initial assertion failure and full corrected proof remain retained. Current profiles
+still exceed the finite latency limit in two samples; parent cancellation/refresh,
+producer/Workflow/settings integration, remaining writer waves and broad closure remain
+open. R1/R4/R5/R6 are not declared complete by this checkpoint.
+
 The [scoped catalog normalization checkpoint](validation/2026-10-21-scoped-catalog-normalization.md)
 implements bounded current-input reuse without caching authorization. Median measured
 allocation falls to 43–46 MB. Four actual-host approval/restart cases pass in the
 bounded diagnostic after earlier timeouts. The measured read repeat still fails one
 latency shape. Seed measurements exclude that work as the dominant remaining cost;
-request construction and current-authority work are the next diagnostic boundary. All 192
+P10 subsequently measures request construction and current manager authority. All 192
 preceding correctness passes, failed attempts, exact source/runtime identity and clean
 new fixture deltas are retained. R1/R4/R5/R6 and downstream activation remain open.
 
