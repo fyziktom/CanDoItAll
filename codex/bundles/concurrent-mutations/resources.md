@@ -813,7 +813,7 @@ The initial and repaired c4-selected-publication-fence roots recorded ownership 
 
 The [enlisted task publication checkpoint](validation/2026-10-20-enlisted-task-publication.md) passes all 72 correctness cases, including real Process expiry before staging and after flush. Its one-second selected-guard performance reference failed for two writers (1006.85 and 1066.32 ms); current responsiveness is reopened and is not a green gate. Inherited producer/continuation and wider capacity remain open.
 
-The [workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67–670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
+The [workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67â€“670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
 
 ## Live-parent saved-effect continuation checkpoint
 
@@ -1084,7 +1084,7 @@ The deadline left the following exact resources, linked by the interrupted test'
 - Temporary workspace
   `C:\Users\lucys\AppData\Local\Temp\process-reviewed-completion\6ea9ebeae3b74434ab0dfcda9483bd27`.
 
-Automatic approval review rejected their removal with “blocked by policy” before
+Automatic approval review rejected their removal with â€śblocked by policyâ€ť before
 execution. The exact record is `c4-process-review-completion/interrupted-fixture-cleanup-blocked.json`;
 the immutable failed proof retains it. No alternative deletion was attempted. Observed
 processes are gone and the database has no active connections. These resources need
@@ -1193,7 +1193,7 @@ reported; three cases were unstarted. Source/runtime identity and all four comma
 observation windows passed. The crash-owned database
 `cditall_primary_40a332c695a94161a74b78718c28b907` and workspace
 `C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\069475322dcc45a2816c596f2d8beb24`
-remain: automatic approval review rejected the exact removal with “blocked by policy.”
+remain: automatic approval review rejected the exact removal with â€śblocked by policy.â€ť
 Ownership was proven from original run metadata and the recorded isolated server;
 no alternative cleanup will be attempted.
 
@@ -1280,3 +1280,41 @@ frozen documentation manifest was refused by its exclusive-write helper; the
 original manifest stayed intact and the exact source bytes were restored before
 execution. The extra EOF blank line is corrected with these post-run documents.
 The immutable candidate and explicit documentation-only bridge preserve provenance.
+
+## Scoped catalog normalization continuation, 2026-10-21
+
+The next owned evidence directory is
+`.artifacts/concurrent-mutations/validation/c4-scoped-catalog-normalization`.
+Its adjacent ownership record precedes creation. It reuses standard Release outputs,
+the existing isolated PostgreSQL server and the existing observation/deadline helpers.
+The new file fixtures use the `catalog-normalization` family and dispose their own
+unique roots. Existing seed, catalog lease and template-pack test families are added
+to the observer's source-derived inventory before execution. Historical denied
+cleanup targets and the ordinary application remain outside this continuation's scope.
+This directory is retained until its tests, cost comparison and reconciliation close.
+
+The initial P09 candidate retains 194 passes / two HTTP deadline failures with twelve
+unstarted cases. Its 428,752-byte proof is `3084E2B8273B96DD89779FDF19E4F29CE23DF67025AEBDA8E3A95F539446F942`.
+The observer covers 17 commands with zero new surviving process, database-name or
+temporary deltas. External CPU saturation was observed, not treated as a waived failure.
+
+Owned repeat `c4-scoped-catalog-normalization-http` retains three HTTP passes and
+one StepSnapshot approval timeout; twelve later cases did not start. Its 43,146-byte
+proof is `4CBDDBFCC39405C8317526FB56B64AD3ECD347B09D70F93DD3EF9D7FE926B85C`.
+The corrected observer covers the test command and reconciles zero new deltas. Its
+ownership sidecar originally used `path`; retained creation-time evidence proves
+ownership preceded creation, and `root` was added before the successful observer.
+
+Owned diagnostic successor `c4-scoped-catalog-normalization-cost` executes all twelve
+unstarted cases: eleven pass, one unchanged latency shape fails. All 51 setup/sample
+rows are retained in its 78,663-byte proof, `E471A4ADE383BCC09AF286332E42B9B13A2579B6871602530D0D6CAA6CA8F14C`.
+Its 383.34-second observer covers four test commands, with zero new surviving process,
+database-name or temporary deltas. A duplicate deadline type prevented its first
+observer launch before child creation; fresh-process retry reused the same baseline.
+All three candidates verify identical source/runtime manifests after execution.
+Ownership is retained failed proof; no new server or custom outputs were created.
+
+The existing owned `c4-accounting-recovery` directory holds unapplied P10 source/design
+and a small P09 request-diagnostic/document draft. These are preparation only, not
+compiled product or successful proof. Historical cleanup-denied resources remain
+untouched and all later candidates reuse the isolated PostgreSQL server.

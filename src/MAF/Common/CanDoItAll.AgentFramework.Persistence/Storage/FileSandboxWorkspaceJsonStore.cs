@@ -123,6 +123,9 @@ internal sealed class FileSandboxWorkspaceJsonStore
     public async Task<T?> ReadJsonAsync<T>(string fullPath, CancellationToken cancellationToken)
         => await ReadJsonAsync<T>(fullPath, cancellationToken, readPolicy: null);
 
+    internal bool CanRetainCatalogSnapshot(SandboxWorkspaceCatalog value)
+        => snapshots.IsRetained(value, FileSandboxWorkspaceCatalogNormalizer.MaximumEstimatedMemoBytes);
+
     internal async Task<FileSandboxWorkspaceRunReadSnapshot?> ReadRunSnapshotAsync(
         string fullPath, CancellationToken cancellationToken) {
         FileSandboxWorkspaceRunReadSnapshot? snapshot = null;

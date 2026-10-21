@@ -32,12 +32,14 @@ internal static class SandboxWorkspaceSeedNormalizer
     }
 
     internal static SandboxWorkspaceCatalog NormalizeCatalog(SandboxWorkspaceCatalog catalog)
+        => NormalizeCatalog(catalog, SandboxWorkspaceSeedFactory.Create());
+
+    internal static SandboxWorkspaceCatalog NormalizeCatalog(SandboxWorkspaceCatalog catalog, SandboxWorkspaceDocument seeded)
     {
         var previousAgents = catalog.Agents.GroupBy(agent => agent.Id).ToDictionary(group => group.Key, group => {
             var latest = group.MaxBy(agent => agent.UpdatedAtUtc)!;
             return (Revision: latest.UpdatedAtUtc, Fingerprint: AgentConfigurationVersion.Create(latest));
         });
-        var seeded = SandboxWorkspaceSeedFactory.Create();
         var providers = MergeProviders(catalog.Providers, seeded.Providers);
         var capabilities = MergeCapabilities(catalog.Capabilities, seeded.Capabilities);
         var ordinaryAgents = catalog.Agents.Select(agent => agent with {

@@ -26,6 +26,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly FileSandboxWorkspaceStorageLayout layout;
     private readonly FileSandboxWorkspaceJsonStore jsonStore;
+    private readonly FileSandboxWorkspaceCatalogNormalizer catalogNormalizer;
     private readonly FileSandboxWorkspaceExecutionSliceStore executionSliceStore;
     private readonly FileSandboxWorkspaceChatProjectionStore chatProjectionStore;
     private readonly FileSandboxWorkspaceCrossProcessLock crossProcessLock;
@@ -112,6 +113,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             durableFileWriter,
             layout.RootPath,
             new FileProviderHistoryJournal(layout, historyCommitBoundary));
+        catalogNormalizer = new(jsonStore.RequiresSave, jsonStore.CanRetainCatalogSnapshot);
         executionSliceStore = new FileSandboxWorkspaceExecutionSliceStore(layout, jsonStore);
         jsonStore.UsageIndex = new FileProviderUsageIndex(layout, jsonStore);
         chatProjectionStore = new FileSandboxWorkspaceChatProjectionStore(layout, jsonStore);
@@ -1650,9 +1652,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task<SandboxWorkspaceCatalog> LoadCatalogWithoutWorkspaceLockAsync(CancellationToken cancellationToken)
     {
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
-        var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
-        if (catalog.CatalogDataRevision.IsAssigned &&
-            !CatalogPayloadRequiresSave(catalog, normalizedCatalog))
+        if (catalogNormalizer.TryNormalizeUnchanged(catalog, out var normalizedCatalog))
         {
             return normalizedCatalog;
         }
@@ -1663,11 +1663,10 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task<SandboxWorkspaceCatalog> LoadNormalizedCatalogCoreAsync(FileSandboxWorkspacePublicationScope operation, CancellationToken cancellationToken)
     {
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
-        var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
         var catalogSave = await SaveCatalogCoreAsync(operation,
             catalog,
             File.Exists(layout.CatalogPath),
-            normalizedCatalog,
+            catalog,
             cancellationToken);
         if (catalogSave.Changed)
         {
@@ -1767,7 +1766,8 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task<CatalogSaveResult> PrepareCatalogCoreAsync(SandboxWorkspaceCatalog currentCatalog,
         bool catalogExists, SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken,
         AgentPolicyPublication? policyPublication = null) {
-        var normalizedCatalog = FileSandboxWorkspacePreparedValues.Freeze(SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog));
+        _ = catalogNormalizer.TryNormalizeUnchanged(catalog, out var normalized);
+        var normalizedCatalog = FileSandboxWorkspacePreparedValues.Freeze(normalized);
         if (catalogMutationPolicy is not null) {
             normalizedCatalog = await catalogMutationPolicy.ApplyAsync(
                 FileSandboxWorkspacePreparedValues.Freeze(currentCatalog), normalizedCatalog, cancellationToken);
@@ -1782,7 +1782,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             normalizedCatalog = policyPublication.Apply(normalizedCatalog);
         }
         var payloadChanged = !catalogExists ||
-                             CatalogPayloadRequiresSave(currentCatalog, normalizedCatalog);
+                             catalogNormalizer.RequiresSave(currentCatalog, normalizedCatalog);
         var revision = currentCatalog.CatalogDataRevision.IsAssigned
             ? payloadChanged
                 ? currentCatalog.CatalogDataRevision.Next()
@@ -1795,21 +1795,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         var changed = !catalogExists ||
                       jsonStore.RequiresSave(currentCatalog, savedCatalog);
         return new CatalogSaveResult(savedCatalog, changed);
-    }
-
-    private bool CatalogPayloadRequiresSave(
-        SandboxWorkspaceCatalog currentCatalog,
-        SandboxWorkspaceCatalog candidateCatalog)
-    {
-        return jsonStore.RequiresSave(
-            currentCatalog with
-            {
-                CatalogDataRevision = CatalogDataRevision.Unassigned
-            },
-            candidateCatalog with
-            {
-                CatalogDataRevision = CatalogDataRevision.Unassigned
-            });
     }
 
     private async Task<bool> SaveExecutionCoreAsync(FileSandboxWorkspacePublicationScope operation,

@@ -1,11 +1,12 @@
 # Execution plan
 
-The [review read boundary and isolated cost checkpoint](../validation/2026-10-21-review-read-boundary.md)
-passes 67 correctness cases, but all six corrected HTTP cost shapes still exceed
-one second and allocate about 79–81 MB. Three component diagnostics identify repeated
-catalog normalization, including seed construction. Proceed with a bounded current-input
-reuse design and matched capacity proof before parent recovery/refresh/cancel,
-executor activation, Workflow/settings/UI and broad closure. SPA stays separate.
+The [scoped catalog normalization checkpoint](../validation/2026-10-21-scoped-catalog-normalization.md)
+reduces median measured allocation to 43–46 MB and passes five of six isolated
+latency shapes. The 128-step RunSnapshot tail and a 30-second actual-host approval
+timeout remain failures. All 192 preceding correctness cases pass. Retain the failed
+attempts, diagnose the selected POST through bounded existing telemetry, and qualify
+both original limits before parent recovery/refresh/cancel, executor activation,
+Workflow/settings/UI and broad closure. SPA stays separate.
 
 The [Core startup accounting scope](../validation/2026-10-20-inherited-startup-accounting.md)
 passes 189 distinct behaviors with exact source/runtime and resource proof.
@@ -95,7 +96,7 @@ the correction also protects the earlier preload interval. Legacy audit writers 
 need to join the owner protocol before runtime activation.
 Resource capacity's repaired successor passed all 126 finite matrix batches and control
 checks: 2,195 calls in total. At 32 writers, small saves in one project measured
-425–429 ms at p95, versus 34–161 ms across independent projects. This accepts the bounded
+425â€“429 ms at p95, versus 34â€“161 ms across independent projects. This accepts the bounded
 baseline and justifies evaluating shared project locks; it does not establish sustained
 capacity. Both failed candidates remain retained, and the joint freeze is released.
 The joint Resource/deletion candidate is
@@ -177,7 +178,7 @@ The [selected source fence](../validation/2026-10-20-selected-publication-fence.
 
 The [enlisted task publication checkpoint](../validation/2026-10-20-enlisted-task-publication.md) passes all 72 correctness cases, including real Process expiry before staging and after flush. Its one-second selected-guard performance reference failed for two writers (1006.85 and 1066.32 ms); current responsiveness is reopened and is not a green gate. Inherited producer/continuation and wider capacity remain open.
 
-The [workspace path-probe repair](../validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67–670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
+The [workspace path-probe repair](../validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67â€“670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
 
 The [live-parent saved-effect continuation checkpoint](../validation/2026-10-20-parent-saved-effect-continuation.md) passes all
 201 selected cases on one frozen candidate. Core retains exact original parent authority,

@@ -4,14 +4,14 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest checkpoint: [review read boundary and isolated cost](validation/2026-10-21-review-read-boundary.md).
-Inherited disclosure is separated from execution construction, with 67 passing
-correctness cases on unchanged production. The corrected cost harness completes all
-30 observations and safety assertions, but all six shapes exceed the unchanged
-one-second limit and allocate about 79–81 MB. Three component diagnostics identify
-repeated seed construction, normalization and catalog comparison as substantial
-allocation sources. Bounded current-input reuse must be designed and qualified next;
-downstream activation and complete E2E closure remain open.
+Latest checkpoint: [scoped catalog normalization](validation/2026-10-21-scoped-catalog-normalization.md).
+Bounded current-input reuse reduces median measured process allocation from about
+79–81 MB to 43–46 MB. All 192 preceding correctness cases pass; across unchanged
+source, latest results cover 206 passing distinct cases out of 208. One actual-host
+approval still exceeds its 30-second deadline and one of six isolated read shapes
+exceeds the unchanged one-second limit. Failed attempts and all measurements remain
+retained. Request-level approval diagnosis comes next; downstream activation and
+complete E2E closure remain open.
 
 Latest fully qualified prerequisite: [Process planning review HTTP](validation/2026-10-21-process-review-http.md).
 All 76 cases pass, including both snapshot modes, exact retained requests after
@@ -479,7 +479,7 @@ The [selected Process publication fence](validation/2026-10-20-selected-publicat
 
 The [enlisted task publication checkpoint](validation/2026-10-20-enlisted-task-publication.md) passes all 72 correctness cases, including real Process expiry before staging and after flush. Its one-second selected-guard performance reference failed for two writers (1006.85 and 1066.32 ms); current responsiveness is reopened and is not a green gate. Inherited producer/continuation and wider capacity remain open.
 
-The [workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67â€“670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
+The [workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67Ă˘â‚¬â€ś670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
 
 The [live-parent saved-effect continuation checkpoint](validation/2026-10-20-parent-saved-effect-continuation.md) passes all
 201 selected cases on one frozen candidate. Core retains exact original parent authority,

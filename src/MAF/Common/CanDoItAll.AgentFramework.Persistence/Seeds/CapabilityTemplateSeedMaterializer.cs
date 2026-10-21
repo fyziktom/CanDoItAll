@@ -11,12 +11,13 @@ internal static class CapabilityTemplateSeedMaterializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
-    public static IReadOnlyList<CapabilityCatalogItem> MaterializeDefaultCapabilities(CapabilityTemplatePack pack)
+    public static IReadOnlyList<CapabilityCatalogItem> MaterializeDefaultCapabilities(CapabilityTemplatePack pack,
+        Func<string, string>? readText = null)
     {
         ArgumentNullException.ThrowIfNull(pack);
 
         return pack.Capabilities
-            .Select(template => Materialize(template, pack.Manifest.SeedVersion, pack.RootPath))
+            .Select(template => Materialize(template, pack.Manifest.SeedVersion, pack.RootPath, readText ?? File.ReadAllText))
             .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -24,7 +25,8 @@ internal static class CapabilityTemplateSeedMaterializer
     private static CapabilityCatalogItem Materialize(
         CapabilitySeedTemplateDescriptor template,
         string seedVersion,
-        string packRoot)
+        string packRoot,
+        Func<string, string> readText)
     {
         var kind = ParseKind(template.Kind, template.Key);
         CapabilityStableId? managedCapabilityVersion = template.IncludeManagedSeedVersion
@@ -35,7 +37,8 @@ internal static class CapabilityTemplateSeedMaterializer
             template,
             seedVersion,
             managedCapabilityVersion,
-            packRoot);
+            packRoot,
+            readText);
         return new CapabilityCatalogItem(
             CreateStableGuid(Require(template.StableGuidKey, template.Key, "stableGuidKey")),
             kind,
@@ -62,14 +65,15 @@ internal static class CapabilityTemplateSeedMaterializer
         CapabilitySeedTemplateDescriptor template,
         string seedVersion,
         CapabilityStableId? managedCapabilityVersion,
-        string packRoot)
+        string packRoot,
+        Func<string, string> readText)
     {
         return NormalizeKind(template.Kind) switch
         {
             "skill" when string.Equals(template.SkillSource, "file", StringComparison.OrdinalIgnoreCase) =>
                 BuildFileSkillConfiguration(template, seedVersion, managedCapabilityVersion),
             "skill" when string.Equals(template.SkillSource, "inline", StringComparison.OrdinalIgnoreCase) =>
-                BuildInlineSkillConfiguration(template, seedVersion, managedCapabilityVersion, packRoot),
+                BuildInlineSkillConfiguration(template, seedVersion, managedCapabilityVersion, packRoot, readText),
             "tool" => BuildToolConfiguration(template, seedVersion, managedCapabilityVersion),
             "aicontext" => BuildAiContextConfiguration(template, seedVersion, managedCapabilityVersion),
             _ => BuildRawConfiguration(template, seedVersion, managedCapabilityVersion)
@@ -103,7 +107,8 @@ internal static class CapabilityTemplateSeedMaterializer
         CapabilitySeedTemplateDescriptor template,
         string seedVersion,
         CapabilityStableId? managedCapabilityVersion,
-        string packRoot)
+        string packRoot,
+        Func<string, string> readText)
     {
         var inlineSkill = template.InlineSkill
             ?? throw new InvalidOperationException($"Capability template '{template.Key}' is missing inlineSkill settings.");
@@ -118,12 +123,12 @@ internal static class CapabilityTemplateSeedMaterializer
                     template.Key,
                     "inlineSkill.instructionsAssetKey"),
                     template.Key,
-                    "inlineSkill.instructionsAssetKey"),
+                    "inlineSkill.instructionsAssetKey", readText),
                 resources = inlineSkill.Resources.Count > 0
                     ? inlineSkill.Resources.Select(resource => new
                     {
                         resource.Name,
-                        Content = ResolveResourceContent(resource, packRoot),
+                        Content = ResolveResourceContent(resource, packRoot, readText),
                         resource.Description
                     }).ToArray()
                     : null
@@ -237,7 +242,8 @@ internal static class CapabilityTemplateSeedMaterializer
 
     private static string ResolveResourceContent(
         InlineSkillResourceTemplate resource,
-        string packRoot)
+        string packRoot,
+        Func<string, string> readText)
     {
         if (!string.IsNullOrWhiteSpace(resource.ContentAssetKey))
         {
@@ -245,7 +251,7 @@ internal static class CapabilityTemplateSeedMaterializer
                 packRoot,
                 resource.ContentAssetKey.Trim(),
                 resource.Name,
-                "inlineSkill.resources[].contentAssetKey");
+                "inlineSkill.resources[].contentAssetKey", readText);
         }
 
         return resource.Content ?? string.Empty;
@@ -255,10 +261,11 @@ internal static class CapabilityTemplateSeedMaterializer
         string packRoot,
         string relativePath,
         string templateKey,
-        string fieldPath)
+        string fieldPath,
+        Func<string, string> readText)
     {
         var fullPath = ResolveTemplateAssetPath(packRoot, relativePath, templateKey, fieldPath);
-        return File.ReadAllText(fullPath, Encoding.UTF8);
+        return readText(fullPath);
     }
 
     internal static string ResolveTemplateAssetPath(

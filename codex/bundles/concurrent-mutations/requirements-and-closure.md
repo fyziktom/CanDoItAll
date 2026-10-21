@@ -1,5 +1,12 @@
 # Requirements and closure ledger
 
+The [scoped catalog normalization checkpoint](validation/2026-10-21-scoped-catalog-normalization.md)
+implements bounded current-input reuse without caching authorization. Median measured
+allocation falls to 43–46 MB; five isolated latency shapes pass. One latency tail and
+one actual-host approval timeout remain open despite 192 preceding correctness
+passes. All failed attempts, exact source/runtime identity and clean new fixture
+deltas are retained. R1/R4/R5/R6 and downstream activation remain open.
+
 The [review read boundary](validation/2026-10-21-review-read-boundary.md) removes
 execution construction from inherited review GETs while preserving current disclosure.
 All 67 selected correctness cases pass. The isolated cost successor passes three
@@ -277,7 +284,7 @@ The [selected publication fence](validation/2026-10-20-selected-publication-fenc
 
 The [enlisted task publication checkpoint](validation/2026-10-20-enlisted-task-publication.md) passes all 72 correctness cases, including real Process expiry before staging and after flush. Its one-second selected-guard performance reference failed for two writers (1006.85 and 1066.32 ms); current responsiveness is reopened and is not a green gate. Inherited producer/continuation and wider capacity remain open.
 
-The [workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67–670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
+The [workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67â€“670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
 
 The [live-parent saved-effect continuation checkpoint](validation/2026-10-20-parent-saved-effect-continuation.md) passes all
 201 selected cases on one frozen candidate. Core retains exact original parent authority,

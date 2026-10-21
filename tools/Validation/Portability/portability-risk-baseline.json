@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-21T15:15:43.007836+00:00",
+  "generated_utc": "2026-10-21T20:58:29.767634+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15664,
+  "allowance_count": 15665,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -34246,7 +34246,7 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplateSeedMaterializer.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "b371e62efcf526dc0c0e603e3fa160382406de27120158c6c5a2e1f2d7a0e10b",
+      "source_fingerprint": "abd40ee0b0532cbbf14b90504a9beabbc3ce45331d8ee35be24d7aa274e1be79",
       "count": 1
     },
     {
@@ -35351,6 +35351,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
       "category": "shell-elevation",
       "source_fingerprint": "865bf1f4a2b9481054d8b6d48cea357f2cf3cb29bf09cd5c98bdf7a284ff1857",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/WorkspaceSeedInputReader.cs",
+      "category": "path-api",
+      "source_fingerprint": "38115a266c43b730d9b2aa4c878d015ab311c5fd97e7ac88e6e01df2d5c6b68d",
       "count": 1
     },
     {
