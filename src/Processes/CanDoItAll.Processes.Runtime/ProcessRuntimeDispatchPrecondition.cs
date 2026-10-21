@@ -4,7 +4,11 @@ namespace CanDoItAll.Processes.Runtime;
 
 public sealed record ProcessRuntimeDispatchPrecondition(ProcessStepInstanceId StepInstanceId,
     DispatchClaimToken ClaimToken, DispatcherOwnerId OwnerId) {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionExecutionContract? DecisionContract { get; init; }
+
     public void Validate() {
+        DecisionContract?.Validate();
         if (StepInstanceId.Value == Guid.Empty || ClaimToken.Value == Guid.Empty || string.IsNullOrWhiteSpace(OwnerId.Value)) {
             throw new InvalidDataException("Dispatch attachment requires its original step, claim and dispatcher owner.");
         }

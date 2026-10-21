@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 
@@ -17,4 +18,9 @@ public abstract record ProcessDecisionChildResult {
 public interface IProcessDecisionChildOutcomeReader {
     ProcessDecisionExecutionContract Contract { get; }
     Task<ProcessDecisionChildResult> ReadAsync(ProcessDecisionChildMaterialBinding original, CancellationToken cancellationToken = default);
+}
+
+public interface IProcessDecisionLiveOutcomeReader : IProcessDecisionChildOutcomeReader {
+    Task<ProcessDecisionChildResult> ReadAsync(ProcessDecisionResultChild original, ProcessExecutionOwnerEvidence evidence,
+        CancellationToken cancellationToken = default);
 }

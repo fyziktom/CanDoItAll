@@ -7,6 +7,31 @@ namespace CanDoItAll.AgentFramework.Persistence;
 public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseStore {
     private const int MaximumSelectedLeaseAgents = 2;
 
+    public async Task<IAgentCatalogReadLease> AcquireAgentAuthoritySnapshotAsync(IReadOnlyList<Guid> agentIds,
+        CancellationToken cancellationToken = default) {
+        var selectedIds = SelectLeaseAgents(agentIds);
+        var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout,
+            runLeaseWriter, cancellationToken).ConfigureAwait(false);
+        try {
+            await EnsureCatalogReadCoreAsync(operation, cancellationToken).ConfigureAwait(false);
+            _ = await LoadNormalizedCatalogCoreAsync(operation, cancellationToken).ConfigureAwait(false);
+            var pending = PendingCommitJournalPaths;
+            var witness = await FileSandboxWorkspaceMutationWitness.CaptureAsync(layout, pending, [], pending,
+                physicalPathPolicyFactory, cancellationToken, SharedPublicationPaths).ConfigureAwait(false);
+            _ = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Agents(selectedIds), witness, cancellationToken).ConfigureAwait(false);
+            var catalog = await LoadCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
+            var lease = new FileAgentCatalogAuthoritySnapshotLease(operation, layout.Scope, catalog.CatalogDataRevision,
+                selectedIds[0], FreezeSelectedAgents(catalog, selectedIds));
+            await operation.ReleaseWorkspaceForAuthoritySnapshotAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return lease;
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            await operation.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
     public async Task<IAgentPlanningPublicationSnapshotLease> AcquirePlanningAuthoritySnapshotAsync(
         AgentPlanningPublicationExpectation expected, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(expected);
@@ -60,22 +85,13 @@ public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseSt
 
     public async Task<IAgentCatalogReadLease> AcquireAgentsReadLeaseAsync(IReadOnlyList<Guid> agentIds,
         CancellationToken cancellationToken = default) {
-        ArgumentNullException.ThrowIfNull(agentIds);
-        if (agentIds.Count is < 1 or > MaximumSelectedLeaseAgents || agentIds.Contains(Guid.Empty) || agentIds.Distinct().Count() != agentIds.Count) {
-            throw new ArgumentException("A catalog read lease requires one or two distinct nonempty Agent identifiers.", nameof(agentIds));
-        }
-        var selectedIds = agentIds.ToImmutableArray();
+        var selectedIds = SelectLeaseAgents(agentIds);
         var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout,
             runLeaseWriter, cancellationToken).ConfigureAwait(false);
         try {
             await EnsureCatalogReadCoreAsync(operation, cancellationToken).ConfigureAwait(false);
             var catalog = await LoadNormalizedCatalogCoreAsync(operation, cancellationToken).ConfigureAwait(false);
-            var agents = selectedIds.Select(id => catalog.Agents.SingleOrDefault(item => item.Id == id))
-                .OfType<AgentDefinition>().Select(agent => agent with {
-                    Permissions = agent.Permissions with { AllowedSecrets = agent.Permissions.NormalizedAllowedSecrets.ToImmutableArray() },
-                    Capabilities = agent.Capabilities.ToImmutableArray(),
-                    Tags = agent.Tags.ToImmutableArray()
-                }).ToImmutableArray();
+            var agents = FreezeSelectedAgents(catalog, selectedIds);
             return new AgentCatalogReadLease(operation, layout.Scope, catalog.CatalogDataRevision,
                 agents.SingleOrDefault(agent => agent.Id == selectedIds[0]), agents,
                 catalog.Capabilities.Select(item => item with { Tags = item.Tags.ToImmutableArray() }).ToImmutableArray(), this);
@@ -85,6 +101,23 @@ public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseSt
             throw;
         }
     }
+
+    private static ImmutableArray<Guid> SelectLeaseAgents(IReadOnlyList<Guid> agentIds) {
+        ArgumentNullException.ThrowIfNull(agentIds);
+        var selected = agentIds.ToImmutableArray();
+        if (selected.Length is < 1 or > MaximumSelectedLeaseAgents || selected.Contains(Guid.Empty) || selected.Distinct().Count() != selected.Length) {
+            throw new ArgumentException("A catalog read lease requires one or two distinct nonempty Agent identifiers.", nameof(agentIds));
+        }
+        return selected;
+    }
+
+    private static ImmutableArray<AgentDefinition> FreezeSelectedAgents(SandboxWorkspaceCatalog catalog, ImmutableArray<Guid> selectedIds)
+        => selectedIds.Select(id => catalog.Agents.SingleOrDefault(item => item.Id == id))
+            .OfType<AgentDefinition>().Select(agent => agent with {
+                Permissions = agent.Permissions with { AllowedSecrets = agent.Permissions.NormalizedAllowedSecrets.ToImmutableArray() },
+                Capabilities = agent.Capabilities.ToImmutableArray(),
+                Tags = agent.Tags.ToImmutableArray()
+            }).ToImmutableArray();
 
     private sealed class ExecutionAdmissionReadLease(IAsyncDisposable? publication,
         ExecutionRunAdmissionSnapshot snapshot, AgentExecutionPublicationRecovery recovery,

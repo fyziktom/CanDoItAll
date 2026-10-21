@@ -113,7 +113,7 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         if (work.OriginalRun.ToolAdmission.PlanningDecision?.InheritedOrigin is not null) {
             var parent = work.Lease.RequireSavedEffect(journal).Parent;
             if (parent is null || held.Original.Origin != AgentPlanningPublicationOrigin.Inherited ||
-                held.OriginalChatSession is not null || held.Original.Scope != AgentPlanningRunMetadata.ReadScope(run)) {
+                held.OriginalChatSession is not null) {
                 throw Refuse(run.ToolAdmission!.PlanningDecision!, AgentPlanningAdmissionRefusal.OriginalStepChanged);
             }
             parent.RequireOriginal(run);
@@ -122,6 +122,13 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
             throw Refuse(run.ToolAdmission!.PlanningDecision!, AgentPlanningAdmissionRefusal.OriginalStepChanged);
         }
         return RequireMutation(work, run, binding);
+    }
+
+    internal AgentInheritedContinuationPurpose RequireInheritedPublicationPurpose(AgentPlanningLiveWork work,
+        IAgentPlanningPublicationSnapshotLease held, AgentToolApprovalBinding binding) {
+        _ = RequirePublication(work, held, binding);
+        return work.Lease.RequireSavedEffect(journal).Parent?.Purpose
+            ?? throw Refuse(held.OriginalRun.ToolAdmission!.PlanningDecision!, AgentPlanningAdmissionRefusal.OriginalStepChanged);
     }
 
     public async Task<AgentPlanningStepObservation> ObserveStepAsync(AgentPlanningLiveWork work, CancellationToken cancellationToken) {

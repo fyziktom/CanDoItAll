@@ -69,12 +69,15 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(saved.Preparation.Review.PlanId, retained.Preparation.Review.PlanId);
     }
 
-    [Fact]
-    public async Task Failure_after_actual_initial_flush_rolls_back_acceptance_and_all_initial_runtime_records() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Failure_after_actual_initial_flush_rolls_back_acceptance_and_all_initial_runtime_records(bool decisionInput) {
         await using var app = await TestApplication.CreateAsync(Harness());
         var services = app.Services;
         var coordinator = Coordinator(services);
-        var saved = await Store(services).PrepareAsync(ProcessPreparedLaunchFixture.Create());
+        var saved = await Store(services).PrepareAsync(decisionInput
+            ? ProcessPreparedLaunchScalingFixture.Create(1, 256) : ProcessPreparedLaunchFixture.Create());
         var request = ProcessPreparedLaunchFixture.Commit(saved);
         var failure = new ArgumentException("Injected failure after initial Process flush.");
         var fault = new AfterFlushFault(failure);
@@ -92,8 +95,10 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(saved.Preparation.AdmissionId, (await new EfProcessRuntimeUnitOfWork(retryContext).LoadAsync(request.Mutation.State.RunId))!.LaunchAdmissionId);
     }
 
-    [Fact]
-    public async Task Application_preserves_exact_commit_ack_exception_and_accepted_identity_through_full_host_restart() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Application_preserves_exact_commit_ack_exception_and_accepted_identity_through_full_host_restart(bool decisionInput) {
         await using var environment = CanDoItAllTestEnvironment.Create("process-prepared-ack");
         var profile = environment.CreatePostgreSqlProfile("prepared-ack");
         var harness = Harness(environment, profile);
@@ -104,7 +109,9 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
             var services = app.Services;
             var authority = ProcessPreparedLaunchFixture.Local(Profile(services).Profile.Id);
             var store = Store(services);
-            saved = await store.PrepareAsync(ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid())));
+            saved = await store.PrepareAsync(decisionInput
+                ? ProcessPreparedLaunchScalingFixture.Create(1, 256, authority)
+                : ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid())));
             await using var context = new ProcessPersistenceDbContext(ProcessOptions(services, new AfterCommitFault(failure)));
             var policy = new AuthorityPolicy();
             var unitOfWork = new EfProcessRuntimeUnitOfWork(context, coordinatedTransaction: Coordinator(services), launchAuthorityPolicy: policy);
@@ -575,6 +582,18 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         } else {
             Assert.NotNull(launch.AcceptedSourceHeaderJson);
             Assert.NotNull(launch.AcceptedSourceHeaderFingerprint);
+            var source = await context.AcceptedAssignmentSources.AsNoTracking().SingleAsync(item => item.AdmissionId == launch.Id);
+            var original = request.InitialAssignments!.Single();
+            if (original.DecisionDataPolicy?.ExecutionContract is not null) {
+                var input = ProcessAcceptedExecutionInputCodec.Read(source.InputVersion, new(source.InputJson!, source.InputFingerprint!),
+                    launch.AcceptedSourceHeaderFingerprint, new(source.PayloadJson, source.Fingerprint));
+                Assert.Equal(JsonSerializer.Serialize(original), JsonSerializer.Serialize(input.Assignment));
+                Assert.NotNull(input.Requirements);
+            } else {
+                Assert.Equal(ProcessAcceptedExecutionInputVersion.NotCaptured, source.InputVersion);
+                Assert.Null(source.InputJson);
+                Assert.Null(source.InputFingerprint);
+            }
         }
     }
     private static Task<string[]> AcceptedSourceRowsAsync(ProcessPersistenceDbContext context, Guid admissionId)

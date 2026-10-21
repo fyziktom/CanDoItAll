@@ -39,6 +39,8 @@ public sealed class ProjectTaskPlanProcessResultTests(ITestOutputHelper output) 
         Assert.NotNull(selected);
         selected.RequireOriginal(source.Process.State, Step(source.Process.State), new(source.Original.Id));
         Assert.Equal(source.Process.Parent, selected.Child!.Original);
+        Assert.Equal(source.Executor.Id, selected.Child.OriginalAgentId);
+        Assert.Equal(source.Sql.Project.ProjectId, selected.Child.OriginalProject!.ProjectId);
         Assert.False(selected.OtherWorkPending);
         Assert.False(selected.SharedScopePending);
         Assert.Equal(4, probe.Commands.Count);

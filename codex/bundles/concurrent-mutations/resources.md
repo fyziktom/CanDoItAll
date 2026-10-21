@@ -1,5 +1,31 @@
 # Resource ownership and cleanup
 
+## Inherited Agent startup validation (2026-10-20)
+
+`c4-inherited-startup-accounting` is owned for exact initial enrollment, measured
+preparation and recovered startup under a child work interval. Its complete sidecar
+was written before directory creation. Reuse the same PostgreSQL/file fixtures and
+serialized standard Release outputs. Record source before builds, check discovered
+methods/counts, and retain static, runtime and observed resource evidence. No new host
+or Docker stack is required. Ordinary 5032 and historical cleanup blockers are preserved.
+
+## Selected step producer validation (2026-10-20)
+
+`c4-process-step-material` is Released with 185 passes and one test failure.
+The claim-expiry test also expired material; the retained failure precedes a precise
+test-only correction. Source/runtime identity and all 12 command observation windows
+pass. The 726.691-second observer leaves no owned process or database-name delta;
+42 unowned TEMP entries are preserved. Exact proof is secret-reviewed and retained.
+
+`c4-process-step-material-final` is Released after all 23 corrected producer/source
+cases pass. Its sidecar precedes directory creation. Complete source/runtime identity
+and a five-file repair bridge preserve 164 unaffected passing regressions and 2,324
+identical production outputs. The 164.720-second observer covers both commands with
+no remaining owned process or database-name delta; nine unowned TEMP entries remain.
+Both roots retain reviewed proof/manifests/helpers for the next integration. The same
+isolated PostgreSQL fixture and standard Release outputs remain in use. No new host
+or Docker stack was created; ordinary 5032 and historical cleanup blockers are preserved.
+
 ## Root material producer validation (2026-10-20)
 
 `c4-process-root-material-final` released the passing 19-case correction/source extension.
@@ -852,3 +878,244 @@ Initial `c4-accepted-source-persistence` is Released with28/31 codec passes and1
 The final accepted-source SQL/history, authority and dispatch/original groups pass 142 cases; the unchanged 51 earlier passes give 193 distinct passing cases. All three final roots are Released after full identity verification, observer coverage, retained proof and secret review, with no new process/database delta. The earlier combined regression command timed out at 900 seconds and remains recorded as such. Its root is ReleasedWithUnattributedDatabase: cditall_primary_3c41089b37074f30b5d6889519d95021 has no connections but lacks exact lease ownership evidence and is preserved. Earlier denied probe/SPA cleanup also remains open.
 
 The original Process outcome reader has 129 distinct passing behaviors across reviewed correction boundaries. All five runs retain exact source/runtime and observer evidence, with zero remaining observed processes or database-name deltas. The initial/repaired/final SQL roots remain in use for the immediately following result integration's helpers and design notes. Automatic approval review rejected recursive removal of the exact owned c4-process-owner-outcome-verified and c4-process-owner-outcome-final directories with `blocked by policy`; both remain CleanupBlocked, with no deletion or retry. Shared PG18 and earlier cleanup denials remain unchanged. Exact hashes, failed attempts and preserved unowned TEMP counts are in the [validation record](validation/2026-10-20-process-owner-outcome.md).
+
+The initial c4-inherited-startup-accounting root is Released with 171/189 passes and all 18 fixture/assertion failures retained. Exact source/runtime identities and all 12 observed test commands match; no observed process or database-name delta remains, and 53 unowned TEMP entries are preserved. The owned c4-inherited-startup-accounting-final root repeats all four affected classes after three test-only edits, using the same isolated PG18 fixture and standard Release outputs. Historical cleanup denials remain open.
+
+The final startup-accounting root is Released with all 44 rerun cases passing and 145 unchanged regression passes retained under six exact source deltas and 666 identical production outputs. Four commands are fully observed; no observed process or database-name delta remains, and 14 unowned TEMP entries are preserved. The owned c4-inherited-startup-boundary root reuses the same isolated PG18 and standard outputs for the additional exhaustion/cancellation regression. No new host or container is created; historical cleanup denials remain open.
+
+The startup-boundary root is Released with 40/40 passing cases, unchanged source/runtime, all five commands observed, zero remaining observed processes or database-name delta, and 54 unowned TEMP paths preserved. Its reviewed proof remains retained. `c4-selected-agent-authority` is owned before creation and reuses the same isolated PG18 and standard outputs for selected-key exclusion, unrelated Agent progress and real Project SQL capture. No additional persistent fixture is created.
+
+The selected-authority candidate completed with 144/148 passing cases and retained all
+four failures. Overlapping observers cover all 11 commands; no observed process or
+database-name delta remains, and 184 unowned temporary entries are preserved.
+Its transient diagnostic tool installation remains CleanupBlocked after automatic
+approval review rejected removal with `blocked by policy`; no retry occurred. Creation
+of a separate recovery diagnostic was also rejected before execution and not retried.
+The corrected candidate reuses the same isolated PostgreSQL fixture and Release outputs.
+
+`c4-selected-agent-authority-final` is Released with 22/23 cases passing and the remaining
+source-lifetime refusal defect retained. All four commands were observed; source and
+runtime matched, and no process, database-name or temporary-path delta remains. The
+owned `c4-selected-agent-authority-lifetime` candidate repeats the full ordinary Agent
+source-authority suite after the explicit lifetime-conflict guard, using the same
+isolated server and standard Release outputs. Prior cleanup denials remain open.
+
+The lifetime candidate is Released with 35/35 passing, exact source/runtime identity
+and full observation of its ordinary-authority suite. No observed process,
+database-name or new temporary-path delta remains. Its reviewed proof is retained;
+the shared PostgreSQL fixture is still needed for initial business-binding integration.
+
+The `c4-initial-business-binding` validation owns only its declared proof/runner directory
+and observed fixture resources. It reuses the isolated PG18 server and standard serialized
+Release outputs. Its composed producer/workspace tests share one database lease; the
+borrowed producer fixture cannot dispose the caller's SQL owner. Ownership is recorded
+before directory creation; cleanup and source/runtime identity are required before closure.
+
+`c4-initial-business-binding` is Released with its failed 172/175 result retained. All ten
+test commands were observed; source/runtime identity matched and no process, database-name
+or temporary-path delta remains. The final test-only correction declares five cases and
+reuses the same isolated server and standard Release outputs. Historical cleanup denials
+remain unresolved; this record does not waive them.
+
+## Initial business binding verification
+
+The second candidate `c4-initial-business-binding-final` is released after retaining its
+4/5 result, unchanged source/runtime identities and zero observed process, database-name
+and temporary-path deltas. The owned `c4-initial-business-binding-verified` directory
+contains only bounded validation helpers and proof. It repeats the four producer cases
+after correcting the parent/child snapshot-policy assertion; it reuses the same isolated
+PostgreSQL 18 fixture and standard Release outputs. No new host or container is created.
+The verified candidate is now Released: all four cases pass, source/runtime identities
+match, and observed process, database-name and temporary-path deltas are zero. A trailing
+blank line in this document failed the first whitespace check; it is corrected after
+the frozen runtime proof, with a separate final documentation/whitespace check.
+
+## Original Process execution input
+
+`c4-original-process-input` was recorded before creation and owns bounded validation logs,
+manifests and retained proof. It reuses the existing isolated PostgreSQL 18 server and
+standard Release outputs. Its 96 selected cases cover input encoding, source compatibility,
+SQL persistence, current/original prompt separation, migrations, actual post-flush rollback,
+lost acknowledgement/restart, produced workspace integration and scaling. Database leases
+and temporary roots remain covered by the existing resource observer. No new server,
+container, worktree or application host is created for this checkpoint.
+
+The initial candidate is Released after retaining 92 passes and four failed scaling
+assertions, verifying source/runtime identities and reconciling zero observed process,
+database-name and temporary-path deltas. The test counted a projected column's textual
+occurrences in inner and outer SQL. The test-only `c4-original-process-input-final`
+candidate checks the actual returned column names and repeats four scaling cases, with
+the same resource families and fixture. Production source remains unchanged.
+The final candidate is Released: four cases pass, 392 production DLL copies match,
+source/runtime identity verification and full portability enforcement pass, and no
+observed process, database-name or temporary-path delta remains. Both proof records
+have zero secret findings. Historical cleanup denials remain unresolved.
+
+## Closed startup failure candidate
+
+`c4-closed-startup-failure` was recorded before creation and owns bounded validation
+helpers, manifests and proof. It reuses standard Release outputs and the existing
+isolated PostgreSQL 18 server. Core filesystem, live owner, actual producer and
+full-host receipt replay tests use the existing test-environment/database leases and
+observed resource families. No new server, container or persistent journal is created.
+The initial candidate is Released after retaining 201 passes and one restart-test
+service-scope failure. Source/runtime identity and full portability enforcement pass;
+all 13 commands were observed with zero remaining process, database-name or temporary-path
+deltas. The final test-only candidate `c4-closed-startup-failure-final` repeats the exact
+restart case with a real async service scope. Its directory ownership was recorded before
+creation. Production source remains unchanged; its source/runtime bridge and final
+resource observations are required before closing this checkpoint.
+The scope-corrected candidate is also Released with its 0/1 result retained. Its generic
+JSON round trip lost readonly Process identifiers, so the command was rejected before
+replay. The `c4-closed-startup-failure-verified` candidate uses the existing Process
+persistence converters and asserts exact command round trip before the host restart.
+It repeats one case; both earlier failures remain retained, and production stays unchanged.
+The verified candidate is now Released: exactly one discovered case passed. Its immutable
+30,333-byte proof has SHA-256
+`C6D037D9904FDAA0B7F65BCDC8B603AEE342C45D947A26CEE9A7E1DBC48D74C8`.
+Source/runtime identity, full portability enforcement and observer coverage pass, with
+zero remaining process, database-name or temporary-path deltas. The existing isolated
+PostgreSQL fixture and bounded capacity drafts remain needed by the next phase.
+Historical cleanup denials are unchanged.
+
+## Process payload and finite capacity candidate
+
+`c4-process-capacity-bounds` ownership was recorded before creation. It retains bounded
+commands, proof and helper manifests, reuses standard Release outputs and the existing
+isolated PostgreSQL server, and provisions no new container. The selected lanes cover
+bounded serialization and atomic acceptance, original-source/input regressions, shared
+scope funding/recovery, finite completion cost and isolated startup-outcome matching.
+Every runtime command requires the existing process/database/path observation and final
+identity/resource reconciliation. The executor guard remains enabled.
+The candidate is Released with 179/179 passes and immutable 487,771-byte proof
+`B95355808C13F4A34DFD09F6D4724DA0BE5926D222BCD35DF3FC87A66347499A`.
+All 15 commands were observed, final source/runtime identity holds, and no owned process,
+database-name or temporary-path delta remains. Its bounded performance/authority drafts
+are retained for the immediate correction; the shared isolated server remains in use.
+
+## Preparation buffer and original-policy correction
+
+`c4-process-capacity-repair` ownership was recorded before directory creation. It retains
+only bounded validation helpers, logs, manifests and proof, reuses standard Release
+outputs and the existing isolated PostgreSQL fixture, and introduces no new host or
+container. Its 183-case selection covers the buffer resource lifecycle and affected
+preparation/source/input/authority behavior. Earlier finite root and isolated startup
+proof remains historical evidence for unchanged code. Final source/runtime identity and
+resource reconciliation are required before release.
+
+The first pooled candidate is now Released with 180/183 passes. The three new lifecycle
+tests assumed serializer flush boundaries that primitive arrays/custom converters do
+not guarantee. All 13 commands are observed; source/runtime identity is unchanged and
+process/database/temporary deltas are zero. Its retained proof is
+`c4-process-capacity-repair.json`, SHA-256
+`EDAA7EAB4FEC485E0B2FA7B019DA6553B91C9347F45D31BB03AEE5FD191CB350`.
+Historical cleanup denials remain unresolved.
+
+`c4-process-capacity-repair-verified` was recorded before creation for the nine affected
+serializer cases after a test-only continuation-boundary correction. It reuses Release
+outputs and the existing observer/isolated fixture. Every production source and DLL copy
+must remain identical to the retained initial pooled candidate. No new host or container
+is introduced; final identity, static enforcement and reconciliation remain pending.
+The corrected root is now Released: 9/9 pass, with all 5,375 production sources and
+392 DLL copies unchanged. Both runtime commands are observed, full portability passes,
+and source/runtime identity plus zero process/database/temporary deltas are verified.
+Its 105,756-byte proof has SHA-256
+`F2B60B6E3A1FE01B910B97B9D8CBEFE21933D5FC6FC5C03628F57BBCE670A995`.
+The nine-case repeat and initial 180 passes qualify 183 distinct cases; neither initial
+failures nor historical cleanup denials are erased.
+
+## Manager review admission candidate
+
+`c4-manager-review-admission` ownership was recorded before directory creation. It
+retains the scoped architecture comparison and 74-case proof, reuses serialized standard
+Release builds, the existing isolated PostgreSQL server and existing file-store fixture
+families. No new host/container is created. Pure selection, saved-effect lease authority
+and actual Project publication after Process claim closure are in scope. Source/runtime
+identity, full portability and observed reconciliation remain required before release.
+
+All three manager-admission roots are now Released. The initial root retains 73 passes
+and one disclosure-expectation failure. `c4-manager-review-admission-verified` retains
+the test-only rebuild and an interrupted command-file-sharing incident with no test
+results. `c4-manager-review-admission-final` retains the one passing corrected case,
+complete source/runtime reuse, and deterministic validation of shared command reads/writes.
+The failed initial sharing probe remains recorded. Each root's ownership preceded
+creation; final process/database/temporary deltas are zero. No replacement server or
+container was created. The final root additionally owns its small local sharing-probe
+JSON files. Earlier cleanup denials remain unchanged.
+See [the validation record](validation/2026-10-21-manager-review-admission.md) for immutable
+proof hashes, exact counts and scope limits.
+
+## Original compiled-step requirements and execution clock
+
+`c4-original-step-requirements`, `c4-original-step-requirements-verified`,
+`c4-original-step-requirements-final` and `c4-original-step-requirements-clock` are
+Released. They retain the initial 131/132 result and three controlled-clock correction
+candidates (2/5, 18/21 and 6/9). Each has complete source/runtime verification, final
+portability enforcement and observed reconciliation with zero process, database-name
+and temporary-path deltas. Their failures remain in immutable proof. No replacement
+database or host was created; the existing isolated server remains in use.
+
+`c4-workspace-execution-clock` was recorded before creation for the reviewed shared-clock
+repair and 29 exact inherited/ordinary/control scenarios. All pass, with exact source/
+runtime verification, final portability enforcement and three observed commands.
+Reconciliation has zero process, database-name and temporary-path deltas. Ownership is
+Released; small reviewed proof is retained. It reused standard Release outputs and the
+same isolated fixture. The older
+cleanup denials are unchanged and are not retried by this work.
+
+`c4-process-review-completion-source` was recorded before creation for bounded source
+drafts only. It contains no host, database or compiled outputs. Adoption verifies the
+existing source hashes first; the scratch copies are disposable after adoption.
+
+`c4-process-review-completion` was recorded before creation for the 230-case waiting
+result/accounting candidate. It reuses the same isolated server, standard Release
+outputs and existing temporary families. All affected builds and full portability pass.
+It retains 209 fully observed Unit passes, eight real-workspace fixture authorization
+failures, one interrupted restart case and twelve unstarted cases. Source/runtime identity
+passes. The resource observer failed on a CIM timeout; the real-workspace command reached
+its existing 900-second deadline. Neither incomplete coverage nor cleanup is qualified.
+
+The deadline left the following exact resources, linked by the interrupted test's
+`pending-run-start.json` and its declared `reviewed-completion` profile:
+
+- Database `cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1` on the existing
+  `candoitall-concurrent-mutations-pg18-20261016` container, ID
+  `306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2`, port 53619.
+- Temporary workspace
+  `C:\Users\lucys\AppData\Local\Temp\process-reviewed-completion\6ea9ebeae3b74434ab0dfcda9483bd27`.
+
+Automatic approval review rejected their removal with “blocked by policy” before
+execution. The exact record is `c4-process-review-completion/interrupted-fixture-cleanup-blocked.json`;
+the immutable failed proof retains it. No alternative deletion was attempted. Observed
+processes are gone and the database has no active connections. These resources need
+manual cleanup or a change to the approval restriction; they must remain visible as a
+blocker when a successor baseline includes them.
+
+`c4-process-review-completion-verified` ownership was recorded before creating its small
+helper directory. It reuses the isolated server and standard outputs, corrects the new
+fixture's missing registered policy, and selects all 21 Integration cases. Its inventory
+also includes the restart test's `process-reviewed-completion` temporary family, which
+the first candidate omitted. Existing blocked paths remain baseline entries, never cleanup
+targets. Three bounded CIM-retry checks pass; actual successor execution remains pending.
+The `c4-process-publication-context` candidate was recorded before creation for the
+catalog/execution-scope correction. It uses the existing isolated PostgreSQL server,
+standard Release outputs and the same three declared temporary families. Both
+preceding positive-gate failures retained proof and verified zero new resource delta.
+The earlier denied database and temporary workspace remain baseline-only; they are
+not cleanup targets for this successor.
+
+The publication-context run completed 331 cases with three fixture failures. Its
+observer stopped on a transient empty command record; final read-only comparison
+found zero known surviving processes, database-name changes or temporary-family
+additions, but continuous resource coverage is incomplete. Its immutable failed
+proof is retained. `c4-process-publication-qualified` was recorded before creation
+and repeats the same 331 cases with the corrected root fixture and command reader.
+It creates no server or custom build outputs and preserves every earlier cleanup
+denial. The final baseline, observation and reconciliation remain required.
+
+The qualified successor completed all 331 cases. Its observer covered all 20 test
+commands and final reconciliation found no surviving observed process, new database
+name or retained temporary entry. The source/runtime manifests and 470,702-byte
+proof are retained locally; ownership is now `RetainedQualifiedProof`. This result
+does not clear the earlier policy-denied database, workspace or other cleanup paths.
+No new server, application host or custom compiled output directory was created.

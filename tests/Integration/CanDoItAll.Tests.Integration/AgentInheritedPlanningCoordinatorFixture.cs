@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.Runtime;
@@ -47,7 +48,8 @@ internal sealed class AgentInheritedPlanningCoordinatorFixture : IAsyncDisposabl
             var store = source.Files.NewStore();
             var admission = new AgentInheritedPlanningRunAdmission(store, store, source.NewJournal(store));
             var original = source.Original.ToolAdmission!.PlanningDecision!;
-            var saved = await admission.AdmitAsync(id, (run, _) => {
+            var saved = await admission.AdmitAsync(id,
+                new(original.InheritedOrigin!.Allocation, AgentInheritedPlanningStartMode.FreshEnrollment), (run, _) => {
                 Assert.Equal(original.InheritedOrigin! with { Source = run.ToolAdmission!.Session.Reference.BackgroundSource! },
                     run.ToolAdmission.PlanningDecision!.InheritedOrigin);
                 return Task.CompletedTask;
@@ -65,9 +67,9 @@ internal sealed class AgentInheritedPlanningCoordinatorFixture : IAsyncDisposabl
         }
     }
 
-    internal AgentInheritedPlanningCoordinator Coordinator(bool registered = true) {
+    internal AgentInheritedPlanningCoordinator Coordinator(bool registered = true, params IAgentInheritedPlanningParticipant[] additional) {
         var store = Source.Files.NewStore();
-        return new(store, Source.NewJournal(store), Runtime, registered ? [Module] : []);
+        return new(store, Source.NewJournal(store), Runtime, registered ? [Module, .. additional] : additional);
     }
 
     internal Task<AgentPlanningExecutionResult> RunAsync(AgentPlanningDecisionExpectation? expected = null)
@@ -82,13 +84,21 @@ internal sealed class AgentInheritedPlanningCoordinatorFixture : IAsyncDisposabl
         await Source.DisposeAsync();
     }
 
-    internal sealed class Participant(AgentPlanningBasisRecord original) : IAgentInheritedPlanningParticipant {
+    internal sealed class Participant(AgentPlanningBasisRecord original) : IAgentInheritedPlanningInitialBinder {
         internal AgentPlanningBasisRecord Basis { get; set; } = original;
         internal int Reads { get; private set; }
         internal int Preparations { get; private set; }
         internal int ContinueSteps { get; set; }
         internal bool DenyRead { get; set; }
+        internal string SupportedParentFormat { get; set; } = AgentPlanningDecisionTestData.Envelope().Format;
+        internal Func<AgentInheritedPlanningBindingContext, AgentToolProtocolEnvelope, AgentToolProtocolEnvelope,
+            CancellationToken, Task<AgentInheritedPlanningBinding>>? Initializer { get; set; }
         public AgentPlanningOwner Owner => AgentPlanningOwner.ProjectTaskPlan;
+        public bool SupportsParent(AgentToolProtocolEnvelope parent) => parent.Format == SupportedParentFormat && parent.Version == 1;
+        public Task<AgentInheritedPlanningBinding> BindInitialAsync(AgentInheritedPlanningBindingContext context,
+            AgentToolProtocolEnvelope originalParent, AgentToolProtocolEnvelope sourceEvidence, CancellationToken cancellationToken)
+            => (Initializer ?? throw new InvalidOperationException("This fixture did not configure an initial binder."))(
+                context, originalParent, sourceEvidence, cancellationToken);
         public AgentPlanningPromptContract Prompt { get; set; } = new("Use only the original request and supplied material basis.", "task_plan",
             "{\"type\":\"object\",\"properties\":{\"tasks\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"tasks\"],\"additionalProperties\":false}");
         public Task<AgentPlanningBasisRecord> ReadOriginalBasisAsync(AgentPlanningInheritedOrigin original, CancellationToken cancellationToken) {

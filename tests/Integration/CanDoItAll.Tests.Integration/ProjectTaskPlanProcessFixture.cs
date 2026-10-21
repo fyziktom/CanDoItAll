@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
@@ -12,6 +13,7 @@ using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Tests.Integration.Runtime;
 using CanDoItAll.Tests.Integration.Processes;
 using CanDoItAll.Tests.Support;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -60,12 +62,15 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
     internal static async Task<ProjectTaskPlanProcessFixture> CreateAsync(bool agentSource = true, bool sameExecutor = false,
         IInterceptor? processReadProbe = null, bool registeredSource = false,
         Func<AgentDefinition, ProviderProfile, IAgentInheritedPlanningParticipant, AgentToolSemanticDigest>? runtimeContract = null,
-        bool includeOperationContract = true) {
+        bool includeOperationContract = true, IInterceptor? projectCaptureProbe = null, bool useInitialBinder = false) {
         var clock = new AgentPlanningLiveOwnerFixture.PlanningClock(DateTimeOffset.UtcNow);
         var generations = new MutableGenerations();
         var sql = await ProjectTaskPlanOperationFixture.CreateAsync(configureServices: services => {
             services.AddSingleton<TimeProvider>(clock);
             services.AddSingleton<IAgentExecutionProfileGenerationSource>(generations);
+            if (projectCaptureProbe is not null) {
+                services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(projectCaptureProbe), ServiceLifetime.Singleton);
+            }
             if (processReadProbe is not null) {
                 services.AddScoped(provider => ProcessDecisionDispatchAuthorityFixture.Query(provider, clock, processReadProbe));
             }
@@ -132,6 +137,15 @@ internal sealed class ProjectTaskPlanProcessFixture : IAsyncDisposable {
                 ProcessDecisionChildMaterialBindingCodec.Version, ProcessDecisionChildMaterialBindingCodec.Serialize(process.Parent));
             var admission = await new AgentInheritedPlanningAdmission(journal).CreateAsync(run, "Plan one original task.",
                 AgentPlanningOwner.ProjectTaskPlan, parentBinding, async (binding, token) => {
+                    if (useInitialBinder) {
+                        var participant = (IAgentInheritedPlanningInitialBinder)services.GetServices<IAgentInheritedPlanningParticipant>()
+                            .Single(item => item.Owner == AgentPlanningOwner.ProjectTaskPlan && item.SupportsParent(parentBinding));
+                        var evidence = ProcessExecutionClaimEvidenceReader.Read(binding.Candidate, out _)
+                            ?? throw new InvalidOperationException("The initial child lost its original Process claim.");
+                        return await participant.BindInitialAsync(binding, parentBinding,
+                            AgentToolProtocolEnvelope.Create(ProcessDecisionInitialSourceCodec.Format,
+                                ProcessDecisionInitialSourceCodec.Version, ProcessDecisionInitialSourceCodec.Serialize(evidence)), token);
+                    }
                     var parent = process.Parent;
                     var caller = new ProjectTaskPlanCaller(ProjectTaskPlanCallerKind.ProcessAgent,
                         ProjectDefinitionGovernedBindings.ProcessCaller(process.Source).Key.ToArray());

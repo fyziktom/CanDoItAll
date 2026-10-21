@@ -8,13 +8,20 @@ namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
 public sealed class AgentInheritedPlanningSavedEffectTests {
-    [Fact]
-    public async Task Parent_continuation_requires_real_receipt_claim_and_original_held_snapshot_without_charging_human_wait() {
-        await using var fixture = await CreateAsync();
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Parent_continuation_requires_real_receipt_claim_and_original_held_snapshot_without_charging_human_wait(
+        bool review, bool projectContext) {
+        var contextScope = projectContext ? WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")) : null;
+        await using var fixture = await AgentInheritedPlanningFixture.CreateForPublicationAsync(contextScope);
         var waiting = await WaitAsync(fixture);
         var access = new ParentAccess(fixture);
         fixture.Clock.Advance(TimeSpan.FromMinutes(2));
-        await using var lease = await ResumeAsync(fixture, waiting, access);
+        fixture.Policy.DispatchAllowed = !review;
+        await using var lease = await ResumeAsync(fixture, waiting, access, review: review);
         using var bound = lease.Bind();
         var work = lease.PlanningWork!;
         var binding = Binding(waiting);
@@ -29,7 +36,11 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
         await using (publication) {
             Assert.Null(publication.OriginalChatSession);
             Assert.Equal(AgentPlanningPublicationOrigin.Inherited, publication.Original.Origin);
+            Assert.Equal(fixture.Files.StorageScope, publication.Original.Scope);
+            Assert.Equal(contextScope ?? fixture.Files.StorageScope, AgentPlanningRunMetadata.ReadScope(publication.OriginalRun));
             Assert.Equal(TimeSpan.FromSeconds(29), work.RequirePublication(publication, binding));
+            Assert.Equal(review ? AgentInheritedContinuationPurpose.ManagerReview : AgentInheritedContinuationPurpose.Dispatch,
+                work.RequireInheritedPublicationPurpose(publication, binding));
             Assert.Throws<AgentPlanningAdmissionException>(() => work.RequirePublication(publication,
                 binding with { IntentId = new(Guid.NewGuid()) }));
             fixture.Clock.Advance(TimeSpan.FromSeconds(3));
@@ -44,6 +55,33 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
         Assert.Null(settled.ToolAdmission.PlanningDecision.Work.Open);
         Assert.Equal(Origin(waiting), Origin(settled));
         Assert.Equal(RunOutcome.Succeeded, settled.Outcome);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Original_context_cannot_change_after_the_saved_publication_claim(bool review) {
+        var originalScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        await using var fixture = await AgentInheritedPlanningFixture.CreateForPublicationAsync(originalScope);
+        var waiting = await WaitAsync(fixture);
+        await using var lease = await ResumeAsync(fixture, waiting, new(fixture), review: review);
+        using var bound = lease.Bind();
+        var claim = await ClaimAsync(fixture, lease, waiting);
+        using var claimed = claim.Bind();
+        var detail = (await fixture.Files.Store.GetExecutionRunDetailAsync(waiting.Id))!;
+        var changed = detail.Run with {
+            MetadataJson = AgentPlanningRunMetadata.ApplyInherited("{}", AgentPlanningOwner.ProjectTaskPlan,
+                AgentPlanningRunMetadata.Read(detail.Run), WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"))),
+            Revision = checked(detail.Run.Revision + 1)
+        };
+        await fixture.Files.Store.SaveExecutionRunDetailAsync(detail with { Run = changed });
+        await using var held = await SnapshotAsync(fixture);
+        Assert.NotEqual(originalScope, AgentPlanningRunMetadata.ReadScope(held.OriginalRun));
+        var refusal = Assert.Throws<AgentPlanningAdmissionException>(() =>
+            lease.PlanningWork!.RequirePublication(held, Binding(waiting)));
+        Assert.Equal(AgentPlanningAdmissionRefusal.OriginalStepChanged, refusal.Reason);
+        Assert.Equal(AgentToolProposalState.Executing,
+            AgentToolJournalTransitions.RequireProposal(held.OriginalRun.ToolAdmission!, Binding(waiting)).State);
     }
 
     [Theory]
@@ -100,27 +138,35 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
     }
 
     [Theory]
-    [InlineData(Denial.Parent, false)]
-    [InlineData(Denial.SourceRead, false)]
-    [InlineData(Denial.SourceDispatch, false)]
-    [InlineData(Denial.SourceFingerprint, false)]
-    [InlineData(Denial.Caller, false)]
-    [InlineData(Denial.Parent, true)]
-    [InlineData(Denial.SourceRead, true)]
-    [InlineData(Denial.SourceDispatch, true)]
-    [InlineData(Denial.SourceFingerprint, true)]
-    [InlineData(Denial.Caller, true)]
-    public async Task Revocation_before_resume_or_before_claim_cannot_enter_an_effect(Denial denial, bool beforeClaim) {
+    [InlineData(Denial.Parent, false, false)]
+    [InlineData(Denial.SourceRead, false, false)]
+    [InlineData(Denial.SourceDispatch, false, false)]
+    [InlineData(Denial.SourceFingerprint, false, false)]
+    [InlineData(Denial.Caller, false, false)]
+    [InlineData(Denial.Parent, true, false)]
+    [InlineData(Denial.SourceRead, true, false)]
+    [InlineData(Denial.SourceDispatch, true, false)]
+    [InlineData(Denial.SourceFingerprint, true, false)]
+    [InlineData(Denial.Caller, true, false)]
+    [InlineData(Denial.Parent, false, true)]
+    [InlineData(Denial.SourceRead, false, true)]
+    [InlineData(Denial.SourceFingerprint, false, true)]
+    [InlineData(Denial.Caller, false, true)]
+    [InlineData(Denial.Parent, true, true)]
+    [InlineData(Denial.SourceRead, true, true)]
+    [InlineData(Denial.SourceFingerprint, true, true)]
+    [InlineData(Denial.Caller, true, true)]
+    public async Task Revocation_before_resume_or_before_claim_cannot_enter_an_effect(Denial denial, bool beforeClaim, bool review) {
         await using var fixture = await CreateAsync();
         var waiting = await WaitAsync(fixture);
         var access = new ParentAccess(fixture);
         if (!beforeClaim) {
             access.Deny(denial);
-            await Assert.ThrowsAsync<AgentToolReceiptAccessDeniedException>(() => ResumeAsync(fixture, waiting, access));
+            await Assert.ThrowsAsync<AgentToolReceiptAccessDeniedException>(() => ResumeAsync(fixture, waiting, access, review: review));
             await RequireUnchangedAsync(fixture, waiting);
             return;
         }
-        await using var lease = await ResumeAsync(fixture, waiting, access);
+        await using var lease = await ResumeAsync(fixture, waiting, access, review: review);
         using var bound = lease.Bind();
         await fixture.Journal.ObserveSavedEffectReceiptAsync(lease, new AbsentReceipt(), default);
         access.Deny(denial);
@@ -133,10 +179,13 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
     }
 
     [Theory]
-    [InlineData(Denial.Parent)]
-    [InlineData(Denial.SourceDispatch)]
-    [InlineData(Denial.Caller)]
-    public async Task Authority_is_rechecked_after_waiting_for_the_original_dispatch_lease(Denial denial) {
+    [InlineData(Denial.Parent, false)]
+    [InlineData(Denial.SourceDispatch, false)]
+    [InlineData(Denial.Caller, false)]
+    [InlineData(Denial.Parent, true)]
+    [InlineData(Denial.SourceRead, true)]
+    [InlineData(Denial.Caller, true)]
+    public async Task Authority_is_rechecked_after_waiting_for_the_original_dispatch_lease(Denial denial, bool review) {
         await using var fixture = await CreateAsync();
         var waiting = await WaitAsync(fixture);
         var access = new ParentAccess(fixture);
@@ -148,7 +197,7 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
                 ready.TrySetResult();
             }
         };
-        var pending = ResumeAsync(fixture, waiting, access, deadline.Token);
+        var pending = ResumeAsync(fixture, waiting, access, deadline.Token, review);
         Exception? check;
         try {
             check = await Record.ExceptionAsync(async () => {
@@ -166,13 +215,15 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
     }
 
     [Theory]
-    [InlineData(AgentToolEffectState.Committed)]
-    [InlineData(AgentToolEffectState.Unknown)]
-    public async Task Actual_effect_outcome_is_retained_after_parent_and_source_revocation(AgentToolEffectState effect) {
+    [InlineData(AgentToolEffectState.Committed, false)]
+    [InlineData(AgentToolEffectState.Unknown, false)]
+    [InlineData(AgentToolEffectState.Committed, true)]
+    [InlineData(AgentToolEffectState.Unknown, true)]
+    public async Task Actual_effect_outcome_is_retained_after_parent_and_source_revocation(AgentToolEffectState effect, bool review) {
         await using var fixture = await CreateAsync();
         var waiting = await WaitAsync(fixture);
         var access = new ParentAccess(fixture);
-        await using var lease = await ResumeAsync(fixture, waiting, access);
+        await using var lease = await ResumeAsync(fixture, waiting, access, review: review);
         using var bound = lease.Bind();
         var claim = await ClaimAsync(fixture, lease, waiting);
         using var claimed = claim.Bind();
@@ -190,11 +241,13 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
             fixture.Journal.ReadSavedEffectAsync(lease, Binding(waiting), default));
     }
 
-    [Fact]
-    public async Task Expiration_is_checked_inside_held_publication_authority() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Expiration_is_checked_inside_held_publication_authority(bool review) {
         await using var fixture = await CreateAsync();
         var waiting = await WaitAsync(fixture);
-        await using var lease = await ResumeAsync(fixture, waiting, new(fixture));
+        await using var lease = await ResumeAsync(fixture, waiting, new(fixture), review: review);
         using var bound = lease.Bind();
         var claim = await ClaimAsync(fixture, lease, waiting);
         using var claimed = claim.Bind();
@@ -205,21 +258,67 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
         Assert.Equal(AgentPlanningAdmissionRefusal.WorkBudgetExhausted, refusal.Reason);
     }
 
-    [Fact]
-    public async Task Lost_resume_acknowledgement_cannot_reconstruct_open_work_after_restart() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Lost_resume_acknowledgement_cannot_reconstruct_open_work_after_restart(bool review) {
         await using var fixture = await CreateAsync();
         var waiting = await WaitAsync(fixture);
         var access = new ParentAccess(fixture);
         fixture.Fault = ExistingRunDetailCommitStage.RunPersisted;
-        await Assert.ThrowsAsync<IOException>(() => ResumeAsync(fixture, waiting, access));
+        await Assert.ThrowsAsync<IOException>(() => ResumeAsync(fixture, waiting, access, review: review));
         var retained = await fixture.ReadAsync();
         Assert.NotNull(retained.ToolAdmission!.PlanningDecision!.Work.Open);
         Assert.Empty(retained.PendingApprovals);
         var owner = new AgentPlanningDecisionOwner(fixture.NewJournal());
         var refusal = await Assert.ThrowsAsync<AgentPlanningAdmissionException>(() => owner.ResumeInheritedSavedEffectAsync(
-            Request(retained), AgentPlanningDecisionExpectation.From(retained), new(Origin(retained), access.RequireAsync), access.ReadAsync, default));
+            Request(retained), AgentPlanningDecisionExpectation.From(retained), Continuation(retained, access, review), access.ReadAsync, default));
         Assert.Equal(AgentPlanningAdmissionRefusal.WorkAlreadyOpen, refusal.Reason);
         Assert.Null(AgentToolJournalTransitions.RequireProposal(retained.ToolAdmission, Binding(retained)).DispatchClaimId);
+    }
+
+    [Fact]
+    public async Task Competing_reviews_of_one_displayed_proposal_admit_only_one_live_interval() {
+        await using var fixture = await CreateAsync();
+        var waiting = await WaitAsync(fixture);
+        var access = new ParentAccess(fixture);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        await using var holder = await fixture.Files.NewStore().AcquireToolDispatchLeaseAsync(waiting.Id, deadline.Token);
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        access.Observed = count => {
+            if (count == 4) {
+                ready.TrySetResult();
+            }
+        };
+        var first = ResumeAsync(fixture, waiting, access, deadline.Token, review: true);
+        var second = ResumeAsync(fixture, waiting, access, deadline.Token, review: true);
+        Exception? check;
+        try {
+            check = await Record.ExceptionAsync(() => ready.Task.WaitAsync(deadline.Token));
+        } finally {
+            await holder.DisposeAsync();
+        }
+        var outcomes = await Task.WhenAll(ObserveAsync(first), ObserveAsync(second));
+        Assert.Null(check);
+        Assert.Single(outcomes, item => item is null);
+        Assert.True(Assert.Single(outcomes, item => item is not null) is AgentToolAdmissionException or AgentPlanningAdmissionException);
+        var current = await fixture.ReadAsync();
+        Assert.NotNull(current.ToolAdmission!.PlanningDecision!.Work.Open);
+        Assert.Equal(waiting.ToolAdmission!.ProviderDispatches.Single().Id,
+            Assert.Single(current.ToolAdmission.ProviderDispatches).Id);
+        var proposal = AgentToolJournalTransitions.RequireProposal(current.ToolAdmission, Binding(waiting));
+        Assert.Equal(AgentToolProposalState.Prepared, proposal.State);
+        Assert.Equal(ExecutionApprovalStatus.Approved, proposal.ApprovalStatus);
+        Assert.Null(proposal.DispatchClaimId);
+
+        static async Task<Exception?> ObserveAsync(Task<AgentToolRunLease> pending) {
+            try {
+                await using var lease = await pending;
+                return null;
+            } catch (Exception failure) {
+                return failure;
+            }
+        }
     }
 
     private static Task<AgentInheritedPlanningFixture> CreateAsync() => AgentInheritedPlanningFixture.CreateForPublicationAsync();
@@ -233,9 +332,12 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
         => new(run.Id, run.ChatSessionId, run.Revision, run.ToolAdmission!.Revision, Binding(run),
             run.PendingApprovals.Select(item => new PendingToolApprovalDecision(item.ApprovalId, true) { ToolAdmission = item.ToolAdmission }).ToArray());
     private static Task<AgentToolRunLease> ResumeAsync(AgentInheritedPlanningFixture fixture, ExecutionRunRecord run,
-        ParentAccess access, CancellationToken token = default)
+        ParentAccess access, CancellationToken token = default, bool review = false)
         => fixture.Owner.ResumeInheritedSavedEffectAsync(Request(run), AgentPlanningDecisionExpectation.From(run),
-            new(Origin(run), access.RequireAsync), access.ReadAsync, token);
+            Continuation(run, access, review), access.ReadAsync, token);
+    private static AgentInheritedSavedEffectContinuation Continuation(ExecutionRunRecord run, ParentAccess access, bool review)
+        => review ? AgentInheritedSavedEffectContinuation.ForManagerReview(Origin(run), AgentPlanningDecisionExpectation.From(run),
+            Binding(run), access.RequireAsync) : new(Origin(run), access.RequireAsync);
     private static ValueTask<bool> AllowRead(AgentToolSessionObservation _, CancellationToken token) => ValueTask.FromResult(true);
 
     private static async Task<AgentToolInvocationClaim> ClaimAsync(AgentInheritedPlanningFixture fixture,
@@ -261,14 +363,15 @@ public sealed class AgentInheritedPlanningSavedEffectTests {
     private sealed class ParentAccess(AgentInheritedPlanningFixture fixture) {
         private bool parentAllowed = true;
         private bool callerAllowed = true;
-        internal int Checks { get; private set; }
+        private int checks;
+        internal int Checks => Volatile.Read(ref checks);
         internal Action<int>? Observed { get; set; }
 
         internal Task RequireAsync(ExecutionRunRecord run, CancellationToken token) {
             token.ThrowIfCancellationRequested();
             Assert.Equal(Origin(fixture.Original), Origin(run));
-            Checks++;
-            Observed?.Invoke(Checks);
+            var observed = Interlocked.Increment(ref checks);
+            Observed?.Invoke(observed);
             if (!parentAllowed) {
                 throw new AgentToolReceiptAccessDeniedException();
             }

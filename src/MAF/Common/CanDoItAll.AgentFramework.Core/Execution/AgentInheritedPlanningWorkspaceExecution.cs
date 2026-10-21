@@ -14,13 +14,14 @@ internal sealed class AgentInheritedPlanningWorkspaceExecution(ISandboxWorkspace
         ArgumentNullException.ThrowIfNull(request.ContextScope);
         ArgumentNullException.ThrowIfNull(request.ParentBinding);
         ArgumentNullException.ThrowIfNull(request.RequireOriginalParent);
-        ArgumentNullException.ThrowIfNull(request.BindAsync);
+        ArgumentNullException.ThrowIfNull(request.CaptureSourceEvidence);
+        ArgumentNullException.ThrowIfNull(request.Start);
         if (request.AgentId == Guid.Empty || request.ActivityOperationId.Value == Guid.Empty || !Enum.IsDefined(request.Owner)) {
             throw new ArgumentException("Inherited planning requires an exact Agent, activity and registered owner.", nameof(request));
         }
         AgentExecutionStartupAggregate? startup = null;
         var executionRequest = new ExecutionRunRequest(request.AgentId, request.OriginalInput, request.ActivityOperationId, Context: request.Context);
-        var admitted = await new AgentInheritedPlanningRunAdmission(runs, leases, journal).AdmitAsync(request.ExecutionRunId,
+        var admitted = await new AgentInheritedPlanningRunAdmission(runs, leases, journal).AdmitWorkspaceAsync(request,
             async (run, token) => {
                 if (run.AgentId != request.AgentId || run.ToolAdmission?.PlanningDecision?.Owner != request.Owner ||
                     AgentPlanningRunMetadata.ReadScope(run) != request.ContextScope ||
@@ -31,8 +32,9 @@ internal sealed class AgentInheritedPlanningWorkspaceExecution(ISandboxWorkspace
             }, async token => {
                 startup = await prepare(executionRequest, null, token);
                 return new(startup.Run with { Id = request.ExecutionRunId }, request.OriginalInput, request.Owner,
-                    coordinator.CaptureRuntimeContract(request.Owner, startup.Agent, startup.Provider), request.ContextScope,
-                    request.ParentBinding, request.BindAsync);
+                    coordinator.CaptureRuntimeContract(request.Owner, request.ParentBinding, startup.Agent, startup.Provider), request.ContextScope,
+                    request.ParentBinding, (context, bindingToken) => coordinator.BindInitialAsync(request.Owner, context,
+                        request.ParentBinding, request.CaptureSourceEvidence(context.Candidate), bindingToken));
             }, cancellationToken);
         var original = admitted.Run;
         await coordinator.RequireCurrentReadAsync(original, cancellationToken);
@@ -43,9 +45,11 @@ internal sealed class AgentInheritedPlanningWorkspaceExecution(ISandboxWorkspace
             return new(original, null);
         }
         executionRequest = RestoreRequest(original, request.ActivityOperationId);
-        startup = startup is null ? await prepare(executionRequest, original, cancellationToken) : startup with { Run = original };
-        var result = await coordinator.RunWithinLifecycleAsync(startup.Agent, startup.Provider, AgentPlanningDecisionExpectation.From(original),
-            (execution, token) => complete(startup with { Run = execution.Run }, executionRequest, execution, token), cancellationToken);
+        var result = await coordinator.RunPreparingWithinLifecycleAsync(AgentPlanningDecisionExpectation.From(original),
+            async (live, token) => {
+                startup = startup is null ? await prepare(executionRequest, live, token) : startup with { Run = live };
+                return (startup.Agent, startup.Provider);
+            }, (execution, token) => complete(startup! with { Run = execution.Run }, executionRequest, execution, token), cancellationToken);
         var saved = await runs.GetExecutionRunAsync(original.Id, cancellationToken)
             ?? throw new InvalidDataException("The completed inherited execution is unavailable.");
         await coordinator.RequireCurrentReadAsync(saved, cancellationToken);

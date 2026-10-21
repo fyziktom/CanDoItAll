@@ -219,7 +219,41 @@ public sealed class ProcessDecisionResultCoordinatorTests {
 
     private static Guid Id(int value) => Guid.Parse($"00000000-0000-0000-0000-{value:D12}");
 
-    private sealed class Fixture : IProcessDecisionResultQuery, IProcessDecisionChildOutcomeReader, IProcessIdempotencyStore, IProcessRuntimeUnitOfWork {
+    [Fact]
+    public async Task Live_outcome_uses_selected_original_and_replay_needs_no_transient_evidence() {
+        var fixture = new Fixture();
+        var evidence = new ProcessExecutionOwnerEvidence<string>("closed-startup");
+        fixture.ExpectedEvidence = evidence;
+        fixture.Outcome = new ProcessDecisionChildResult.Closed(ProcessDecisionChildTerminalStatus.Failed,
+            new(1, ProcessDecisionChildOutcome.NoEffect, null), new(1, new(120, 0)));
+        var command = fixture.Command with { Result = fixture.Command.Result with {
+            Outcome = StrategyOutcome.Failed, ProducedArtifacts = [], OwnerEvidence = evidence
+        } };
+        var first = await fixture.SubmitAsync(command);
+        Assert.Equal(ProcessRuntimeStepStatus.Failed, first.State.Steps.Single().Status);
+        Assert.Equal(120, first.DecisionBudget!.Change.Balance.ConsumedWorkTicks);
+        Assert.True(first.DecisionBudget.Change.Balance.OverrunDetected);
+        fixture.State = first.State;
+        fixture.Failure = new InvalidDataException("Replay cannot read the owner again.");
+        var replay = await fixture.SubmitAsync(command with { Result = command.Result with { OwnerEvidence = null } });
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Duplicate, replay.Outcome);
+        Assert.Equal(first.DecisionBudget, replay.DecisionBudget);
+        Assert.Equal(1, fixture.Reads);
+    }
+
+    [Fact]
+    public async Task Live_evidence_without_an_original_selected_child_cannot_commit() {
+        var fixture = new Fixture();
+        fixture.Selection = fixture.Selection with { Child = null };
+        var result = await fixture.SubmitAsync(fixture.Command with { Result = fixture.Command.Result with {
+            OwnerEvidence = new ProcessExecutionOwnerEvidence<string>("unbound")
+        } });
+        Assert.False(result.Succeeded);
+        Assert.Equal(0, fixture.Reads);
+        Assert.Equal(0, fixture.Commits);
+    }
+
+    private sealed class Fixture : IProcessDecisionResultQuery, IProcessDecisionLiveOutcomeReader, IProcessIdempotencyStore, IProcessRuntimeUnitOfWork {
         internal Fixture() {
             var now = new DateTimeOffset(2026, 10, 20, 12, 0, 0, TimeSpan.Zero);
             ProcessRunId run = new(Id(1));
@@ -260,6 +294,7 @@ public sealed class ProcessDecisionResultCoordinatorTests {
         internal int Queries { get; private set; }
         internal int Reads { get; private set; }
         internal int Commits { get; private set; }
+        internal ProcessExecutionOwnerEvidence? ExpectedEvidence { get; set; }
         internal ProcessRuntimeCommitRequest? Request { get; private set; }
         internal RuntimeCommandId Lookup { get; private set; }
         private readonly Dictionary<RuntimeCommandId, ProcessRuntimeCommitResult> saved = [];
@@ -280,6 +315,13 @@ public sealed class ProcessDecisionResultCoordinatorTests {
             Reads++;
             Assert.Equal(Selection.Child!.Original, original);
             return Failure is null ? Task.FromResult(Outcome) : Task.FromException<ProcessDecisionChildResult>(Failure);
+        }
+
+        public Task<ProcessDecisionChildResult> ReadAsync(ProcessDecisionResultChild original, ProcessExecutionOwnerEvidence evidence,
+            CancellationToken cancellationToken = default) {
+            Assert.Same(Selection.Child, original);
+            Assert.Same(ExpectedEvidence, evidence);
+            return ReadAsync(original.Original, cancellationToken);
         }
 
         public Task<ProcessRuntimeCommitResult?> FindCompletedCommandAsync(RuntimeCommandId commandId, CancellationToken cancellationToken = default) {

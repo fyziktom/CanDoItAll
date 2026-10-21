@@ -60,7 +60,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var catalog = await store.LoadCatalogAsync(cancellationToken);
             EnsureAgentExists(catalog, agentId);
-            var now = DateTimeOffset.UtcNow;
+            var now = executionClock.GetUtcNow();
             return await chatSessionStore.CreateChatSessionAsync(
                 new ChatSessionRecord(
                     Id: Guid.NewGuid(),
@@ -86,8 +86,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 Id: Guid.NewGuid(),
                 AgentId: agentId,
                 Title: "New exploration thread",
-                CreatedAtUtc: DateTimeOffset.UtcNow,
-                UpdatedAtUtc: DateTimeOffset.UtcNow,
+                CreatedAtUtc: executionClock.GetUtcNow(),
+                UpdatedAtUtc: executionClock.GetUtcNow(),
                 RuntimeSessionKey: string.Empty,
                 SerializedSessionStateJson: null,
                 Messages: [],
@@ -125,7 +125,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 session with
                 {
                     Title = normalizedTitle,
-                    UpdatedAtUtc = DateTimeOffset.UtcNow
+                    UpdatedAtUtc = executionClock.GetUtcNow()
                 },
                 cancellationToken);
         }
@@ -141,7 +141,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             renamedSession = session with
             {
                 Title = normalizedTitle,
-                UpdatedAtUtc = DateTimeOffset.UtcNow
+                UpdatedAtUtc = executionClock.GetUtcNow()
             };
 
             return SandboxWorkspaceDocument.Combine(
@@ -403,7 +403,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
             currentSession = currentSession with
             {
-                UpdatedAtUtc = DateTimeOffset.UtcNow,
+                UpdatedAtUtc = executionClock.GetUtcNow(),
                 Compatibility = ChatSessionRuntimeCompatibilityAdapter.CreateCompatibility(
                     currentResponse.RuntimeSessionKey,
                     currentResponse.SerializedSessionStateJson,
@@ -481,7 +481,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var decisions = expected.Select(approval => new PendingToolApprovalDecision(approval.ApprovalId, true) {
                 ToolAdmission = approval.ToolAdmission
             }).ToArray();
-            var now = DateTimeOffset.UtcNow;
+            var now = executionClock.GetUtcNow();
             var audit = ExecutionRunStateTransitions.ApplyApprovalDecision(current.Approvals, current.Run,
                 decisions, now, "auto-approval", runId.ToString("N"), toolPolicies);
             var run = ExecutionRunStateTransitions.CreateContinuationStartRun(current.Run, true, true, now) with {

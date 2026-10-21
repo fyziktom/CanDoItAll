@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
+using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Processes.Persistence;
 
@@ -7,6 +8,7 @@ internal static class ProcessDecisionResultAcceptance {
     internal static async Task RequireAsync(ProcessPersistenceDbContext context, ProcessRuntimeCommitRequest request,
         CancellationToken cancellationToken) {
         var original = request.OriginalState.AppliedResults.Select(item => (item.StepInstanceId, item.StrategyId, item.IdempotencyKey)).ToHashSet();
+        var reviewRootChecked = false;
         foreach (var result in request.Mutation.State.AppliedResults.Where(item => !original.Contains((item.StepInstanceId, item.StrategyId, item.IdempotencyKey)))) {
             var selection = await EfProcessDecisionResultQuery.ReadStateAsync(context, request.Mutation.State.RunId,
                 result.StepInstanceId, result.ExecutionRunId, cancellationToken).ConfigureAwait(false);
@@ -26,6 +28,11 @@ internal static class ProcessDecisionResultAcceptance {
             if (step.Status is not (ProcessRuntimeStepStatus.Completed or ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled) ||
                     selection.OtherWorkPending || selection.SharedScopePending) {
                 throw Refuse();
+            }
+            if (!reviewRootChecked && request.OriginalState.Steps.Single(item => item.StepInstanceId == result.StepInstanceId).Status
+                    is ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.WaitingApproval or ProcessRuntimeStepStatus.Blocked) {
+                await RequireReviewRootAsync(context, request.OriginalState, cancellationToken).ConfigureAwait(false);
+                reviewRootChecked = true;
             }
             if (selection.Head is null) {
                 if (result.Outcome is not (StrategyOutcome.Failed or StrategyOutcome.Canceled) ||
@@ -51,6 +58,17 @@ internal static class ProcessDecisionResultAcceptance {
                     settlement.Expectation.StepInstanceId != result.StepInstanceId) {
                 throw Refuse();
             }
+        }
+    }
+
+    private static async Task RequireReviewRootAsync(ProcessPersistenceDbContext context,
+        ProcessRuntimeStateSnapshot original, CancellationToken cancellationToken) {
+        var status = original.RunId == original.RootRunId ? original.Status :
+            await context.RuntimeStates.AsNoTracking().Where(item => item.RunId == original.RootRunId.Value)
+                .Select(item => (ProcessRuntimeStatus?)item.Status).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (status is null || !Enum.IsDefined(status.Value) || status == ProcessRuntimeStatus.CancelRequested ||
+                ProcessRuntimeTerminalStates.IsRunTerminal(status.Value)) {
+            throw new InvalidOperationException("A stopped or cancelling root cannot accept a new terminal result from waiting review.");
         }
     }
 

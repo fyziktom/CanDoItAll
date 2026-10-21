@@ -5,7 +5,10 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Processes.Application;
 
-public sealed record ProcessDecisionResultChild(ProcessDecisionChildMaterialBinding Original, ProcessDecisionChildObservation Observation);
+public sealed record ProcessDecisionResultChild(ProcessDecisionChildMaterialBinding Original, ProcessDecisionChildObservation Observation) {
+    public Guid? OriginalAgentId { get; init; }
+    public ProcessProjectAdmission? OriginalProject { get; init; }
+}
 
 public sealed record ProcessDecisionResultSelection(ProcessRunId RootRunId, ProcessRunId RunId, ProcessStepInstanceId StepInstanceId,
     DecisionBudgetBalance Budget, ProcessDecisionGeneration? Head, ProcessDecisionResultChild? Child,

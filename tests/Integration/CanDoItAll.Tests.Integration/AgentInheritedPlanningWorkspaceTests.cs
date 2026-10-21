@@ -47,7 +47,7 @@ public sealed class AgentInheritedPlanningWorkspaceTests {
         var result = await fixture.ExecuteAsync(fixture.Request with {
             OriginalInput = "Replacement input must not enter the provider.", ActivityOperationId = AgentExecutionOperationId.New(),
             Context = ExecutionInvocationContext.Empty with { SourceId = "replacement" },
-            BindAsync = (_, _) => throw new InvalidOperationException("Retained execution must not create a new binding.")
+            CaptureSourceEvidence = _ => throw new InvalidOperationException("Retained execution must not create a new binding.")
         });
         Assert.NotNull(result.Execution);
         Assert.Equal(original.SourceId, result.Run.SourceId);
@@ -134,7 +134,9 @@ public sealed class AgentInheritedPlanningWorkspaceTests {
     public async Task Parent_rejection_leaves_no_initial_run_or_provider_work() {
         await using var fixture = await AgentInheritedPlanningWorkspaceFixture.CreateAsync();
         fixture.DenyParent = true;
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.ExecuteAsync());
+        var failure = await Assert.ThrowsAsync<AgentInheritedPlanningPreparationException>(() => fixture.ExecuteAsync());
+        Assert.IsType<UnauthorizedAccessException>(failure.InnerException);
+        Assert.Equal(fixture.Request.ExecutionRunId, failure.Failure.ExecutionRunId);
         Assert.Null(await fixture.Files.Store.GetExecutionRunAsync(fixture.Request.ExecutionRunId));
         Assert.Empty(fixture.Wire.Requests);
     }
@@ -143,7 +145,7 @@ public sealed class AgentInheritedPlanningWorkspaceTests {
     [InlineData("participant")]
     [InlineData("provider")]
     [InlineData("agent-options")]
-    public async Task Changed_registered_contract_refuses_retained_preparation_without_writing_failure(string change) {
+    public async Task Changed_registered_contract_settles_recovered_startup_without_entering_provider(string change) {
         await using var fixture = await AgentInheritedPlanningWorkspaceFixture.CreateAsync();
         var original = await fixture.SeedInitialAsync();
         if (change == "participant") {
@@ -161,8 +163,26 @@ public sealed class AgentInheritedPlanningWorkspaceTests {
         }
         var failure = await Assert.ThrowsAsync<AgentToolAdmissionException>(() => fixture.ExecuteAsync());
         Assert.Equal("planning.runtime-contract-changed", failure.Code);
-        Assert.Equal(JsonSerializer.Serialize(original), JsonSerializer.Serialize(await fixture.Files.Store.GetExecutionRunAsync(original.Id)));
+        var closed = (await fixture.Files.Store.GetExecutionRunAsync(original.Id))!;
+        Assert.Equal(RunOutcome.Failed, closed.Outcome);
+        Assert.Null(closed.ToolAdmission!.PlanningDecision!.Work.Open);
+        Assert.True(closed.ToolAdmission.PlanningDecision.Work.ClosedWorkTicks >= original.ToolAdmission!.PlanningDecision!.Work.ClosedWorkTicks);
+        Assert.Equal(original.ToolAdmission.PlanningDecision.InheritedOrigin, closed.ToolAdmission.PlanningDecision.InheritedOrigin);
+        Assert.Equal(original.MetadataJson, closed.MetadataJson);
         Assert.Empty(fixture.Wire.Requests);
+        Assert.Null((await fixture.ExecuteAsync()).Execution);
+    }
+
+    [Fact]
+    public async Task Recovery_without_an_original_journal_cannot_prepare_or_bind_a_new_child() {
+        await using var fixture = await AgentInheritedPlanningWorkspaceFixture.CreateAsync();
+        var failure = await Assert.ThrowsAsync<AgentToolAdmissionException>(() => fixture.ExecuteAsync(fixture.Request with {
+            Start = fixture.Request.Start with { Mode = AgentInheritedPlanningStartMode.ExistingOnly }
+        }));
+        Assert.Equal(AgentInheritedPlanningRunAdmission.MissingOriginalCode, failure.Code);
+        Assert.Equal(0, fixture.Bindings);
+        Assert.Empty(fixture.Wire.Requests);
+        Assert.Null(await fixture.Files.Store.GetExecutionRunAsync(fixture.Request.ExecutionRunId));
     }
 
     private static void AssertOriginalInput(AgentInheritedPlanningWorkspaceFixture fixture) {

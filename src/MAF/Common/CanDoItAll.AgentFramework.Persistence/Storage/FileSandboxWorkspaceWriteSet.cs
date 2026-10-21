@@ -60,6 +60,8 @@ internal sealed class FileSandboxWorkspaceWriteSet {
         return additionalAgentId is { } id ? new(selected.keys.Append(Agent(id))) : selected;
     }
 
+    internal static FileSandboxWorkspaceWriteSet Agents(IEnumerable<Guid> agentIds) => new(agentIds.Select(Agent));
+
     internal static FileSandboxWorkspaceWriteSet Workspace(SandboxWorkspaceDocument before, SandboxWorkspaceDocument after) {
         var keys = Catalog(before.ToCatalog(), after.ToCatalog()).keys.ToList();
         foreach (var run in before.ExecutionRuns.Concat(after.ExecutionRuns)) {

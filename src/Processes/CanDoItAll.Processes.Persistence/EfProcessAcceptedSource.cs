@@ -14,13 +14,26 @@ internal static class EfProcessAcceptedSource {
         launch.AcceptedSourceVersion = ProcessAcceptedSourceVersion.OriginalProjection;
         launch.AcceptedSourceHeaderJson = projection.Header.PayloadJson;
         launch.AcceptedSourceHeaderFingerprint = projection.Header.Fingerprint;
-        context.AcceptedAssignmentSources.AddRange(projection.Assignments.Select(item => new ProcessAcceptedAssignmentSourceEntity {
-            AdmissionId = launch.Id, StepInstanceId = item.Key.Value, PayloadJson = item.Value.PayloadJson, Fingerprint = item.Value.Fingerprint
-        }));
+        foreach (var item in projection.Assignments) {
+            projection.ExecutionInputs.TryGetValue(item.Key, out var input);
+            context.AcceptedAssignmentSources.Add(new() {
+                AdmissionId = launch.Id, StepInstanceId = item.Key.Value, PayloadJson = item.Value.PayloadJson, Fingerprint = item.Value.Fingerprint,
+                InputVersion = input is null ? ProcessAcceptedExecutionInputVersion.NotCaptured : ProcessAcceptedExecutionInputVersion.OriginalStepRequirements,
+                InputJson = input?.PayloadJson, InputFingerprint = input?.Fingerprint
+            });
+        }
     }
 
-    internal static async Task<ProcessAcceptedSource> ReadAsync(ProcessPersistenceDbContext context,
-        ProcessRuntimeStateEntity state, ProcessStepInstanceId stepId, CancellationToken cancellationToken) {
+    internal static Task<ProcessAcceptedSource> ReadAsync(ProcessPersistenceDbContext context,
+        ProcessRuntimeStateEntity state, ProcessStepInstanceId stepId, CancellationToken cancellationToken)
+        => ReadCoreAsync(context, state, stepId, false, cancellationToken);
+
+    internal static Task<ProcessAcceptedSource> ReadProjectedAsync(ProcessPersistenceDbContext context,
+        ProcessRuntimeStateEntity state, ProcessStepInstanceId stepId, CancellationToken cancellationToken)
+        => ReadCoreAsync(context, state, stepId, true, cancellationToken);
+
+    private static async Task<ProcessAcceptedSource> ReadCoreAsync(ProcessPersistenceDbContext context,
+        ProcessRuntimeStateEntity state, ProcessStepInstanceId stepId, bool requireProjection, CancellationToken cancellationToken) {
         var admissionId = state.LaunchAdmissionId ?? throw Mismatch("The Process runtime has no original launch admission.");
         var row = await (from launch in context.PreparedLaunches.AsNoTracking()
             where launch.Id == admissionId
@@ -37,7 +50,8 @@ internal static class EfProcessAcceptedSource {
                     LinkConflictReason = launch.LinkConflictReason, PublicFailure = launch.PublicFailure,
                     AcceptedSourceVersion = launch.AcceptedSourceVersion, AcceptedSourceHeaderJson = launch.AcceptedSourceHeaderJson,
                     AcceptedSourceHeaderFingerprint = launch.AcceptedSourceHeaderFingerprint,
-                    PayloadJson = launch.AcceptedSourceVersion == ProcessAcceptedSourceVersion.LegacyPreparedLaunch ? launch.PayloadJson : string.Empty
+                    PayloadJson = !requireProjection && launch.AcceptedSourceVersion == ProcessAcceptedSourceVersion.LegacyPreparedLaunch
+                        ? launch.PayloadJson : string.Empty
                 },
                 Assignment = source == null ? null : new ProcessAcceptedSourceEnvelope(source.PayloadJson, source.Fingerprint)
             }).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false)
@@ -45,6 +59,10 @@ internal static class EfProcessAcceptedSource {
         var saved = row.Launch;
         if (saved.AcceptedAtUtc is null || saved.RunId != state.RunId || saved.PlanId != state.PlanId) {
             throw Mismatch("The Process runtime does not match its accepted launch admission.");
+        }
+        if (requireProjection && saved.AcceptedSourceVersion == ProcessAcceptedSourceVersion.LegacyPreparedLaunch &&
+                saved.AcceptedSourceHeaderJson is null && saved.AcceptedSourceHeaderFingerprint is null && row.Assignment is null) {
+            throw new ProcessDecisionSourceProjectionRequiredException();
         }
         var original = saved.AcceptedSourceVersion switch {
             ProcessAcceptedSourceVersion.LegacyPreparedLaunch when saved.AcceptedSourceHeaderJson is null &&
@@ -56,12 +74,16 @@ internal static class EfProcessAcceptedSource {
                     saved.PreparationFingerprint, new(payload, fingerprint), assignment),
             _ => throw Mismatch("The accepted Process source version has missing, inconsistent or unsupported evidence.")
         };
+        RequireRuntime(original, state);
+        return original;
+    }
+
+    internal static void RequireRuntime(ProcessAcceptedSource original, ProcessRuntimeStateEntity state) {
         var header = original.Header;
         if (header.RunId.Value != state.RunId || header.RootRunId.Value != state.RootRunId || header.PlanId.Value != state.PlanId ||
             header.PlanHash != state.PlanHash || header.ProjectAdmission != ProcessPersistenceMappers.ReadProjectAdmission(state)) {
             throw Mismatch("The original Process source does not match its exact runtime or project lifetime.");
         }
-        return original;
     }
 
     private static ProcessExecutionAuthorityMismatchException Mismatch(string message) => new(message);

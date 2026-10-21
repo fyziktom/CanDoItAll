@@ -10,7 +10,7 @@ public enum AgentPlanningGenerationReason { Initial = 1, ExplicitRefresh = 2, Au
 public enum AgentPlanningGenerationState { Active = 1, AwaitingApproval = 2, PausedBasisChanged = 3, Completed = 4, Cancelled = 5, Failed = 6, Superseded = 7 }
 public enum AgentPlanningStepState { CapturingBasis = 1, PreparedInput = 2, ProviderEntered = 3, ResponseAdmitted = 4, Retired = 5 }
 public enum AgentPlanningWorkPhase { BasisPreparation = 1, LiveProvider = 2, SavedEffectContinuation = 3, Publication = 4 }
-public enum AgentPlanningWorkSettlementReason { AwaitingApproval = 1, PausedBasisChanged = 2, Terminal = 3, ReconciliationOnly = 4, StepCompleted = 5 }
+public enum AgentPlanningWorkSettlementReason { AwaitingApproval = 1, PausedBasisChanged = 2, Terminal = 3, ReconciliationOnly = 4, StepCompleted = 5, InitialAdmission = 6 }
 
 public sealed record AgentPlanningPolicyProvenance(
     [property: JsonRequired] Guid WorkspaceNamespaceId,

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
@@ -5,6 +6,25 @@ using CanDoItAll.Processes.Runtime;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessStrategyResultSnapshotTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Live_owner_evidence_stays_in_memory_and_cannot_arrive_through_JSON(bool adapter) {
+        var evidence = new ProcessExecutionOwnerEvidence<string>("live-only-owner-evidence");
+        var result = Result() with { OwnerEvidence = evidence };
+        Assert.True(ProcessStrategyResultSnapshot.TryCapture(result, out var snapshot, out _));
+        Assert.Same(evidence, snapshot.OwnerEvidence);
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var json = adapter ? JsonSerializer.Serialize(ProcessExecutionAdapterResult.Succeeded("Success", Hash) with {
+            OwnerEvidence = evidence
+        }, options) : JsonSerializer.Serialize(snapshot, options);
+        Assert.DoesNotContain("live-only-owner-evidence", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("ownerEvidence", json, StringComparison.Ordinal);
+        var supplied = json[..^1] + ",\"ownerEvidence\":{\"workTicks\":0}}";
+        Assert.Null(adapter ? JsonSerializer.Deserialize<ProcessExecutionAdapterResult>(supplied, options)!.OwnerEvidence
+            : JsonSerializer.Deserialize<StrategyResultEnvelope>(supplied, options)!.OwnerEvidence);
+    }
+
     [Fact]
     public void Captured_artifacts_and_host_facts_do_not_follow_mutable_caller_collections() {
         var artifact = new ProducedArtifactRef(ArtifactInstanceId.New(), ArtifactSlotId.New(), Hash);

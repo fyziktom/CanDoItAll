@@ -32,4 +32,5 @@ internal sealed record ProcessAcceptedSource(ProcessAcceptedSourceHeader Header,
 internal sealed record ProcessAcceptedSourceEnvelope(string PayloadJson, string Fingerprint);
 
 internal sealed record ProcessAcceptedSourceProjection(ProcessAcceptedSourceEnvelope Header,
-    IReadOnlyDictionary<ProcessStepInstanceId, ProcessAcceptedSourceEnvelope> Assignments);
+    IReadOnlyDictionary<ProcessStepInstanceId, ProcessAcceptedSourceEnvelope> Assignments,
+    IReadOnlyDictionary<ProcessStepInstanceId, ProcessAcceptedSourceEnvelope> ExecutionInputs);

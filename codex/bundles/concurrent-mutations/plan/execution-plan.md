@@ -1,10 +1,39 @@
 # Execution plan
 
+The [Core startup accounting scope](../validation/2026-10-20-inherited-startup-accounting.md)
+passes 189 distinct behaviors with exact source/runtime and resource proof.
+The remaining-budget/cancellation boundary passes all 40 affected integration cases.
+The selected Agent authority lease and its corrected source/lifetime regressions now
+pass. The initial business binder qualifies 177 behaviors and original input qualifies
+96. [Closed startup failure](../validation/2026-10-21-closed-startup-failure.md) qualifies
+202 distinct behaviors, including exact receipt replay after a full host restart.
+The [capacity checkpoint](../validation/2026-10-21-process-capacity-bounds.md) passes
+179 cases, including isolated outcome-verifier negatives and finite root completion.
+The [pooled-buffer and original-policy correction](../validation/2026-10-21-process-capacity-repair.md)
+now qualifies 183 behaviors with unchanged-production test correction and retained failures.
+The [manager-review admission checkpoint](../validation/2026-10-21-manager-review-admission.md)
+qualifies 74 distinct behaviors with unchanged production across its test correction.
+The [original compiled-step requirements and execution clock](../validation/2026-10-21-original-step-requirements.md)
+qualify with 128 original-input prerequisites and 29 final workspace scenarios.
+The [waiting-result completion](../validation/2026-10-21-process-review-completion.md)
+now passes all 331 final cases with frozen source/runtime and observed resource proof.
+Proceed with the [current manager action design](P07-current-manager-actions.md):
+first protect approval publication after selected file-key waits, then bind durable
+choices, current caller authority and exact Process completion. Implement the actual
+adapter only after this path qualifies. Cold allocation and sustained capacity remain explicit.
+
+The [selected step producer](../validation/2026-10-20-process-selected-step-producer.md)
+passes 187 distinct behaviors, including real RunSnapshot/StepSnapshot material,
+fresh-only preparation, exact child enrollment and transactional assignment repair
+fencing. Proceed to the remaining Core opening boundary, actual business binding
+and manager continuation. The actual executor remains gated until those owners form a
+complete tested path. Workflow, settings/SPA, remaining writers and capacity stay open.
+
 The [initial root material producer](../validation/2026-10-20-process-root-material-producer.md)
 passes 192 distinct behaviors with exact source/runtime/resource proof and retained
 initial failures. Required before-claim capture is now wired to the real Workbench reader.
-Next, design and implement the selected step preparation query, StepSnapshot capture,
-actual Agent child enrollment/binding and manager continuation as a complete selected
+Selected preparation and enrollment now pass; continue actual Agent child binding
+and manager continuation as a complete selected
 execution path. Reuse the accepted source and original work owners; preserve the executor
 guard until that path passes. Workflow, settings/SPA and broad closure remain open.
 

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Processes.Application;
 
 public sealed class ProcessDecisionRootPreparationCoordinator(IProcessDecisionRootQuery query,
-    IEnumerable<IProcessDecisionRootCapturer> capturers, IProcessRuntimeStateStore states, IProcessIdempotencyStore receipts,
+    IEnumerable<IProcessDecisionMaterialCapturer> capturers, IProcessRuntimeStateStore states, IProcessIdempotencyStore receipts,
     IProcessRuntimeUnitOfWork unitOfWork, TimeProvider clock, ILogger<ProcessDecisionRootPreparationCoordinator> logger) {
     private const int MaximumAttempts = 3;
 
@@ -84,7 +84,7 @@ public sealed class ProcessDecisionRootPreparationCoordinator(IProcessDecisionRo
     }
 
     private async Task<ProcessDecisionRootPreparationResult> CaptureAsync(ProcessRuntimeStateSnapshot state,
-        ProcessDecisionRootSelection selected, ProcessDecisionRootCaptureAttempt attempt, IProcessDecisionRootCapturer capturer,
+        ProcessDecisionRootSelection selected, ProcessDecisionRootCaptureAttempt attempt, IProcessDecisionMaterialCapturer capturer,
         CancellationToken cancellationToken) {
         ProcessDecisionMaterial? material = null;
         Exception? failure = null;
@@ -93,10 +93,11 @@ public sealed class ProcessDecisionRootPreparationCoordinator(IProcessDecisionRo
         var started = clock.GetTimestamp();
         try {
             var reference = new ProcessDecisionMaterialReference(selected.Scope.Admission.ScopeId, 1, attempt.Capture.MaterialId);
-            var outcome = await capturer.CaptureAsync(new(selected.Source, selected.Scope.Admission, reference),
+            var outcome = await capturer.CaptureAsync(new(selected.Source, selected.Scope.Admission.MaterialScope,
+                selected.Scope.Admission.ContentContract, reference),
                 captureCancellation.Token).ConfigureAwait(false);
             switch (outcome) {
-                case ProcessDecisionRootCaptureResult.Captured captured:
+                case ProcessDecisionMaterialCaptureResult.Captured captured:
                     material = captured.Material ?? throw new InvalidDataException("The root capturer returned no material.");
                     if (material.Scope != selected.Scope.Admission.MaterialScope || material.Reference != reference ||
                             material.ContentContract != capturer.ContentContract) {
@@ -104,7 +105,7 @@ public sealed class ProcessDecisionRootPreparationCoordinator(IProcessDecisionRo
                     }
                     material.RequireFresh(clock.GetUtcNow(), selected.Root.Policy.Budget.MaximumBasisAge);
                     break;
-                case ProcessDecisionRootCaptureResult.Refused refused when Enum.IsDefined(refused.Reason):
+                case ProcessDecisionMaterialCaptureResult.Refused refused when Enum.IsDefined(refused.Reason):
                     logger.LogWarning("Root capture for run {RunId}, scope {ScopeId} was refused: {Reason}.",
                         state.RunId, selected.Scope.Admission.ScopeId, refused.Reason);
                     break;

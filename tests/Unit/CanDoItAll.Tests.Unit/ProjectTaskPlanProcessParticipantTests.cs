@@ -14,7 +14,7 @@ public sealed class ProjectTaskPlanProcessParticipantTests {
     public async Task Participant_reads_original_immutable_material_without_current_assignment_access(bool step) {
         var original = ProjectTaskPlanProcessCodecFixture.Create(step);
         var reader = new OriginalReader(original);
-        var participant = new ProjectTaskPlanProcessParticipant(reader, reader, null!);
+        var participant = new ProjectTaskPlanProcessParticipant(reader, reader, null!, null!);
         Assert.Equal(original.Basis, await participant.ReadOriginalBasisAsync(original.Origin, default));
         Assert.Equal(1, reader.ChildReads);
         Assert.Equal(1, reader.MaterialReads);
@@ -44,7 +44,7 @@ public sealed class ProjectTaskPlanProcessParticipantTests {
         } else {
             reader.Material = ProjectTaskPlanProcessCodecFixture.Create().Material;
         }
-        var participant = new ProjectTaskPlanProcessParticipant(reader, reader, null!);
+        var participant = new ProjectTaskPlanProcessParticipant(reader, reader, null!, null!);
         await Assert.ThrowsAsync<AgentToolAdmissionException>(() => participant.ReadOriginalBasisAsync(original.Origin, default));
         Assert.Equal(missing is MissingEvidence.Child or MissingEvidence.Allocation ? 0 : 1, reader.MaterialReads);
     }
@@ -84,7 +84,7 @@ public sealed class ProjectTaskPlanProcessParticipantTests {
     public async Task Cancellation_stops_before_reading_material() {
         var original = ProjectTaskPlanProcessCodecFixture.Create();
         var reader = new OriginalReader(original);
-        var participant = new ProjectTaskPlanProcessParticipant(reader, reader, null!);
+        var participant = new ProjectTaskPlanProcessParticipant(reader, reader, null!, null!);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => participant.ReadOriginalBasisAsync(original.Origin, cancellation.Token));

@@ -34,7 +34,7 @@ internal sealed class ProjectTaskPlanProcessReadAuthority(IProcessOriginalReceip
             }
             var launcher = (authority.Principal as ProcessLaunchPrincipal.AgentExecution)?.Ceiling.AgentId;
             Guid[] selected = launcher is { } id && id != target.Session.AgentId ? [target.Session.AgentId, id] : [target.Session.AgentId];
-            await using var held = await catalog.AcquireAgentsReadLeaseAsync(selected, cancellationToken);
+            await using var held = await catalog.AcquireAgentAuthoritySnapshotAsync(selected, cancellationToken);
             void RequireHeld() {
                 var executor = ProjectProcessLaunchAuthorityService.FindHeldAgent(held, target.Session.AgentId);
                 if (held.Scope != WorkspaceScopeDescriptor.Organization(target.Session.Profile.ProfileId.ToString("N")) ||

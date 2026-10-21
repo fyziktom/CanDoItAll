@@ -84,6 +84,9 @@ public sealed class ProjectAgentSourceMutationAuthority(ICanonicalRuntimeDatabas
         if (admission.SourceProject is { } sourceProject && !expected.Contains(sourceProject)) {
             expected = expected.Add(sourceProject);
         }
+        if (expected.GroupBy(project => project.ProjectId).Any(group => group.Distinct().Skip(1).Any())) {
+            throw Denied("A mutation cannot use different lifetimes of the same project.");
+        }
         foreach (var project in expected) {
             var lifetime = new AgentProjectStructureLifetime(project.DatabaseProfileId, project.ProjectId, project.LifetimeId);
             var created = admission.FindCreatedProject(project) ??
@@ -116,7 +119,7 @@ public sealed class ProjectAgentSourceMutationAuthority(ICanonicalRuntimeDatabas
             target.Purpose is not (ProjectMutationPurpose.ReserveRoot or ProjectMutationPurpose.CreateRoot) &&
             (target.Purpose is not (ProjectMutationPurpose.ReserveChild or ProjectMutationPurpose.CreateChild) ||
                 target.ExistingProjects.Length == 1 && target.ExistingProjects[0] == scopedProject) &&
-            expected.All(project => project.ProjectId == scopeId ||
+            expected.All(project => project == scopedProject ||
                 admission.FindCreatedProject(project) is { } child && child.ParentProjectId == scopeId && child.ParentLifetimeId == scopedProject.LifetimeId);
         var organizationScopeAllowed = ceiling.WorkspaceScope.Kind == WorkspaceScopeKind.Organization &&
             Guid.TryParse(ceiling.WorkspaceScope.Key, out var authorityProfile) && authorityProfile == profileId;

@@ -41,6 +41,9 @@ internal static class ProcessRuntimeDispatchGuard {
                     claim.AttemptNumber, claim.CreatedAtUtc, claim.ExpiresAtUtc, claim.RenewedAtUtc, null)) {
             throw Refuse(request, ProcessRuntimeDispatchPreconditionRefusal.ClaimChanged);
         }
+        if (expected.DecisionContract is { } contract) {
+            await ProcessAcceptedAssignmentGuard.RequireAsync(context, existing, expected.StepInstanceId, contract, cancellationToken).ConfigureAwait(false);
+        }
         RequireUnexpired(request, claim.ExpiresAtUtc, clock.GetUtcNow());
         return claim.ExpiresAtUtc;
     }

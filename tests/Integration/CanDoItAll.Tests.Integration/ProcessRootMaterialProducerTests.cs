@@ -222,11 +222,11 @@ public sealed class ProcessRootMaterialProducerTests(ITestOutputHelper output) {
         Assert.Empty(await context.DecisionBudgetAllocations.ToArrayAsync());
     }
 
-    private sealed class CaptureProbe(IProcessDecisionRootCapturer inner, Func<CancellationToken, Task>? before = null,
-        Func<CancellationToken, Task>? after = null) : IProcessDecisionRootCapturer {
+    private sealed class CaptureProbe(IProcessDecisionMaterialCapturer inner, Func<CancellationToken, Task>? before = null,
+        Func<CancellationToken, Task>? after = null) : IProcessDecisionMaterialCapturer {
         internal int Calls { get; private set; }
         public ProcessDecisionContentContract ContentContract => inner.ContentContract;
-        public async Task<ProcessDecisionRootCaptureResult> CaptureAsync(ProcessDecisionRootCaptureRequest request, CancellationToken cancellationToken = default) {
+        public async Task<ProcessDecisionMaterialCaptureResult> CaptureAsync(ProcessDecisionMaterialCaptureRequest request, CancellationToken cancellationToken = default) {
             Calls++;
             if (before is not null) {
                 await before(cancellationToken);

@@ -79,7 +79,7 @@ public sealed partial class ProcessRuntimeEngine
             UserSafeSummary = string.IsNullOrWhiteSpace(appliedResult.UserSafeSummary)
                 ? string.Empty
                 : appliedResult.UserSafeSummary.Trim(),
-            AppliedSequence = NextAppliedResultSequence(state.AppliedResults),
+            AppliedSequence = StrategyResultReceipt.NextSequence(state.AppliedResults),
             ExecutionRunId = ResolveExecutionRunId(appliedResult),
             HostCapabilityEvidence = appliedResult.HostCapabilityEvidence
         };
@@ -111,7 +111,7 @@ public sealed partial class ProcessRuntimeEngine
             ConnectedInputArtifacts = ProcessRuntimeArtifactContracts.ApplyProducedArtifacts(state, step.StepInstanceId, appliedResult),
             UpdatedAtUtc = context.OccurredAtUtc
         };
-        next = CompleteRunIfTerminal(next, context.OccurredAtUtc);
+        next = ProcessRuntimeTerminalStates.CompleteRunIfTerminal(next, context.OccurredAtUtc);
 
         var events = BuildResultEvents(next, context, command, appliedResult, nextStepStatus);
         var resultEventId = events[1].EventId;
@@ -120,15 +120,6 @@ public sealed partial class ProcessRuntimeEngine
             next,
             events,
             BuildArtifactLedgerEvents(resultEventId, appliedResult));
-    }
-
-    private static long NextAppliedResultSequence(IReadOnlyList<StrategyResultReceipt> receipts)
-    {
-        return Math.Max(
-            receipts.Count + 1L,
-            receipts.Count == 0
-                ? 1L
-                : receipts.Max(receipt => receipt.AppliedSequence) + 1L);
     }
 
     private static ProcessRuntimeMutation RequestCancellation(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context)

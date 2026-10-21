@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-20T13:37:04.385596+00:00",
+  "generated_utc": "2026-10-21T09:02:12.214978+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15651,
+  "allowance_count": 15663,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13835,6 +13835,54 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020131404_AddAcceptedProcessSourceProjection.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "c29aeb5f7bfa0ab0ecd6ea9871ca2edcb6426a0ceb651b29a0d1632c70fe611e",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021041654_AddAcceptedProcessExecutionInput.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b5df9a56cbaf5ec1d7ecea7495a53b2a0fd833d8167d79f0287a93f037714f31",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021041654_AddAcceptedProcessExecutionInput.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "bc5f04f5e55f9e14fd1b7da3e519574ec29e7c0c9c4026ed966c75d394542844",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021041654_AddAcceptedProcessExecutionInput.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "7df20dff87cbd8a4728e9dba6d02c8f55348d7a65b8c2736ae95df2fd5c28de3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021041654_AddAcceptedProcessExecutionInput.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "d1f3fbab19b7a63b37e7803ebac608cc588c36fc6603fa84a03a5831ae13cda4",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021085340_AddAcceptedProcessStepRequirements.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "3d61f2dbfb3d651341c5d15b081ad1e6c30fa8b34bac18369c9518dd5a37cdf0",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021085340_AddAcceptedProcessStepRequirements.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "6ec25048aa62ef5a9d85b4d34cfdef2d5f298302e340a539a8778a513a6d0eca",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021085340_AddAcceptedProcessStepRequirements.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "8cb13b9e875c71971358a33468acfe67044ba886c684c221f8d8fac34d8ed445",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021085340_AddAcceptedProcessStepRequirements.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "af2f8105ece682bf117d7bd7f098d8469595d91eddf6901416335a0c16588f7d",
       "count": 1
     },
     {
@@ -69962,6 +70010,12 @@
       "count": 1
     },
     {
+      "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessDecisionResultQuery.cs",
+      "category": "case-policy",
+      "source_fingerprint": "29d38d23a24b9e7bed28a3b58ef5d522b8fa750d3408335e9dad10a39e28b74a",
+      "count": 1
+    },
+    {
       "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessExecutionAuthorityQuery.cs",
       "category": "case-policy",
       "source_fingerprint": "0d32656b2777034ec28d2cb28bd47c4be1120974d3b4a25cc8fa265729e09935",
@@ -70133,6 +70187,24 @@
       "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessWorkflowDispatchAuthority.cs",
       "category": "case-policy",
       "source_fingerprint": "cdbb2e6a9633aea0f1f2c7057f4ae292f5481aadbafa6f7a3eb82b5e36dd1e33",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessAcceptedAssignmentGuard.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3c5b6651f00562cab0ea59c24cef87bb2eafe5b76852f939701151245fad3e7e",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessAcceptedStepRequirementsCapture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "5dbaad0e759d5c040e77a521b3e865075a1c2aa191a38ca2006f4a97dfde526a",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessAcceptedStepRequirementsCapture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a8eecacd32dc67bff4a2f842fe7324e6396aa9fc9bca114fc6cf5787fbed8401",
       "count": 1
     },
     {

@@ -4,6 +4,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.Runtime;
 
@@ -26,9 +27,17 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
             SourceKind = source.SourceKind, SourceId = source.SourceId, MetadataJson = "{}",
             ProcessRunId = Guid.NewGuid().ToString("D"), ProcessStepId = Guid.NewGuid().ToString("D")
         };
-        Request = new(Guid.NewGuid(), source.AgentId, "Prepare the original inherited plan.", AgentExecutionOperationId.New(), context,
+        Request = new(Guid.NewGuid(),
+            new(new(new(Guid.NewGuid()), new(Guid.NewGuid()), new(TimeSpan.FromSeconds(30).Ticks, 0)),
+                AgentInheritedPlanningStartMode.FreshEnrollment),
+            source.AgentId, "Prepare the original inherited plan.", AgentExecutionOperationId.New(), context,
             AgentPlanningOwner.ProjectTaskPlan, WorkspaceScopeDescriptor.Project(entry.Files.Sql.Project.ProjectId.ToString("D")),
-            source.ParentBinding, RequireParentAsync, BindAsync);
+            source.ParentBinding, RequireParentAsync, _ => AgentPlanningDecisionTestData.Envelope());
+        Participant.Initializer = (binding, parent, evidence, token) => {
+            Assert.Equal(Request.ParentBinding, parent);
+            Assert.Equal(AgentPlanningDecisionTestData.Envelope(), evidence);
+            return BindAsync(binding, token);
+        };
     }
 
     internal AgentToolProfileBinding Profile { get; }
@@ -48,6 +57,7 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
         var participant = new AgentInheritedPlanningCoordinatorFixture.Participant(AgentInheritedPlanningTestData.Basis(AgentInheritedPlanningTestData.Create()));
         var entry = await ProjectTaskPlanExecutionEntryTests.EntryFixture.CreateAsync(configureServices: services => {
             services.AddSingleton<IAgentToolBackgroundSourcePolicy>(source);
+            services.RemoveAll<IAgentInheritedPlanningParticipant>();
             services.AddSingleton<IAgentInheritedPlanningParticipant>(participant);
         });
         entry.Wire.ResponseText = "{\"tasks\":[\"review\"]}";
@@ -69,7 +79,7 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
             InitialActivityOperationId = Request.ActivityOperationId
         };
         var journal = new AgentToolAdmissionJournal(Files.Store, Profile, backgroundSources: [source]);
-        return (await new AgentInheritedPlanningRunAdmission(Files.Store, Files.Store, journal).AdmitAsync(Request.ExecutionRunId,
+        return (await new AgentInheritedPlanningRunAdmission(Files.Store, Files.Store, journal).AdmitAsync(Request.ExecutionRunId, Request.Start,
             Request.RequireOriginalParent, _ => Task.FromResult(new AgentInheritedPlanningRunPreparation(candidate,
                 Request.OriginalInput, Request.Owner, runtime.CaptureRuntimeContract(agent, provider, Participant), Request.ContextScope,
                 Request.ParentBinding, BindAsync)))).Run;
@@ -91,7 +101,9 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
         Bindings++;
         var template = AgentInheritedPlanningTestData.Create(context.Session, mode);
         var decision = template.PlanningDecision!;
-        var origin = decision.InheritedOrigin! with { CapturedAtUtc = DateTimeOffset.UtcNow - TimeSpan.FromMinutes(1) };
+        var origin = decision.InheritedOrigin! with {
+            CapturedAtUtc = DateTimeOffset.UtcNow - TimeSpan.FromMinutes(1), Allocation = Request.Start.Allocation
+        };
         Participant.Basis = AgentInheritedPlanningTestData.Basis(template) with { CapturedAtUtc = origin.CapturedAtUtc };
         return Task.FromResult(new AgentInheritedPlanningBinding(decision.OriginalTarget, origin));
     }

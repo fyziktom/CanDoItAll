@@ -1,10 +1,52 @@
 # Requirements and closure ledger
 
+Latest prerequisites: initial business binding qualifies 177 behaviors, original input
+96 and [closed startup failure](validation/2026-10-21-closed-startup-failure.md) 202.
+The final restart correction passes with unchanged production. These close those
+prerequisites only; bounded capacity, actual adapter activation, manager continuation,
+cancellation/refresh, Workflow, settings/SPA, remaining writers and final broad closure
+remain required. Earlier "open" entries below are historical checkpoint records.
+The [payload/capacity checkpoint](validation/2026-10-21-process-capacity-bounds.md)
+passes 179 cases and finite root completion. The [pooled-buffer and original-policy
+correction](validation/2026-10-21-process-capacity-repair.md) qualifies 183 distinct
+behaviors across a retained test-only correction.
+[Manager-review admission](validation/2026-10-21-manager-review-admission.md) now qualifies
+74 distinct behaviors, with the disclosure test correction and observer incident retained.
+Process [waiting-result accounting](validation/2026-10-21-process-review-completion.md)
+now qualifies with 331 final passing cases, including real publication, root fences,
+rollback, replay and restart. The scope guard, root fixture and observation failures
+remain recorded with their corrections. Current manager actions and the actual adapter
+remain next; sustained concurrent capacity stays open.
+The [original step requirements and clock](validation/2026-10-21-original-step-requirements.md)
+now qualify: 128 original-input prerequisites and all 29 final affected workspace cases.
+Legacy inputs explicitly refuse missing compiled obligations. Existing work, deadline
+and timestamp guards remain enforced. This does not activate the incomplete executor.
+
+Selected Agent authority and its [corrected source/lifetime regressions](validation/2026-10-20-selected-agent-authority.md)
+have 54 distinct passing affected cases. Initial business binding, original input,
+manager continuation and full Process activation remain open. The retained failed
+candidates and temporary trace-tool cleanup denial remain explicit.
+
+Core startup evidence: [189 distinct passing behaviors](validation/2026-10-20-inherited-startup-accounting.md).
+Fresh initial work and recovered preparation consume the original allocation.
+Existing-only recovery cannot recreate a missing journal. Initial 171/189 and final
+44/44 plus 145 unchanged passes remain retained. The remaining-budget/cancellation
+boundary identified in review now passes 40 affected integration cases. The selected
+Agent authority capability now precedes business binding to avoid workspace-wide
+serialization across Project SQL checks.
+
+Current selected step evidence: [187 distinct passing behaviors](validation/2026-10-20-process-selected-step-producer.md).
+Bounded original source, registered root/step capture and exact first-child enrollment
+are integrated. Only a fresh enrollment may start a missing child; Core startup now
+enforces and accounts for that fact. Both test candidates retain exact source,
+runtime, static and resource proof. Actual business binding, manager continuation,
+Workflow, persisted settings and broader writer/capacity closure remain open.
+
 Current root producer evidence: [192 distinct passing behaviors](validation/2026-10-20-process-root-material-producer.md).
 Real registered RunSnapshot capture now precedes claims and owns exact reservations,
 material and settlement. Original source and coherent Project reads remain bounded;
 unknown acknowledgement never authorizes another capture. This closes initial shared
-material production only. Actual Agent child binding, StepSnapshot production, manager
+material production only. Selected step production now passes; actual Agent child binding, manager
 continuation and full R5 remain open. SPA stays on its own branch.
 
 Current capture ownership evidence: [127 distinct passing behaviors](validation/2026-10-20-process-capture-ownership.md).

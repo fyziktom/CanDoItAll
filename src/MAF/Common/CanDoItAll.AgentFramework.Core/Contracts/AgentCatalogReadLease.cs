@@ -4,6 +4,10 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.AgentFramework.Core;
 
 public interface IAgentCatalogReadLeaseStore {
+    Task<IAgentCatalogReadLease> AcquireAgentAuthoritySnapshotAsync(IReadOnlyList<Guid> agentIds,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This catalog store does not support selected Agent authority without a workspace-wide lease.");
+
     Task<IAgentPlanningPublicationSnapshotLease> AcquirePlanningAuthoritySnapshotAsync(AgentPlanningPublicationExpectation expected,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This catalog store does not support a held original-run authorization snapshot.");

@@ -131,7 +131,8 @@ public sealed class EfProcessExecutionAuthorityQuery(
                 throw Mismatch("The saved Process assignment changed its admitted operation contract.");
             }
         }
-        var current = assignment.DecisionDataPolicy is null && evidence.ExecutionMayDispatch && row.State.Status == ProcessRuntimeStatus.Active &&
+        var current = original.DecisionDataPolicy is null && assignment.DecisionDataPolicy is null &&
+            evidence.ExecutionMayDispatch && row.State.Status == ProcessRuntimeStatus.Active &&
             row.Step.Status is (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running) &&
             row.Step.ActiveClaimToken == evidence.DispatchClaimToken && row.Step.AttemptNumber == row.Claim.AttemptNumber &&
             row.Claim.Status is (DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) && row.Claim.ExpiresAtUtc > observedAt;
@@ -187,7 +188,7 @@ public sealed class EfProcessExecutionAuthorityQuery(
         }
     }
 
-    private static DateTimeOffset StoredTimestamp(DateTimeOffset value) {
+    internal static DateTimeOffset StoredTimestamp(DateTimeOffset value) {
         if (value == DateTimeOffset.MinValue || value == DateTimeOffset.MaxValue) {
             return value;
         }

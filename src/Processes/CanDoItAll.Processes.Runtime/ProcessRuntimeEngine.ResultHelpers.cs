@@ -492,67 +492,6 @@ public sealed partial class ProcessRuntimeEngine
         return ledgerEvents;
     }
 
-    private static ProcessRuntimeStateSnapshot CompleteRunIfTerminal(
-        ProcessRuntimeStateSnapshot state,
-        DateTimeOffset occurredAtUtc)
-    {
-        var hasOpenExecutableSteps = false;
-        var hasFailedStep = false;
-        var hasCancelledStep = false;
-        foreach (var step in state.Steps)
-        {
-            if (!step.IsExecutable)
-            {
-                continue;
-            }
-
-            if (step.Status == ProcessRuntimeStepStatus.Failed)
-            {
-                hasFailedStep = true;
-                break;
-            }
-
-            if (step.Status == ProcessRuntimeStepStatus.Cancelled)
-            {
-                hasCancelledStep = true;
-            }
-
-            if (!ProcessRuntimeTerminalStates.IsStepTerminal(step.Status))
-            {
-                hasOpenExecutableSteps = true;
-            }
-        }
-
-        if (hasFailedStep)
-        {
-            return state with
-            {
-                Status = ProcessRuntimeStatus.Failed,
-                UpdatedAtUtc = occurredAtUtc
-            };
-        }
-
-        if (hasCancelledStep && !hasOpenExecutableSteps)
-        {
-            return state with
-            {
-                Status = ProcessRuntimeStatus.Cancelled,
-                UpdatedAtUtc = occurredAtUtc
-            };
-        }
-
-        if (!hasOpenExecutableSteps)
-        {
-            return state with
-            {
-                Status = ProcessRuntimeStatus.Completed,
-                UpdatedAtUtc = occurredAtUtc
-            };
-        }
-
-        return state;
-    }
-
     private static IReadOnlySet<ArtifactSlotId> AddProducedSlots(
         IReadOnlySet<ArtifactSlotId> availableSlots,
         StrategyResultEnvelope result)

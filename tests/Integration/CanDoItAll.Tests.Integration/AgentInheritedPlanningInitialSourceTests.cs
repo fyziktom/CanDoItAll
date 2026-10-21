@@ -149,7 +149,7 @@ public sealed class AgentInheritedPlanningInitialSourceTests {
         var original = await fixture.SeedInitialAsync();
         var request = fixture.Request with {
             ParentBinding = AgentPlanningDecisionTestData.Envelope("{\"parent\":2}"),
-            BindAsync = (_, _) => throw new InvalidOperationException("An original child cannot be rebound.")
+            CaptureSourceEvidence = _ => throw new InvalidOperationException("An original child cannot be rebound.")
         };
         await Assert.ThrowsAsync<AgentToolAdmissionException>(() => fixture.ExecuteAsync(request));
         var retained = await fixture.Files.Store.GetExecutionRunAsync(original.Id);

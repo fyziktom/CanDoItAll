@@ -188,29 +188,33 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    public async Task Unsupported_decision_policy_preserves_history_but_blocks_reservation_and_owner_mutation(bool latePolicy, bool declaredContract) {
+    [InlineData(PolicyChange.AlreadyGoverned, false)]
+    [InlineData(PolicyChange.Added, false)]
+    [InlineData(PolicyChange.AlreadyGoverned, true)]
+    [InlineData(PolicyChange.Added, true)]
+    [InlineData(PolicyChange.Removed, false)]
+    [InlineData(PolicyChange.Removed, true)]
+    public async Task Unsupported_decision_policy_preserves_history_but_blocks_reservation_and_owner_mutation(PolicyChange change, bool declaredContract) {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
-        var fixture = await SeedAsync(services, decisionPolicy: !latePolicy, declaredContract: declaredContract);
+        var fixture = await SeedAsync(services, decisionPolicy: change != PolicyChange.Added, declaredContract: declaredContract);
         var original = Assert.IsType<ProcessExecutionDispatchAuthority>((await Reader(services).ReadAsync(fixture.Run.Id)).Snapshot?.DispatchAuthority);
-        Assert.Equal(latePolicy, original.ObservedCurrentDispatch);
+        Assert.Equal(change == PolicyChange.Added, original.ObservedCurrentDispatch);
         var options = Options(services);
         var transactions = services.GetRequiredService<CoordinatedDatabaseTransaction>();
         var guard = new EfProcessExecutionMutationGuard(options, transactions, new Clock());
-        if (latePolicy) {
-            await using (var owner = new ProcessPersistenceDbContext(options)) {
-                await using var transaction = await owner.Database.BeginTransactionAsync();
-                using var participation = transactions.Enter(owner);
-                await guard.RequireForMutationAsync(original);
+        if (change != PolicyChange.AlreadyGoverned) {
+            if (change == PolicyChange.Added) {
+                await using (var owner = new ProcessPersistenceDbContext(options)) {
+                    await using var transaction = await owner.Database.BeginTransactionAsync();
+                    using var participation = transactions.Enter(owner);
+                    await guard.RequireForMutationAsync(original);
+                }
             }
             await using var changed = new ProcessPersistenceDbContext(options);
             var assignment = await changed.RuntimeStepAssignments.SingleAsync(item => item.RunId == fixture.RunId);
-            assignment.DecisionDataPolicyJson = ProcessDecisionDataPolicyAdmissionCodec.Serialize(ProcessDecisionPolicyFixture.Create(
+            assignment.DecisionDataPolicyJson = change == PolicyChange.Removed ? null : ProcessDecisionDataPolicyAdmissionCodec.Serialize(ProcessDecisionPolicyFixture.Create(
                 fixture.Prepared.Preparation.InitialCommit.InitialPlan!.Definition.VersionId, new(assignment.StepInstanceId)) with {
                     ExecutionContract = declaredContract ? ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Agent) : null
                 });
@@ -233,6 +237,8 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
             await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => guard.RequireForMutationAsync(observation));
         }
     }
+
+    public enum PolicyChange { AlreadyGoverned, Added, Removed }
 
     private static async Task<Fixture> SeedAsync(IServiceProvider services, int channel = 0, bool decisionPolicy = false, bool declaredContract = false) {
         var projectId = Guid.NewGuid();

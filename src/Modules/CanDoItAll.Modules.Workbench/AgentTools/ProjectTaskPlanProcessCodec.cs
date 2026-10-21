@@ -63,22 +63,31 @@ internal static class ProjectTaskPlanProcessCodec {
             decision.InheritedOrigin is not { } original || decision.Policy != original.ResolvePolicy()) {
             throw ProjectTaskPlanAgentCodec.Denied("This task-plan adapter requires its original inherited Process decision.");
         }
-        var parent = Parent(original);
         var wire = ProjectTaskPlanAgentCodec.Read<TargetWire>(decision.OriginalTarget, TargetFormat,
             AgentToolPreparedPayload.MaximumSourcePreparationUtf8Bytes);
         AgentToolSessionAdmission session = new(new(wire.Session.ExecutionRunId, Guid.Empty, default, wire.Session.Source),
             wire.Session.AgentId, AgentRuntimeContextPurpose.GovernedProcessAutomation, wire.Session.Profile);
         ProjectTaskPlanProcessTarget target = new(session, wire.Project, wire.Source, wire.Executor, wire.WriteContext);
+        if (session.Reference != decision.Session || target.Source.Evidence.ExecutionCreatedAtUtc > decision.StartedAtUtc) {
+            throw ProjectTaskPlanAgentCodec.Denied("The inherited task-plan target differs from its original decision session or start.");
+        }
+        RequireTarget(target, original);
+        return target;
+    }
+
+    internal static void RequireTarget(ProjectTaskPlanProcessTarget target, AgentPlanningInheritedOrigin original) {
+        var parent = Parent(original);
+        var session = target.Session;
         var source = target.Source;
         var evidence = source.Evidence;
         var address = parent.Child.Address;
-        if (session.Reference != decision.Session || session.Profile != original.Profile || session.AgentId != original.AgentId ||
+        if (session.Profile != original.Profile || session.AgentId != original.AgentId ||
             session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation || session.Reference.BackgroundSource != original.Source ||
             session.Reference.ChatSessionId != Guid.Empty || session.Reference.AuthorityId.Value != Guid.Empty ||
             evidence.ExecutionRunId != session.Reference.ExecutionRunId || evidence.ExecutionRunId != address.ChildId.Value ||
             evidence.ExecutorAgentId != session.AgentId || evidence.RunId != address.RunId || evidence.StepInstanceId != address.StepInstanceId ||
             source.RootRunId != address.RootRunId || evidence.DispatchClaimToken == Guid.Empty || !evidence.ExecutionMayDispatch ||
-            !source.ObservedCurrentDispatch || evidence.ExecutionCreatedAtUtc > decision.StartedAtUtc ||
+            !source.ObservedCurrentDispatch ||
             original.Source.SourceId != evidence.StepKey || original.Source.OwnerFingerprint != AgentToolProtocolEnvelope.ComputeDigest(source.OwnerFingerprint) ||
             source.SourceAuthority is not { CanCreateTasks: true, ProjectAdmission: { } project } authority ||
             authority.DatabaseProfileId != session.Profile.ProfileId || target.Project.DatabaseProfileId != session.Profile.ProfileId ||
@@ -93,10 +102,13 @@ internal static class ProjectTaskPlanProcessCodec {
         ProjectDefinitionGovernedBindings.RequireSourceBounds(null, source);
         authority.Validate();
         RequireContext(target.WriteContext, original.WorkspaceNamespaceId, target.Caller);
-        return target;
     }
 
-    internal static AgentPlanningBasisRecord Basis(AgentPlanningInheritedOrigin original, ProcessDecisionMaterial material) {
+    internal static AgentPlanningBasisRecord Basis(AgentPlanningInheritedOrigin original, ProcessDecisionMaterial material)
+        => ReadBasis(original, material).Basis;
+
+    internal static (AgentPlanningBasisRecord Basis, ProjectTaskPlanBasis Material) ReadBasis(
+        AgentPlanningInheritedOrigin original, ProcessDecisionMaterial material) {
         var parent = Parent(original);
         if (material.Scope != parent.Scope || material.Stamp != parent.Material ||
             material.ContentContract != ProjectTaskPlanProcessContract.Content || material.ExecutionContract is not null ||
@@ -105,8 +117,7 @@ internal static class ProjectTaskPlanProcessCodec {
         }
         var value = AgentToolProtocolEnvelope.Create(MaterialFormat, 1, material.PayloadJson);
         var basis = new AgentPlanningBasisRecord(original.BasisId, original.CapturedAtUtc, value);
-        _ = Material(original, basis);
-        return basis;
+        return (basis, Material(original, basis));
     }
 
     internal static ProjectTaskPlanBasis Material(AgentPlanningInheritedOrigin original, AgentPlanningBasisRecord basis) {

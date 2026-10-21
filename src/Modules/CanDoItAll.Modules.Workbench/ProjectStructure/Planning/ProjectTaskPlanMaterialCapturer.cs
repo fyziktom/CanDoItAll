@@ -6,25 +6,24 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal sealed class ProjectTaskPlanRootCapturer(ProjectTaskPlanBasisCapture capture, ProjectProcessLaunchAuthorityService sources)
-    : IProcessDecisionRootCapturer {
+internal sealed class ProjectTaskPlanMaterialCapturer(ProjectTaskPlanBasisCapture capture, ProjectProcessLaunchAuthorityService sources)
+    : IProcessDecisionMaterialCapturer {
     public ProcessDecisionContentContract ContentContract => ProjectTaskPlanProcessContract.Content;
 
-    public async Task<ProcessDecisionRootCaptureResult> CaptureAsync(ProcessDecisionRootCaptureRequest request,
+    public async Task<ProcessDecisionMaterialCaptureResult> CaptureAsync(ProcessDecisionMaterialCaptureRequest request,
         CancellationToken cancellationToken = default) {
         request.Source.Validate();
         request.Scope.Validate();
         request.Material.Validate();
         if (request.Source.ProjectAdmission is not { } project || request.Source.DatabaseProfileId != request.Scope.DatabaseProfileId ||
-                request.Material.ScopeId != request.Scope.ScopeId || request.Scope.ContentContract != ContentContract ||
-                request.Material.Generation != 1) {
-            throw new InvalidDataException("Root task capture requires its original Project authority, scope and initial content contract.");
+                request.Material.ScopeId != request.Scope.Id || request.ContentContract != ContentContract) {
+            throw new InvalidDataException("Task capture requires its original Project authority, scope and content contract.");
         }
         try {
             await using var held = await sources.AcquireResultReadAsync(request.Source, cancellationToken);
             var agentLease = held as IAgentCatalogReadLease;
             if (request.Source.Principal is ProcessLaunchPrincipal.AgentExecution && agentLease is null) {
-                throw new InvalidDataException("Root capture did not acquire its original source Agent lease.");
+                throw new InvalidDataException("Task capture did not acquire its original source Agent lease.");
             }
             var result = await capture.CaptureAsync(new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId),
                 async (_, token) => {
@@ -34,27 +33,27 @@ internal sealed class ProjectTaskPlanRootCapturer(ProjectTaskPlanBasisCapture ca
             if (result is ProjectTaskPlanBasisReadResult.Captured captured) {
                 var basis = captured.Basis;
                 if (basis.Namespace.Value != request.Scope.WorkspaceNamespaceId) {
-                    return new ProcessDecisionRootCaptureResult.Refused(ProcessDecisionRootCaptureRefusal.DatasetChanged);
+                    return new ProcessDecisionMaterialCaptureResult.Refused(ProcessDecisionMaterialCaptureRefusal.DatasetChanged);
                 }
-                return new ProcessDecisionRootCaptureResult.Captured(ProcessDecisionMaterial.FromContent(request.Scope.MaterialScope,
+                return new ProcessDecisionMaterialCaptureResult.Captured(ProcessDecisionMaterial.FromContent(request.Scope,
                     request.Material, ContentContract, basis.CapturedAtUtc, Encoding.UTF8.GetString(ProjectTaskPlanBasisCodec.Encode(basis))));
             }
             if (result is not ProjectTaskPlanBasisReadResult.Refused refused) {
                 throw new InvalidDataException("Task-plan capture returned an unsupported original source result.");
             }
-            return new ProcessDecisionRootCaptureResult.Refused(refused.Reason switch {
-                ProjectTaskPlanBasisRefusal.SourceMissing => ProcessDecisionRootCaptureRefusal.SourceMissing,
-                ProjectTaskPlanBasisRefusal.LifetimeChanged => ProcessDecisionRootCaptureRefusal.LifetimeChanged,
-                ProjectTaskPlanBasisRefusal.DatasetChanged => ProcessDecisionRootCaptureRefusal.DatasetChanged,
-                ProjectTaskPlanBasisRefusal.InvalidSource => ProcessDecisionRootCaptureRefusal.InvalidSource,
-                ProjectTaskPlanBasisRefusal.LimitExceeded => ProcessDecisionRootCaptureRefusal.LimitExceeded,
+            return new ProcessDecisionMaterialCaptureResult.Refused(refused.Reason switch {
+                ProjectTaskPlanBasisRefusal.SourceMissing => ProcessDecisionMaterialCaptureRefusal.SourceMissing,
+                ProjectTaskPlanBasisRefusal.LifetimeChanged => ProcessDecisionMaterialCaptureRefusal.LifetimeChanged,
+                ProjectTaskPlanBasisRefusal.DatasetChanged => ProcessDecisionMaterialCaptureRefusal.DatasetChanged,
+                ProjectTaskPlanBasisRefusal.InvalidSource => ProcessDecisionMaterialCaptureRefusal.InvalidSource,
+                ProjectTaskPlanBasisRefusal.LimitExceeded => ProcessDecisionMaterialCaptureRefusal.LimitExceeded,
                 _ => throw new InvalidDataException("Task-plan capture returned an unsupported source refusal.")
             });
         } catch (ProcessLaunchAuthorityRejectedException) {
-            return new ProcessDecisionRootCaptureResult.Refused(ProcessDecisionRootCaptureRefusal.SourceChanged);
+            return new ProcessDecisionMaterialCaptureResult.Refused(ProcessDecisionMaterialCaptureRefusal.SourceChanged);
         } catch (ProjectTaskPlanBasisException failure) {
-            return new ProcessDecisionRootCaptureResult.Refused(failure.Reason == ProjectTaskPlanBasisRefusal.LimitExceeded
-                ? ProcessDecisionRootCaptureRefusal.LimitExceeded : ProcessDecisionRootCaptureRefusal.InvalidSource);
+            return new ProcessDecisionMaterialCaptureResult.Refused(failure.Reason == ProjectTaskPlanBasisRefusal.LimitExceeded
+                ? ProcessDecisionMaterialCaptureRefusal.LimitExceeded : ProcessDecisionMaterialCaptureRefusal.InvalidSource);
         }
     }
 }

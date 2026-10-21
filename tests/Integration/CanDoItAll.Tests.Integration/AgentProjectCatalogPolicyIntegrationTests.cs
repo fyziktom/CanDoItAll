@@ -143,6 +143,23 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
         var mismatched = new AgentProjectAccessCatalogPolicy(admissions, Guid.NewGuid());
         await Assert.ThrowsAsync<InvalidOperationException>(() => mismatched.ApplyAsync(saved, saved));
         Assert.Equal(4, probe.Transactions.Count);
+
+        probe.Transactions.Clear();
+        await using (var held = await guarded.AcquireAgentAuthoritySnapshotAsync([agents[0].Id, agents[1].Id])) {
+            Assert.Equal(2, held.Agents.Length);
+            Assert.Empty(probe.Transactions);
+        }
+        var edited = await guarded.UpdateCatalogAsync(catalog => catalog with {
+            Agents = catalog.Agents.Select(agent => agent.Id != agents[0].Id ? agent : agent with {
+                Name = "Unrelated display edit",
+                ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson,
+                    new() { AllowedProjectIds = [projectId] })
+            }).ToArray()
+        });
+        Assert.Equal("Unrelated display edit", Assert.Single(edited.Agents, agent => agent.Id == agents[0].Id).Name);
+        Assert.Equal(ReadAccess(saved, agents[0].Id).AllowedProjectLifetimes,
+            ReadAccess(edited, agents[0].Id).AllowedProjectLifetimes);
+        Assert.Empty(probe.Transactions);
     }
 
     private static FileSandboxWorkspaceStore CreateGuardedStore(IServiceProvider services, string root) => new(root,

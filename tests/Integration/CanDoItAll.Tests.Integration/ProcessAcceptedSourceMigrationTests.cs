@@ -42,7 +42,7 @@ public sealed class ProcessAcceptedSourceMigrationTests {
             await using var reopened = new AppDbContext(lease.CreateAppDbContextOptions());
             await reopened.GetService<IMigrator>().MigrateAsync(Migration);
             Assert.Equal(before, await LegacyRowsAsync(reopened));
-            Assert.Empty(await reopened.Set<ProcessAcceptedAssignmentSourceEntity>().ToArrayAsync());
+            Assert.Equal(0, await SourceCountAsync(reopened));
             Assert.False(reopened.Database.HasPendingModelChanges());
             if (state != LegacyState.Empty) {
                 var retained = await reopened.Set<ProcessPreparedLaunchEntity>().SingleAsync();
@@ -62,7 +62,7 @@ public sealed class ProcessAcceptedSourceMigrationTests {
         Assert.Equal(before, await LegacyRowsAsync(context));
         Assert.Equal(PreviousMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         if (state == LegacyState.Prepared) {
-            await context.GetService<IMigrator>().MigrateAsync(Migration);
+            await context.GetService<IMigrator>().MigrateAsync();
             var retained = await scoped.PreparedLaunches.SingleAsync();
             var saved = ProcessPreparedLaunchCodec.Read(retained);
             Assert.True((await new EfProcessRuntimeUnitOfWork(scoped).CommitAsync(ProcessPreparedLaunchFixture.Commit(saved))).Succeeded);
@@ -88,10 +88,13 @@ public sealed class ProcessAcceptedSourceMigrationTests {
         row.AcceptedSourceHeaderJson = source.Header.PayloadJson;
         row.AcceptedSourceHeaderFingerprint = source.Header.Fingerprint;
         context.Add(row);
-        context.AddRange(source.Assignments.Select(item => new ProcessAcceptedAssignmentSourceEntity {
-            AdmissionId = row.Id, StepInstanceId = item.Key.Value, PayloadJson = item.Value.PayloadJson, Fingerprint = item.Value.Fingerprint
-        }));
         await context.SaveChangesAsync();
+        foreach (var item in source.Assignments) {
+            await context.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO process_accepted_assignment_sources ("AdmissionId", "StepInstanceId", "PayloadJson", "Fingerprint")
+                VALUES ({row.Id}, {item.Key.Value}, {item.Value.PayloadJson}, {item.Value.Fingerprint})
+                """);
+        }
         var before = await SourceRowsAsync(context);
         foreach (var invalid in new[] {
             "UPDATE process_prepared_launches SET \"AcceptedSourceVersion\" = 2",
@@ -123,7 +126,7 @@ public sealed class ProcessAcceptedSourceMigrationTests {
         await reopened.GetService<IMigrator>().MigrateAsync(Migration);
         Assert.Equal(before, await SourceRowsAsync(reopened));
         await reopened.Set<ProcessPreparedLaunchEntity>().Where(item => item.Id == row.Id).ExecuteDeleteAsync();
-        Assert.Empty(await reopened.Set<ProcessAcceptedAssignmentSourceEntity>().ToArrayAsync());
+        Assert.Equal(0, await SourceCountAsync(reopened));
         await reopened.GetService<IMigrator>().MigrateAsync(PreviousMigration);
     }
 
@@ -136,6 +139,9 @@ public sealed class ProcessAcceptedSourceMigrationTests {
         SELECT to_jsonb(r)::text AS "Value" FROM process_prepared_launches r
         UNION ALL SELECT to_jsonb(s)::text FROM process_accepted_assignment_sources s ORDER BY "Value"
         """).ToArrayAsync();
+
+    private static Task<int> SourceCountAsync(AppDbContext context)
+        => context.Database.SqlQueryRaw<int>("""SELECT count(*)::int AS "Value" FROM process_accepted_assignment_sources""").SingleAsync();
 
     public enum LegacyState { Empty, Prepared, Accepted }
 }

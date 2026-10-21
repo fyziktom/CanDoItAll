@@ -9,6 +9,7 @@ namespace CanDoItAll.Processes.Application;
 public sealed class ProcessDecisionResultCoordinator(IProcessDecisionResultQuery query,
     IEnumerable<IProcessDecisionChildOutcomeReader> readers, IProcessIdempotencyStore receipts,
     IProcessRuntimeUnitOfWork unitOfWork, ILogger<ProcessDecisionResultCoordinator> logger) {
+    private readonly ProcessDecisionChildOutcomes outcomes = new(readers, logger);
     private const string ReviewCode = "process.runtime.decision_result_requires_review";
     private const string ReviewSummary = "The original decision work requires reconciliation or manager review before this step can continue.";
 
@@ -25,6 +26,9 @@ public sealed class ProcessDecisionResultCoordinator(IProcessDecisionResultQuery
         command = command with { Result = result };
         var selection = await query.ReadAsync(state.RunId, command.StepInstanceId, result.ExecutionRunId, cancellationToken).ConfigureAwait(false);
         if (selection is null) {
+            if (result.OwnerEvidence is not null) {
+                return Reject(state, "Runtime.DecisionResultEvidenceUnbound", "Live owner evidence requires its original decision child.");
+            }
             return await new ProcessRuntimeEngine(unitOfWork).SubmitStrategyResultAsync(state, context, command, cancellationToken).ConfigureAwait(false);
         }
         selection.RequireOriginal(state, command.StepInstanceId, result.ExecutionRunId);
@@ -32,6 +36,9 @@ public sealed class ProcessDecisionResultCoordinator(IProcessDecisionResultQuery
         if (await receipts.FindCompletedCommandAsync(context.CommandId, cancellationToken).ConfigureAwait(false) is { } replay) {
             RequireOriginalReceipt(replay, command, selection);
             return replay with { Outcome = ProcessRuntimeTransitionOutcome.Duplicate };
+        }
+        if (result.OwnerEvidence is not null && selection.Child is null) {
+            return Reject(state, "Runtime.DecisionResultEvidenceUnbound", "Live owner evidence requires its original decision child.");
         }
         var mutation = ProcessRuntimeEngine.PrepareStrategyResult(state, context, command);
         if (mutation.Outcome == ProcessRuntimeTransitionOutcome.Duplicate) {
@@ -51,17 +58,8 @@ public sealed class ProcessDecisionResultCoordinator(IProcessDecisionResultQuery
             return Reject(state, "Runtime.DecisionResultClosed", "A new result cannot reopen a terminal decision.");
         }
         var outcome = selection.Child is { } child
-            ? await ReadOutcomeAsync(child.Original, cancellationToken).ConfigureAwait(false)
+            ? await outcomes.ReadAsync(child, result.OwnerEvidence, cancellationToken).ConfigureAwait(false)
             : new ProcessDecisionChildResult.Pending(ProcessDecisionChildPendingReason.MissingJournal);
-        if (outcome is ProcessDecisionChildResult.Closed closed) {
-            closed.Closure.Validate();
-            closed.Work.Validate();
-            if (!Enum.IsDefined(closed.Status) || closed.Closure.OwnerRevision != closed.Work.OwnerWorkRevision ||
-                    selection.Child!.Observation.Closure is { } retained && retained != closed.Closure ||
-                    selection.Child.Observation.Settlement is { } work && work != closed.Work) {
-                throw new InvalidDataException("The original child outcome disagrees with its retained closure or work.");
-            }
-        }
         var completion = ChooseCompletion(selection, outcome, mutation, command);
         if (completion is ProcessDecisionCompletion.Review or ProcessDecisionCompletion.Reconcile &&
                 !(outcome is ProcessDecisionChildResult.Closed { Status: ProcessDecisionChildTerminalStatus.Succeeded } &&
@@ -80,19 +78,6 @@ public sealed class ProcessDecisionResultCoordinator(IProcessDecisionResultQuery
         return await unitOfWork.CommitAsync(new(context.CommandId, state, mutation) {
             Decision = decision, DecisionBudget = settlement
         }, cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<ProcessDecisionChildResult> ReadOutcomeAsync(ProcessDecisionChildMaterialBinding original, CancellationToken cancellationToken) {
-        var reader = readers.SingleOrDefault(item => item.Contract == original.ExecutionContract)
-            ?? throw new InvalidOperationException("The original Process execution contract has no registered outcome reader.");
-        try {
-            return await reader.ReadAsync(original, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidDataException("The original Process outcome reader returned no evidence.");
-        } catch (IOException failure) {
-            logger.LogWarning("Process result reconciliation could not read child {ChildId} in run {RunId}; failure kind {FailureKind}.",
-                original.Child.Address.ChildId, original.Child.Address.RunId, failure.GetType().Name);
-            return new ProcessDecisionChildResult.Pending(ProcessDecisionChildPendingReason.UnresolvedEffects);
-        }
     }
 
     private static ProcessDecisionCompletion ChooseCompletion(ProcessDecisionResultSelection selection, ProcessDecisionChildResult outcome,
@@ -114,10 +99,7 @@ public sealed class ProcessDecisionResultCoordinator(IProcessDecisionResultQuery
             }
             return selection.Head?.Phase == ProcessDecisionPhase.Reconciling ? ProcessDecisionCompletion.Reconcile : ProcessDecisionCompletion.Review;
         }
-        if (outcome is not ProcessDecisionChildResult.Pending pending || !Enum.IsDefined(pending.Reason)) {
-            throw new InvalidDataException("The Process child outcome is unsupported.");
-        }
-        return pending.Reason is ProcessDecisionChildPendingReason.ApprovalRequired or ProcessDecisionChildPendingReason.BasisChanged &&
+        return outcome is ProcessDecisionChildResult.Pending { Reason: ProcessDecisionChildPendingReason.ApprovalRequired or ProcessDecisionChildPendingReason.BasisChanged } &&
             selection.Head?.Phase != ProcessDecisionPhase.Reconciling ? ProcessDecisionCompletion.Review : ProcessDecisionCompletion.Reconcile;
     }
 

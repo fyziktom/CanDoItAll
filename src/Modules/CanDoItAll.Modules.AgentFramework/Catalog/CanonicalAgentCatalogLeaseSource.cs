@@ -30,6 +30,12 @@ public sealed partial class CanonicalAgentCatalogLeaseSource : IAgentCatalogRead
     public Task<IAgentCatalogReadLease> AcquireAgentsReadLeaseAsync(IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default)
         => AcquireWithRecoveryAsync(store.AcquireAgentsReadLeaseAsync(agentIds, cancellationToken));
 
+    public Task<IAgentCatalogReadLease> AcquireAgentAuthoritySnapshotAsync(IReadOnlyList<Guid> agentIds,
+        CancellationToken cancellationToken = default) {
+        sourceRecovery.RequireCurrentHost();
+        return store.AcquireAgentAuthoritySnapshotAsync(agentIds, cancellationToken);
+    }
+
     public Task<IAgentPlanningPublicationSnapshotLease> AcquirePlanningAuthoritySnapshotAsync(
         AgentPlanningPublicationExpectation expected, CancellationToken cancellationToken = default) {
         sourceRecovery.RequireCurrentHost();

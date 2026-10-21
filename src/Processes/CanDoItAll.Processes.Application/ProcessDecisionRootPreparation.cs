@@ -11,25 +11,8 @@ public interface IProcessDecisionRootQuery {
 }
 
 public sealed class ProcessDecisionSourceProjectionRequiredException()
-    : InvalidOperationException("Root capture requires the bounded original accepted source projection.");
+    : InvalidOperationException("Process preparation requires the bounded original accepted source projection.");
 
 public enum ProcessDecisionRootPreparationStatus { Ready, CapturePending, ReviewRequired, Stopped, SourceProjectionRequired, NotRequired }
 
 public sealed record ProcessDecisionRootPreparationResult(ProcessDecisionRootPreparationStatus Status, ProcessRuntimeStateSnapshot State);
-
-public sealed record ProcessDecisionRootCaptureRequest(ProcessLaunchAuthority Source, ProcessDecisionRunScopeAdmission Scope,
-    ProcessDecisionMaterialReference Material);
-
-public enum ProcessDecisionRootCaptureRefusal { SourceChanged, SourceMissing, LifetimeChanged, DatasetChanged, InvalidSource, LimitExceeded }
-
-public abstract record ProcessDecisionRootCaptureResult {
-    private ProcessDecisionRootCaptureResult() { }
-
-    public sealed record Captured(ProcessDecisionMaterial Material) : ProcessDecisionRootCaptureResult;
-    public sealed record Refused(ProcessDecisionRootCaptureRefusal Reason) : ProcessDecisionRootCaptureResult;
-}
-
-public interface IProcessDecisionRootCapturer {
-    ProcessDecisionContentContract ContentContract { get; }
-    Task<ProcessDecisionRootCaptureResult> CaptureAsync(ProcessDecisionRootCaptureRequest request, CancellationToken cancellationToken = default);
-}

@@ -43,7 +43,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             Id: Guid.NewGuid(),
             AgentId: agentId,
             ChatSessionId: chatSessionId,
-            CreatedAtUtc: occurredAtUtc ?? DateTimeOffset.UtcNow,
+            CreatedAtUtc: occurredAtUtc ?? executionClock.GetUtcNow(),
             State: state,
             Phase: phase,
             Message: message)
@@ -526,7 +526,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 throw CreateSessionBlockedException(blockingRun!);
             }
 
-            var now = DateTimeOffset.UtcNow;
+            var now = executionClock.GetUtcNow();
             var userMessage = new ChatMessageRecord(
                 Id: Guid.NewGuid(),
                 Role: ChatMessageRole.User,
@@ -623,7 +623,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 EnsurePreparationCurrentForUse(
                     blueprint,
                     current.CatalogSnapshot);
-                var now = DateTimeOffset.UtcNow;
+                var now = executionClock.GetUtcNow();
                 var runtimeAgent = CreateProviderCompatibleRuntimeAgent(
                     current.Agent,
                     provider,

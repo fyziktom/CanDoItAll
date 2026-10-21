@@ -577,3 +577,21 @@ Initial inherited admission now requires an explicit source-owner observation ov
 Registered Process source observation now supports explicit initial inherited admission and saved schema 7 through shared canonical binding interpretation. Live and historical observations require the complete original accepted parent policy; current generation/cancellation are fenced across awaits. The persistence query returns the policy without changing saved source bytes. Inherited ordinary reservation remains unsupported. The 153-case proof is retained; whole prepared-launch decode scaling must be qualified before producer activation.
 
 The accepted-source persistence checkpoint separates immutable original header/assignment evidence from current authorization. New acceptance captures version 1 atomically; retained version 0 uses the explicit legacy path. Missing/corrupt projected evidence refuses observation. The Agent query reads one selected assignment; Workflow and bounded legacy conversion remain pending. See the [candidate validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-20-accepted-source-persistence.md) for 193 passing cases, migration/rollback proof and qualified SQL measurements. Selected source reads stay about 2.3 KB across 1024 steps and a 1 MiB prompt; acceptance still scales with plan size and sustained capacity remains open.
+
+## Original input and inherited snapshot ownership
+
+An accepted Process prompt is original launch intent. Decision execution must not read a
+repaired current prompt or decode the entire launch for every child. The
+[selected original input design](../../../codex/bundles/concurrent-mutations/plan/P07-original-process-input.md)
+adds independently selected, versioned input beside existing immutable assignment metadata.
+Capture belongs to the first-acceptance transaction; retries and legacy reads cannot
+silently regenerate it. Its [96-case proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-21-original-process-input.md)
+covers atomic capture, migration, corruption, recovery and bounded selected reads. The
+executor remains gated by the remaining lifecycle and capacity work.
+
+Process RunSnapshot selects shared business material for the run; StepSnapshot selects it
+for each Process step. An inherited Agent keeps that selected material fixed for its own
+child run, with no independent replan grant. Its resolved child policy is therefore
+RunSnapshot in both cases, while the original parent policy remains preserved. The
+[registered binding proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-21-initial-business-binding.md)
+checks both policies, publication permissions and waiting-child recovery.

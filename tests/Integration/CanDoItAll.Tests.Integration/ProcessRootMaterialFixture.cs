@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Application;
@@ -12,18 +13,19 @@ using static CanDoItAll.Tests.Integration.Processes.ProcessDecisionPersistenceFi
 namespace CanDoItAll.Tests.Integration.Processes;
 
 internal sealed record ProcessRootMaterialFixture(ProjectTaskPlanOperationFixture Sql, ProcessRuntimeStateSnapshot State,
-    ProcessDecisionRunAdmission Root, ProcessLaunchAuthority Source) : IAsyncDisposable {
+    ProcessDecisionRunAdmission Root, ProcessLaunchAuthority Source, bool OwnsSql = true) : IAsyncDisposable {
     internal IServiceProvider Services => Sql.Services;
-    internal IProcessDecisionRootCapturer Capturer => Services.GetServices<IProcessDecisionRootCapturer>().Single();
+    internal IProcessDecisionMaterialCapturer Capturer => Services.GetServices<IProcessDecisionMaterialCapturer>().Single();
 
-    internal static async Task<ProcessRootMaterialFixture> CreateAsync(int steps = 1) {
-        var sql = await ProjectTaskPlanOperationFixture.CreateAsync();
+    internal static async Task<ProcessRootMaterialFixture> CreateAsync(int steps = 1, ReadBasisMode read = ReadBasisMode.RunSnapshot,
+        ProjectTaskPlanOperationFixture? existingSql = null, Guid? executorId = null, bool allowTaskPublication = false) {
+        var sql = existingSql ?? await ProjectTaskPlanOperationFixture.CreateAsync();
         try {
             var source = await sql.Services.GetRequiredService<ProjectProcessLaunchAuthorityService>()
                 .CaptureLocalAsync(sql.Project.ProjectId, ProcessLaunchOperatorSurface.UserInterface);
             var prepared = ProcessPreparedLaunchScalingFixture.Create(steps, 16_384, source);
             var initial = prepared.InitialCommit;
-            var policy = new DecisionDataPolicy(ReadBasisMode.RunSnapshot, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview,
+            var policy = new DecisionDataPolicy(read, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview,
                 new(0, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10)));
             var capabilities = new DecisionDataPolicyCapabilities(true, true, false, true, true, true,
                 PublicationFreshness.RequireCurrent, policy.Budget);
@@ -31,13 +33,18 @@ internal sealed record ProcessRootMaterialFixture(ProjectTaskPlanOperationFixtur
             ProcessDecisionRunAdmission root = new(state.RunId, new(Guid.NewGuid()), sql.Project.DatabaseProfileId,
                 sql.Binding.Namespace.Value, Guid.NewGuid(), initial.InitialPlan!.Definition.VersionId,
                 policy, null, null, capabilities, [], policy);
-            root = root with { MaterialScope = new(new(Guid.NewGuid()), root.Funding, root.DatabaseProfileId,
-                root.WorkspaceNamespaceId, ProjectTaskPlanProcessContract.Content) };
+            if (read == ReadBasisMode.RunSnapshot) {
+                root = root with { MaterialScope = new(new(Guid.NewGuid()), root.Funding, root.DatabaseProfileId,
+                    root.WorkspaceNamespaceId, ProjectTaskPlanProcessContract.Content) };
+            }
             initial = initial with {
                 OriginalState = state, Mutation = initial.Mutation with { State = state }, InitialRunDecisionAdmission = root,
                 InitialAssignments = initial.InitialAssignments!.Select(assignment => assignment with {
+                    ExecutorId = executorId?.ToString("D") ?? assignment.ExecutorId,
+                    AllowedOperations = allowTaskPublication
+                        ? [.. assignment.AllowedOperations, ProcessOperationContractNames.ExecuteExternalAction] : assignment.AllowedOperations,
                     DecisionDataPolicy = ProcessDecisionRunPolicyFixture.Child(root, assignment.StepInstanceId) with {
-                        ExecutionContract = ProjectTaskPlanProcessContract.Execution
+                        ExecutionContract = ProjectTaskPlanProcessContract.Execution, ContentContract = ProjectTaskPlanProcessContract.Content
                     }
                 }).ToArray()
             };
@@ -45,9 +52,11 @@ internal sealed record ProcessRootMaterialFixture(ProjectTaskPlanOperationFixtur
             await using var context = Context(sql.Services);
             var owner = Owner(context, sql.Services);
             state = (await owner.CommitAsync(ProcessPreparedLaunchFixture.Commit(saved))).State;
-            return new(sql, state, root, source);
+            return new(sql, state, root, source, existingSql is null);
         } catch {
-            await sql.DisposeAsync();
+            if (existingSql is null) {
+                await sql.DisposeAsync();
+            }
             throw;
         }
     }
@@ -61,14 +70,14 @@ internal sealed record ProcessRootMaterialFixture(ProjectTaskPlanOperationFixtur
         => new(context, Services.GetRequiredService<ICanonicalRuntimeDatabase>());
 
     internal ProcessDecisionRootPreparationCoordinator Coordinator(ProcessPersistenceDbContext context,
-        IProcessDecisionRootCapturer? capturer = null, IProcessRuntimeUnitOfWork? commit = null, TimeProvider? clock = null) {
+        IProcessDecisionMaterialCapturer? capturer = null, IProcessRuntimeUnitOfWork? commit = null, TimeProvider? clock = null) {
         var owner = Owner(context, Services);
         return new(Query(context), [capturer ?? Capturer], owner, owner, commit ?? owner, clock ?? TimeProvider.System,
             NullLogger<ProcessDecisionRootPreparationCoordinator>.Instance);
     }
 
-    internal ProcessDecisionRootCaptureRequest CaptureRequest() => new(Source, Root.MaterialScope!,
+    internal ProcessDecisionMaterialCaptureRequest CaptureRequest() => new(Source, Root.MaterialScope!.MaterialScope, Root.MaterialScope.ContentContract,
         new(Root.MaterialScope!.ScopeId, 1, new(Guid.NewGuid())));
 
-    public ValueTask DisposeAsync() => Sql.DisposeAsync();
+    public ValueTask DisposeAsync() => OwnsSql ? Sql.DisposeAsync() : ValueTask.CompletedTask;
 }

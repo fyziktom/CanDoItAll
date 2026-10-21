@@ -8447,6 +8447,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(71)
                         .HasColumnType("character varying(71)");
 
+                    b.Property<string>("InputFingerprint")
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("InputJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("InputVersion")
+                        .HasColumnType("integer");
+
                     b.Property<string>("PayloadJson")
                         .IsRequired()
                         .HasColumnType("text");
@@ -8456,6 +8466,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("process_accepted_assignment_sources", null, t =>
                         {
                             t.HasCheckConstraint("CK_process_accepted_assignment_source", "\"StepInstanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND octet_length(\"PayloadJson\") BETWEEN 2 AND 1048576\nAND \"Fingerprint\" ~ '^sha256:[0-9a-f]{64}$'");
+
+                            t.HasCheckConstraint("CK_process_accepted_execution_input", "(\"InputVersion\" = 0 AND \"InputJson\" IS NULL AND \"InputFingerprint\" IS NULL)\nOR (\"InputVersion\" IN (1, 2) AND \"InputJson\" IS NOT NULL\n    AND octet_length(\"InputJson\") BETWEEN 2 AND 4194304\n    AND \"InputFingerprint\" IS NOT NULL AND \"InputFingerprint\" ~ '^sha256:[0-9a-f]{64}$')");
                         });
                 });
 

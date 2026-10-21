@@ -18,7 +18,8 @@ public sealed class AgentProjectAccessCatalogPolicy(ProjectWriteAdmissionService
                 : new(false, [], []),
             AgentProjectStructureAccessMetadata.ReadBindingScopeForMutation(agent.ConfigurationJson))).ToArray();
         var projectIds = changes.Where(change => !change.After.AllowAllProjects)
-            .SelectMany(change => change.After.ProjectIds).Distinct().ToArray();
+            .SelectMany(change => change.After.ProjectIds.Where(projectId => RequiresBindingFacts(change, projectId)))
+            .Distinct().ToArray();
         var facts = await admissions.ListAccessBindingFactsAsync(projectIds, cancellationToken);
         if (facts.DatabaseProfileId != databaseProfileId) {
             throw new InvalidOperationException("The project owner returned binding facts for another database profile.");
@@ -68,6 +69,13 @@ public sealed class AgentProjectAccessCatalogPolicy(ProjectWriteAdmissionService
             }
         }
         return changed ? after with { Agents = agents } : after;
+    }
+
+    private static bool RequiresBindingFacts(CatalogAgentScope change, Guid projectId) {
+        var current = change.After.Lifetimes.Where(lifetime => lifetime.ProjectId == projectId).ToArray();
+        return current.Length == 0
+            ? !change.Before.Lifetimes.Any(lifetime => lifetime.ProjectId == projectId)
+            : current.Any(lifetime => !change.Before.Lifetimes.Contains(lifetime));
     }
 
     private sealed record CatalogAgentScope(AgentDefinition Agent, AgentProjectStructureBindingScope Before,

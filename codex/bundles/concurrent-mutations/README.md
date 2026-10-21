@@ -4,14 +4,97 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest checkpoint: [initial root snapshot production](validation/2026-10-20-process-root-material-producer.md)
+Latest qualified prerequisite: [waiting-result completion](validation/2026-10-21-process-review-completion.md).
+All 331 final selected cases pass, including real Project-scoped publication in both
+snapshot modes, root cancellation, exact settlement replay, rollback and restart.
+The corrected root fixture and observer are validated; all earlier failures remain
+retained. Frozen source/runtime, full portability and observed resource reconciliation
+pass. Current manager actions and the actual adapter remain next, under the
+[reviewed manager design](plan/P07-current-manager-actions.md). Earlier cleanup
+denials remain unresolved; SPA stays on its separate branch.
+
+The preceding [original step requirements](validation/2026-10-21-original-step-requirements.md)
+qualify original input and execution accounting.
+All 128 original-input cases and the final 29 affected workspace scenarios pass.
+Versioned input, migration interruption and indexed scaling checks pass. The shared
+execution clock preserves exact work and deadline enforcement; earlier failures remain
+retained. Source/runtime identity, final portability and resource reconciliation pass.
+
+The preceding [manager review admission](validation/2026-10-21-manager-review-admission.md)
+qualifies 74 distinct behaviors, including actual saved publication after the Process
+claim closes. The test-only disclosure correction and observer-sharing incident remain
+retained. Production source/binary identity, full portability and resource proof pass.
+Process waiting-result completion now qualifies. Current manager actions and the actual
+adapter remain next; executor activation stays gated.
+
+The preceding [pooled preparation and original-policy authority](validation/2026-10-21-process-capacity-repair.md)
+qualifies 183 distinct behaviors across the retained 180/183 candidate and nine-case
+test-only correction. Warm output allocation is close to baseline; cold allocation and
+clearing time remain explicit. Removing a current policy cannot downgrade original
+governed authority. Full portability and source/runtime/resource proof pass.
+Manager continuation and the actual adapter remain required.
+
+The preceding [payload bounds and finite root capacity](validation/2026-10-21-process-capacity-bounds.md)
+passes all 179 cases, with explicit preparation/projection limits and finite completion
+at the 256-allocation ceiling. Sustained concurrent capacity remains required.
+
+The preceding [closed startup failure](validation/2026-10-21-closed-startup-failure.md)
+qualifies 202 distinct behaviors, including replay after acknowledgement loss and a full
+host restart without live failure evidence. Both test-only failures are retained; all
+production source and 392 DLL copies remain unchanged across the corrections. Full
+portability and observed resource reconciliation pass. Capacity and Process continuation
+still gate executor activation.
+
+The preceding [original accepted Process input](validation/2026-10-21-original-process-input.md)
+qualifies 96 distinct behaviors. Atomic original input, indexed selection, migration,
+rollback and recovery pass. Selected reads stay at one query and about 5.3 KB through
+1,024 steps; initial acceptance still requires capacity work. The failed SQL-text
+assertion candidate is retained, and its test-only correction leaves production unchanged.
+Release builds, full portability and observed resource reconciliation pass.
+
+The preceding [initial registered business binding](validation/2026-10-21-initial-business-binding.md)
+qualifies 177 distinct behaviors across documented test-only corrections. Both Process
+snapshot modes reach the real inherited workspace; read-only assignments are refused and
+waiting children retain their original input without another provider call. Production
+sources and assemblies are identical across the correction candidates. Full portability,
+final documentation/whitespace checks and observed resource reconciliation pass.
+The [original execution input design](plan/P07-original-process-input.md) is implemented
+and validated; Process activation remains gated.
+
+The preceding [selected Agent authority](validation/2026-10-20-selected-agent-authority.md)
+has 54 passing affected behaviors across the policy/recovery and final source-lifetime
+corrections. Selected Agent keys permit unrelated edits while preserving revocation
+fences; retained Project bindings no longer trigger redundant SQL. Conflicting source
+and target lifetimes are refused before native mutation. Both failed candidates remain
+recorded. Initial business binding is validated; Process activation still requires original
+input, manager continuation, cancellation and capacity closure.
+
+The [initial and recovered startup accounting](validation/2026-10-20-inherited-startup-accounting.md)
+passes 189 distinct behaviors after an exact test-only correction. Initial work
+uses the original child grant, and recovery cannot create a missing journal.
+Recovered startup runs inside measured child work. Release builds, full portability,
+source/runtime identities and resource reconciliation pass. The additional
+[budget/cancellation boundary](validation/2026-10-20-inherited-startup-boundary.md)
+passes all 40 affected integration cases. Selected Agent authority locking now passes,
+so actual business binding can avoid carrying a workspace-wide lock across SQL.
+Business binding and manager continuation still gate Process activation.
+
+The [selected step preparation and enrollment](validation/2026-10-20-process-selected-step-producer.md)
+passes 187 distinct behaviors under an exact test-only correction. It reads bounded
+original source, reuses shared RunSnapshot or captures StepSnapshot, and atomically
+enrolls one original child under the exact claim and assignment contract. Lost responses
+never authorize repeated capture. Full portability, Release builds, architecture and
+source/runtime/resource checks pass. The original 185/186 result remains retained.
+Actual business binding and manager continuation remain next.
+
+The [initial root snapshot production](validation/2026-10-20-process-root-material-producer.md)
 passes 192 distinct behaviors. Required dispatcher preparation captures real Project
 material before claims, invokes one capture under contention, preserves unknown work and
 atomically settles closed work. Root source reads stay at three rows / 6,612 serialized
 scalar bytes for both 1 and 128 steps. Original Agent/operator source, lifetime and
 profile checks are proved; Release builds, full portability and resource checks pass.
-The initial test setup/assembly failures remain recorded. Actual child binding,
-StepSnapshot production and manager continuation are next; the executor guard remains.
+The initial test setup/assembly failures remain recorded. Selected step production is
+now available; actual child binding and manager continuation remain activation gates.
 
 The [Process capture ownership prerequisite](validation/2026-10-20-process-capture-ownership.md)
 has 127 distinct passing behaviors under an exact test-only correction. Durable replay

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.Processes.Abstractions;
 
 namespace CanDoItAll.Processes.Drivers.Abstractions;
@@ -169,6 +170,9 @@ public sealed record StrategyResultEnvelope(
     public ProcessExecutionRunId? ExecutionRunId { get; init; }
 
     public ProcessHostCapabilityEvaluationEvidence? HostCapabilityEvidence { get; init; }
+
+    [JsonIgnore]
+    public ProcessExecutionOwnerEvidence? OwnerEvidence { get; init; }
 }
 
 public static class ProcessStrategyResultLimits

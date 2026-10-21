@@ -66,6 +66,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
         ?? throw new ArgumentNullException(nameof(workspaceProcessLeaseCleaner));
     private readonly AgentToolPolicyCatalog toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
     private readonly ILogger logger = logger;
+    private readonly TimeProvider executionClock = toolAdmissionJournal?.Clock ?? TimeProvider.System;
     private readonly AgentPlanningCoordinator? planning = toolAdmissionJournal is not null && planningRuntime is not null
         ? new(toolAdmissionJournal, planningRuntime, planningParticipants ?? []) : null;
     private readonly AgentInheritedPlanningCoordinator? inheritedPlanning = toolAdmissionJournal is not null && planningRuntime is not null &&

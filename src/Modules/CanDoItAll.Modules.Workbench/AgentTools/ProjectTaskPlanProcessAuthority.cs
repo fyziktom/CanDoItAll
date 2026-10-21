@@ -67,7 +67,7 @@ internal sealed class ProjectTaskPlanProcessAuthority(ProjectTaskPlanProcessComm
         parent ??= ProjectTaskPlanProcessCodec.Parent(origin);
         try {
             await fence.RequireSelectedAsync(parent, original.Target.Source, ProjectTaskPlanProcessContract.Execution,
-                ProjectTaskPlanProcessContract.Content, ProcessDecisionPublicationKind.Dispatch, cancellationToken);
+                ProjectTaskPlanProcessContract.Content, RequirePublicationKind(), cancellationToken);
         } catch (ProcessExecutionAuthorityMismatchException) {
             throw new ProjectTaskPlanAuthorityException(ProjectTaskPlanRefusal.SourceChanged);
         }
@@ -78,8 +78,16 @@ internal sealed class ProjectTaskPlanProcessAuthority(ProjectTaskPlanProcessComm
         if (expected != original.Command.Source || policy != original.Command.Policy) {
             throw new ProjectTaskPlanAuthorityException(ProjectTaskPlanRefusal.SourceChanged);
         }
+        _ = RequirePublicationKind();
+    }
+
+    private ProcessDecisionPublicationKind RequirePublicationKind() {
         try {
-            _ = work.RequirePublication(held!, binding);
+            return work.RequireInheritedPublicationPurpose(held!, binding) switch {
+                AgentInheritedContinuationPurpose.Dispatch => ProcessDecisionPublicationKind.Dispatch,
+                AgentInheritedContinuationPurpose.ManagerReview => ProcessDecisionPublicationKind.ManagerReview,
+                _ => throw new ProjectTaskPlanAuthorityException(ProjectTaskPlanRefusal.SourceChanged)
+            };
         } catch (AgentPlanningAdmissionException exception) {
             throw new ProjectTaskPlanAuthorityException(exception.Reason == AgentPlanningAdmissionRefusal.WorkBudgetExhausted
                 ? ProjectTaskPlanRefusal.BudgetElapsed : ProjectTaskPlanRefusal.SourceChanged);

@@ -45,21 +45,21 @@ public sealed class ProcessRootMaterialSourceTests {
     }
 
     [Theory]
-    [InlineData(ProcessDecisionRootCaptureRefusal.SourceChanged)]
-    [InlineData(ProcessDecisionRootCaptureRefusal.LifetimeChanged)]
-    [InlineData(ProcessDecisionRootCaptureRefusal.DatasetChanged)]
-    public async Task Registered_capturer_checks_original_source_lifetime_and_namespace(ProcessDecisionRootCaptureRefusal expected) {
+    [InlineData(ProcessDecisionMaterialCaptureRefusal.SourceChanged)]
+    [InlineData(ProcessDecisionMaterialCaptureRefusal.LifetimeChanged)]
+    [InlineData(ProcessDecisionMaterialCaptureRefusal.DatasetChanged)]
+    public async Task Registered_capturer_checks_original_source_lifetime_and_namespace(ProcessDecisionMaterialCaptureRefusal expected) {
         await using var fixture = await ProcessRootMaterialFixture.CreateAsync();
         var request = fixture.CaptureRequest();
         request = expected switch {
-            ProcessDecisionRootCaptureRefusal.SourceChanged => request with { Source = request.Source with { PolicyFingerprint = "sha256:" + new string('0', 64) } },
-            ProcessDecisionRootCaptureRefusal.LifetimeChanged => request with { Source = request.Source with {
+            ProcessDecisionMaterialCaptureRefusal.SourceChanged => request with { Source = request.Source with { PolicyFingerprint = "sha256:" + new string('0', 64) } },
+            ProcessDecisionMaterialCaptureRefusal.LifetimeChanged => request with { Source = request.Source with {
                 ProjectAdmission = new(fixture.Sql.Project.DatabaseProfileId, fixture.Sql.Project.ProjectId, Guid.NewGuid())
             } },
-            ProcessDecisionRootCaptureRefusal.DatasetChanged => request with { Scope = request.Scope with { WorkspaceNamespaceId = Guid.NewGuid() } },
+            ProcessDecisionMaterialCaptureRefusal.DatasetChanged => request with { Scope = request.Scope with { WorkspaceNamespaceId = Guid.NewGuid() } },
             _ => throw new ArgumentOutOfRangeException(nameof(expected))
         };
-        var refused = Assert.IsType<ProcessDecisionRootCaptureResult.Refused>(await fixture.Capturer.CaptureAsync(request));
+        var refused = Assert.IsType<ProcessDecisionMaterialCaptureResult.Refused>(await fixture.Capturer.CaptureAsync(request));
         Assert.Equal(expected, refused.Reason);
     }
 
@@ -83,7 +83,7 @@ public sealed class ProcessRootMaterialSourceTests {
         await using var fixture = await ProcessRootMaterialFixture.CreateAsync();
         var request = fixture.CaptureRequest();
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Capturer.CaptureAsync(request with {
-            Scope = request.Scope with { ContentContract = new(Guid.NewGuid(), 1) }
+            ContentContract = new(Guid.NewGuid(), 1)
         }));
     }
 
@@ -100,8 +100,9 @@ public sealed class ProcessRootMaterialSourceTests {
         var root = (await new EfProcessDecisionBudgetStore(context).ReadAsync(fixture.Process.State.RootRunId, null))!;
         ProcessDecisionRunScopeAdmission scope = new(new(Guid.NewGuid()), new(fixture.Process.State.RootRunId, root.BudgetId),
             fixture.Sql.Project.DatabaseProfileId, fixture.Sql.Binding.Namespace.Value, ProjectTaskPlanProcessContract.Content);
-        var request = new ProcessDecisionRootCaptureRequest(source, scope, new(scope.ScopeId, 1, new(Guid.NewGuid())));
-        var capturer = fixture.Sql.Services.GetServices<IProcessDecisionRootCapturer>().Single();
+        var request = new ProcessDecisionMaterialCaptureRequest(source, scope.MaterialScope, scope.ContentContract,
+            new(scope.ScopeId, 1, new(Guid.NewGuid())));
+        var capturer = fixture.Sql.Services.GetServices<IProcessDecisionMaterialCapturer>().Single();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         if (change == AgentSourceChange.ProfileChanged) {
             fixture.Generations.Advance();
@@ -110,12 +111,12 @@ public sealed class ProcessRootMaterialSourceTests {
         }
         var result = await capturer.CaptureAsync(request, deadline.Token);
         if (change == AgentSourceChange.Healthy) {
-            Assert.Equal(scope.MaterialScope, Assert.IsType<ProcessDecisionRootCaptureResult.Captured>(result).Material.Scope);
+            Assert.Equal(scope.MaterialScope, Assert.IsType<ProcessDecisionMaterialCaptureResult.Captured>(result).Material.Scope);
             await RevokeAsync();
             result = await capturer.CaptureAsync(request, deadline.Token);
         }
-        Assert.Equal(ProcessDecisionRootCaptureRefusal.SourceChanged,
-            Assert.IsType<ProcessDecisionRootCaptureResult.Refused>(result).Reason);
+        Assert.Equal(ProcessDecisionMaterialCaptureRefusal.SourceChanged,
+            Assert.IsType<ProcessDecisionMaterialCaptureResult.Refused>(result).Reason);
         Assert.Equal(before.Revision, (await fixture.ReadAsync()).Revision);
 
         Task RevokeAsync() => fixture.Store.UpdateCatalogAsync(catalog => catalog with {

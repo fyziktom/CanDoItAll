@@ -42,8 +42,10 @@ public sealed partial class AgentToolAdmissionJournal {
         AgentSavedEffectContinuationRequest request, AgentPlanningDecisionExpectation expected, AgentInheritedSavedEffectContinuation parent,
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(owner);
+        ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(expected);
         ArgumentNullException.ThrowIfNull(parent);
+        parent.RequireSelection(expected, request.Binding);
         return AcquireSavedEffectDispatchAsync(request, currentRead, owner, expected, parent, cancellationToken);
     }
 
@@ -297,7 +299,8 @@ public sealed partial class AgentToolAdmissionJournal {
         await RequireEffectReadPolicyAsync(run, AgentToolSessionObservation.From(run),
             parent is null ? currentRead : RequireParentReadAsync,
             recheckAfterBackground: parent is not null, cancellationToken,
-            parent is null ? BackgroundCheck.Read : BackgroundCheck.Dispatch);
+            parent is null || parent.Purpose == AgentInheritedContinuationPurpose.ManagerReview
+                ? BackgroundCheck.Read : BackgroundCheck.Dispatch);
         cancellationToken.ThrowIfCancellationRequested();
 
         async ValueTask<bool> RequireParentReadAsync(AgentToolSessionObservation observation, CancellationToken token) {

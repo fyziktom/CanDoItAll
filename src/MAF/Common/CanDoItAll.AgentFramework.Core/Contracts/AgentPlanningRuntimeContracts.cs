@@ -23,7 +23,13 @@ public interface IAgentPlanningParticipant : IAgentPlanningStepParticipant {
 }
 
 public interface IAgentInheritedPlanningParticipant : IAgentPlanningStepParticipant {
+    bool SupportsParent(AgentToolProtocolEnvelope parent);
     Task<AgentPlanningBasisRecord> ReadOriginalBasisAsync(AgentPlanningInheritedOrigin original, CancellationToken cancellationToken);
+}
+
+public interface IAgentInheritedPlanningInitialBinder : IAgentInheritedPlanningParticipant {
+    Task<AgentInheritedPlanningBinding> BindInitialAsync(AgentInheritedPlanningBindingContext context,
+        AgentToolProtocolEnvelope originalParent, AgentToolProtocolEnvelope sourceEvidence, CancellationToken cancellationToken);
 }
 
 public enum AgentPlanningPublicationOutcome { Committed, BasisChanged, Refused }

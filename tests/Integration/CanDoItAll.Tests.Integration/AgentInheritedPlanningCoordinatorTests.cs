@@ -180,4 +180,61 @@ public sealed class AgentInheritedPlanningCoordinatorTests {
         Assert.Single(fixture.Wire.Requests);
         Assert.Single(result.Run.PendingApprovals);
     }
+    [Fact]
+    public async Task Different_parent_contracts_can_share_one_business_owner_without_sharing_execution() {
+        await using var fixture = await AgentInheritedPlanningCoordinatorFixture.CreateAsync();
+        var other = new AgentInheritedPlanningCoordinatorFixture.Participant(fixture.Module.Basis) {
+            SupportedParentFormat = "different-parent-contract"
+        };
+        var result = await fixture.Coordinator(additional: [other]).RunAsync(fixture.Agent, fixture.Provider, fixture.Expected);
+        Assert.Single(result.Run.PendingApprovals);
+        Assert.Single(fixture.Wire.Requests);
+        Assert.Equal(0, other.Reads);
+        Assert.Equal(0, other.Preparations);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Unsupported_or_ambiguous_parent_contracts_refuse_before_provider_or_journal_mutation(bool ambiguous) {
+        await using var fixture = await AgentInheritedPlanningCoordinatorFixture.CreateAsync();
+        var other = new AgentInheritedPlanningCoordinatorFixture.Participant(fixture.Module.Basis);
+        if (!ambiguous) {
+            fixture.Module.SupportedParentFormat = "unsupported-parent-contract";
+        }
+        var coordinator = fixture.Coordinator(additional: ambiguous ? [other] : []);
+        var refusal = await Assert.ThrowsAsync<AgentToolAdmissionException>(() =>
+            coordinator.RunAsync(fixture.Agent, fixture.Provider, fixture.Expected));
+        Assert.Equal(ambiguous ? "planning.ambiguous-participant" : "planning.unsupported", refusal.Code);
+        Assert.Empty(fixture.Wire.Requests);
+        Assert.Equal(JsonSerializer.Serialize(fixture.Original), JsonSerializer.Serialize(await fixture.ReadAsync()));
+    }
+
+    [Fact]
+    public async Task An_initial_bind_requires_the_selected_participants_explicit_initializer() {
+        await using var fixture = await AgentInheritedPlanningCoordinatorFixture.CreateAsync();
+        var participant = new ReadOnlyParticipant(fixture.Module);
+        var original = fixture.Original;
+        var refusal = await Assert.ThrowsAsync<AgentToolAdmissionException>(() =>
+            fixture.Coordinator(registered: false, additional: [participant]).BindInitialAsync(
+                AgentPlanningOwner.ProjectTaskPlan, new(original, original.ToolAdmission!.Session),
+                original.ToolAdmission.PlanningDecision!.InheritedOrigin!.ParentBinding,
+                AgentPlanningDecisionTestData.Envelope(), default));
+        Assert.Equal("planning.initial-binding-unsupported", refusal.Code);
+        Assert.Empty(fixture.Wire.Requests);
+        Assert.Equal(JsonSerializer.Serialize(original), JsonSerializer.Serialize(await fixture.ReadAsync()));
+    }
+
+    private sealed class ReadOnlyParticipant(IAgentInheritedPlanningParticipant inner) : IAgentInheritedPlanningParticipant {
+        public AgentPlanningOwner Owner => inner.Owner;
+        public AgentPlanningPromptContract Prompt => inner.Prompt;
+        public bool SupportsParent(AgentToolProtocolEnvelope parent) => inner.SupportsParent(parent);
+        public Task<AgentPlanningBasisRecord> ReadOriginalBasisAsync(AgentPlanningInheritedOrigin original, CancellationToken cancellationToken)
+            => inner.ReadOriginalBasisAsync(original, cancellationToken);
+        public Task RequireCurrentReadAsync(AgentPlanningDecisionRecord decision, CancellationToken cancellationToken)
+            => inner.RequireCurrentReadAsync(decision, cancellationToken);
+        public AgentPlanningResponsePreparation PreparePublication(AgentPlanningDecisionRecord decision, AgentPlanningBasisRecord basis, string responseText)
+            => inner.PreparePublication(decision, basis, responseText);
+    }
+
 }

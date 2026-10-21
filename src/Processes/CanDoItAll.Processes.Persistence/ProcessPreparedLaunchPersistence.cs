@@ -76,6 +76,7 @@ internal sealed class ProcessPreparedLaunchEntityConfiguration : IEntityTypeConf
 }
 
 internal static class ProcessPreparedLaunchCodec {
+    internal const int MaximumGovernedPayloadUtf8Bytes = 33_554_432;
     private const string ToolSourceHashDomain = "process-tool-source-v1\n";
     private const string ProjectMutationHashDomain = "process-project-mutations-v1\n";
     private const string SourceLifetimeHashDomain = "process-agent-source-lifetime-v2\n";
@@ -108,7 +109,9 @@ internal static class ProcessPreparedLaunchCodec {
             throw new InvalidOperationException("The process launch review does not describe the immutable prepared plan.");
         }
         RequireDecisionPolicyBindings(preparation);
-        var payload = JsonSerializer.Serialize(preparation, Options);
+        var payload = preparation.InitialCommit.InitialAssignments.Any(item => item.DecisionDataPolicy is not null)
+            ? ProcessBoundedJson.Serialize(preparation, Options, MaximumGovernedPayloadUtf8Bytes)
+            : JsonSerializer.Serialize(preparation, Options);
         return new() {
             Id = preparation.AdmissionId.Value,
             CallerIntentId = preparation.CallerIntentId?.Value,

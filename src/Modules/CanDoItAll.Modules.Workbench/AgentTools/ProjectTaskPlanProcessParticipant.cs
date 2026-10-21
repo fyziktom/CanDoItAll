@@ -6,9 +6,16 @@ using CanDoItAll.Processes.Application;
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectTaskPlanProcessParticipant(IProcessDecisionChildReader children,
-    IProcessDecisionMaterialReader materials, ProjectTaskPlanProcessReadAuthority read) : IAgentInheritedPlanningParticipant {
+    IProcessDecisionMaterialReader materials, ProjectTaskPlanProcessReadAuthority read,
+    ProjectTaskPlanProcessBinding binding) : IAgentInheritedPlanningInitialBinder {
     public AgentPlanningOwner Owner => AgentPlanningOwner.ProjectTaskPlan;
     public AgentPlanningPromptContract Prompt => ProjectTaskPlanPlanningContent.Prompt;
+
+    public bool SupportsParent(AgentToolProtocolEnvelope parent) => ProjectTaskPlanProcessBinding.Supports(parent);
+
+    public Task<AgentInheritedPlanningBinding> BindInitialAsync(AgentInheritedPlanningBindingContext context,
+        AgentToolProtocolEnvelope originalParent, AgentToolProtocolEnvelope sourceEvidence, CancellationToken cancellationToken)
+        => binding.BindAsync(context, originalParent, sourceEvidence, cancellationToken);
 
     public async Task<AgentPlanningBasisRecord> ReadOriginalBasisAsync(AgentPlanningInheritedOrigin original,
         CancellationToken cancellationToken) {

@@ -33,9 +33,10 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
     internal AgentToolAdmissionJournal NewJournal(FileSandboxWorkspaceStore? store = null)
         => new(store ?? Files.NewStore(), Files.Profile, Clock, backgroundSources: [Policy]);
 
-    internal static Task<AgentInheritedPlanningFixture> CreateForPublicationAsync() {
+    internal static Task<AgentInheritedPlanningFixture> CreateForPublicationAsync(WorkspaceScopeDescriptor? contextScope = null) {
         var profile = new AgentToolProfileBinding(Guid.NewGuid(), "inherited-saved-effect-profile", new(1));
         return CreateAsync(scope: WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")), profile: profile,
+            contextScope: contextScope,
             configureAgent: agent => agent with {
                 Id = Guid.NewGuid(), Name = "Inherited saved effect fixture", TemplateKey = string.Empty,
                 IsTemplate = false, ConfigurationJson = "{}"
@@ -58,7 +59,7 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
 
     internal static async Task<AgentInheritedPlanningFixture> CreateAsync(ReadBasisMode parentMode = ReadBasisMode.StepSnapshot,
         TimeSpan? basisAge = null, WorkspaceScopeDescriptor? scope = null, AgentToolProfileBinding? profile = null,
-        Func<AgentDefinition, AgentDefinition>? configureAgent = null) {
+        Func<AgentDefinition, AgentDefinition>? configureAgent = null, WorkspaceScopeDescriptor? contextScope = null) {
         var files = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true,
             storageScope: scope, profileBinding: profile,
             configureAgent: agent => {
@@ -73,7 +74,7 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
             var candidate = files.Detail.Run with {
                 Id = Guid.NewGuid(), ChatSessionId = null, ToolAdmission = null,
                 MetadataJson = AgentPlanningRunMetadata.ApplyInherited("{}", AgentPlanningOwner.ProjectTaskPlan,
-                    AgentPlanningDecisionTestData.Envelope().Digest, files.StorageScope),
+                    AgentPlanningDecisionTestData.Envelope().Digest, contextScope ?? files.StorageScope),
                 SourceKind = policy.SourceKind, SourceId = policy.SourceId,
                 ProcessRunId = Guid.NewGuid().ToString("D"), ProcessStepId = Guid.NewGuid().ToString("D")
             };

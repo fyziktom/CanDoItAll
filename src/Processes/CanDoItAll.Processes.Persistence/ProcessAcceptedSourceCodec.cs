@@ -10,6 +10,7 @@ namespace CanDoItAll.Processes.Persistence;
 
 internal static class ProcessAcceptedSourceCodec {
     internal const int MaximumPayloadUtf8Bytes = 1_048_576;
+    internal const int MaximumGovernedProjectionUtf8Bytes = 16_777_216;
     private const string HeaderDomain = "process-accepted-source-header/v1\n";
     private const string AssignmentDomain = "process-accepted-source-assignment/v1\n";
     private static readonly JsonSerializerOptions Options = new(ProcessInstancePlanPersistenceMapper.CreateSerializerOptions()) {
@@ -22,15 +23,39 @@ internal static class ProcessAcceptedSourceCodec {
         var assignments = saved.Preparation.InitialCommit.InitialAssignments
             ?? throw Invalid("The accepted source requires its original assignments.");
         var encodedHeader = Encode(header, HeaderDomain);
+        var governed = assignments.Any(item => item.DecisionDataPolicy is not null);
+        var requirements = assignments.Any(item => item.DecisionDataPolicy?.ExecutionContract is not null)
+            ? new ProcessAcceptedStepRequirementsCapture(saved.Preparation.InitialCommit) : null;
+        var totalBytes = 0;
+        RequireCapacity(encodedHeader);
         Dictionary<ProcessStepInstanceId, ProcessAcceptedSourceEnvelope> encodedAssignments = [];
+        Dictionary<ProcessStepInstanceId, ProcessAcceptedSourceEnvelope> inputs = [];
         foreach (var assignment in assignments) {
             var source = ProcessAssignmentSource.From(assignment);
             RequireAssignment(header, source);
-            if (!encodedAssignments.TryAdd(source.StepInstanceId, Encode(source, AssignmentDomain + encodedHeader.Fingerprint + "\n"))) {
+            var metadata = EncodeAssignment(source, encodedHeader.Fingerprint);
+            RequireCapacity(metadata);
+            if (!encodedAssignments.TryAdd(source.StepInstanceId, metadata)) {
                 throw Invalid("The accepted source repeats an original step assignment.");
             }
+            if (assignment.DecisionDataPolicy?.ExecutionContract is not null) {
+                var input = ProcessAcceptedExecutionInputCodec.Capture(assignment, requirements!.Capture(assignment), encodedHeader.Fingerprint, metadata);
+                RequireCapacity(input);
+                inputs.Add(source.StepInstanceId, input);
+            }
         }
-        return new(encodedHeader, encodedAssignments);
+        return new(encodedHeader, encodedAssignments, inputs);
+
+        void RequireCapacity(ProcessAcceptedSourceEnvelope envelope) {
+            if (!governed) {
+                return;
+            }
+            var bytes = Encoding.UTF8.GetByteCount(envelope.PayloadJson);
+            if (bytes > MaximumGovernedProjectionUtf8Bytes - totalBytes) {
+                throw Invalid("The accepted governed Process source exceeds its total UTF-8 byte limit.");
+            }
+            totalBytes += bytes;
+        }
     }
 
     internal static ProcessAcceptedSource ReadLegacy(ProcessPreparedLaunchSnapshot saved, ProcessStepInstanceId stepId) {
@@ -68,15 +93,18 @@ internal static class ProcessAcceptedSourceCodec {
         return decoded;
     }
 
-    private static ProcessAcceptedSourceEnvelope Encode<T>(T value, string domain) {
+    internal static ProcessAcceptedSourceEnvelope EncodeAssignment(ProcessAssignmentSource assignment, string headerFingerprint)
+        => Encode(assignment, AssignmentDomain + headerFingerprint + "\n");
+
+    internal static ProcessAcceptedSourceEnvelope Encode<T>(T value, string domain, int maximumBytes = MaximumPayloadUtf8Bytes) {
         var payload = JsonSerializer.Serialize(value, Options);
-        RequirePayload(payload);
+        RequirePayload(payload, maximumBytes);
         return new(payload, Hash(domain, payload));
     }
 
-    private static T Decode<T>(ProcessAcceptedSourceEnvelope envelope, string domain) {
+    internal static T Decode<T>(ProcessAcceptedSourceEnvelope envelope, string domain, int maximumBytes = MaximumPayloadUtf8Bytes) {
         ArgumentNullException.ThrowIfNull(envelope);
-        RequirePayload(envelope.PayloadJson);
+        RequirePayload(envelope.PayloadJson, maximumBytes);
         if (!IsDigest(envelope.Fingerprint) || Hash(domain, envelope.PayloadJson) != envelope.Fingerprint) {
             throw Invalid("The accepted source evidence has an inconsistent fingerprint.");
         }
@@ -126,9 +154,9 @@ internal static class ProcessAcceptedSourceCodec {
         assignment.DecisionDataPolicy?.RequireBinding(header.DefinitionVersionId, assignment.StepInstanceId);
     }
 
-    private static void RequirePayload(string payload) {
-        if (string.IsNullOrWhiteSpace(payload) || Encoding.UTF8.GetByteCount(payload) > MaximumPayloadUtf8Bytes) {
-            throw Invalid("The accepted source metadata is empty or exceeds its 1 MiB UTF-8 limit.");
+    private static void RequirePayload(string payload, int maximumBytes) {
+        if (string.IsNullOrWhiteSpace(payload) || payload.Length > maximumBytes || Encoding.UTF8.GetByteCount(payload) > maximumBytes) {
+            throw Invalid($"The accepted Process payload is empty or exceeds its {maximumBytes}-byte UTF-8 limit.");
         }
     }
 

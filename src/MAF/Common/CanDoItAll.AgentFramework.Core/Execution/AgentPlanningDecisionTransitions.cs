@@ -49,6 +49,24 @@ public static class AgentPlanningDecisionTransitions {
         return result;
     }
 
+    public static AgentPlanningDecisionRecord CloseInitialPreparation(AgentPlanningDecisionRecord current, TimeSpan elapsed, DateTimeOffset now) {
+        RequireActive(current, now);
+        if (current.InheritedOrigin is null || current.CurrentGeneration != 1 || current.Generations.Length != 1 ||
+                current.Current.Reason != AgentPlanningGenerationReason.Initial || !current.Current.Steps.IsEmpty ||
+                !current.Current.Bases.IsEmpty || current.Work.Open is not null || current.Work.Revision != 1 ||
+                current.Work.ClosedWorkTicks != 0 || current.Work.LastSettlement is not null) {
+            throw Refuse(current, AgentPlanningAdmissionRefusal.OriginalStepChanged);
+        }
+        if (elapsed < TimeSpan.Zero) {
+            throw Refuse(current, AgentPlanningAdmissionRefusal.ClockInvalid);
+        }
+        return Valid(WithGeneration(current, current.Current with {
+            State = elapsed >= current.Policy.Budget.MaximumWorkDuration ? AgentPlanningGenerationState.Failed : AgentPlanningGenerationState.Active
+        }) with {
+            Work = new(2, elapsed.Ticks, now, null, new(Guid.NewGuid(), now, elapsed.Ticks, AgentPlanningWorkSettlementReason.InitialAdmission))
+        });
+    }
+
     public static AgentPlanningDecisionRecord BeginStep(AgentPlanningDecisionRecord current, Guid dispatchLeaseId, DateTimeOffset now) {
         RequireActive(current, now);
         RequireClosed(current);

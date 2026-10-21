@@ -13,7 +13,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
         IAgentCatalogReadLease? held = null;
         try {
             if (authority.Principal is ProcessLaunchPrincipal.AgentExecution source) {
-                held = await catalog.AcquireAgentReadLeaseAsync(source.Ceiling.AgentId, cancellationToken);
+                held = await catalog.AcquireAgentAuthoritySnapshotAsync([source.Ceiling.AgentId], cancellationToken);
             }
             RequireReadSource(authority, held);
             await RequireSourceProjectCurrentAsync(authority, cancellationToken);
@@ -49,7 +49,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
         IAgentCatalogReadLease? held = null;
         try {
             if (authority.Principal is ProcessLaunchPrincipal.AgentExecution source) {
-                held = await catalog.AcquireAgentReadLeaseAsync(source.Ceiling.AgentId, cancellationToken);
+                held = await catalog.AcquireAgentAuthoritySnapshotAsync([source.Ceiling.AgentId], cancellationToken);
             }
             RequireReadSource(authority, held);
             await RequireSourceProjectCurrentAsync(authority, cancellationToken);

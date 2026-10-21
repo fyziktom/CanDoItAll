@@ -30,6 +30,9 @@ public sealed class AgentPlanningLiveWork {
     public TimeSpan RequirePublication(IAgentPlanningPublicationSnapshotLease held, AgentToolApprovalBinding binding)
         => owner.RequirePublication(this, held, binding);
 
+    public AgentInheritedContinuationPurpose RequireInheritedPublicationPurpose(IAgentPlanningPublicationSnapshotLease held,
+        AgentToolApprovalBinding binding) => owner.RequireInheritedPublicationPurpose(this, held, binding);
+
     internal TimeSpan RequireMutation(ExecutionRunRecord run, AgentToolApprovalBinding binding)
         => owner.RequireMutation(this, run, binding);
 

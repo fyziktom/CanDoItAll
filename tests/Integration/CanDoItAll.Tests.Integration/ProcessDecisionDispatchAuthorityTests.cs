@@ -184,6 +184,7 @@ public sealed class ProcessDecisionDispatchAuthorityTests {
     [InlineData(AdmissionChange.Policy)]
     [InlineData(AdmissionChange.Agent)]
     [InlineData(AdmissionChange.Readiness)]
+    [InlineData(AdmissionChange.RemovedPolicy)]
     public async Task Prepared_launch_retains_the_original_policy_Agent_and_readiness(AdmissionChange change) {
         var clock = new ProcessDecisionPublicationTestClock();
         await using var app = await TestApplication.CreateAsync(clock.Harness());
@@ -193,7 +194,9 @@ public sealed class ProcessDecisionDispatchAuthorityTests {
         Assert.True((await fixture.ReadAsync(Query(scope.ServiceProvider, clock))).Snapshot!.ObservedCurrentDispatch);
         context.ChangeTracker.Clear();
         var assignment = await context.RuntimeStepAssignments.SingleAsync(item => item.RunId == fixture.State.RunId.Value);
-        if (change == AdmissionChange.Policy) {
+        if (change == AdmissionChange.RemovedPolicy) {
+            assignment.DecisionDataPolicyJson = null;
+        } else if (change == AdmissionChange.Policy) {
             var policy = ProcessDecisionDataPolicyAdmissionCodec.Deserialize(assignment.DecisionDataPolicyJson!);
             assignment.DecisionDataPolicyJson = ProcessDecisionDataPolicyAdmissionCodec.Serialize(policy with { WorkspaceHeadRevision = Guid.NewGuid() });
         } else if (change == AdmissionChange.Agent) {
@@ -282,7 +285,7 @@ public sealed class ProcessDecisionDispatchAuthorityTests {
     public enum BindingSubstitution { Execution, Root, Child, Grant, Profile, Namespace, Stamp, Material, Contract, SupportedExecution, SupportedContent }
     public enum CurrentChange { Expired, ReplacedClaim, Attempt, ReleasedClaim, CancelRequested, WaitingRun, CompletedStep, WaitingReview,
         ParentReconciliation, ClosedChild, TerminalExecution }
-    public enum AdmissionChange { Policy, Agent, Readiness }
+    public enum AdmissionChange { Policy, Agent, Readiness, RemovedPolicy }
 
     [Fact]
     public async Task Lease_expiry_during_the_last_metadata_read_is_observed_before_authorization_returns() {

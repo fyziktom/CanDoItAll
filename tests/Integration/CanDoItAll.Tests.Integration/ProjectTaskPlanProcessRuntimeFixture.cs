@@ -70,7 +70,8 @@ internal sealed class ProjectTaskPlanProcessRuntimeFixture : IAsyncDisposable {
             proposal.Payload.ToolName, "function", "Review the original inherited task plan.", proposal.Payload.ArgumentsJson), default);
     }
 
-    internal async Task<AgentSavedEffectDispatchResult> PublishAsync(ExecutionRunRecord waiting) {
+    internal async Task<AgentSavedEffectDispatchResult> PublishAsync(ExecutionRunRecord waiting,
+        AgentInheritedSavedEffectContinuation? continuation = null) {
         var binding = ProjectTaskPlanAgentFixture.Binding(waiting);
         var origin = waiting.ToolAdmission!.PlanningDecision!.InheritedOrigin!;
         var request = new AgentSavedEffectContinuationRequest(waiting.Id, null, waiting.Revision, waiting.ToolAdmission.Revision,
@@ -78,7 +79,7 @@ internal sealed class ProjectTaskPlanProcessRuntimeFixture : IAsyncDisposable {
                 ToolAdmission = item.ToolAdmission
             }).ToArray());
         await using var lease = await Source.Owner.ResumeInheritedSavedEffectAsync(request,
-            AgentPlanningDecisionExpectation.From(waiting), new(origin, RequireParentAsync), CanReadAsync, default);
+            AgentPlanningDecisionExpectation.From(waiting), continuation ?? new(origin, RequireParentAsync), CanReadAsync, default);
         using var bound = lease.Bind();
         var result = await Dispatcher().DispatchAsync(AgentSavedEffectDispatchRequest.ForInherited(Session, binding), default);
         if (result.OwnerResult is null) {

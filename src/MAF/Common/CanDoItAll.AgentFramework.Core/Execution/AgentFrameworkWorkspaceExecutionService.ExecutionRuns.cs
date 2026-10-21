@@ -182,7 +182,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             CreateSessionTitle(prompt),
             context,
             prompt,
-            DateTimeOffset.UtcNow,
+            executionClock.GetUtcNow(),
             request.AutoApprovePendingToolCalls,
             request.InitialActivityOperationId,
             request.StructuredOutput);
@@ -271,7 +271,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var agent = CreateProviderCompatibleRuntimeAgent(preparation.Blueprint.Agent, provider,
             original?.Model ?? ResolveEffectiveManagedSeedModel(preparation.Blueprint.Agent, provider));
         var run = original ?? CreatePreparingRun(agent, provider, chatSessionId: null, CreateSessionTitle(request.Prompt),
-            PrepareInvocationContext(request), request.Prompt, DateTimeOffset.UtcNow, autoApprovePendingToolCalls: false, request.InitialActivityOperationId);
+            PrepareInvocationContext(request), request.Prompt, executionClock.GetUtcNow(),
+            autoApprovePendingToolCalls: false, request.InitialActivityOperationId);
         return new(preparation.Blueprint, preparation.CatalogSnapshot, agent, provider, null, run, null, []);
     }
 
@@ -371,7 +372,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var writer = store as ISandboxWorkspaceExecutionRunMutationStore
                 ?? throw new InvalidOperationException("Approval cancellation requires the canonical atomic run writer.");
             var saved = await writer.UpdateExecutionRunDetailAsync(run.Id,
-                current => AgentPendingApprovalCancellation.Apply(current, run, DateTimeOffset.UtcNow), cancellationToken);
+                current => AgentPendingApprovalCancellation.Apply(current, run, executionClock.GetUtcNow()), cancellationToken);
             transientContextRegistry.Remove(run.Id);
             if (saved.ExecutionLog.FirstOrDefault(item => item.Phase == AgentPendingApprovalCancellation.Phase) is { } entry) {
                 NotifyExecutionUpdated(entry);
@@ -402,7 +403,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var message = result.HasUnknownEffects
                 ? "Cancellation is closed without replay. Some prior effects remain unverified and require owner inspection."
                 : "Cancellation receipt reconciliation completed without replay.";
-            var entry = new ExecutionLogEntry(Guid.NewGuid(), run.AgentId, run.ChatSessionId, DateTimeOffset.UtcNow,
+            var entry = new ExecutionLogEntry(Guid.NewGuid(), run.AgentId, run.ChatSessionId, executionClock.GetUtcNow(),
                 ExecutionState.Failed, "cancelled-tool-reconciliation", message) { ExecutionRunId = run.Id };
             var writer = store as ISandboxWorkspaceExecutionRunMutationStore
                 ?? throw new InvalidOperationException("Cancelled reconciliation requires the canonical run writer.");
@@ -646,7 +647,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 : prepared.Blueprint.Memory;
         var structuredOutput =
             ResolveContinuationStructuredOutputContract(currentRun);
-        var startedAt = DateTimeOffset.UtcNow;
+        var startedAt = executionClock.GetUtcNow();
         AgentRuntimeHandoffExecutionOptions? handoffOptions = null;
         AgentDefinition? runtimeAgent = null;
         AgentRuntimeResponse? lastRuntimeResponse = null;
@@ -874,7 +875,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         Id: Guid.NewGuid(),
                         Role: ChatMessageRole.Assistant,
                         Content: runtimeResponse.ResponseText,
-                        CreatedAtUtc: DateTimeOffset.UtcNow,
+                        CreatedAtUtc: executionClock.GetUtcNow(),
                         TokenEstimate: totalOutputTokens);
 
                 var metric = PriceMetric(
@@ -882,13 +883,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         Id: Guid.NewGuid(),
                         AgentId: agent.Id,
                         ChatSessionId: run.ChatSessionId,
-                        CreatedAtUtc: DateTimeOffset.UtcNow,
+                        CreatedAtUtc: executionClock.GetUtcNow(),
                         Outcome: runtimeResponse.PendingApprovals.Count > 0
                             ? RunOutcome.Cancelled
                             : completionOutcome ?? RunOutcome.Succeeded,
                         ProviderName: provider.Name,
                         Model: ResolveModel(runtimeAgent, provider),
-                        DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                        DurationMs: Math.Max(1, (long)(executionClock.GetUtcNow() - startedAt).TotalMilliseconds),
                         InputTokens: totalInputTokens,
                         OutputTokens: totalOutputTokens,
                         ToolCalls: totalToolCalls)
@@ -910,7 +911,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeResponse,
                     completionState,
                     completionOutcome,
-                    DateTimeOffset.UtcNow);
+                    executionClock.GetUtcNow());
                 updatedRun = ApplyPortableJsonSchemaOutputEvidence(updatedRun, portableStructuredOutput);
                 if (!string.IsNullOrWhiteSpace(toolCompletionAssessment.FailureSummary))
                 {
@@ -926,7 +927,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     prepared.RunApprovals,
                     updatedRun,
                     runtimeResponse.PendingApprovals,
-                    DateTimeOffset.UtcNow);
+                    executionClock.GetUtcNow());
 
                 activityOperation.Report(
                     completionState == ExecutionState.WaitingOnTool
@@ -1062,11 +1063,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     Id: Guid.NewGuid(),
                     AgentId: agent.Id,
                     ChatSessionId: run.ChatSessionId,
-                    CreatedAtUtc: DateTimeOffset.UtcNow,
+                    CreatedAtUtc: executionClock.GetUtcNow(),
                     Outcome: outcome,
                     ProviderName: failureProvider.Name,
                     Model: failureModel,
-                    DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                    DurationMs: Math.Max(1, (long)(executionClock.GetUtcNow() - startedAt).TotalMilliseconds),
                     InputTokens: 0,
                     OutputTokens: 0,
                     ToolCalls: failureToolInvocationTraces.Count)
@@ -1097,8 +1098,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var failedRun = run with
             {
                 Revision = NextRunRevision(run.Revision),
-                UpdatedAtUtc = DateTimeOffset.UtcNow,
-                CompletedAtUtc = DateTimeOffset.UtcNow,
+                UpdatedAtUtc = executionClock.GetUtcNow(),
+                CompletedAtUtc = executionClock.GetUtcNow(),
                 State = ExecutionState.Failed,
                 Outcome = outcome,
                 ResultSummary = CreateExecutionSummary(resultSummary),
@@ -1494,7 +1495,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
         else
         {
-            var now = DateTimeOffset.UtcNow;
+            var now = executionClock.GetUtcNow();
             EnsurePreparationCurrentForUse(
                 preparation.Blueprint,
                 preparation.CatalogSnapshot);
@@ -1570,7 +1571,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var prompt = request.Prompt.Trim();
         var jsonSchemaOutput = AgentJsonSchemaOutputContractProcessor.Restore(run);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run", run);
-        var startedAt = DateTimeOffset.UtcNow;
+        var startedAt = executionClock.GetUtcNow();
         AgentDefinition? runtimeAgent = null;
         AgentRuntimeResponse? lastRuntimeResponse = null;
         var lastEntryAgentRequestCompatibilityEvidence = run.EntryAgentRequestCompatibilityEvidence;
@@ -1775,7 +1776,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         Id: Guid.NewGuid(),
                         Role: ChatMessageRole.Assistant,
                         Content: runtimeResponse.ResponseText,
-                        CreatedAtUtc: DateTimeOffset.UtcNow,
+                        CreatedAtUtc: executionClock.GetUtcNow(),
                         TokenEstimate: totalOutputTokens);
 
                 var metric = PriceMetric(
@@ -1783,13 +1784,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         Id: Guid.NewGuid(),
                         AgentId: agent.Id,
                         ChatSessionId: run.ChatSessionId,
-                        CreatedAtUtc: DateTimeOffset.UtcNow,
+                        CreatedAtUtc: executionClock.GetUtcNow(),
                         Outcome: runtimeResponse.PendingApprovals.Count > 0
                             ? RunOutcome.Cancelled
                             : completionOutcome ?? RunOutcome.Succeeded,
                         ProviderName: provider.Name,
                         Model: ResolveModel(runtimeAgent, provider),
-                        DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                        DurationMs: Math.Max(1, (long)(executionClock.GetUtcNow() - startedAt).TotalMilliseconds),
                         InputTokens: totalInputTokens,
                         OutputTokens: totalOutputTokens,
                         ToolCalls: totalToolCalls)
@@ -1811,7 +1812,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeResponse,
                     completionState,
                     completionOutcome,
-                    DateTimeOffset.UtcNow);
+                    executionClock.GetUtcNow());
                 updatedRun = ApplyPortableJsonSchemaOutputEvidence(updatedRun, portableStructuredOutput);
                 if (!string.IsNullOrWhiteSpace(toolCompletionAssessment.FailureSummary))
                 {
@@ -1827,7 +1828,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     previousApprovals ?? [],
                     updatedRun,
                     runtimeResponse.PendingApprovals,
-                    DateTimeOffset.UtcNow);
+                    executionClock.GetUtcNow());
 
                 activityOperation.Report(
                     completionState == ExecutionState.WaitingOnTool
@@ -1968,11 +1969,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     Id: Guid.NewGuid(),
                     AgentId: agent.Id,
                     ChatSessionId: run.ChatSessionId,
-                    CreatedAtUtc: DateTimeOffset.UtcNow,
+                    CreatedAtUtc: executionClock.GetUtcNow(),
                     Outcome: outcome,
                     ProviderName: failureProvider.Name,
                     Model: failureModel,
-                    DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                    DurationMs: Math.Max(1, (long)(executionClock.GetUtcNow() - startedAt).TotalMilliseconds),
                     InputTokens: userMessage?.TokenEstimate ?? EstimateTokens(prompt),
                     OutputTokens: 0,
                     ToolCalls: failureToolInvocationTraces.Count)
@@ -2002,8 +2003,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
             var failedRun = run with
             {
-                UpdatedAtUtc = DateTimeOffset.UtcNow,
-                CompletedAtUtc = DateTimeOffset.UtcNow,
+                UpdatedAtUtc = executionClock.GetUtcNow(),
+                CompletedAtUtc = executionClock.GetUtcNow(),
                 State = ExecutionState.Failed,
                 Outcome = outcome,
                 ResultSummary = CreateExecutionSummary(resultSummary),

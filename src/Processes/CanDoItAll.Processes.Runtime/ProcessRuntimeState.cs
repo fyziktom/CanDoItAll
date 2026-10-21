@@ -145,6 +145,11 @@ public sealed record StrategyResultReceipt
         RecoveryDecision = recoveryDecision;
     }
 
+    public static long NextSequence(IReadOnlyList<StrategyResultReceipt> receipts) {
+        ArgumentNullException.ThrowIfNull(receipts);
+        return Math.Max(receipts.Count + 1L, receipts.Count == 0 ? 1L : checked(receipts.Max(receipt => receipt.AppliedSequence) + 1L));
+    }
+
     public ProcessStepInstanceId StepInstanceId { get; init; }
 
     public StrategyId StrategyId { get; init; }
@@ -315,6 +320,19 @@ public sealed record ProcessRuntimeMutation(
 {
     public bool Succeeded => Outcome is ProcessRuntimeTransitionOutcome.Applied or ProcessRuntimeTransitionOutcome.Duplicate;
 
+    public static ProcessRuntimeMutation Applied(ProcessRuntimeStateSnapshot state,
+        IReadOnlyList<ProcessRuntimeEventEnvelope> events, IReadOnlyList<ProcessArtifactLedgerEvent> artifactLedgerEvents) {
+        var outbox = new List<ProcessOutboxMessage>(events.Count);
+        foreach (var runtimeEvent in events) {
+            outbox.Add(new ProcessOutboxMessage(RuntimeOutboxMessageId.New(), runtimeEvent.EventId,
+                ProcessOutboxSubscriberKind.RuntimeProjection, runtimeEvent.PayloadHash));
+        }
+        return new(ProcessRuntimeTransitionOutcome.Applied, state, events, outbox, artifactLedgerEvents, []);
+    }
+
+    public static ProcessRuntimeMutation Duplicate(ProcessRuntimeStateSnapshot state)
+        => new(ProcessRuntimeTransitionOutcome.Duplicate, state, [], [], [], []);
+
     public static ProcessRuntimeMutation Rejected(
         ProcessRuntimeStateSnapshot state,
         string code,
@@ -410,22 +428,4 @@ public sealed class ProcessRuntimeOptimisticConcurrencyException : Exception
     public ProcessRunId RunId { get; }
 
     public DateTimeOffset OriginalUpdatedAtUtc { get; }
-}
-
-public static class ProcessRuntimeTerminalStates
-{
-    public static bool IsRunTerminal(ProcessRuntimeStatus status)
-    {
-        return status is ProcessRuntimeStatus.Completed or ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Cancelled;
-    }
-
-    public static bool IsStepTerminal(ProcessRuntimeStepStatus status)
-    {
-        return status is ProcessRuntimeStepStatus.Completed or ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled or ProcessRuntimeStepStatus.Skipped;
-    }
-
-    public static bool IsChildRunStopped(ProcessRuntimeStatus status)
-    {
-        return IsRunTerminal(status) || status == ProcessRuntimeStatus.Blocked;
-    }
 }

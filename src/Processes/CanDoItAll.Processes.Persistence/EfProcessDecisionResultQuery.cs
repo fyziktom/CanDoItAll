@@ -47,7 +47,16 @@ public sealed class EfProcessDecisionResultQuery(IDbContextFactory<ProcessPersis
                     saved.Budget.BudgetId != original.Balance.BudgetId) {
                 throw new InvalidDataException("The Process result material differs from the original accepted policy.");
             }
-            child = new(binding, original.Observation);
+            Guid? agentId = null;
+            if (string.Equals(source.Assignment.ExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase)) {
+                if (!Guid.TryParse(source.Assignment.ExecutorId, out var selectedAgent) || selectedAgent == Guid.Empty) {
+                    throw new InvalidDataException("The original Process result has an invalid accepted Agent identity.");
+                }
+                agentId = selectedAgent;
+            }
+            child = new(binding, original.Observation) {
+                OriginalAgentId = agentId, OriginalProject = source.Header.ProjectAdmission
+            };
             saved = saved with { Budget = original.Balance };
         }
         return new(new(saved.State.RootRunId), runId, stepId, saved.Budget, saved.Head, child,

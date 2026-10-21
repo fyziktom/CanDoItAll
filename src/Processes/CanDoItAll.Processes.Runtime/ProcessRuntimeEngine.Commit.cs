@@ -31,81 +31,22 @@ public sealed partial class ProcessRuntimeEngine
         return await unitOfWork.CommitAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
-    private static ProcessRuntimeMutation Applied(
-        ProcessRuntimeStateSnapshot state,
-        RuntimeCommandContext context,
-        ProcessEventType eventType,
-        string payloadHash)
-    {
-        return Applied(state, [CreateEvent(state, context, eventType, payloadHash)]);
-    }
+    private static ProcessRuntimeMutation Applied(ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context, ProcessEventType eventType, string payloadHash)
+        => ProcessRuntimeMutation.Applied(state, [CreateEvent(state, context, eventType, payloadHash)], []);
 
-    private static ProcessRuntimeMutation Applied(
-        ProcessRuntimeStateSnapshot state,
+    private static ProcessRuntimeMutation Applied(ProcessRuntimeStateSnapshot state,
         IReadOnlyList<ProcessRuntimeEventEnvelope> events)
-    {
-        return Applied(state, events, []);
-    }
+        => ProcessRuntimeMutation.Applied(state, events, []);
 
-    private static ProcessRuntimeMutation Applied(
-        ProcessRuntimeStateSnapshot state,
-        IReadOnlyList<ProcessRuntimeEventEnvelope> events,
-        IReadOnlyList<ProcessArtifactLedgerEvent> artifactLedgerEvents)
-    {
-        var outbox = new List<ProcessOutboxMessage>(events.Count);
-        foreach (var runtimeEvent in events)
-        {
-            outbox.Add(new ProcessOutboxMessage(
-                RuntimeOutboxMessageId.New(),
-                runtimeEvent.EventId,
-                ProcessOutboxSubscriberKind.RuntimeProjection,
-                runtimeEvent.PayloadHash));
-        }
-
-        return new ProcessRuntimeMutation(
-            ProcessRuntimeTransitionOutcome.Applied,
-            state,
-            events,
-            outbox,
-            artifactLedgerEvents,
-            []);
-    }
+    private static ProcessRuntimeMutation Applied(ProcessRuntimeStateSnapshot state,
+        IReadOnlyList<ProcessRuntimeEventEnvelope> events, IReadOnlyList<ProcessArtifactLedgerEvent> artifactLedgerEvents)
+        => ProcessRuntimeMutation.Applied(state, events, artifactLedgerEvents);
 
     private static ProcessRuntimeMutation Duplicate(ProcessRuntimeStateSnapshot state)
-    {
-        return new ProcessRuntimeMutation(
-            ProcessRuntimeTransitionOutcome.Duplicate,
-            state,
-            [],
-            [],
-            [],
-            []);
-    }
+        => ProcessRuntimeMutation.Duplicate(state);
 
-    private static ProcessRuntimeEventEnvelope CreateEvent(
-        ProcessRuntimeStateSnapshot state,
-        RuntimeCommandContext context,
-        ProcessEventType eventType,
-        string payloadHash)
-    {
-        var envelope = new ProcessRuntimeEventEnvelope(
-            RuntimeEventId.New(),
-            state.RootRunId,
-            state.RunId,
-            context.CorrelationId,
-            null,
-            context.Actor,
-            ProcessContractVersions.RuntimeEventEnvelopeV1,
-            ProcessEventSensitivity.Normal,
-            context.OccurredAtUtc,
-            eventType,
-            payloadHash);
-        var validation = ProcessRuntimeEventRules.Validate(envelope);
-        if (!validation.IsValid)
-        {
-            throw new InvalidOperationException(validation.Failures[0].Message);
-        }
-
-        return envelope;
-    }
+    private static ProcessRuntimeEventEnvelope CreateEvent(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context,
+        ProcessEventType eventType, string payloadHash)
+        => ProcessRuntimeEventFactory.Create(state, context, eventType, payloadHash);
 }
