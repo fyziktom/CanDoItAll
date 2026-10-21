@@ -1,5 +1,12 @@
 # Execution plan
 
+The [review read boundary and isolated cost checkpoint](../validation/2026-10-21-review-read-boundary.md)
+passes 67 correctness cases, but all six corrected HTTP cost shapes still exceed
+one second and allocate about 79–81 MB. Three component diagnostics identify repeated
+catalog normalization, including seed construction. Proceed with a bounded current-input
+reuse design and matched capacity proof before parent recovery/refresh/cancel,
+executor activation, Workflow/settings/UI and broad closure. SPA stays separate.
+
 The [Core startup accounting scope](../validation/2026-10-20-inherited-startup-accounting.md)
 passes 189 distinct behaviors with exact source/runtime and resource proof.
 The remaining-budget/cancellation boundary passes all 40 affected integration cases.

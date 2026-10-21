@@ -232,6 +232,17 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<AgentInheritedPlanningRunReader>(serviceProvider => {
+            var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+            var profile = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile;
+            var journal = new AgentToolAdmissionJournal(store, new(profile.Id, profile.Runtime.Fingerprint,
+                serviceProvider.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration()),
+                serviceProvider.GetRequiredService<TimeProvider>(),
+                serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
+                serviceProvider.GetServices<IAgentChatContextAttachmentCodec>());
+            return new((ISandboxWorkspaceExecutionRunStore)store, journal,
+                serviceProvider.GetServices<IAgentInheritedPlanningParticipant>());
+        });
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentProviderUsageEvidenceStore>(serviceProvider =>

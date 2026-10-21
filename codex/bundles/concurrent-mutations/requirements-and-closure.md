@@ -1,5 +1,13 @@
 # Requirements and closure ledger
 
+The [review read boundary](validation/2026-10-21-review-read-boundary.md) removes
+execution construction from inherited review GETs while preserving current disclosure.
+All 67 selected correctness cases pass. The isolated cost successor passes three
+component diagnostics but fails all six HTTP latency cases after all 30 samples and
+safety assertions. Repeated catalog normalization remains a measured bottleneck;
+the earlier contaminated measurements and fixture correction are retained. No new
+project references or scoped cycles were introduced. R1/R4/R5/R6 remain open.
+
 The [review compatibility/read-cost checkpoint](validation/2026-10-21-review-compatibility-read-cost.md)
 passes nine fixed v1 digest cases and seven HTTP recovery regressions. Its six cost
 cases fail: even one-step plans exceed one second and allocate about 80 MB per

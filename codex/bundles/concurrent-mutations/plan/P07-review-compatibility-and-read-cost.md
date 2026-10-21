@@ -90,3 +90,11 @@ A repair must pass the six final unprofiled shapes and re-run the affected owner
 behavior plus the seven HTTP recovery cases. Expand to wider storage or factory
 tests only if profiling locates the defect there. The failed source/runtime/proof
 identities remain immutable; later candidates get separate ownership records.
+
+Diagnostic selection: three `Profile_HTTP_review_through_existing_telemetry`
+cases (one-step RunSnapshot, one-step StepSnapshot, 1,024-step StepSnapshot).
+They use the same helper as the six unprofiled cases with an explicit test-only
+activity listener. Record no paths, SQL text, credentials or payload contents.
+Activity durations are inclusive and must not be summed as disjoint wall time.
+Process SQL timing covers command execution, not full result materialization.
+Diagnostic success must never be substituted for the unprofiled latency gate.

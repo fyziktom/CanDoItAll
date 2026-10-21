@@ -1220,3 +1220,63 @@ reconciliation found zero new surviving processes, databases or temporary entrie
 Its 97,195-byte failed proof is retained; ownership is `RetainedFailedProof`.
 Keep the bounded profiling baseline and helpers for the required performance repair.
 No denied target was retried and no replacement database server was created.
+
+`c4-review-read-profiling` is reserved before creation for three explicit diagnostic
+cases on the existing HTTP fixture: one step in both modes and 1,024 steps in
+StepSnapshot. A bounded test-only listener records existing Agent activity names,
+payload types/byte counts and inclusive durations; it records no paths, credentials,
+SQL text or payload contents. Process SQL execution duration is measured separately.
+Diagnostic passes prove read identity and no effects, not the failed latency gate.
+The six unprofiled latency cases keep the one-second reference and now collect all
+five observations before asserting it. Standard Release and the existing isolated
+server/families are reused; all historical denied targets remain baseline-only.
+## Review-read execution boundary candidate
+
+Reserve `.artifacts/concurrent-mutations/validation/c4-review-read-boundary` before
+creation for P08 source/runtime identities, standard Release build logs, exact
+focused discovery/results and existing PostgreSQL/API/file fixture leases. Preserve
+all earlier denied cleanup targets. No new database server or output configuration.
+
+P07 diagnostics are retained separately: `c4-review-read-profiling` (3/3; 151.146 s
+observer) and `c4-review-read-cpu` (3/3; 195.821 s observer), each with zero new
+surviving process/database-name/temp deltas. These are diagnostic-only passes.
+The bounded trace and temporary `c4-review-read-cpu-tools` installation have explicit
+ownership records; compact secret-checked proof was retained before bulk cleanup.
+
+Automatic approval review rejected the exact P07 bulk cleanup command with
+`blocked by policy`; no deletion ran and it will not be retried through another
+route. Remaining new resources: `c4-review-read-cpu-tools`,
+`c4-review-read-cpu/owned-testhost.nettrace` (103,847,906 bytes) and
+`c4-review-read-cpu/owned-testhost.speedscope.json` (89,996,821 bytes), all below
+`.artifacts/concurrent-mutations/validation`. The exact denial is in
+`c4-review-read-cpu/diagnostic-bulk-cleanup-blocked.json`. These do not invalidate
+the test fixture's zero process/database/temp delta; complete bulk cleanup is blocked.
+
+## Review read isolation continuation, 2026-10-21
+
+`c4-review-read-boundary` retains 13 passes and two fixture failures in a
+330,732-byte proof, SHA-256 `E60736CFC10CA92E5CFE8B3F78440DC69EF58B45FF030EB612CFBF04039856A3`.
+The exact test-only correction changed one source and the Integration DLL/PDB;
+production source and runtime stayed unchanged. `c4-review-read-boundary-qualified`
+then ran all 73 cases: 70 passed, three failed. Its 422,865-byte proof is
+`D235D019318A44F74BFD09371F9FDCE0CDD0C1EC0E72ACDA293BF2D437B0E6F1`.
+The name does not imply qualification: capacity failed and one sample set is partial.
+The 981.84-second observer covers all eight commands, with zero surviving process,
+database-name or temporary-directory deltas. Historical cleanup denials remain open.
+
+The owned directory is `.artifacts/concurrent-mutations/validation/c4-review-read-isolation`.
+Its adjacent ownership record preceded creation. It reused the same isolated
+PostgreSQL server and declared fixture families, standard Release outputs and the
+existing observation/deadline helpers. Three pure catalog-component diagnostic cases
+and six request-scoped HTTP cost cases establish an explicitly changed measurement
+baseline. Only the cost hosts disable the existing Process recovery option. The
+ordinary application and denied cleanup targets remain outside its ownership.
+The three component cases passed; all six cost cases failed latency after complete
+samples and safety assertions. Its 336,485-byte retained proof is SHA-256
+`F2C137670C92170137CC29CBC78A8A235FF5DE5552DAA3D2FFFD458AB1AA8D24`.
+The 500.65-second observer covered both commands with zero new surviving process,
+database-name or temporary-directory deltas. A pre-execution attempt to amend a
+frozen documentation manifest was refused by its exclusive-write helper; the
+original manifest stayed intact and the exact source bytes were restored before
+execution. The extra EOF blank line is corrected with these post-run documents.
+The immutable candidate and explicit documentation-only bridge preserve provenance.

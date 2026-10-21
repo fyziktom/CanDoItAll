@@ -4,7 +4,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class AgentInheritedPlanningCoordinator(ISandboxWorkspaceExecutionRunStore runs, AgentToolAdmissionJournal journal,
     IAgentPlanningStepRuntime runtime, IEnumerable<IAgentInheritedPlanningParticipant> participants) {
-    private readonly IAgentInheritedPlanningParticipant[] participants = participants.ToArray();
+    private readonly AgentInheritedPlanningReadAuthority readAuthority = new(journal, participants);
     private readonly AgentPlanningDecisionOwner owner = new(journal);
 
     public Task<AgentPlanningExecutionResult> RunAsync(AgentDefinition agent, ProviderProfile provider,
@@ -15,13 +15,8 @@ public sealed class AgentInheritedPlanningCoordinator(ISandboxWorkspaceExecution
         AgentDefinition agent, ProviderProfile provider)
         => runtime.CaptureRuntimeContract(agent, provider, RequireParticipant(selection, parent));
 
-    internal async Task RequireCurrentReadAsync(ExecutionRunRecord original, CancellationToken cancellationToken) {
-        if (original.ToolAdmission is not { SchemaVersion: AgentToolJournalRecord.InheritedPlanningSchemaVersion,
-                PlanningDecision.InheritedOrigin: not null } admission || !await journal.CanReadBackgroundResultAsync(original, cancellationToken)) {
-            throw new AgentToolReceiptAccessDeniedException();
-        }
-        await RequireParticipant(admission.PlanningDecision!.Owner, admission.PlanningDecision.InheritedOrigin!.ParentBinding).RequireCurrentReadAsync(admission.PlanningDecision, cancellationToken);
-    }
+    internal Task RequireCurrentReadAsync(ExecutionRunRecord original, CancellationToken cancellationToken)
+        => readAuthority.RequireCurrentAsync(original, cancellationToken);
 
     internal Task<AgentInheritedPlanningBinding> BindInitialAsync(AgentPlanningOwner selection,
         AgentInheritedPlanningBindingContext context, AgentToolProtocolEnvelope parent, AgentToolProtocolEnvelope sourceEvidence,
@@ -34,15 +29,8 @@ public sealed class AgentInheritedPlanningCoordinator(ISandboxWorkspaceExecution
         return binder.BindInitialAsync(context, parent, sourceEvidence, cancellationToken);
     }
 
-    internal IAgentInheritedPlanningParticipant RequireParticipant(AgentPlanningOwner selection, AgentToolProtocolEnvelope parent) {
-        var matches = participants.Where(participant => participant.Owner == selection && participant.SupportsParent(parent))
-            .Take(2).ToArray();
-        return matches.Length switch {
-            1 => matches[0],
-            0 => throw new AgentToolAdmissionException("planning.unsupported", "No inherited planning participant supports the original parent."),
-            _ => throw new AgentToolAdmissionException("planning.ambiguous-participant", "Multiple inherited planning participants support the original parent.")
-        };
-    }
+    internal IAgentInheritedPlanningParticipant RequireParticipant(AgentPlanningOwner selection, AgentToolProtocolEnvelope parent)
+        => readAuthority.RequireParticipant(selection, parent);
 
     public Task<T> RunWithinLifecycleAsync<T>(AgentDefinition agent, ProviderProfile provider,
         AgentPlanningDecisionExpectation expected, Func<AgentInheritedPlanningExecution, CancellationToken, Task<T>> lifecycle,

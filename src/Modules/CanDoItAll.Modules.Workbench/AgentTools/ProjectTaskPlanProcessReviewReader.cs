@@ -16,7 +16,7 @@ public sealed record ProjectTaskPlanProcessReview(ExecutionRunRecord Run, Proces
     DateTimeOffset ObservedAtUtc, DateTimeOffset? BasisCapturedAtUtc, TimeSpan ChargedWork,
     TimeSpan? RemainingWork, bool HasUnsettledWork, string? RefusalCode);
 
-public sealed class ProjectTaskPlanProcessReviewReader(IAgentFrameworkWorkspaceService workspace,
+public sealed class ProjectTaskPlanProcessReviewReader(AgentInheritedPlanningRunReader runs,
     IProcessRuntimeStateStore states, ProcessDecisionReviewCoordinator reviews, ProjectProcessLaunchAuthorityService sources,
     ICanonicalRuntimeDatabase database, IAgentExecutionProfileGenerationSource generations, TimeProvider clock) {
     private const string ObservationChangedCode = "process-review.observation-changed";
@@ -29,7 +29,7 @@ public sealed class ProjectTaskPlanProcessReviewReader(IAgentFrameworkWorkspaceS
         ArgumentOutOfRangeException.ThrowIfEqual(executionRunId, Guid.Empty);
         await manager.RequireCurrentAsync(cancellationToken);
         await using var authority = await sources.AcquireAsync(manager.Original, manager.Original, cancellationToken);
-        var detail = await workspace.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+        var detail = await runs.ReadAsync(executionRunId, cancellationToken);
         var run = detail.Run;
         if (run.ToolAdmission?.PlanningDecision is not { Owner: AgentPlanningOwner.ProjectTaskPlan, InheritedOrigin: { } origin } decision) {
             throw new AgentToolReceiptAccessDeniedException();
@@ -81,7 +81,7 @@ public sealed class ProjectTaskPlanProcessReviewReader(IAgentFrameworkWorkspaceS
                 choices.Add(AgentPlanningReviewChoice.Reject);
             }
         }
-        var current = await workspace.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+        var current = await runs.ReadAsync(executionRunId, cancellationToken);
         if (current.Run.Revision != run.Revision) {
             throw new AgentToolAdmissionException(ObservationChangedCode, "The original child changed while its review was read.");
         }
