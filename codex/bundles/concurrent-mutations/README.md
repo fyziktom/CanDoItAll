@@ -4,11 +4,20 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest qualified prerequisite: [durable manager review owner](validation/2026-10-21-manager-review-owner.md).
+Latest qualified prerequisite: [workspace and Process manager review](validation/2026-10-21-manager-review-integration.md).
+All 172 cases pass, including both snapshot modes, approve/reject, exact retry,
+renewed credentials, lost acknowledgements, late revocation/cancellation and sibling
+progress with retained accounting receipts. Source/runtime identity, full portability
+and all 13 observed commands pass, with zero new resource deltas. Implementation is
+signed commit `528d29dbd`. Public review transport, parent reconciliation and executor
+activation remain next; earlier cleanup denials remain unresolved.
+
+The preceding [durable manager review owner](validation/2026-10-21-manager-review-owner.md)
+qualifies persisted Agent intent.
 All 147 cases pass, including exact intent replay, permission changes during lock
 waits, cancellation after effects, Project rollback and Process completion regressions.
 Frozen source/runtime identity, portability and resource reconciliation pass.
-Workspace, Process and public review integration remain next.
+Workspace and Process integration now qualify; public review integration remains next.
 
 The preceding [manager publication guard](validation/2026-10-21-manager-run-authority.md)
 qualifies the selected file publication boundary.

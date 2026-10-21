@@ -1175,3 +1175,8 @@ deltas were verified. Its failed proof is retained.
 test-only correction of runtime replay semantics. It reuses the isolated PostgreSQL
 server, fixture lease families and standard Release outputs, with the same 172
 cases divided into bounded groups. All earlier denied resources remain excluded.
+
+That successor passed all 172 cases. All 13 commands were observed, source/runtime
+identities stayed unchanged, and reconciliation found zero new resource deltas.
+Its 281,941-byte reviewed proof is retained; ownership is `RetainedQualifiedProof`.
+Historical denied resources remain baseline-only.

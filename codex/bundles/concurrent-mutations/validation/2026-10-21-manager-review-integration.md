@@ -1,6 +1,8 @@
 # Workspace and Process manager review integration
 
-Status: two failed candidates retained; boundary repair prepared, qualification pending.
+Status: qualified; 172 cases pass. All three failed candidates are retained.
+
+Implementation checkpoint: signed commit `528d29dbd`.
 
 The prerequisite is signed commit `f083ec3d0`, with 147 passing owner cases.
 The [reviewed integration design](../plan/P07-current-manager-actions.md) retains
@@ -132,3 +134,25 @@ the 172-case selection, splits the SQL-heavy review groups to stay within the
 existing 900-second command bound, and starts with the two corrected sibling
 cases. No production behavior or timeout is changed. The API continuation remains
 source-only in its existing isolated checkout until this prerequisite qualifies.
+
+The qualified successor passed all 172 cases in 13 lanes. Standard Integration
+Release outputs were refreshed for the test-only correction, and source stayed
+unchanged during compilation. Comparison with the preceding candidate confirms
+all 5,393 production source inputs and 1,137 non-test assembly copies are identical.
+All earlier seven-project Release builds and architecture observations therefore
+remain applicable. Full portability enforcement passes with 15,664 reviewed
+findings; documentation and whitespace checks also pass.
+
+The complete frozen inputs contain 9,868 source files and 4,566 runtime files:
+source `43DC001A2FC67ED78F91DC54D4CA8EA4DE50265E8533656E01F8667B45CFEA01`,
+runtime `585A717506096A4FB09E0BFCBA0B9039B31826A94E4286F63931EF562C9F460A`.
+Final verification found no source or runtime changes. Observation covered all 13
+commands over 1,127.0644032 seconds. Reconciliation found no surviving observed
+processes, new database names or retained temporary entries.
+
+The local 281,941-byte qualified proof has SHA-256
+`40F2E0D9AA6ADA6F5AF0EEDC5E1F3A1B46679D64030C7715C81FF2D60D44A56A`
+and no secret findings. The implementation commit was created while this candidate
+ran; file identities stayed unchanged. The proof remains local under the existing
+ignored proof directory. Historical policy-denied cleanup remains unresolved and
+is not cleared by the zero new deltas.

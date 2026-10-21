@@ -2,7 +2,9 @@
 
 Status: reviewed for implementation after the 331-case waiting-result prerequisite.
 The guarded aggregate write is qualified by 56 passing tests, and the durable Agent
-review owner by 147 passing cases. Implement the workspace and Process connection next.
+review owner by 147 passing cases. The workspace and Process connection is now
+qualified by [172 passing cases](../validation/2026-10-21-manager-review-integration.md)
+and signed implementation commit `528d29dbd`. Public review transport is next.
 Executor, Workflow and SPA activation remain gated.
 
 ## Workspace and Process integration refinement
