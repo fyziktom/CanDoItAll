@@ -197,3 +197,13 @@ Agent. Real MAF/PostgreSQL cases exercise produced children and their original
 receipts. All earlier fixture, publication and observer failures remain retained.
 Current manager authority, durable choice intent, parent reconciliation and actual
 executor activation remain required under the [manager design](../plan/P07-current-manager-actions.md).
+
+## Guarded run publication
+
+Status: Pass with follow-up. The [56-case guard qualification](../validation/2026-10-21-manager-run-authority.md)
+adds one explicit mutation capability to the existing file owner. It shares preparation
+and revalidates the original witness; external authority I/O does not hold the workspace
+lock. No new type, dependency edge, project reference or cycle appears. File store
+members increase from 155 to 157, the mutation interface from two to three; other
+reviewed owners are unchanged. All 277 findings and 189 collector diagnostics are
+pre-existing. Durable intent, manager integration and public transport remain required.

@@ -36,7 +36,8 @@ internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
     }
 
     internal async Task<IAsyncDisposable> AcquireAsync(FileSandboxWorkspaceWriteSet writeSet,
-        FileSandboxWorkspaceMutationWitness witness, CancellationToken cancellationToken) {
+        FileSandboxWorkspaceMutationWitness witness, CancellationToken cancellationToken,
+        Func<CancellationToken, Task>? requireCurrentAuthority = null) {
         ObjectDisposedException.ThrowIf(disposed, this);
         if (!heldGate || heldWorkspace is null) {
             throw new InvalidOperationException("A prepared workspace publication requires the short workspace guard.");
@@ -44,6 +45,9 @@ internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
         if (heldWriteSet is not null) {
             if (!heldWriteSet.Contains(writeSet)) {
                 throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.WriteSetChanged);
+            }
+            if (requireCurrentAuthority is not null) {
+                throw new InvalidOperationException("External authority cannot be introduced inside an existing publication.");
             }
             return EmptyLease.Instance;
         }
@@ -58,6 +62,10 @@ internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
                         requirePrivateUnixMode: false, cancellationToken).ConfigureAwait(false));
                     _ = RequireRemainingBudget();
                 }
+            }
+            if (requireCurrentAuthority is not null) {
+                await requireCurrentAuthority(cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
             }
             using (AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.publication.workspace.reacquire")) {
                 await EnterWorkspaceAsync(cancellationToken).ConfigureAwait(false);

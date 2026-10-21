@@ -783,10 +783,22 @@ public sealed partial class FileSandboxWorkspaceStore :
             TimeSpan.FromMinutes(1), requirePrivateUnixMode: false, cancellationToken);
     }
 
-    public async Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
+    public Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
         Guid executionRunId,
         Func<ExecutionRunDetail, ExecutionRunDetail> update,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default)
+        => UpdateExecutionRunDetailCoreAsync(executionRunId, update, null, cancellationToken);
+
+    public Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(Guid executionRunId,
+        Func<ExecutionRunDetail, ExecutionRunDetail> update, Func<CancellationToken, Task> requireCurrentAuthority,
+        CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(requireCurrentAuthority);
+        return UpdateExecutionRunDetailCoreAsync(executionRunId, update, requireCurrentAuthority, cancellationToken);
+    }
+
+    private async Task<ExecutionRunDetail> UpdateExecutionRunDetailCoreAsync(Guid executionRunId,
+        Func<ExecutionRunDetail, ExecutionRunDetail> update, Func<CancellationToken, Task>? requireCurrentAuthority,
+        CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(update);
 
         await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
@@ -807,7 +819,7 @@ public sealed partial class FileSandboxWorkspaceStore :
                     "Execution run update cannot change the run identity.");
             }
 
-            if (ReferenceEquals(currentForUpdate, updatedDetail)) {
+            if (ReferenceEquals(currentForUpdate, updatedDetail) && requireCurrentAuthority is null) {
                 return previousDetail;
             }
 
@@ -816,7 +828,8 @@ public sealed partial class FileSandboxWorkspaceStore :
                 previousDetail,
                 updatedDetail,
                 cancellationToken,
-                observation.Snapshot);
+                observation.Snapshot,
+                requireCurrentAuthority);
         } catch (Exception failure) {
             operation.RetainFailure(failure);
             throw;
@@ -1094,14 +1107,15 @@ public sealed partial class FileSandboxWorkspaceStore :
         ExecutionRunDetail? previousDetail,
         ExecutionRunDetail detail,
         CancellationToken cancellationToken,
-        FileSandboxWorkspaceRunReadSnapshot? snapshot = null) {
+        FileSandboxWorkspaceRunReadSnapshot? snapshot = null, Func<CancellationToken, Task>? requireCurrentAuthority = null) {
         using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.save");
         return await SaveExecutionRunDetailCoreAsync(operation,
             previousDetail,
             detail,
             validatedCatalog: null,
             cancellationToken,
-            snapshot);
+            snapshot,
+            requireCurrentAuthority);
     }
 
     private async Task<ExecutionRunDetail> SaveExecutionRunDetailCoreAsync(FileSandboxWorkspacePublicationScope operation,
@@ -1109,10 +1123,11 @@ public sealed partial class FileSandboxWorkspaceStore :
         ExecutionRunDetail detail,
         SandboxWorkspaceCatalog? validatedCatalog,
         CancellationToken cancellationToken,
-        FileSandboxWorkspaceRunReadSnapshot? snapshot = null) {
+        FileSandboxWorkspaceRunReadSnapshot? snapshot = null, Func<CancellationToken, Task>? requireCurrentAuthority = null) {
         detail = FileSandboxWorkspacePreparedValues.Freeze(detail);
-        if (previousDetail is not null && executionSliceStore.HasSameRunDetailPayload(previousDetail, detail)) {
-            return previousDetail;
+        var unchanged = previousDetail is not null && executionSliceStore.HasSameRunDetailPayload(previousDetail, detail);
+        if (unchanged && requireCurrentAuthority is null) {
+            return previousDetail!;
         }
         var chatPaths = new[] { previousDetail?.Run.ChatSessionId, detail.Run.ChatSessionId }
             .OfType<Guid>().Select(layout.SessionPath).Distinct().ToArray();
@@ -1124,7 +1139,10 @@ public sealed partial class FileSandboxWorkspaceStore :
             : await CapturePublicationWitnessAsync(cancellationToken, chatPaths, [layout.RunRoot(detail.Run.Id)]);
         await using var publication = await operation.AcquireAsync(
             FileSandboxWorkspaceWriteSet.Run(previousDetail?.Run, detail.Run, validatedCatalog is not null || previousDetail is null),
-            witness, cancellationToken);
+            witness, cancellationToken, requireCurrentAuthority);
+        if (unchanged) {
+            return previousDetail!;
+        }
         try {
             if (previousDetail is not null) {
                 var persistencePlan =

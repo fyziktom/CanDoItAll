@@ -178,6 +178,11 @@ public interface ISandboxWorkspaceExecutionRunMutationStore
         Func<ExecutionRunDetail, ExecutionRunDetail> update,
         CancellationToken cancellationToken = default);
 
+    Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(Guid executionRunId,
+        Func<ExecutionRunDetail, ExecutionRunDetail> update, Func<CancellationToken, Task> requireCurrentAuthority,
+        CancellationToken cancellationToken)
+        => throw new NotSupportedException("This execution store cannot recheck authority after publication-key waits.");
+
     Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
         Guid executionRunId,
         Func<SandboxWorkspaceCatalog, ExecutionRunDetail, ExecutionRunDetail> update,

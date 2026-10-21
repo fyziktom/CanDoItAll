@@ -1,7 +1,8 @@
 # Current manager review actions — design review
 
 Status: reviewed for implementation after the 331-case waiting-result prerequisite.
-Implement and qualify the guarded aggregate write first, then the complete manager action.
+The guarded aggregate write is now qualified by 56 passing tests; implement the complete
+manager action next.
 Executor, Workflow and SPA activation remain gated.
 
 ## Ownership and dependency direction

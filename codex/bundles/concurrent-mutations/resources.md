@@ -1119,3 +1119,13 @@ name or retained temporary entry. The source/runtime manifests and 470,702-byte
 proof are retained locally; ownership is now `RetainedQualifiedProof`. This result
 does not clear the earlier policy-denied database, workspace or other cleanup paths.
 No new server, application host or custom compiled output directory was created.
+
+`c4-manager-run-authority` was recorded before creation for the guarded aggregate
+publication boundary. It refreshes standard Core, AgentFramework Persistence and
+Integration Release outputs and declares the existing file recovery fixture families.
+The PostgreSQL server is reused for observation; no host or server is provisioned.
+All 56 cases passed. The observer covered all five execution commands, and final
+reconciliation found zero surviving observed processes, new database names or retained
+temporary entries. Source/runtime identity was unchanged. The 112,113-byte proof is
+retained locally; ownership is `RetainedQualifiedProof`. All historical denied resources
+remain excluded from cleanup.

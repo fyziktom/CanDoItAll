@@ -4,7 +4,13 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest qualified prerequisite: [waiting-result completion](validation/2026-10-21-process-review-completion.md).
+Latest qualified prerequisite: [manager publication guard](validation/2026-10-21-manager-run-authority.md).
+All 56 selected cases pass, including permission changes during lock waits and
+unrelated publication during authority observation. Frozen inputs, portability and
+resource reconciliation pass; durable manager choice remains next.
+
+The preceding [waiting-result completion](validation/2026-10-21-process-review-completion.md)
+qualifies the produced Process child.
 All 331 final selected cases pass, including real Project-scoped publication in both
 snapshot modes, root cancellation, exact settlement replay, rollback and restart.
 The corrected root fixture and observer are validated; all earlier failures remain
