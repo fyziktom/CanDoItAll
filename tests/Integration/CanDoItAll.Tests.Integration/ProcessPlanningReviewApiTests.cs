@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace.ApiAccess;
@@ -13,13 +15,15 @@ using CanDoItAll.Web.Api;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.AspNetCore.Http;
+using Xunit.Abstractions;
 using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
 [Trait("Category", "HostPlatform")]
 [Trait("Category", "FileSystemPortability")]
-public sealed class ProcessPlanningReviewApiTests {
+public sealed class ProcessPlanningReviewApiTests(ITestOutputHelper output) {
     [Theory]
     [InlineData(AgentPlanningReviewChoice.Approve, ReadBasisMode.RunSnapshot)]
     [InlineData(AgentPlanningReviewChoice.Reject, ReadBasisMode.RunSnapshot)]
@@ -55,7 +59,19 @@ public sealed class ProcessPlanningReviewApiTests {
             ProcessPlanningReviewApiSubmission request = new(new(actionId, choice, view.Expected,
                 view.Publication.Binding, view.Publication.ApprovalId), view.Process!);
             retainedRequest = JsonSerializer.Serialize(request, json);
-            using var applied = await host.Client.PostAsync(route, Content(retainedRequest));
+            using var diagnostics = new ReviewDiagnostics(host.App.Services.GetRequiredService<IHttpContextAccessor>(), route);
+            var started = Stopwatch.GetTimestamp();
+            HttpResponseMessage response;
+            try {
+                response = await host.Client.PostAsync(route, Content(retainedRequest));
+            } finally {
+                output.WriteLine(JsonSerializer.Serialize(new {
+                    Workload = "review-http-approval", Choice = choice.ToString(), Mode = mode.ToString(),
+                    ElapsedMilliseconds = Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                    Diagnostics = diagnostics.Summarize()
+                }));
+            }
+            using var applied = response;
             Assert.Equal(HttpStatusCode.OK, applied.StatusCode);
             Assert.Equal("no-store", applied.Headers.CacheControl?.ToString());
             var responseText = await applied.Content.ReadAsStringAsync();
@@ -237,6 +253,58 @@ public sealed class ProcessPlanningReviewApiTests {
                 }
             }
         }
+    }
+
+    private sealed class ReviewDiagnostics : IDisposable {
+        private const int MaximumActivities = 4096;
+        private readonly object sync = new();
+        private readonly List<(string Name, string? Payload, double Milliseconds)> completed = [];
+        private readonly ActivityListener listener;
+        private int started;
+        private int stopped;
+
+        internal ReviewDiagnostics(IHttpContextAccessor context, PathString route) {
+            listener = new ActivityListener {
+                ShouldListenTo = source => source.Name == AgentFrameworkTelemetry.SourceName,
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+                SampleUsingParentId = (ref ActivityCreationOptions<string> _) => ActivitySamplingResult.AllData,
+                ActivityStarted = activity => {
+                    if (context.HttpContext?.Request is { } request && HttpMethods.IsPost(request.Method) && request.Path == route) {
+                        activity.SetCustomProperty(nameof(ReviewDiagnostics), this);
+                        Interlocked.Increment(ref started);
+                    }
+                },
+                ActivityStopped = activity => {
+                    if (!ReferenceEquals(activity.GetCustomProperty(nameof(ReviewDiagnostics)), this)) {
+                        return;
+                    }
+                    Interlocked.Increment(ref stopped);
+                    lock (sync) {
+                        if (completed.Count < MaximumActivities) {
+                            completed.Add((activity.OperationName,
+                                (activity.GetTagItem("payload.type") ?? activity.Parent?.GetTagItem("payload.type")) as string,
+                                activity.Duration.TotalMilliseconds));
+                        }
+                    }
+                }
+            };
+            ActivitySource.AddActivityListener(listener);
+        }
+
+        internal object Summarize() {
+            lock (sync) {
+                return new {
+                    Started = Volatile.Read(ref started), Stopped = Volatile.Read(ref stopped),
+                    Truncated = stopped > MaximumActivities,
+                    Activities = completed.GroupBy(item => (item.Name, item.Payload))
+                        .Select(group => new { group.Key.Name, group.Key.Payload, Count = group.Count(),
+                            InclusiveMilliseconds = group.Sum(item => item.Milliseconds), MaximumMilliseconds = group.Max(item => item.Milliseconds) })
+                        .OrderByDescending(item => item.InclusiveMilliseconds).ToArray()
+                };
+            }
+        }
+
+        public void Dispose() => listener.Dispose();
     }
 
     private sealed class CompletionFault(bool loseAcknowledgement) {

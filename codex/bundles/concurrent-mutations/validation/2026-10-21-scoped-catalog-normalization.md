@@ -1,6 +1,6 @@
 # Scoped catalog normalization: measured checkpoint
 
-The bounded normalization memo is implemented, but this checkpoint is not fully qualified. The 192 preceding correctness cases pass. Repeated actual-host approval tests still show a 30-second deadline failure, and one of six unchanged isolated latency shapes exceeds one second. Continue diagnosing before downstream activation.
+The bounded normalization memo is implemented, but this checkpoint is not fully qualified. The 192 preceding correctness cases pass. Four actual-host approval/restart cases now pass under bounded request tracing; earlier 30-second failures remain recorded. The measured read repeat still exceeds one second in one of six shapes. Continue diagnosing before downstream activation.
 
 ## Change and architecture
 
@@ -74,3 +74,48 @@ Retained local proof is secret-scanned; generated proof remains ignored by Git:
 - [Candidate C and all measured rows](../proof/2026-10-19-planning-authority/c4-scoped-catalog-normalization-cost.json): 78,663 bytes, `E471A4ADE383BCC09AF286332E42B9B13A2579B6871602530D0D6CAA6CA8F14C`.
 
 Historical cleanup denials remain in [resources](../resources.md). Automatic approval review rejected those deletions with â€śblocked by policyâ€ť; they have not been retried. Zero new fixture deltas do not mean historical cleanup is complete.
+
+
+## Measured diagnostic successors D, E and F
+
+D changes only the existing HTTP test's bounded request diagnostics (plus documentation), with byte-identical production to A/B/C. All four original approval/restart cases pass in 167.65 seconds. Initial approval POSTs take 12,439 and 12,856 ms; rejects take 3,360 and 3,876 ms. Each approval records 1,637 completed activities without truncation. File waits are short in this run (maximum individual coordination/key waits below 27 ms); these observations do not reproduce or explain the earlier timeouts. The 55 visible CPU samples have median 8.27% and maximum 12.98%. This measures visible processes only.
+
+E repeats the six unchanged acceptance shapes on D's exact source and binaries. Five pass; StepSnapshot/1024 fails with samples 759.81, 1075.17, 1250.26, 696.67 and 568.15 ms. All 30 samples and safety assertions remain retained: 27 Process SQL commands, one provider invocation, unchanged child revision, zero Project writes and no execution-factory construction in the GET. Visible CPU has median 7.70% and maximum 12.40% across 61 samples, so earlier CPU saturation does not explain this repeat. No threshold was relaxed.
+
+F executes the three existing profiled GET shapes, all passing their correctness assertions in 108.43 seconds. Its 15 samples remain diagnostic, not finite-latency passes. Five JSON comparisons / ten catalog serializations take median 18–43 ms per request; they overlap and must not be summed. Whole-process allocation remains 43–47 MB. Seed construction and file validation are not separately timed yet; bounded activities are the next measurement before any functional optimization.
+
+D/E/F use source manifest `0C13023497F2C3AE0D4C43F9637A29FAA96F464D3BAF915AF6652C46733A5340` (9,899 inputs) and runtime `91027C089E2ECEE9ABDB31464244A6873F47B7E0509EBB4E467097C475D239F2` (7,013 files), verified unchanged after each run. D refreshed standard Release Integration, ran a full source scan and final no-write enforcement (15,665 findings); E/F used the same protected source and reran enforcement. Resource observers cover every selected test command and reconcile zero new surviving processes, database names or temporary entries. Earlier denied cleanup remains unresolved.
+
+D's first CPU sampler failed before tests on a process with null StartTime; the initial observer closed with zero execution commands and no resource delta. The corrected sampler skips inaccessible/null identity observations. The original helper and preflight records remain retained. An initial unsupported outer deadline was rejected before a child started. These are harness preflight corrections, not approval-review denials.
+
+- [D approval diagnostic](../proof/2026-10-19-planning-authority/c4-review-approval-diagnostic.json): 191,441 bytes, `350550A20F7CCCEFF60D64B476D1FC99FFC14CB2E93EC135E37B770D0A433FFD`.
+- [E failed read-cost confirmation](../proof/2026-10-19-planning-authority/c4-review-read-cost-confirmation.json): 144,448 bytes, `882B22D1D59C6FD857670E0ED0ABC0226A2F0029A0889A176A30C54B0D539768`.
+- [F request profile](../proof/2026-10-19-planning-authority/c4-review-read-profile-followup.json): 195,633 bytes, `8FA9B7348EFB831407FFD9EEFA85E98449495181B0BA9A61D68E0C9C22E18F19`.
+
+All retained proof passed secret scanning. Finite latency and sustained capacity remain open; the separate accounting action may be implemented and tested without enabling producers. Parent cancellation and refresh remain separate prerequisites for activation.
+
+
+G adds only the planned seed activities. Direct Release Persistence/Web/Integration
+builds pass (29.28/125.27/35.68 seconds); source stayed unchanged during compilation.
+Full portability scan (164.55 seconds), final no-write enforcement at 15,665 findings,
+rendering, documentation and diff checks pass. Three actual profiled shapes pass in
+108.28 seconds. Their 15 samples show normalization total median 58–105 ms, including
+seed validation 24–26 ms and seed construction 22–35 ms; pure normalization is 13–31 ms.
+These nested timings overlap. They do not explain most elapsed request time, so seed
+validation is retained unchanged. Finite acceptance remains failed; request construction
+and current authority are the next measured boundary alongside independent accounting.
+
+G verifies source `9FA853BA7E4CDF7E71220B64EE4227D1B05BC091395091CF2D972C8C6ACC66C3`
+and runtime `F76883E171629840451891758EF2C37AF09328BD1B9CE569E97C1488FCAA125B`
+unchanged after execution (9,899 / 7,013 inputs). Its 134.16-second observer covers the
+execution with zero new resource deltas. The first preparation assertion found that the
+two new P09 helpers were not resource-allocation pins; complete source capture already
+covered them. Explicit pins were added before tests. No fixture or source was altered
+by that preparation correction. Fresh runtime hashes followed successful post-build
+source verification, reusing that proven source manifest rather than rescanning twice.
+
+[G seed diagnostic](../proof/2026-10-19-planning-authority/c4-review-seed-diagnostic.json)
+is 216,271 bytes, SHA256 `98EA8BD648C1232B1240EF3AB1298FA81D184EC27C0D3D454DA4F97701D73F7B`,
+with zero secret findings. No new architecture boundary, class, project reference,
+cache or authority behavior was introduced. The signed checkpoint remains diagnostic,
+not a declaration of latency, sustained capacity or E2E completion.

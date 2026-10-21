@@ -1,12 +1,16 @@
 # Execution plan
 
 The [scoped catalog normalization checkpoint](../validation/2026-10-21-scoped-catalog-normalization.md)
-reduces median measured allocation to 43–46 MB and passes five of six isolated
-latency shapes. The 128-step RunSnapshot tail and a 30-second actual-host approval
-timeout remain failures. All 192 preceding correctness cases pass. Retain the failed
-attempts, diagnose the selected POST through bounded existing telemetry, and qualify
-both original limits before parent recovery/refresh/cancel, executor activation,
-Workflow/settings/UI and broad closure. SPA stays separate.
+reduces median measured allocation to 43–46 MB. All four actual HTTP approval/restart
+cases pass in the measured diagnostic; earlier timeouts remain recorded. A six-shape
+read repeat still fails StepSnapshot/1024 at 1.25 seconds. All 192 preceding correctness
+cases pass. Existing request spans attribute only 18–43 ms to catalog comparisons;
+seed construction/validation also account for only 58–105 ms. Retain those checks
+and inspect request construction/current authority in the independent accounting slice. Keep the
+original acceptance bounds and gate executor activation, Workflow/settings/UI and
+broad closure. The reviewed accounting action can be developed independently once
+this diagnostic is retained; it does not establish capacity or enable producers.
+Parent cancellation and refresh need their own reviewed transitions. SPA stays separate.
 
 The [Core startup accounting scope](../validation/2026-10-20-inherited-startup-accounting.md)
 passes 189 distinct behaviors with exact source/runtime and resource proof.

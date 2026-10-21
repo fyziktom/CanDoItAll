@@ -1,4 +1,5 @@
 using System.Reflection.Metadata;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Persistence;
@@ -12,12 +13,15 @@ internal sealed class FileSandboxWorkspaceCatalogNormalizer(
     private CatalogReadSnapshot? memo;
 
     internal bool TryNormalizeUnchanged(SandboxWorkspaceCatalog source, out SandboxWorkspaceCatalog normalized) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.catalog.normalize");
         var previous = Volatile.Read(ref memo);
         if (!MetadataUpdater.IsSupported && previous is not null && ReferenceEquals(previous.Source, source) &&
             canRetain(source) && previous.InputsCurrent()) {
             normalized = previous.Normalized;
+            activity?.SetTag("catalog.memo.hit", true);
             return true;
         }
+        activity?.SetTag("catalog.memo.hit", false);
         Volatile.Write(ref memo, null);
         var current = normalize(source);
         normalized = current.Normalized;
@@ -37,8 +41,15 @@ internal sealed class FileSandboxWorkspaceCatalogNormalizer(
 
     private static CatalogReadSnapshot Normalize(SandboxWorkspaceCatalog source) {
         var inputs = new WorkspaceSeedInputReader();
-        var seed = SandboxWorkspaceSeedBuilder.Build(inputs.Roots.Capabilities, inputs.Roots.Agents, inputs.ReadText);
-        return new(source, SandboxWorkspaceSeedNormalizer.NormalizeCatalog(source, seed), inputs.IsCurrent);
+        SandboxWorkspaceDocument seed;
+        using (AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.catalog.seeds.build")) {
+            seed = SandboxWorkspaceSeedBuilder.Build(inputs.Roots.Capabilities, inputs.Roots.Agents, inputs.ReadText);
+        }
+        SandboxWorkspaceCatalog normalized;
+        using (AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.catalog.seeds.normalize")) {
+            normalized = SandboxWorkspaceSeedNormalizer.NormalizeCatalog(source, seed);
+        }
+        return new(source, normalized, inputs.IsCurrent);
     }
 }
 

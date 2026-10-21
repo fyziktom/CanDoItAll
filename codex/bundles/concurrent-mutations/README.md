@@ -7,11 +7,12 @@ The original end-to-end outcome remains active. SPA work stays on its own
 Latest checkpoint: [scoped catalog normalization](validation/2026-10-21-scoped-catalog-normalization.md).
 Bounded current-input reuse reduces median measured process allocation from about
 79–81 MB to 43–46 MB. All 192 preceding correctness cases pass; across unchanged
-source, latest results cover 206 passing distinct cases out of 208. One actual-host
-approval still exceeds its 30-second deadline and one of six isolated read shapes
-exceeds the unchanged one-second limit. Failed attempts and all measurements remain
-retained. Request-level approval diagnosis comes next; downstream activation and
-complete E2E closure remain open.
+source, the four approval/restart cases now pass under bounded request diagnostics.
+Earlier approval timeouts remain evidence. The measured six-shape read repeat still
+fails StepSnapshot/1024 at 1.25 seconds with low observed host CPU. Existing tracing
+shows only 18–43 ms in catalog comparisons; seed construction/input validation
+also account for only 58–105 ms. Request construction/current authority are next. Failed attempts and all samples remain
+retained. Downstream activation and complete E2E closure remain open.
 
 Latest fully qualified prerequisite: [Process planning review HTTP](validation/2026-10-21-process-review-http.md).
 All 76 cases pass, including both snapshot modes, exact retained requests after

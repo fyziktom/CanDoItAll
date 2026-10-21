@@ -1318,3 +1318,15 @@ The existing owned `c4-accounting-recovery` directory holds unapplied P10 source
 and a small P09 request-diagnostic/document draft. These are preparation only, not
 compiled product or successful proof. Historical cleanup-denied resources remain
 untouched and all later candidates reuse the isolated PostgreSQL server.
+
+
+P09 successors `c4-review-approval-diagnostic`, `c4-review-read-cost-confirmation`
+and `c4-review-read-profile-followup` are retained reviewed proof. D passes four
+HTTP cases, E retains five passes/one finite-latency failure, F passes three diagnostic
+shapes. Observers cover 200.27/212.96/136.84 seconds respectively, all selected commands,
+and zero new surviving process, database-name or temporary deltas. Their exact proof
+hashes and source/runtime identity are in the P09 validation record. D's failed sampler
+preflight, null-start-time correction and schema-rejected outer deadline remain recorded.
+No new server or custom build output was created; historical denied deletions remain.
+
+Owned `c4-review-seed-diagnostic` retains three passing diagnostic cases, all timing rows and unchanged source/runtime proof (216,271 bytes; `98EA8BD648C1232B1240EF3AB1298FA81D184EC27C0D3D454DA4F97701D73F7B`). Its observer covers the test with zero new resource deltas. Preparation pin correction and build/source verification provenance remain explicit. No historical cleanup denial was retried.

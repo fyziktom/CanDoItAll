@@ -2,10 +2,12 @@
 
 The [scoped catalog normalization checkpoint](validation/2026-10-21-scoped-catalog-normalization.md)
 implements bounded current-input reuse without caching authorization. Median measured
-allocation falls to 43–46 MB; five isolated latency shapes pass. One latency tail and
-one actual-host approval timeout remain open despite 192 preceding correctness
-passes. All failed attempts, exact source/runtime identity and clean new fixture
-deltas are retained. R1/R4/R5/R6 and downstream activation remain open.
+allocation falls to 43–46 MB. Four actual-host approval/restart cases pass in the
+bounded diagnostic after earlier timeouts. The measured read repeat still fails one
+latency shape. Seed measurements exclude that work as the dominant remaining cost;
+request construction and current-authority work are the next diagnostic boundary. All 192
+preceding correctness passes, failed attempts, exact source/runtime identity and clean
+new fixture deltas are retained. R1/R4/R5/R6 and downstream activation remain open.
 
 The [review read boundary](validation/2026-10-21-review-read-boundary.md) removes
 execution construction from inherited review GETs while preserving current disclosure.

@@ -122,3 +122,13 @@ POST timeout, background workers and effect/accounting assertions stay unchanged
 Nested telemetry durations are inclusive; no payload or credential content is logged.
 The checkpoint may be committed as measured unfinished work; dependent activation
 remains gated. The separate accounting-recovery draft is not applied yet.
+
+## Measured follow-up: seed cost visibility
+
+The four original approval/restart cases pass with bounded request tracing (12.4–12.9 seconds for approval); their earlier 30-second failures remain evidence. A measured six-shape repeat still fails StepSnapshot/1024 at 1,250 ms with visible CPU below 13%. The next three-case profile records only 18–43 ms median for five full JSON comparisons, so comparison removal alone does not explain the wall-time cost.
+
+Before changing the memo or authority checks, add activities to the existing normalizer and seed-input reader: normalization total, seed construction, pure normalization, input validation, memo hit and consumed-file count. Use the existing AgentFramework ActivitySource with numeric/Boolean tags only; no file paths, payloads or identity data. This is observability within Persistence, with no new project, lifetime, cache, lock or behavior. With no listener, StartActivity returns null. Existing bounded request diagnostics collect at most 4,096 spans.
+
+Refresh standard Release Persistence, Web and Integration, scan all protected source, and execute the three existing profiled GET scenarios (1-step RunSnapshot, 1/1024-step StepSnapshot). Preserve all samples, constant-query/no-write/no-runtime assertions and the earlier failed acceptance evidence. Select a functional optimization only after these timings identify its target. The one-second acceptance and current-authority checks stay unchanged.
+
+The seed diagnostic is now [retained](../validation/2026-10-21-scoped-catalog-normalization.md): three profiled cases pass, normalization totals 58–105 ms. Preserve seed validation; measure request construction/current authority next. The independent accounting implementation may proceed without producer activation. Finite and sustained capacity remain open.

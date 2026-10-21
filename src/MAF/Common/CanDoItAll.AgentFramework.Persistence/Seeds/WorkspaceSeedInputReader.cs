@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
@@ -52,6 +53,9 @@ internal sealed class WorkspaceSeedInputReader {
     }
 
     internal bool IsCurrent() {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.catalog.seeds.validate");
+        activity?.SetTag("seed.files", files.Count);
+        activity?.SetTag("seed.bytes", retainedBytes);
         if (!canRetain || files.Count == 0 || Roots != resolveRoots()) {
             return false;
         }
