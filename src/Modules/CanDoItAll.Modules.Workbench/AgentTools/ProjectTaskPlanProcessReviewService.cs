@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -40,10 +41,7 @@ public sealed class ProjectTaskPlanProcessReviewService(IAgentFrameworkWorkspace
             throw new AgentToolAdmissionException("process-review.child-changed", "Review requires the exact original Process child.");
         }
         await RequireManagerAsync(cancellationToken);
-        var intent = AgentToolProtocolEnvelope.ComputeDigest(JsonSerializer.Serialize(new {
-            Domain = "process-task-plan-review/v1", request.Process,
-            OriginalParent = ProcessDecisionChildMaterialBindingCodec.Serialize(parent), manager.Actor
-        }));
+        var intent = ComputeIntent(request.Process, parent, manager.Actor);
         var continuation = AgentInheritedSavedEffectContinuation.ForManagerReview(origin, request.Agent.Expected, request.Agent.Binding,
             async (run, token) => {
                 if (run.Id != original.Id ||
@@ -88,4 +86,11 @@ public sealed class ProjectTaskPlanProcessReviewService(IAgentFrameworkWorkspace
             token.ThrowIfCancellationRequested();
         }
     }
+
+    internal static AgentToolSemanticDigest ComputeIntent(ProcessDecisionReviewRequest process,
+        ProcessDecisionChildMaterialBinding parent, ProcessEventActor actor)
+        => AgentToolProtocolEnvelope.ComputeDigest(JsonSerializer.Serialize(new {
+            Domain = "process-task-plan-review/v1", Process = process,
+            OriginalParent = ProcessDecisionChildMaterialBindingCodec.Serialize(parent), Actor = actor
+        }));
 }

@@ -1,5 +1,12 @@
 # Requirements and closure ledger
 
+The [review compatibility/read-cost checkpoint](validation/2026-10-21-review-compatibility-read-cost.md)
+passes nine fixed v1 digest cases and seven HTTP recovery regressions. Its six cost
+cases fail: even one-step plans exceed one second and allocate about 80 MB per
+request. The failed proof and clean resource delta are retained. Fixed-cost
+profiling/repair now blocks capacity qualification and downstream activation.
+R1/R4/R5/R6 remain open; no complete E2E claim follows from the compatibility passes.
+
 The [Process review HTTP checkpoint](validation/2026-10-21-process-review-http.md)
 now passes all 76 cases. Current access, lossless bounded requests, original-child
 reads, restart and exact action/accounting recovery are qualified. It adds no

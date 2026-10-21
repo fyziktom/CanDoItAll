@@ -29,7 +29,7 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
 
     internal static async Task<ProjectTaskPlanReviewFixture> CreateAsync(ReadBasisMode mode = ReadBasisMode.StepSnapshot,
         CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null,
-        Action<IServiceCollection>? configureServices = null, int steps = 1) {
+        Action<IServiceCollection>? configureServices = null, int steps = 1, int promptCharacters = 16_384) {
         var clock = new ProjectTaskPlanScenarioClock();
         var entry = await ProjectTaskPlanExecutionEntryTests.EntryFixture.CreateAsync(testEnvironment: environment, activeProfile: profile,
             configureServices: services => {
@@ -39,7 +39,7 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
         ProcessStepMaterialFixture? process = null;
         try {
             process = await ProcessStepMaterialFixture.CreateAsync(mode, steps, existingSql: entry.Files.Sql,
-                executorId: entry.Files.Agent.Id, allowTaskPublication: true);
+                executorId: entry.Files.Agent.Id, allowTaskPublication: true, promptCharacters: promptCharacters);
             var services = entry.Files.Sql.Services;
             var produced = await services.GetRequiredService<ProcessDecisionStepPreparationCoordinator>()
                 .PrepareAsync(process.State, process.Claim, TimeSpan.FromSeconds(30));

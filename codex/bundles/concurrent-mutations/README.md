@@ -4,7 +4,14 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest qualified prerequisite: [Process planning review HTTP](validation/2026-10-21-process-review-http.md).
+Latest capacity finding: [review compatibility and read cost](validation/2026-10-21-review-compatibility-read-cost.md).
+All nine fixed v1 compatibility and seven HTTP recovery cases pass. All six cost
+shapes fail the one-second reference, including one-step plans: approximately
+80 MB allocated and 27 Process SQL commands for an approximately 1.8 KB response.
+The failed baseline is retained with unchanged inputs and zero new resource deltas.
+Profiling and repair are required before downstream activation.
+
+Latest fully qualified prerequisite: [Process planning review HTTP](validation/2026-10-21-process-review-http.md).
 All 76 cases pass, including both snapshot modes, exact retained requests after
 host restart, invalid input without intent, accounting refusal and lost commit
 acknowledgement. Full portability, source/runtime identity and all seven observed

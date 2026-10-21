@@ -18,12 +18,13 @@ internal sealed record ProcessRootMaterialFixture(ProjectTaskPlanOperationFixtur
     internal IProcessDecisionMaterialCapturer Capturer => Services.GetServices<IProcessDecisionMaterialCapturer>().Single();
 
     internal static async Task<ProcessRootMaterialFixture> CreateAsync(int steps = 1, ReadBasisMode read = ReadBasisMode.RunSnapshot,
-        ProjectTaskPlanOperationFixture? existingSql = null, Guid? executorId = null, bool allowTaskPublication = false) {
+        ProjectTaskPlanOperationFixture? existingSql = null, Guid? executorId = null, bool allowTaskPublication = false,
+        int promptCharacters = 16_384) {
         var sql = existingSql ?? await ProjectTaskPlanOperationFixture.CreateAsync();
         try {
             var source = await sql.Services.GetRequiredService<ProjectProcessLaunchAuthorityService>()
                 .CaptureLocalAsync(sql.Project.ProjectId, ProcessLaunchOperatorSurface.UserInterface);
-            var prepared = ProcessPreparedLaunchScalingFixture.Create(steps, 16_384, source);
+            var prepared = ProcessPreparedLaunchScalingFixture.Create(steps, promptCharacters, source);
             var initial = prepared.InitialCommit;
             var policy = new DecisionDataPolicy(read, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview,
                 new(0, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10)));

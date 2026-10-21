@@ -17,8 +17,8 @@ internal sealed record ProcessStepMaterialFixture(ProcessRootMaterialFixture Roo
 
     internal static async Task<ProcessStepMaterialFixture> CreateAsync(ReadBasisMode mode = ReadBasisMode.StepSnapshot, int steps = 1,
         TimeSpan? claimDuration = null, ProjectTaskPlanOperationFixture? existingSql = null, Guid? executorId = null,
-        bool allowTaskPublication = false) {
-        var root = await ProcessRootMaterialFixture.CreateAsync(steps, mode, existingSql, executorId, allowTaskPublication);
+        bool allowTaskPublication = false, int promptCharacters = 16_384) {
+        var root = await ProcessRootMaterialFixture.CreateAsync(steps, mode, existingSql, executorId, allowTaskPublication, promptCharacters);
         try {
             var state = root.State;
             if (mode == ReadBasisMode.RunSnapshot) {

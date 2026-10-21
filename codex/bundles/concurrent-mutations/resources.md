@@ -1207,3 +1207,16 @@ identity passed and reconciliation found zero new surviving processes, database
 names or temporary entries. Its 150,610-byte reviewed proof is retained and ownership
 is `RetainedQualifiedProof`. Earlier denied resources, including the aborted HTTP
 fixture, remain excluded from cleanup. No new server or custom build output exists.
+
+`c4-review-compatibility-read-cost` is reserved before creation for the saved-intent
+fixtures and actual HTTP read measurements. Its small preparation/proof directory
+may retain a separate golden-establishment transcript; that transcript is not final
+qualification. It reuses standard Release outputs, the existing isolated PostgreSQL
+server and API fixture leases. All historical denied targets remain baseline-only.
+
+The candidate retained 16 passing compatibility/HTTP cases and six failed latency
+cases. All five commands were observed, frozen inputs verified unchanged, and
+reconciliation found zero new surviving processes, databases or temporary entries.
+Its 97,195-byte failed proof is retained; ownership is `RetainedFailedProof`.
+Keep the bounded profiling baseline and helpers for the required performance repair.
+No denied target was retried and no replacement database server was created.
