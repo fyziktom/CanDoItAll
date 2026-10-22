@@ -1,6 +1,15 @@
 # Concurrent mutations implementation bundle
 
-Current behavioral checkpoint: [held publication fencing](validation/2026-10-22-held-publication.md).
+Current behavioral checkpoint: [held cancellation registration](validation/2026-10-22-held-registration.md).
+All 93 selected cases pass (60 Integration, 33 Unit). The real Core/MAF stop-first
+race reproduced a saved cancellation overwritten as failure; typed original-session
+classification and atomic publication refusal now preserve the entire saved detail.
+Foreign cancellation evidence, stale success/failure, original publication fences and
+Process completion pass. Seven production builds, 44 output identities, full portability
+and zero new resource residue qualify this repair. Inherited publication, worker/HTTP
+activation, capacity/fairness and final E2E remain open. SPA stays on its separate branch.
+
+Preceding behavioral checkpoint: [held publication fencing](validation/2026-10-22-held-publication.md).
 All 87 selected Integration cases pass. The original held race reproduced late Agent
 publication after completed root cancellation; a retained Process transaction now fences
 journal/index publication after ordered file keys. Reverse ordering, replay, release

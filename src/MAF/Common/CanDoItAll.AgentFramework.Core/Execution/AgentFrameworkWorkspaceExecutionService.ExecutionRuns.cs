@@ -1056,7 +1056,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         catch (Exception exception)
         {
             transientContextRegistry.Remove(run.Id);
-            var cancellationKind = ClassifyExecutionCancellation(exception, executionCancellation, cancellationToken);
+            var cancellationKind = ClassifyExecutionCancellation(exception, run, executionCancellation, cancellationToken);
             var wasCancelled = cancellationKind != ExecutionCancellationKind.None;
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
             var failureIdentity = ResolveProviderFailureIdentity(exception);
@@ -1077,7 +1077,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             }
             var resultSummary = cancellationKind switch
             {
-                ExecutionCancellationKind.ProcessRegistry => "Execution run cancelled because the owning process run was cancelled.",
+                ExecutionCancellationKind.OwnerCancellation => "Execution run cancelled because the owning process run was cancelled.",
                 ExecutionCancellationKind.CallerRequest => "Execution run cancelled because the caller request was cancelled.",
                 _ => ResolveRunFailureDisplayMessage(exception, failureDisplay)
             };
@@ -1164,8 +1164,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         exception,
                         persistence.ExecutionLogFailure);
                 }
-            }
-            catch (Exception persistenceException)
+            } catch (AgentExecutionCancelledException) {
+                terminalRunPersisted = true;
+                TerminalizeFailedActivityBestEffort(activityOperation, wasCancelled: true, run.Id);
+                throw;
+            } catch (Exception persistenceException)
             {
                 LogTerminalFailurePersistenceFailure(
                     run.Id,
@@ -1195,7 +1198,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 activityOperation,
                 wasCancelled,
                 run.Id);
-            if (cancellationKind == ExecutionCancellationKind.ProcessRegistry)
+            if (cancellationKind == ExecutionCancellationKind.OwnerCancellation)
             {
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
             }
@@ -1962,7 +1965,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         catch (Exception exception)
         {
             transientContextRegistry.Remove(run.Id);
-            var cancellationKind = ClassifyExecutionCancellation(exception, executionCancellation, cancellationToken);
+            var cancellationKind = ClassifyExecutionCancellation(exception, run, executionCancellation, cancellationToken);
             var wasCancelled = cancellationKind != ExecutionCancellationKind.None;
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
             var failureIdentity = ResolveProviderFailureIdentity(exception);
@@ -1983,7 +1986,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             }
             var resultSummary = cancellationKind switch
             {
-                ExecutionCancellationKind.ProcessRegistry => "Execution run cancelled because the owning process run was cancelled.",
+                ExecutionCancellationKind.OwnerCancellation => "Execution run cancelled because the owning process run was cancelled.",
                 ExecutionCancellationKind.CallerRequest => "Execution run cancelled because the caller request was cancelled.",
                 _ => ResolveRunFailureDisplayMessage(exception, failureDisplay)
             };
@@ -2069,8 +2072,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         exception,
                         persistence.ExecutionLogFailure);
                 }
-            }
-            catch (Exception persistenceException)
+            } catch (AgentExecutionCancelledException) {
+                terminalRunPersisted = true;
+                TerminalizeFailedActivityBestEffort(activityOperation, wasCancelled: true, run.Id);
+                throw;
+            } catch (Exception persistenceException)
             {
                 LogTerminalFailurePersistenceFailure(
                     run.Id,
@@ -2100,7 +2106,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 activityOperation,
                 wasCancelled,
                 run.Id);
-            if (cancellationKind == ExecutionCancellationKind.ProcessRegistry)
+            if (cancellationKind == ExecutionCancellationKind.OwnerCancellation)
             {
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
             }
@@ -2522,17 +2528,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private enum ExecutionCancellationKind
     {
         None,
-        ProcessRegistry,
+        OwnerCancellation,
         CallerRequest
     }
 
     private static ExecutionCancellationKind ClassifyExecutionCancellation(
         Exception exception,
+        ExecutionRunRecord run,
         IAgentExecutionCancellationRegistration? executionCancellation,
         CancellationToken callerCancellationToken)
     {
         while (exception is AgentRuntimeUsageException { InnerException: { } cause }) {
             exception = cause;
+        }
+        if (exception is AgentExecutionCancelledException cancelled && cancelled.ExecutionRunId == run.Id ||
+            exception is AgentToolAdmissionException { CancelledSession: { } original } && original == run.ToolAdmission?.Session) {
+            return ExecutionCancellationKind.OwnerCancellation;
         }
         if (exception is not OperationCanceledException)
         {
@@ -2542,7 +2553,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         if (executionCancellation?.IsCancellationRequested == true &&
             !callerCancellationToken.IsCancellationRequested)
         {
-            return ExecutionCancellationKind.ProcessRegistry;
+            return ExecutionCancellationKind.OwnerCancellation;
         }
 
         return callerCancellationToken.IsCancellationRequested

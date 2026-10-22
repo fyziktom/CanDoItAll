@@ -1665,3 +1665,23 @@ Two redundant scan files were removed by exact proof/hash checks; their absence 
 recorded. Durable proof scanning passes. Three run-folder scanner matches are only the
 retained execution helper's variable assignments; their explicit review and zero private
 password sentinel findings are retained. No earlier denied target was retried.
+
+### P16 held registration qualification — ownership before creation
+
+Own `.artifacts/concurrent-mutations/validation/c4-held-registration` before creation.
+Reuse the existing isolated PostgreSQL 18 fixture, standard Release outputs and reviewed
+fixture families. Hold the real Core registration call around the shared registry while
+using the real MAF execution entry and a refusing provider boundary. Both test orderings
+must make zero provider calls; inspect the fresh saved journal and registered root
+recovery. The first two-case selection runs against signed production `2a53d6826` before
+any production repair. Observe and reconcile each run; preserve all historical blocked
+cleanup targets and the ordinary instance.
+
+Held registration closure qualifies 93 cases with 46 unchanged source pins and 44
+unchanged owning/copied binaries. Both the confirmed failure and final seven-lane run
+reconcile with zero new resources. Full portability passes with 15674 unchanged findings.
+Compact proof is 134847 bytes, SHA256
+`D06AF37606BECD443DB41A068420552FC752CB0C3E5677D51F2B50FB1A47587D`.
+Durable proof scanning has zero findings. Three run-folder matches are reviewed variable
+assignments in the retained Execute.ps1, with no private password sentinel. Retain exact
+helper hashes and raw scanner evidence; do not claim the raw run-folder scanner passed.

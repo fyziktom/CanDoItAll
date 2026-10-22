@@ -662,6 +662,9 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         var run = detail.Run;
         if (session.Reference.BackgroundSource is { } background) {
             RequireBackgroundIdentity(session, run, background);
+            if (detail.ChatSession is null && mode == AgentToolRunLeaseMode.Dispatch && run.Outcome == RunOutcome.Cancelled) {
+                throw AgentToolAdmissionException.Cancelled(session);
+            }
             if (detail.ChatSession is not null || !AllowsState(run, mode)) {
                 throw Failure("The background execution cannot dispatch in its current terminal or chat state.");
             }

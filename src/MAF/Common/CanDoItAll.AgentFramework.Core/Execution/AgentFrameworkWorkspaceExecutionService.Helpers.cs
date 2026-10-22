@@ -258,6 +258,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return proposed;
         }
 
+        if (current.ToolAdmission.Session.Reference.BackgroundSource is not null && current.Outcome == RunOutcome.Cancelled) {
+            throw new AgentExecutionCancelledException(current.Id, current.ProcessRunId,
+                "The original background execution was cancelled by its owner.");
+        }
+
         var cancelled = proposed.Outcome == RunOutcome.Cancelled;
         var admission = cancelled ? AgentToolJournalTransitions.RejectUndispatchedOnCancellation(current.ToolAdmission) : current.ToolAdmission;
         var waiting = !cancelled && current.PendingApprovals.Count != 0 && current.ToolAdmission.Batches.Any(batch =>

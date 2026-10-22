@@ -205,3 +205,13 @@ and journals after publication/release failures. It does not qualify late full-p
 registration, inherited initial publication, hard I/O bounds or capacity. The transaction
 covers initial publication only; prompt preparation, file-key waits and provider execution
 remain outside it. Existing global workspace contention still needs its separate gate.
+
+Late cancellation registration is now qualified through the real Core and MAF producer.
+MAF already refused provider dispatch after the saved stop; Core's stale failure handling
+previously replaced cancellation. The existing admission exception now carries internal
+original-session evidence, checked against the current execution. Atomic current-state
+publication separately refuses every stale completion over saved background cancellation.
+The entire original detail remains intact. Foreign session or code-only failures cannot
+cancel another execution. The [93-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-held-registration.md)
+includes both registration orderings, stale successful/failed completion, continuation
+and real Process recovery. It does not qualify OS restart or inherited initial publication.

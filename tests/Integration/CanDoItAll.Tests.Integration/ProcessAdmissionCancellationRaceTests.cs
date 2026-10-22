@@ -151,7 +151,7 @@ public sealed class ProcessAdmissionCancellationRaceTests {
         }
     }
 
-    private static async Task CompleteRecoveryAsync(IServiceProvider services, CancellationToken cancellationToken) {
+    internal static async Task CompleteRecoveryAsync(IServiceProvider services, CancellationToken cancellationToken) {
         await using var scope = services.CreateAsyncScope();
         var queue = scope.ServiceProvider.GetRequiredService<IProcessCancellationRecoveryQueue>();
         var claim = (await queue.ClaimAsync(ProcessCancellationRecoveryOrigin.LiveBarrier, TimeSpan.FromMinutes(1), cancellationToken))!;
@@ -171,10 +171,11 @@ public sealed class ProcessAdmissionCancellationRaceTests {
         Assert.Fail("Root recovery did not complete its bounded stage sequence.");
     }
 
-    private static TestHarnessOptions Harness()
+    internal static TestHarnessOptions Harness(Action<IServiceCollection>? configure = null)
         => ProcessExecutionAuthorityPersistenceTests.Harness(configure: services => {
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(new Clock()));
             services.Replace(ServiceDescriptor.Singleton<IAgentExecutionProfileGenerationSource>(new Generation()));
+            configure?.Invoke(services);
         });
 
     private sealed class Clock : TimeProvider {

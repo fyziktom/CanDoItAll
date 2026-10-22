@@ -937,3 +937,33 @@ journal, so explicitly check the saved cancellation outcome after an admission f
 This is a suspected subsequent window, not yet a confirmed defect. Retain actual
 Process authority/root stopping and observe the saved journal through a fresh store.
 Inherited initial publication still needs its separately held enrolled-child test.
+
+The registration regression against signed production `2a53d6826` passes registration-
+first and fails stop-first: provider calls stay zero, but Core changes the saved outcome
+from Cancelled to Failed after MAF rejects the late dispatch. All 32 binaries and 40
+source pins match; the observed run leaves zero new resource residue.
+
+Repair the existing Core contracts without changing MAF or Process ownership. A verified
+cancelled background journal should carry its exact original session on the existing
+admission exception; Core classifies that typed evidence only for the matching execution.
+Keep the existing exception type for journal callers. Independently guard the atomic
+current-state merge: a saved background cancellation cannot be replaced by a stale
+success, failure or second cancellation snapshot. Report the existing owner-cancellation
+outcome and retain its original run, timestamps, journal and metrics. Both normal execution
+and approval continuation must handle this refusal without wrapping it as persistence
+failure. A fresh pre-registration read alone would leave another race before dispatch-
+lease acquisition, so it is insufficient. Test the two actual producer orderings first,
+then focused journal, cancellation and continuation regressions. No source mutation may
+bypass the final portability gate or invalidate the retained baseline failure.
+
+The [held registration qualification](../validation/2026-10-22-held-registration.md)
+passes all 93 cases. Both actual Core/MAF orderings make zero provider calls; saved
+stop-first detail is byte-for-byte equivalent under the same serializer after stale
+finalization. Foreign session/code-only failures remain failures, and separate stale
+success/failure cases retain the original stop. Full portability and 44 output identities
+pass, with zero new resource residue. Continue to inherited initial publication: hold
+the actual run publication key after SQL enrollment, let cancellation recovery inspect
+the missing journal, and require retained pending work before releasing the producer.
+After release, no provider work may escape the root barrier; settle only the original
+measured preparation and close the root through the registered stages. Cover both
+RunSnapshot and StepSnapshot. This is the next test design, not a claimed pass.
