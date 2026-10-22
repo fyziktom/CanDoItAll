@@ -1,5 +1,13 @@
 # Execution plan
 
+The [terminal-child accounting checkpoint](../validation/2026-10-21-terminal-child-accounting.md)
+qualifies P11 A with 178 passing cases, five direct Release builds, unchanged project
+references, complete static/input/resource proof and no new resource residue. Before
+parent-stop integration, repair the newly identified CancelRequested-to-Active rework
+path in runtime and persisted admission. Then qualify selected Agent stopping, durable
+quiescence/recovery and snapshot refresh. Preserve the separate finite-read/capacity
+gate, closed producer activation and SPA branch constraint.
+
 The [closed-child accounting checkpoint](../validation/2026-10-21-closed-child-accounting.md)
 qualifies P10 with 134 passing cases, complete identity/static/resource proof and the
 initial test-only failure retained. Continue with separately designed terminal/parent

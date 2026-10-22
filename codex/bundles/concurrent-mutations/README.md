@@ -4,7 +4,16 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest qualified checkpoint: [closed-child accounting recovery](validation/2026-10-21-closed-child-accounting.md).
+Latest qualified checkpoint: [terminal-child accounting](validation/2026-10-21-terminal-child-accounting.md).
+All 178 selected cases pass, including 61 new cases. Exact closed work settles after a
+Process step stops while its business outcome and accepted effects remain unchanged.
+Both snapshot modes, competing requests, lost acknowledgements and SQL rollback pass.
+Source/runtime identity, full portability and all six observed commands pass with zero
+new resource deltas. The next prerequisite repairs rework that can reactivate a
+CancelRequested root; parent stop/recovery, snapshot refresh and producer activation
+remain gated. Finite read latency and sustained capacity are still open.
+
+Preceding checkpoint: [closed-child accounting recovery](validation/2026-10-21-closed-child-accounting.md).
 All 134 selected cases pass (131 correctness/compatibility and three diagnostic profiles),
 including all 55 new cases. Lost original approval requests can be recovered without
 another Agent/provider/effect operation. Source/runtime identity, full portability and

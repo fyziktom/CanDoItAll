@@ -1315,8 +1315,9 @@ All three candidates verify identical source/runtime manifests after execution.
 Ownership is retained failed proof; no new server or custom outputs were created.
 
 The existing owned `c4-accounting-recovery` directory retains the P10 design/source
-staging history and the unapplied P11 investigation/design with its Application baseline.
-P10 source is now applied and qualified by the records below. P11 remains preparation.
+staging history and the P11 investigation/design with its Application baseline.
+P10 and P11 A source are applied and qualified below; broader parent recovery/refresh
+remains preparation, including scoped Core/Runtime/Persistence baselines.
 Historical cleanup-denied resources remain untouched; the isolated server is reused.
 
 
@@ -1341,3 +1342,14 @@ database-name or temporary delta remains. Exact proof hashes and the preflight p
 correction are in [P10 validation](validation/2026-10-21-closed-child-accounting.md).
 Retain reviewed proof/manifests/helpers for continuation; no new server, custom output
 configuration or denied cleanup attempt was introduced.
+
+P11 A `c4-terminal-child-accounting` retains 178 passing cases, all 61 new cases,
+five standard Release builds and complete unchanged source/runtime identities.
+Ownership was recorded before directory creation. Its 654.68-second observer covers
+all six test commands, with zero new surviving process, database-name or temporary
+delta. The bounded CPU sampler closed normally with 198 samples. The 566,858-byte
+reviewed proof has SHA-256 `3909728F8D4ABF10961FA1B4A7903451D57D874AA689FF59EBC1C78A9FC7152E`.
+Direct Process module output is included in the ten-root runtime manifest. The same
+isolated PostgreSQL server and existing file leases were reused; no custom output,
+new server or historical denied deletion was introduced. Exact commands and the
+remaining gates are in [P11 A validation](validation/2026-10-21-terminal-child-accounting.md).

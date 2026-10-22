@@ -1,5 +1,14 @@
 # Requirements and closure ledger
 
+The [terminal-child accounting checkpoint](validation/2026-10-21-terminal-child-accounting.md)
+qualifies exact closure and work settlement for Completed, Failed and Cancelled Process
+steps. All 178 cases pass, including 61 new cases and actual SQL/file evidence in both
+snapshot modes. No business outcome is reopened and no effect/provider is replayed.
+Automatic parent stop, quiescence, refresh and activation remain open. The next gate
+repairs rework that can undo CancelRequested before relying on that barrier across
+owners. Performance, Workflow/settings/SPA, remaining writer waves and broad closure
+are not completed; R1/R4/R5/R6 remain open.
+
 The [closed-child accounting checkpoint](validation/2026-10-21-closed-child-accounting.md)
 qualifies recovery after loss of an original approval request, with 131 correctness
 cases and three diagnostic profiles passing. Exact work and receipts settle through
