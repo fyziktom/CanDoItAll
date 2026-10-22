@@ -8,6 +8,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
     FileSandboxWorkspaceJsonStore jsonStore)
 {
     private const int ReportingUpgradeReadConcurrency = 4;
+    private readonly FileProcessExecutionIndex processIndex = new(layout, jsonStore);
     private ExecutionChatIndex? cachedReportingChatIndex;
     private ReportingIndexFileStamp? cachedReportingIndexStamp;
     private ReportingIndexFileStamp? cachedReportingExecutionIndexStamp;
@@ -111,10 +112,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             Revision = executionIndex.Revision,
             UpdatedAtUtc = executionIndex.UpdatedAtUtc
         };
-        await jsonStore.WriteJsonAtomicallyAsync(
-            layout.ExecutionChatIndexPath,
-            rebuilt,
-            cancellationToken);
+        await processIndex.PublishAsync(rebuilt, cancellationToken);
         return rebuilt;
     }
 
@@ -123,10 +121,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(targetIndex);
-        return jsonStore.WriteJsonIfChangedAsync(
-            layout.ExecutionChatIndexPath,
-            targetIndex,
-            cancellationToken);
+        return processIndex.PublishAsync(targetIndex, cancellationToken, onlyIfChanged: true);
     }
 
     public async Task<ExecutionReportIndexPreparation> InspectExecutionReportIndexAsync(
@@ -225,10 +220,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
 
         if (preparation.RequiresWrite)
         {
-            await jsonStore.WriteJsonAtomicallyAsync(
-                layout.ExecutionChatIndexPath,
-                preparation.TargetIndex,
-                cancellationToken);
+            await processIndex.PublishAsync(preparation.TargetIndex, cancellationToken);
         }
 
         return CacheReportingIndex(preparation.TargetIndex);
@@ -414,10 +406,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             return false;
         }
 
-        await jsonStore.WriteJsonAtomicallyAsync(
-            layout.ExecutionChatIndexPath,
-            nextChatIndex,
-            cancellationToken);
+        await processIndex.PublishAsync(nextChatIndex, cancellationToken);
         return true;
     }
 
@@ -523,17 +512,11 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
 
         if (validatePersistedState)
         {
-            await jsonStore.WriteJsonIfChangedAsync(
-                layout.ExecutionChatIndexPath,
-                chatProjectionPlan.TargetIndex,
-                cancellationToken);
+            await processIndex.PublishAsync(chatProjectionPlan.TargetIndex, cancellationToken, onlyIfChanged: true);
             return;
         }
 
-        await jsonStore.WriteJsonAtomicallyAsync(
-            layout.ExecutionChatIndexPath,
-            chatProjectionPlan.TargetIndex,
-            cancellationToken);
+        await processIndex.PublishAsync(chatProjectionPlan.TargetIndex, cancellationToken);
     }
 
     public async Task<ExistingExecutionRunChatProjectionPlan> PrepareExistingRunUpdateAsync(
@@ -606,15 +589,9 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
 
         if (origin == ExistingRunDetailCommitOrigin.Prepared &&
             jsonStore.RequiresSave(currentChatIndex, chatProjectionPlan.TargetIndex)) {
-            await jsonStore.WriteJsonAtomicallyAsync(
-                layout.ExecutionChatIndexPath,
-                chatProjectionPlan.TargetIndex,
-                cancellationToken);
+            await processIndex.PublishAsync(chatProjectionPlan.TargetIndex, cancellationToken);
         } else {
-            await jsonStore.WriteJsonIfChangedAsync(
-                layout.ExecutionChatIndexPath,
-                chatProjectionPlan.TargetIndex,
-                cancellationToken);
+            await processIndex.PublishAsync(chatProjectionPlan.TargetIndex, cancellationToken, onlyIfChanged: true);
         }
     }
 
@@ -751,7 +728,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             return false;
         }
 
-        await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionChatIndexPath, nextChatIndex, cancellationToken);
+        await processIndex.PublishAsync(nextChatIndex, cancellationToken);
         return true;
     }
 
@@ -865,7 +842,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         }
 
         var rebuilt = await BuildChatIndexAsync(cancellationToken);
-        await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionChatIndexPath, rebuilt, cancellationToken);
+        await processIndex.PublishAsync(rebuilt, cancellationToken);
         return rebuilt;
     }
 

@@ -15,6 +15,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     ISandboxWorkspaceChatSessionStore,
     ISandboxWorkspaceExecutionRunStore,
     ISandboxWorkspaceProcessRunPageStore,
+    ISandboxWorkspaceProcessRunIndexPreparation,
     ISandboxWorkspaceChatRunStartStore,
     ISandboxWorkspaceExecutionRunMutationStore,
     ISandboxWorkspaceExecutionRunLeaseStore,
@@ -506,6 +507,20 @@ public sealed partial class FileSandboxWorkspaceStore :
                 return ProcessExecutionRunPage.Pending(ProcessExecutionRunPageStatus.PublicationPending);
             }
             return await new FileProcessExecutionRunPageReader(layout, jsonStore).ReadAsync(query, cancellationToken).ConfigureAwait(false);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
+        }
+    }
+
+    public async Task<ProcessExecutionRunPageStatus> PrepareProcessExecutionRunIndexAsync(CancellationToken cancellationToken = default) {
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            if (PendingCommitJournalPaths.Any(File.Exists)) {
+                return ProcessExecutionRunPageStatus.PublicationPending;
+            }
+            return await new FileProcessExecutionIndex(layout, jsonStore).PrepareAsync(cancellationToken).ConfigureAwait(false);
         } catch (Exception failure) {
             operation.RetainFailure(failure);
             throw;
@@ -1957,7 +1972,7 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     private IEnumerable<string> SharedPublicationPaths =>
         new[] { layout.CatalogPath, layout.WorkspaceIndexPath, layout.LegacyExecutionPath,
-            layout.ExecutionIndexPath, layout.ExecutionChatIndexPath, layout.ExecutionUsageIndexPath }
+            layout.ExecutionIndexPath, layout.ExecutionChatIndexPath, layout.ExecutionProcessIndexPath, layout.ExecutionUsageIndexPath }
             .Concat(PendingCommitJournalPaths);
 
     private string PendingChatBackedRunCommitJournalPath

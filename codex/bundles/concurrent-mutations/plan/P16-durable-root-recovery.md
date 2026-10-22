@@ -433,3 +433,45 @@ duplicate or invalid identity is explicit unavailable/corrupt evidence. Never re
 exhaustion from it. Legacy upgrade is a distinct owner preparation step from trusted
 complete metadata; it may not hydrate all historical journals inside a recovery slice.
 The page reader performs no migration, repair or publication.
+
+For the write-cost comparison, preserve the already-qualified `4a35d5311` production
+DLL/PDB identities before building the changed production source. Add a four-case
+diagnostic using only its existing public store/read APIs: histories 0/2000 with one
+writer, plus 2000 with 8/32 writers. Populate actual run records through the owner,
+warm up 20 writes, then measure 100 single-attempt writes and 100 concurrent page reads.
+Record accepted/conflicting attempts, p50/p95/p99, elapsed/throughput, allocations and
+physical read bytes; verify each accepted update through its original final revision.
+Do not retry conflicts or infer queue wait/WAL/server CPU. Repeat the identical class
+after the compact-index build, with unchanged source and configuration. A test-only
+baseline build uses the previously qualified production binaries intentionally; retain
+their exact provenance and never label that baseline as validation of the new source.
+
+The compact-index candidate selects 66 cases before execution: 23 new index-owner cases,
+18 updated page cases, 12 unchanged query regressions, the four identical cost diagnostics
+and nine existing publication-recovery cases covering chat creation, generic creation,
+existing updates and Agent deletion. Build Core, Persistence, Agent module, Web and
+Integration in dependency order; confirm exact discovery in Release. New owner cases
+include legacy preparation, incomplete/future source refusal, missing required fields,
+same-stamp membership corruption, orphan projections, explicit repair, real bulk/session/
+Agent deletion writes, and actual filesystem failure between chat and compact publication
+with retained-journal roll-forward. Reuse `tool-admission` and
+`workspace-publication-recovery` temporary families; no new host or database is needed.
+
+### Compact index result and progression
+
+The final 66 cases pass. The first owner's 22/23 result was a test setup error: Agent
+deletion correctly refused the fixture's active run. The corrected terminal fixture and
+all selected tests were rebuilt/discovered/rerun. The four-case baseline used exact signed
+production binaries from 4a35d5311; cost-test source is identical across both versions.
+See [the checkpoint](../validation/2026-10-22-process-selection-index.md) for the full
+publication audit, negative proof, source/runtime identities and retained measurements.
+
+Compact 100,000-entry metadata is 11.2 MB instead of 82.1 MB; page samples are 103–133 ms.
+All 400 candidate writes/reads preserve accepted revisions, but the tiny-history sample
+loses 13.8% throughput and adds 29.8% write p95. This exceeds the investigation thresholds;
+do not close performance or activate the worker. Existing workspace serialization still
+produces multi-second waits. Next qualify bounded cancellation-aware owner operations and
+sibling-root fairness, investigate small-history cost with controlled repeats or a measured
+redesign, and implement exact ordinary stopping and the real stage adapter. Preserve
+sticky pending-cycle state, original intents and notification cursors across takeover.
+This checkpoint permits dependent correctness integration only; R1/R4/R5/R6 remain open.

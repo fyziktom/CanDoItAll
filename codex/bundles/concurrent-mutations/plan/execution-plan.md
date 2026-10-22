@@ -1,16 +1,17 @@
 # Execution plan
 
-Current qualified checkpoint: [paged Agent execution lookup and cost finding](../validation/2026-10-22-process-execution-pages.md).
-All 30 selected lookup cases pass. Candidate journal hydration is paged, unavailable
-indexes remain pending, and restart selection retains original records. Five affected
-Release builds plus four refreshed downstream builds, portability (15669 unchanged),
-rendering, identity and resource checks pass. The first prototype's content-version defect
-and 15 historical failures remain retained. At 100,000 history entries, a page still
-reads 82 MB and takes 1.0–1.3 seconds: this cost blocks automatic worker activation.
-The queue and coordinator prerequisites are signed as `13de74201` and `8cd7ebab8`.
-Compact owner indexing, actual Agent/stage integration, host fairness, HTTP/status,
-snapshot refresh, Workflow/settings, remaining writers, sustained capacity and final E2E
-closure remain open. SPA stays on its separate branch.
+Current behavioral checkpoint: [compact Process selection index](../validation/2026-10-22-process-selection-index.md).
+All 66 final cases pass; the four-case signed-binary baseline and one historical fixture
+failure are retained. Every index publisher uses its original journal target. At 100,000
+history entries, metadata falls from 82.1 MB to 11.2 MB and page samples fall to 103–133 ms.
+All 400 candidate writes and 400 reads complete without conflicts or lost revisions.
+The tiny-history sample exceeds cost thresholds (13.8% throughput loss, 29.8% write-p95
+increase), and global-lock tail waits remain. This is not a capacity or activation pass.
+Five production/test Release builds plus a refreshed test build, source/runtime identity,
+portability (15670 reviewed), rendering and resource checks pass. Actual Agent/stage
+integration, bounded waits/fairness, repeated cost investigation, HTTP/status, refresh,
+Workflow/settings, remaining writers and final E2E closure remain open. SPA stays on its
+separate branch. The queue/coordinator prerequisites remain `13de74201` and `8cd7ebab8`.
 
 
 

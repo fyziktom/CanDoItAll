@@ -1599,7 +1599,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         if (changed || currentChatIndex is null || jsonStore.RequiresSave(currentChatIndex, nextChatIndex))
         {
-            await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionChatIndexPath, nextChatIndex, cancellationToken);
+            await new FileProcessExecutionIndex(layout, jsonStore).PublishAsync(nextChatIndex, cancellationToken);
         }
 
         var currentUsageProjection = await jsonStore.ReadJsonAsync<AgentUsageProjection>(layout.ExecutionUsageIndexPath, cancellationToken);

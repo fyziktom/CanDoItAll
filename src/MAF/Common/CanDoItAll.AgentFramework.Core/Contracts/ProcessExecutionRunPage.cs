@@ -26,3 +26,7 @@ public interface ISandboxWorkspaceProcessRunPageStore {
     Task<ProcessExecutionRunPage> ReadProcessExecutionRunPageAsync(ProcessExecutionRunPageQuery query,
         CancellationToken cancellationToken = default);
 }
+
+public interface ISandboxWorkspaceProcessRunIndexPreparation {
+    Task<ProcessExecutionRunPageStatus> PrepareProcessExecutionRunIndexAsync(CancellationToken cancellationToken = default);
+}

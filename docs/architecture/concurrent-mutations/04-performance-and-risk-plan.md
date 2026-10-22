@@ -27,6 +27,16 @@ candidate; optional postcommit projection failures remain visible until P02b's a
 
 ## Hard cost constraints
 
+The [compact Process index comparison](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-selection-index.md)
+reduces 100,000-entry read metadata from 82.1 MB to 11.2 MB, but does not qualify worker
+capacity. One actual sample per population/writer count shows tiny-history throughput
+down 13.8% and write p95 up 29.8% (37.49 ms), exceeding the investigation thresholds.
+Larger-history throughput is down 2.6–5.9%; multi-second workspace-lock tail waits remain.
+Keep the thresholds unchanged and require repeated cost attribution/mitigation plus
+bounded owner waits and sibling-root fairness before activation. O(history) compact
+selection is not a history-independent bound. No journal/effect check may be removed
+to improve these measurements.
+
 - Zero model, external network or filesystem work inside the owner transaction;
   the bounded PostgreSQL calls are the intended transactional I/O.
 - At most a fixed number of owner-batched basis queries, never one query per fact.

@@ -234,6 +234,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceProcessRunPageStore>(serviceProvider =>
             (ISandboxWorkspaceProcessRunPageStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<ISandboxWorkspaceProcessRunIndexPreparation>(serviceProvider =>
+            (ISandboxWorkspaceProcessRunIndexPreparation)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<AgentInheritedPlanningStopper>(serviceProvider => {
             var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
             return new((ISandboxWorkspaceExecutionRunStore)store, (ISandboxWorkspaceExecutionRunMutationStore)store,

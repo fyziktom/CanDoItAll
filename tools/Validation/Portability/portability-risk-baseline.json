@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-22T11:01:58.890504+00:00",
+  "generated_utc": "2026-10-22T15:31:21.033297+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15669,
+  "allowance_count": 15670,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -35843,6 +35843,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStorageLayout.cs",
       "category": "path-api",
       "source_fingerprint": "179dd19134ac69262770c903fefc089b55d64b9b583a978699ac3281e4e67ca0",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStorageLayout.cs",
+      "category": "path-api",
+      "source_fingerprint": "1b5debc982eae09829c92bd9e3c70a2cff5c4d0444689f761fcbb8d650473e4c",
       "count": 1
     },
     {

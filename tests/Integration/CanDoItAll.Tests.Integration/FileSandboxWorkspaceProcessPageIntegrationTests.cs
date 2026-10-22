@@ -31,6 +31,7 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
             Assert.Equal(ProcessExecutionRunPageStatus.Ready, page.Status);
             Assert.InRange(page.Candidates.Count, 1, take);
             Assert.Equal(page.Candidates.Count, reads.Count(read => read.PayloadType == typeof(ExecutionRunRecord)));
+            Assert.DoesNotContain(reads, read => read.FullPath == Layout(fixture).ExecutionChatIndexPath);
             Assert.DoesNotContain(reads, read => history.Any(run => read.FullPath.Contains(run.Id.ToString("N"), StringComparison.Ordinal)));
             Assert.DoesNotContain(reads, read => read.FullPath.Contains("logs", StringComparison.Ordinal));
             Assert.All(page.Candidates, run => Assert.Equal(process, Guid.Parse(run.ProcessRunId)));
@@ -57,11 +58,11 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
         await fixture.Store.SaveExecutionRunDetailAsync(new(run, null, [], []));
         var layout = Layout(fixture);
         if (state == UnavailableIndex.Missing) {
-            File.Delete(layout.ExecutionChatIndexPath);
+            File.Delete(layout.ExecutionProcessIndexPath);
         } else if (state == UnavailableIndex.Stale) {
-            var index = await ReadIndex(layout);
+            var index = JsonNode.Parse(await File.ReadAllTextAsync(layout.ExecutionProcessIndexPath))!;
             index["revision"] = -1;
-            await File.WriteAllTextAsync(layout.ExecutionChatIndexPath, index.ToJsonString());
+            await File.WriteAllTextAsync(layout.ExecutionProcessIndexPath, index.ToJsonString());
         } else {
             File.Delete(layout.ExecutionIndexPath);
             await File.WriteAllTextAsync(layout.LegacyExecutionPath, "{}");
@@ -93,6 +94,9 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
         }
         index["reportingProjectionVersion"] = 0;
         await File.WriteAllTextAsync(layout.ExecutionChatIndexPath, index.ToJsonString());
+        File.Delete(layout.ExecutionProcessIndexPath);
+        Assert.Equal(ProcessExecutionRunPageStatus.IndexUnavailable, (await fixture.Store.ReadProcessExecutionRunPageAsync(new(process))).Status);
+        Assert.Equal(ProcessExecutionRunPageStatus.Ready, await fixture.Store.PrepareProcessExecutionRunIndexAsync());
         var before = await IndexBytes(layout);
         var candidates = new List<Guid>();
         Guid? after = null;
@@ -112,12 +116,12 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
     }
 
     [Fact]
-    public async Task Future_projection_evidence_is_pending_and_does_not_trigger_journal_reads() {
+    public async Task Future_selection_projection_evidence_is_pending_and_does_not_trigger_journal_reads() {
         await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
         var layout = Layout(fixture);
-        var index = await ReadIndex(layout);
-        index["runSummaries"]![0]!["reportingProjectionVersion"] = WorkspaceChatProjectionBuilder.CurrentReportingProjectionVersion + 1;
-        await File.WriteAllTextAsync(layout.ExecutionChatIndexPath, index.ToJsonString());
+        var index = JsonNode.Parse(await File.ReadAllTextAsync(layout.ExecutionProcessIndexPath))!;
+        index["schemaVersion"] = FileProcessExecutionIndex.SchemaVersion + 1;
+        await File.WriteAllTextAsync(layout.ExecutionProcessIndexPath, index.ToJsonString());
         var reads = new List<FileSandboxWorkspacePhysicalJsonRead>();
 
         var page = await Observed(fixture, reads).ReadProcessExecutionRunPageAsync(new(Guid.NewGuid()));
@@ -132,10 +136,11 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
         await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
         var run = Run(fixture, Guid.NewGuid());
         await fixture.Store.SaveExecutionRunDetailAsync(new(run, null, [], []));
+        await fixture.Store.SaveExecutionRunDetailAsync(new(Run(fixture, Guid.NewGuid()), null, [], []));
         var layout = Layout(fixture);
-        var index = await ReadIndex(layout);
-        index["runSummaries"]![1] = index["runSummaries"]![0]!.DeepClone();
-        await File.WriteAllTextAsync(layout.ExecutionChatIndexPath, index.ToJsonString());
+        var index = JsonNode.Parse(await File.ReadAllTextAsync(layout.ExecutionProcessIndexPath))!;
+        index["runs"]![1] = index["runs"]![0]!.DeepClone();
+        await File.WriteAllTextAsync(layout.ExecutionProcessIndexPath, index.ToJsonString());
         var reads = new List<FileSandboxWorkspacePhysicalJsonRead>();
 
         await Assert.ThrowsAsync<InvalidDataException>(() => Observed(fixture, reads).ReadProcessExecutionRunPageAsync(new(Guid.Parse(run.ProcessRunId))));
@@ -183,6 +188,7 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
         var pending = await Observed(fixture, reads).ReadProcessExecutionRunPageAsync(query);
 
         Assert.Equal(ProcessExecutionRunPageStatus.PublicationPending, pending.Status);
+        Assert.Equal(ProcessExecutionRunPageStatus.PublicationPending, await fixture.NewStore().PrepareProcessExecutionRunIndexAsync());
         Assert.False(pending.Exhausted);
         Assert.Empty(reads);
         foreach (var item in before) {
@@ -237,9 +243,11 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
         Assert.Equal(ProcessExecutionRunPageStatus.Ready, page.Status);
         Assert.True(page.Exhausted);
         Assert.Empty(page.Candidates);
+        Assert.Equal(ProcessExecutionRunPageStatus.Ready, await store.PrepareProcessExecutionRunIndexAsync());
         var layout = new FileSandboxWorkspaceStorageLayout(emptyRoot);
         Assert.False(File.Exists(layout.CatalogPath));
         Assert.False(File.Exists(layout.ExecutionIndexPath));
+        Assert.False(File.Exists(layout.ExecutionProcessIndexPath));
     }
 
     [Fact]
@@ -278,6 +286,9 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
         await using (var stream = File.Create(layout.ExecutionIndexPath)) {
             await JsonSerializer.SerializeAsync(stream, execution with { RunCount = summaries.Length }, serializer);
         }
+        var preparation = Stopwatch.StartNew();
+        Assert.Equal(ProcessExecutionRunPageStatus.Ready, await fixture.Store.PrepareProcessExecutionRunIndexAsync());
+        preparation.Stop();
         var reads = new List<FileSandboxWorkspacePhysicalJsonRead>();
         var store = Observed(fixture, reads);
         for (var attempt = 0; attempt < 2; attempt++) {
@@ -293,7 +304,8 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
             Assert.Equal(2, reads.Count(read => read.PayloadType == typeof(ExecutionRunRecord)));
             Assert.Equal(selected.Select(run => run.Id).Order().Take(2), page.Candidates.Select(run => run.Id));
             output.WriteLine(JsonSerializer.Serialize(new { historyCount, attempt, elapsedMilliseconds = watch.Elapsed.TotalMilliseconds,
-                allocatedBytes = allocated, metadataBytes = new FileInfo(layout.ExecutionChatIndexPath).Length,
+                allocatedBytes = allocated, metadataBytes = new FileInfo(layout.ExecutionProcessIndexPath).Length,
+                sourceMetadataBytes = new FileInfo(layout.ExecutionChatIndexPath).Length, preparationMilliseconds = preparation.Elapsed.TotalMilliseconds,
                 physicalReadBytes = reads.Sum(read => read.LengthBytes), journalReads = 2,
                 scope = "Synthetic metadata population; actual selected run owner; filesystem cache uncontrolled; not sustained producer throughput." }));
         }
@@ -305,7 +317,7 @@ public sealed class FileSandboxWorkspaceProcessPageIntegrationTests(ITestOutputH
     private static async Task<JsonNode> ReadIndex(FileSandboxWorkspaceStorageLayout layout)
         => JsonNode.Parse(await File.ReadAllTextAsync(layout.ExecutionChatIndexPath))!;
     private static async Task<string?> IndexBytes(FileSandboxWorkspaceStorageLayout layout)
-        => File.Exists(layout.ExecutionChatIndexPath) ? await File.ReadAllTextAsync(layout.ExecutionChatIndexPath) : null;
+        => File.Exists(layout.ExecutionProcessIndexPath) ? await File.ReadAllTextAsync(layout.ExecutionProcessIndexPath) : null;
     private static ExecutionRunRecord Run(AgentToolAdmissionJournalFixture fixture, Guid process) => fixture.Detail.Run with {
         Id = Guid.NewGuid(), ChatSessionId = null, Title = "Indexed run", SourceKind = "process-step", SourceId = "page-proof",
         ProcessRunId = process.ToString("D"), ProcessStepId = Guid.NewGuid().ToString("D"), ToolAdmission = null

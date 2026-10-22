@@ -1512,3 +1512,27 @@ The two redundant page-qualification scan JSON/CSV files were removed after exac
 ownership/hash checks and verified absence: 46,585,963 bytes. The cleanup record is
 `c4-process-execution-pages-confirmed/redundant-scan-cleanup.json`; enforcement output,
 required command logs and compact proof remain.
+
+## Compact Process index, 2026-10-22
+
+Candidates `c4-process-selection-baseline`, `c4-process-selection-index` and
+`c4-process-selection-index-confirmed` were recorded before creation. They reuse standard
+Release outputs and the audited `tool-admission` and `workspace-publication-recovery`
+fixture families. No new host, database or container was provisioned. All seven execution
+commands are fully observed; all three reconciliations report zero new process,
+database-name or temporary-path residue. The baseline pins the exact signed 4a35d5311
+production binaries; the final candidate verifies 14 owning/copied outputs.
+
+Compact proof is 193495 bytes, SHA256
+`D40C00AB48C47C53294EFD6EDB456221707BC8899A067AC7741673A22CAB46FE`.
+It retains all 93 executions (four baseline, 23 first-attempt and 66 final), the one
+historical fixture failure, initial portability failure, reviewed single path baseline
+delta, final no-write enforcement and the performance regressions. Secret-pattern and
+private fixture-password sentinel checks pass before retaining it.
+
+The confirmed candidate's two redundant scan JSON/CSV files were removed after exact
+ownership/hash checks and absence verification; the record is
+`c4-process-selection-index-confirmed/redundant-scan-cleanup.json`. Keep the compact proof,
+required command/TRX/source/runtime/architecture records and reusable isolated fixture.
+Historical automatic cleanup denials remain unresolved; none was retried. Ordinary 5032,
+its databases, installed MCP tools, unrelated resources and SPA main remain preserved.

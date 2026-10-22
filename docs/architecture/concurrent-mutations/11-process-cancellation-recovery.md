@@ -90,6 +90,23 @@ Cancelled roots; terminal status alone is insufficient.
 
 ## Remaining activation proof
 
+Process execution pages now select from an owner-maintained compact projection. The
+existing publication journal retains its exact chat target until both projections are
+published; interrupted publication rolls forward through that same owner. The page port
+only reads, validates completeness and hydrates selected original journals. Legacy
+preparation is a separate explicit owner operation; no full-journal startup migration or
+reader repair is permitted. Projection identities cannot authorize effects or establish
+terminal outcomes.
+
+At 100,000 synthetic history entries the compact page reads 11.2 MB and took 103–133 ms
+in two uncontrolled-cache samples, versus 82.1 MB and 1.0–1.3 seconds previously. It still
+scans O(history) metadata. Actual 1/8/32-writer comparisons retain every accepted revision,
+but tiny-history throughput falls 13.8% and write p95 rises 29.8%; workspace contention
+still creates multi-second waits. See the [qualification and limits](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-selection-index.md).
+Do not interpret the lookup correctness pass as capacity, bounded elapsed time or fair
+worker scheduling. Repeated cost investigation and cancellation-aware owner waits remain
+activation prerequisites alongside the real stop/stage adapters.
+
 The worker must enforce finite operations/time, live/legacy fairness and cursor progress,
 then use the actual Agent/Workbench stop and accounting owners. Ordinary Agent selection
 currently has an unbounded candidate path; limiting the result after loading every journal

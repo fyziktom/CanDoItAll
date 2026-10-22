@@ -37,7 +37,7 @@ internal sealed class FileSandboxWorkspaceMutationWitness {
         IEnumerable<string> paths, IEnumerable<string> pendingJournals,
         IPhysicalFileSystemPathPolicyFactory pathPolicies, CancellationToken cancellationToken) =>
         CaptureCoreAsync(layout, paths, [layout.ExecutionStorageRoot], pendingJournals, pathPolicies, cancellationToken, null,
-            [layout.ExecutionIndexPath, layout.ExecutionChatIndexPath, layout.ExecutionUsageIndexPath]);
+            [layout.ExecutionIndexPath, layout.ExecutionChatIndexPath, layout.ExecutionProcessIndexPath, layout.ExecutionUsageIndexPath]);
 
     private static async Task<FileSandboxWorkspaceMutationWitness> CaptureCoreAsync(FileSandboxWorkspaceStorageLayout layout,
         IEnumerable<string> paths, IEnumerable<string> directories, IEnumerable<string> pendingJournals,
