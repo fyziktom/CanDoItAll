@@ -240,7 +240,8 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
 
     public enum PolicyChange { AlreadyGoverned, Added, Removed }
 
-    private static async Task<Fixture> SeedAsync(IServiceProvider services, int channel = 0, bool decisionPolicy = false, bool declaredContract = false) {
+    internal static async Task<Fixture> SeedAsync(IServiceProvider services, int channel = 0, bool decisionPolicy = false,
+        bool declaredContract = false, bool admitBackground = false) {
         var projectId = Guid.NewGuid();
         Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Saved Process source" })).IsSuccess);
         var project = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
@@ -254,6 +255,10 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
         };
         var authority = new ProcessLaunchAuthority(source, project.DatabaseProfileId,
             new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId), true, true, "fixture-source");
+        if (admitBackground) {
+            authority = await services.GetRequiredService<IProcessLaunchOperatorAuthoritySource>()
+                .CaptureLocalAsync(projectId, ProcessLaunchOperatorSurface.UserInterface);
+        }
         var preparation = ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid()));
         if (decisionPolicy) {
             var initial = Assert.Single(preparation.InitialCommit.InitialAssignments!);
@@ -300,6 +305,14 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
             "process-runtime", "system", Metadata(claim), "Execute assigned step.", string.Empty, "fixture", "fixture-model",
             ExecutionState.Running, null, created, created, created, null, string.Empty, null, [],
             ProcessRunId: assignment.RunId.ToString(), ProcessStepId: assignment.StepInstanceId.ToString());
+        if (admitBackground) {
+            run = run with { State = ExecutionState.Preparing };
+            var profile = services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile;
+            var journal = new AgentToolAdmissionJournal(services.GetRequiredService<ISandboxWorkspaceStore>(),
+                new(profile.Id, profile.Runtime.Fingerprint, services.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration()),
+                services.GetRequiredService<TimeProvider>(), services.GetServices<IAgentToolBackgroundSourcePolicy>());
+            run = run with { ToolAdmission = await journal.CreateForNewBackgroundRunAsync(run, "Original Process input.") };
+        }
         run = (await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().SaveExecutionRunDetailAsync(new(run, null, [], []))).Run;
         return new(prepared, run, claim);
     }
@@ -330,20 +343,22 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
         => new(services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(), new(new Factory(Options(services, interceptors)), new Clock()),
             services.GetRequiredService<ICanonicalRuntimeDatabase>());
 
-    private static DbContextOptions<ProcessPersistenceDbContext> Options(IServiceProvider services, params IInterceptor[] interceptors) {
+    internal static DbContextOptions<ProcessPersistenceDbContext> Options(IServiceProvider services, params IInterceptor[] interceptors) {
         var builder = new DbContextOptionsBuilder<ProcessPersistenceDbContext>();
         AppDbContextOptionsConfigurator.Configure(builder, services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         return builder.AddInterceptors(interceptors).Options;
     }
 
-    private static TestHarnessOptions Harness(CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null)
+    internal static TestHarnessOptions Harness(CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null,
+        Action<IServiceCollection>? configure = null)
         => new() { TestEnvironment = environment, ActiveProfile = profile, ConfigureServices = services => {
             foreach (var descriptor in services.Where(item => item.ImplementationType?.Name == "ProcessLaunchContinuationWorker").ToArray()) {
                 services.Remove(descriptor);
             }
+            configure?.Invoke(services);
         } };
 
-    private sealed record Fixture(ProcessPreparedLaunchSnapshot Prepared, ExecutionRunRecord Run, Guid Claim) {
+    internal sealed record Fixture(ProcessPreparedLaunchSnapshot Prepared, ExecutionRunRecord Run, Guid Claim) {
         public Guid RunId => Prepared.Preparation.InitialCommit.Mutation.State.RunId.Value;
     }
 

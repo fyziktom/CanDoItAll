@@ -569,3 +569,48 @@ zero new process/database/temporary residue. See the
 The earlier 107-case pass and two compile failures remain retained. This closes only the
 Core protocol and module factory prerequisite; the actual Process adapter, stages,
 bounded waits/fairness, cost regression investigation and activation remain open.
+
+### Original Process execution stop adapter entry
+
+Signed prerequisite 914c78922 qualifies the Core protocol. Add one narrow Application
+port taking typed root, Process run and Agent execution identities, returning the
+existing recovery pending enum (None means a verified closed execution only). The
+Processes module owns the bridge to Core; Application remains independent of Agent
+models and file storage. No new project reference or runtime partial is needed.
+
+Before signalling, after lease wait and at publication, require the durable root barrier,
+original Process claim/source receipt, selected run/root relationship, admitted owner
+fingerprint and original database profile/fingerprint. Capture the current profile
+generation once per call and reject changes during observation/publication; allow a
+renewed current generation without rewriting the original session. Current dispatch
+permission is deliberately not required for stopping an already-stopped parent. Missing
+journals and unknown effects remain pending. Inherited planning uses its separate child
+owner and cannot enter this adapter. No automatic worker or HTTP path is enabled here.
+
+Use independently testable authority/store seams for wrong root/run/claim/profile,
+revocation at each boundary and renewed-generation cases. A real composition/persistence
+case must create a new background journal through the actual admission owner before
+saving it, stop the original Process root through its runtime owner, then stop/replay
+the selected Agent through the registered adapter. Reuse the existing isolated fixture
+and source-authority seed helpers; do not fabricate admission for an existing run.
+Confirm final exact class discovery before execution. Refresh affected Application,
+Processes module, dependent composition/Web and tests in standard Release, inspect
+dependency cycles, run static gates and reconcile resources. This is Behavioral proof;
+bounded stage orchestration, elapsed waits and sustained capacity remain separate gates.
+
+Final source selection before launch: 55 cases, comprising ProcessExecutionStopperTests
+Unit 27 and Integration 6 plus 22 ProcessExecutionAuthorityPersistenceTests regressions
+for the reused seed helper. The latter keeps its existing behavior by default; the new
+opt-in admits a new unsaved Agent through the real registered source policy and journal
+owner. Integration uses the native root cancellation operation and registered stop port,
+including new-scope replay, renewed generation, active-root refusal, source corruption,
+unknown provider dispatch and legacy missing journal. No host restart is claimed.
+
+All 55 selected cases pass, with six affected Release builds, twenty verified runtime
+outputs, full portability and zero new resource residue. The initial discovery/observer
+helper defects were corrected before execution and remain retained. See the
+[Process stop adapter qualification](../validation/2026-10-22-process-stop-adapter.md).
+The entry and Behavioral closure gates pass for this adapter; actual recovery stages and
+performance/activation remain open. During current-profile review, also flag the inherited
+Workbench adapter's capture of a mutable profile object: bind identity/fingerprint values
+there and add late-change regressions before activating the shared worker.

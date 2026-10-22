@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current behavioral checkpoint: [ordinary Agent parent stopping](validation/2026-10-22-ordinary-parent-stop.md).
+Current behavioral checkpoint: [original Process stop adapter](validation/2026-10-22-process-stop-adapter.md).
+All 55 selected cases pass through the typed port and real Process/Agent owners. Six
+Release builds, twenty source/runtime identities, full portability, architecture and
+resource closure pass. Exact root/claim/source/profile checks preserve pending unknown
+work and support renewed current generations without changing original admission.
+Finite recovery stages, capacity/fairness, snapshot refresh, remaining writers and final
+E2E remain open. SPA stays on its separate branch.
+
+Preceding behavioral checkpoint: [ordinary Agent parent stopping](validation/2026-10-22-ordinary-parent-stop.md).
 All 112 selected cases pass, including exact-session signalling, authority changes,
 unknown/legacy/request-scoped provider work and lost publication acknowledgements.
 Six Release builds, source/runtime identity, unchanged architecture cycles, full

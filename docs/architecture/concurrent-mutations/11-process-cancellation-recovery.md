@@ -95,9 +95,15 @@ journal policies. Signals require the exact admitted session/source/profile gene
 publication follows a bounded dispatch-lease wait, reread and repeated current parent
 authority checks. Unknown provider/effect work and committed unfinished effects remain
 pending. Neither a legacy terminal status nor an empty request-scoped attachment journal
-proves that an invocation stopped. The real module factory is registered; Process root/
-original-receipt authority still needs its adapter before recovery can invoke it. See the
+proves that an invocation stopped. The real module factory is registered. See the
 [focused qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-ordinary-parent-stop.md).
+
+The Processes module now supplies the typed Application stop port. Its adapter verifies
+the original accepted claim/source, selected run/root, admitted fingerprint and stable
+current profile identity/fingerprint/generation before any signal or journal publication.
+Historical generation is retained across renewed current generations. The registered
+adapter's native persistence proof is [qualified here](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-stop-adapter.md).
+Automatic stage orchestration and bounded elapsed/fairness proof are still required.
 
 Process execution pages now select from an owner-maintained compact projection. The
 existing publication journal retains its exact chat target until both projections are

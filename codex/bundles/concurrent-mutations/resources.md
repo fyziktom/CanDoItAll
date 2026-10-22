@@ -1556,3 +1556,23 @@ JSON/CSV files were removed with exact ownership/hash and absence checks; its
 and the reusable fixture for the Process adapter. Earlier automatic cleanup denials
 remain unresolved and were not retried. Ordinary 5032 and the separate SPA branch remain
 preserved.
+
+## Original Process stop adapter, 2026-10-22
+
+`c4-process-stop-adapter` was owned before creation and reused standard Release outputs,
+the existing API test fixture family and isolated PostgreSQL server. Its original
+ownership record used path instead of the observer's root/state fields; the original
+pre-create record is retained alongside the corrected representation. The rejected
+observer launched no test/host. Exact corrected discovery precedes all 55 tests, and the
+successful observer covers all three commands with zero new process, database-name or
+temporary-path residue.
+
+Compact proof: 211487 bytes, SHA256
+`305A35B57A656051EED447DA3ECBEAFF679245FA061B0CCD6716DFCBB6A322CD`.
+Pattern/private-password checks pass. Its two redundant scan JSON/CSV files and the older
+ordinary-stop candidate's two redundant scans were removed after exact ownership/proof
+hash checks and verified absence, recorded in each candidate's redundant-scan-cleanup.json.
+Commands, required TRX/source/runtime/architecture evidence and compact proofs remain.
+No denied resource was retried; historical automatic cleanup denials remain open.
+The ordinary 5032 instance, installed tooling, unrelated resources and SPA main remain
+preserved. Keep the shared isolated fixture for bounded stage integration.

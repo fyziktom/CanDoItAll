@@ -67,6 +67,7 @@ public static class ProcessesModuleServiceCollectionExtensions
 
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddScoped<IProcessOriginalReceiptAuthorityReader, ProcessOriginalReceiptAuthorityReader>();
+        services.TryAddScoped<IProcessExecutionStopper, AgentFrameworkProcessExecutionStopper>();
         services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
         {
             var executionRunStore =
