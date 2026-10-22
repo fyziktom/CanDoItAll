@@ -106,6 +106,11 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
             case ProcessDecisionRefresh refresh:
                 receipt = await StageRefreshAsync(state, current, refresh, accounting, material, cancellationToken).ConfigureAwait(false);
                 break;
+            case ProcessDecisionFinalization finalization when accounting is null:
+                _ = RequireCompleteChildren(current, await ReadBoundedChildrenAsync(current.Reference, cancellationToken).ConfigureAwait(false));
+                await EfProcessDecisionFinalizationGuard.RequireAsync(dbContext, state, current, finalization, cancellationToken).ConfigureAwait(false);
+                receipt = new(command, true, ProcessDecisionTransitions.FinalizeTerminal(current, expected, finalization.StepStatus));
+                break;
             case ProcessDecisionChangePhase phase when accounting is null:
                 var changed = phase.Change switch {
                     ProcessDecisionPhaseChange.WaitForReview => ProcessDecisionTransitions.WaitForReview(current, expected),
@@ -297,6 +302,7 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
             throw new InvalidOperationException("Decision accounting cannot change the terminal runtime outcome.");
         }
         var valid = command switch {
+            ProcessDecisionFinalization finalization => originalStep.Status == finalization.StepStatus && step.Status == finalization.StepStatus,
             ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.WaitForReview or ProcessDecisionPhaseChange.BeginReconciliation }
                 => step.Status is ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.WaitingApproval or ProcessRuntimeStepStatus.Blocked,
             ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.Complete } => step.Status == ProcessRuntimeStepStatus.Completed,
@@ -309,7 +315,7 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
             ProcessDecisionRefresh => step.Status == ProcessRuntimeStepStatus.Ready,
             _ => true
         };
-        var releasesClaim = command is ProcessDecisionChangePhase or ProcessDecisionRefresh or ProcessDecisionClosure { Completion: not null };
+        var releasesClaim = command is ProcessDecisionChangePhase or ProcessDecisionFinalization or ProcessDecisionRefresh or ProcessDecisionClosure { Completion: not null };
         if (!valid || releasesClaim &&
                 (step.ActiveClaimToken is not null || proposed.Claims.Any(claim => claim.StepInstanceId == step.StepInstanceId &&
                     claim.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed))) {

@@ -106,3 +106,12 @@ capture times and prior material/decision generations remain historical facts.
 
 These owner transitions do not activate an executor. The Application producer and inherited
 Agent/Workflow journal paths must use them before advertising shared snapshot capability.
+
+## Terminal local generation
+
+`ProcessDecisionFinalization` explicitly closes an empty or already-accounted generation
+whose step is terminal. Cancelled maps to Cancelled accounting; Completed, Failed and
+Skipped map to Completed accounting without asserting business success. It retains the
+exact local budget and forbids new material, inherited capture or settlement payloads.
+Persistence validates complete work and the actual terminal step under the root fence;
+the pure transition alone is not durable authorization.

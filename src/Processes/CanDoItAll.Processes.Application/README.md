@@ -35,3 +35,13 @@ also authorize the operation. A historical child observation is not publication 
 scope and reference. It does not select the active parent generation or grant execution
 authority. Missing material is an explicit recovery failure; callers must not substitute
 current source reads.
+
+## Terminal decision accounting
+
+`ProcessDecisionFinalizationCoordinator` closes an empty or already-accounted generation
+after its business step becomes terminal. The caller supplies the original action ID,
+explicit actor and exact decision/budget expectations. Retain that request before an
+uncertain commit and replay it unchanged; a newer displayed expectation is another action.
+The coordinator checks the original receipt before current-state selection and does not
+change business outcomes or produce effects. Actual child work must first be closed and
+settled by its owner. Shared scope closure and durable root recovery are separate owners.

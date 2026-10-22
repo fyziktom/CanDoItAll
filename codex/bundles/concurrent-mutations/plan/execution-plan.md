@@ -1,23 +1,26 @@
 # Execution plan
 
-Current qualified checkpoint: [owned Agent cancellation signalling](../validation/2026-10-22-cancellation-signal-lifetime.md).
-All 60 selected cases pass, including 13 new cases. Exact and upstream cancellation mark
-the token immediately without waiting for consumer callbacks. One retained notification
-owns callback completion, sanitized failure reporting and source release; disposal keeps
-the exact execution identity reserved until notification finishes. Both existing DI paths
-and actual selected-stop integration pass. Six Release builds, full portability,
-source/runtime identity and all five observed test commands pass with zero new residue.
-Terminal empty-decision finalization, durable recovery, snapshot refresh,
-producer/Workflow/settings integration, remaining writers, sustained capacity and final
-end-to-end closure remain open. SPA stays on its separate branch.
+Current qualified checkpoint: [terminal decision finalization](../validation/2026-10-22-terminal-decision-finalization.md).
+All 312 selected cases pass on the final candidate, including 94 new cases. Empty or
+already-accounted decisions can close after a terminal step without changing its business
+outcome or inventing work/effects. A cancelled strategy result can atomically settle its
+last child and finish a quiescent root, with full post-flush validation before commit.
+Earlier codec, test-probe and root-guard failures remain recorded; no earlier pass is
+reused after the production repairs. Affected Release builds, full portability,
+source/runtime identity and resource reconciliation pass. Durable recovery, snapshot
+refresh, producer/Workflow/settings integration, remaining writers, sustained capacity
+and complete E2E closure remain open. SPA stays on its separate branch.
+
 
 
 
 [P13 root cancellation fence](P13-root-cancellation-fence.md) qualifies the persisted guard.
-[P14 cancellation lifetime](P14-cancellation-signal-lifetime.md) now qualifies nonblocking
-signals and owned notification cleanup. Continue with terminal empty-decision finalization
-and bounded durable recovery before producer activation. P13 signing remains pending in
-the existing local GPG prompt; its reviewed index is preserved.
+[P14 cancellation lifetime](P14-cancellation-signal-lifetime.md) qualifies nonblocking
+signals and owned notification cleanup. [P15 finalization](P15-terminal-decision-finalization.md)
+now qualifies empty terminal decisions and corrects P13's ordering for atomic cancelled
+results. Continue with bounded durable recovery before producer activation. The existing
+signed P13 commit remains pending in local GPG; its index is preserved. P14's exact
+qualified blobs are saved separately for the subsequent signed commit.
 
 The [cancellation-barrier continuation](../validation/2026-10-21-cancellation-barrier-and-replay.md)
 passes all 84 selected cases, including 14 new cases, with seven direct Release builds

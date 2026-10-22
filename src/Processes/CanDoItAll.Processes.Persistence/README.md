@@ -150,7 +150,17 @@ so a caller cannot disguise lease renewal by modifying its original snapshot.
 
 Finalization checks outstanding runtime, decision, budget and shared-scope work with
 one scalar query. Unsettled or uncertain work keeps the root CancelRequested with an
-explicit diagnostic. Complete original owner settlement before retrying finalization;
-do not combine the last settlement and finalization in one request. Accepted historical
-receipts still replay and exact accounting remains legal after stopping. Durable root
+explicit diagnostic. Ordinary cancellation waits for original owner settlement before
+retrying finalization. A new cancelled strategy result may atomically settle its matching
+last child and cancel the root: the guard then requires full-root quiescence after the
+flush and persisted result acceptance, before commit. Remaining work rolls back the
+whole outcome. Accepted historical receipts still replay and exact accounting remains
+legal after stopping. Durable root
 recovery and inherited producer activation require their separate integration gates.
+
+
+Terminal empty-decision finalization uses one exact persisted step/claim/budget guard
+and a complete child read capped at 65 rows. Unsettled allocations, including zero-work
+replan grants, and inconsistent child/allocation owner revisions refuse closure. Runtime
+business statuses and effects remain unchanged. The command is receipt version 6;
+versions 1–5 retain their previous shapes. No schema change is required for this command.

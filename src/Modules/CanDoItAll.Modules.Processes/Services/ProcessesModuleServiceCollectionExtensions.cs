@@ -121,6 +121,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessDecisionResultCoordinator>();
         services.TryAddScoped<ProcessDecisionReviewCoordinator>();
         services.TryAddScoped<ProcessDecisionTerminalAccountingCoordinator>();
+        services.TryAddScoped<ProcessDecisionFinalizationCoordinator>();
         services.TryAddScoped<IProcessDecisionRootQuery, EfProcessDecisionRootQuery>();
         services.TryAddScoped<IProcessRootCancellationBarrierReader, EfProcessRootCancellationBarrierReader>();
         services.TryAddScoped<IProcessDecisionStepQuery, EfProcessDecisionStepQuery>();

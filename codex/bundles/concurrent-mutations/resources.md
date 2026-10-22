@@ -1429,3 +1429,26 @@ with exact ownership/hash checks and verified absence: 92,616,348 bytes. Their r
 `c4-root-cancellation-final/redundant-scan-cleanup.json`; enforcement, manifests and proof
 remain. No historical denied target was retried. Earlier automatic cleanup denials remain
 unresolved; ordinary 5032, its databases, installed tools and unrelated resources remain.
+
+## Terminal decision finalization, 2026-10-22
+
+Five candidates (`c4-terminal-finalization`, `-fixed`, `-final`, `-quiescence`, `-retest`) reused
+standard Release outputs and the existing isolated PostgreSQL 18 fixture. The final
+312-case selection passes; earlier failures and unexecuted tails remain in proof.
+All 22 test commands are observed and every attempt reconciles with zero new process,
+database-name or temporary-path delta. No new container, host or custom compiled-output
+tree was created. Compact proof: 765904 bytes, SHA256 `37E60C654F3CE569D0E6DE40AC5EE58D9EE1BEAF49B3BDB5EF8D25AE056A66E7`.
+Retain the small command/TRX/source/runtime/architecture records and required shared
+fixture for continuing recovery integration.
+
+P14's two redundant scan JSON/CSV files were removed with exact ownership/hash checks
+and verified absence (46,352,608 bytes), recorded in
+`c4-cancellation-signal/redundant-scan-cleanup.json`. No historical denied target was
+retried. Existing automatic cleanup denials remain unresolved; preserve ordinary 5032,
+its databases, installed tools, unrelated resources and the separate SPA branch.
+
+The ten redundant P15 scan JSON/CSV files were removed with exact ownership/hash
+checks and verified absence: 231,777,535 bytes.
+The record is `c4-terminal-finalization-retest/redundant-scan-cleanup.json`.
+Required command/enforcement logs, failures, TRX, source/runtime manifests and compact
+proof remain. No historical denied resource was retried by this cleanup.

@@ -97,6 +97,23 @@ public static class ProcessDecisionTransitions {
         return ChangePhase(current, ProcessDecisionPhase.Cancelled);
     }
 
+    public static ProcessDecisionGeneration FinalizeTerminal(ProcessDecisionGeneration current, ProcessDecisionExpectation expectation,
+        ProcessRuntimeStepStatus stepStatus) {
+        RequireExpected(current, expectation);
+        var phase = TerminalPhase(stepStatus);
+        if (current.Phase is not (ProcessDecisionPhase.Active or ProcessDecisionPhase.WaitingForReview or ProcessDecisionPhase.Reconciling)) {
+            throw new ProcessDecisionException(ProcessDecisionRefusal.InvalidPhase);
+        }
+        RequireAllClosed(current);
+        return ChangePhase(current, phase);
+    }
+
+    public static ProcessDecisionPhase TerminalPhase(ProcessRuntimeStepStatus stepStatus) => stepStatus switch {
+        ProcessRuntimeStepStatus.Cancelled => ProcessDecisionPhase.Cancelled,
+        ProcessRuntimeStepStatus.Completed or ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Skipped => ProcessDecisionPhase.Completed,
+        _ => throw new InvalidDataException("Decision finalization requires a terminal business step.")
+    };
+
     public static ProcessDecisionAdvance Advance(ProcessDecisionGeneration current, ProcessDecisionExpectation expectation,
         ProcessDecisionMaterialId materialId) {
         RequireExpected(current, expectation);

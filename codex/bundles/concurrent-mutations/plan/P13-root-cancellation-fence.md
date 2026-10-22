@@ -278,3 +278,15 @@ here. Empty active decisions and already-closed children without final completio
 an explicit terminal reconciliation path before worker activation. Do not weaken this
 quiescence predicate to ignore them. Historical child/allocation volume also needs its
 own SQL plan/index measurements; the descendant-population timing is not that proof.
+
+## Atomic cancelled-result ordering correction
+
+P15 regression testing exposed that the original pre-flush guard also rejected a valid
+cancelled strategy result settling its last original child in the same transaction.
+The [P15 qualification](../validation/2026-10-22-terminal-decision-finalization.md)
+supersedes the blanket prohibition on combining final settlement and root cancellation
+for that exact typed result. Admission remains checked before staging; independent
+full-root quiescence runs after persisted result acceptance and before commit. Remaining
+runtime/decision/budget work rolls back the whole outcome. Non-result cancellation
+retains early refusal. All 312 final P15 cases pass, including the existing P13 root
+quiescence/admission lanes and 13 added ordering/rollback/replay regressions.

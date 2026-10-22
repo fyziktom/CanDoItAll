@@ -175,6 +175,13 @@ public sealed class EfProcessRuntimeUnitOfWork(
             throw new InvalidOperationException("Process accounting and decisions must accompany an applied mutation of an existing runtime state.");
         }
 
+        if (request.Decision is ProcessDecisionFinalization &&
+                (request.DecisionBudget is not null || request.DecisionMaterial is not null || request.DecisionRunScope is not null ||
+                request.Mutation.State.Status != request.OriginalState.Status || request.Mutation.Events.Count != 0 ||
+                request.Mutation.OutboxMessages.Count != 0 || request.Mutation.ArtifactLedgerEvents.Count != 0)) {
+            throw new InvalidOperationException("Terminal decision finalization cannot change the business outcome, settle work or publish effects.");
+        }
+
         if (request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)
         {
             return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
@@ -305,6 +312,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         }
 
         var workAdmission = ProcessRuntimeWorkAdmission.Read(existing, request);
+        var checkCancellationAfterFlush = false;
         if (existing is null)
         {
             dbContext.RuntimeStates.Add(ProcessPersistenceMappers.ToEntity(request.Mutation.State));
@@ -312,11 +320,13 @@ public sealed class EfProcessRuntimeUnitOfWork(
         else
         {
             EnsureCurrentStateMatchesOriginal(existing, request.OriginalState);
-            if (await EfProcessRootCancellationGuard.CheckAsync(dbContext, request, existing, workAdmission,
-                    cancellationToken).ConfigureAwait(false) is { } cancellationRejection) {
+            var cancellationCheck = await EfProcessRootCancellationGuard.CheckAsync(dbContext, request, existing, workAdmission,
+                cancellationToken).ConfigureAwait(false);
+            if (cancellationCheck.Rejection is { } cancellationRejection) {
                 dbContext.ChangeTracker.Clear();
                 return cancellationRejection;
             }
+            checkCancellationAfterFlush = cancellationCheck.CheckAfterFlush;
             if (await ValidateBlockedRecoveryChildLineageAsync(
                     request,
                     cancellationToken).ConfigureAwait(false) is { } childLineageRejection)
@@ -364,6 +374,9 @@ public sealed class EfProcessRuntimeUnitOfWork(
             ?? throw new InvalidOperationException("The Process runtime state was not found after its mutation was saved.");
         await ProcessDecisionResultAcceptance.RequireAsync(dbContext,
             request with { Mutation = request.Mutation with { State = persistedState } }, cancellationToken).ConfigureAwait(false);
+        if (checkCancellationAfterFlush) {
+            await EfProcessRootCancellationGuard.RequireAfterFlushAsync(dbContext, persistedState, cancellationToken).ConfigureAwait(false);
+        }
         if (dispatchExpiresAtUtc is not null) {
             ProcessRuntimeDispatchGuard.RequireUnexpired(request, dispatchExpiresAtUtc, clock.GetUtcNow());
         }

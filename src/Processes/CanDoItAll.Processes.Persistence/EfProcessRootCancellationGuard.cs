@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +14,7 @@ internal static class EfProcessRootCancellationGuard {
     internal const string WorkAdmissionStopped = "Runtime.RootWorkAdmissionStopped";
     internal const string WorkPending = "Runtime.RootCancellationWorkPending";
 
-    internal static async Task<ProcessRuntimeCommitResult?> CheckAsync(ProcessPersistenceDbContext context,
+    internal static async Task<(ProcessRuntimeCommitResult? Rejection, bool CheckAfterFlush)> CheckAsync(ProcessPersistenceDbContext context,
         ProcessRuntimeCommitRequest request, ProcessRuntimeStateEntity current, ProcessRuntimeWorkAdmission admission,
         CancellationToken cancellationToken) {
         var proposed = request.Mutation.State;
@@ -30,21 +31,47 @@ internal static class EfProcessRootCancellationGuard {
             if (rootStatus is null or ProcessRuntimeStatus.CancelRequested or ProcessRuntimeStatus.Cancelled ||
                     !isRoot && ProcessRuntimeTerminalStates.IsRunTerminal(rootStatus.Value) ||
                     isRoot && (proposed.Status == ProcessRuntimeStatus.CancelRequested || ProcessRuntimeTerminalStates.IsRunTerminal(proposed.Status))) {
-                return Refuse(current, WorkAdmissionStopped,
-                    $"Root '{current.RootRunId:D}' cannot admit new work with persisted status '{rootStatus}' and proposed run status '{proposed.Status}'.");
+                return (Refuse(current, WorkAdmissionStopped,
+                    $"Root '{current.RootRunId:D}' cannot admit new work with persisted status '{rootStatus}' and proposed run status '{proposed.Status}'."), false);
             }
         }
         if (!isRoot || current.Status == ProcessRuntimeStatus.Cancelled || proposed.Status != ProcessRuntimeStatus.Cancelled) {
-            return null;
+            return (null, false);
+        }
+        if (HasAtomicCancelledResult(request)) {
+            return (null, true);
         }
         var pending = await ReadPendingAsync(context, new(current.RootRunId), cancellationToken).ConfigureAwait(false);
-        if (proposed.Claims.Any(claim => ProcessRuntimeWorkAdmission.IsActive(claim.Status)) ||
-                proposed.Steps.Any(step => step.ActiveClaimToken is not null || step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running)) {
+        if (HasLocalRuntimeWork(proposed)) {
             pending |= ProcessRootCancellationPending.RuntimeWork;
         }
-        return pending == ProcessRootCancellationPending.None ? null : Refuse(current, WorkPending,
-            $"Root '{current.RootRunId:D}' cannot finish cancellation while original work remains: {pending}. Settle or reconcile that work before retrying.");
+        return (pending == ProcessRootCancellationPending.None ? null : Refuse(current, WorkPending,
+            $"Root '{current.RootRunId:D}' cannot finish cancellation while original work remains: {pending}. Settle or reconcile that work before retrying."), false);
     }
+
+    internal static async Task RequireAfterFlushAsync(ProcessPersistenceDbContext context,
+        ProcessRuntimeStateSnapshot state, CancellationToken cancellationToken) {
+        var pending = await ReadPendingAsync(context, state.RootRunId, cancellationToken).ConfigureAwait(false);
+        if (HasLocalRuntimeWork(state)) {
+            pending |= ProcessRootCancellationPending.RuntimeWork;
+        }
+        if (state.RunId != state.RootRunId || state.Status != ProcessRuntimeStatus.Cancelled || pending != ProcessRootCancellationPending.None) {
+            throw new InvalidOperationException($"{WorkPending}: Root '{state.RootRunId}' cannot commit its cancelled result while original work remains: {pending}.");
+        }
+    }
+
+    private static bool HasAtomicCancelledResult(ProcessRuntimeCommitRequest request)
+        => request.Decision is ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Cancel } closure &&
+            request.DecisionBudget is ProcessDecisionBudgetSettlement &&
+            request.Mutation.State.AppliedResults.Any(result => result.StepInstanceId == closure.StepInstanceId &&
+                result.AppliedStepStatus == ProcessRuntimeStepStatus.Cancelled && result.Outcome == StrategyOutcome.Canceled &&
+                result.ExecutionRunId?.Value == closure.ChildId.Value && !request.OriginalState.AppliedResults.Any(original =>
+                    original.StepInstanceId == result.StepInstanceId && original.StrategyId == result.StrategyId &&
+                    original.IdempotencyKey == result.IdempotencyKey));
+
+    private static bool HasLocalRuntimeWork(ProcessRuntimeStateSnapshot state)
+        => state.Claims.Any(claim => ProcessRuntimeWorkAdmission.IsActive(claim.Status)) ||
+            state.Steps.Any(step => step.ActiveClaimToken is not null || step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running);
 
     internal static async Task<ProcessRootCancellationPending> ReadPendingAsync(ProcessPersistenceDbContext context,
         ProcessRunId rootRunId, CancellationToken cancellationToken = default) {
