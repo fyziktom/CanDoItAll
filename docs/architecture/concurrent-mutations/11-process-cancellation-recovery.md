@@ -6,6 +6,10 @@ Agent notification selection and bounded HTTP/status integration remain in progr
 path still performs its synchronous cascade. See the [design and activation criteria](../../../codex/bundles/concurrent-mutations/plan/P16-durable-root-recovery.md)
 and the [queue qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-recovery.md)
 and [58-case coordinator/transfer qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-coordination.md).
+The [30-case paged Agent lookup qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-execution-pages.md)
+proves selected journal bounds and explicit pending evidence. Its full metadata scan still
+reads 82 MB and takes 1.0–1.3 seconds at 100,000 entries. An owner-maintained compact index
+and cost/contention proof are required before this read port can serve an active worker.
 
 ## Transaction and ownership
 

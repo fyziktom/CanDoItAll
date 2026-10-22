@@ -14,6 +14,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     ISandboxWorkspaceChatProjectionQueryStore,
     ISandboxWorkspaceChatSessionStore,
     ISandboxWorkspaceExecutionRunStore,
+    ISandboxWorkspaceProcessRunPageStore,
     ISandboxWorkspaceChatRunStartStore,
     ISandboxWorkspaceExecutionRunMutationStore,
     ISandboxWorkspaceExecutionRunLeaseStore,
@@ -488,6 +489,23 @@ public sealed partial class FileSandboxWorkspaceStore :
         try {
             await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await executionSliceStore.ListRunsAsync(cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
+        }
+    }
+
+    public async Task<ProcessExecutionRunPage> ReadProcessExecutionRunPageAsync(
+        ProcessExecutionRunPageQuery query, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(query);
+        query.Validate();
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            if (PendingCommitJournalPaths.Any(File.Exists)) {
+                return ProcessExecutionRunPage.Pending(ProcessExecutionRunPageStatus.PublicationPending);
+            }
+            return await new FileProcessExecutionRunPageReader(layout, jsonStore).ReadAsync(query, cancellationToken).ConfigureAwait(false);
         } catch (Exception failure) {
             operation.RetainFailure(failure);
             throw;

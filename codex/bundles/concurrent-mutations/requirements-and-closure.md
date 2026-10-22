@@ -1,14 +1,16 @@
 # Requirements and closure ledger
 
-Current qualified checkpoint: [finite recovery coordination and transfer safeguards](validation/2026-10-22-recovery-coordination.md).
-All 58 distinct selected cases qualify, including 25 new cases. The finite coordinator
-preserves saved intent through cancellation, uncertain acknowledgements and lease loss.
-Transfer rejects unfinished recovery and releases its locks when a writer is active.
-Six Release builds, final portability, source/binary identity and resource reconciliation
-pass. One historical model-count assertion failure and its test-only bridge are retained.
-The signed queue substrate remains `13de74201`. Actual stage/Agent integration, host
-fairness, HTTP/status, snapshot refresh, Workflow/settings, remaining writers, sustained
-capacity and final E2E closure remain open. SPA stays on its separate branch.
+Current qualified checkpoint: [paged Agent execution lookup and cost finding](validation/2026-10-22-process-execution-pages.md).
+All 30 selected lookup cases pass. Candidate journal hydration is paged, unavailable
+indexes remain pending, and restart selection retains original records. Five affected
+Release builds plus four refreshed downstream builds, portability (15669 unchanged),
+rendering, identity and resource checks pass. The first prototype's content-version defect
+and 15 historical failures remain retained. At 100,000 history entries, a page still
+reads 82 MB and takes 1.0–1.3 seconds: this cost blocks automatic worker activation.
+The queue and coordinator prerequisites are signed as `13de74201` and `8cd7ebab8`.
+Compact owner indexing, actual Agent/stage integration, host fairness, HTTP/status,
+snapshot refresh, Workflow/settings, remaining writers, sustained capacity and final E2E
+closure remain open. SPA stays on its separate branch.
 
 
 

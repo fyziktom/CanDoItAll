@@ -1490,3 +1490,25 @@ with absence verified: 93,078,122 bytes. The record is
 enforcement output and the compact proof remain. No historical denied resource was
 retried. Existing automatic cleanup denials remain unresolved; ordinary 5032, its
 databases, installed tools, unrelated resources and the separate SPA branch are preserved.
+
+## Paged Agent execution lookup, 2026-10-22
+
+Candidates `c4-process-execution-pages` and `c4-process-execution-pages-confirmed` were
+recorded before creation. They reuse standard Release outputs and the `tool-admission`
+temporary fixture family. No new host/container/database was provisioned; the existing
+isolated PostgreSQL server was inspected only for resource reconciliation. All three
+execution commands are observed and both candidates have zero new process, database-name
+or temporary-path residue. The first failed prototype and the complete 30-case rerun
+are retained; the final candidate's source and 14 owning/copied binary identities match.
+
+Compact proof: 107320 bytes, SHA256
+`166C09C86A02EFFDAB09691B8B904993B24AA99C030400D10914FC3340EB8C0B`.
+Keep it, command/TRX/identity/architecture records and the shared fixture for the next
+index/stage work. Historical automatic cleanup denials remain unresolved and are not
+retried by this checkpoint. Ordinary 5032, installed tools, unrelated resources and SPA
+main remain preserved.
+
+The two redundant page-qualification scan JSON/CSV files were removed after exact
+ownership/hash checks and verified absence: 46,585,963 bytes. The cleanup record is
+`c4-process-execution-pages-confirmed/redundant-scan-cleanup.json`; enforcement output,
+required command logs and compact proof remain.

@@ -370,3 +370,66 @@ or terminalize unknown work. Selected Agent/child outcomes must be verified befo
 accounting intent is prepared. The final root check includes persisted local root work
 as well as descendants, and a clean SQL guard alone does not substitute for completion
 of the ordinary Agent notification scan.
+
+### Paged Agent lookup implementation entry
+
+Prerequisites are signed as `13de74201` and `8cd7ebab8`. Implement the lookup as a new
+Core read port with typed Process/continuation GUIDs, a page limit of 1–64, explicit
+Ready/IndexUnavailable/PublicationPending/LayoutUnavailable outcomes, and an exhausted
+marker that is valid only for a Ready page. Persistence owns a small metadata selector;
+the existing store supplies only its workspace guard and delegates. No new partial,
+project reference, second journal, implicit fallback or automatic index repair is needed.
+
+The selector reads a narrow projection of the canonical execution and chat indexes,
+checks their version/revision/count agreement and unique nonempty run identities, then
+retains only the smallest Take+1 eligible IDs after the cursor. Hydrate at most Take run
+records, including old projection rows conservatively because their Process lineage is
+not yet trustworthy. A future projection version or incomplete index is explicit pending
+evidence, never exhaustion. Read selected records afresh; file timestamps alone are not
+an authority for cache reuse. No journal details, effects or unrelated run files are read.
+Pending publication journals are reported before selection, without invoking recovery.
+
+The owning proof is a new FileSandboxWorkspaceProcessPageIntegrationTests class (planned
+18 cases, including two diagnostic history sizes) plus the existing twelve-case
+FileSandboxWorkspaceProcessQueryIntegrationTests class. Cover restart pagination at
+three page sizes, unavailable/stale/legacy layouts, old/future projections, duplicate
+identities, same-stamp edits, pending publication, invalid input, missing/corrupt selected
+records, empty storage and profile isolation. Diagnostic metadata populations exercise
+cold/warm cost and selected-read counts; they are not producer-throughput evidence.
+Confirm exact discovery before launch. Build affected Core/Persistence, the Agent module
+registration, Web composition and the owning Integration assembly in standard Release,
+with final portability and resource closure. Build them in that dependency order; existing
+qualified unchanged dependencies allow `--no-dependencies`, and the final identity check
+must verify that the Integration output contains the refreshed production assemblies.
+No automatic recovery activation follows from these thirty selected cases alone.
+
+### Lookup result and compact projection decision
+
+All 30 cases now pass; the first prototype's content-version comparison was incorrect
+and its 15 failures are retained. The final reader still consumes 82,104,264 metadata
+bytes at 100,000 unrelated entries, allocating about 44 MB and taking 1.0–1.3 seconds.
+These are two diagnostic samples with uncontrolled filesystem cache, not distributions
+or cold-cache/concurrent-writer proof. Keep worker activation blocked by this finding.
+
+The next change belongs to the existing file-store projection owner. Derive a compact
+selection projection from each exact committed chat-index target and publish it before
+that owner clears its existing prepared journal. Retain only the execution identity,
+parsed Process identity or explicit unknown lineage, and completeness/version evidence.
+Do not copy authority, effects or outcomes into the projection. The read port continues
+to hydrate original selected records and reuses no timestamp-based record cache.
+
+Prefer this single derived projection over a second canonical journal, a database bridge
+with a cross-store commit obligation, or a bespoke filesystem search tree. The prototype
+still has O(history) metadata cost; quantify the compact file's size, allocation and lock
+hold at 20,000/100,000 entries before accepting it. Compare actual owner writes and reads
+under contention, including failure/restart between canonical, chat and compact index
+publication. If compact projection cost still violates the slice/latency budget, reopen
+the index decision rather than declaring paging alone sufficient.
+
+Audit every publication path: initial/bulk save, run creation, existing-run update,
+chat-backed creation, session update, Agent deletion, projection rebuild and retained
+prepared-journal recovery. A revision/count mismatch, missing projection, future format,
+duplicate or invalid identity is explicit unavailable/corrupt evidence. Never return
+exhaustion from it. Legacy upgrade is a distinct owner preparation step from trusted
+complete metadata; it may not hydrate all historical journals inside a recovery slice.
+The page reader performs no migration, repair or publication.
