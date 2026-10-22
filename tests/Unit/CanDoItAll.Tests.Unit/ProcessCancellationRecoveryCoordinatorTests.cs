@@ -88,6 +88,51 @@ public sealed class ProcessCancellationRecoveryCoordinatorTests {
     }
 
     [Fact]
+    public async Task A_later_success_keeps_the_earlier_unresolved_cycle_across_the_slice_yield() {
+        var fixture = new Fixture();
+        fixture.Queue.Saved = fixture.Queue.Saved! with { Position = new(ProcessCancellationRecoveryStage.Runtime,
+            CurrentRun: RecoveryContractFixture.Root) };
+        fixture.Step = (claim, _) => Task.FromResult(fixture.Calls == 1
+            ? new ProcessCancellationRecoveryCheckpoint(claim.Position with { ExecutionAfter = new(Guid.NewGuid()), CycleHadPending = true },
+                Pending: ProcessCancellationRecoveryPending.UnresolvedEffects)
+            : new ProcessCancellationRecoveryCheckpoint(new(ProcessCancellationRecoveryStage.Runtime,
+                RunAfter: RecoveryContractFixture.Root, CycleHadPending: true)));
+        var result = await fixture.RunAsync(2);
+        Assert.Equal(ProcessCancellationRecoverySliceStatus.Yielded, result.Status);
+        Assert.Equal(ProcessCancellationRecoveryPending.None, result.Pending);
+        Assert.True(fixture.Queue.Saved!.Position.CycleHadPending);
+        Assert.Equal(RecoveryContractFixture.Root, fixture.Queue.Saved.Position.RunAfter);
+        Assert.Null(fixture.Queue.Saved.Position.CurrentRun);
+    }
+
+    [Fact]
+    public async Task A_stage_cannot_skip_unresolved_work_by_advancing_without_cycle_evidence() {
+        var fixture = new Fixture();
+        var original = fixture.Queue.Saved!;
+        fixture.Step = (claim, _) => Task.FromResult(new ProcessCancellationRecoveryCheckpoint(
+            claim.Position with { RunAfter = claim.RootRunId }, Pending: ProcessCancellationRecoveryPending.UnresolvedEffects));
+        var result = await fixture.RunAsync();
+        Assert.Equal(ProcessCancellationRecoveryPending.InvalidEvidence, result.Pending);
+        Assert.Equal(original.Position, fixture.Queue.Saved!.Position);
+        Assert.Single(fixture.Queue.Checkpoints);
+    }
+
+    [Fact]
+    public async Task Lost_final_root_acknowledgement_preserves_the_exact_receipt_path_without_inventing_unresolved_work() {
+        var fixture = new Fixture();
+        var original = fixture.Queue.Saved! with { Position = new(ProcessCancellationRecoveryStage.Quiescence),
+            Intent = RecoveryContractFixture.Intents()[4].Intent };
+        fixture.Queue.Saved = original;
+        fixture.Step = (_, _) => throw new IOException("Final root acknowledgement lost.");
+        Assert.Equal(ProcessCancellationRecoverySliceStatus.Pending, (await fixture.RunAsync()).Status);
+        Assert.Equal(original.Position, fixture.Queue.Saved!.Position);
+        Assert.Same(original.Intent, fixture.Queue.Saved.Intent);
+        fixture.Step = (claim, _) => Task.FromResult(new ProcessCancellationRecoveryCheckpoint(new(ProcessCancellationRecoveryStage.Completed),
+            Resolution: new(claim.Intent!.Context.CommandId, ProcessCancellationIntentOutcome.Committed)));
+        Assert.Equal(ProcessCancellationRecoverySliceStatus.Completed, (await fixture.RunAsync()).Status);
+    }
+
+    [Fact]
     public async Task Caller_cancellation_during_owner_work_preserves_the_intent_and_expiring_lease() {
         var fixture = new Fixture();
         using var cancellation = new CancellationTokenSource();

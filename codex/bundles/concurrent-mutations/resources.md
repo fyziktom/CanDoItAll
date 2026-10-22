@@ -1576,3 +1576,15 @@ Commands, required TRX/source/runtime/architecture evidence and compact proofs r
 No denied resource was retried; historical automatic cleanup denials remain open.
 The ordinary 5032 instance, installed tooling, unrelated resources and SPA main remain
 preserved. Keep the shared isolated fixture for bounded stage integration.
+
+## Recovery cursors, 2026-10-22
+
+`c4-recovery-cursors` was owned before creation. It reused standard Release outputs and
+the isolated PostgreSQL/API fixture family. All five execution commands are observed;
+all 54 cases pass with zero new process, database-name or temporary-path residue.
+Compact proof is 93705 bytes, SHA256
+`C3C77797B12265553599B0658C1BECF48BFC3D715019BD31EE1DBF317571F0A3`.
+Secret-pattern and private-password checks pass. Keep compact proof, required commands,
+TRX and source/runtime identities. Remove only its redundant scan JSON/CSV after exact
+ownership/proof/hash verification and record verified absence. Historical denied
+resources remain untouched; the ordinary instance and SPA main remain preserved.

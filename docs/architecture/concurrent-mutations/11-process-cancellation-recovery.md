@@ -90,6 +90,14 @@ Cancelled roots; terminal status alone is insufficient.
 
 ## Remaining activation proof
 
+Recovery positions retain the selected Process run, last inspected Agent execution and
+sticky pending-cycle evidence across release and takeover. Advancing past unresolved
+work cannot lose that evidence; later success cannot authorize completion. Only an
+explicit pending cycle restart clears it. Old canonical v1 wire positions remain
+byte-identical. Uncertain owner acknowledgement retains the exact original intent and
+selection, including final-root receipt recovery. The [54-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-cursors.md)
+does not yet enable automatic stage execution.
+
 Ordinary and inherited Agent parent stopping now share one Core protocol with distinct
 journal policies. Signals require the exact admitted session/source/profile generation;
 publication follows a bounded dispatch-lease wait, reread and repeated current parent

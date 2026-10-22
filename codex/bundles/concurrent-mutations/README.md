@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current behavioral checkpoint: [original Process stop adapter](validation/2026-10-22-process-stop-adapter.md).
+Current behavioral checkpoint: [durable recovery cursors](validation/2026-10-22-recovery-cursors.md).
+All 54 selected cases pass with seven Release builds, 24 verified owning/copied outputs,
+full portability and zero new resource residue. Selected Process/Agent cursors and sticky
+pending-cycle evidence survive takeover; old canonical wire positions remain unchanged.
+Lost finalization acknowledgements retain their original receipt-recovery intent.
+Actual recovery stages, bounded waits/fairness, capacity, refresh, remaining writers and
+final E2E remain open. SPA stays on its separate branch.
+
+Preceding behavioral checkpoint: [original Process stop adapter](validation/2026-10-22-process-stop-adapter.md).
 All 55 selected cases pass through the typed port and real Process/Agent owners. Six
 Release builds, twenty source/runtime identities, full portability, architecture and
 resource closure pass. Exact root/claim/source/profile checks preserve pending unknown

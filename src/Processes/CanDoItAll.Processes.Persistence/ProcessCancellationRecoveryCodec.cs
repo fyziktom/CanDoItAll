@@ -19,7 +19,8 @@ internal static class ProcessCancellationRecoveryCodec {
     internal static string WritePosition(ProcessCancellationRecoveryPosition position) {
         position.Validate();
         return Encode(new PositionDocument(1, position.Stage, position.RunAfter?.Value, position.DecisionAfter?.Value,
-            position.CurrentDecision?.DecisionId.Value, position.CurrentDecision?.Generation, position.ChildAfter?.Value), MaximumPositionBytes);
+            position.CurrentDecision?.DecisionId.Value, position.CurrentDecision?.Generation, position.ChildAfter?.Value,
+            position.CurrentRun?.Value, position.ExecutionAfter?.Value, position.CycleHadPending), MaximumPositionBytes);
     }
 
     internal static ProcessCancellationRecoveryPosition ReadPosition(string json)
@@ -30,7 +31,9 @@ internal static class ProcessCancellationRecoveryCodec {
             return new(document.Stage, document.RunAfter is { } run ? new(run) : null,
                 document.DecisionAfter is { } after ? new(after) : null,
                 document.DecisionId is { } decision ? new(new(decision), document.Generation ?? 0) : null,
-                document.ChildAfter is { } child ? new(child) : null);
+                document.ChildAfter is { } child ? new(child) : null,
+                document.CurrentRun is { } current ? new(current) : null,
+                document.ExecutionAfter is { } execution ? new(execution) : null, document.CycleHadPending);
         }, WritePosition);
 
     internal static string? WriteIntent(ProcessRunId root, ProcessCancellationRecoveryIntent? intent) {
@@ -126,7 +129,9 @@ internal static class ProcessCancellationRecoveryCodec {
 
     private enum IntentKind { CancelRun, AccountChild, FinalizeDecision, ChangeScope, FinalizeRoot }
     private sealed record PositionDocument(int Version, ProcessCancellationRecoveryStage Stage, Guid? RunAfter = null,
-        Guid? DecisionAfter = null, Guid? DecisionId = null, int? Generation = null, Guid? ChildAfter = null);
+        Guid? DecisionAfter = null, Guid? DecisionId = null, int? Generation = null, Guid? ChildAfter = null,
+        Guid? CurrentRun = null, Guid? ExecutionAfter = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool CycleHadPending = false);
     private sealed record ContextDocument(Guid ActionId, ProcessEventActorKind ActorKind, string ActorId, string CorrelationId, DateTimeOffset OccurredAtUtc);
     private sealed record IntentDocument(int Version, IntentKind Kind, Guid RunId, ContextDocument Context,
         TerminalDocument? Terminal = null, ScopeDocument? Scope = null);

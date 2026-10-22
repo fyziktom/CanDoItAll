@@ -26,6 +26,22 @@ public sealed class ProcessCancellationRecoveryCodecTests {
     }
 
     [Fact]
+    public void Existing_v1_positions_remain_byte_exact_without_new_cursor_fields_or_false_flags() {
+        string[] original = ["{\"version\":1,\"stage\":0}",
+            "{\"version\":1,\"stage\":0,\"runAfter\":\"6a146dbd-1c0a-4a2d-9dda-154bfb66eb53\"}",
+            "{\"version\":1,\"stage\":1,\"decisionId\":\"6a146dbd-1c0a-4a2d-9dda-154bfb66eb53\",\"generation\":2}",
+            "{\"version\":1,\"stage\":4}"];
+        foreach (var json in original) {
+            var restored = ProcessCancellationRecoveryCodec.ReadPosition(json);
+            Assert.Null(restored.CurrentRun);
+            Assert.Null(restored.ExecutionAfter);
+            Assert.False(restored.CycleHadPending);
+            Assert.Equal(json, ProcessCancellationRecoveryCodec.WritePosition(restored));
+        }
+        Assert.Throws<InvalidDataException>(() => ProcessCancellationRecoveryCodec.ReadPosition("{\"version\":1,\"stage\":0,\"cycleHadPending\":false}"));
+    }
+
+    [Fact]
     public void Unsupported_versions_unknown_fields_duplicate_fields_and_noncanonical_text_are_refused() {
         var json = ProcessCancellationRecoveryCodec.WriteIntent(RecoveryContractFixture.Root, RecoveryContractFixture.Intents()[0].Intent)!;
         foreach (var invalid in new[] {

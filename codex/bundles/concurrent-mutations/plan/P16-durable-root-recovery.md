@@ -614,3 +614,44 @@ The entry and Behavioral closure gates pass for this adapter; actual recovery st
 performance/activation remain open. During current-profile review, also flag the inherited
 Workbench adapter's capture of a mutable profile object: bind identity/fingerprint values
 there and add late-change regressions before activating the shared worker.
+
+### Cursor and pending-cycle contract before stage implementation
+
+Extend the existing position with optional typed CurrentRun and ExecutionAfter plus a
+CycleHadPending flag. Only Runtime owns selected-run/Agent cursors; an Agent cursor
+requires CurrentRun, and the selected run cannot equal the completed RunAfter cursor.
+Completed cannot retain pending-cycle evidence. Append nullable wire fields and omit
+false CycleHadPending so every existing canonical v1 position remains byte-identical.
+No migration, new queue or second journal is needed.
+
+Pending work and an uncertain owner acknowledgement are different. A stage advancing
+past a known unresolved selected item must mark the cycle pending; later success cannot
+clear that flag. Only the existing explicit Quiescence-to-Initial pending-cycle restart
+may clear it. An unresolved mutation intent keeps its exact selection cursor, context
+and command; permit only adding the pending-cycle bit without changing that selection.
+Do not blindly mark every caught transport error as pending work: a lost final-root
+acknowledgement must remain recoverable through its original receipt, without inventing
+another finalization or clearing earlier unresolved work. The coordinator already keeps
+the unchanged cursor/intent on errors. Validate monotonic pending state and refuse an
+attempt to advance past an explicit pending result without retaining the cycle flag.
+
+Qualify byte-exact old-wire compatibility, new cursor round trips, cross-stage/empty/
+ambiguous cursors, retained intent with only the pending bit added, forbidden completion
+after an unresolved earlier item, explicit reset, and real queue lease takeover with
+the selected run/Agent cursor and sticky flag preserved. Existing coordinator, codec,
+queue and atomic outcome tests remain the focused regressions; declare their final
+selection before execution. Keep arbitrary owner I/O deadlines and actual stage behavior
+outside this contract-only change. Fix the inherited adapter's mutable-profile capture
+and add source-observation boundary cases before invoking it from a recovery stage.
+
+Cursor proof selection is 54 before execution: Unit contract 12, codec 8, coordinator 22;
+Integration queue 8 and atomic outcome 4. Exact class-prefix discovery must match these
+counts. Refresh Application, Persistence, Processes module, Composition, Web and both
+test assemblies, verifying 24 owning/copied output identities. No project reference,
+new production type or partial expansion changes here; direct boundary review plus
+the serialization/lease tests is the appropriate architecture evidence for this edit.
+
+All 54 selected cases pass with seven refreshed Release builds, 24 verified owning/copied
+outputs, full portability and zero new resource residue. The contract entry/Behavioral
+closure gate passes; see [cursor qualification](../validation/2026-10-22-recovery-cursors.md).
+No stage, automatic worker, hard I/O deadline or E2E completion is claimed by this proof.

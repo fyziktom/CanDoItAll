@@ -15,13 +15,17 @@ public enum ProcessCancellationSeedStatus { Advanced, Completed, Busy }
 
 public sealed record ProcessCancellationRecoveryPosition(ProcessCancellationRecoveryStage Stage,
     ProcessRunId? RunAfter = null, ProcessDecisionId? DecisionAfter = null,
-    ProcessDecisionReference? CurrentDecision = null, ProcessDecisionChildId? ChildAfter = null) {
+    ProcessDecisionReference? CurrentDecision = null, ProcessDecisionChildId? ChildAfter = null,
+    ProcessRunId? CurrentRun = null, ProcessExecutionRunId? ExecutionAfter = null, bool CycleHadPending = false) {
     public static ProcessCancellationRecoveryPosition Initial { get; } = new(ProcessCancellationRecoveryStage.Runtime);
 
     public void Validate() {
         CurrentDecision?.Validate();
         if (!Enum.IsDefined(Stage) || RunAfter?.Value == Guid.Empty || DecisionAfter?.Value == Guid.Empty || ChildAfter?.Value == Guid.Empty ||
-                Stage != ProcessCancellationRecoveryStage.Runtime && RunAfter is not null ||
+                CurrentRun?.Value == Guid.Empty || ExecutionAfter?.Value == Guid.Empty ||
+                Stage != ProcessCancellationRecoveryStage.Runtime && (RunAfter is not null || CurrentRun is not null || ExecutionAfter is not null) ||
+                ExecutionAfter is not null && CurrentRun is null || CurrentRun is not null && CurrentRun == RunAfter ||
+                Stage == ProcessCancellationRecoveryStage.Completed && CycleHadPending ||
                 Stage != ProcessCancellationRecoveryStage.Decisions && (DecisionAfter is not null || CurrentDecision is not null || ChildAfter is not null) ||
                 ChildAfter is not null && CurrentDecision is null || CurrentDecision?.DecisionId == DecisionAfter && DecisionAfter is not null) {
             throw new InvalidDataException("The cancellation recovery position has an invalid stage or keyset cursor.");
@@ -58,15 +62,22 @@ public sealed record ProcessCancellationRecoveryCheckpoint(ProcessCancellationRe
         if (!Enum.IsDefined(Pending) || RetryAfter is { } delay && (delay < TimeSpan.Zero || delay > TimeSpan.FromHours(1))) {
             throw new InvalidDataException("Recovery requires a known pending reason and bounded retry delay.");
         }
+        var restarting = saved.Position.Stage == ProcessCancellationRecoveryStage.Quiescence &&
+            Position == ProcessCancellationRecoveryPosition.Initial && Pending != ProcessCancellationRecoveryPending.None && Intent is null;
+        var sameSelection = Position with { CycleHadPending = saved.Position.CycleHadPending } == saved.Position;
+        if (saved.Position.CycleHadPending && !Position.CycleHadPending && !restarting ||
+                Pending != ProcessCancellationRecoveryPending.None && !sameSelection && !restarting && !Position.CycleHadPending) {
+            throw new InvalidDataException("Advancing past pending work must retain the cycle evidence until an explicit cycle restart.");
+        }
         if (saved.Intent is { } original) {
             if (Intent is not null) {
-                if (Intent != original || Position != saved.Position || Resolution is not null) {
+                if (Intent != original || !sameSelection || Resolution is not null) {
                     throw new InvalidDataException("An unresolved recovery intent and its position cannot be replaced.");
                 }
             } else if (Resolution is null || Resolution.ActionId != original.Context.CommandId || !Enum.IsDefined(Resolution.Outcome)) {
                 throw new InvalidDataException("Clearing a recovery intent requires its exact action and a definite owner outcome.");
             }
-        } else if (Resolution is not null || Intent is not null && Position != saved.Position) {
+        } else if (Resolution is not null || Intent is not null && !sameSelection) {
             throw new InvalidDataException("A new recovery intent must retain its original selection position.");
         }
         if (Position.Stage == ProcessCancellationRecoveryStage.Completed &&
@@ -75,8 +86,7 @@ public sealed record ProcessCancellationRecoveryCheckpoint(ProcessCancellationRe
             throw new InvalidDataException("Recovery completion requires the verified final-root intent without pending work.");
         }
         if (Position.Stage != saved.Position.Stage && Position.Stage != saved.Position.Stage + 1 &&
-                !(saved.Position.Stage == ProcessCancellationRecoveryStage.Quiescence && Position == ProcessCancellationRecoveryPosition.Initial &&
-                Pending != ProcessCancellationRecoveryPending.None && Intent is null)) {
+                !restarting) {
             throw new InvalidDataException("Recovery stages must advance in order or restart a pending completed cycle.");
         }
     }

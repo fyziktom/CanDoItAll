@@ -57,11 +57,12 @@ public sealed class ProcessCancellationRecoveryQueueTests {
         var queue = Queue(app.Services);
         var claim = (await queue.ClaimAsync(ProcessCancellationRecoveryOrigin.LiveBarrier, TimeSpan.FromSeconds(1)))!;
         var intent = Intent(claim);
-        claim = (await queue.CheckpointAsync(claim, new(claim.Position, intent))).Claim!;
+        claim = (await queue.CheckpointAsync(claim, new(claim.Position with { CycleHadPending = true }, intent))).Claim!;
         var wire = (await context.CancellationRecoveries.AsNoTracking().SingleAsync()).IntentJson;
         await WaitExpiredAsync(app.Services, claim.LeaseExpiresAtUtc);
         var takeover = (await Queue(app.Services).ClaimAsync(ProcessCancellationRecoveryOrigin.LiveBarrier, Lease))!;
         Assert.Equal(intent, takeover.Intent);
+        Assert.True(takeover.Position.CycleHadPending);
         Assert.Equal(claim.ProgressRevision, takeover.ProgressRevision);
         Assert.Equal(claim.LeaseGeneration + 1, takeover.LeaseGeneration);
         Assert.NotEqual(claim.LeaseToken, takeover.LeaseToken);
@@ -94,6 +95,28 @@ public sealed class ProcessCancellationRecoveryQueueTests {
         Assert.Equal(intent, recovered.Intent);
         Assert.Equal(ProcessCancellationRecoveryPending.UnresolvedEffects, recovered.Pending);
         Assert.Equal(ProcessCancellationCheckpointStatus.NotOwned, (await queue.CheckpointAsync(claim, new(claim.Position, intent))).Status);
+    }
+
+    [Fact]
+    public async Task Selected_run_agent_cursor_and_pending_cycle_survive_release_and_a_new_owner() {
+        await using var app = await TestApplication.CreateAsync();
+        await using var context = Context(app.Services);
+        var root = await RootAsync(context);
+        var queue = Queue(app.Services);
+        var claim = (await queue.ClaimAsync(ProcessCancellationRecoveryOrigin.LiveBarrier, Lease))!;
+        var selected = claim.Position with { CurrentRun = root.RunId, ExecutionAfter = new(Guid.NewGuid()), CycleHadPending = true };
+        Assert.Equal(ProcessCancellationCheckpointStatus.Released, (await queue.CheckpointAsync(claim,
+            new(selected, Pending: ProcessCancellationRecoveryPending.UnresolvedEffects, RetryAfter: TimeSpan.Zero))).Status);
+        var retained = (await context.CancellationRecoveries.AsNoTracking().SingleAsync()).PositionJson;
+        var next = (await Queue(app.Services).ClaimAsync(ProcessCancellationRecoveryOrigin.LiveBarrier, Lease))!;
+        Assert.Equal(selected, next.Position);
+        Assert.Equal(claim.LeaseGeneration + 1, next.LeaseGeneration);
+        Assert.NotEqual(claim.LeaseToken, next.LeaseToken);
+        await Assert.ThrowsAsync<InvalidDataException>(() => queue.CheckpointAsync(next,
+            new(next.Position with { CycleHadPending = false })));
+        Assert.Equal(retained, (await context.CancellationRecoveries.AsNoTracking().SingleAsync()).PositionJson);
+        Assert.Equal(ProcessCancellationCheckpointStatus.NotOwned, (await queue.CheckpointAsync(claim,
+            new(claim.Position))).Status);
     }
 
     [Fact]

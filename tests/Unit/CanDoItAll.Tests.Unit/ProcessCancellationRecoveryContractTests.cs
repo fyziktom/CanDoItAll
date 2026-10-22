@@ -23,7 +23,13 @@ public sealed class ProcessCancellationRecoveryContractTests {
             new(ProcessCancellationRecoveryStage.Decisions, ChildAfter: new(Guid.NewGuid())),
             new(ProcessCancellationRecoveryStage.Decisions, DecisionAfter: decision.DecisionId, CurrentDecision: decision),
             new(ProcessCancellationRecoveryStage.Decisions, CurrentDecision: decision with { Generation = 0 }),
-            new(ProcessCancellationRecoveryStage.Decisions, DecisionAfter: new(Guid.Empty))
+            new(ProcessCancellationRecoveryStage.Decisions, DecisionAfter: new(Guid.Empty)),
+            new(ProcessCancellationRecoveryStage.Runtime, CurrentRun: new ProcessRunId()),
+            new(ProcessCancellationRecoveryStage.Runtime, CurrentRun: RecoveryContractFixture.Root, ExecutionAfter: new ProcessExecutionRunId()),
+            new(ProcessCancellationRecoveryStage.Runtime, ExecutionAfter: ProcessExecutionRunId.New()),
+            new(ProcessCancellationRecoveryStage.Runtime, RunAfter: RecoveryContractFixture.Root, CurrentRun: RecoveryContractFixture.Root),
+            new(ProcessCancellationRecoveryStage.Decisions, CurrentRun: RecoveryContractFixture.Root),
+            new(ProcessCancellationRecoveryStage.Completed, CycleHadPending: true)
         ];
         foreach (var position in invalid) {
             Assert.Throws<InvalidDataException>(position.Validate);
@@ -45,6 +51,41 @@ public sealed class ProcessCancellationRecoveryContractTests {
         foreach (var claim in invalid) {
             Assert.Throws<InvalidDataException>(claim.Validate);
         }
+    }
+
+    [Fact]
+    public void Later_success_cannot_clear_pending_cycle_evidence_or_complete_the_root() {
+        var claim = RecoveryContractFixture.Claim() with { Position = new(ProcessCancellationRecoveryStage.Quiescence, CycleHadPending: true) };
+        new ProcessCancellationRecoveryCheckpoint(claim.Position).Validate(claim);
+        Assert.Throws<InvalidDataException>(() => new ProcessCancellationRecoveryCheckpoint(claim.Position with { CycleHadPending = false }).Validate(claim));
+        claim = claim with { Intent = RecoveryContractFixture.Intents()[4].Intent };
+        Assert.Throws<InvalidDataException>(() => new ProcessCancellationRecoveryCheckpoint(new(ProcessCancellationRecoveryStage.Completed),
+            Resolution: new(claim.Intent.Context.CommandId, ProcessCancellationIntentOutcome.Committed)).Validate(claim));
+        claim = claim with { Intent = null };
+        new ProcessCancellationRecoveryCheckpoint(ProcessCancellationRecoveryPosition.Initial,
+            Pending: ProcessCancellationRecoveryPending.UnresolvedEffects).Validate(claim);
+    }
+
+    [Fact]
+    public void Advancing_past_an_unresolved_execution_must_mark_the_cycle_pending() {
+        var claim = RecoveryContractFixture.Claim() with { Position = new(ProcessCancellationRecoveryStage.Runtime,
+            CurrentRun: RecoveryContractFixture.Root) };
+        var next = claim.Position with { ExecutionAfter = ProcessExecutionRunId.New() };
+        Assert.Throws<InvalidDataException>(() => new ProcessCancellationRecoveryCheckpoint(next,
+            Pending: ProcessCancellationRecoveryPending.ActiveWork).Validate(claim));
+        new ProcessCancellationRecoveryCheckpoint(next with { CycleHadPending = true },
+            Pending: ProcessCancellationRecoveryPending.ActiveWork).Validate(claim);
+    }
+
+    [Fact]
+    public void Unknown_intent_keeps_its_selection_while_pending_evidence_can_be_added() {
+        var intent = RecoveryContractFixture.Intents()[0].Intent;
+        var claim = RecoveryContractFixture.Claim() with { Intent = intent,
+            Position = new(ProcessCancellationRecoveryStage.Runtime, CurrentRun: RecoveryContractFixture.Root, ExecutionAfter: ProcessExecutionRunId.New()) };
+        var marked = claim.Position with { CycleHadPending = true };
+        new ProcessCancellationRecoveryCheckpoint(marked, intent, ProcessCancellationRecoveryPending.UnresolvedEffects).Validate(claim);
+        Assert.Throws<InvalidDataException>(() => new ProcessCancellationRecoveryCheckpoint(marked with { ExecutionAfter = ProcessExecutionRunId.New() },
+            intent, ProcessCancellationRecoveryPending.UnresolvedEffects).Validate(claim));
     }
 
     [Fact]
@@ -136,7 +177,9 @@ internal static class RecoveryContractFixture {
     internal static ProcessCancellationRecoveryPosition[] Positions() => [
         ProcessCancellationRecoveryPosition.Initial, new(ProcessCancellationRecoveryStage.Runtime, Root),
         new(ProcessCancellationRecoveryStage.Decisions, DecisionAfter: new(Guid.NewGuid()), CurrentDecision: new(new(Guid.NewGuid()), 2), ChildAfter: new(Guid.NewGuid())),
-        new(ProcessCancellationRecoveryStage.SharedScope), new(ProcessCancellationRecoveryStage.Quiescence), new(ProcessCancellationRecoveryStage.Completed)
+        new(ProcessCancellationRecoveryStage.SharedScope), new(ProcessCancellationRecoveryStage.Quiescence), new(ProcessCancellationRecoveryStage.Completed),
+        new(ProcessCancellationRecoveryStage.Runtime, Root, CurrentRun: ProcessRunId.New(), ExecutionAfter: ProcessExecutionRunId.New(), CycleHadPending: true),
+        new(ProcessCancellationRecoveryStage.Decisions, CycleHadPending: true)
     ];
 
     internal static (ProcessCancellationRecoveryStage Stage, ProcessCancellationRecoveryIntent Intent)[] Intents() {
