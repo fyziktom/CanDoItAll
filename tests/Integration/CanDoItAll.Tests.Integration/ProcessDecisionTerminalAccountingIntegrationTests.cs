@@ -59,6 +59,47 @@ public sealed class ProcessDecisionTerminalAccountingIntegrationTests {
         await fixture.Entry.Files.Sql.VerifyAsync(choice == AgentPlanningReviewChoice.Approve ? 1 : 0, choice == AgentPlanningReviewChoice.Approve ? 1 : 0);
     }
 
+    [Theory]
+    [InlineData(ReadBasisMode.RunSnapshot)]
+    [InlineData(ReadBasisMode.StepSnapshot)]
+    public async Task Accounting_replay_after_failed_step_rework_returns_current_runtime_without_recharging(ReadBasisMode mode) {
+        await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync(mode);
+        var closed = await fixture.CloseWithoutAccountingAsync(AgentPlanningReviewChoice.Approve);
+        var beforeAgent = JsonSerializer.Serialize(await fixture.Entry.Files.Store.GetExecutionRunDetailAsync(closed.Id));
+        var owner = fixture.Services.GetRequiredService<IProcessRuntimeUnitOfWork>();
+        var current = (await fixture.Services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(fixture.State.RunId))!;
+        var failed = current with {
+            Steps = current.Steps.Select(step => step with { Status = ProcessRuntimeStepStatus.Failed }).ToArray(),
+            UpdatedAtUtc = current.UpdatedAtUtc.AddTicks(10)
+        };
+        failed = (await owner.CommitAsync(new(RuntimeCommandId.New(), current,
+            new(ProcessRuntimeTransitionOutcome.Applied, failed, [], [], [], [])))).State;
+        var request = await RequestAsync(fixture, failed);
+        var accounted = await fixture.Services.GetRequiredService<ProcessDecisionTerminalAccountingCoordinator>()
+            .CompleteAsync(failed, fixture.CommandContext, request);
+        Assert.True(accounted.CommittedNow);
+        var reworked = await new ProcessRuntimeEngine(owner).RequestStepReworkAsync(accounted.State,
+            fixture.CommandContext with { CommandId = RuntimeCommandId.New(), OccurredAtUtc = accounted.State.UpdatedAtUtc.AddTicks(10) },
+            new(request.Child.StepInstanceId, "Retry after terminal accounting."));
+        Assert.True(reworked.CommittedNow);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, reworked.State.Steps.Single().Status);
+        await using var scope = fixture.Services.CreateAsyncScope();
+        current = (await scope.ServiceProvider.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(failed.RunId))!;
+        var replay = await scope.ServiceProvider.GetRequiredService<ProcessDecisionTerminalAccountingCoordinator>()
+            .CompleteAsync(current, fixture.CommandContext, request);
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Duplicate, replay.Outcome);
+        Assert.False(replay.CommittedNow);
+        Assert.Equal(JsonSerializer.Serialize(current), JsonSerializer.Serialize(replay.State));
+        Assert.Equal(accounted.Decision, replay.Decision);
+        Assert.Equal(accounted.DecisionBudget, replay.DecisionBudget);
+        await using var budgetContext = Context(scope.ServiceProvider);
+        Assert.Equal(accounted.DecisionBudget!.Funding!.Receipt.Change.Balance,
+            await new EfProcessDecisionBudgetStore(budgetContext).ReadAsync(failed.RootRunId, null));
+        Assert.Equal(beforeAgent, JsonSerializer.Serialize(await fixture.Entry.Files.Store.GetExecutionRunDetailAsync(closed.Id)));
+        Assert.Single(fixture.Entry.Wire.Requests);
+        await fixture.Entry.Files.Sql.VerifyAsync(1, 1);
+    }
+
     [Fact]
     public async Task Lost_commit_acknowledgement_recovers_in_a_fresh_scope() {
         await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync();

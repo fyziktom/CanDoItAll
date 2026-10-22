@@ -311,6 +311,11 @@ public sealed class EfProcessRuntimeUnitOfWork(
         else
         {
             EnsureCurrentStateMatchesOriginal(existing, request.OriginalState);
+            if (existing.Status == ProcessRuntimeStatus.CancelRequested &&
+                    request.Mutation.State.Status is not (ProcessRuntimeStatus.CancelRequested or ProcessRuntimeStatus.Cancelled) ||
+                    existing.Status == ProcessRuntimeStatus.Cancelled && request.Mutation.State.Status != ProcessRuntimeStatus.Cancelled) {
+                throw new InvalidOperationException($"Run '{request.OriginalState.RunId}' cannot leave its persisted cancellation barrier.");
+            }
             if (await ValidateBlockedRecoveryChildLineageAsync(
                     request,
                     cancellationToken).ConfigureAwait(false) is { } childLineageRejection)

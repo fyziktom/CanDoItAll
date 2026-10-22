@@ -1,10 +1,16 @@
 # Execution plan
 
+The [cancellation-barrier continuation](../validation/2026-10-21-cancellation-barrier-and-replay.md)
+passes all 84 selected cases, including 14 new cases, with seven direct Release builds
+and complete static/identity/resource proof. Runtime and persisted admission now retain
+the cancellation barrier. Accounting receipts replay across later legitimate rework.
+Proceed to selected inherited Agent stop and its concrete Process adapter before durable
+quiescence/recovery and refresh. Capacity, producer activation and final Stable stay open.
+
 The [terminal-child accounting checkpoint](../validation/2026-10-21-terminal-child-accounting.md)
 qualifies P11 A with 178 passing cases, five direct Release builds, unchanged project
-references, complete static/input/resource proof and no new resource residue. Before
-parent-stop integration, repair the newly identified CancelRequested-to-Active rework
-path in runtime and persisted admission. Then qualify selected Agent stopping, durable
+references, complete static/input/resource proof and no new resource residue. The later
+CancelRequested-to-Active finding is repaired by the continuation above. Qualify selected Agent stopping, durable
 quiescence/recovery and snapshot refresh. Preserve the separate finite-read/capacity
 gate, closed producer activation and SPA branch constraint.
 

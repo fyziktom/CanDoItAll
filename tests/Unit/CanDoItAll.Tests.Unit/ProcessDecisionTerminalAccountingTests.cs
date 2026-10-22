@@ -129,6 +129,29 @@ public sealed class ProcessDecisionTerminalAccountingTests {
     }
 
     [Theory]
+    [InlineData(ProcessRuntimeStepStatus.Ready)]
+    [InlineData(ProcessRuntimeStepStatus.Running)]
+    [InlineData(ProcessRuntimeStepStatus.Blocked)]
+    [InlineData(ProcessRuntimeStepStatus.Completed)]
+    public async Task Recovered_receipt_preserves_current_runtime_after_later_rework(ProcessRuntimeStepStatus status) {
+        var fixture = Create(ProcessRuntimeStepStatus.Failed);
+        var request = Request(fixture);
+        var committed = await CompleteAsync(fixture, request);
+        Apply(fixture, committed);
+        fixture.State = fixture.State with { Steps = fixture.State.Steps.Select(step => step with { Status = status }).ToArray() };
+        fixture.Saved[fixture.Lookup] = committed with { State = fixture.State };
+        fixture.OutcomeFailure = new IOException("The child owner is temporarily unavailable.");
+        var replay = await CompleteAsync(fixture, request);
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Duplicate, replay.Outcome);
+        Assert.False(replay.CommittedNow);
+        Assert.Equal(fixture.State, replay.State);
+        Assert.Equal(committed.Decision, replay.Decision);
+        Assert.Equal(committed.DecisionBudget, replay.DecisionBudget);
+        Assert.Equal(1, fixture.Commits);
+        Assert.Equal(1, fixture.OutcomeReads);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Another_actor_or_action_cannot_adopt_an_existing_receipt(bool actor) {
@@ -148,7 +171,7 @@ public sealed class ProcessDecisionTerminalAccountingTests {
     [InlineData(CorruptReceipt.Material)]
     [InlineData(CorruptReceipt.Work)]
     [InlineData(CorruptReceipt.Child)]
-    [InlineData(CorruptReceipt.Status)]
+    [InlineData(CorruptReceipt.Root)]
     [InlineData(CorruptReceipt.Completion)]
     public async Task Corrupt_original_receipt_is_not_reported_as_recovered(CorruptReceipt change) {
         var fixture = Create();
@@ -161,7 +184,7 @@ public sealed class ProcessDecisionTerminalAccountingTests {
                 Command = ((ProcessDecisionBudgetSettlement)result.DecisionBudget!.Command) with { Settlement = fixture.Closed.Work with { OwnerWorkRevision = 99 } }
             } },
             CorruptReceipt.Child => result with { Decision = result.Decision with { Command = closure with { ChildId = new(Id(97)) } } },
-            CorruptReceipt.Status => result with { State = result.State with { Steps = result.State.Steps.Select(step => step with { Status = ProcessRuntimeStepStatus.Completed }).ToArray() } },
+            CorruptReceipt.Root => result with { State = result.State with { RootRunId = new(Id(98)) } },
             _ => result with { Decision = result.Decision with { Command = closure with { Completion = ProcessDecisionCompletion.Review } } }
         };
         await Assert.ThrowsAsync<InvalidDataException>(() => CompleteAsync(fixture, request));
@@ -307,6 +330,6 @@ public sealed class ProcessDecisionTerminalAccountingTests {
     }
 
     public enum AdmissionChange { Waiting, ActiveClaim, Budget, Decision, ClosedDecision }
-    public enum CorruptReceipt { Material, Work, Child, Status, Completion }
+    public enum CorruptReceipt { Material, Work, Child, Root, Completion }
     public enum OriginalChange { Root, Admission, Plan, Step, Contract }
 }

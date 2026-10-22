@@ -1,5 +1,18 @@
 # Resource ownership and cleanup
 
+## Cancellation barrier and accounting replay (2026-10-21)
+
+`c4-cancellation-barrier-replay` retains reviewed proof for 84 passing selected cases,
+including 14 new cases and the separately retained expected pre-fix assertion failure.
+Its ownership sidecar preceded directory creation. Seven builds use the existing Release
+outputs; eleven direct/copied runtime roots and complete source identity are unchanged
+through the selected proof. The 391.17-second observer covers all five test commands;
+reconciliation finds no remaining observed process, database-name or temporary-path
+delta. The existing isolated PostgreSQL fixture remains available for selected Agent
+stop/recovery work. No replacement host, Docker stack or compiled output tree was created.
+Ordinary 5032, SPA branch ownership and all historical cleanup denials remain preserved.
+See [validation](validation/2026-10-21-cancellation-barrier-and-replay.md).
+
 ## Inherited Agent startup validation (2026-10-20)
 
 `c4-inherited-startup-accounting` is owned for exact initial enrollment, measured

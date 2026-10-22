@@ -4,13 +4,22 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest qualified checkpoint: [terminal-child accounting](validation/2026-10-21-terminal-child-accounting.md).
+Latest qualified checkpoint: [cancellation barrier and accounting replay](validation/2026-10-21-cancellation-barrier-and-replay.md).
+All 84 selected cases pass, including 14 new cases. CancelRequested and Cancelled cannot
+be reactivated by rework or direct persisted mutations. Ordinary failed-run retry stays
+supported. Historical accounting recovers with current runtime after legitimate rework,
+without another charge or effect. Seven Release builds, full portability, exact source/
+runtime identity and all five observed commands pass with zero new resource residue.
+Selected Agent stopping and durable quiescence/recovery are next; refresh, activation,
+finite read latency, sustained capacity and final integrated closure remain open.
+
+Preceding checkpoint: [terminal-child accounting](validation/2026-10-21-terminal-child-accounting.md).
+Its later rework-replay finding is corrected by the checkpoint above.
 All 178 selected cases pass, including 61 new cases. Exact closed work settles after a
 Process step stops while its business outcome and accepted effects remain unchanged.
 Both snapshot modes, competing requests, lost acknowledgements and SQL rollback pass.
 Source/runtime identity, full portability and all six observed commands pass with zero
-new resource deltas. The next prerequisite repairs rework that can reactivate a
-CancelRequested root; parent stop/recovery, snapshot refresh and producer activation
+new resource deltas. Parent stop/recovery, snapshot refresh and producer activation
 remain gated. Finite read latency and sustained capacity are still open.
 
 Preceding checkpoint: [closed-child accounting recovery](validation/2026-10-21-closed-child-accounting.md).

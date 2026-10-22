@@ -1,6 +1,9 @@
 # Terminal-child Process accounting
 
-Status: qualified for P11 A. All 178 selected cases pass, including 61 new cases.
+Status: the original P11 A selection passes all 178 cases, including 61 new cases.
+The [continuation](2026-10-21-cancellation-barrier-and-replay.md) corrects and proves the
+later finding in exact receipt replay after legitimate failed-step rework. Its additional
+cases run against a new frozen candidate; the 178-case record below remains historical.
 This is the accounting prerequisite for parent cancellation/recovery. It does not
 activate Agent stopping, a recovery worker, finalization fencing, refresh or producers.
 SPA remains clean on `codex/concurrent-mutations` at signed `70c65dd`.
@@ -22,9 +25,11 @@ Already settled work cannot be charged again.
 
 The retained action identity includes original input/binding and actor. Its exact
 receipt recovers before current-phase admission, without another Agent observation.
-A different actor/action cannot adopt it. Corrupted original material, work, child,
-status or completion fails explicitly. This lower-level receipt is historical; a
-future product boundary must reload current runtime separately.
+A different actor/action cannot adopt it. The initial validator also compared current
+step status to the old request; the continuation removes that incorrect comparison,
+tests immutable root identity instead, and adds positive replay after legitimate rework.
+The receipt is historical; the persistence result also contains freshly loaded current
+runtime, which can legitimately differ from the original accounting state.
 
 ## Validation
 

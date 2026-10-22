@@ -104,7 +104,6 @@ public sealed class ProcessDecisionTerminalAccountingCoordinator(IProcessAccepte
         ProcessDecisionResultChild selected) {
         var original = selected.Original.Child;
         if (!replay.Succeeded || replay.State.RootRunId != request.Child.RootRunId || replay.State.RunId != request.Child.RunId ||
-                replay.State.Steps.SingleOrDefault(step => step.StepInstanceId == request.Child.StepInstanceId)?.Status != request.StepStatus ||
                 replay.Events.Count != 0 || replay.OutboxMessages.Count != 0 || replay.ArtifactLedgerEvents.Count != 0 || replay.DecisionRunScope is not null ||
                 replay.Decision is not { Command: ProcessDecisionClosure closure } decision ||
                 replay.DecisionBudget is not { Command: ProcessDecisionBudgetSettlement settlement } budget ||
