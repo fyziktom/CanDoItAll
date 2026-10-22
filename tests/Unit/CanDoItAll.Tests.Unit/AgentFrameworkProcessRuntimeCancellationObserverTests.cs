@@ -24,7 +24,7 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
         var inherited = new ExecutionRunDetail(legacy with { ToolAdmission = journal }, null, [], []);
         var store = new RecordingExecutionRunStore(inherited) { ListedRun = listedAsInherited ? inherited.Run : legacy };
         var cleanup = new RecordingProcessLeaseCleaner();
-        var observer = new AgentFrameworkProcessRuntimeCancellationObserver(new AgentExecutionCancellationRegistry(), store, cleanup,
+        var observer = new AgentFrameworkProcessRuntimeCancellationObserver(new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance), store, cleanup,
             NullLogger<AgentFrameworkProcessRuntimeCancellationObserver>.Instance);
         await observer.OnRunsCancelledAsync(new(processRunId, [processRunId], "fixture", "Stop parent.", DateTimeOffset.UtcNow));
         Assert.Same(inherited, await store.GetExecutionRunDetailAsync(inherited.Run.Id));
@@ -38,7 +38,7 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
         var processRunId = ProcessRunId.New();
         var run = CreateRun(processRunId);
         var store = new RecordingExecutionRunStore(new ExecutionRunDetail(run, null, [], []));
-        var registry = new AgentExecutionCancellationRegistry();
+        var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
         var processLeaseCleaner = new RecordingProcessLeaseCleaner();
         using var registration = registry.Register(run, CancellationToken.None);
         var observer = new AgentFrameworkProcessRuntimeCancellationObserver(
@@ -74,7 +74,7 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
         var processRunId = ProcessRunId.New();
         var run = CreateRun(processRunId);
         var store = new RecordingExecutionRunStore(new ExecutionRunDetail(run, null, [], []));
-        var registry = new AgentExecutionCancellationRegistry();
+        var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
         var processLeaseCleaner = new RecordingProcessLeaseCleaner(throwOnCleanup: true);
         var observer = new AgentFrameworkProcessRuntimeCancellationObserver(
             registry,

@@ -1,16 +1,16 @@
 # Concurrent mutations implementation bundle
 
-Current qualified checkpoint: [root cancellation quiescence and work admission](validation/2026-10-22-root-cancellation-fence.md).
-All 367 distinct selected cases are qualified across an exact one-test repair, including
-51 new cases. Root finalization refuses outstanding
-runtime, decision, budget or shared-capture work. New work and disguised claim renewals
-are refused after the persisted root stops; historical receipts and exact settlement
-remain legal. The final check uses one four-value SQL read, including the measured
-1,024-descendant shape. Four Release builds, full portability, source/runtime identity
-and all 19 test commands are covered by resource observation with zero new residue. The
-initial fixture failure remains retained. Durable recovery,
-snapshot refresh, producer/Workflow/settings integration, remaining writer waves,
-sustained capacity and end-to-end closure remain open. SPA stays on its separate branch.
+Current qualified checkpoint: [owned Agent cancellation signalling](validation/2026-10-22-cancellation-signal-lifetime.md).
+All 60 selected cases pass, including 13 new cases. Exact and upstream cancellation mark
+the token immediately without waiting for consumer callbacks. One retained notification
+owns callback completion, sanitized failure reporting and source release; disposal keeps
+the exact execution identity reserved until notification finishes. Both existing DI paths
+and actual selected-stop integration pass. Six Release builds, full portability,
+source/runtime identity and all five observed test commands pass with zero new residue.
+Terminal empty-decision finalization, durable recovery, snapshot refresh,
+producer/Workflow/settings integration, remaining writers, sustained capacity and final
+end-to-end closure remain open. SPA stays on its separate branch.
+
 
 
 Current work resumed on 2026-10-18 under the [resumption record](validation/2026-10-18-resumption.md).

@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -35,7 +36,7 @@ internal sealed class AgentInheritedParentStopFixture : ISandboxWorkspaceExecuti
     internal AgentPlanningInheritedOrigin Original { get; }
     internal AgentInheritedParentStop Parent { get; }
     internal AgentInheritedPlanningStopper Owner { get; }
-    internal AgentExecutionCancellationRegistry Registry { get; } = new();
+    internal AgentExecutionCancellationRegistry Registry { get; } = new(NullLogger<AgentExecutionCancellationRegistry>.Instance);
     internal StopClock Clock { get; } = new();
     internal Action<int>? OnParentCheck { get; set; }
     internal Action? OnLease { get; set; }

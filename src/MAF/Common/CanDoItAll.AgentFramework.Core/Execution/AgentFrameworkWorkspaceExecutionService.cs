@@ -40,7 +40,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     private readonly IAgentOutputRepairService outputRepairService =
         outputRepairService ?? JsonObjectExtractionAgentOutputRepairService.Instance;
     private readonly IAgentExecutionCancellationRegistry executionCancellationRegistry =
-        executionCancellationRegistry ?? new AgentExecutionCancellationRegistry();
+        executionCancellationRegistry ?? new AgentExecutionCancellationRegistry(logger);
     // IEnumerable<T> (not IReadOnlyList<T>) so plain reflection-based DI activation (AddScoped<T>() with no
     // factory - the production AddAgentFrameworkCore/AddAgentFrameworkModule registration shape, and every test
     // host that re-registers this type the same way) auto-supplies every registered policy without requiring a

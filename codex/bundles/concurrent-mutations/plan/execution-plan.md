@@ -1,21 +1,23 @@
 # Execution plan
 
-Current qualified checkpoint: [root cancellation quiescence and work admission](../validation/2026-10-22-root-cancellation-fence.md).
-All 367 distinct selected cases are qualified across an exact one-test repair, including
-51 new cases. Root finalization refuses outstanding
-runtime, decision, budget or shared-capture work. New work and disguised claim renewals
-are refused after the persisted root stops; historical receipts and exact settlement
-remain legal. The final check uses one four-value SQL read, including the measured
-1,024-descendant shape. Four Release builds, full portability, source/runtime identity
-and all 19 test commands are covered by resource observation with zero new residue. The
-initial fixture failure remains retained. Durable recovery,
-snapshot refresh, producer/Workflow/settings integration, remaining writer waves,
-sustained capacity and end-to-end closure remain open. SPA stays on its separate branch.
+Current qualified checkpoint: [owned Agent cancellation signalling](../validation/2026-10-22-cancellation-signal-lifetime.md).
+All 60 selected cases pass, including 13 new cases. Exact and upstream cancellation mark
+the token immediately without waiting for consumer callbacks. One retained notification
+owns callback completion, sanitized failure reporting and source release; disposal keeps
+the exact execution identity reserved until notification finishes. Both existing DI paths
+and actual selected-stop integration pass. Six Release builds, full portability,
+source/runtime identity and all five observed test commands pass with zero new residue.
+Terminal empty-decision finalization, durable recovery, snapshot refresh,
+producer/Workflow/settings integration, remaining writers, sustained capacity and final
+end-to-end closure remain open. SPA stays on its separate branch.
 
 
-[P13 root cancellation fence](P13-root-cancellation-fence.md) now qualifies the persisted
-guard. Continue with owned asynchronous Agent cancellation signalling and the durable
-recovery design before producer activation. P12 is signed as `94a4d1ac9`.
+
+[P13 root cancellation fence](P13-root-cancellation-fence.md) qualifies the persisted guard.
+[P14 cancellation lifetime](P14-cancellation-signal-lifetime.md) now qualifies nonblocking
+signals and owned notification cleanup. Continue with terminal empty-decision finalization
+and bounded durable recovery before producer activation. P13 signing remains pending in
+the existing local GPG prompt; its reviewed index is preserved.
 
 The [cancellation-barrier continuation](../validation/2026-10-21-cancellation-barrier-and-replay.md)
 passes all 84 selected cases, including 14 new cases, with seven direct Release builds

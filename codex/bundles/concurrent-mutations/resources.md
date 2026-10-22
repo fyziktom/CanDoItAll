@@ -1414,3 +1414,18 @@ The prebuild check addition required one companion checksum correction before re
 observation began; the failed early check and correction are retained. The shared fixture
 remains required for durable recovery/producer work. Historical denied cleanup targets
 remain unchanged; this result does not clear those blockers.
+
+## Cancellation notification lifetime, 2026-10-22
+
+`c4-cancellation-signal` reused standard Release outputs and the existing isolated
+PostgreSQL 18 fixture. All 60 cases pass, five commands are observed, and reconciliation
+finds zero new process/database/temp delta. The new composition workspace family remains
+absent as expected. No new host, container or custom compiled-output tree was created.
+Proof: 71587 bytes, SHA256 `2844805BEFF1A0AD1E63DD125A1433811CE065798CD77383CA414DD925CC0E49`. Keep the small proof, exact manifests,
+TRX and command logs for the next recovery integration. The shared fixture remains needed.
+
+Four redundant portability scan JSON/CSV files from the two P13 candidates were removed
+with exact ownership/hash checks and verified absence: 92,616,348 bytes. Their record is
+`c4-root-cancellation-final/redundant-scan-cleanup.json`; enforcement, manifests and proof
+remain. No historical denied target was retried. Earlier automatic cleanup denials remain
+unresolved; ordinary 5032, its databases, installed tools and unrelated resources remain.

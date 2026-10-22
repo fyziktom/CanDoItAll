@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.Runtime;
 
@@ -116,9 +117,39 @@ public sealed class AgentInheritedParentStopTests {
         Assert.True(interrupted.ToolAdmission.HasUnresolvedProviderDispatch);
     }
 
+    [Fact]
+    public async Task A_live_file_backed_execution_signals_while_its_callback_is_blocked_without_mutating_the_journal() {
+        await using var source = await AgentInheritedPlanningFixture.CreateForPublicationAsync();
+        var waiting = await source.WaitForApprovalAsync();
+        var before = JsonSerializer.Serialize(await source.Files.NewStore().GetExecutionRunDetailAsync(waiting.Id));
+        var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
+        var registration = registry.Register(waiting, default);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var callback = registration.Token.Register(() => {
+            entered.TrySetResult();
+            release.Task.WaitAsync(TimeSpan.FromSeconds(30)).GetAwaiter().GetResult();
+        });
+        var store = source.Files.NewStore();
+        var owner = new AgentInheritedPlanningStopper(store, store, store, registry, source.Clock);
+        var stopping = Task.Run(() => owner.StopAsync(waiting.Id, Parent(waiting)));
+        try {
+            Assert.Equal(AgentInheritedPlanningStopOutcome.Signalled, await stopping.WaitAsync(TimeSpan.FromSeconds(10)));
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(registration.IsCancellationRequested);
+            Assert.Equal(before, JsonSerializer.Serialize(await source.Files.NewStore().GetExecutionRunDetailAsync(waiting.Id)));
+        } finally {
+            release.TrySetResult();
+            await stopping.WaitAsync(TimeSpan.FromSeconds(10));
+            await registration.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+        }
+        Assert.Equal(AgentInheritedPlanningStopOutcome.Stopped, await owner.StopAsync(waiting.Id, Parent(waiting)));
+        Assert.Equal(RunOutcome.Cancelled, (await source.ReadAsync()).Outcome);
+    }
+
     private static AgentInheritedPlanningStopper Owner(AgentInheritedPlanningFixture source, FileSandboxWorkspaceStore? store = null) {
         store ??= source.Files.NewStore();
-        return new(store, store, store, new AgentExecutionCancellationRegistry(), source.Clock);
+        return new(store, store, store, new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance), source.Clock);
     }
 
     private static AgentInheritedParentStop Parent(ExecutionRunRecord original)
