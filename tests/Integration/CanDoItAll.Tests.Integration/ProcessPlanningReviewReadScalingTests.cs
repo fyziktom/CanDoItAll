@@ -8,7 +8,6 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Workbench;
-using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -98,6 +97,7 @@ public sealed class ProcessPlanningReviewReadScalingTests(ITestOutputHelper outp
                 Workload = "review-http-selected-read", Steps = steps, Mode = mode.ToString(), Sample = sample, Profiled = trace,
                 ElapsedMilliseconds = elapsed, ProcessAllocatedBytes = allocatedBytes,
                 ProcessSqlCommands = commands, ProcessSqlMilliseconds = probe.SqlMilliseconds, ResponseUtf8Bytes = bytes,
+                ProcessConnectionOpens = probe.ConnectionOpens, ProcessConnectionMilliseconds = probe.ConnectionMilliseconds,
                 Trace = probe.Summarize()
             }));
         }
@@ -127,7 +127,7 @@ public sealed class ProcessPlanningReviewReadScalingTests(ITestOutputHelper outp
     private sealed record ReadActivity(string Name, string? PayloadType, double Milliseconds, long PayloadBytes);
     private sealed record ReadActivitySummary(string Name, string? PayloadType, int Count, double InclusiveMilliseconds, long PayloadBytes);
 
-    private sealed class ProcessReadProbe : DbCommandInterceptor, IDisposable {
+    private sealed class ProcessReadProbe : DbCommandInterceptor, IDbConnectionInterceptor, IDisposable {
         private const int MaximumActivities = 4096;
         private readonly ConcurrentQueue<ReadActivity> activities = new();
         private readonly ActivityListener? listener;
@@ -135,6 +135,8 @@ public sealed class ProcessPlanningReviewReadScalingTests(ITestOutputHelper outp
         private PathString route;
         private int reads;
         private long sqlTicks;
+        private int connectionOpens;
+        private long connectionTicks;
         private int activityCount;
 
         internal ProcessReadProbe(bool trace) {
@@ -158,6 +160,8 @@ public sealed class ProcessPlanningReviewReadScalingTests(ITestOutputHelper outp
 
         internal int Reads => Volatile.Read(ref reads);
         internal double SqlMilliseconds => TimeSpan.FromTicks(Interlocked.Read(ref sqlTicks)).TotalMilliseconds;
+        internal int ConnectionOpens => Volatile.Read(ref connectionOpens);
+        internal double ConnectionMilliseconds => TimeSpan.FromTicks(Interlocked.Read(ref connectionTicks)).TotalMilliseconds;
 
         internal bool IsObservedRequest => context?.HttpContext?.Request is { } request &&
             HttpMethods.IsGet(request.Method) && request.Path == route;
@@ -170,6 +174,8 @@ public sealed class ProcessPlanningReviewReadScalingTests(ITestOutputHelper outp
         internal void Reset() {
             Interlocked.Exchange(ref reads, 0);
             Interlocked.Exchange(ref sqlTicks, 0);
+            Interlocked.Exchange(ref connectionOpens, 0);
+            Interlocked.Exchange(ref connectionTicks, 0);
             activities.Clear();
             Interlocked.Exchange(ref activityCount, 0);
         }
@@ -192,5 +198,18 @@ public sealed class ProcessPlanningReviewReadScalingTests(ITestOutputHelper outp
         }
 
         public void Dispose() => listener?.Dispose();
+
+        public void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData) {
+            if (IsObservedRequest) {
+                Interlocked.Increment(ref connectionOpens);
+                Interlocked.Add(ref connectionTicks, eventData.Duration.Ticks);
+            }
+        }
+
+        public Task ConnectionOpenedAsync(DbConnection connection, ConnectionEndEventData eventData,
+            CancellationToken cancellationToken = default) {
+            ConnectionOpened(connection, eventData);
+            return Task.CompletedTask;
+        }
     }
 }

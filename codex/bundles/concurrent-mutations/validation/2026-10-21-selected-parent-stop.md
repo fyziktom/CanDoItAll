@@ -1,7 +1,9 @@
 # Selected inherited Agent stop: implementation checkpoint
 
-Status: implementation retained; behavioral qualification is blocked. This is not
-end-to-end completion or permission to activate the gated Process/Workflow producers.
+Historical status at this checkpoint: implementation retained; behavioral qualification
+was blocked. [Subsequent qualification](2026-10-22-selected-read-connections.md) resolves the receipt deadline
+and completes the remaining regressions. All original failures below remain evidence;
+producer activation and end-to-end closure are still gated.
 
 ## Implemented behavior
 

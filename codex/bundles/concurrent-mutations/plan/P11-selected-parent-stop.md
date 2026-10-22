@@ -1,6 +1,6 @@
 # P11 selected inherited Agent stop: implementation entry candidate
 
-Entry reviewed after signed e4eadf619. Implementation is retained, but [qualification](../validation/2026-10-21-selected-parent-stop.md) is blocked: all 58 new cases pass; an existing receipt checkpoint repeatedly exceeds its unchanged deadline, and 98 selected cases remain unexecuted.
+Entry reviewed after signed e4eadf619. Implementation is signed as 919ba4491; [focused qualification](../validation/2026-10-22-selected-read-connections.md) now passes all 187 selected cases across the explicit unchanged-case bridge. Root quiescence/recovery, refresh and producer activation remain separate.
 The verified monotonic persisted cancellation barrier is a prerequisite. The broader
 root worker, finalization fence, snapshot refresh and producer activation remain separate.
 

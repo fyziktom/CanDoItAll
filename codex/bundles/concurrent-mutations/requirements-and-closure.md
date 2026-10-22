@@ -1,11 +1,13 @@
 # Requirements and closure ledger
 
-Current implementation checkpoint: [selected inherited Agent stop](validation/2026-10-21-selected-parent-stop.md).
-All 58 new cases pass, with 88 passing selected cases overall. One existing receipt-recovery
-case exceeds its unchanged two-second checkpoint deadline, including all three isolated
-repeats; 98 selected regression cases remain unexecuted. Qualification and producer activation
-remain blocked. Measure connection opening and current-authority reads next, then repair and
-rerun affected validation. Root quiescence/recovery, refresh and end-to-end closure remain open.
+Current qualified checkpoint: [selected authority read connections and receipt recovery](validation/2026-10-22-selected-read-connections.md).
+All 235 selected executions pass, including 18 new lifecycle cases, both receipt-recovery
+selections and all six unchanged finite latency shapes. Reviews retain 27 SQL statements
+while connection opens fall from 22 to 10. The remaining 98 parent-stop regressions pass;
+with 65 unaffected earlier cases, all 187 parent-stop cases are now qualified. Full
+portability, exact source/runtime identity and observed resource checks pass. Root
+quiescence/recovery, snapshot refresh, producer/Workflow/settings integration, remaining
+writer waves, sustained capacity and end-to-end closure remain open. SPA remains separate.
 
 The [cancellation-barrier continuation](validation/2026-10-21-cancellation-barrier-and-replay.md)
 passes 84 selected cases, including 14 new cases. It prevents direct or rework-driven

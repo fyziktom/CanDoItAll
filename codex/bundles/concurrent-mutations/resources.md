@@ -1378,3 +1378,17 @@ process/database/temp residue. Standard Release outputs and the isolated server 
 Proof is 1,330,947 bytes, SHA-256 `7909CF6CEE9B0CABF49454E39789250E9D1F6A5CC122D0947FE1DB7B13DC14E6`. Keep failure evidence for read-cost
 repair. Qualification, final cleanup and end-to-end closure remain open; historical denied
 resources were not retried. See [checkpoint](validation/2026-10-21-selected-parent-stop.md).
+
+
+## Selected read connection qualification (2026-10-22 UTC)
+
+`c4-read-connection-cost` retains three passing diagnostic cases. The intermediate
+`c4-read-connection-reuse` retains 18 passes, one finite failure and 167 unexecuted cases.
+`c4-selected-read-connections` passes all 235 executions. All three runs retain verified
+source/runtime identities and complete test-command observation with zero process,
+database-name or temporary-path deltas. The shared isolated PostgreSQL fixture remains
+needed; ordinary 5032, installed MCP tooling and unrelated resources are preserved.
+Historical automatic cleanup denials remain unresolved and were not retried.
+
+The compact selected-read proof SHA256 is `237748F955324E609509949E81154837C002DAAFD0F0B61B5ABC982142AA87BF`. Source/runtime manifests,
+necessary diagnostics and the compact proof remain available for the lifecycle work.

@@ -38,8 +38,8 @@ public sealed class EfProcessExecutionAuthorityQuery(
         ProcessDecisionContentContract? supportedContent, CancellationToken cancellationToken = default) {
         var selection = new ProcessDecisionDispatchSelection(original, supportedExecution, supportedContent, clock);
         selection.Validate(evidence);
-        await using var context = await factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
-        return await ReadCoreAsync(context, evidence, clock.GetUtcNow(), cancellationToken, selection).ConfigureAwait(false);
+        return await WithSelectedReadContextAsync(context =>
+            ReadCoreAsync(context, evidence, clock.GetUtcNow(), cancellationToken, selection), cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<ProcessExecutionReservationObservation> ReadReservationAsync(ProcessExecutionClaimEvidence evidence,
@@ -67,27 +67,44 @@ public sealed class EfProcessExecutionAuthorityQuery(
         RequireEvidence(evidence);
         var selection = new ProcessDecisionDispatchSelection(original, supportedExecution, supportedContent, clock);
         selection.Validate(evidence);
+        return await WithSelectedReadContextAsync(async context => {
+            var row = await (from state in context.RuntimeStates.AsNoTracking()
+                join claim in context.DispatchClaims.AsNoTracking() on state.RunId equals claim.RunId
+                where state.RunId == evidence.RunId.Value && claim.StepInstanceId == evidence.StepInstanceId.Value &&
+                    claim.ClaimToken == evidence.DispatchClaimToken
+                select new { State = state, Claim = claim }).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            if (row is null || evidence.ExecutionCreatedAtUtc < row.Claim.CreatedAtUtc || evidence.ExecutionCreatedAtUtc >= row.Claim.ExpiresAtUtc) {
+                return new(ProcessExecutionAuthorityDisposition.DispatchBindingChanged);
+            }
+            if (row.State.LaunchAdmissionId is null) {
+                throw Mismatch("Original selected receipt evidence requires an accepted Process launch admission.");
+            }
+            var saved = await EfProcessAcceptedSource.ReadAsync(context, row.State, evidence.StepInstanceId, cancellationToken).ConfigureAwait(false);
+            var assignment = saved.Assignment;
+            if (assignment.StepKey != evidence.StepKey || assignment.PlanId.Value != row.State.PlanId) {
+                throw Mismatch("The original selected assignment differs from its exact Process runtime.");
+            }
+            await EfProcessDecisionDispatchBinding.RequireOriginalAsync(context, evidence, new(row.State.RootRunId),
+                assignment, selection, cancellationToken).ConfigureAwait(false);
+            assignment = assignment with { CreatedAtUtc = StoredTimestamp(assignment.CreatedAtUtc) };
+            return Snapshot(row.State, evidence, assignment, assignment, saved.Header, false, clock.GetUtcNow(), selection);
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ProcessExecutionDispatchAuthorityResult> WithSelectedReadContextAsync(
+        Func<ProcessPersistenceDbContext, Task<ProcessExecutionDispatchAuthorityResult>> read, CancellationToken cancellationToken) {
         await using var context = await factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
-        var row = await (from state in context.RuntimeStates.AsNoTracking()
-            join claim in context.DispatchClaims.AsNoTracking() on state.RunId equals claim.RunId
-            where state.RunId == evidence.RunId.Value && claim.StepInstanceId == evidence.StepInstanceId.Value &&
-                claim.ClaimToken == evidence.DispatchClaimToken
-            select new { State = state, Claim = claim }).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-        if (row is null || evidence.ExecutionCreatedAtUtc < row.Claim.CreatedAtUtc || evidence.ExecutionCreatedAtUtc >= row.Claim.ExpiresAtUtc) {
-            return new(ProcessExecutionAuthorityDisposition.DispatchBindingChanged);
+        var relational = context.Database.IsRelational();
+        try {
+            if (relational) {
+                await context.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            }
+            return await read(context).ConfigureAwait(false);
+        } finally {
+            if (relational) {
+                await context.Database.CloseConnectionAsync().ConfigureAwait(false);
+            }
         }
-        if (row.State.LaunchAdmissionId is null) {
-            throw Mismatch("Original selected receipt evidence requires an accepted Process launch admission.");
-        }
-        var saved = await EfProcessAcceptedSource.ReadAsync(context, row.State, evidence.StepInstanceId, cancellationToken).ConfigureAwait(false);
-        var assignment = saved.Assignment;
-        if (assignment.StepKey != evidence.StepKey || assignment.PlanId.Value != row.State.PlanId) {
-            throw Mismatch("The original selected assignment differs from its exact Process runtime.");
-        }
-        await EfProcessDecisionDispatchBinding.RequireOriginalAsync(context, evidence, new(row.State.RootRunId),
-            assignment, selection, cancellationToken).ConfigureAwait(false);
-        assignment = assignment with { CreatedAtUtc = StoredTimestamp(assignment.CreatedAtUtc) };
-        return Snapshot(row.State, evidence, assignment, assignment, saved.Header, false, clock.GetUtcNow(), selection);
     }
 
     internal static async Task<ProcessExecutionDispatchAuthorityResult> ReadCoreAsync(ProcessPersistenceDbContext context,

@@ -7,9 +7,14 @@ public sealed class AgentInheritedPlanningRunReader(ISandboxWorkspaceExecutionRu
     private readonly AgentInheritedPlanningReadAuthority authority = new(journal, participants);
 
     public async Task<ExecutionRunDetail> ReadAsync(Guid executionRunId, CancellationToken cancellationToken = default) {
-        var detail = await runs.GetExecutionRunDetailAsync(executionRunId, cancellationToken)
-            ?? throw new InvalidOperationException("Execution run was not found.");
-        await authority.RequireCurrentAsync(detail.Run, cancellationToken);
+        ExecutionRunDetail detail;
+        using (AgentFrameworkTelemetry.ActivitySource.StartActivity("agent.planning.read.detail")) {
+            detail = await runs.GetExecutionRunDetailAsync(executionRunId, cancellationToken)
+                ?? throw new InvalidOperationException("Execution run was not found.");
+        }
+        using (AgentFrameworkTelemetry.ActivitySource.StartActivity("agent.planning.read.authority")) {
+            await authority.RequireCurrentAsync(detail.Run, cancellationToken);
+        }
         cancellationToken.ThrowIfCancellationRequested();
         return detail;
     }
