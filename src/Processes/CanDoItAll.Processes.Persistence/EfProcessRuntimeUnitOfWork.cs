@@ -164,6 +164,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         ArgumentNullException.ThrowIfNull(request);
 
         request.DispatchPrecondition?.Validate();
+        EfProcessRootCancellationGuard.ValidateConfirmation(request);
 
         if (request.InitialRunDecisionAdmission is not null && (request.InitialPlan is null || request.InitialAssignments is null ||
                 request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {

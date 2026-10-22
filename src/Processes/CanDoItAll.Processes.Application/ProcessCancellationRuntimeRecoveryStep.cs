@@ -1,5 +1,4 @@
 using CanDoItAll.Processes.Abstractions;
-using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Application;
@@ -55,7 +54,7 @@ public sealed class ProcessCancellationRuntimeRecoveryStep(IProcessCancellationR
             throw new InvalidDataException("Runtime cancellation intent differs from the selected original descendant.");
         }
         if (await receipts.FindCompletedCommandAsync(intent.Context.CommandId, cancellationToken).ConfigureAwait(false) is { } replay) {
-            RequireReceipt(claim.RootRunId, intent, replay);
+            ProcessCancellationRuntimeReceipt.RequireCancellation(claim.RootRunId, intent, replay);
             return Resolved(claim, intent, ProcessCancellationIntentOutcome.Committed);
         }
         var state = await states.LoadAsync(intent.RunId, cancellationToken).ConfigureAwait(false);
@@ -72,7 +71,7 @@ public sealed class ProcessCancellationRuntimeRecoveryStep(IProcessCancellationR
             return Resolved(claim, intent, ProcessCancellationIntentOutcome.RefusedWithoutCommit, ProcessCancellationRecoveryPending.ConflictingState);
         }
         if (result.Succeeded) {
-            RequireReceipt(claim.RootRunId, intent, result);
+            ProcessCancellationRuntimeReceipt.RequireCancellation(claim.RootRunId, intent, result);
             return Resolved(claim, intent, ProcessCancellationIntentOutcome.Committed);
         }
         if (result.Outcome != ProcessRuntimeTransitionOutcome.Rejected) {
@@ -93,22 +92,4 @@ public sealed class ProcessCancellationRuntimeRecoveryStep(IProcessCancellationR
     private static ProcessCancellationRecoveryPending RetainedPending(ProcessCancellationRecoveryClaim claim)
         => claim.Position.CycleHadPending ? claim.Pending : ProcessCancellationRecoveryPending.None;
 
-    private static void RequireReceipt(ProcessRunId rootRunId, ProcessCancellationCancelRun intent, ProcessRuntimeCommitResult result) {
-        if (!result.Succeeded || result.State.RunId != intent.RunId || result.State.RootRunId != rootRunId ||
-                result.State.Status != ProcessRuntimeStatus.Cancelled || result.Decision is not null || result.DecisionBudget is not null ||
-                result.DecisionRunScope is not null || result.ArtifactLedgerEvents.Count != 0) {
-            throw new InvalidDataException("The cancellation receipt differs from the original selected descendant.");
-        }
-        if (result.Events.Count == 0 && !result.CommittedNow && result.OutboxMessages.Count == 0) {
-            return;
-        }
-        if (result.Events.Count != 1 || result.Events[0] is not { } applied || applied.EventType != ProcessRuntimeEventTypes.ProcessRunCancelled ||
-                applied.RootRunId != rootRunId || applied.RunId != intent.RunId || applied.Actor != intent.Context.Actor ||
-                applied.CorrelationId != intent.Context.CorrelationId || applied.OccurredAtUtc != intent.Context.OccurredAtUtc ||
-                result.OutboxMessages.Count != 1 || result.OutboxMessages[0] is not { } notification ||
-                notification.EventId != applied.EventId || notification.PayloadHash != applied.PayloadHash ||
-                notification.SubscriberKind != ProcessOutboxSubscriberKind.RuntimeProjection) {
-            throw new InvalidDataException("The cancellation receipt differs from the original selected descendant and command context.");
-        }
-    }
 }

@@ -5,6 +5,12 @@ are claimed. Baseline is `ead988abeb4cfb3e12341e618362bfa3dde5df29`. Projects de
 coverage is detailed separately in [editor design](03-editor-and-validation-design.md).
 This inventory prevents the Projects pilot from being mistaken for engine-wide protection.
 
+2026-10-22 Process recovery update: [completion stages](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-completion-stages.md)
+pass all 141 selected cases. Registered stages preserve original child accounting,
+scope capture work and exact cancellation receipts, with persisted root-local quiescence
+and legacy confirmation. This covers stage composition through real Agent producers;
+automatic scheduling, HTTP cutover, late publication races and capacity remain open.
+
 2026-10-19 policy recovery update: [historical Agent policy receipts](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-receipts.md)
 pass 40 focused cases. The dedicated file owner atomically stores exact original
 acceptance, preserves it through ordinary writers/deletion, and supports read-only

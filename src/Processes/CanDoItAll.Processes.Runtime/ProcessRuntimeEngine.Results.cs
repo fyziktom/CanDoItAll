@@ -185,10 +185,12 @@ public sealed partial class ProcessRuntimeEngine
                 "Root cancellation can only be finalized after the cancellation barrier was committed.");
         }
 
+        var occurred = context.OccurredAtUtc.UtcTicks;
+        var updated = Math.Max(occurred - occurred % 10, checked(state.UpdatedAtUtc.UtcTicks + 10));
         var next = state with
         {
             Status = ProcessRuntimeStatus.Cancelled,
-            UpdatedAtUtc = context.OccurredAtUtc
+            UpdatedAtUtc = new(updated, TimeSpan.Zero)
         };
         return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
     }

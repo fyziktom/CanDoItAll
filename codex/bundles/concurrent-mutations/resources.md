@@ -1604,3 +1604,23 @@ JSON/CSV pair was removed after ownership/proof/hash checks and verified absence
 recorded in its redundant-scan-cleanup.json. The earlier cursor pair was also removed
 and verified in its own record. Required command/TRX/identity/architecture evidence and
 the reusable fixture remain. No denied cleanup was retried; historical denials are open.
+
+## Cancellation completion stages, 2026-10-22
+
+Own `.artifacts/concurrent-mutations/validation/c4-cancellation-completion` before
+creation for focused command logs, discovery/results, source/runtime identities and
+resource observations. Reuse standard Release outputs and the existing isolated
+PostgreSQL/API/default integration/tool-admission fixture families. No new container,
+host, build configuration or database server is required. Reconcile all observed leases
+and temporary paths after execution; retain compact reviewed proof, remove only redundant
+owned scans after qualification. Historical denied cleanup remains untouched.
+
+All 141 cases pass and all 12 execution commands are observed; no new process, database
+or temporary entry remains. Two pre-execution observer setup refusals were corrected
+without backdating the machine-readable ownership adapter. Their evidence remains.
+Compact proof is 177346 bytes, SHA256
+`A279F4C32589A2969829E27CC7B6B7E60CA244911DFFE0A64DB9C387AC759375`.
+Required logs/results, source/output identities and architecture evidence remain.
+Secret-pattern/private-password scanning passes. Exact redundant scan JSON/CSV removal
+and verified absence are recorded in `redundant-scan-cleanup.json`. No denied resource
+was retried.

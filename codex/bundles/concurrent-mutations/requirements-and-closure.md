@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current behavioral checkpoint: [finite runtime recovery stage](validation/2026-10-22-runtime-recovery-stage.md).
+Current behavioral checkpoint: [cancellation completion stages](validation/2026-10-22-cancellation-completion-stages.md).
+All 141 selected cases pass (112 Unit, 29 Integration), including real Agent producers,
+measured child accounting, interrupted scope capture and exact receipt recovery after
+lost acknowledgement. Nine affected Release builds, 32 output identities, architecture,
+full portability and observed resource closure pass. Automatic scheduling/HTTP cutover,
+publication races, indexes/capacity/fairness, refresh, remaining writers and final E2E
+remain open. SPA stays on codex/concurrent-mutations; main remains untouched.
+
+Preceding behavioral checkpoint: [finite runtime recovery stage](validation/2026-10-22-runtime-recovery-stage.md).
 All 87 selected cases qualify: 64 Unit passes plus 23 Integration passes after a test-only
 parent-claim fixture repair. Exact source/28-output identity, full portability, architecture
 and resource gates pass. Original cancellation receipts recover across new leases;

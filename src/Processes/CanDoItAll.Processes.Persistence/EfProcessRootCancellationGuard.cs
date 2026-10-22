@@ -14,6 +14,27 @@ internal static class EfProcessRootCancellationGuard {
     internal const string WorkAdmissionStopped = "Runtime.RootWorkAdmissionStopped";
     internal const string WorkPending = "Runtime.RootCancellationWorkPending";
 
+    internal static void ValidateConfirmation(ProcessRuntimeCommitRequest request) {
+        if (!request.ConfirmRootCancellation) {
+            return;
+        }
+        var original = request.OriginalState;
+        var mutation = request.Mutation;
+        if (original.RunId != original.RootRunId || original.Status != ProcessRuntimeStatus.Cancelled ||
+                mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied ||
+                mutation.State with { UpdatedAtUtc = original.UpdatedAtUtc } != original ||
+                mutation.State.UpdatedAtUtc <= original.UpdatedAtUtc || mutation.State.UpdatedAtUtc.Offset != TimeSpan.Zero ||
+                mutation.State.UpdatedAtUtc.UtcTicks % 10 != 0 ||
+                request.ParentStepPrecondition is not null || request.InitialPlan is not null || request.InitialAssignments is not null ||
+                request.InitialLaunchAdmission is not null || request.InitialRunDecisionAdmission is not null ||
+                request.BlockedRecoveryAuthorization is not null || request.DispatchPrecondition is not null ||
+                request.Decision is not null || request.DecisionBudget is not null || request.DecisionMaterial is not null ||
+                request.DecisionRunScope is not null || mutation.Events.Count != 0 || mutation.OutboxMessages.Count != 0 ||
+                mutation.ArtifactLedgerEvents.Count != 0 || mutation.Diagnostics.Count != 0) {
+            throw new InvalidOperationException("Root cancellation confirmation requires an unchanged cancelled root without business effects or other commands.");
+        }
+    }
+
     internal static async Task<(ProcessRuntimeCommitResult? Rejection, bool CheckAfterFlush)> CheckAsync(ProcessPersistenceDbContext context,
         ProcessRuntimeCommitRequest request, ProcessRuntimeStateEntity current, ProcessRuntimeWorkAdmission admission,
         CancellationToken cancellationToken) {
@@ -35,13 +56,14 @@ internal static class EfProcessRootCancellationGuard {
                     $"Root '{current.RootRunId:D}' cannot admit new work with persisted status '{rootStatus}' and proposed run status '{proposed.Status}'."), false);
             }
         }
-        if (!isRoot || current.Status == ProcessRuntimeStatus.Cancelled || proposed.Status != ProcessRuntimeStatus.Cancelled) {
+        if (!isRoot || current.Status == ProcessRuntimeStatus.Cancelled && !request.ConfirmRootCancellation || proposed.Status != ProcessRuntimeStatus.Cancelled) {
             return (null, false);
         }
         if (HasAtomicCancelledResult(request)) {
             return (null, true);
         }
-        var pending = await ReadPendingAsync(context, new(current.RootRunId), cancellationToken).ConfigureAwait(false);
+        var pending = await ReadPendingAsync(context, new(current.RootRunId), cancellationToken,
+            includeRootLocal: request.ConfirmRootCancellation).ConfigureAwait(false);
         if (HasLocalRuntimeWork(proposed)) {
             pending |= ProcessRootCancellationPending.RuntimeWork;
         }
@@ -74,18 +96,19 @@ internal static class EfProcessRootCancellationGuard {
             state.Steps.Any(step => step.ActiveClaimToken is not null || step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running);
 
     internal static async Task<ProcessRootCancellationPending> ReadPendingAsync(ProcessPersistenceDbContext context,
-        ProcessRunId rootRunId, CancellationToken cancellationToken = default) {
+        ProcessRunId rootRunId, CancellationToken cancellationToken = default, bool includeRootLocal = false) {
         if (rootRunId.Value == Guid.Empty) {
             throw new ArgumentOutOfRangeException(nameof(rootRunId));
         }
         var row = await context.RuntimeStates.AsNoTracking().Where(root => root.RunId == rootRunId.Value && root.RootRunId == root.RunId)
             .Select(root => new {
-                RuntimeWork = context.RuntimeStates.Any(run => run.RootRunId == root.RunId && run.RunId != root.RunId &&
-                    (run.Status != ProcessRuntimeStatus.Completed && run.Status != ProcessRuntimeStatus.Failed && run.Status != ProcessRuntimeStatus.Cancelled ||
-                    context.DispatchClaims.Any(claim => claim.RunId == run.RunId &&
+                RuntimeWork = context.RuntimeStates.Any(run => run.RootRunId == root.RunId &&
+                    (run.RunId != root.RunId && run.Status != ProcessRuntimeStatus.Completed && run.Status != ProcessRuntimeStatus.Failed &&
+                        run.Status != ProcessRuntimeStatus.Cancelled ||
+                    (run.RunId != root.RunId || includeRootLocal) && (context.DispatchClaims.Any(claim => claim.RunId == run.RunId &&
                         (claim.Status == DispatchClaimStatus.Claimed || claim.Status == DispatchClaimStatus.LeaseRenewed || claim.Status == DispatchClaimStatus.Reclaimed)) ||
                     context.RuntimeSteps.Any(step => step.RunId == run.RunId && (step.ActiveClaimToken != null ||
-                        step.Status == ProcessRuntimeStepStatus.Claimed || step.Status == ProcessRuntimeStepStatus.Running)))),
+                        step.Status == ProcessRuntimeStepStatus.Claimed || step.Status == ProcessRuntimeStepStatus.Running))))),
                 Decisions = context.DecisionHeads.Any(head => head.RootRunId == root.RunId &&
                     (!context.DecisionGenerations.Any(generation => generation.DecisionId == head.DecisionId && generation.Generation == head.CurrentGeneration &&
                         (generation.Phase == ProcessDecisionPhase.Completed || generation.Phase == ProcessDecisionPhase.Cancelled)) ||

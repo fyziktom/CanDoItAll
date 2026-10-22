@@ -111,6 +111,13 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessCancellationRecoveryQueue, EfProcessCancellationRecoveryQueue>();
         services.TryAddScoped<IProcessCancellationRuntimeReader, EfProcessCancellationRuntimeReader>();
         services.TryAddScoped<ProcessCancellationRuntimeRecoveryStep>();
+        services.TryAddScoped<IProcessCancellationQuiescenceReader, EfProcessCancellationQuiescenceReader>();
+        services.TryAddScoped<ProcessCancellationQuiescenceRecoveryStep>();
+        services.TryAddScoped<IProcessCancellationDecisionReader, EfProcessCancellationDecisionReader>();
+        services.TryAddScoped<ProcessCancellationDecisionRecoveryStep>();
+        services.TryAddScoped<ProcessCancellationScopeRecoveryStep>();
+        services.TryAddScoped<IProcessCancellationRecoveryStep, ProcessCancellationRecoveryDispatcher>();
+        services.TryAddScoped<ProcessCancellationRecoveryCoordinator>();
         services.TryAddScoped<ProcessAuthoringWorkspace>();
         services.TryAddScoped<ProcessExecutableDefinitionResolver>();
         services.TryAddScoped<ProcessDefinitionAuthoringAdapter>();

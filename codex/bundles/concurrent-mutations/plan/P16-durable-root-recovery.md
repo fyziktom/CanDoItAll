@@ -772,3 +772,32 @@ windows and preserve pending if original work cannot be proven closed. Complete 
 cooperative/hard I/O distinction, original receipt races, full-cycle restart/takeover,
 live/legacy fairness, pending status/HTTP cutover and the compact-index cost investigation
 before enabling a hosted worker. No stage-only pass waives those gates.
+
+Completion-stage implementation refinement: register the finite dispatcher and scoped
+coordinator with the concrete stages so native qualification can resolve the complete
+production composition. Registration starts no worker; automatic scheduling and HTTP
+cutover remain disabled. A retained final intent can precede later accounting timestamps,
+so native finalization must keep a monotonic microsecond state timestamp while its event
+retains the original action's occurrence. Test both live finalization and legacy
+confirmation against this race. Confirmation shape validation runs before replay or any
+transaction, and its persisted guard includes root-local work even if the supplied
+snapshot omits active status. No project references or partial-class owners are added.
+
+Completion-stage focused selection before execution is 141 cases. Unit: quiescence 19,
+shared scope 11, decision recovery 16, confirmation request shape/wire 19, existing runtime
+recovery 22, coordinator 22 and cancellation barrier 3. Integration: quiescence/legacy
+confirmation 4, decision keysets/finalization 3, interrupted shared capture 1, registered
+full-stage real Agent producer/replay 2 and existing persisted quiescence 19. Exact class
+discovery must match. Refresh Runtime, Application, Persistence, Workbench, Processes,
+Composition, Web, Unit and Integration in standard Release; verify all 32 owning/copied
+outputs. Full static checks include untracked protected files. Reuse and observe the
+existing isolated fixture families. No broad Stable or automatic worker is activated by
+this focused qualification.
+
+Completion-stage Behavioral closure passes with [141 cases](../validation/2026-10-22-cancellation-completion-stages.md).
+All 112 Unit and 29 Integration cases pass; the two complete cycles use real Agent
+producers and inject lost accounting/scope acknowledgements. Nine affected builds,
+32 output identities, full portability and all 12 observed execution commands qualify
+these stages. There is no new resource residue. The test-only compile repair and both
+observer setup refusals remain recorded. Proceed with the indexed-selection and held
+publication/registration gates above; stage composition does not authorize activation.

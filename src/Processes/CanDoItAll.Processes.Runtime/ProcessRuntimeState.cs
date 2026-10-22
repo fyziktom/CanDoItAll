@@ -378,6 +378,9 @@ public sealed record ProcessRuntimeCommitRequest(
 
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ProcessDecisionRunScopeCommand? DecisionRunScope { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ConfirmRootCancellation { get; init; }
 }
 
 public sealed record ProcessRuntimeCommitResult(

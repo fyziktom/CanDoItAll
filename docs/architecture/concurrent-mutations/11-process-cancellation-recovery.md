@@ -88,6 +88,39 @@ missing journals and incomplete capture accounting remain explicit recovery stat
 root completion needs an independent persisted quiescence check, including historical
 Cancelled roots; terminal status alone is insufficient.
 
+## Finite recovery stages
+
+The registered Application dispatcher composes four independently testable stages. It
+does not start a hosted worker. Runtime selects one Process run or Agent candidate;
+Decisions selects one original generation or child; SharedScope retains one original
+scope transition; Quiescence independently verifies persisted work before finalization.
+Every mutation retains its original intent before invoking the existing transaction owner.
+The scoped coordinator can be explicitly resolved for bounded slices; HTTP cancellation
+has not yet switched to this path.
+
+Decision metadata uses root-bound keysets without material or runtime payloads. Children
+remain bound to their original generation and execution contract. The registered child
+stop owner supplies readiness; the terminal accounting coordinator retains actual
+measured work, accepted effects and root funding. A pending first child advances with
+sticky cycle evidence, permitting later children to progress. Historical unfinished
+generations remain InvalidEvidence. Empty terminal decisions use the existing finalization
+owner without publishing new business effects.
+
+Shared scope cancellation moves Active through Reconciling, or cancels AwaitingCapture
+directly. Each transition has its own retained action and expected revision. Capturing
+remains CapturePending until the original capture owner settles measured work through
+AbortCapture. Recovery cannot infer that settlement from absence of a process or journal.
+
+The final persisted query includes root-local claims and running steps as well as
+descendants, decisions, allocations and shared scope. Any unresolved cycle restarts from
+Runtime with bounded backoff. A legacy Cancelled root receives an explicit no-effect
+confirmation under the same runtime root transaction and full guard. Confirmation requires
+unchanged business state, no other command/effect and a later microsecond timestamp; its
+request flag is omitted by default from existing wire data. New root cancellation also
+advances state time if accounting committed after the retained final intent, while its
+event retains the original action occurrence. Either path recovers a lost acknowledgement
+through the exact existing owner receipt before attempting another mutation.
+
 ## Remaining activation proof
 
 The finite runtime stage now selects one run, retains/resolves one original cancellation
@@ -96,7 +129,7 @@ root, preserves sticky pending work, recovers original native cancellation recei
 delegates inherited Agents only to retained Process children. The inherited stop adapter
 also captures profile identity/fingerprint values across source observation. See the
 [87-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-runtime-recovery-stage.md).
-The stage is registered as a concrete service; no worker or HTTP path is activated.
+The stage is composed by the scoped dispatcher; no worker or HTTP path is activated.
 
 Recovery positions retain the selected Process run, last inspected Agent execution and
 sticky pending-cycle evidence across release and takeover. Advancing past unresolved
@@ -104,7 +137,7 @@ work cannot lose that evidence; later success cannot authorize completion. Only 
 explicit pending cycle restart clears it. Old canonical v1 wire positions remain
 byte-identical. Uncertain owner acknowledgement retains the exact original intent and
 selection, including final-root receipt recovery. The [54-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-cursors.md)
-does not yet enable automatic stage execution.
+does not itself enable automatic stage execution.
 
 Ordinary and inherited Agent parent stopping now share one Core protocol with distinct
 journal policies. Signals require the exact admitted session/source/profile generation;
@@ -119,7 +152,7 @@ the original accepted claim/source, selected run/root, admitted fingerprint and 
 current profile identity/fingerprint/generation before any signal or journal publication.
 Historical generation is retained across renewed current generations. The registered
 adapter's native persistence proof is [qualified here](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-stop-adapter.md).
-Automatic stage orchestration and bounded elapsed/fairness proof are still required.
+Hosted activation and bounded elapsed/fairness proof are still required.
 
 Process execution pages now select from an owner-maintained compact projection. The
 existing publication journal retains its exact chat target until both projections are
@@ -138,9 +171,11 @@ Do not interpret the lookup correctness pass as capacity, bounded elapsed time o
 worker scheduling. Repeated cost investigation and cancellation-aware owner waits remain
 activation prerequisites alongside the real stop/stage adapters.
 
-The worker must enforce finite operations/time, live/legacy fairness and cursor progress,
-then use the actual Agent/Workbench stop and accounting owners. Ordinary Agent selection
-currently has an unbounded candidate path; limiting the result after loading every journal
-does not meet this contract. Qualify selected hydration and cold metadata cost before use.
-Prove restart/takeover, unresolved-first-child progress, shared capture handling, transfer
-refusal, operational pending status and both snapshot policies before enabling recovery.
+The worker still needs measured live/legacy fairness, indexed runtime/decision selection,
+bounded owner waits and publication-race qualification. The existing HTTP cancellation
+cascade remains unbounded; its cutover must use the finite dispatcher and expose accepted
+versus pending completion. One exhausted keyset scan does not prove that a producer
+admitted before the barrier cannot publish a journal behind the cursor. Hold publication
+and registration at their actual boundaries and prove safe refusal or retained pending
+evidence before activation. New service scopes and lease takeover do not by themselves
+qualify an operating-system process restart.
