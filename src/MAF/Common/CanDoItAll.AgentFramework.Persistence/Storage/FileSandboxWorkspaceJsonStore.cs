@@ -410,9 +410,9 @@ internal sealed class FileSandboxWorkspaceJsonStore
         return changed;
     }
 
-    public async Task<bool> WriteJsonIfChangedAsync<T>(string fullPath, T payload, CancellationToken cancellationToken)
+    public async Task<bool> WriteJsonIfChangedAsync<T>(string fullPath, T payload, CancellationToken cancellationToken, bool compact = false)
     {
-        var serialized = Serialize(payload);
+        var serialized = Serialize(payload, compact);
         if (File.Exists(fullPath))
         {
             var existing = await ReadTextAsync(fullPath, cancellationToken);
@@ -516,10 +516,10 @@ internal sealed class FileSandboxWorkspaceJsonStore
             cancellationToken: cancellationToken);
     }
 
-    private string Serialize<T>(T payload) {
+    private string Serialize<T>(T payload, bool compact = false) {
         using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.serialize");
         activity?.SetTag("payload.type", typeof(T).Name);
-        return JsonSerializer.Serialize(payload, SerializerOptions);
+        return JsonSerializer.Serialize(payload, compact ? CompactSerializerOptions : SerializerOptions);
     }
 
     private static FileStream OpenSharedReadStream(string fullPath)

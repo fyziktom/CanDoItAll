@@ -27,6 +27,14 @@ candidate; optional postcommit projection failures remain visible until P02b's a
 
 ## Hard cost constraints
 
+The [selection reuse qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-selection-reuse.md)
+reduces the repeated small-history throughput loss to 3.35%, with write p95 1.66% lower
+than the pre-index baseline. The original investigation thresholds now pass; stable
+updates avoid 120 repeated physical publications in the diagnostic workload. Actual
+2,000-history workloads still allocate 4.22–4.83 GB per 100 writes and reach a 15.06-second
+write p95 at 32 writers. Preserve bounded cooperative waits and qualify sibling-root
+progress under competing writes before activation. This repair does not qualify capacity.
+
 The [compact Process index comparison](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-selection-index.md)
 reduces 100,000-entry read metadata from 82.1 MB to 11.2 MB, but does not qualify worker
 capacity. One actual sample per population/writer count shows tiny-history throughput

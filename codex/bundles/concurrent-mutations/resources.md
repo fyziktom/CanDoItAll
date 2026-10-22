@@ -1797,3 +1797,23 @@ Historical cleanup denials, ordinary 5032, installed tools and SPA main remain u
 The two owned bulk portability files were removed after exact hash and containment checks
 and verified absent. The durable proof scan and all three local proof scans pass with
 zero findings and no skipped oversized/unreadable text. Small reviewed records remain.
+
+## Process selection reuse, 2026-10-22
+
+Five observed runs (initial typed-data failure, corrected 82-case selection, six repeated
+cost cases, five real-owner/listener cases, four actual legacy handoffs) report no new
+process, database-name or fixture-temp residue. Their ownership and exact identities are
+under `.artifacts/concurrent-mutations/validation/c4-process-index-reuse`,
+`c4-process-index-reuse-verified`, `c4-process-index-reuse-cost`,
+`c4-process-index-reuse-cost-extra` and `c4-process-index-legacy-handoff`.
+
+Automatic approval review rejected the cleanup command before execution with `blocked by
+policy`. Four exact new targets remain: `ProcessIndexHistoricalBinaryHandoffProbe.cs` in
+the main and cost-baseline Integration test projects, and `JournalPersisted` plus
+`ExecutionIndexPersisted` below the handoff validation root. The source is retained as
+`.cs.txt`; original file hashes, output identities, results and cleanup review are retained.
+No rejected deletion was retried. Explicit permission for separate cleanup is pending.
+The two temporary source files must be removed and the main Integration Release output
+refreshed before broad testing. The baseline worktree and owned `C:/cm-cost` junction
+remain until their last-use cleanup can finish. No ordinary instance or installed tool
+was modified. Older cleanup denials remain unchanged; this is not resource closure.

@@ -1140,3 +1140,12 @@ attribution identifies repeated physical projection publication as the useful re
 The [selection reuse design](P16-process-selection-reuse.md) defines canonical stamp ownership,
 legacy journal compatibility and the exact negative/cost proof before implementation.
 No performance threshold was relaxed and automatic recovery remains disabled.
+
+The [selection reuse qualification](../validation/2026-10-22-process-selection-reuse.md)
+now passes all 82 correctness cases, actual pre-index journal handoff at both publication
+boundaries, and the three alternating cost pairs. Median throughput loss is 3.35% with
+write p95 down 1.66%; listener counts fall from 863 to 743 JSON publications. The original
+thresholds pass. Actual 2,000-history/32-writer p95 remains 15.06 seconds, so this is not
+contended capacity acceptance. Full portability passes. Temporary handoff/source cleanup
+was rejected by automatic review and remains explicitly pending user action. Continue
+with the bounded competing-writer/sibling-root design; keep HTTP activation disabled.

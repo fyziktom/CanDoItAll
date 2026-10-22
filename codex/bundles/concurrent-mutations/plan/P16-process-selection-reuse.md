@@ -1,8 +1,11 @@
 # P16 — Reuse unchanged Process selection publication
 
-Status: design checkpoint. Implement only after the repeated cost proof and the scoped
-architecture record are sealed. Recovery remains disabled by default. SPA stays on its
-separate branch.
+Status: design implemented and qualified by the
+[selection reuse record](../validation/2026-10-22-process-selection-reuse.md).
+All 82 correctness cases, four actual historical-binary handoffs, repeated cost and
+full portability pass. Explicit temporary cleanup is blocked by automatic review;
+contended capacity and activation remain open. Recovery remains disabled by default.
+SPA stays on its separate branch.
 
 ## Evidence and decision
 

@@ -265,3 +265,15 @@ The [selection publication reuse design](../../../codex/bundles/concurrent-mutat
 keeps canonical completeness and original-journal recovery while avoiding physical
 replacement of unchanged selection bytes. It must pass compatibility and repeated cost
 proof before acceptance. This does not activate recovery or settle contended capacity.
+
+The [selection reuse qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-selection-reuse.md)
+implements that design inside the existing Persistence owners. Compact schema 2 uses an
+optional canonical membership revision while schema 1 retains exact ordinary revision
+binding. Exact persisted-content comparison suppresses only unchanged derived publication;
+business journals, flushes and pending/evidence checks remain. Actual pre-index binaries
+produce both interrupted original targets for successful current-binary recovery.
+The 82-case selection and unchanged full portability pass. Repeated small-history median
+throughput is 3.35% below pre-index production, within the original threshold. Same-workspace
+32-writer tails and large allocation remain; sibling-root progress under contention and
+HTTP status/activation still require qualification. Automatic review has blocked temporary
+handoff cleanup; the detailed resource record remains open. Enabled stays false.

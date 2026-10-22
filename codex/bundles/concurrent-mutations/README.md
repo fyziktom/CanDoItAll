@@ -1,6 +1,15 @@
 # Concurrent mutations implementation bundle
 
-Current cost checkpoint: [controlled index investigation](validation/2026-10-22-process-index-controlled-cost.md).
+Current checkpoint: [selection publication reuse](validation/2026-10-22-process-selection-reuse.md).
+All 82 focused cases, four actual historical-binary handoffs and full portability pass.
+Three alternating cost pairs reduce median throughput loss to 3.35%; original thresholds
+pass and 120 repeated JSON publications disappear. Four real-owner contention cases also
+preserve every revision, but 32-writer p95 still reaches 15.06 seconds. Temporary source/
+handoff cleanup was blocked by automatic review and remains pending explicit user action.
+Worker activation, contended capacity, remaining writers/policies and final E2E stay open.
+SPA remains on its dedicated branch.
+
+Preceding cost checkpoint: [controlled index investigation](validation/2026-10-22-process-index-controlled-cost.md).
 Six alternating native cases preserve 600 writes and 600 reads, but reproduce a 12.714%
 median throughput loss. Two final listener diagnostics identify 123 additional durable
 JSON publications; serialization itself is small. The failed first listener and build

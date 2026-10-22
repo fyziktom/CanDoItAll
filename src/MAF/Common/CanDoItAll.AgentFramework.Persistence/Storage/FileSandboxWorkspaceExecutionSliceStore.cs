@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
@@ -1317,6 +1318,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             previousDetail,
             targetDetail,
             plan.TargetIndex.UpdatedAtUtc);
+        if (plan.PreviousIndex.ProcessSelectionRevision is null && plan.TargetIndex.ProcessSelectionRevision is null) {
+            expectedTargetIndex = expectedTargetIndex with { ProcessSelectionRevision = null };
+        }
         if (!HasSamePayload(expectedTargetIndex, plan.TargetIndex))
         {
             throw new InvalidDataException(
@@ -1575,7 +1579,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             ReceiptCount: executionState.ToolExecutionReceipts.Count,
             ActiveRunCount: executionState.ExecutionRuns.Count(IsIndexedActiveRun),
             FailedRunCount: executionState.ExecutionRuns.Count(IsIndexedFailedRun),
-            UsageObservationCount: executionState.ProviderUsageObservations.Count);
+            UsageObservationCount: executionState.ProviderUsageObservations.Count,
+            ProcessSelectionRevision: changed ? (currentIndex?.Revision ?? 0L) + 1L : currentIndex?.Revision ?? 1L);
 
         if (changed || currentIndex is null || jsonStore.RequiresSave(currentIndex, nextIndex))
         {
@@ -1595,7 +1600,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             UpdatedAtUtc: nextIndex.UpdatedAtUtc,
             SessionSummaries: projection.SessionSummaries,
             RunSummaries: projection.RunSummaries,
-            ReportingProjectionVersion: WorkspaceChatProjectionBuilder.CurrentReportingProjectionVersion);
+            ReportingProjectionVersion: WorkspaceChatProjectionBuilder.CurrentReportingProjectionVersion,
+            ProcessSelectionRevision: nextIndex.ProcessSelectionRevision);
 
         if (changed || currentChatIndex is null || jsonStore.RequiresSave(currentChatIndex, nextChatIndex))
         {
@@ -1910,6 +1916,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         bool sessionExistedBefore,
         DateTimeOffset updatedAtUtc)
     {
+        FileProcessExecutionIndex.RequireValidRevision(currentIndex.Revision, currentIndex.ProcessSelectionRevision);
         return new ExecutionStorageIndex(
             Version: string.IsNullOrWhiteSpace(currentIndex.Version) ? "3.0" : currentIndex.Version,
             Revision: currentIndex.Revision + 1L,
@@ -1927,7 +1934,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 currentIndex.ActiveRunCount +
                 CountIndexedActiveRuns(detail.Run),
             FailedRunCount: currentIndex.FailedRunCount + CountIndexedFailedRuns(detail.Run),
-            UsageObservationCount: currentIndex.UsageObservationCount + detail.UsageObservations.Count);
+            UsageObservationCount: currentIndex.UsageObservationCount + detail.UsageObservations.Count,
+            ProcessSelectionRevision: currentIndex.ProcessSelectionRevision is null ? null : checked(currentIndex.Revision + 1));
     }
 
     private static ExecutionStorageIndex CreateExistingRunTargetIndex(
@@ -1959,7 +1967,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             UsageObservationCount:
                 currentIndex.UsageObservationCount +
                 targetDetail.UsageObservations.Count -
-                previousDetail.UsageObservations.Count);
+                previousDetail.UsageObservations.Count,
+            ProcessSelectionRevision: FileProcessExecutionIndex.NextSelectionRevision(currentIndex.Revision,
+                currentIndex.ProcessSelectionRevision, previousDetail.Run.ProcessRunId, targetDetail.Run.ProcessRunId));
     }
 
     private static ExecutionStorageIndex CreateAgentDeletionTargetIndex(
@@ -1974,6 +1984,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         int orphanReceiptCount,
         DateTimeOffset updatedAtUtc)
     {
+        FileProcessExecutionIndex.RequireValidRevision(currentIndex.Revision, currentIndex.ProcessSelectionRevision);
         var runLogCount = runDetails.Sum(item => item.ExecutionLog.Count);
         var runMetricCount = runDetails.Sum(item => item.Metrics.Count);
         var runUsageCount = runDetails.Sum(item => item.UsageObservations.Count);
@@ -1985,6 +1996,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return currentIndex with
         {
             Revision = currentIndex.Revision + 1L,
+            ProcessSelectionRevision = currentIndex.ProcessSelectionRevision is null ? null : checked(currentIndex.Revision + 1),
             UpdatedAtUtc = updatedAtUtc,
             SessionCount = SubtractIndexedCount(currentIndex.SessionCount, sessionCount, "session"),
             RunCount = SubtractIndexedCount(currentIndex.RunCount, runDetails.Count, "execution run"),
@@ -3350,7 +3362,8 @@ internal sealed record ExecutionStorageIndex(
     int ReceiptCount,
     int ActiveRunCount,
     int FailedRunCount,
-    int UsageObservationCount = 0);
+    int UsageObservationCount = 0,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? ProcessSelectionRevision = null);
 
 internal sealed record ExecutionChatIndex(
     string Version,
@@ -3358,7 +3371,8 @@ internal sealed record ExecutionChatIndex(
     DateTimeOffset UpdatedAtUtc,
     IReadOnlyList<ChatSessionSummaryRecord> SessionSummaries,
     IReadOnlyList<ChatRunSummaryRecord> RunSummaries,
-    int ReportingProjectionVersion = 0);
+    int ReportingProjectionVersion = 0,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? ProcessSelectionRevision = null);
 
 internal abstract class UsageProjectionAccumulator
 {

@@ -93,6 +93,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
 
         var current = await LoadOrBuildChatIndexAsync(cancellationToken);
         if (current.Version == executionIndex.Version && current.Revision == executionIndex.Revision &&
+            current.ProcessSelectionRevision == executionIndex.ProcessSelectionRevision &&
             current.SessionSummaries.Count == executionIndex.SessionCount &&
             current.RunSummaries.Count == executionIndex.RunCount)
         {
@@ -110,6 +111,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         rebuilt = rebuilt with
         {
             Revision = executionIndex.Revision,
+            ProcessSelectionRevision = executionIndex.ProcessSelectionRevision,
             UpdatedAtUtc = executionIndex.UpdatedAtUtc
         };
         await processIndex.PublishAsync(rebuilt, cancellationToken);
@@ -672,7 +674,8 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .ToList(),
             RunSummaries: runSummaries,
-            ReportingProjectionVersion: reportingProjectionVersion);
+            ReportingProjectionVersion: reportingProjectionVersion,
+            ProcessSelectionRevision: executionIndex.ProcessSelectionRevision);
     }
 
     public async Task<bool> SaveSessionAsync(
@@ -719,7 +722,8 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .ToList(),
             RunSummaries: currentChatIndex.RunSummaries,
-            ReportingProjectionVersion: currentChatIndex.ReportingProjectionVersion);
+            ReportingProjectionVersion: currentChatIndex.ReportingProjectionVersion,
+            ProcessSelectionRevision: executionIndex.ProcessSelectionRevision);
 
         if (currentChatIndex is not null &&
             File.Exists(layout.ExecutionChatIndexPath) &&
@@ -874,7 +878,8 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             UpdatedAtUtc: index?.UpdatedAtUtc ?? DateTimeOffset.UtcNow,
             SessionSummaries: projection.SessionSummaries,
             RunSummaries: projection.RunSummaries,
-            ReportingProjectionVersion: 0);
+            ReportingProjectionVersion: 0,
+            ProcessSelectionRevision: index?.ProcessSelectionRevision);
     }
 
     private async Task<ExecutionChatIndex> BuildReportingChatIndexAsync(
@@ -927,7 +932,8 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             UpdatedAtUtc: executionIndex?.UpdatedAtUtc ?? DateTimeOffset.UtcNow,
             SessionSummaries: projection.SessionSummaries,
             RunSummaries: runSummaries,
-            ReportingProjectionVersion: WorkspaceChatProjectionBuilder.CurrentReportingProjectionVersion);
+            ReportingProjectionVersion: WorkspaceChatProjectionBuilder.CurrentReportingProjectionVersion,
+            ProcessSelectionRevision: executionIndex?.ProcessSelectionRevision);
     }
 
     private async Task<ExecutionRunDetail?> LoadReportingRunDetailAsync(

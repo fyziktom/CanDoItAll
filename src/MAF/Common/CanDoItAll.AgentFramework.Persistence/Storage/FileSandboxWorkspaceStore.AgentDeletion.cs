@@ -269,6 +269,7 @@ public sealed partial class FileSandboxWorkspaceStore
         return currentChatIndex with
         {
             Revision = executionPlan.TargetIndex.Revision,
+            ProcessSelectionRevision = executionPlan.TargetIndex.ProcessSelectionRevision,
             UpdatedAtUtc = executionPlan.TargetIndex.UpdatedAtUtc,
             SessionSummaries = currentChatIndex.SessionSummaries
                 .Where(item => !sessionIds.Contains(item.Id))
