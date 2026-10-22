@@ -124,15 +124,19 @@ includes untracked test files; no protected source was omitted. The compact proo
 and the two original test-binding failures. Of those, 97 are the final correctness,
 six repeated-cost, five contention/listener and four historical-handoff passes.
 
-Automatic approval review rejected the combined cleanup command before it ran, with
-`blocked by policy`. The two temporary `ProcessIndexHistoricalBinaryHandoffProbe.cs`
-files in the main/baseline Integration projects and the JournalPersisted and
-ExecutionIndexPersisted handoff workspaces remain. Their exact ownership, source/file
-hashes and the rejection are recorded; explicit user permission for separate cleanup
-steps is pending. The final Integration output currently includes the temporary probe;
-remove it and refresh standard Release after cleanup is permitted. The original 82-case
-source/output freeze and all handoff identities remain intact in proof. The baseline
-worktree and its owned short-path junction remain until that cleanup is resolved.
+Automatic approval review rejected the initial combined cleanup command before it ran,
+with `blocked by policy`. The user then authorized the four exact targets separately.
+Both temporary `ProcessIndexHistoricalBinaryHandoffProbe.cs` sources were removed, and
+the ordinary Integration Release build passed. All source pins and production/copied
+outputs match the original freeze. The rebuilt Integration DLL/PDB have new identities:
+their informational version now contains signed commit `e0918e98a`; the original
+82-case source/output freeze and all handoff identities remain intact in historical proof.
+
+Separate retries of `JournalPersisted` and `ExecutionIndexPersisted` were rejected again
+by automatic approval review with the same generic reason. Removal of the exact owned
+`C:/cm-cost` junction was also rejected. These paths remain; baseline worktree archival is
+deferred until its alias is removed. The retained `.cs.txt`, receipts, inventories and
+`cleanup-approved-retry-outcome.json` preserve the original evidence and retry outcomes.
 
 Final resource closure remains pending cleanup. The broad Stable gate belongs at
 the final integrated freeze; shared publication/serialization remains its named trigger.

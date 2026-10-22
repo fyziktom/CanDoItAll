@@ -1,11 +1,18 @@
 # Requirements and closure ledger
 
-Current checkpoint: [selection publication reuse](validation/2026-10-22-process-selection-reuse.md).
+Current work: [contended recovery](validation/2026-10-22-recovery-contention.md) exposes
+five concurrent-progress failures in six cases; all 600 writes and final settlements are
+preserved. Five regressions pass. A diagnostic identifies repeated workspace-lock waits
+that exhaust recovery slices. The [local admission design](plan/P16-local-coordination-fairness.md)
+owns the repair; worker activation and HTTP cutover remain blocked pending proof.
+
+Previous implementation checkpoint: [selection publication reuse](validation/2026-10-22-process-selection-reuse.md).
 All 82 focused cases, four actual historical-binary handoffs and full portability pass.
 Three alternating cost pairs reduce median throughput loss to 3.35%; original thresholds
 pass and 120 repeated JSON publications disappear. Four real-owner contention cases also
-preserve every revision, but 32-writer p95 still reaches 15.06 seconds. Temporary source/
-handoff cleanup was blocked by automatic review and remains pending explicit user action.
+preserve every revision, but 32-writer p95 still reaches 15.06 seconds. Approved separate
+cleanup removed both temporary probe sources and Release was refreshed. Automatic review
+still blocks the two handoff folders and baseline junction; their ownership is retained.
 Worker activation, contended capacity, remaining writers/policies and final E2E stay open.
 SPA remains on its dedicated branch.
 

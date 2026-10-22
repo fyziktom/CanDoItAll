@@ -30,7 +30,7 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
 
     internal static async Task<ProjectTaskPlanReviewFixture> CreateAsync(ReadBasisMode mode = ReadBasisMode.StepSnapshot,
         CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null,
-        Action<IServiceCollection>? configureServices = null, int steps = 1, int promptCharacters = 16_384) {
+        Action<IServiceCollection>? configureServices = null, int steps = 1, int promptCharacters = 16_384, bool freezeClock = true) {
         var clock = new ProjectTaskPlanScenarioClock();
         var entry = await ProjectTaskPlanExecutionEntryTests.EntryFixture.CreateAsync(testEnvironment: environment, activeProfile: profile,
             configureServices: services => {
@@ -43,9 +43,13 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
                 executorId: entry.Files.Agent.Id, allowTaskPublication: true, promptCharacters: promptCharacters);
             var services = entry.Files.Sql.Services;
             var (parent, request) = await PrepareRequestAsync(entry, process);
-            clock.Freeze();
+            if (freezeClock) {
+                clock.Freeze();
+            }
             entry.Wire.OnRequest = token => {
-                clock.Advance(TimeSpan.FromSeconds(1));
+                if (freezeClock) {
+                    clock.Advance(TimeSpan.FromSeconds(1));
+                }
                 token.ThrowIfCancellationRequested();
                 return Task.CompletedTask;
             };

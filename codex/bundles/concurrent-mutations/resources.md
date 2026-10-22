@@ -1807,13 +1807,37 @@ under `.artifacts/concurrent-mutations/validation/c4-process-index-reuse`,
 `c4-process-index-reuse-verified`, `c4-process-index-reuse-cost`,
 `c4-process-index-reuse-cost-extra` and `c4-process-index-legacy-handoff`.
 
-Automatic approval review rejected the cleanup command before execution with `blocked by
-policy`. Four exact new targets remain: `ProcessIndexHistoricalBinaryHandoffProbe.cs` in
-the main and cost-baseline Integration test projects, and `JournalPersisted` plus
-`ExecutionIndexPersisted` below the handoff validation root. The source is retained as
-`.cs.txt`; original file hashes, output identities, results and cleanup review are retained.
-No rejected deletion was retried. Explicit permission for separate cleanup is pending.
-The two temporary source files must be removed and the main Integration Release output
-refreshed before broad testing. The baseline worktree and owned `C:/cm-cost` junction
-remain until their last-use cleanup can finish. No ordinary instance or installed tool
-was modified. Older cleanup denials remain unchanged; this is not resource closure.
+Automatic approval review rejected the initial combined cleanup command before execution
+with `blocked by policy`. After the user explicitly authorized four separate retries,
+both `ProcessIndexHistoricalBinaryHandoffProbe.cs` sources were removed and the main
+Integration Release build passed. Source and production/copied output hashes remain
+unchanged; the refreshed Integration assembly records signed commit `e0918e98a`.
+
+Automatic approval review rejected separate removal of `JournalPersisted` and
+`ExecutionIndexPersisted` again, and also rejected the owned `C:/cm-cost` junction.
+Those three paths and the baseline worktree remain. The original `.cs.txt`, file hashes,
+binary identities, receipts, cleanup review and `cleanup-approved-retry-outcome.json`
+are preserved. No further rejected deletion was retried. Ordinary 5032, installed tools
+and older cleanup blockers are unchanged; this is not resource closure.
+
+## Contended cancellation recovery, 2026-10-22
+
+`c4-recovery-contention` was recorded in its ownership sidecar before creation. It uses
+the existing isolated PostgreSQL fixture, two real planning children in one organization
+workspace, and ordinary Release outputs. The finite writer batch, held file lease and
+registered worker have awaited cleanup paths. Native discovery must match six contention
+rows, two completion regressions and three scenario-clock rows. Observe all executions
+and reconcile process, database and fixture-directory deltas before closing this lane.
+
+The initial 11-case run and the single real-dispatcher diagnostic in
+`c4-recovery-contention-activity` both closed their observers with zero remaining process,
+database-name or fixture-directory deltas. The diagnostic root was separately recorded
+before creation and reused the same database fixture and Release outputs. Failed progress
+assertions, exact source snapshots and full identities are retained in durable proof.
+
+Automatic approval review rejected removal of that diagnostic root's
+`portability-scan-1.json` (31,426,134 bytes) and `portability-scan-1.csv` (17,985,498 bytes).
+The command did not execute; `static-bulk-cleanup-blocked.json` records their identities.
+`reviewed-delivery` retains the exact two small durable proof copies used for the
+directory-only secret scan. Their ownership sidecar preceded creation. No new host or
+database stack was provisioned; earlier denied resources remain untouched.
