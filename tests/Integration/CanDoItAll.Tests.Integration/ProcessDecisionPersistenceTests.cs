@@ -435,18 +435,22 @@ public sealed class ProcessDecisionPersistenceTests {
         await using var context = Context(app.Services);
         var enrolled = await EnrollAsync(context, (await StartAsync(context)).State);
         var owner = new EfProcessRuntimeUnitOfWork(context);
-        var stoppedRequest = Request(enrolled.State, null);
-        stoppedRequest = stoppedRequest with { Mutation = stoppedRequest.Mutation with { State = stoppedRequest.Mutation.State with { Status = ProcessRuntimeStatus.Cancelled } } };
-        var stopped = await owner.CommitAsync(stoppedRequest);
-        var closed = await CloseAsync(context, stopped.State, enrolled.Decision!.Child!, NoEffect(), 21);
+        var stopped = await ProcessRootCancellationFixture.StopAsync(owner, enrolled.State);
+        var closure = await ClosureRequestAsync(context, stopped, enrolled.Decision!.Child!, NoEffect(), 21);
+        var closed = await owner.CommitAsync(closure with {
+            Decision = Assert.IsType<ProcessDecisionClosure>(closure.Decision) with { Completion = ProcessDecisionCompletion.Cancel }
+        });
         Assert.True(closed.DecisionBudget!.Change.Balance.OverrunDetected);
         Assert.Equal(26, closed.DecisionBudget.Change.Balance.ConsumedWorkTicks);
         Assert.Equal(0, closed.Decision!.Current.UnclosedChildCount);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => EnrollAsync(context, closed.State));
-        var quiesced = await PhaseAsync(context, closed.State, ProcessDecisionPhaseChange.BeginReconciliation);
-        var cancelled = await PhaseAsync(context, quiesced.State, ProcessDecisionPhaseChange.Cancel);
-        Assert.Equal(ProcessDecisionPhase.Cancelled, cancelled.Decision!.Current.Phase);
-        Assert.True((await BudgetAsync(context, cancelled.State)).OverrunDetected);
+        var refused = await EnrollAsync(context, closed.State);
+        Assert.False(refused.Succeeded);
+        Assert.Contains(refused.Diagnostics, item => item.Code == EfProcessRootCancellationGuard.WorkAdmissionStopped);
+        Assert.Equal(ProcessRuntimeStepStatus.Cancelled, closed.State.Steps.Single().Status);
+        Assert.Equal(ProcessDecisionPhase.Cancelled, closed.Decision.Current.Phase);
+        Assert.True((await BudgetAsync(context, closed.State)).OverrunDetected);
+        Assert.True((await new ProcessRuntimeEngine(owner).FinalizeRootCancellationAsync(closed.State,
+            ProcessRootCancellationFixture.Command(closed.State))).Succeeded);
     }
 
     private static async Task<Exception?> AttemptAsync(EfProcessRuntimeUnitOfWork owner, ProcessRuntimeCommitRequest request) {

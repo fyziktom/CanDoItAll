@@ -116,7 +116,7 @@ public sealed class ProcessStepMaterialProducerTests {
                     await using (var other = Context(fixture.Services)) {
                         var owner = fixture.Owner(other);
                         var original = await owner.LoadAsync(fixture.State.RunId);
-                        await owner.CommitAsync(CanDoItAll.Tests.Support.ProcessProjectAdmissionFixture.Cancel(original!));
+                        await ProcessRootCancellationFixture.StopAsync(owner, original!);
                     }
                     break;
                 case ClosedCapture.FailedRead:

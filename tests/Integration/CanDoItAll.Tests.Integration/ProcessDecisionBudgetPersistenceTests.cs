@@ -188,17 +188,22 @@ public sealed class ProcessDecisionBudgetPersistenceTests {
         var state = (await owner.CommitAsync(Initial())).State;
         var first = await owner.CommitAsync(Advance(state, Reserve(state, await BalanceAsync(context, state), 100)));
         var second = await owner.CommitAsync(Advance(first.State, Reserve(first.State, first.DecisionBudget!.Change.Balance, 100)));
-        var cancelled = await owner.CommitAsync(ProcessProjectAdmissionFixture.Cancel(second.State));
+        var cancelled = await ProcessRootCancellationFixture.StopAsync(owner, second.State);
         var balance = await BalanceAsync(context, state);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => owner.CommitAsync(Advance(cancelled.State, Reserve(state, balance, 1))));
-        var overrun = await owner.CommitAsync(Advance(cancelled.State, Settle(state, balance, first.DecisionBudget!.Command.AllocationId, 101)));
+        var refused = await owner.CommitAsync(Advance(cancelled, Reserve(state, balance, 1)));
+        Assert.Contains(refused.Diagnostics, item => item.Code == EfProcessRootCancellationGuard.WorkAdmissionStopped);
+        Assert.False(refused.Succeeded);
+        var overrun = await owner.CommitAsync(Advance(cancelled, Settle(state, balance, first.DecisionBudget!.Command.AllocationId, 101)));
         Assert.True(overrun.DecisionBudget!.Change.Balance.OverrunDetected);
         var settled = await owner.CommitAsync(Advance(overrun.State, Settle(state, overrun.DecisionBudget.Change.Balance, second.DecisionBudget!.Command.AllocationId, 70)));
         Assert.True(settled.DecisionBudget!.Change.Balance.OverrunDetected);
         Assert.Equal(171, settled.DecisionBudget.Change.Balance.ConsumedWorkTicks);
         Assert.Equal(0, settled.DecisionBudget.Change.Balance.ReservedWorkTicks);
         Assert.Equal(2, settled.DecisionBudget.Change.Balance.AllocationCount);
-        Assert.Equal(ProcessRuntimeStatus.Cancelled, settled.State.Status);
+        Assert.Equal(ProcessRuntimeStatus.CancelRequested, settled.State.Status);
+        var finalized = await new ProcessRuntimeEngine(owner).FinalizeRootCancellationAsync(settled.State, ProcessRootCancellationFixture.Command(settled.State));
+        Assert.True(finalized.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, finalized.State.Status);
     }
 
     [Fact]

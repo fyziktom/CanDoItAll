@@ -1390,5 +1390,27 @@ database-name or temporary-path deltas. The shared isolated PostgreSQL fixture r
 needed; ordinary 5032, installed MCP tooling and unrelated resources are preserved.
 Historical automatic cleanup denials remain unresolved and were not retried.
 
-The compact selected-read proof SHA256 is `237748F955324E609509949E81154837C002DAAFD0F0B61B5ABC982142AA87BF`. Source/runtime manifests,
+The compact selected-read proof SHA256 is `BF70D3E814938B25C2B89B84D2244FBCF43EBD807AB7CA24BC309332AEBA0D17`. Source/runtime manifests,
 necessary diagnostics and the compact proof remain available for the lifecycle work.
+
+After signed `94a4d1ac9`, four redundant portability scan JSON/CSV files from
+`c4-read-connection-reuse` and `c4-selected-read-connections` were removed and absence
+verified (92,458,674 bytes). Exact paths, hashes and ownership checks are retained in
+`c4-selected-read-connections/redundant-scan-cleanup.json`. Command/enforcement results,
+source/runtime manifests, TRX, measurements and the compact proof remain. The proof's
+documented SHA256 uses its exact LF bytes committed by Git; JSON content is unchanged.
+No historical denied target was retried, and the isolated database server remains needed.
+
+## Root cancellation fence, 2026-10-22
+
+`c4-root-cancellation-fence` and `c4-root-cancellation-final` reused standard Release
+outputs and the existing isolated PostgreSQL 18 fixture. The initial run passed 287,
+failed one fixture and stopped before 79 cases; the one-method repair's final selection
+passes all 80. All 367 distinct cases are qualified across the exact repair bridge.
+All 19 commands are observed; both reconciliations find zero new process/database/temp
+delta. No new container, host or compiled-output
+tree was created. Retained proof: 497084 bytes, SHA256 `07B6057FA2ED6BBDAFA28EA258788AB4D75906C4F257856D6FB8512B264AC81F`.
+The prebuild check addition required one companion checksum correction before resource
+observation began; the failed early check and correction are retained. The shared fixture
+remains required for durable recovery/producer work. Historical denied cleanup targets
+remain unchanged; this result does not clear those blockers.

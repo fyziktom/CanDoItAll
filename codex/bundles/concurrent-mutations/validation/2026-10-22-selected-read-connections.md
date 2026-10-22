@@ -108,7 +108,7 @@ Source/runtime identity verification passes before documentation-only closure ed
 
 [Compact proof](../proof/2026-10-19-planning-authority/c4-selected-read-connections.json)
 retains all three candidates' commands, discovery/results, measurements, architecture,
-input identities and resource reconciliation. Its SHA256 is `237748F955324E609509949E81154837C002DAAFD0F0B61B5ABC982142AA87BF`.
+input identities and resource reconciliation. Its SHA256 is `BF70D3E814938B25C2B89B84D2244FBCF43EBD807AB7CA24BC309332AEBA0D17`.
 The proof passed the secret scanner, including the private fixture-password sentinel.
 
 All test commands are covered by the owned resource observer. Each run leaves zero new

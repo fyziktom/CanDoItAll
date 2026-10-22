@@ -114,9 +114,10 @@ public sealed partial class ProcessDecisionFundingPersistenceTests {
         var child = (await owner.CommitAsync(Descendant(root, initial.InitialRunDecisionAdmission!))).State;
         var first = await owner.CommitAsync(Change(child, Reserve(Step(child), await BudgetAsync(context, child), 100)));
         var second = await owner.CommitAsync(Change(first.State, Reserve(Step(child), first.DecisionBudget!.Change.Balance, 100)));
-        await owner.CommitAsync(ProcessProjectAdmissionFixture.Cancel(root));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => owner.CommitAsync(Change(second.State,
-            Reserve(Step(child), second.DecisionBudget!.Change.Balance, 1))));
+        await ProcessRootCancellationFixture.StopAsync(owner, root);
+        var refused = await owner.CommitAsync(Change(second.State, Reserve(Step(child), second.DecisionBudget!.Change.Balance, 1)));
+        Assert.False(refused.Succeeded);
+        Assert.Contains(refused.Diagnostics, item => item.Code == EfProcessRootCancellationGuard.WorkAdmissionStopped);
         var settled = await owner.CommitAsync(Change(second.State, Settle(Step(child), second.DecisionBudget!.Change.Balance,
             first.DecisionBudget!.Command.AllocationId, 60)));
         Assert.Equal(60, settled.DecisionBudget!.Change.Balance.ConsumedWorkTicks);

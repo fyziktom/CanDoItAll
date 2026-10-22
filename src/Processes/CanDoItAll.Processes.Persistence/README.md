@@ -140,3 +140,17 @@ allocations. Local inheritance and publication use indexed metadata reads; neith
 the payload. Old generations remain readable but lose publication authority as soon as the
 parent starts reconciliation. The new migration refuses downgrade even for a prepared-only
 scope declaration. Executor producers and inherited child journals remain separate work.
+
+## Root cancellation and new-work admission
+
+Persisted root cancellation is monotonic. New descendant work, reservations, claim
+renewals, decision enrollment/refresh and shared capture require the root to remain
+eligible under the existing root lock. Admission compares persisted claim/step fields,
+so a caller cannot disguise lease renewal by modifying its original snapshot.
+
+Finalization checks outstanding runtime, decision, budget and shared-scope work with
+one scalar query. Unsettled or uncertain work keeps the root CancelRequested with an
+explicit diagnostic. Complete original owner settlement before retrying finalization;
+do not combine the last settlement and finalization in one request. Accepted historical
+receipts still replay and exact accounting remains legal after stopping. Durable root
+recovery and inherited producer activation require their separate integration gates.

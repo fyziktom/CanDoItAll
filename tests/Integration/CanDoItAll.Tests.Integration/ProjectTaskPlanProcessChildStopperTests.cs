@@ -70,11 +70,10 @@ public sealed class ProjectTaskPlanProcessChildStopperTests {
         Assert.False(await barriers.IsStoppedAsync(ProcessRunId.New()));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => barriers.IsStoppedAsync(default));
         var stopped = await StopRootAsync(fixture);
-        var finalized = await new ProcessRuntimeEngine(fixture.Services.GetRequiredService<IProcessRuntimeUnitOfWork>())
-            .FinalizeRootCancellationAsync(stopped, fixture.CommandContext);
-        Assert.True(finalized.Succeeded);
-        Assert.Equal(ProcessRuntimeStatus.Cancelled, finalized.State.Status);
-        Assert.True(await barriers.IsStoppedAsync(finalized.State.RunId));
+        await using var context = Context(fixture.Services);
+        var finalized = await Processes.ProcessRootCancellationFixture.LegacyCancelledAsync(context, stopped);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, finalized.Status);
+        Assert.True(await barriers.IsStoppedAsync(finalized.RunId));
         Assert.Equal(ProcessDecisionChildStopResult.ReadyForAccounting, await Owner(fixture).StopAsync(fixture.Parent));
         Assert.Equal(RunOutcome.Cancelled, (await fixture.Entry.Files.Store.GetExecutionRunAsync(fixture.Waiting.Id))!.Outcome);
         Assert.Single(fixture.Entry.Wire.Requests);

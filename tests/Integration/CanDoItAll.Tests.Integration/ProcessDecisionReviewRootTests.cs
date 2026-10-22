@@ -87,8 +87,7 @@ public sealed class ProcessDecisionReviewRootTests {
             root = (await new ProcessRuntimeEngine(owner).BeginRootCancellationAsync(root,
                 commandContext with { CommandId = RuntimeCommandId.New() })).State;
             if (rootStatus == ProcessRuntimeStatus.Cancelled) {
-                root = (await new ProcessRuntimeEngine(owner).FinalizeRootCancellationAsync(root,
-                    commandContext with { CommandId = RuntimeCommandId.New() })).State;
+                root = await ProcessRootCancellationFixture.LegacyCancelledAsync(database, root);
             }
         }
         Assert.Equal(rootStatus, root.Status);

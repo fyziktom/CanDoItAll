@@ -32,12 +32,7 @@ public sealed class EfProcessDecisionRunScopeStore(ProcessPersistenceDbContext c
         context.DecisionRunScopes.Add(entity);
     }
 
-    internal async Task RequireWorkAdmissionAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) {
-        var activeClaims = request.OriginalState.Claims.Where(claim => IsActiveClaim(claim.Status)).Select(claim => claim.ClaimToken).ToHashSet();
-        var claimedSteps = request.OriginalState.Steps.Where(step => step.ActiveClaimToken is not null)
-            .Select(step => (step.StepInstanceId, step.ActiveClaimToken)).ToHashSet();
-        var admitsClaim = request.Mutation.State.Claims.Any(claim => IsActiveClaim(claim.Status) && !activeClaims.Contains(claim.ClaimToken)) ||
-            request.Mutation.State.Steps.Any(step => step.ActiveClaimToken is not null && !claimedSteps.Contains((step.StepInstanceId, step.ActiveClaimToken)));
+    internal async Task RequireWorkAdmissionAsync(ProcessRuntimeCommitRequest request, bool admitsClaim, CancellationToken cancellationToken) {
         if (request.DecisionBudget is null && !admitsClaim) {
             return;
         }
@@ -266,9 +261,6 @@ public sealed class EfProcessDecisionRunScopeStore(ProcessPersistenceDbContext c
             throw new InvalidOperationException("Shared scope transitions require the runtime owner's fenced transaction.");
         }
     }
-
-    private static bool IsActiveClaim(DispatchClaimStatus status)
-        => status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed;
 
     private static void Write(ProcessDecisionRunScopeEntity entity, ProcessDecisionRunScopeState state) {
         entity.Revision = state.Revision;

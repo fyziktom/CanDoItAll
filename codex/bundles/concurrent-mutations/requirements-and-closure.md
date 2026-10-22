@@ -1,13 +1,17 @@
 # Requirements and closure ledger
 
-Current qualified checkpoint: [selected authority read connections and receipt recovery](validation/2026-10-22-selected-read-connections.md).
-All 235 selected executions pass, including 18 new lifecycle cases, both receipt-recovery
-selections and all six unchanged finite latency shapes. Reviews retain 27 SQL statements
-while connection opens fall from 22 to 10. The remaining 98 parent-stop regressions pass;
-with 65 unaffected earlier cases, all 187 parent-stop cases are now qualified. Full
-portability, exact source/runtime identity and observed resource checks pass. Root
-quiescence/recovery, snapshot refresh, producer/Workflow/settings integration, remaining
-writer waves, sustained capacity and end-to-end closure remain open. SPA remains separate.
+Current qualified checkpoint: [root cancellation quiescence and work admission](validation/2026-10-22-root-cancellation-fence.md).
+All 367 distinct selected cases are qualified across an exact one-test repair, including
+51 new cases. Root finalization refuses outstanding
+runtime, decision, budget or shared-capture work. New work and disguised claim renewals
+are refused after the persisted root stops; historical receipts and exact settlement
+remain legal. The final check uses one four-value SQL read, including the measured
+1,024-descendant shape. Four Release builds, full portability, source/runtime identity
+and all 19 test commands are covered by resource observation with zero new residue. The
+initial fixture failure remains retained. Durable recovery,
+snapshot refresh, producer/Workflow/settings integration, remaining writer waves,
+sustained capacity and end-to-end closure remain open. SPA stays on its separate branch.
+
 
 The [cancellation-barrier continuation](validation/2026-10-21-cancellation-barrier-and-replay.md)
 passes 84 selected cases, including 14 new cases. It prevents direct or rework-driven

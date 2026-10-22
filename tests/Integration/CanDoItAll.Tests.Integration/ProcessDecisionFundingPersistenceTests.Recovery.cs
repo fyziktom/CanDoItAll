@@ -254,7 +254,7 @@ public sealed partial class ProcessDecisionFundingPersistenceTests {
         var original = (await services.GetRequiredService<EfProcessDecisionChildQuery>().ReadAsync(address))!.Admission;
         await RequirePublicationAsync(services, original);
         if (cancel) {
-            await owner.CommitAsync(ProcessProjectAdmissionFixture.Cancel(state));
+            await ProcessRootCancellationFixture.StopAsync(owner, state);
         } else {
             var work = await owner.CommitAsync(Change(state, Reserve(null, await RootBudgetAsync(context, state), 1)));
             await owner.CommitAsync(Change(work.State, Settle(null, work.DecisionBudget!.Change.Balance, work.DecisionBudget.Command.AllocationId, 2)));

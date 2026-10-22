@@ -218,7 +218,7 @@ public sealed class ProcessRuntimeDispatchPreconditionTests {
             selected = (await owner.CommitAsync(Claim(child.State))).State;
         }
         var request = Request(selected, null) with { DispatchPrecondition = Precondition(selected) };
-        await owner.CommitAsync(ProcessProjectAdmissionFixture.Cancel(parent));
+        await ProcessRootCancellationFixture.StopAsync(owner, parent);
         var failure = await Assert.ThrowsAsync<ProcessRuntimeDispatchPreconditionException>(() => owner.CommitAsync(request));
         Assert.Equal(ProcessRuntimeDispatchPreconditionRefusal.RuntimeInactive, failure.Refusal);
         Assert.Null(await owner.FindCompletedCommandAsync(request.CommandId));

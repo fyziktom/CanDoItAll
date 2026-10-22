@@ -304,6 +304,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             decisionScopes.StageInitial(request);
         }
 
+        var workAdmission = ProcessRuntimeWorkAdmission.Read(existing, request);
         if (existing is null)
         {
             dbContext.RuntimeStates.Add(ProcessPersistenceMappers.ToEntity(request.Mutation.State));
@@ -311,10 +312,10 @@ public sealed class EfProcessRuntimeUnitOfWork(
         else
         {
             EnsureCurrentStateMatchesOriginal(existing, request.OriginalState);
-            if (existing.Status == ProcessRuntimeStatus.CancelRequested &&
-                    request.Mutation.State.Status is not (ProcessRuntimeStatus.CancelRequested or ProcessRuntimeStatus.Cancelled) ||
-                    existing.Status == ProcessRuntimeStatus.Cancelled && request.Mutation.State.Status != ProcessRuntimeStatus.Cancelled) {
-                throw new InvalidOperationException($"Run '{request.OriginalState.RunId}' cannot leave its persisted cancellation barrier.");
+            if (await EfProcessRootCancellationGuard.CheckAsync(dbContext, request, existing, workAdmission,
+                    cancellationToken).ConfigureAwait(false) is { } cancellationRejection) {
+                dbContext.ChangeTracker.Clear();
+                return cancellationRejection;
             }
             if (await ValidateBlockedRecoveryChildLineageAsync(
                     request,
@@ -327,7 +328,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             ReplaceState(existing, request.Mutation.State);
         }
 
-        await decisionScopes.RequireWorkAdmissionAsync(request, cancellationToken).ConfigureAwait(false);
+        await decisionScopes.RequireWorkAdmissionAsync(request, workAdmission.Claims, cancellationToken).ConfigureAwait(false);
         var decisionBudget = await decisionBudgets.StageAsync(request.OriginalState, request.DecisionBudget, cancellationToken).ConfigureAwait(false);
         var decisionScope = await decisionScopes.StageAsync(request, decisionBudget, cancellationToken).ConfigureAwait(false);
         var decision = await decisions.StageAsync(request.OriginalState, request.Mutation.State, request.Decision, decisionBudget,
