@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -67,13 +66,7 @@ internal sealed class ProjectTaskPlanProcessOutcomeReader(ISandboxWorkspaceHisto
             }
             var result = await originals.ObserveOriginalDecisionForReceiptReadAsync(target.Source.Evidence, original,
                 Contract, ProjectTaskPlanProcessContract.Content, cancellationToken);
-            if (result.OriginalDecisionPolicy != run.ToolAdmission.PlanningDecision!.InheritedOrigin!.ParentPolicy ||
-                result.Snapshot is not { ObservedCurrentDispatch: false, SourceAuthority: { } authority } current ||
-                current.Evidence != target.Source.Evidence || current.OwnerFingerprint != target.Source.OwnerFingerprint ||
-                current.RootRunId != target.Source.RootRunId || current.ProjectReference != target.Source.ProjectReference ||
-                JsonSerializer.Serialize(authority) != JsonSerializer.Serialize(target.Source.SourceAuthority)) {
-                throw new InvalidDataException("The retained child outcome differs from its original accepted Process source.");
-            }
+            target.RequireOriginalReceiptSource(result, run.ToolAdmission.PlanningDecision!.InheritedOrigin!);
             cancellationToken.ThrowIfCancellationRequested();
             return outcome;
         } finally {

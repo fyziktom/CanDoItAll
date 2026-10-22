@@ -71,8 +71,7 @@ closure edits receive a separately retained exact source bridge.
 
 ## Remaining work
 
-Implement and qualify the selected Agent stop owner and concrete Process adapter, then
-durable quiescence/recovery, snapshot refresh and supported producer activation. Existing
+The [selected Agent stop owner and Process adapter](2026-10-21-selected-parent-stop.md) are implemented. Qualification is blocked by the repeated receipt checkpoint deadline failure and unexecuted regression lanes. Resolve read cost before durable quiescence/recovery, snapshot refresh and supported producer activation. Existing
 finite-read and sustained-capacity gates, Workflow/settings/SPA integration, remaining
 writer waves and final integrated Stable closure remain open. Historical cleanup
 rejections remain recorded in [resources](../resources.md); no rejected deletion was retried.

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
@@ -20,6 +21,16 @@ internal sealed record ProjectTaskPlanProcessTarget(AgentToolSessionAdmission Se
     ProcessExecutionDispatchAuthority Source, ProjectTaskPlanExecutorCeiling Executor, ProjectTaskPlanWriteContext WriteContext) {
     internal ProjectTaskPlanCaller Caller => new(ProjectTaskPlanCallerKind.ProcessAgent,
         ProjectDefinitionGovernedBindings.ProcessCaller(Source).Key.ToArray());
+
+    internal void RequireOriginalReceiptSource(ProcessExecutionDispatchAuthorityResult result, AgentPlanningInheritedOrigin original) {
+        if (result.OriginalDecisionPolicy != original.ParentPolicy ||
+                result.Snapshot is not { ObservedCurrentDispatch: false, SourceAuthority: { } authority } current ||
+                current.Evidence != Source.Evidence || current.OwnerFingerprint != Source.OwnerFingerprint ||
+                current.RootRunId != Source.RootRunId || current.ProjectReference != Source.ProjectReference ||
+                JsonSerializer.Serialize(authority) != JsonSerializer.Serialize(Source.SourceAuthority)) {
+            throw new InvalidDataException("The retained child differs from its original accepted Process source.");
+        }
+    }
 }
 internal sealed record ProjectTaskPlanProcessCommand(ProjectTaskPlanProcessTarget Target, ProjectTaskPlanCommand Command);
 

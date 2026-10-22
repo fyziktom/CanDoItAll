@@ -1366,3 +1366,15 @@ Direct Process module output is included in the ten-root runtime manifest. The s
 isolated PostgreSQL server and existing file leases were reused; no custom output,
 new server or historical denied deletion was introduced. Exact commands and the
 remaining gates are in [P11 A validation](validation/2026-10-21-terminal-child-accounting.md).
+
+
+Selected-stop implementation checkpoint: initial `c4-selected-parent-stop` retains
+62 passes/three test-only failures; `c4-selected-parent-stop-final` retains 73 passes/two
+test-generation setup failures. `c4-selected-parent-stop-verified` retains 88 passes/one
+receipt checkpoint timeout and 98 unexecuted cases. `c4-parent-stop-recovery-diagnostic`
+repeats that same case three times; all fail at the final authority checkpoint. Each run
+has unchanged frozen inputs, complete executed-command resource coverage and zero new
+process/database/temp residue. Standard Release outputs and the isolated server are reused.
+Proof is 1,330,947 bytes, SHA-256 `7909CF6CEE9B0CABF49454E39789250E9D1F6A5CC122D0947FE1DB7B13DC14E6`. Keep failure evidence for read-cost
+repair. Qualification, final cleanup and end-to-end closure remain open; historical denied
+resources were not retried. See [checkpoint](validation/2026-10-21-selected-parent-stop.md).

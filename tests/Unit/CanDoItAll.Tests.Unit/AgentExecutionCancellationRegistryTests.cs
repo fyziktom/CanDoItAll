@@ -6,6 +6,22 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentExecutionCancellationRegistryTests
 {
     [Fact]
+    public void Exact_execution_stop_signals_only_the_selected_run_and_reports_disposal() {
+        var registry = new AgentExecutionCancellationRegistry();
+        var selected = CreateRun("shared-process");
+        using var target = registry.Register(selected, default);
+        using var sibling = registry.Register(CreateRun("shared-process"), default);
+        Assert.True(registry.RequestCancellation(selected.Id));
+        Assert.True(registry.RequestCancellation(selected.Id));
+        Assert.True(target.Token.IsCancellationRequested);
+        Assert.False(sibling.Token.IsCancellationRequested);
+        target.Dispose();
+        Assert.False(registry.RequestCancellation(selected.Id));
+        Assert.False(registry.RequestCancellation(Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => registry.RequestCancellation(Guid.Empty));
+    }
+
+    [Fact]
     public void RequestCancellationByProcessRunIds_cancels_only_matching_active_execution()
     {
         var registry = new AgentExecutionCancellationRegistry();

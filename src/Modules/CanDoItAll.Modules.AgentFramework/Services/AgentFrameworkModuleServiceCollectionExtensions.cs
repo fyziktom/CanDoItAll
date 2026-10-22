@@ -232,6 +232,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<AgentInheritedPlanningStopper>(serviceProvider => {
+            var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+            return new((ISandboxWorkspaceExecutionRunStore)store, (ISandboxWorkspaceExecutionRunMutationStore)store,
+                (ISandboxWorkspaceExecutionRunLeaseStore)store, serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
+                serviceProvider.GetRequiredService<TimeProvider>());
+        });
         services.TryAddScoped<AgentInheritedPlanningRunReader>(serviceProvider => {
             var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
             var profile = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile;

@@ -1,5 +1,12 @@
 # Concurrent mutations implementation bundle
 
+Current implementation checkpoint: [selected inherited Agent stop](validation/2026-10-21-selected-parent-stop.md).
+All 58 new cases pass, with 88 passing selected cases overall. One existing receipt-recovery
+case exceeds its unchanged two-second checkpoint deadline, including all three isolated
+repeats; 98 selected regression cases remain unexecuted. Qualification and producer activation
+remain blocked. Measure connection opening and current-authority reads next, then repair and
+rerun affected validation. Root quiescence/recovery, refresh and end-to-end closure remain open.
+
 Current work resumed on 2026-10-18 under the [resumption record](validation/2026-10-18-resumption.md).
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.

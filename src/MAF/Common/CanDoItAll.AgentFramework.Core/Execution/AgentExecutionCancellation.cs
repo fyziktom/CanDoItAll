@@ -5,6 +5,8 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public interface IAgentExecutionCancellationRegistry
 {
+    bool RequestCancellation(Guid executionRunId);
+
     IAgentExecutionCancellationRegistration Register(
         ExecutionRunRecord run,
         CancellationToken cancellationToken);
@@ -25,6 +27,21 @@ public interface IAgentExecutionCancellationRegistration : IDisposable
 public sealed class AgentExecutionCancellationRegistry : IAgentExecutionCancellationRegistry
 {
     private readonly ConcurrentDictionary<Guid, ActiveExecution> activeExecutions = new();
+
+    public bool RequestCancellation(Guid executionRunId) {
+        if (executionRunId == Guid.Empty) {
+            throw new ArgumentException("Cancellation requires an execution identity.", nameof(executionRunId));
+        }
+        if (!activeExecutions.TryGetValue(executionRunId, out var active)) {
+            return false;
+        }
+        try {
+            active.Cancellation.Cancel();
+            return true;
+        } catch (ObjectDisposedException) {
+            return false;
+        }
+    }
 
     public IAgentExecutionCancellationRegistration Register(
         ExecutionRunRecord run,

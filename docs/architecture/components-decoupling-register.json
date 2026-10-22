@@ -11203,7 +11203,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
-      "sha256_lf": "1bac6b79194bab97f891bdaf901ded49c15866be1b5d7452a93409becedf409c",
+      "sha256_lf": "7b42adde7cb0ff3df2291185a92ac64d7322a6781e3c8541eeb986eff09c31f2",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions, CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleAssemblyMarker",
@@ -11218,7 +11218,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. Historical receipt review resolves the canonical runtime profile on each invocation through a scoped module service; registration adds no rendering or provider dependency. Inherited planning adds one scoped execution port pointing to the existing current-profile service; no renderer, asset or UI lifetime changes. Original Process outcome accounting registers the existing canonical historical-read owner as a scoped service; no renderer, asset, workspace state or editor lifetime changes. P08 registers a scoped inherited planning detail reader over the existing store and disclosure policies; it avoids execution-runtime construction without adding rendering, assets, UI state or editor lifetime changes."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. Historical receipt review resolves the canonical runtime profile on each invocation through a scoped module service; registration adds no rendering or provider dependency. Inherited planning adds one scoped execution port pointing to the existing current-profile service; no renderer, asset or UI lifetime changes. Original Process outcome accounting registers the existing canonical historical-read owner as a scoped service; no renderer, asset, workspace state or editor lifetime changes. P08 registers a scoped inherited planning detail reader over the existing store and disclosure policies; it avoids execution-runtime construction without adding rendering, assets, UI state or editor lifetime changes. P11 selected parent stopping registers a scoped Core owner over canonical execution ports, cancellation and clock; it adds no renderer or UI lifetime change."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/PromptGalleryLlmChatComposerActionContributor.cs",

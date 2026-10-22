@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -110,23 +109,13 @@ public sealed partial class AgentToolAdmissionJournal {
         }
     }
 
-    private void RequireBackgroundIdentity(AgentToolSessionAdmission session, ExecutionRunRecord run, AgentToolBackgroundSourceBinding source) {
-        if (session.Profile != profile || session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation ||
-                session.Reference.ChatSessionId != Guid.Empty || session.Reference.AuthorityId.Value != Guid.Empty ||
-                run.Id != session.Reference.ExecutionRunId || run.AgentId != session.AgentId || run.ChatSessionId is not null ||
-                run.SourceKind != source.SourceKind || run.SourceId != source.SourceId ||
-                BackgroundExecutionFingerprint(run) != source.ExecutionFingerprint) {
-            throw Failure("The saved background execution, source, profile or immutable input binding changed.");
-        }
-    }
+    private void RequireBackgroundIdentity(AgentToolSessionAdmission session, ExecutionRunRecord run, AgentToolBackgroundSourceBinding source)
+        => AgentBackgroundExecutionIdentity.Require(session, run, source, profile);
 
     private IAgentToolBackgroundSourcePolicy RequireBackgroundPolicy(string sourceKind)
         => backgroundSources.TryGetValue(sourceKind, out var source) ? source :
             throw new AgentToolAdmissionException("tool-admission.source-policy-missing", "The saved background source has no installed owner policy.");
 
     private static AgentToolSemanticDigest BackgroundExecutionFingerprint(ExecutionRunRecord run)
-        => AgentToolProtocolEnvelope.ComputeDigest(JsonSerializer.Serialize(new {
-            run.Id, run.AgentId, run.SourceKind, run.SourceId, run.CorrelationId, run.CausationId, run.RequestedBy,
-            run.RequestedByKind, run.ProcessRunId, run.ProcessStepId, run.SchedulerRunId, run.MetadataJson, run.CreatedAtUtc
-        }));
+        => AgentBackgroundExecutionIdentity.Fingerprint(run);
 }

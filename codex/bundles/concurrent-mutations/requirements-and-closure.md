@@ -1,5 +1,12 @@
 # Requirements and closure ledger
 
+Current implementation checkpoint: [selected inherited Agent stop](validation/2026-10-21-selected-parent-stop.md).
+All 58 new cases pass, with 88 passing selected cases overall. One existing receipt-recovery
+case exceeds its unchanged two-second checkpoint deadline, including all three isolated
+repeats; 98 selected regression cases remain unexecuted. Qualification and producer activation
+remain blocked. Measure connection opening and current-authority reads next, then repair and
+rerun affected validation. Root quiescence/recovery, refresh and end-to-end closure remain open.
+
 The [cancellation-barrier continuation](validation/2026-10-21-cancellation-barrier-and-replay.md)
 passes 84 selected cases, including 14 new cases. It prevents direct or rework-driven
 reactivation after cancellation and preserves exact accounting replay after legitimate
