@@ -16,11 +16,12 @@ internal sealed class ProjectTaskPlanProcessChildStopper(ISandboxWorkspaceExecut
         CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(original);
         original.Validate();
-        var profile = database.Profile.Profile;
+        var profileId = database.Profile.Profile.Id;
+        var fingerprint = database.Profile.Profile.Runtime.Fingerprint;
         var generation = generations.GetGeneration();
         void RequireProfile() {
-            if (original.ExecutionContract != Contract || original.Scope.DatabaseProfileId != profile.Id ||
-                    database.Profile.Profile.Id != profile.Id || database.Profile.Profile.Runtime.Fingerprint != profile.Runtime.Fingerprint ||
+            if (original.ExecutionContract != Contract || original.Scope.DatabaseProfileId != profileId ||
+                    database.Profile.Profile.Id != profileId || database.Profile.Profile.Runtime.Fingerprint != fingerprint ||
                     generations.GetGeneration() != generation) {
                 throw new InvalidDataException("Parent stopping requires the original profile and a stable current profile generation.");
             }
@@ -40,7 +41,7 @@ internal sealed class ProjectTaskPlanProcessChildStopper(ISandboxWorkspaceExecut
             }
             var (target, _) = ProjectTaskPlanProcessOutcome.Read(run, original);
             var origin = run.ToolAdmission.PlanningDecision!.InheritedOrigin!;
-            if (target.Session.Profile.ProfileId != profile.Id || target.Session.Profile.Fingerprint != profile.Runtime.Fingerprint) {
+            if (target.Session.Profile.ProfileId != profileId || target.Session.Profile.Fingerprint != fingerprint) {
                 throw new InvalidDataException("The original inherited Agent belongs to a different database profile.");
             }
             var parent = new AgentInheritedParentStop(origin, async (current, token) => {

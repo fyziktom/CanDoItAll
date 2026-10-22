@@ -655,3 +655,120 @@ All 54 selected cases pass with seven refreshed Release builds, 24 verified owni
 outputs, full portability and zero new resource residue. The contract entry/Behavioral
 closure gate passes; see [cursor qualification](../validation/2026-10-22-recovery-cursors.md).
 No stage, automatic worker, hard I/O deadline or E2E completion is claimed by this proof.
+
+### Runtime-stage implementation entry
+
+Cursor checkpoint 56f62f545 is signed. Application owns a small Runtime-stage step,
+separate from the future decision/scope/quiescence dispatcher. Persistence supplies
+metadata-only next-run and exact-run status queries with a five-second command timeout;
+the Process module bridges one compact Agent page and the qualified original stop port.
+No Agent model enters Application/Persistence, no project reference or runtime partial
+is added, and no hosted service or HTTP cutover is enabled at this checkpoint.
+
+One advance selects one run, retains one original cancel intent, resolves that intent,
+or inspects at most one Agent candidate. Include terminal runs and the root itself in
+notification selection. A root barrier is required on every advance. Never issue a
+CancelRun intent for the root: it already owns the durable barrier. For a descendant,
+look up the exact command receipt before reloading/re-running the transition; validate
+its run/root, cancelled state, actor/correlation and cancellation event. A known runtime
+refusal or rolled-back optimistic conflict may clear the intent and advance with sticky
+pending evidence. Unknown failures retain the exact intent through the coordinator.
+
+Legacy index candidates can belong to other runs; inspect each original record before
+selecting ordinary Agent stopping. Inherited planning stays with the decision owner.
+An unavailable index remains pending and advances the selected run for cycle fairness;
+it never proves empty notification work or triggers reader-side index repair. Validate
+page shape and strict cursor progress. A later successful item retains earlier pending
+evidence. Correct the inherited adapter's profile capture to immutable ID/fingerprint
+values, with late original-source observation regressions.
+
+Use pure step/adapter tests for finite progress, wrong root/selection, pending first
+item, exact lost-acknowledgement receipt recovery and refusals. Use native PostgreSQL
+and real runtime transitions for root/descendant selection and restart recovery; reuse
+the actual original-admission Agent fixture for registered page-to-stop composition.
+Add no host or Docker stack. Declare exact discovery before launching tests. Keep the
+composite run/decision indexes, full stage dispatcher, independent quiescence, publication
+fences, sustained cost and bounded-wait/fairness proof as explicit pre-activation gates.
+
+Runtime-stage selection declared before execution: 87 cases (22 Unit runtime-stage,
+20 Unit page/stop adapter, 22 unchanged coordinator; 2 Integration native selection/replay,
+7 Integration ordinary stop/composition and 14 Integration inherited stop/delegation).
+Refresh Application, Persistence, Workbench, Processes module, Composition, Web, Unit
+and Integration in dependency order, verifying 28 owning/copied runtime outputs.
+Observe the API, default integration and tool-admission fixture families together.
+
+Native receipt inspection before execution corrected the initial event-list assumption.
+The existing runtime idempotency store retains the exact command key and run completion,
+then returns current runtime state and no historical event list. Recovery trusts that
+owner's lookup of its retained, uniquely generated intent action, checks the original
+run/root, immutable Cancelled status and absence of other decision/scope/accounting
+receipts, and does not invent a historical event or recover by timestamp. A newly
+committed cancellation must contain its exact cancellation event and matching projection
+outbox entry; a replay marker must report no new commit or event/outbox work. Eight initial
+builds passed but were not executed; their source manifest and reviewed source are retained.
+
+The 64 Unit cases pass. Both first native cases failed because the new fixture tried to
+launch descendants from a Created parent without its required active dispatch claim,
+then used the rejected results without asserting admission. Repair only that fixture:
+reuse the existing original-time runtime owner and parent-claim setup, require every
+seed commit to succeed, and stop the search at the Runtime-stage boundary. Production
+is unchanged. Retain both failures and the corrected source. Refresh Integration and
+run its 23 selected cases (2 runtime, 7 ordinary and 14 inherited); retain the 64 Unit
+passes only after exact production/Unit source and all 26 unaffected output identities
+match the original candidate. Repeat the full static gate on the repaired test source.
+
+### Following decision, scope and quiescence stage design
+
+Runtime-stage Behavioral closure passes with [87 qualified cases](../validation/2026-10-22-runtime-recovery-stage.md).
+The 64 Unit passes retain exact unchanged production/Unit identities after the test-only
+parent-claim correction; all 23 Integration cases pass. Eight affected production/test
+builds, one test-only refresh, 28 output identities, unchanged architecture findings,
+full portability and zero new resource residue qualify progression to the stages below.
+
+Keep each stage as a small Application owner behind the existing recovery-step contract;
+a final dispatcher composes the four concrete stages. Persistence owns only metadata
+selection and final persisted guards. The module registers the dispatcher only when all
+stages qualify, then a separately qualified hosted adapter supplies scheduling/options.
+
+Decision selection pages original heads by DecisionId and children by ChildId, retaining
+the selected original generation. Select only keys/status/counts before loading the exact
+run and original child through IProcessDecisionResultQuery. Historical open generations
+must remain explicit InvalidEvidence; do not relabel them as current or silently close
+them. The original registered child stopper determines whether accounting may be prepared.
+Pending children advance the cursor with sticky cycle evidence so later children can
+progress. Ready children create a retained ProcessCancellationAccountChild intent using
+the displayed terminal step, decision and budget expectations. The existing terminal
+accounting coordinator owns measured settlement and root funding; the recovery stage
+must not calculate synthetic work. Exact replay precedes revalidation through that owner.
+After scanning children, use the existing finalization coordinator for empty/settled
+terminal local decisions. Known owner refusals advance with pending evidence; unknown
+acknowledgements retain the unchanged original intent.
+
+Shared-scope recovery reads its original accepted root selection. AwaitingCapture can
+prepare Cancel; Active prepares BeginReconciliation, then Reconciling prepares Cancel.
+The existing scope store still validates complete membership and original accounting
+inside the runtime transaction. Capturing is CapturePending until the actual capture
+owner supplies measured abort; absence of a running process cannot manufacture zero work.
+Transitions retain their exact expectation/action and recover DecisionRunScope receipts
+through the existing idempotency owner. A missing original source remains explicit.
+
+Quiescence must query persisted root-local claims/steps as well as P13's descendant,
+decision, budget and scope guards. A sticky pending cycle or nonempty persisted guard
+restarts Initial with bounded backoff. Otherwise retain a FinalizeRoot intent before
+the native transition. An already Cancelled legacy root needs a real no-effect
+confirmation receipt under the same runtime root transaction, not a fabricated Applied
+result. Add one explicit, omission-compatible confirmation flag to the runtime commit
+request only if needed: it must require original/proposed Cancelled root state, unchanged
+business state except the update timestamp, no decision/accounting/scope/material or
+event/outbox/ledger effects, and the full current persisted quiescence guard. This avoids
+changing the ordinary cancellation transition or running a parallel transaction owner.
+The intent's exact action key recovers acknowledgement loss for either root path.
+
+Before activation, add and measure (RootRunId, RunId) and (RootRunId, DecisionId) indexes
+through the actual migration path. Trace admission and late Agent journal publication
+against the root barrier: exhausting one keyset scan cannot itself prove that no late
+pre-barrier producer can publish behind its cursor. Test held publication/registration
+windows and preserve pending if original work cannot be proven closed. Complete the
+cooperative/hard I/O distinction, original receipt races, full-cycle restart/takeover,
+live/legacy fairness, pending status/HTTP cutover and the compact-index cost investigation
+before enabling a hosted worker. No stage-only pass waives those gates.

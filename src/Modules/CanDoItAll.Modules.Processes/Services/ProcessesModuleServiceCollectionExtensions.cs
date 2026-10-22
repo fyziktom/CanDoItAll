@@ -68,6 +68,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddScoped<IProcessOriginalReceiptAuthorityReader, ProcessOriginalReceiptAuthorityReader>();
         services.TryAddScoped<IProcessExecutionStopper, AgentFrameworkProcessExecutionStopper>();
+        services.TryAddScoped<IProcessExecutionRecovery, AgentFrameworkProcessExecutionRecovery>();
         services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
         {
             var executionRunStore =
@@ -108,6 +109,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessAuthoringContext>(provider => provider.GetRequiredService<ProcessAuthoringAdmissionPolicy>());
         services.TryAddScoped<IProcessAuthoringStore, EfProcessAuthoringStore>();
         services.TryAddScoped<IProcessCancellationRecoveryQueue, EfProcessCancellationRecoveryQueue>();
+        services.TryAddScoped<IProcessCancellationRuntimeReader, EfProcessCancellationRuntimeReader>();
+        services.TryAddScoped<ProcessCancellationRuntimeRecoveryStep>();
         services.TryAddScoped<ProcessAuthoringWorkspace>();
         services.TryAddScoped<ProcessExecutableDefinitionResolver>();
         services.TryAddScoped<ProcessDefinitionAuthoringAdapter>();

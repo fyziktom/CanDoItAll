@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current behavioral checkpoint: [durable recovery cursors](validation/2026-10-22-recovery-cursors.md).
+Current behavioral checkpoint: [finite runtime recovery stage](validation/2026-10-22-runtime-recovery-stage.md).
+All 87 selected cases qualify: 64 Unit passes plus 23 Integration passes after a test-only
+parent-claim fixture repair. Exact source/28-output identity, full portability, architecture
+and resource gates pass. Original cancellation receipts recover across new leases;
+finite Agent inspection retains unresolved work and guards inherited profile changes.
+Decision/scope/quiescence stages, capacity/fairness, refresh, remaining writers and final
+E2E remain open. SPA stays on its separate branch.
+
+Preceding behavioral checkpoint: [durable recovery cursors](validation/2026-10-22-recovery-cursors.md).
 All 54 selected cases pass with seven Release builds, 24 verified owning/copied outputs,
 full portability and zero new resource residue. Selected Process/Agent cursors and sticky
 pending-cycle evidence survive takeover; old canonical wire positions remain unchanged.

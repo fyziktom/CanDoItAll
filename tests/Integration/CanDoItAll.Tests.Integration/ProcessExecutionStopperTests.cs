@@ -15,6 +15,32 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed class ProcessExecutionStopperTests {
+    [Fact]
+    public async Task Registered_runtime_stage_selects_and_stops_the_original_admitted_Agent_through_durable_checkpoints() {
+        await using var app = await TestApplication.CreateAsync(Harness());
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var fixture = await ProcessExecutionAuthorityPersistenceTests.SeedAsync(services, admitBackground: true);
+        await StopRootAsync(services, fixture);
+        var queue = services.GetRequiredService<IProcessCancellationRecoveryQueue>();
+        var claim = (await queue.ClaimAsync(ProcessCancellationRecoveryOrigin.LiveBarrier, TimeSpan.FromMinutes(1)))!;
+        Assert.Equal(fixture.RunId, claim.RootRunId.Value);
+        var step = services.GetRequiredService<ProcessCancellationRuntimeRecoveryStep>();
+        for (var operation = 0; operation < 4 && claim.Position.Stage == ProcessCancellationRecoveryStage.Runtime; operation++) {
+            var checkpoint = await step.AdvanceAsync(claim, default);
+            var saved = await queue.CheckpointAsync(claim, checkpoint);
+            Assert.Equal(ProcessCancellationCheckpointStatus.Applied, saved.Status);
+            claim = saved.Claim!;
+        }
+        Assert.Equal(ProcessCancellationRecoveryStage.Decisions, claim.Position.Stage);
+        Assert.False(claim.Position.CycleHadPending);
+        Assert.Equal(ProcessCancellationRecoveryPending.None, claim.Pending);
+        var run = (await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().GetExecutionRunAsync(fixture.Run.Id))!;
+        Assert.Equal(RunOutcome.Cancelled, run.Outcome);
+        Assert.Equal(fixture.Run.ToolAdmission!.Session, run.ToolAdmission!.Session);
+        Assert.Equal(fixture.Run.ToolAdmission.BackgroundInput, run.ToolAdmission.BackgroundInput);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

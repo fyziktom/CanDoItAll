@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
@@ -19,6 +20,33 @@ namespace CanDoItAll.Tests.Integration;
 
 [Trait("Category", "FileSystemPortability")]
 public sealed class ProjectTaskPlanProcessChildStopperTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Runtime_selection_delegates_inherited_work_only_to_its_retained_Process_child(bool missingChild) {
+        await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync();
+        await StopRootAsync(fixture);
+        var before = await RetainedAsync(fixture);
+        var owner = missingChild ? ActivatorUtilities.CreateInstance<AgentFrameworkProcessExecutionRecovery>(fixture.Services, new MissingChild())
+            : fixture.Services.GetRequiredService<IProcessExecutionRecovery>();
+        if (missingChild) {
+            await Assert.ThrowsAsync<InvalidDataException>(() => owner.InspectNextAsync(fixture.State.RootRunId, fixture.State.RunId, null, default));
+        } else {
+            var progress = await owner.InspectNextAsync(fixture.State.RootRunId, fixture.State.RunId, null, default);
+            Assert.Equal(new ProcessExecutionRunId(fixture.Waiting.Id), progress.After);
+            Assert.True(progress.Exhausted);
+            Assert.Equal(ProcessCancellationRecoveryPending.None, progress.Pending);
+        }
+        Assert.Equal(before, await RetainedAsync(fixture));
+        Assert.Single(fixture.Entry.Wire.Requests);
+        await fixture.Entry.Files.Sql.VerifyAsync(0, 0);
+    }
+
+    private sealed class MissingChild : IProcessDecisionChildReader {
+        public Task<ProcessDecisionChildObservation?> ReadAsync(ProcessDecisionChildAddress address, CancellationToken cancellationToken)
+            => Task.FromResult<ProcessDecisionChildObservation?>(null);
+    }
+
     [Theory]
     [InlineData(ReadBasisMode.RunSnapshot)]
     [InlineData(ReadBasisMode.StepSnapshot)]
@@ -139,6 +167,39 @@ public sealed class ProjectTaskPlanProcessChildStopperTests {
             Assert.NotEqual(generations.GetGeneration(), original.Profile.Generation);
         }
         Assert.Equal(3, observations);
+        Assert.Single(fixture.Entry.Wire.Requests);
+        await fixture.Entry.Files.Sql.VerifyAsync(0, 0);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Profile_identity_or_fingerprint_cannot_change_in_place_after_original_source_observation(bool fingerprint) {
+        await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync();
+        await StopRootAsync(fixture);
+        var before = await RetainedAsync(fixture);
+        var profile = fixture.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile;
+        var originalId = profile.Id;
+        var originalFingerprint = profile.Runtime.Fingerprint;
+        var observations = 0;
+        var observed = new OriginalSourceObservation(fixture.Services.GetRequiredService<IProcessOriginalReceiptAuthorityReader>(), () => {
+            if (++observations == 3) {
+                if (fingerprint) {
+                    profile.Runtime.Fingerprint = "changed-after-source-observation";
+                } else {
+                    profile.Id = Guid.NewGuid();
+                }
+            }
+        });
+        var owner = ActivatorUtilities.CreateInstance<ProjectTaskPlanProcessChildStopper>(fixture.Services, observed);
+        try {
+            await Assert.ThrowsAsync<InvalidDataException>(() => owner.StopAsync(fixture.Parent));
+        } finally {
+            profile.Id = originalId;
+            profile.Runtime.Fingerprint = originalFingerprint;
+        }
+        Assert.Equal(3, observations);
+        Assert.Equal(before, await RetainedAsync(fixture));
         Assert.Single(fixture.Entry.Wire.Requests);
         await fixture.Entry.Files.Sql.VerifyAsync(0, 0);
     }

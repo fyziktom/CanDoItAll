@@ -1588,3 +1588,19 @@ Secret-pattern and private-password checks pass. Keep compact proof, required co
 TRX and source/runtime identities. Remove only its redundant scan JSON/CSV after exact
 ownership/proof/hash verification and record verified absence. Historical denied
 resources remain untouched; the ordinary instance and SPA main remain preserved.
+
+## Runtime recovery stage, 2026-10-22
+
+`c4-runtime-recovery-stage` and `c4-runtime-recovery-confirmed` were owned before creation.
+They reuse the API/default integration/tool-admission fixture families, isolated
+PostgreSQL and standard Release outputs. All seven test commands are observed with zero
+new process, database-name or temporary-path residue. Both initial native fixture
+failures and the source/Unit identity bridge are retained; 87 cases qualify.
+
+Compact proof is 437275 bytes, SHA256
+`56198FB16AFB902C17F57938EA9C84F974807B13D6936A15F71757A706BFD821`.
+Secret-pattern/private-password checks pass. Each candidate's exact redundant scan
+JSON/CSV pair was removed after ownership/proof/hash checks and verified absence,
+recorded in its redundant-scan-cleanup.json. The earlier cursor pair was also removed
+and verified in its own record. Required command/TRX/identity/architecture evidence and
+the reusable fixture remain. No denied cleanup was retried; historical denials are open.

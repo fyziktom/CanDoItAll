@@ -90,6 +90,14 @@ Cancelled roots; terminal status alone is insufficient.
 
 ## Remaining activation proof
 
+The finite runtime stage now selects one run, retains/resolves one original cancellation
+intent or inspects one Agent candidate per advance. It includes terminal runs and the
+root, preserves sticky pending work, recovers original native cancellation receipts and
+delegates inherited Agents only to retained Process children. The inherited stop adapter
+also captures profile identity/fingerprint values across source observation. See the
+[87-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-runtime-recovery-stage.md).
+The stage is registered as a concrete service; no worker or HTTP path is activated.
+
 Recovery positions retain the selected Process run, last inspected Agent execution and
 sticky pending-cycle evidence across release and takeover. Advancing past unresolved
 work cannot lose that evidence; later success cannot authorize completion. Only an
