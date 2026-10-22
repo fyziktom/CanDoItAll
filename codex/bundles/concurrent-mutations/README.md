@@ -1,14 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current qualified checkpoint: [durable cancellation queue](validation/2026-10-22-cancellation-recovery.md).
-All 136 distinct selected cases qualify, including 34 new cases. Root barriers atomically
-enqueue recovery; database leases preserve original intent through takeover, and legacy
-seeding advances in bounded pages. Seven Release builds, full portability, architecture,
-source/runtime identity and resource reconciliation pass. Four test defects and their
-exact unchanged-production repair bridges remain recorded. Worker scheduling, bounded
-ordinary Agent notifications, actual owner/HTTP/transfer integration, snapshot refresh,
-producer/Workflow/settings, remaining writers and sustained capacity still require work.
-The E2E outcome remains active; SPA stays on its separate branch.
+Current qualified checkpoint: [finite recovery coordination and transfer safeguards](validation/2026-10-22-recovery-coordination.md).
+All 58 distinct selected cases qualify, including 25 new cases. The finite coordinator
+preserves saved intent through cancellation, uncertain acknowledgements and lease loss.
+Transfer rejects unfinished recovery and releases its locks when a writer is active.
+Six Release builds, final portability, source/binary identity and resource reconciliation
+pass. One historical model-count assertion failure and its test-only bridge are retained.
+The signed queue substrate remains `13de74201`. Actual stage/Agent integration, host
+fairness, HTTP/status, snapshot refresh, Workflow/settings, remaining writers, sustained
+capacity and final E2E closure remain open. SPA stays on its separate branch.
 
 
 

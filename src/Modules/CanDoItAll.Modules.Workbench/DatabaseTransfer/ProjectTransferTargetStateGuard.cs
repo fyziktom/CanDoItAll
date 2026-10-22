@@ -69,7 +69,7 @@ public sealed class ProjectTransferTargetStateGuard {
     internal async Task RequireSupportedSourceAsync(DatabaseTransferProfileSession session, CancellationToken cancellationToken) {
         var unsupported = (await FindResiduesAsync(session, cancellationToken)).Where(item => item.BlocksSourceTransfer).ToArray();
         if (unsupported.Length > 0) {
-            throw new InvalidDataException("Project transfer cannot preserve the source's retained executable authoring history: " + Describe(unsupported) + ". No project data was copied.");
+            throw new InvalidDataException("Project transfer cannot preserve the source's retained executable history or unfinished recovery: " + Describe(unsupported) + ". No project data was copied.");
         }
     }
 

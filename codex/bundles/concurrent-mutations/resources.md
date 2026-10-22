@@ -1468,3 +1468,25 @@ verified absence: 139377372 bytes. The record is
 command/TRX/source/runtime/architecture records and the existing shared fixture for
 actual worker integration. No historical denied target was retried. Ordinary 5032,
 installed tools, unrelated resources and the separate SPA branch remain preserved.
+
+## Finite recovery coordination and transfer, 2026-10-22
+
+Candidates `c4-recovery-coordinator-transfer` and `c4-recovery-coordinator-transfer-confirmed`
+reuse standard Release outputs and the existing isolated PostgreSQL 18 server. All five
+execution commands are observed; both candidates reconcile with zero remaining observed
+processes, database-name deltas or temporary-path deltas. The newly audited fixture family
+is `transfer-dataset-activation`, with provider-history database leases disposed by the
+existing fixture. No new host or container was created.
+
+The compact 58-case qualification proof is 123957 bytes, SHA256
+`CA28C96D313575E4A26F13570D1DEE070C7999065DD36A7CC85DCC71DC8CB86C`.
+It retains the initial 57/58 result and the corrected 23/23 transfer run, with an exact
+test-only bridge preserving 35 Unit cases. Keep command/TRX/identity and architecture
+records for the continuing integration.
+
+Four redundant scan JSON/CSV files were removed after exact ownership and hash checks,
+with absence verified: 93,078,122 bytes. The record is
+`c4-recovery-coordinator-transfer-confirmed/redundant-scan-cleanup.json`. Command records,
+enforcement output and the compact proof remain. No historical denied resource was
+retried. Existing automatic cleanup denials remain unresolved; ordinary 5032, its
+databases, installed tools, unrelated resources and the separate SPA branch are preserved.

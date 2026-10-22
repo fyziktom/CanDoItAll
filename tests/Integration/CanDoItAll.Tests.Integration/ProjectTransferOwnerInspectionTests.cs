@@ -25,10 +25,117 @@ using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectTransferOwnerInspectionTests {
+    [Theory]
+    [InlineData(CancellationResidue.LivePending)]
+    [InlineData(CancellationResidue.LegacyPending)]
+    [InlineData(CancellationResidue.UnseededRequested)]
+    [InlineData(CancellationResidue.UnseededCancelled)]
+    [InlineData(CancellationResidue.Completed)]
+    public async Task Cancellation_recovery_metadata_blocks_target_and_unfinished_source_without_parsing_intents(CancellationResidue kind) {
+        await using var database = await HistoryPersistenceTestDatabase.CreateAsync();
+        await using var owner = database.Factory.CreateDbContext();
+        var root = RecoveryRoot(kind == CancellationResidue.UnseededRequested ? ProcessRuntimeStatus.CancelRequested : ProcessRuntimeStatus.Cancelled);
+        owner.Add(root);
+        ProcessCancellationRecoveryEntity? recovery = null;
+        if (kind is not (CancellationResidue.UnseededRequested or CancellationResidue.UnseededCancelled)) {
+            recovery = RecoveryRow(root.RunId, kind);
+            owner.Add(recovery);
+        }
+        await owner.SaveChangesAsync();
+        var runner = new ProjectTransferTargetInspectionRunner();
+        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, owner, runner, await database.ActivateDatasetAsync());
+        var guard = new ProjectTransferTargetStateGuard(CreateParticipants(runner), operations);
+        Assert.Contains(typeof(ProcessCancellationRecoveryEntity), guard.EntityTypesToLock);
+        Assert.DoesNotContain(typeof(ProcessCancellationRecoverySeedEntity), guard.EntityTypesToLock);
+
+        var preflight = await operations.RunIndependentAsync(database.Profile, guard.FindPreflightResiduesAsync);
+        var expected = kind == CancellationResidue.Completed
+            ? "retained completed Process cancellation recovery" : "unfinished Process cancellation recovery";
+        Assert.Contains(preflight, item => item.Area == ProjectTransferTargetStateArea.Processes && item.Description == expected &&
+            item.BlocksSourceTransfer == (kind != CancellationResidue.Completed));
+        await guard.RunLockedImportAsync(database.Profile, async (session, token) => {
+            Assert.Contains(await guard.FindLockedResiduesAsync(session, token), item => item.Description == expected);
+            return true;
+        });
+        var source = () => operations.RunSerializableAsync(database.Profile,
+            [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], async (session, token) => {
+                await guard.RequireSupportedSourceAsync(session, token);
+                return true;
+            });
+        if (kind == CancellationResidue.Completed) {
+            Assert.True(await source());
+        } else {
+            Assert.Contains(expected, (await Assert.ThrowsAsync<InvalidDataException>(source)).Message);
+        }
+        if (recovery is not null) {
+            await using var restarted = database.Factory.CreateDbContext();
+            var retained = await restarted.Set<ProcessCancellationRecoveryEntity>().SingleAsync();
+            Assert.Equal(recovery.PositionJson, retained.PositionJson);
+            Assert.Equal(recovery.IntentJson, retained.IntentJson);
+            Assert.Equal(recovery.BarrierCommandId, retained.BarrierCommandId);
+        }
+    }
+
+    [Fact]
+    public async Task Import_refuses_an_active_runtime_writer_and_releases_queue_exclusion_before_the_writer_stages_recovery() {
+        await using var database = await HistoryPersistenceTestDatabase.CreateAsync();
+        await using var owner = database.Factory.CreateDbContext();
+        var root = RecoveryRoot(ProcessRuntimeStatus.Active);
+        owner.Add(root);
+        await owner.SaveChangesAsync();
+        var activation = await database.ActivateDatasetAsync();
+        var runner = new ProjectTransferTargetInspectionRunner();
+        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, owner, runner, activation);
+        var guard = new ProjectTransferTargetStateGuard(CreateParticipants(runner), operations);
+        await using var writer = database.Factory.CreateDbContext();
+        await using var transaction = await writer.Database.BeginTransactionAsync();
+        var updating = await writer.Set<ProcessRuntimeStateEntity>().SingleAsync(item => item.RunId == root.RunId);
+        updating.Status = ProcessRuntimeStatus.CancelRequested;
+        await writer.SaveChangesAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var importEntered = false;
+
+        var refusal = await Assert.ThrowsAsync<PostgresException>(() => guard.RunLockedImportAsync(database.Profile, (_, _) => {
+            importEntered = true;
+            return Task.FromResult(true);
+        }, timeout.Token));
+
+        Assert.Equal(PostgresErrorCodes.LockNotAvailable, refusal.SqlState);
+        Assert.False(importEntered);
+        var recovery = RecoveryRow(root.RunId, CancellationResidue.LivePending);
+        writer.Add(recovery);
+        await writer.SaveChangesAsync(timeout.Token);
+        await transaction.CommitAsync(timeout.Token);
+        await using var restarted = database.Factory.CreateDbContext();
+        Assert.Equal(ProcessRuntimeStatus.CancelRequested, (await restarted.Set<ProcessRuntimeStateEntity>().SingleAsync()).Status);
+        var retained = await restarted.Set<ProcessCancellationRecoveryEntity>().SingleAsync();
+        Assert.Equal(recovery.BarrierCommandId, retained.BarrierCommandId);
+        Assert.Equal(recovery.IntentJson, retained.IntentJson);
+        Assert.Contains(await operations.RunIndependentAsync(database.Profile, guard.FindPreflightResiduesAsync),
+            item => item.Description == "unfinished Process cancellation recovery" && item.BlocksSourceTransfer);
+    }
+
+    private static ProcessRuntimeStateEntity RecoveryRoot(ProcessRuntimeStatus status) {
+        var id = Guid.NewGuid();
+        return new() { RunId = id, RootRunId = id, PlanId = Guid.NewGuid(), Status = status };
+    }
+
+    private static ProcessCancellationRecoveryEntity RecoveryRow(Guid root, CancellationResidue kind) => new() {
+        RootRunId = root,
+        Origin = kind == CancellationResidue.LivePending ? ProcessCancellationRecoveryOrigin.LiveBarrier : ProcessCancellationRecoveryOrigin.LegacySeed,
+        BarrierCommandId = kind == CancellationResidue.LivePending ? Guid.NewGuid() : null,
+        PositionJson = "unparsed retained cursor",
+        IntentJson = kind == CancellationResidue.Completed ? null : "unparsed retained original intent",
+        Completed = kind == CancellationResidue.Completed
+    };
+
+    public enum CancellationResidue { LivePending, LegacyPending, UnseededRequested, UnseededCancelled, Completed }
+
     [Theory]
     [InlineData(AuthoringResidue.Head, false)]
     [InlineData(AuthoringResidue.Publication, false)]
@@ -279,7 +386,7 @@ public sealed class ProjectTransferOwnerInspectionTests {
                 Assert.NotEmpty(probe.Commands);
                 Assert.All(probe.Commands, command => {
                     Assert.Equal(typeof(ProcessPersistenceDbContext), command.ContextType);
-                    Assert.Equal(22, command.EntityCount);
+                    Assert.Equal(34, command.EntityCount);
                     Assert.Same(owner.Database.GetDbConnection(), command.Connection);
                     Assert.Same(transaction.GetDbTransaction(), command.Transaction);
                 });
@@ -316,8 +423,8 @@ public sealed class ProjectTransferOwnerInspectionTests {
         Dictionary<Type, int> expected = new() {
             [typeof(SearchDbContext)] = 1, [typeof(StorageDbContext)] = 3,
             [typeof(WorkflowDbContext)] = 17, [typeof(AgentProjectAccessDbContext)] = 1, [typeof(AgentHistoryDbContext)] = 1,
-            [typeof(CollaborationDbContext)] = 4, [typeof(CrmHrDbContext)] = 30, [typeof(ProcessPersistenceDbContext)] = 22,
-            [typeof(ProjectsDbContext)] = 7, [typeof(PromptsDbContext)] = 10, [typeof(ResourcesDbContext)] = 1,
+            [typeof(CollaborationDbContext)] = 4, [typeof(CrmHrDbContext)] = 30, [typeof(ProcessPersistenceDbContext)] = 34,
+            [typeof(ProjectsDbContext)] = 9, [typeof(PromptsDbContext)] = 10, [typeof(ResourcesDbContext)] = 1,
             [typeof(SchedulerPlannerDbContext)] = 3, [typeof(TestLabDbContext)] = 4, [typeof(WorkbenchDbContext)] = 16,
             [typeof(WorkspaceConnectorCommandDbContext)] = 2
         };

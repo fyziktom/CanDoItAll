@@ -1,10 +1,11 @@
 # Process cancellation recovery
 
-The durable queue substrate is implemented and qualified. Automatic recovery is not yet
-activated: the finite worker, ordinary Agent notification selection, transfer safeguards
-and bounded HTTP/status integration remain in progress. The existing cancellation HTTP
+The durable queue, finite coordinator and transfer safeguards are implemented and
+qualified. Automatic recovery is not yet activated: actual stage composition, ordinary
+Agent notification selection and bounded HTTP/status integration remain in progress. The existing cancellation HTTP
 path still performs its synchronous cascade. See the [design and activation criteria](../../../codex/bundles/concurrent-mutations/plan/P16-durable-root-recovery.md)
-and [136-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-recovery.md).
+and the [queue qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-recovery.md)
+and [58-case coordinator/transfer qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-coordination.md).
 
 ## Transaction and ownership
 
@@ -45,6 +46,20 @@ one bounded insert page. Cursor and inserted rows commit together. It does not h
 runtime plans or scan already-seeded roots through an anti-join.
 
 ## Rollout, retained evidence and repair
+
+The Application coordinator admits one root per slice and checkpoints every stage result.
+Defaults are eight operations, two seconds cooperative elapsed time and a 30-second
+database lease. Item/time exhaustion releases the unchanged cursor and intent. An owner
+failure preserves uncertain work and defers retry; a checkpoint failure propagates
+without guessing whether it committed. Lost ownership ends the slice. Caller cancellation
+leaves the lease to expire. This is orchestration, not a hard deadline on an individual
+owner call; stage I/O and cold metadata costs require separate qualification.
+
+Project transfer rejects pending queue rows and unseeded stopped roots as unsupported
+source history and target residue. A completed marker only blocks target adoption.
+Inspection neither parses nor discards recovery payloads. Its target lock set includes
+the queue, and ACCESS EXCLUSIVE NOWAIT refuses conflicting writers before the import
+snapshot. The seed singleton is outside this lock set.
 
 Apply the schema before upgraded writers and stop old writers before completing legacy
 seeding. Mixed old writers can create stopped roots behind the saved cursor and are not

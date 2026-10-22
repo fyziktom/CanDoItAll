@@ -4,6 +4,12 @@ Entry gate: Pass, Behavioral tier. P15 qualifies all 312 final cases, with sourc
 
 Queue substrate gate: **Pass**, with [136 qualified cases](../validation/2026-10-22-cancellation-recovery.md), including 34 new cases. Four test defects are retained and corrected through exact unchanged-production bridges. The actual finite worker, bounded ordinary notification selection, HTTP/status and transfer integration below remain required before activation.
 
+Coordinator/transfer gate: **Pass**, with [58 qualified cases](../validation/2026-10-22-recovery-coordination.md),
+including 25 new cases. Six affected Release builds and final portability pass. One
+historical Projects model-count assertion was repaired without production changes;
+its failure and exact bridge remain retained. Continue with the real stage/Agent
+integration and remaining activation criteria below.
+
 ## Ownership and delivery order
 
 Process Application owns typed recovery positions, original intents, scheduling and the
@@ -271,3 +277,96 @@ unfiltered Stable gate is reserved for the integrated E2E frozen candidate; this
 checkpoint alone does not trigger it or claim final product closure.
 
 Corrupt retained wire evidence is an explicit typed root failure. Claim records InvalidEvidence, releases the lease and defers that row for one minute without changing cursor/intent bytes, then throws the typed error. This avoids a malformed first row starving healthy roots; it does not reinterpret or repair unknown work. The finite worker must count that failure against its slice budget and expose it for owner repair. One additional SQL test covers this negative path, bringing the planned new cases to 34.
+
+## Finite coordinator and transfer integration
+
+The queue substrate is signed as `13de74201`. The next implementation keeps scheduling
+in a small Application coordinator and one real stage-operation boundary. A stage prepares
+an intent when none exists, or replays the saved intent. The coordinator checkpoints each
+result before calling the next stage. Its tests must prove that no owner action runs before
+the prepared intent was saved. This replaces neither Runtime business transitions nor the
+existing child stop/accounting owners. No new project reference or partial class is needed.
+
+Use typed validated slice limits: eight operations, two seconds cooperative elapsed time,
+30-second database lease, 25 ms yield and two-second failure retry by default. Maximum
+operations is 64; maximum slice duration is 30 seconds and must be shorter than the lease.
+On item/time exhaustion, release the unchanged position and intent. A NotOwned result
+ends the slice. Caller cancellation propagates and leaves the lease to expire. Unknown
+owner exceptions preserve the original intent and report a typed pending reason; a failed
+checkpoint is never interpreted as proof of no commit. Log root, stage and exception type,
+without external exception messages or journal contents. The hosted adapter will own the
+per-host 3:1 live/legacy turn schedule and one seed page per legacy turn.
+
+Transfer inspection must recognize pending recovery even when runtime status is already
+Cancelled. Pending queue rows and stopped legacy roots without a queue marker block source
+export and target adoption. Completed markers still make a target nonempty but do not by
+themselves block source history export. Inspect metadata only; corrupt intent bytes must
+not be parsed or discarded by transfer. Add the recovery entity to the target lock set.
+Do not lock the seed singleton: inspection does not read it, and seed-to-queue order must
+not be reversed. The actual exclusive import uses ACCESS EXCLUSIVE NOWAIT before its
+Serializable snapshot, so an active runtime/queue writer makes import fail and release
+its acquired locks instead of waiting in an inverse order. Prove this with independent
+PostgreSQL connections and preserve the ordinary source snapshot contract.
+
+Update the Process owner-model expectation in its transfer test from the historical 22
+entities to the current 34, based on the qualified scoped model; do not suppress model
+isolation checks. Pure coordinator tests cover item/time limits, saved-intent ordering,
+unknown acknowledgement, cancellation, lost ownership, corrupt evidence and empty classes.
+The owning transfer class covers all current inspection scenarios plus live/legacy pending,
+completed, unseeded legacy and concurrent import/writer cases. Final exact discovery is
+required before execution. Build Application, Process module, Workbench, Web and the two
+owning test assemblies in standard Release outputs. Reuse the fixture, run portability
+and review scoped architecture. Broader Stable remains at the final integrated checkpoint.
+
+Automatic worker activation remains dependent on the real stage adapter, bounded ordinary
+Agent notification lookup/cursor, shared-scope/root completion, HTTP/status, fairness and
+actual restart proof. Candidate lookup currently ignores Take and must not be presented
+as bounded. A cache can reduce repeated metadata reads but does not establish cold
+history-independent cost; qualify that owner choice before enabling it.
+
+### Notification lookup decision to qualify
+
+Keep the canonical Agent journal with its existing file owner. Introducing a second
+canonical journal or a Process-owned copy would add a cross-store commit obligation and
+would not establish whether a provider action completed. A bespoke filesystem tree is
+also disproportionate to this lookup. The next prototype will page the existing owner
+metadata and hydrate only the selected journals. Its contract must distinguish a current
+page, exhausted selection, incomplete legacy projection and invalid/missing index evidence.
+It must never call the current automatic full-journal index rebuild in a recovery slice.
+
+This reduces journal work; it does not make cold metadata reads independent of history.
+Measure current and proposed reads at representative larger histories, warm and cold,
+with concurrent publication. Record bytes, journal reads, elapsed time and allocation,
+not only returned-item counts. Cache reuse must be tied to the owner's actual publication
+evidence, and invalidation under sustained writes must not cause silent omissions or
+starve all recovery roots. If the measured cold/read-contention cost does not meet the
+slice/latency budget, this design remains unqualified and requires a separate durable
+index decision before worker activation. No arbitrary low history cap is an acceptable
+replacement for the measurement or for original journal evidence.
+
+For each selected ordinary execution, signal its exact registration and use its journal
+owner's dispatch lease, original Process lineage and current root cancellation barrier.
+An absent registration is not proof of stopped work. Open provider dispatch, unknown
+effects, committed effects awaiting completion, and inherited planning children require
+their existing owner outcomes. The broad compatibility observer's direct force-failure
+write cannot serve as this recovery owner. Its replacement must retain these negative
+cases and source/profile generation fences in the actual producer tests.
+
+### Stage cursor requirements discovered during integration
+
+The stage adapter must distinguish the last operator-facing pending reason from a
+sticky indication that this cycle observed unresolved work. A later successful item
+must not erase an earlier unknown Agent outcome and allow root completion. Restart the
+cycle explicitly after quiescence if any selection was unresolved; reset the cycle
+indication only on that restart. Keep successful receipt replay independent of this
+diagnostic state. Qualify omission-compatible wire additions against the already-signed
+canonical v1 records before changing the position contract.
+
+Runtime selection also needs a selected run and its ordinary notification cursor before
+advancing RunAfter. Cancellation must retain a prepared original runtime command until
+its receipt or definite refusal is established. Exact stop notifications may repeat only
+through their existing idempotent, lease-protected owner; they cannot invent accounting
+or terminalize unknown work. Selected Agent/child outcomes must be verified before any
+accounting intent is prepared. The final root check includes persisted local root work
+as well as descendants, and a clean SQL guard alone does not substitute for completion
+of the ordinary Agent notification scan.
