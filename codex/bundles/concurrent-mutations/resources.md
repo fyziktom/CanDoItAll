@@ -1707,3 +1707,22 @@ Durable proof scanning passes with zero findings. Nine run-folder matches are re
 variable assignments in three unchanged execution-helper copies; the raw scanner result
 and exact hash review are retained. No private sentinel appears. Historical denied
 cleanup targets remain untouched.
+
+### P16 cooperative recovery deadlines — ownership before creation
+
+Own `.artifacts/concurrent-mutations/validation/c4-recovery-deadlines` before creation.
+Reuse standard Release outputs, the existing isolated PostgreSQL fixture and audited
+temporary families. Exercise cancellation through the real coordinator and persistence
+owner, with held claim/owner/checkpoint boundaries and native File waits. No detached
+owner tasks or new host/container are part of this checkpoint. Observe native executions,
+retain failures and reconcile every owned resource; preserve all historical denied
+targets and ordinary 5032.
+
+Recovery deadlines qualify 53 cases with 44 unchanged source pins and 44 owning/copied
+outputs. All six observed execution commands reconcile with zero new resources. Full
+portability passes with 15674 unchanged findings. Compact proof is 86572 bytes, SHA256
+`7745C297AED23BA40E007F54985A105A8E4D45E8AFF52207BBFFC9B335833AD5`.
+Two owned bulk scan files were removed after exact hash/containment checks and verified
+absent. Durable proof scanning passes; three local matches are reviewed helper variable
+assignments with no private sentinel. Raw evidence and hashes remain retained. Earlier
+denied cleanup targets and ordinary 5032 were untouched.

@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current behavioral checkpoint: [held inherited publication](validation/2026-10-22-held-inherited-publication.md).
+Current behavioral checkpoint: [cooperative recovery deadlines](validation/2026-10-22-recovery-deadlines.md).
+All 53 selected cases pass (41 Unit, 12 Integration). Linked deadlines propagate through
+claim, owner and checkpoint without detached work or cleanup writes; native File/SQL
+waits preserve original intent through lease takeover. Seven production builds, 44 output
+identities, unchanged architecture/full portability and zero new resource residue pass.
+Hosted fairness/restart, capacity, HTTP activation and final E2E remain open. SPA stays
+on its separate branch.
+
+Preceding behavioral checkpoint: [held inherited publication](validation/2026-10-22-held-inherited-publication.md).
 All 20 selected Integration cases pass on unchanged production c7e0e8c61. In both snapshot
 modes, SQL enrollment keeps recovery pending while the first child journal is held;
 after publication, no provider call occurs and the original preparation charge is settled

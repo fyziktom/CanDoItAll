@@ -18,7 +18,7 @@ public sealed record ProcessCancellationRecoverySliceLimits(int MaximumOperation
     }
 }
 
-public enum ProcessCancellationRecoverySliceStatus { Idle, Yielded, Pending, Completed, NotOwned, InvalidEvidence }
+public enum ProcessCancellationRecoverySliceStatus { Idle, Yielded, Pending, Completed, NotOwned, InvalidEvidence, TimedOut }
 public sealed record ProcessCancellationRecoverySliceResult(ProcessCancellationRecoverySliceStatus Status,
     ProcessRunId? RootRunId, int Operations, ProcessCancellationRecoveryPending Pending = ProcessCancellationRecoveryPending.None);
 
@@ -35,62 +35,78 @@ public sealed class ProcessCancellationRecoveryCoordinator(IProcessCancellationR
         if (!Enum.IsDefined(origin)) {
             throw new ArgumentOutOfRangeException(nameof(origin));
         }
-        var started = clock.GetTimestamp();
-        ProcessCancellationRecoveryClaim? claim;
-        try {
-            claim = await queue.ClaimAsync(origin, limits.LeaseDuration, cancellationToken).ConfigureAwait(false);
-            if (claim is null && clock.GetElapsedTime(started) < limits.MaximumDuration) {
-                var other = origin == ProcessCancellationRecoveryOrigin.LiveBarrier
-                    ? ProcessCancellationRecoveryOrigin.LegacySeed : ProcessCancellationRecoveryOrigin.LiveBarrier;
-                claim = await queue.ClaimAsync(other, limits.LeaseDuration, cancellationToken).ConfigureAwait(false);
-            }
-        } catch (ProcessCancellationRecoveryCorruptRecordException exception) {
-            logger.LogError("Cancellation recovery root {RootRunId} has invalid retained queue evidence and was deferred by its owner.", exception.RootRunId);
-            return new(ProcessCancellationRecoverySliceStatus.InvalidEvidence, exception.RootRunId, 1, ProcessCancellationRecoveryPending.InvalidEvidence);
-        }
-        if (claim is null) {
-            return new(ProcessCancellationRecoverySliceStatus.Idle, null, 0);
-        }
-        var operations = 0;
-        while (operations < limits.MaximumOperations && clock.GetElapsedTime(started) < limits.MaximumDuration) {
-            cancellationToken.ThrowIfCancellationRequested();
-            claim.Validate();
-            operations++;
-            ProcessCancellationRecoveryCheckpoint checkpoint;
-            try {
-                checkpoint = await step.AdvanceAsync(claim, cancellationToken).ConfigureAwait(false);
-                checkpoint.Validate(claim);
-            } catch (OperationCanceledException) {
-                throw;
-            } catch (Exception exception) {
-                logger.LogError("Cancellation recovery root {RootRunId} at stage {Stage} failed with {FailureType}; its original intent remains retained.",
-                    claim.RootRunId, claim.Position.Stage, exception.GetType().FullName);
-                checkpoint = new(claim.Position, claim.Intent,
-                    exception is InvalidDataException ? ProcessCancellationRecoveryPending.InvalidEvidence : ProcessCancellationRecoveryPending.UnresolvedEffects,
-                    RetryAfter: limits.FailureDelay);
-            }
-            var result = await queue.CheckpointAsync(claim, checkpoint, cancellationToken).ConfigureAwait(false);
-            if (result.Status == ProcessCancellationCheckpointStatus.NotOwned) {
-                return new(ProcessCancellationRecoverySliceStatus.NotOwned, claim.RootRunId, operations, claim.Pending);
-            }
-            if (result.Status == ProcessCancellationCheckpointStatus.Released) {
-                return new(checkpoint.Position.Stage == ProcessCancellationRecoveryStage.Completed
-                    ? ProcessCancellationRecoverySliceStatus.Completed : ProcessCancellationRecoverySliceStatus.Pending,
-                    claim.RootRunId, operations, checkpoint.Pending);
-            }
-            if (result.Status != ProcessCancellationCheckpointStatus.Applied || result.Claim is null) {
-                throw new InvalidDataException("A recovery checkpoint did not return a supported outcome and its owned claim.");
-            }
-            claim = result.Claim;
-        }
         cancellationToken.ThrowIfCancellationRequested();
-        var released = await queue.CheckpointAsync(claim,
-            new(claim.Position, claim.Intent, claim.Pending, RetryAfter: limits.YieldDelay), cancellationToken).ConfigureAwait(false);
-        if (released.Status is not (ProcessCancellationCheckpointStatus.Released or ProcessCancellationCheckpointStatus.NotOwned)) {
-            throw new InvalidDataException("A recovery yield did not release its lease or report ownership loss.");
+        var started = clock.GetTimestamp();
+        ProcessCancellationRecoveryClaim? claim = null;
+        var operations = 0;
+        using var deadline = new CancellationTokenSource(limits.MaximumDuration, clock);
+        using var bounded = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+        var token = bounded.Token;
+        try {
+            try {
+                claim = await queue.ClaimAsync(origin, limits.LeaseDuration, token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                if (claim is null && clock.GetElapsedTime(started) < limits.MaximumDuration) {
+                    var other = origin == ProcessCancellationRecoveryOrigin.LiveBarrier
+                        ? ProcessCancellationRecoveryOrigin.LegacySeed : ProcessCancellationRecoveryOrigin.LiveBarrier;
+                    claim = await queue.ClaimAsync(other, limits.LeaseDuration, token).ConfigureAwait(false);
+                }
+            } catch (ProcessCancellationRecoveryCorruptRecordException exception) {
+                logger.LogError("Cancellation recovery root {RootRunId} has invalid retained queue evidence and was deferred by its owner.", exception.RootRunId);
+                return new(ProcessCancellationRecoverySliceStatus.InvalidEvidence, exception.RootRunId, 1, ProcessCancellationRecoveryPending.InvalidEvidence);
+            }
+            token.ThrowIfCancellationRequested();
+            if (claim is null) {
+                return new(ProcessCancellationRecoverySliceStatus.Idle, null, 0);
+            }
+            while (operations < limits.MaximumOperations && clock.GetElapsedTime(started) < limits.MaximumDuration) {
+                token.ThrowIfCancellationRequested();
+                claim.Validate();
+                operations++;
+                ProcessCancellationRecoveryCheckpoint checkpoint;
+                try {
+                    checkpoint = await step.AdvanceAsync(claim, token).ConfigureAwait(false);
+                    checkpoint.Validate(claim);
+                } catch (OperationCanceledException) {
+                    throw;
+                } catch (Exception exception) {
+                    logger.LogError("Cancellation recovery root {RootRunId} at stage {Stage} failed with {FailureType}; its original intent remains retained.",
+                        claim.RootRunId, claim.Position.Stage, exception.GetType().FullName);
+                    checkpoint = new(claim.Position, claim.Intent,
+                        exception is InvalidDataException ? ProcessCancellationRecoveryPending.InvalidEvidence : ProcessCancellationRecoveryPending.UnresolvedEffects,
+                        RetryAfter: limits.FailureDelay);
+                }
+                token.ThrowIfCancellationRequested();
+                var result = await queue.CheckpointAsync(claim, checkpoint, token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                if (result.Status == ProcessCancellationCheckpointStatus.NotOwned) {
+                    return new(ProcessCancellationRecoverySliceStatus.NotOwned, claim.RootRunId, operations, claim.Pending);
+                }
+                if (result.Status == ProcessCancellationCheckpointStatus.Released) {
+                    return new(checkpoint.Position.Stage == ProcessCancellationRecoveryStage.Completed
+                        ? ProcessCancellationRecoverySliceStatus.Completed : ProcessCancellationRecoverySliceStatus.Pending,
+                        claim.RootRunId, operations, checkpoint.Pending);
+                }
+                if (result.Status != ProcessCancellationCheckpointStatus.Applied || result.Claim is null) {
+                    throw new InvalidDataException("A recovery checkpoint did not return a supported outcome and its owned claim.");
+                }
+                claim = result.Claim;
+            }
+            token.ThrowIfCancellationRequested();
+            var released = await queue.CheckpointAsync(claim,
+                new(claim.Position, claim.Intent, claim.Pending, RetryAfter: limits.YieldDelay), token).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            if (released.Status is not (ProcessCancellationCheckpointStatus.Released or ProcessCancellationCheckpointStatus.NotOwned)) {
+                throw new InvalidDataException("A recovery yield did not release its lease or report ownership loss.");
+            }
+            return new(released.Status == ProcessCancellationCheckpointStatus.NotOwned
+                ? ProcessCancellationRecoverySliceStatus.NotOwned : ProcessCancellationRecoverySliceStatus.Yielded,
+                claim.RootRunId, operations, claim.Pending);
+        } catch (OperationCanceledException) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+            logger.LogWarning("Cancellation recovery root {RootRunId} exceeded its cooperative slice deadline after {Operations} operations. No cleanup write was attempted; the next owner must read the durable state.",
+                claim?.RootRunId, operations);
+            return new(ProcessCancellationRecoverySliceStatus.TimedOut, claim?.RootRunId, operations,
+                claim?.Pending ?? ProcessCancellationRecoveryPending.None);
         }
-        return new(released.Status == ProcessCancellationCheckpointStatus.NotOwned
-            ? ProcessCancellationRecoverySliceStatus.NotOwned : ProcessCancellationRecoverySliceStatus.Yielded,
-            claim.RootRunId, operations, claim.Pending);
     }
 }

@@ -223,3 +223,11 @@ first publication key. After release, provider dispatch refuses the stopped pare
 registered recovery accounts the original measured preparation before root completion.
 Production was unchanged. OS restart, cooperative owner deadlines, fair scheduling and
 the existing whole-journal cost gate remain activation prerequisites.
+
+The coordinator now owns a linked cooperative deadline across claim, stage and checkpoint.
+It awaits cancellation unwind and returns TimedOut without guessing or writing cleanup
+state. Caller cancellation propagates; noncooperative operations remain awaited. Unknown
+commit outcomes stay with the database until the next owner reads actual retained state.
+The [53-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-deadlines.md)
+covers lost checkpoint acknowledgement and real File/SQL waits through expiry/takeover.
+These local samples do not qualify hard I/O bounds, hosted fairness or OS restart.

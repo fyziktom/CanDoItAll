@@ -1001,3 +1001,11 @@ acknowledgement, noncooperative return, simultaneous caller/deadline cancellatio
 existing operation/elapsed limits. Avoid new dependencies, runtime partial owners or a
 second recovery coordinator. Keep live/legacy scheduling and process restart as separate
 required behavior checks in this same P16 outcome.
+
+The [cooperative deadline qualification](../validation/2026-10-22-recovery-deadlines.md)
+passes 53 cases with unchanged source/runtime identity, full portability and zero new
+resource residue. Real File and SQL waits unwind near the configured one-second local
+budget while retaining the original intent and lease. This remains cooperative; the
+noncooperative test proves that owner work is awaited, not abandoned. Continue to the
+finite hosted scheduling and OS restart boundary. Capacity and HTTP activation remain
+separate required gates.
