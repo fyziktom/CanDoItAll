@@ -1104,3 +1104,39 @@ root retains its original intent and is deferred. Full portability and resource 
 pass. The two providers are in one OS process; do not claim multi-process fairness or a
 sustained capacity SLA. Continue to controlled whole-journal cost/contended-write analysis
 and mitigation before HTTP/status cutover and automatic activation.
+
+### Controlled small-history cost investigation
+
+Native backlog progression is signed as `cbff4ac4f`. The prior single small-history
+comparison remains a failed investigation threshold, not a performance pass. Begin with
+an alternating, repeated comparison of the exact real-owner workload against signed
+pre-compact-index production `4a35d5311aa23c5294b6fabadc5f4930ebd863d1` and the current
+candidate. Use a separate managed worktree for the historical baseline: the existing
+runtime worktree is dirty and must be preserved. Keep all outputs in standard Release
+locations and serialize builds that share sibling-library outputs. Explicit existing
+MSBuild repository-root properties locate the same Components/FileTools sources.
+
+Copy only the reviewed cost test and a narrow one-case entry into the baseline test
+project; do not alter historical production or inject a runtime bypass. The same test
+source must execute for both versions. Freeze exact source and assembly identities, SDK,
+local dependencies, fixture setup, warmup and 100-write/100-read workload. Alternate the
+order across at least three pairs and report every sample, medians and tail distributions.
+Do not weaken the earlier thresholds or claim controlled cold-cache behavior. Record
+machine-load/cache limitations and retain failures. This repeated healthy tiny-history
+lane addresses measurement variance; it does not settle 1/8/32-writer contention or
+maximum history size. Profile/attribute real hot-path work before selecting a storage
+redesign; never trade publication completeness, original intents or durable flushes for
+a passing number.
+
+The .NET pattern review is scoped to compact selection, its page reader, JSON persistence
+and publication locking. Allocation/API findings remain hypotheses until measured. Avoid
+new module dependencies, speculative cache correctness, count-only membership stamps,
+reader-side repair or a switch that silently omits Process indexing. Archive the temporary
+benchmark worktree after its last required run, retaining only reviewed proof.
+
+The [controlled cost investigation](../validation/2026-10-22-process-index-controlled-cost.md)
+reproduces the throughput regression across three alternating pairs. Existing ActivitySource
+attribution identifies repeated physical projection publication as the useful repair target.
+The [selection reuse design](P16-process-selection-reuse.md) defines canonical stamp ownership,
+legacy journal compatibility and the exact negative/cost proof before implementation.
+No performance threshold was relaxed and automatic recovery remains disabled.

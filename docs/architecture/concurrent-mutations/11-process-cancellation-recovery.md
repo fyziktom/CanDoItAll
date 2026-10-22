@@ -254,3 +254,14 @@ its original intent intact. Both initial 3:1 cycles are observed per worker. Thi
 same-process native backlog proof does not establish sustained editor throughput,
 maximum history size, multi-OS-process fairness or a latency SLA. Capacity and HTTP
 activation remain open.
+
+## Controlled index cost and next repair
+
+The [controlled comparison](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-process-index-controlled-cost.md)
+reproduces 12.714% median throughput loss across three alternating pairs, despite all
+600 writes and 600 reads retaining correct results. Separate tracing attributes a useful
+target to 123 additional JSON publications, with only 7.25 ms of compact serialization.
+The [selection publication reuse design](../../../codex/bundles/concurrent-mutations/plan/P16-process-selection-reuse.md)
+keeps canonical completeness and original-journal recovery while avoiding physical
+replacement of unchanged selection bytes. It must pass compatibility and repeated cost
+proof before acceptance. This does not activate recovery or settle contended capacity.

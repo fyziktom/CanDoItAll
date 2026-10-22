@@ -1,6 +1,15 @@
 # Execution plan
 
-Current behavioral checkpoint: [native backlog progression](../validation/2026-10-22-recovery-backlog.md).
+Current cost checkpoint: [controlled index investigation](../validation/2026-10-22-process-index-controlled-cost.md).
+Six alternating native cases preserve 600 writes and 600 reads, but reproduce a 12.714%
+median throughput loss. Two final listener diagnostics identify 123 additional durable
+JSON publications; serialization itself is small. The failed first listener and build
+attempts remain retained. Full portability and all three resource reconciliations pass.
+Implement the reviewed selection-publication reuse design next; capacity, activation and
+final E2E remain open. The owned baseline worktree is retained for that comparison. SPA
+stays on its separate branch.
+
+Preceding behavioral checkpoint: [native backlog progression](../validation/2026-10-22-recovery-backlog.md).
 Both Integration rows pass on unchanged production 91ce8b113. One/two independent service
 providers preserve 3:1 opportunities across 32 live and eight historical roots; all 39
 valid roots progress while corrupt original evidence is deferred intact. Source/output

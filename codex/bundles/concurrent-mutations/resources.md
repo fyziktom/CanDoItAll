@@ -1764,3 +1764,36 @@ Two owned bulk scan files were removed after exact hash/containment checks and v
 absent. Durable proof scanning passes; the three local matches are reviewed helper
 variable assignments with no private sentinel. Earlier denied cleanup and ordinary 5032
 remain untouched. No new host, listener or container was created.
+
+### Controlled Process index cost — ownership before creation
+
+Own `.artifacts/concurrent-mutations/validation/c4-process-index-cost-control` and a new
+managed worktree named `concurrent-mutations-cost-baseline` at exact signed production
+`4a35d5311aa23c5294b6fabadc5f4930ebd863d1` before creation. The already-attached runtime
+worktree is dirty and remains untouched. The baseline checkout is needed for causal
+real-owner comparisons without changing current production or introducing bypasses.
+Use standard Release outputs and the same explicit sibling source-library paths; serialize
+shared-output builds. Reuse audited File test families and the isolated PostgreSQL server
+only if a selected fixture requires it. Record the returned worktree identity and archive
+it after the final required baseline measurement. Preserve reviewed small proof, ordinary
+5032, installed tools, SPA main and all historical denied cleanup targets.
+
+The baseline registered at `C:/Users/lucys/.codex/worktrees/concurrent-mutations-cost-baseline/CanDoItAll`
+(operation `8204a82a-3bff-493b-bdb3-c285d99fc326`). Its first build hit Windows path length;
+an exact owned junction `C:/cm-cost` points to that same checkout. The junction ownership
+record predates creation. Remove only that verified junction before managed archive after
+the final comparison. No source, template or output configuration was changed to bypass it.
+
+Additional small proof roots `c4-process-index-cost-profile` and
+`c4-process-index-cost-profile-qualified` have precreation ownership records and reuse the
+same worktree and audited fixture families. Their test hosts are gone. The control/failed-
+listener/final-listener reconciliations cover six/one/two commands with zero new process,
+database or temporary-path residue. The checkout and junction are deliberately retained
+for the designed publication repair, not reported as cleaned. Full portability passes
+with 15675 unchanged findings. Compact proof is 342384 bytes, SHA256
+`FF3CF522EF44E9E8824EB37A761225717043C86BB10D8D3961EE0715351863D6`.
+Historical cleanup denials, ordinary 5032, installed tools and SPA main remain untouched.
+
+The two owned bulk portability files were removed after exact hash and containment checks
+and verified absent. The durable proof scan and all three local proof scans pass with
+zero findings and no skipped oversized/unreadable text. Small reviewed records remain.
