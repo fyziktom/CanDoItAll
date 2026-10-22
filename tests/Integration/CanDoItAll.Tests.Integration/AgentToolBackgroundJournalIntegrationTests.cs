@@ -266,7 +266,7 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
     private static AgentToolAdmissionJournal Journal(AgentToolAdmissionJournalFixture fixture, FileSandboxWorkspaceStore store, SourcePolicy policy)
         => new(store, fixture.Profile, backgroundSources: [policy]);
 
-    private sealed class Fixture(AgentToolAdmissionJournalFixture source, SourcePolicy policy, AgentToolSessionReference reference) : IAsyncDisposable {
+    internal sealed class Fixture(AgentToolAdmissionJournalFixture source, SourcePolicy policy, AgentToolSessionReference reference) : IAsyncDisposable {
         public AgentToolAdmissionJournalFixture Source { get; } = source;
         public SourcePolicy Policy { get; } = policy;
         public AgentToolSessionReference Reference { get; } = reference;
@@ -289,7 +289,7 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
         public ValueTask DisposeAsync() => Source.DisposeAsync();
     }
 
-    private sealed class SourcePolicy(AgentToolAdmissionJournalFixture fixture) : IAgentToolBackgroundReservationPolicy {
+    internal sealed class SourcePolicy(AgentToolAdmissionJournalFixture fixture) : IAgentToolBackgroundReservationPolicy {
         public HashSet<Guid> AcknowledgedExecutionRunIds { get; } = [];
         public ValueTask<AgentToolBackgroundReservationObservation> ObserveReservationAsync(ExecutionRunRecord candidate,
             AgentToolProfileBinding profile, CancellationToken cancellationToken = default)

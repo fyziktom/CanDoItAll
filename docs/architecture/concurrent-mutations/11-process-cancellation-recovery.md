@@ -90,6 +90,15 @@ Cancelled roots; terminal status alone is insufficient.
 
 ## Remaining activation proof
 
+Ordinary and inherited Agent parent stopping now share one Core protocol with distinct
+journal policies. Signals require the exact admitted session/source/profile generation;
+publication follows a bounded dispatch-lease wait, reread and repeated current parent
+authority checks. Unknown provider/effect work and committed unfinished effects remain
+pending. Neither a legacy terminal status nor an empty request-scoped attachment journal
+proves that an invocation stopped. The real module factory is registered; Process root/
+original-receipt authority still needs its adapter before recovery can invoke it. See the
+[focused qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-ordinary-parent-stop.md).
+
 Process execution pages now select from an owner-maintained compact projection. The
 existing publication journal retains its exact chat target until both projections are
 published; interrupted publication rolls forward through that same owner. The page port

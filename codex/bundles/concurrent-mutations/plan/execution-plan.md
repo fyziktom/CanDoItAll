@@ -1,6 +1,15 @@
 # Execution plan
 
-Current behavioral checkpoint: [compact Process selection index](../validation/2026-10-22-process-selection-index.md).
+Current behavioral checkpoint: [ordinary Agent parent stopping](../validation/2026-10-22-ordinary-parent-stop.md).
+All 112 selected cases pass, including exact-session signalling, authority changes,
+unknown/legacy/request-scoped provider work and lost publication acknowledgements.
+Six Release builds, source/runtime identity, unchanged architecture cycles, full
+portability (15670 reviewed) and resource closure pass. The previous 107-case candidate
+and two fixture compile failures remain retained. Process receipt/root adapters and
+stages are next; capacity, fairness, refresh, remaining writers and final E2E are open.
+SPA remains on its separate branch.
+
+Preceding behavioral checkpoint: [compact Process selection index](../validation/2026-10-22-process-selection-index.md).
 All 66 final cases pass; the four-case signed-binary baseline and one historical fixture
 failure are retained. Every index publisher uses its original journal target. At 100,000
 history entries, metadata falls from 82.1 MB to 11.2 MB and page samples fall to 103–133 ms.

@@ -13,6 +13,53 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentExecutionCancellationRegistryTests
 {
     [Fact]
+    public void Original_admitted_session_signals_only_its_matching_registration() {
+        var run = new AgentInheritedParentStopFixture().Detail!.Run;
+        var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
+        using var registration = registry.Register(run, default);
+        Assert.True(registry.RequestCancellation(run.ToolAdmission!.Session));
+        Assert.True(registration.Token.IsCancellationRequested);
+        Assert.True(registry.RequestCancellation(run.ToolAdmission.Session));
+        registration.Dispose();
+        Assert.False(registry.RequestCancellation(run.ToolAdmission.Session));
+    }
+
+    [Theory]
+    [InlineData(AdmissionChange.Profile)]
+    [InlineData(AdmissionChange.Generation)]
+    [InlineData(AdmissionChange.Source)]
+    public void Another_original_admission_cannot_signal_the_same_guid(AdmissionChange change) {
+        var run = new AgentInheritedParentStopFixture().Detail!.Run;
+        var original = run.ToolAdmission!.Session;
+        var profile = original.Profile;
+        var source = original.Reference.BackgroundSource!;
+        var other = change switch {
+            AdmissionChange.Profile => original with { Profile = new(Guid.NewGuid(), profile.Fingerprint, profile.Generation) },
+            AdmissionChange.Generation => original with { Profile = new(profile.ProfileId, profile.Fingerprint, new(profile.Generation.Value + 1)) },
+            _ => original with { Reference = new(original.Reference.ExecutionRunId, original.Reference.ChatSessionId,
+                original.Reference.AuthorityId, new(source.SourceKind, "different-source", source.OwnerFingerprint, source.ExecutionFingerprint)) }
+        };
+        var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
+        using var registration = registry.Register(run, default);
+        Assert.False(registry.RequestCancellation(other));
+        Assert.False(registration.Token.IsCancellationRequested);
+        Assert.True(registry.RequestCancellation(original));
+        Assert.True(registration.Token.IsCancellationRequested);
+    }
+
+    [Fact]
+    public void A_legacy_registration_does_not_claim_to_match_an_admitted_session() {
+        var run = new AgentInheritedParentStopFixture().Detail!.Run;
+        var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
+        using var registration = registry.Register(run with { ToolAdmission = null }, default);
+        Assert.False(registry.RequestCancellation(run.ToolAdmission!.Session));
+        Assert.False(registration.Token.IsCancellationRequested);
+        Assert.True(registry.RequestCancellation(run.Id));
+    }
+
+    public enum AdmissionChange { Profile, Generation, Source }
+
+    [Fact]
     public void Exact_execution_stop_signals_only_the_selected_run_and_reports_disposal() {
         var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
         var selected = CreateRun("shared-process");

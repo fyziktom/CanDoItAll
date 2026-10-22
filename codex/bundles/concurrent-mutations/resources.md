@@ -1536,3 +1536,23 @@ ownership/hash checks and absence verification; the record is
 required command/TRX/source/runtime/architecture records and reusable isolated fixture.
 Historical automatic cleanup denials remain unresolved; none was retried. Ordinary 5032,
 its databases, installed MCP tools, unrelated resources and SPA main remain preserved.
+
+## Ordinary Agent parent stopping, 2026-10-22
+
+Candidates `c4-ordinary-parent-stop` and `c4-ordinary-parent-stop-confirmed` were recorded
+before creation. The confirmed ownership entry initially declared 109 cases; source
+review added three request-scoped cases before execution, recorded by its final manifest
+and P16 plan. Standard Release outputs and the existing tool-admission temporary family
+were reused. All twelve test commands were observed and both candidates report zero new
+process, database-name or temporary-path residue. No new host/container/database was added.
+
+Compact proof: 277302 bytes, SHA256
+`D96DCCD4C7DF7619C1DAB0D64D41035CA35E7AD1493349EC7EAEF7065AA57AE1`.
+It retains 107 earlier and 112 final passing cases, both fixture compile failures, source
+and twenty runtime output identities, architecture and final static evidence. Pattern
+and private-password sentinel checks pass. The confirmed candidate's two redundant scan
+JSON/CSV files were removed with exact ownership/hash and absence checks; its
+`redundant-scan-cleanup.json` records the result. Keep proof, commands/TRX/identity records
+and the reusable fixture for the Process adapter. Earlier automatic cleanup denials
+remain unresolved and were not retried. Ordinary 5032 and the separate SPA branch remain
+preserved.

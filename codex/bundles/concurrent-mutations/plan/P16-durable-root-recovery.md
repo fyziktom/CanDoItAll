@@ -475,3 +475,97 @@ sibling-root fairness, investigate small-history cost with controlled repeats or
 redesign, and implement exact ordinary stopping and the real stage adapter. Preserve
 sticky pending-cycle state, original intents and notification cursors across takeover.
 This checkpoint permits dependent correctness integration only; R1/R4/R5/R6 remain open.
+
+### Ordinary selected Agent stop entry
+
+Prerequisite: signed compact-index checkpoint 6131bd540 (behavior only; capacity remains
+open). The current compatibility cancellation observer force-writes active runs and
+cannot prove stopped provider work. Do not use it in durable recovery. Core will own an
+ordinary background-journal stop policy, and a shared internal parent-stop protocol will
+own the existing exact signal, 250 ms dispatch-lease acquisition, current-state reread and
+authority-checked publication sequence. The inherited policy retains its planning work
+and terminal-generation checks. This is one protocol with two semantic policies, not a
+second execution runtime or a new project/interface hierarchy. Use explicit delegates at
+this internal seam; neither policy may delegate behavior back into a runtime partial.
+
+The existing unreleased inherited-only outcome enum becomes a shared parent-stop outcome
+across its Core/Workbench/test callers; no persisted wire field uses that enum. Ordinary
+authority binds the exact admitted session/source/profile and execution fingerprint, and
+requires a caller-owned stopped-parent observation before signalling, after lease wait
+and at publication. The Process adapter must later supply original receipt/root-barrier
+and stable current profile-generation checks; the Core policy does not reference SQL,
+Process runtime, Workbench or UI. No new project reference or partial file is planned.
+
+Absence of a registration or a released dispatch lease is not stop proof. Missing journals,
+open provider dispatch, executing/reconciling/unknown effects and committed effects awaiting
+completion remain typed pending outcomes. An original terminal outcome is accepted only
+with consistent terminal fields and a closed journal. Legacy background schema without
+provider-dispatch evidence may stop only before invocation began; abandoned started legacy
+work remains unresolved. Rejecting undispatched proposals uses the existing cancellation
+transition and retains all original inputs, results, approvals and accepted effects.
+Inherited planning cannot be interpreted as an ordinary background run. No external work,
+model call or replay is introduced by stopping.
+
+Behavioral proof uses new ordinary parent-stop Unit and Integration classes, existing
+inherited parent-stop Unit (20) and Integration (9) characterization tests, and background
+identity Unit tests (15). Reuse pure in-memory store/lease seams and the real background
+journal fixture; do not construct the full runtime for policy tests. Prove current
+authority loss at each boundary, wrong original bindings, cancellation/lease contention,
+late changed journal state, never-dispatched cancellation, known terminal replay, unknown
+provider/effect outcomes, committed-but-unfinished work and lost publication acknowledgement.
+Declare the final new-class discovery counts before running. Build affected Core and
+downstream owners in standard Release, verify copied binaries, then perform architecture,
+portability and resource closure. Existing broader capacity and final Stable gates remain.
+
+Before execution, the selected discovery count is 84: ordinary parent-stop Unit 29 and
+Integration 11, inherited parent-stop Unit 20 and Integration 9, and background identity
+Unit 15. Exact class-prefix filters are declared in the owned `c4-ordinary-parent-stop`
+manifest. The composition case resolves the real Agent module registration over the
+selected isolated store and shared cancellation registry across two scopes; it does not
+claim a running HTTP host. Refresh Core, Workbench, Agent module, Web, Unit and Integration
+in that dependency order. The existing background fixture is made assembly-visible for
+reuse; no production behavior branch or second disposable host is added.
+
+Signal-path review found that the existing registry selects only by execution GUID.
+Parent recovery additionally needs the original admitted session, including source and
+profile generation. Add an exact-session overload; the registry captures the immutable
+session at registration and the shared parent protocol uses that overload. Preserve the
+existing GUID/broad compatibility APIs for their existing callers. A legacy or mismatched
+registration cannot count as a successful parent signal; normal dispatch-lease/current
+authority checks still govern any subsequent stop. Add negative source/profile/generation
+registry cases and an end-to-end protocol case. This extends the selected proof to 105
+cases (30 ordinary Unit plus the 20-case cancellation-registry topic); do not activate
+the compatibility observer as the recovery worker. The initial Integration build's
+public test parameter exposed an internal boundary enum; retain that build failure and
+use the existing xUnit integer-to-typed-enum pattern for that test boundary.
+
+Final pre-execution review adds the supported effect-journal schema to both idle-stop and
+incomplete legacy-segment cases: 32 ordinary Unit cases, 107 total. A later schema number
+alone cannot prove that a legacy provider invocation was recorded. The initial Unit build
+also attempted a with assignment to a read-only session-reference property; the fixture
+now uses its explicit immutable constructor. Both compile failures remain retained.
+
+The 107-case candidate passed, including static, identity and resource closure. Final
+source review then found a quiescence gap: its terminal-record return preceded the legacy
+provider-evidence check, so an old compatibility observer's forced terminal status could
+be accepted without original invocation proof. Reopen that candidate. Move legacy
+uncertainty before terminal replay and add both Cancelled and Succeeded terminal-record
+regressions. The confirmed candidate selects 109 cases (34 ordinary Unit, other topics
+unchanged), refreshes all six affected outputs and reruns the complete focused selection.
+The original 107 passes remain evidence of the earlier candidate, not final qualification.
+
+Recovery review also traced request-scoped attachments through the actual MAF adapters:
+their admission context is enabled only for Recoverable support, so request-scoped runs
+can invoke a provider without durable segment/dispatch evidence. A released dispatch
+lease or a terminal compatibility status cannot establish quiescence for them. Return
+UnresolvedEffects before terminal replay for RequestScopedInput and cover active,
+succeeded and cancelled records. The 109-case build passed but was not executed; retain
+it as an intermediate build. The final selection is 112 cases (37 ordinary Unit).
+
+The final 112-case candidate passes with six refreshed Release builds, twenty unchanged
+owning/copied binaries, unchanged architecture cycles/findings, full portability and
+zero new process/database/temporary residue. See the
+[ordinary parent-stop qualification](../validation/2026-10-22-ordinary-parent-stop.md).
+The earlier 107-case pass and two compile failures remain retained. This closes only the
+Core protocol and module factory prerequisite; the actual Process adapter, stages,
+bounded waits/fairness, cost regression investigation and activation remain open.

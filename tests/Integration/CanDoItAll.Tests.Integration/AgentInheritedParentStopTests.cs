@@ -19,7 +19,7 @@ public sealed class AgentInheritedParentStopTests {
         var original = waiting.ToolAdmission!;
         var owner = Owner(source);
         var parent = Parent(waiting);
-        Assert.Equal(AgentInheritedPlanningStopOutcome.Stopped, await owner.StopAsync(waiting.Id, parent));
+        Assert.Equal(AgentParentStopOutcome.Stopped, await owner.StopAsync(waiting.Id, parent));
         var stopped = await source.ReadAsync();
         Assert.Equal(RunOutcome.Cancelled, stopped.Outcome);
         Assert.Equal(AgentPlanningGenerationState.Cancelled, stopped.ToolAdmission!.PlanningDecision!.Current.State);
@@ -35,7 +35,7 @@ public sealed class AgentInheritedParentStopTests {
             Assert.Equal(AgentToolCancellationDisposition.NotDispatched, proposal.Cancellation!.Disposition);
         });
         var retained = JsonSerializer.Serialize(await source.Files.NewStore().GetExecutionRunDetailAsync(waiting.Id));
-        Assert.Equal(AgentInheritedPlanningStopOutcome.AlreadyClosed, await Owner(source).StopAsync(waiting.Id, parent));
+        Assert.Equal(AgentParentStopOutcome.AlreadyClosed, await Owner(source).StopAsync(waiting.Id, parent));
         Assert.Equal(retained, JsonSerializer.Serialize(await source.Files.NewStore().GetExecutionRunDetailAsync(waiting.Id)));
     }
 
@@ -45,10 +45,10 @@ public sealed class AgentInheritedParentStopTests {
         var waiting = await source.WaitForApprovalAsync();
         var before = JsonSerializer.Serialize(waiting);
         await using (var held = await source.Files.NewStore().AcquireToolDispatchLeaseAsync(waiting.Id)) {
-            Assert.Equal(AgentInheritedPlanningStopOutcome.LeaseBusy, await Owner(source).StopAsync(waiting.Id, Parent(waiting)));
+            Assert.Equal(AgentParentStopOutcome.LeaseBusy, await Owner(source).StopAsync(waiting.Id, Parent(waiting)));
             Assert.Equal(before, JsonSerializer.Serialize(await source.ReadAsync()));
         }
-        Assert.Equal(AgentInheritedPlanningStopOutcome.Stopped, await Owner(source).StopAsync(waiting.Id, Parent(waiting)));
+        Assert.Equal(AgentParentStopOutcome.Stopped, await Owner(source).StopAsync(waiting.Id, Parent(waiting)));
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public sealed class AgentInheritedParentStopTests {
         Assert.True(injected);
         var recovered = await source.ReadAsync();
         Assert.Equal(RunOutcome.Cancelled, recovered.Outcome);
-        Assert.Equal(AgentInheritedPlanningStopOutcome.AlreadyClosed, await Owner(source).StopAsync(waiting.Id, Parent(waiting)));
+        Assert.Equal(AgentParentStopOutcome.AlreadyClosed, await Owner(source).StopAsync(waiting.Id, Parent(waiting)));
         Assert.Equal(recovered.Revision, (await source.ReadAsync()).Revision);
         Assert.Equal(waiting.ToolAdmission!.PlanningDecision!.Work.ClosedWorkTicks, recovered.ToolAdmission!.PlanningDecision!.Work.ClosedWorkTicks);
     }
@@ -111,7 +111,7 @@ public sealed class AgentInheritedParentStopTests {
         }
         var interrupted = await source.ReadAsync();
         var before = JsonSerializer.Serialize(interrupted);
-        Assert.Equal(AgentInheritedPlanningStopOutcome.OpenWork, await Owner(source).StopAsync(interrupted.Id, Parent(interrupted)));
+        Assert.Equal(AgentParentStopOutcome.OpenWork, await Owner(source).StopAsync(interrupted.Id, Parent(interrupted)));
         Assert.Equal(before, JsonSerializer.Serialize(await source.ReadAsync()));
         Assert.NotNull(interrupted.ToolAdmission!.PlanningDecision!.Work.Open);
         Assert.True(interrupted.ToolAdmission.HasUnresolvedProviderDispatch);
@@ -134,7 +134,7 @@ public sealed class AgentInheritedParentStopTests {
         var owner = new AgentInheritedPlanningStopper(store, store, store, registry, source.Clock);
         var stopping = Task.Run(() => owner.StopAsync(waiting.Id, Parent(waiting)));
         try {
-            Assert.Equal(AgentInheritedPlanningStopOutcome.Signalled, await stopping.WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.Equal(AgentParentStopOutcome.Signalled, await stopping.WaitAsync(TimeSpan.FromSeconds(10)));
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             Assert.True(registration.IsCancellationRequested);
             Assert.Equal(before, JsonSerializer.Serialize(await source.Files.NewStore().GetExecutionRunDetailAsync(waiting.Id)));
@@ -143,7 +143,7 @@ public sealed class AgentInheritedParentStopTests {
             await stopping.WaitAsync(TimeSpan.FromSeconds(10));
             await registration.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
         }
-        Assert.Equal(AgentInheritedPlanningStopOutcome.Stopped, await owner.StopAsync(waiting.Id, Parent(waiting)));
+        Assert.Equal(AgentParentStopOutcome.Stopped, await owner.StopAsync(waiting.Id, Parent(waiting)));
         Assert.Equal(RunOutcome.Cancelled, (await source.ReadAsync()).Outcome);
     }
 

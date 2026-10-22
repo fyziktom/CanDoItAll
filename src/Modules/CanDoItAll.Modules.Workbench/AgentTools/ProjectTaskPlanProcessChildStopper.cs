@@ -53,12 +53,12 @@ internal sealed class ProjectTaskPlanProcessChildStopper(ISandboxWorkspaceExecut
             });
             var outcome = await stopper.StopAsync(run.Id, parent, cancellationToken).ConfigureAwait(false);
             return outcome switch {
-                AgentInheritedPlanningStopOutcome.Stopped or AgentInheritedPlanningStopOutcome.AlreadyClosed => ProcessDecisionChildStopResult.ReadyForAccounting,
-                AgentInheritedPlanningStopOutcome.Signalled or AgentInheritedPlanningStopOutcome.OpenWork => ProcessDecisionChildStopResult.ActiveWork,
-                AgentInheritedPlanningStopOutcome.LeaseBusy => ProcessDecisionChildStopResult.LeaseBusy,
-                AgentInheritedPlanningStopOutcome.MissingJournal => ProcessDecisionChildStopResult.MissingJournal,
-                AgentInheritedPlanningStopOutcome.UnresolvedEffects => ProcessDecisionChildStopResult.UnresolvedEffects,
-                AgentInheritedPlanningStopOutcome.CompletionPending => ProcessDecisionChildStopResult.CompletionPending,
+                AgentParentStopOutcome.Stopped or AgentParentStopOutcome.AlreadyClosed => ProcessDecisionChildStopResult.ReadyForAccounting,
+                AgentParentStopOutcome.Signalled or AgentParentStopOutcome.OpenWork => ProcessDecisionChildStopResult.ActiveWork,
+                AgentParentStopOutcome.LeaseBusy => ProcessDecisionChildStopResult.LeaseBusy,
+                AgentParentStopOutcome.MissingJournal => ProcessDecisionChildStopResult.MissingJournal,
+                AgentParentStopOutcome.UnresolvedEffects => ProcessDecisionChildStopResult.UnresolvedEffects,
+                AgentParentStopOutcome.CompletionPending => ProcessDecisionChildStopResult.CompletionPending,
                 _ => throw new InvalidDataException("The inherited Agent stop owner returned an unsupported result.")
             };
         } finally {

@@ -53,7 +53,7 @@ internal sealed class AgentInheritedParentStopFixture : ISandboxWorkspaceExecuti
         Clock.Now = Detail.Run.UpdatedAtUtc;
     }
 
-    internal Task<AgentInheritedPlanningStopOutcome> StopAsync(CancellationToken token = default)
+    internal Task<AgentParentStopOutcome> StopAsync(CancellationToken token = default)
         => Owner.StopAsync(Detail!.Run.Id, Parent, token);
 
     public Task<ExecutionRunDetail?> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default) {

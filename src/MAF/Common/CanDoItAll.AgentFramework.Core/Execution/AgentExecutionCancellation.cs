@@ -7,6 +7,8 @@ namespace CanDoItAll.AgentFramework.Core;
 public interface IAgentExecutionCancellationRegistry {
     bool RequestCancellation(Guid executionRunId);
 
+    bool RequestCancellation(AgentToolSessionAdmission original);
+
     IAgentExecutionCancellationRegistration Register(
         ExecutionRunRecord run,
         CancellationToken cancellationToken);
@@ -41,6 +43,15 @@ public sealed class AgentExecutionCancellationRegistry : IAgentExecutionCancella
         return activeExecutions.TryGetValue(executionRunId, out var active) && active.RequestCancellation(onlyNew: false);
     }
 
+    public bool RequestCancellation(AgentToolSessionAdmission original) {
+        ArgumentNullException.ThrowIfNull(original);
+        if (original.Reference.ExecutionRunId == Guid.Empty) {
+            throw new ArgumentException("Cancellation requires an original admitted execution identity.", nameof(original));
+        }
+        return activeExecutions.TryGetValue(original.Reference.ExecutionRunId, out var active) &&
+            active.Session == original && active.RequestCancellation(onlyNew: false);
+    }
+
     public IAgentExecutionCancellationRegistration Register(
         ExecutionRunRecord run,
         CancellationToken cancellationToken) {
@@ -48,7 +59,7 @@ public sealed class AgentExecutionCancellationRegistry : IAgentExecutionCancella
         if (run.Id == Guid.Empty) {
             throw new ArgumentException("Cancellation registration requires an execution identity.", nameof(run));
         }
-        var activeExecution = new AgentExecutionCancellationRegistration(run.Id, NormalizeRunId(run.ProcessRunId), Unregister, logger);
+        var activeExecution = new AgentExecutionCancellationRegistration(run.Id, NormalizeRunId(run.ProcessRunId), run.ToolAdmission?.Session, Unregister, logger);
         if (!activeExecutions.TryAdd(run.Id, activeExecution)) {
             activeExecution.Dispose();
             throw new InvalidOperationException($"Execution run '{run.Id:N}' is already registered for cancellation.");

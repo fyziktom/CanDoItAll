@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -13,10 +14,11 @@ internal sealed class AgentExecutionCancellationRegistration : IAgentExecutionCa
     private bool disposed;
     private bool released;
 
-    internal AgentExecutionCancellationRegistration(Guid executionRunId, string processRunId,
+    internal AgentExecutionCancellationRegistration(Guid executionRunId, string processRunId, AgentToolSessionAdmission? session,
         Action<AgentExecutionCancellationRegistration> release, ILogger logger) {
         ExecutionRunId = executionRunId;
         ProcessRunId = processRunId;
+        Session = session;
         this.release = release;
         this.logger = logger;
         Token = cancellation.Token;
@@ -24,6 +26,7 @@ internal sealed class AgentExecutionCancellationRegistration : IAgentExecutionCa
 
     internal Guid ExecutionRunId { get; }
     internal string ProcessRunId { get; }
+    internal AgentToolSessionAdmission? Session { get; }
     public CancellationToken Token { get; }
     public bool IsCancellationRequested => Token.IsCancellationRequested;
 

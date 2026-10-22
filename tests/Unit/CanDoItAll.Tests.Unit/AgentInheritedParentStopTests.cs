@@ -10,7 +10,7 @@ public sealed class AgentInheritedParentStopTests {
     public async Task Idle_selected_stop_retains_work_and_replays_without_another_revision() {
         var fixture = new AgentInheritedParentStopFixture();
         var original = fixture.Detail!.Run.ToolAdmission!.PlanningDecision!;
-        Assert.Equal(AgentInheritedPlanningStopOutcome.Stopped, await fixture.StopAsync());
+        Assert.Equal(AgentParentStopOutcome.Stopped, await fixture.StopAsync());
         var cancelled = fixture.Detail!.Run;
         Assert.Equal(RunOutcome.Cancelled, cancelled.Outcome);
         Assert.Equal(AgentPlanningGenerationState.Cancelled, cancelled.ToolAdmission!.PlanningDecision!.Current.State);
@@ -18,7 +18,7 @@ public sealed class AgentInheritedParentStopTests {
         Assert.Equal(original.InheritedOrigin, cancelled.ToolAdmission.PlanningDecision.InheritedOrigin);
         Assert.Equal(3, fixture.ParentChecks);
         Assert.True(fixture.LeaseDisposed);
-        Assert.Equal(AgentInheritedPlanningStopOutcome.AlreadyClosed, await fixture.StopAsync());
+        Assert.Equal(AgentParentStopOutcome.AlreadyClosed, await fixture.StopAsync());
         Assert.Same(cancelled, fixture.Detail.Run);
         Assert.Equal(1, fixture.Writes);
     }
@@ -28,7 +28,7 @@ public sealed class AgentInheritedParentStopTests {
         var fixture = new AgentInheritedParentStopFixture();
         var original = fixture.Detail!;
         using var registration = fixture.Registry.Register(original.Run, default);
-        Assert.Equal(AgentInheritedPlanningStopOutcome.Signalled, await fixture.StopAsync());
+        Assert.Equal(AgentParentStopOutcome.Signalled, await fixture.StopAsync());
         Assert.True(registration.Token.IsCancellationRequested);
         Assert.Same(original, fixture.Detail);
         Assert.Equal(0, fixture.Writes);
@@ -64,7 +64,7 @@ public sealed class AgentInheritedParentStopTests {
         } else {
             Open();
         }
-        Assert.Equal(AgentInheritedPlanningStopOutcome.OpenWork, await fixture.StopAsync());
+        Assert.Equal(AgentParentStopOutcome.OpenWork, await fixture.StopAsync());
         Assert.NotNull(fixture.Detail!.Run.ToolAdmission!.PlanningDecision!.Work.Open);
         Assert.Equal(0, fixture.Writes);
     }
@@ -80,18 +80,18 @@ public sealed class AgentInheritedParentStopTests {
                 Start.AddSeconds(2), AgentPlanningWorkSettlementReason.ReconciliationOnly, AgentPlanningGenerationState.Failed)
         }));
         var before = JsonSerializer.Serialize(fixture.Detail);
-        Assert.Equal(AgentInheritedPlanningStopOutcome.UnresolvedEffects, await fixture.StopAsync());
+        Assert.Equal(AgentParentStopOutcome.UnresolvedEffects, await fixture.StopAsync());
         Assert.Equal(before, JsonSerializer.Serialize(fixture.Detail));
         Assert.Equal(0, fixture.Writes);
     }
 
     [Theory]
-    [InlineData(AgentToolProposalState.Executing, AgentToolEffectState.Unknown, AgentInheritedPlanningStopOutcome.UnresolvedEffects)]
-    [InlineData(AgentToolProposalState.ReconciliationRequired, AgentToolEffectState.Unknown, AgentInheritedPlanningStopOutcome.UnresolvedEffects)]
-    [InlineData(AgentToolProposalState.Completed, AgentToolEffectState.Unknown, AgentInheritedPlanningStopOutcome.UnresolvedEffects)]
-    [InlineData(AgentToolProposalState.Completed, AgentToolEffectState.Committed, AgentInheritedPlanningStopOutcome.CompletionPending)]
+    [InlineData(AgentToolProposalState.Executing, AgentToolEffectState.Unknown, AgentParentStopOutcome.UnresolvedEffects)]
+    [InlineData(AgentToolProposalState.ReconciliationRequired, AgentToolEffectState.Unknown, AgentParentStopOutcome.UnresolvedEffects)]
+    [InlineData(AgentToolProposalState.Completed, AgentToolEffectState.Unknown, AgentParentStopOutcome.UnresolvedEffects)]
+    [InlineData(AgentToolProposalState.Completed, AgentToolEffectState.Committed, AgentParentStopOutcome.CompletionPending)]
     public async Task Dispatched_effects_require_their_original_reconciliation_or_completion_owner(
-        AgentToolProposalState state, AgentToolEffectState effect, AgentInheritedPlanningStopOutcome expected) {
+        AgentToolProposalState state, AgentToolEffectState effect, AgentParentStopOutcome expected) {
         var fixture = new AgentInheritedParentStopFixture();
         var initial = fixture.Detail!.Run.ToolAdmission!;
         var waiting = AwaitApproval(Respond(Enter(Attach(Begin(initial),
@@ -147,7 +147,7 @@ public sealed class AgentInheritedParentStopTests {
         var fixture = new AgentInheritedParentStopFixture();
         var id = fixture.Detail!.Run.Id;
         fixture.Detail = null;
-        Assert.Equal(AgentInheritedPlanningStopOutcome.MissingJournal, await fixture.Owner.StopAsync(id, fixture.Parent));
+        Assert.Equal(AgentParentStopOutcome.MissingJournal, await fixture.Owner.StopAsync(id, fixture.Parent));
         Assert.Equal(0, fixture.Leases);
         Assert.Equal(0, fixture.Writes);
     }
@@ -182,7 +182,7 @@ public sealed class AgentInheritedParentStopTests {
     [Fact]
     public async Task Inconsistent_terminal_run_is_not_declared_closed_or_rewritten() {
         var fixture = new AgentInheritedParentStopFixture();
-        Assert.Equal(AgentInheritedPlanningStopOutcome.Stopped, await fixture.StopAsync());
+        Assert.Equal(AgentParentStopOutcome.Stopped, await fixture.StopAsync());
         fixture.Detail = fixture.Detail! with { Run = fixture.Detail.Run with { State = ExecutionState.Running } };
         var changed = fixture.Detail;
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.StopAsync());
