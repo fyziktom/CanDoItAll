@@ -276,6 +276,10 @@ public static class ProcessesModuleServiceCollectionExtensions
             ProcessExecutionRunCriticalityPolicy>());
         services.Configure<ProcessRuntimeDispatchQueueOptions>(
             configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
+        services.AddOptions<ProcessCancellationRecoveryOptions>()
+            .Bind(configuration.GetSection(ProcessCancellationRecoveryOptions.ConfigurationSectionName))
+            .Validate(ProcessCancellationRecoveryOptions.IsValid, "Process cancellation recovery options are invalid.")
+            .ValidateOnStart();
         services.AddOptions<ProcessRuntimeDispatchOptions>()
             .Bind(configuration.GetSection(ProcessRuntimeDispatchOptions.ConfigurationSectionName))
             .Validate(
@@ -296,6 +300,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AgentFrameworkProcessExecutionClaimRecoveryWorker>());
         if (backgroundWorkersEnabled)
         {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessCancellationRecoveryWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessLaunchContinuationWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRuntimeProjectionReplayBackgroundWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRunRecordBackgroundWorker>());

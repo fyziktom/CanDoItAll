@@ -1,6 +1,14 @@
 # Execution plan
 
-Current behavioral checkpoint: [cooperative recovery deadlines](../validation/2026-10-22-recovery-deadlines.md).
+Current behavioral checkpoint: [finite worker and OS restart](../validation/2026-10-22-recovery-worker.md).
+All 64 selected cases pass (50 Unit, 14 Integration). The scoped worker preserves finite
+3:1 opportunities, pacing and cancellation. Four actual termination/restart rows preserve
+original actions and receipts and charge real inherited work once across both snapshot
+modes. All eight child identities, 56 output identities, architecture, full portability
+and zero new resource residue qualify. Native backlog fairness, capacity, HTTP activation
+and final E2E remain open; Enabled remains false. SPA stays on its separate branch.
+
+Preceding behavioral checkpoint: [cooperative recovery deadlines](../validation/2026-10-22-recovery-deadlines.md).
 All 53 selected cases pass (41 Unit, 12 Integration). Linked deadlines propagate through
 claim, owner and checkpoint without detached work or cleanup writes; native File/SQL
 waits preserve original intent through lease takeover. Seven production builds, 44 output

@@ -1009,3 +1009,63 @@ budget while retaining the original intent and lease. This remains cooperative; 
 noncooperative test proves that owner work is awaited, not abandoned. Continue to the
 finite hosted scheduling and OS restart boundary. Capacity and HTTP activation remain
 separate required gates.
+
+### Finite hosted scheduling and restart design
+
+Entry gate: Pass for implementation after signed deadline checkpoint `2ad59bbe0`.
+The Behavioral outcome is a lifecycle adapter over the existing coordinator and queue.
+The Processes module owns only scheduling, scoped construction and validated options.
+Application remains responsible for slice limits, stage transitions and cancellation;
+Persistence retains database leases and legacy seed progress. No production project
+reference, partial owner or second coordinator is needed. An internal worker and options
+type are justified by the real hosting/configuration boundary.
+
+Each worker iteration opens one async scope, awaits one coordinator slice and disposes
+that scope before pacing. Preferred origins repeat live/live/live/legacy. Empty-origin
+fallback remains the coordinator's existing behavior; this is a per-worker opportunity
+quota, not a global ordering or latency guarantee. Advance preference even on failures
+so a poison root cannot consume every legacy turn. Existing due-time ordering and lease
+expiry supply cross-process exclusion. There is no parallel root work inside one worker.
+
+After a legacy recovery opportunity, seed at most one durable legacy page in its own
+scope and cooperative deadline. Seeding must not precede and block already-queued legacy
+work. Do not cache seed completion across runtime profile changes; the durable seed row
+owns that fact. Deadline/failure leaves its transaction outcome with Persistence and the
+next iteration proceeds only after owner unwind. Defaults remain 8 operations, 2 seconds,
+30-second leases and one 16-root seed page; positive pacing prevents an empty/busy spin.
+Stop propagates through every wait and disposes the scope only after its task unwinds.
+Log typed status, root/origin, operation count and exception type without payloads or
+connection strings. Validate options on start and suppress registration on MCP host lanes.
+Keep Enabled=false until the documented capacity and HTTP activation gates pass.
+
+Unit proof will exercise the actual BackgroundService with the real coordinator and
+substituted queue/stage ports: two complete 3:1 cycles, empty queue pacing, failures,
+legacy seed cancellation, disabled startup, caller stop and scope disposal. Validate
+configuration binding and invalid limits and both host-lane registration outcomes.
+Native proof must use the registered stages and actual PostgreSQL/File owners. A dedicated
+small support executable is justified only for OS termination/restart: no web listener,
+no migration/seed defaults and no unrelated workers. It reuses the parent's isolated
+profile, records exact child identity and stops only its owned process. Hold before an
+original action, and after an owner commit before queue acknowledgement, terminate the
+first child, restart against the same state and require exact receipt/accounting recovery.
+No production fault-injection callback is introduced; test-only port decoration holds
+those boundaries. Existing scopes/lease tests alone do not satisfy this OS proof.
+
+Select new worker Unit and restart Integration classes, existing module hosted registration,
+coordinator/deadline/queue/completion classes. Freeze exact counts after source discovery,
+before execution. Changes to worker, options, registration, coordinator/queue/stages,
+protocol/fixture or owner binaries invalidate the relevant lane. Full portability and
+scoped CodeAnalytics are required; broad Stable remains at final integration freeze.
+The initial module snapshot is `snap-20261022204226-b1eb8ad6` (361 types, 2920 members,
+143 findings, 124 existing dependency-load NuGet audit diagnostics). Preserve that
+limitation and compare the changed owner rather than claiming a clean workspace load.
+
+The [finite worker and OS restart qualification](../validation/2026-10-22-recovery-worker.md)
+passes all 64 selected cases, including four actual termination/restart rows over real
+inherited producer state. Original actions and receipts survive before/after accounting
+interruption in both snapshot modes; all eight child identities are observed and leave
+zero new residue. Full portability passes after the one reviewed test-friend allowance.
+The existing composition-size finding changes only its line count; no new semantic
+finding or cycle appears. Per-worker Unit scheduling is qualified, not sustained native
+backlog capacity. Continue with native one/two-host live/legacy queue progression before
+addressing the whole-journal cost gate and HTTP/status cutover. Enabled remains false.

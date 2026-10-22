@@ -231,3 +231,18 @@ commit outcomes stay with the database until the next owner reads actual retaine
 The [53-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-deadlines.md)
 covers lost checkpoint acknowledgement and real File/SQL waits through expiry/takeover.
 These local samples do not qualify hard I/O bounds, hosted fairness or OS restart.
+
+The module now registers a finite scoped hosted adapter, suppressed on MCP lanes and
+configured through `Processes:CancellationRecovery` with Enabled=false by default.
+Validated nested Limits retain the eight-operation/two-second/thirty-second defaults.
+Preferred live/live/live/legacy turns advance even after failure. Seeding follows a
+legacy recovery turn with one bounded page and its own scope/deadline; no seed-completion
+cache can outlive its durable owner. Positive pacing and awaited shutdown prevent spinning
+or disposal beneath an active owner. Logs contain typed status/address/count/failure type.
+
+The [64-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-worker.md)
+includes four actual OS termination/restart cases in both snapshot modes. The second
+process reuses original accounting actions and receipts without duplicate charges, even
+when acknowledgement is interrupted or subsequent leases expire. This closes that
+specific restart boundary. Native sustained backlog fairness, whole-journal capacity
+and HTTP activation remain required; the worker is not enabled automatically.

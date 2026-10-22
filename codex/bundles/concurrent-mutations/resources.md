@@ -1726,3 +1726,23 @@ Two owned bulk scan files were removed after exact hash/containment checks and v
 absent. Durable proof scanning passes; three local matches are reviewed helper variable
 assignments with no private sentinel. Raw evidence and hashes remain retained. Earlier
 denied cleanup targets and ordinary 5032 were untouched.
+
+### P16 hosted recovery — ownership before creation
+
+Own `.artifacts/concurrent-mutations/validation/c4-recovery-worker` before creation.
+Reuse the existing isolated PostgreSQL fixture and standard Release outputs. Any restart
+child uses only a recorded test environment/profile and no network listener. Record
+process creation identity before termination, retain bounded proof, and clean owned test
+resources after each row. No new container or database stack; preserve ordinary 5032,
+installed tooling and all historically denied cleanup targets.
+
+Hosted recovery qualifies 64 cases with 57 unchanged source pins and 56 owning/copied
+outputs. The observer covers all eight execution commands and all eight exact restart
+child identities. Reconciliation leaves zero new process, database or temporary-path
+residue. Full portability passes with 15675 reviewed findings, including the single
+reviewed test-friend declaration. Compact proof is 138439 bytes, SHA256
+`20961BBD3228D673F7027CEBEB3A1133E3DE735986A3FF3C3CC72EFE39D491A2`.
+Two owned bulk scan files were removed after exact hash/containment checks and verified
+absent. Durable proof scanning passes; three local matches are reviewed helper variable
+assignments with no private sentinel. Raw evidence and hashes remain. Earlier denied
+cleanup resources, ordinary 5032 and SPA main are untouched.
