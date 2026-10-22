@@ -1,15 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current qualified checkpoint: [terminal decision finalization](validation/2026-10-22-terminal-decision-finalization.md).
-All 312 selected cases pass on the final candidate, including 94 new cases. Empty or
-already-accounted decisions can close after a terminal step without changing its business
-outcome or inventing work/effects. A cancelled strategy result can atomically settle its
-last child and finish a quiescent root, with full post-flush validation before commit.
-Earlier codec, test-probe and root-guard failures remain recorded; no earlier pass is
-reused after the production repairs. Affected Release builds, full portability,
-source/runtime identity and resource reconciliation pass. Durable recovery, snapshot
-refresh, producer/Workflow/settings integration, remaining writers, sustained capacity
-and complete E2E closure remain open. SPA stays on its separate branch.
+Current qualified checkpoint: [durable cancellation queue](validation/2026-10-22-cancellation-recovery.md).
+All 136 distinct selected cases qualify, including 34 new cases. Root barriers atomically
+enqueue recovery; database leases preserve original intent through takeover, and legacy
+seeding advances in bounded pages. Seven Release builds, full portability, architecture,
+source/runtime identity and resource reconciliation pass. Four test defects and their
+exact unchanged-production repair bridges remain recorded. Worker scheduling, bounded
+ordinary Agent notifications, actual owner/HTTP/transfer integration, snapshot refresh,
+producer/Workflow/settings, remaining writers and sustained capacity still require work.
+The E2E outcome remains active; SPA stays on its separate branch.
 
 
 

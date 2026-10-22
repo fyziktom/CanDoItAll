@@ -63,7 +63,8 @@ internal static class ProcessRootCancellationFixture {
             Heads = await context.DecisionHeads.AsNoTracking().OrderBy(item => item.DecisionId).ToArrayAsync(),
             Generations = await context.DecisionGenerations.AsNoTracking().OrderBy(item => item.DecisionId).ThenBy(item => item.Generation).ToArrayAsync(),
             Children = await context.DecisionChildren.AsNoTracking().OrderBy(item => item.DecisionId).ThenBy(item => item.ChildId).ToArrayAsync(),
-            Materials = await context.DecisionMaterials.CountAsync(), Scopes = await context.DecisionRunScopes.AsNoTracking().OrderBy(item => item.ScopeId).ToArrayAsync()
+            Materials = await context.DecisionMaterials.CountAsync(), Scopes = await context.DecisionRunScopes.AsNoTracking().OrderBy(item => item.ScopeId).ToArrayAsync(),
+            Recovery = await context.CancellationRecoveries.AsNoTracking().OrderBy(item => item.RootRunId).ToArrayAsync()
         });
     }
 }

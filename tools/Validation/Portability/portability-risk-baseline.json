@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-21T22:55:38.667938+00:00",
+  "generated_utc": "2026-10-22T11:01:58.890504+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15665,
+  "allowance_count": 15669,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13883,6 +13883,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261021085340_AddAcceptedProcessStepRequirements.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "af2f8105ece682bf117d7bd7f098d8469595d91eddf6901416335a0c16588f7d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022080512_AddProcessCancellationRecovery.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "50a510337080866d36a1bb0200ad6203220c38f0ba43a067fbbecf4e764380d0",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022080512_AddProcessCancellationRecovery.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e7402610e57ca1bcb0536ac32026b4ab0471d50296ba95c13ee8efd98fa9f2e8",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022080512_AddProcessCancellationRecovery.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "81fe6f077d4fe898148d1ac4d209a48e0cb7adea0c9ae47744cf56ac69387baa",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022080512_AddProcessCancellationRecovery.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "8ff25653ecc20415c6a420781a1b5f6c28a3180b9cce0e40a11d35eeafa3ade8",
       "count": 1
     },
     {

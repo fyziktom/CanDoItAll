@@ -1,0 +1,273 @@
+# Durable root cancellation recovery
+
+Entry gate: Pass, Behavioral tier. P15 qualifies all 312 final cases, with source/runtime identity, full portability and resource reconciliation verified. P13, P14 and P15 are signed as `78d23eb92`, `31cde4ef3` and `24a3017ae`. This design extends the P11 options and does not yet authorize worker activation.
+
+Queue substrate gate: **Pass**, with [136 qualified cases](../validation/2026-10-22-cancellation-recovery.md), including 34 new cases. Four test defects are retained and corrected through exact unchanged-production bridges. The actual finite worker, bounded ordinary notification selection, HTTP/status and transfer integration below remain required before activation.
+
+## Ownership and delivery order
+
+Process Application owns typed recovery positions, original intents, scheduling and the
+finite coordinator. Process Persistence owns only queue transactions, exact metadata
+selection and database leases. Process Runtime remains responsible for business/runtime
+transitions. Existing Agent/Workbench child stoppers and outcome readers own their journals,
+callbacks and measured work. A small Process module hosted adapter invokes the application
+coordinator through a DI scope. No worker or Agent dependency enters Runtime/Persistence;
+no new project references or broad coordinator partials are needed.
+
+First qualify the queue/lease/backfill substrate and its migration. Then implement finite
+stage selection and actual owner composition, qualify recovery races/restarts, expose
+operational pending reasons, and replace the existing unbounded HTTP cascade. These are
+checkpoints in one continuing outcome, not a reduction of E2E scope.
+
+## Durable record and original intent
+
+Use one row per root, with restrictive FK to its runtime state. Retain origin
+LiveBarrier/LegacySeed, original barrier command when available, due time, lease token,
+generation, expiry, progress revision, stage/keyset position, cycle count, last typed
+pending reason, and at most one original intent. A completed row remains a historical
+recovery marker. Do not delete it while original owner receipts are retained.
+
+The queue is staged in the same existing runtime transaction that first persists a root
+cancellation barrier, after persisted authority checks and before SaveChanges. Replays
+return the original receipt before staging. The queue cannot extend transaction lifetime
+across file, Agent or provider work. A failed flush rolls back root, event, receipt and
+queue together. A direct already-quiescent root cancellation can use the same marker.
+
+An intent is a closed typed set: cancel a selected runtime run, account a retained child,
+finalize a terminal local decision, transition a shared scope, or finalize the root.
+Accounting and finalization retain the entire existing request, including action ID and
+original decision/budget expectations. Scope transitions retain their exact expectation.
+Every intent retains the original command context and fixed System recovery actor; a
+legacy seed never invents a user cancellation receipt. Wire serialization uses primitive
+IDs with explicit typed reconstruction, bounded UTF-8 size, strict version/kind/field
+checks and canonical round trips. Never deserialize read-only ID wrappers implicitly.
+
+Persist the intent under the lease before invoking the owner. Every successor replays
+that exact intent before selecting new work. Lost acknowledgement, cancellation, timeout
+and lease loss never authorize replacement or clearing. Clear only after an original
+receipt or a definite owner refusal that proves no commit; optimistic concurrency is a
+known negative only where the transaction owner guarantees rollback. Corruption and
+unknown exceptions retain intent and report a typed pending reason. Unknown external
+work does not receive an accounting intent or a fabricated zero settlement.
+
+## Clock and lease ordering
+
+The database owns durable time. PostgreSQL documents that statement_timestamp is fixed
+at statement entry, whereas clock_timestamp advances during execution. Therefore lease
+validation after a possible lock wait cannot rely on the old statement timestamp.
+Use a short exact-row lock with SKIP LOCKED and a subsequent database-clock conditional
+write while holding that row. A busy row produces an explicit not-owned/busy result;
+no wait on a worker's file operation or another recovery slice is allowed. The timestamp
+predicate is checked at the mutation's linearization point, not against a host clock.
+
+Claim one due root from a matching (Origin, DueAtUtc, RootRunId) pending-row index,
+FOR UPDATE SKIP LOCKED. Record a new random token and increment generation; set DueAtUtc
+to the lease expiry while owned so active leases do not remain at the head of the due
+index. Checkpoint requires root, token, generation, progress revision and unexpired
+database lease. Advancing twice, stale-token writes and a pre-expiry request delayed
+until after expiry must fail. Keep original intent and cursor through a takeover.
+
+No advisory/root runtime lock is held during a queue transaction, and no queue row lock
+is held while acquiring a runtime root or Project lock. Thus staging order remains
+Project -> runtime root -> new queue row; recovery releases the queue lock before any
+owner call. No reverse edge is introduced. Local elapsed budgets use monotonic time and
+are cooperative; they cannot preempt a third-party callback ignoring cancellation.
+
+Primary references checked 2026-10-22:
+- https://www.postgresql.org/docs/18/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT
+- https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE
+
+## Finite stages and fairness
+
+Runtime stage visits bounded keyset pages by RunId, including retained terminal runs
+whose stop notification may have been interrupted. Do not infer notification from a
+Cancelled state. Cancellation and notification completion are distinct; replay the
+original cancel intent first, then repeat the idempotent signal before advancing.
+
+Decision stage visits heads by DecisionId using (RootRunId, DecisionId), then individual
+children of the selected generation using the existing primary key. Retain the selected
+head plus child cursor so one 64-child head cannot reset the per-invocation item limit.
+Unknown first children advance the cursor; closed outcomes can prepare exact accounting
+intents. A finished child scan attempts P15 finalization where appropriate, then advances
+to another head. Historical mismatched/open generations remain explicit corruption, not
+silently treated as the current generation. Read only metadata until an exact owner is
+selected; never enumerate all child journals to select work.
+
+After local decisions, reconcile/cancel the shared root scope through its existing
+complete membership and accounting guard. A pending capture requires actual measured
+capture work and explicit abort; no worker can infer zero. Finally query P13's independent
+quiescence guard once per completed cycle and finalize the root only when clear. An
+already-finalized legacy root still needs that independent check before its queue closes.
+
+Set explicit roots/items/pages and cooperative elapsed limits. A completed scan with
+pending work schedules bounded backoff and resets the next cycle, rather than hot-looping
+the first unresolved item. Keep a typed reason and selected original address for operator
+inspection; do not embed secret payloads or arbitrary exception messages.
+
+Schedule live and legacy classes with an explicit finite ratio (initial candidate 3:1),
+querying the other class only when the scheduled class is empty. This is empty-queue
+scheduling, not failure fallback. Both new live cancellations and historical recovery
+must progress under sustained backlog. Multiple hosts have independent cursors/quotas;
+tests must not turn a local quota into an unsupported global latency guarantee.
+
+## Bounded legacy seed and migration
+
+Use one dedicated seed checkpoint with a keyset RunId cursor, completion flag and exact
+revision. Under its short row lock, select at most one bounded page of stopped roots
+from a partial RunId index where RootRunId=RunId and status is CancelRequested/Cancelled.
+Insert missing LegacySeed rows with ON CONFLICT DO NOTHING and advance the cursor in the
+same transaction. This bounds scanning by selected roots, not an unbounded anti-join of
+all previously seeded rows. A completed empty page records completion. New barriers are
+already atomically enqueued, including random IDs below the legacy cursor.
+
+Schema rollout must precede upgraded writers; enable one-time seeding only after all
+writers use the barrier transaction. Mixed old writers can create stopped roots behind
+the cursor and are not a supported active rollout. Backups must preserve queue, seed
+cursor and owner receipts together. Legacy import/restore needs an explicit seed reset
+or import-owned enqueue; restoring only the cursor is invalid. No entire-population
+startup UPDATE/INSERT or full historical payload hydration is allowed.
+
+Create needed existing-table indexes concurrently with a documented deployment window;
+measure construction/write cost. New queue tables are additive. Downgrade refuses
+retained recovery records/intents/progress; it must not discard unknown work. Actual
+migration and restored old fixtures need proof, not only EnsureCreated.
+
+## Required acceptance before activation
+
+- Atomic barrier/enqueue, duplicate replay, rollback before/after flush and lost commit
+  acknowledgement through actual runtime owner and isolated PostgreSQL.
+- Two independent owners, finite claim, due ordering, active-lease exclusion, lease
+  expiry/takeover, stale token/generation/revision, lock-delay expiry and retained intent.
+- Strict typed wire corruption/version/field rejection, exact replay after restart,
+  unknown settlement retention and actor/action isolation.
+- Seed empty/populated/multi-page progress, failure rollback, conflicting live enqueue,
+  IDs below cursor, host restart, migration/restore/downgrade refusal and index plans.
+- Finite item/page bounds, unresolved first child/root fairness, live versus legacy
+  backlog, cancellation, repeated slices and no lock held across owner calls.
+- Actual child journal/Agent callback stop, terminal accounting, empty-generation close,
+  shared scope and root completion across lost acknowledgements and host restart.
+- Historical root shape and index/write overhead measurements. Healthy local budgets
+  allow at most 256 allocations; the risk is many budgets/heads/descendants, not invented
+  millions of valid allocations in one budget. Observe full-runtime snapshot load cost.
+- Operational pending/resolution flow and bounded HTTP cancellation response, followed
+  by integrated producer/Workflow/settings/snapshot policy proof and final Stable gates.
+
+The reviewed defaults and implementation acceptance are fixed below. Keep recovery disabled until that actual owner integration qualifies;
+the queue substrate alone must never be advertised as completed automatic recovery.
+
+## Concrete substrate contract reviewed against current source
+
+Use one Application port for the cohesive queue: claim one root in an explicit origin
+class, checkpoint one owned root, and seed at most one legacy page. The implementation
+uses a fresh Process context and short transaction per operation; PostgreSQL is required
+for lease operations. Existing in-memory runtime fixtures may stage queue entities but
+must not be advertised as proving durable queue concurrency. Do not change runtime
+transition constructors to inject a queue service: staging is part of Persistence's
+existing transaction, through a small internal row/codec owner.
+
+The position contains a typed stage, nullable RunAfter, DecisionAfter, CurrentDecision
+reference and ChildAfter. Validation permits only fields belonging to that stage:
+Runtime uses RunAfter; Decisions uses completed-head and current-head/child cursors;
+SharedScope, Quiescence and Completed carry no row cursors. A current decision retains
+its generation while root cancellation prevents refresh. Historical inconsistent open
+generations are reported for owner resolution, never silently closed as the current one.
+
+The checkpoint contains the next position, retained intent, typed pending reason,
+optional explicit intent resolution (Committed or RefusedWithoutCommit), and optional
+retry delay. Use actual locked stored state for transition validation, not caller-supplied
+old values. An unresolved intent cannot be replaced or have its position advanced. A
+new intent must preserve the current position. Clearing requires the exact current action
+identity and an explicit known resolution. Completed requires no intent, no pending
+reason and an already-finished quiescence operation. Release with an uncertain intent
+keeps its bytes unchanged. Each successful write increments progress revision; claim
+takeover separately increments the lease generation.
+
+Store the bounded strict position/intent wire text alongside indexed root/origin/due,
+lease token/generation/expiry, revision and completion fields. Keeping JSON as canonical
+text avoids JSONB rewriting receipt identity. The database has length/shape/nullability
+constraints and a restrictive root FK; the codec validates full semantic binding and
+rejects unknown versions. Queue records carry metadata and expectations, never material
+payloads, prompts, credentials or complete runtime snapshots. A progress operation must
+use a conditional write with clock_timestamp after its exact row lock, so a slow operation
+cannot extend an already-expired lease merely because it entered before expiry.
+
+Legacy seed state is one separate row with a typed singleton identity, LastRootRunId,
+revision and completion. Take at most 64 IDs per call (default 16); insert them in one
+bounded parameterized statement with ON CONFLICT DO NOTHING and advance the seed in the
+same transaction. Do not perform one network round trip per root. Seed contention is an
+explicit Busy result. A missing seed checkpoint is corruption, not an empty queue.
+
+Current funding code mirrors every local allocation settlement into its retained root
+funding allocation in the same transaction. Recovery therefore reuses terminal accounting;
+it must not settle a second synthetic root grant. Local finalization only changes the
+generation phase. Root shared capture still requires its separately measured abort.
+
+P15 also exposed and repaired P13's pre-flush ordering for a valid atomic cancelled
+strategy result. New queue staging must support that final-root transition too, while
+retaining its late full-root quiescence obligation and rollback. A queue record for an
+already-quiescent Cancelled root can close without owner side effects after verification.
+The queue must never be staged from a returned historical command replay.
+
+For the substrate checkpoint, prove schema/constraints, runtime staging/rollback/replay,
+strict original-intent preservation, two independent owners, expiry/takeover and delayed
+checkpoint refusal, finite seed progress/conflicts/restart, actual migration downgrade
+refusal and relevant index plans. All worker options, finite stage queries, operational
+read/resolution APIs and HTTP cascade replacement remain the immediately following
+integration in this same ongoing task; they are not silently waived by substrate proof.
+
+## Concrete implementation and rollout decisions
+
+The queue port has three operations: ClaimAsync, CheckpointAsync and SeedLegacyAsync.
+Lease duration is bounded to 1 secondâ€“15 minutes (worker default 30 seconds); database
+commands have a 5-second timeout. Retry delay is 0â€“1 hour. Seed pages default to 16 and
+cannot exceed 64 roots. Positions and intents are bounded to 1024 and 8192 UTF-8 bytes.
+Worker defaults are 8 selected items per slice, a 2-second cooperative elapsed budget,
+and a 3:1 live/legacy claim quota. No queue lock spans an owner invocation. Unknown
+intent outcomes survive expiry and takeover byte-for-byte. Substrate tests may use
+short leases; they must never change system/database time or production defaults.
+
+Intent cases retain typed cancel-run, account-child, finalize-decision, change-scope and
+finalize-root requests. Context actor is the fixed System recovery owner, correlation
+is the root ID, and the exact action/timestamp survives replay. Scope intents permit
+BeginReconciliation and Cancel only; measured capture abort remains with its owner.
+A checkpoint validates the actual locked state, not the caller's cached intent. Root
+completion requires a resolved final-root intent from Quiescence; the executor must
+perform the independent quiescence check even for a legacy already-Cancelled root.
+
+Build the stopped-root partial index concurrently before transactional new-table DDL.
+A retry may reuse only a valid index with the exact table, columns, predicate and index
+kind. An invalid or conflicting same-name index raises an actionable migration error;
+IF NOT EXISTS alone is insufficient. A failed concurrent build may leave such an index
+for explicit deployment repair. Downgrade first refuses retained queue rows or seed
+progress, then removes its owned index concurrently before transactional table drops.
+Migration/down execution requires stopped writers and occurs only on an isolated test
+lease during proof. No ordinary application database is a migration test target.
+
+## Architecture and testability contract
+
+Application owns queue contracts, intent/position validation and later scheduling.
+Persistence owns two EF entities, their mappings, a strict primitive wire codec, the
+short-transaction queue implementation and atomic staging. Existing UoW adds one staged
+row obligation after persisted authority validation. Runtime remains queue-unaware.
+Process module registers the queue; it starts no worker in this checkpoint. There are
+no new project references, generic repositories, broad coordinator partials or Agent
+dependencies. Pure intent contracts/codec have direct tests; queue behavior uses two
+independent contexts and the actual PostgreSQL database, not a simulated lease clock.
+
+Owning filters: ProcessCancellationRecoveryContractTests (9 facts),
+ProcessCancellationRecoveryCodecTests (7 facts), ProcessCancellationRecoveryQueueTests
+(7 facts), ProcessCancellationRecoverySeedTests (3 facts),
+ProcessCancellationRecoveryAtomicTests (4 facts), and
+ProcessCancellationRecoveryMigrationTests (4 facts): 34 planned new tests. Build-backed
+discovery must confirm these before execution; any changed inventory is recorded before
+launch. Regressions are ProcessDecisionCompletionPersistenceTests (38),
+ProcessRootQuiescenceTests (19), ProcessRootWorkAdmissionTests (14), and
+ProcessDecisionPersistenceTests (31), covering the staged owner and late rollback.
+Expected total is 136 cases. Queue/model/codec/UoW changes invalidate their owning lanes;
+any production repair repeats all affected lanes. Migration generation/model parity,
+actual upgrade/re-entry/down refusal, Release builds for changed projects, scoped
+CodeAnalytics dependency review and final portability enforcement are required. The
+unfiltered Stable gate is reserved for the integrated E2E frozen candidate; this substrate
+checkpoint alone does not trigger it or claim final product closure.
+
+Corrupt retained wire evidence is an explicit typed root failure. Claim records InvalidEvidence, releases the lease and defers that row for one minute without changing cursor/intent bytes, then throws the typed error. This avoids a malformed first row starving healthy roots; it does not reinterpret or repair unknown work. The finite worker must count that failure against its slice budget and expose it for owner repair. One additional SQL test covers this negative path, bringing the planned new cases to 34.

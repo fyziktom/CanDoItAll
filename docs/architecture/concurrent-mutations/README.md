@@ -1,5 +1,9 @@
 # Concurrent mutations architecture
 
+The [durable Process cancellation queue](11-process-cancellation-recovery.md) is qualified
+with 136 distinct selected cases. Automatic worker and bounded owner/HTTP/transfer
+integration remain in progress; the schema alone does not enable automatic recovery.
+
 Current implementation: [2026-10-18 resumption](../../../codex/bundles/concurrent-mutations/validation/2026-10-18-resumption.md)
 and [lifecycle integration](../../../codex/bundles/concurrent-mutations/validation/2026-10-18-lifecycle-integration.md).
 Work has resumed. The historical C4 correctness candidate passed 706/706; the additional

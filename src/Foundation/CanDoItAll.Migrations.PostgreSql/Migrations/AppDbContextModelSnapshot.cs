@@ -8647,6 +8647,106 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("process_authoring_receipts", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessCancellationRecoveryEntity", b =>
+                {
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BarrierCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<int>("Cycle")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("DueAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<string>("IntentJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("LeaseGeneration")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Origin")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Pending")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PositionJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("ProgressRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.HasKey("RootRunId");
+
+                    b.HasIndex("Origin", "DueAtUtc", "RootRunId")
+                        .HasDatabaseName("IX_process_cancellation_recovery_due")
+                        .HasFilter("NOT \"Completed\"");
+
+                    b.ToTable("process_cancellation_recovery", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_cancellation_recovery_identity", "\"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND ((\"Origin\" = 0 AND \"BarrierCommandId\" IS NOT NULL AND \"BarrierCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\n    OR (\"Origin\" = 1 AND \"BarrierCommandId\" IS NULL))");
+
+                            t.HasCheckConstraint("CK_process_cancellation_recovery_lease", "\"LeaseGeneration\" >= 0 AND \"ProgressRevision\" >= 0 AND \"Cycle\" >= 0\nAND ((\"LeaseToken\" IS NULL AND \"LeaseExpiresAtUtc\" IS NULL)\n    OR (\"LeaseToken\" IS NOT NULL AND \"LeaseToken\" <> '00000000-0000-0000-0000-000000000000'::uuid\n        AND \"LeaseGeneration\" > 0 AND \"LeaseExpiresAtUtc\" IS NOT NULL AND \"DueAtUtc\" = \"LeaseExpiresAtUtc\" AND NOT \"Completed\"))");
+
+                            t.HasCheckConstraint("CK_process_cancellation_recovery_payload", "octet_length(\"PositionJson\") BETWEEN 2 AND 1024\nAND (\"IntentJson\" IS NULL OR octet_length(\"IntentJson\") BETWEEN 2 AND 8192)\nAND \"Pending\" BETWEEN 0 AND 12\nAND (NOT \"Completed\" OR (\"IntentJson\" IS NULL AND \"Pending\" = 0))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessCancellationRecoverySeedEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("LastRootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("process_cancellation_recovery_seed", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_cancellation_recovery_seed", "\"Id\" = 1 AND \"Revision\" >= 0\nAND (\"LastRootRunId\" IS NULL OR (\"LastRootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Revision\" > 0))\nAND (NOT \"Completed\" OR \"Revision\" > 0)");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Completed = false,
+                            Revision = 0L
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", b =>
                 {
                     b.Property<Guid>("BudgetId")
@@ -9982,6 +10082,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("UpdatedAtUtc", "RunId")
                         .IsDescending();
 
+                    b.HasIndex(new[] { "RunId" }, "IX_process_runtime_states_stopped_root")
+                        .HasDatabaseName("IX_process_runtime_states_stopped_root")
+                        .HasFilter("\"RootRunId\" = \"RunId\" AND \"Status\" IN ('CancelRequested', 'Cancelled')");
+
                     b.ToTable("process_runtime_states", null, t =>
                         {
                             t.HasCheckConstraint("CK_process_runtime_states_project_admission", "(\"ProjectAdmissionDatabaseProfileId\" IS NULL AND \"ProjectAdmissionProjectId\" IS NULL AND \"ProjectAdmissionLifetimeId\" IS NULL)\nOR (\"ProjectAdmissionDatabaseProfileId\" IS NOT NULL AND \"ProjectAdmissionProjectId\" IS NOT NULL AND \"ProjectAdmissionLifetimeId\" IS NOT NULL\n    AND \"ProjectAdmissionDatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectAdmissionProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectAdmissionLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
@@ -10728,6 +10832,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .WithMany()
                         .HasForeignKey("AdmissionId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessCancellationRecoveryEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RootRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

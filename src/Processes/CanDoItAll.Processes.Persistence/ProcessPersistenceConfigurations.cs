@@ -50,6 +50,9 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
         builder.Property(state => state.BlockedRecoveryActionsJson).IsRequired();
         builder.HasIndex(state => state.RootRunId);
         builder.HasIndex(state => state.Status);
+        builder.HasIndex(state => state.RunId, ProcessCancellationRecoveryStaging.StoppedRootIndexName)
+            .HasDatabaseName(ProcessCancellationRecoveryStaging.StoppedRootIndexName)
+            .HasFilter(ProcessCancellationRecoveryStaging.StoppedRootFilter);
         builder.HasIndex(state => new { state.UpdatedAtUtc, state.RunId })
             .IsDescending(true, true);
 

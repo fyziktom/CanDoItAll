@@ -312,6 +312,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         }
 
         var workAdmission = ProcessRuntimeWorkAdmission.Read(existing, request);
+        var previousStatus = existing?.Status;
         var checkCancellationAfterFlush = false;
         if (existing is null)
         {
@@ -339,6 +340,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         }
 
         await decisionScopes.RequireWorkAdmissionAsync(request, workAdmission.Claims, cancellationToken).ConfigureAwait(false);
+        ProcessCancellationRecoveryStaging.Stage(dbContext, request, previousStatus);
         var decisionBudget = await decisionBudgets.StageAsync(request.OriginalState, request.DecisionBudget, cancellationToken).ConfigureAwait(false);
         var decisionScope = await decisionScopes.StageAsync(request, decisionBudget, cancellationToken).ConfigureAwait(false);
         var decision = await decisions.StageAsync(request.OriginalState, request.Mutation.State, request.Decision, decisionBudget,

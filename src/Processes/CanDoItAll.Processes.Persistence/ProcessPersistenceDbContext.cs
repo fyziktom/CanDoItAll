@@ -18,6 +18,10 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessRuntimeStateEntity> RuntimeStates => Set<ProcessRuntimeStateEntity>();
 
+    public DbSet<ProcessCancellationRecoveryEntity> CancellationRecoveries => Set<ProcessCancellationRecoveryEntity>();
+
+    public DbSet<ProcessCancellationRecoverySeedEntity> CancellationRecoverySeeds => Set<ProcessCancellationRecoverySeedEntity>();
+
     public DbSet<ProcessRuntimeStepAssignmentEntity> RuntimeStepAssignments => Set<ProcessRuntimeStepAssignmentEntity>();
 
     public DbSet<ProcessRuntimeStepEntity> RuntimeSteps => Set<ProcessRuntimeStepEntity>();

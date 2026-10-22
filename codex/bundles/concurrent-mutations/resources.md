@@ -1452,3 +1452,19 @@ checks and verified absence: 231,777,535 bytes.
 The record is `c4-terminal-finalization-retest/redundant-scan-cleanup.json`.
 Required command/enforcement logs, failures, TRX, source/runtime manifests and compact
 proof remain. No historical denied resource was retried by this cleanup.
+
+## Durable cancellation queue, 2026-10-22
+
+The four queue candidates (`c4-cancellation-recovery-final`, `-retest`, `-verified`,
+`-confirmed`) reuse the same isolated PostgreSQL 18 fixture and standard Release outputs.
+All eight execution commands are observed and every candidate reconciles with zero new
+process, database-name or temporary-path residue. The 136 qualified cases include exact
+test-only repair bridges; four historical test failures remain retained. Compact proof
+is 516716 bytes, SHA256 `48B4A3E937A784B6902D802A7FF92DFE36C7CE94CA91D5C304BEA33693DB1F35`.
+
+Six redundant scan JSON/CSV files were removed after exact ownership/hash checks and
+verified absence: 139377372 bytes. The record is
+`c4-cancellation-recovery-confirmed/redundant-scan-cleanup.json`. Keep the compact proof,
+command/TRX/source/runtime/architecture records and the existing shared fixture for
+actual worker integration. No historical denied target was retried. Ordinary 5032,
+installed tools, unrelated resources and the separate SPA branch remain preserved.

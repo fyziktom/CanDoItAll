@@ -1,15 +1,12 @@
 # Requirements and closure ledger
 
-Current qualified checkpoint: [terminal decision finalization](validation/2026-10-22-terminal-decision-finalization.md).
-All 312 selected cases pass on the final candidate, including 94 new cases. Empty or
-already-accounted decisions can close after a terminal step without changing its business
-outcome or inventing work/effects. A cancelled strategy result can atomically settle its
-last child and finish a quiescent root, with full post-flush validation before commit.
-Earlier codec, test-probe and root-guard failures remain recorded; no earlier pass is
-reused after the production repairs. Affected Release builds, full portability,
-source/runtime identity and resource reconciliation pass. Durable recovery, snapshot
-refresh, producer/Workflow/settings integration, remaining writers, sustained capacity
-and complete E2E closure remain open. SPA stays on its separate branch.
+Current qualified checkpoint: [durable cancellation queue](validation/2026-10-22-cancellation-recovery.md).
+All 136 distinct selected cases qualify, including 34 new cases. Atomic enqueue,
+database leases, original-intent recovery, finite legacy seeding and migration behavior
+have focused proof. Four historical test defects are retained with unchanged-production
+repair bridges. This advances R3/R4/R5/R6, without closing them: actual finite worker and
+owner/HTTP/transfer integration, snapshot refresh, producer/Workflow/settings, remaining
+writers, sustained capacity and final broad validation remain open. SPA stays separate.
 
 
 
