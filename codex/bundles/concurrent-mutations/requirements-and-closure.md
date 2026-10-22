@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current behavioral checkpoint: [cancellation completion stages](validation/2026-10-22-cancellation-completion-stages.md).
+Current behavioral checkpoint: [indexed recovery selection](validation/2026-10-22-recovery-selection-indexes.md).
+All 24 selected Integration cases pass after a retained test-only bulk-seeding timeout.
+Both actual readers use bounded composite index plans; exact migration restart/downgrade,
+row preservation, concurrent writes and real Agent recovery pass. Full portability,
+architecture, source/output identity and resource reconciliation pass. Held publication
+races, worker/HTTP activation, capacity/fairness and final E2E remain open. SPA main is
+untouched.
+
+Preceding behavioral checkpoint: [cancellation completion stages](validation/2026-10-22-cancellation-completion-stages.md).
 All 141 selected cases pass (112 Unit, 29 Integration), including real Agent producers,
 measured child accounting, interrupted scope capture and exact receipt recovery after
 lost acknowledgement. Nine affected Release builds, 32 output identities, architecture,

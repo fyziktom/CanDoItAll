@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-22T15:31:21.033297+00:00",
+  "generated_utc": "2026-10-22T18:47:54.732678+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15670,
+  "allowance_count": 15674,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13907,6 +13907,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022080512_AddProcessCancellationRecovery.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "8ff25653ecc20415c6a420781a1b5f6c28a3180b9cce0e40a11d35eeafa3ade8",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "50e11f7a1e625723e9a03b74543cb6455db41a601aa772ce5566f439f640b7c9",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e82f9b480ce2f7ebe43616523461eb2bc6f8dd6fd0ddac1550c08ffec20b9cef",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "e702f8f46dd66e8fb49a802fbf81801e6925c44c878e49e92e77fb3111d2ad33",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "ff8beeaf33e963c13135e4135c3145acd1b7171f170d4e1240b04f615302fc0a",
       "count": 1
     },
     {

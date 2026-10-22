@@ -171,7 +171,18 @@ Do not interpret the lookup correctness pass as capacity, bounded elapsed time o
 worker scheduling. Repeated cost investigation and cancellation-aware owner waits remain
 activation prerequisites alongside the real stop/stage adapters.
 
-The worker still needs measured live/legacy fairness, indexed runtime/decision selection,
+Runtime/decision keysets now use composite root/identity indexes, replacing their
+root-only prefixes. The real migration builds replacements concurrently before removal
+and checks exact valid definitions on restart and downgrade. Invalid/conflicting named
+indexes require explicit operator repair. Inspect `pg_index` validity/readiness and
+`pg_get_indexdef` against the migration before taking any repair action; do not blindly
+drop a conflicting operator-created object. The [24-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-selection-indexes.md)
+includes all interrupted command boundaries and writes during construction. On 50,000
+synthetic rows, four actual queries touch four buffers without sorting. Index size rises
+from 0.45 MB to 2.60 MB each; seven insertion-batch medians show no measured regression.
+These local samples do not qualify production-volume migration or whole-journal capacity.
+
+The worker still needs measured live/legacy fairness,
 bounded owner waits and publication-race qualification. The existing HTTP cancellation
 cascade remains unbounded; its cutover must use the finite dispatcher and expose accepted
 versus pending completion. One exhausted keyset scan does not prove that a producer

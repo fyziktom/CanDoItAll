@@ -1624,3 +1624,23 @@ Required logs/results, source/output identities and architecture evidence remain
 Secret-pattern/private-password scanning passes. Exact redundant scan JSON/CSV removal
 and verified absence are recorded in `redundant-scan-cleanup.json`. No denied resource
 was retried.
+
+## Recovery selection indexes, 2026-10-22
+
+Own `.artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes` before
+creation for commands, exact discovery, source/output identities and compact query/cost
+evidence. Reuse the isolated PostgreSQL server and existing default/API integration
+fixture families with standard Release outputs. No new container, host or compiled-output
+tree is required. Observe and reconcile all leases and temporary paths; preserve earlier
+denied resources and the ordinary instance. Keep required evidence and remove only owned
+redundant scan data after its proof has been recorded.
+
+The first candidate passed 12 of 13 safety/cost cases; its cost fixture timed out before
+measurement. Its evidence is retained in `first-candidate`. All 24 final cases pass after
+bounded test-only seeding. Both observed runs reconcile with zero new process/database/
+temporary-path residue. Keep the compact proof, commands/TRX and source/output identities.
+Proof is 144973 bytes, SHA256
+`4759FEA031CBF56D397CEBE3822B35B2163C377EDF23DFD2AE3A7CF063F7BC4A`.
+Secret-pattern/private-password scanning passes. All four exact redundant scan files were
+removed after proof/hash verification and their absence is recorded in the candidate's
+`redundant-scan-cleanup.json`. No earlier denied resource was retried.

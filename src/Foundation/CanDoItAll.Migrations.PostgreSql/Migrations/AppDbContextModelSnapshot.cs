@@ -8993,9 +8993,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("BudgetId")
                         .IsUnique();
 
-                    b.HasIndex("RootRunId");
-
                     b.HasIndex("SharedRunScopeId");
+
+                    b.HasIndex("RootRunId", "DecisionId");
 
                     b.HasIndex("RunId", "StepInstanceId")
                         .IsUnique();
@@ -10075,9 +10075,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasKey("RunId");
 
-                    b.HasIndex("RootRunId");
-
                     b.HasIndex("Status");
+
+                    b.HasIndex("RootRunId", "RunId");
 
                     b.HasIndex("UpdatedAtUtc", "RunId")
                         .IsDescending();

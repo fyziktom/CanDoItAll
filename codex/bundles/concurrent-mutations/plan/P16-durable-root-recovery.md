@@ -801,3 +801,93 @@ producers and inject lost accounting/scope acknowledgements. Nine affected build
 these stages. There is no new resource residue. The test-only compile repair and both
 observer setup refusals remain recorded. Proceed with the indexed-selection and held
 publication/registration gates above; stage composition does not authorize activation.
+
+### Recovery selection indexes
+
+Replace the two single-column root indexes with `(RootRunId, RunId)` and
+`(RootRunId, DecisionId)` B-tree indexes. Each still serves root-only equality queries;
+its second key supports ordered continuation without scanning/sorting the whole root.
+Keep this change within Persistence model configuration and the PostgreSQL migration
+owner. Build each replacement concurrently before removing its old prefix index; reverse
+that order on downgrade. Validate exact table, key order, ascending UUID operator class,
+no predicate/expression/include/uniqueness, and valid/ready/live catalog state before
+reusing or dropping a named index. Interrupted construction must fail explicitly on an
+invalid/conflicting index; it must not silently drop an operator's object. Reentry after
+completed commands must be safe, including when the old index is already absent.
+
+Use the real application migration chain to verify fresh upgrade, restart, exact row
+preservation, downgrade, interruption between concurrent commands and refusal of invalid
+or conflicting named indexes. Measure both real readers on skewed history before/after
+with actual PostgreSQL plans and buffer work; record construction, size and repeated
+insertion costs without claiming a production latency guarantee. Existing native reader
+and recovery-migration cases provide boundary regressions. This remains a focused gate;
+no broad Stable or worker activation is justified by index-only changes.
+
+The design follows PostgreSQL 18's [concurrent construction](https://www.postgresql.org/docs/18/sql-createindex.html)
+and [multicolumn index](https://www.postgresql.org/docs/18/indexes-multicolumn.html)
+contracts. Concurrent construction avoids blocking ordinary writes but can wait for old
+transactions and leave an invalid index after interruption; explicit operator repair is
+required for that state. The default migration timeout remains an operational limit.
+
+Declare 24 focused Integration cases before execution: 13 recovery-selection migration
+cases (8 interrupted up/down boundaries, 2 conflict/invalid variants, upgrade/restart,
+concurrent writer and real-reader cost); existing recovery migration 4, runtime readers 2,
+decision readers 3 and full-stage real Agent producer 2. Refresh Persistence and the
+migration scaffold first, then the customized migration, Web and Integration outputs.
+Use standard Release and exact discovery; capture owning/copied binaries, static gates
+and the existing default/API/tool-admission resource families. The generated EF migration
+partial/designer pair follows the existing schema convention; no runtime owner or
+dependency is added.
+
+The first index candidate passes all 12 migration safety cases but its cost case times
+out during one 50,000-row fixture insertion, before measurement. Preserve that failure
+and the zero-residue reconciliation. Repair only test seeding into bounded 1,000-row
+batches, keeping production/read timeouts unchanged. Refresh Integration and repeat the
+24-case selection. Complete static scanning before performance execution. Its four new
+portability findings are generated model properties (`RootPathState`, `RootPathSyntax`,
+`RaisesEscalation`, `EscalationCount`) identical to previous designers, not path or process
+operations. Review and refresh only those entries, then require final no-write enforcement
+on the regenerated complete scan.
+
+The [indexed-selection Behavioral gate](../validation/2026-10-22-recovery-selection-indexes.md)
+now passes all 24 final cases, including both real Agent recovery cycles. Both actual
+readers use four-buffer composite plans; the measured index storage increase is explicit.
+The 12/13 earlier result remains retained. Full portability, unchanged architecture,
+11 output identities and zero new resource residue qualify progression to the held races.
+
+### Held publication and registration qualification
+
+Source review identifies a concrete window to test before activation. Ordinary Core
+admission observes the source in `CreateNewBackgroundSessionAsync` and
+`PrepareBackgroundReservationAsync`; `FileSandboxWorkspaceStore.ReserveBackgroundExecutionRunAsync`
+then waits for its publication keys and writes its journal without another Process
+transaction. Hold that real key wait after original admission, commit the root barrier,
+and drive recovery through its final queue receipt before releasing the writer. Verify
+whether a new journal can appear behind the finished cursor. The historical completion
+receipt and new-work authority must remain distinct. Repeated empty scans or sleeps
+cannot close an arbitrarily delayed producer window.
+
+If the held test confirms the gap, prefer an explicit transient publication lease from
+the existing source-owner boundary over a second cancellation database or journal.
+Acquire the Process root transaction only after the complete ordered Agent/run publication
+key set and before reacquiring the short workspace gate. Revalidate the exact accepted
+claim/source under that transaction and retain the root fence through actual journal and
+index publication. Reuse the existing Process dispatch guard; Core/File persistence must
+not depend on Process implementation types. Unsupported source owners must fail explicitly.
+The existing reservation replay path must continue recovering original admitted records
+without demanding authority for a fresh dispatch. Publication/lease failure must retain
+unknown acknowledgement evidence and release all acquired resources; never reacquire an
+Agent key while holding the root transaction. Do not hold a root transaction during
+provider execution, prompt preparation or file-key waits.
+
+Inherited children already have a retained SQL enrollment and a dispatch lease spanning
+initial preparation/save. Hold their real publication window separately: missing journal
+or unsettled original work must keep recovery pending until the original owner resolves
+it. Do not apply the ordinary reservation contract to inherited schema 7.
+
+For late cancellation registration, hold the actual lifecycle immediately before
+registration and let stopping acquire its dispatch lease first. MAF rereads the saved
+journal when acquiring that lease; verify no provider request can escape after the stop
+and no stale finalization overwrites cancellation. Test the reverse order too: an already
+active owner must be signalled or remain explicitly pending. These are proposed race
+checks, not qualified behavior; follow their evidence before choosing the final repair.

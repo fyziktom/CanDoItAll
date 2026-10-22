@@ -48,7 +48,7 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
         builder.Property(state => state.Status).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(state => state.ConcurrencyToken).IsConcurrencyToken();
         builder.Property(state => state.BlockedRecoveryActionsJson).IsRequired();
-        builder.HasIndex(state => state.RootRunId);
+        builder.HasIndex(state => new { state.RootRunId, state.RunId });
         builder.HasIndex(state => state.Status);
         builder.HasIndex(state => state.RunId, ProcessCancellationRecoveryStaging.StoppedRootIndexName)
             .HasDatabaseName(ProcessCancellationRecoveryStaging.StoppedRootIndexName)

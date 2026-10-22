@@ -48,7 +48,7 @@ internal sealed class ProcessDecisionHeadConfiguration : IEntityTypeConfiguratio
         builder.Property(item => item.Revision).IsConcurrencyToken();
         builder.HasIndex(item => new { item.RunId, item.StepInstanceId }).IsUnique();
         builder.HasIndex(item => item.BudgetId).IsUnique();
-        builder.HasIndex(item => item.RootRunId);
+        builder.HasIndex(item => new { item.RootRunId, item.DecisionId });
         builder.HasOne<ProcessDecisionRunScopeEntity>().WithMany().HasForeignKey(item => item.SharedRunScopeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ProcessRuntimeStepAssignmentEntity>().WithMany()
             .HasForeignKey(item => new { item.RunId, item.StepInstanceId }).OnDelete(DeleteBehavior.Restrict);
