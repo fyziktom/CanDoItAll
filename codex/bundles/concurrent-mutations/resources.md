@@ -1685,3 +1685,25 @@ Compact proof is 134847 bytes, SHA256
 Durable proof scanning has zero findings. Three run-folder matches are reviewed variable
 assignments in the retained Execute.ps1, with no private password sentinel. Retain exact
 helper hashes and raw scanner evidence; do not claim the raw run-folder scanner passed.
+
+### P16 held inherited publication — ownership before creation
+
+Own `.artifacts/concurrent-mutations/validation/c4-held-inherited-publication` before
+creation. Reuse the isolated PostgreSQL 18 fixture, standard Release outputs and the
+reviewed default/API/tool-admission temporary families. Hold only the exact enrolled
+child's run publication key, then exercise the actual inherited workspace producer,
+Process barrier and registered recovery stages. Observe and reconcile each native run.
+No new server, container or database stack is authorized by this test setup. Preserve
+ordinary 5032 and all previously denied cleanup resources.
+
+Held inherited publication qualifies 20 cases on unchanged production c7e0e8c61, with
+44 verified source pins and 32 unchanged owning/copied outputs. All three native runs
+reconcile with zero new resources. The two failed candidates and exact test-only bridges
+remain retained. Full portability passes with 15674 unchanged reviewed findings.
+Compact proof is 147155 bytes, SHA256
+`DD0F681F156D0C0921F5EA0AEB7259508F1C28535C77DAB74573D923DAA8F7B8`.
+Two bulk scan files were removed after exact proof/hash checks and verified absent.
+Durable proof scanning passes with zero findings. Nine run-folder matches are reviewed
+variable assignments in three unchanged execution-helper copies; the raw scanner result
+and exact hash review are retained. No private sentinel appears. Historical denied
+cleanup targets remain untouched.

@@ -186,17 +186,17 @@ public sealed class ProcessAdmissionCancellationRaceTests {
         public DatabaseProfileGeneration GetGeneration() => new(1);
     }
 
-    private sealed class PublicationWait : IDisposable {
+    internal sealed class PublicationWait : IDisposable {
         private readonly Activity root = new Activity("process-admission-publication").SetIdFormat(ActivityIdFormat.W3C).Start();
         private readonly ActivityListener listener;
         internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        internal PublicationWait() {
+        internal PublicationWait(Func<bool>? selected = null) {
             listener = new() {
                 ShouldListenTo = source => source.Name == AgentFrameworkTelemetry.SourceName,
                 Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
                 ActivityStarted = activity => {
-                    if (activity.TraceId == root.TraceId && activity.OperationName == "workspace.publication.keys.wait") {
+                    if (activity.TraceId == root.TraceId && activity.OperationName == "workspace.publication.keys.wait" && (selected?.Invoke() ?? true)) {
                         Entered.TrySetResult();
                     }
                 }

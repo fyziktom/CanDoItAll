@@ -215,3 +215,11 @@ The entire original detail remains intact. Foreign session or code-only failures
 cancel another execution. The [93-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-held-registration.md)
 includes both registration orderings, stale successful/failed completion, continuation
 and real Process recovery. It does not qualify OS restart or inherited initial publication.
+
+The [20-case inherited publication qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-held-inherited-publication.md)
+now closes that initial-publication window for RunSnapshot and StepSnapshot. SQL enrollment
+keeps the root and original allocation pending while the producer waits on the child's
+first publication key. After release, provider dispatch refuses the stopped parent and
+registered recovery accounts the original measured preparation before root completion.
+Production was unchanged. OS restart, cooperative owner deadlines, fair scheduling and
+the existing whole-journal cost gate remain activation prerequisites.

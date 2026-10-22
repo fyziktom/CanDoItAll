@@ -967,3 +967,37 @@ the missing journal, and require retained pending work before releasing the prod
 After release, no provider work may escape the root barrier; settle only the original
 measured preparation and close the root through the registered stages. Cover both
 RunSnapshot and StepSnapshot. This is the next test design, not a claimed pass.
+
+The [held inherited publication qualification](../validation/2026-10-22-held-inherited-publication.md)
+passes all 20 selected Integration cases on unchanged production `c7e0e8c61`. Both policy
+modes retain MissingJournal through a complete recovery cycle while initial publication
+is held, then refuse provider dispatch and settle the original measured preparation
+before completing the root. Two test-only failures and exact unchanged-production
+bridges remain retained. Full portability and all 32 output identities pass; all three
+native runs leave zero new resources. Ordinary, registration and inherited publication
+windows are now qualified. Activation still requires the following owner-wait work.
+
+### Cooperative deadline boundary
+
+The current coordinator checks elapsed time only between awaited operations. This does
+not interrupt a blocked owner call. Add a linked deadline token owned by the existing
+Application coordinator and propagate it through claiming, stage work and checkpointing.
+Keep the existing finite operation count and database-owned lease expiry. A deadline
+outcome must be distinct from external caller cancellation. It must never clear or
+replace the saved original intent, invent an owner refusal, or checkpoint a guessed
+result after cancellation. An uncertain claim/checkpoint acknowledgement remains with
+the database; a successor reads the actual durable state after expiry.
+
+Do not race an owner task and abandon it with WhenAny or WaitAsync. The coordinator must
+await its completion/unwind before disposing the scope. A noncooperative callback can
+exceed the cooperative budget; explicitly prove that it remains awaited and cannot
+produce another operation after the deadline. The subsequent hosted adapter may log and
+advance scheduling only after the coordinator returns. This is not a hard process-kill
+or wall-clock SLA. Qualify held native File/SQL waits before automatic activation, and
+retain original lease/intent evidence through deadline and caller cancellation races.
+
+Test claim, owner and checkpoint cancellation, committed checkpoint with lost
+acknowledgement, noncooperative return, simultaneous caller/deadline cancellation and
+existing operation/elapsed limits. Avoid new dependencies, runtime partial owners or a
+second recovery coordinator. Keep live/legacy scheduling and process restart as separate
+required behavior checks in this same P16 outcome.

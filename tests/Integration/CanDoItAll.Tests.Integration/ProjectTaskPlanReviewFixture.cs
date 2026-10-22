@@ -42,37 +42,7 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
             process = await ProcessStepMaterialFixture.CreateAsync(mode, steps, existingSql: entry.Files.Sql,
                 executorId: entry.Files.Agent.Id, allowTaskPublication: true, promptCharacters: promptCharacters);
             var services = entry.Files.Sql.Services;
-            var produced = await services.GetRequiredService<ProcessDecisionStepPreparationCoordinator>()
-                .PrepareAsync(process.State, process.Claim, TimeSpan.FromSeconds(30));
-            Assert.True(produced.EnrolledNow);
-            var parent = Assert.IsType<ProcessDecisionChildMaterialBinding>(produced.Child);
-            var input = await services.GetRequiredService<IProcessAcceptedExecutionInputReader>()
-                .ReadAsync(parent.Child.Address.RunId, parent.Child.Address.StepInstanceId);
-            ProcessDecisionSingleActivityAdmission.Require(process.State, input, parent.ExecutionContract);
-            var assignment = input.Assignment;
-            var context = ExecutionInvocationContext.Empty with {
-                SourceKind = ProjectTaskPlanProcessContract.SourceKind, SourceId = assignment.StepKey,
-                CorrelationId = assignment.RunId.ToString(), CausationId = assignment.StepInstanceId.ToString(),
-                RequestedBy = "process-runtime", RequestedByKind = "system",
-                ProcessRunId = assignment.RunId.ToString(), ProcessStepId = assignment.StepInstanceId.ToString(),
-                MetadataJson = services.GetRequiredService<ProcessExecutionMetadataComposer>()
-                    .ComposeClaimedExecution(assignment, new(process.Claim.ClaimToken.Value))
-            };
-            var envelope = AgentToolProtocolEnvelope.Create(ProcessDecisionChildMaterialBindingCodec.Format,
-                ProcessDecisionChildMaterialBindingCodec.Version, ProcessDecisionChildMaterialBindingCodec.Serialize(parent));
-            AgentInheritedPlanningWorkspaceRequest request = new(parent.Child.Address.ChildId.Value,
-                new(new(parent.Child.BudgetId, parent.Child.AllocationId, parent.Child.Grant), AgentInheritedPlanningStartMode.FreshEnrollment),
-                entry.Files.Agent.Id, assignment.Prompt, AgentExecutionOperationId.New(), context, AgentPlanningOwner.ProjectTaskPlan,
-                WorkspaceScopeDescriptor.Project(entry.Files.Sql.Project.ProjectId.ToString("D")), envelope, async (run, token) => {
-                    Assert.Equal(parent.Child.Address.ChildId.Value, run.Id);
-                    var child = await services.GetRequiredService<IProcessDecisionChildReader>().ReadAsync(parent.Child.Address, token);
-                    Assert.Equal(parent.Child, child!.Admission);
-                }, candidate => {
-                    var evidence = ProcessExecutionClaimEvidenceReader.Read(candidate, out _)
-                        ?? throw new InvalidOperationException("The original claim was not retained.");
-                    return AgentToolProtocolEnvelope.Create(ProcessDecisionInitialSourceCodec.Format, ProcessDecisionInitialSourceCodec.Version,
-                        ProcessDecisionInitialSourceCodec.Serialize(evidence));
-                });
+            var (parent, request) = await PrepareRequestAsync(entry, process);
             clock.Freeze();
             entry.Wire.OnRequest = token => {
                 clock.Advance(TimeSpan.FromSeconds(1));
@@ -107,6 +77,43 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
             await entry.DisposeAsync();
             throw;
         }
+    }
+
+    internal static async Task<(ProcessDecisionChildMaterialBinding Parent, AgentInheritedPlanningWorkspaceRequest Request)> PrepareRequestAsync(
+        ProjectTaskPlanExecutionEntryTests.EntryFixture entry, ProcessStepMaterialFixture process, CancellationToken cancellationToken = default) {
+        var services = entry.Files.Sql.Services;
+        var produced = await services.GetRequiredService<ProcessDecisionStepPreparationCoordinator>()
+            .PrepareAsync(process.State, process.Claim, TimeSpan.FromSeconds(30), cancellationToken);
+        Assert.True(produced.EnrolledNow);
+        var parent = Assert.IsType<ProcessDecisionChildMaterialBinding>(produced.Child);
+        var input = await services.GetRequiredService<IProcessAcceptedExecutionInputReader>()
+            .ReadAsync(parent.Child.Address.RunId, parent.Child.Address.StepInstanceId, cancellationToken);
+        ProcessDecisionSingleActivityAdmission.Require(process.State, input, parent.ExecutionContract);
+        var assignment = input.Assignment;
+        var context = ExecutionInvocationContext.Empty with {
+            SourceKind = ProjectTaskPlanProcessContract.SourceKind, SourceId = assignment.StepKey,
+            CorrelationId = assignment.RunId.ToString(), CausationId = assignment.StepInstanceId.ToString(),
+            RequestedBy = "process-runtime", RequestedByKind = "system",
+            ProcessRunId = assignment.RunId.ToString(), ProcessStepId = assignment.StepInstanceId.ToString(),
+            MetadataJson = services.GetRequiredService<ProcessExecutionMetadataComposer>()
+                .ComposeClaimedExecution(assignment, new(process.Claim.ClaimToken.Value))
+        };
+        var envelope = AgentToolProtocolEnvelope.Create(ProcessDecisionChildMaterialBindingCodec.Format,
+            ProcessDecisionChildMaterialBindingCodec.Version, ProcessDecisionChildMaterialBindingCodec.Serialize(parent));
+        AgentInheritedPlanningWorkspaceRequest request = new(parent.Child.Address.ChildId.Value,
+            new(new(parent.Child.BudgetId, parent.Child.AllocationId, parent.Child.Grant), AgentInheritedPlanningStartMode.FreshEnrollment),
+            entry.Files.Agent.Id, assignment.Prompt, AgentExecutionOperationId.New(), context, AgentPlanningOwner.ProjectTaskPlan,
+            WorkspaceScopeDescriptor.Project(entry.Files.Sql.Project.ProjectId.ToString("D")), envelope, async (run, token) => {
+                Assert.Equal(parent.Child.Address.ChildId.Value, run.Id);
+                var child = await services.GetRequiredService<IProcessDecisionChildReader>().ReadAsync(parent.Child.Address, token);
+                Assert.Equal(parent.Child, child!.Admission);
+            }, candidate => {
+                var evidence = ProcessExecutionClaimEvidenceReader.Read(candidate, out _)
+                    ?? throw new InvalidOperationException("The original claim was not retained.");
+                return AgentToolProtocolEnvelope.Create(ProcessDecisionInitialSourceCodec.Format, ProcessDecisionInitialSourceCodec.Version,
+                    ProcessDecisionInitialSourceCodec.Serialize(evidence));
+            });
+        return (parent, request);
     }
 
     internal ProcessDecisionReviewCoordinator Coordinator(IProcessRuntimeUnitOfWork? unitOfWork = null,

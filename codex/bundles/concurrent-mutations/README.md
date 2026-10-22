@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current behavioral checkpoint: [held cancellation registration](validation/2026-10-22-held-registration.md).
+Current behavioral checkpoint: [held inherited publication](validation/2026-10-22-held-inherited-publication.md).
+All 20 selected Integration cases pass on unchanged production c7e0e8c61. In both snapshot
+modes, SQL enrollment keeps recovery pending while the first child journal is held;
+after publication, no provider call occurs and the original preparation charge is settled
+before root completion. Full portability, 32 output identities and all three observed
+runs pass with zero new resource residue. Cooperative deadlines, worker/HTTP activation,
+capacity/fairness and final E2E remain open. SPA stays on its separate branch.
+
+Preceding behavioral checkpoint: [held cancellation registration](validation/2026-10-22-held-registration.md).
 All 93 selected cases pass (60 Integration, 33 Unit). The real Core/MAF stop-first
 race reproduced a saved cancellation overwritten as failure; typed original-session
 classification and atomic publication refusal now preserve the entire saved detail.
