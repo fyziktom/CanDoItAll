@@ -1,6 +1,14 @@
 # Execution plan
 
-Current behavioral checkpoint: [finite worker and OS restart](../validation/2026-10-22-recovery-worker.md).
+Current behavioral checkpoint: [native backlog progression](../validation/2026-10-22-recovery-backlog.md).
+Both Integration rows pass on unchanged production 91ce8b113. One/two independent service
+providers preserve 3:1 opportunities across 32 live and eight historical roots; all 39
+valid roots progress while corrupt original evidence is deferred intact. Source/output
+identity, full portability and zero new residue pass. This is finite backlog progression,
+not a capacity or global latency guarantee. Whole-journal cost, HTTP activation and final
+E2E remain open; Enabled remains false. SPA stays on its separate branch.
+
+Preceding behavioral checkpoint: [finite worker and OS restart](../validation/2026-10-22-recovery-worker.md).
 All 64 selected cases pass (50 Unit, 14 Integration). The scoped worker preserves finite
 3:1 opportunities, pacing and cancellation. Four actual termination/restart rows preserve
 original actions and receipts and charge real inherited work once across both snapshot

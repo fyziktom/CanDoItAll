@@ -246,3 +246,11 @@ process reuses original accounting actions and receipts without duplicate charge
 when acknowledgement is interrupted or subsequent leases expire. This closes that
 specific restart boundary. Native sustained backlog fairness, whole-journal capacity
 and HTTP activation remain required; the worker is not enabled automatically.
+
+The [native backlog qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-backlog.md)
+now exercises one/two independent providers over one database with 32 live and eight
+historical roots. Every valid root progresses; the corrupt first root is deferred with
+its original intent intact. Both initial 3:1 cycles are observed per worker. This finite
+same-process native backlog proof does not establish sustained editor throughput,
+maximum history size, multi-OS-process fairness or a latency SLA. Capacity and HTTP
+activation remain open.

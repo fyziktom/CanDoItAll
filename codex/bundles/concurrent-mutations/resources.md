@@ -1746,3 +1746,21 @@ Two owned bulk scan files were removed after exact hash/containment checks and v
 absent. Durable proof scanning passes; three local matches are reviewed helper variable
 assignments with no private sentinel. Raw evidence and hashes remain. Earlier denied
 cleanup resources, ordinary 5032 and SPA main are untouched.
+
+### P16 native backlog progression — ownership before creation
+
+Own `.artifacts/concurrent-mutations/validation/c4-recovery-backlog` before creation.
+Reuse the isolated PostgreSQL 18 server, standard Release outputs and the audited
+candoitall-tests family. Each row has one owned database/environment shared by one or
+two independently constructed providers. Start only the cancellation workers; await stop
+and provider disposal before the environment/database lease cleanup. No new OS host,
+listener, container or stack; preserve ordinary 5032 and historical denied cleanup.
+
+Native backlog progression qualifies both rows with 48 unchanged source pins and 56
+owning/copied outputs. The observed command leaves zero new process, database or temporary
+residue. Full portability passes with 15675 unchanged findings. Compact proof is 51581
+bytes, SHA256 `C3992980ADDBEE4CA60C6E117428F54EB5EA69C19A7C00634CAF913DB2F4D6E6`.
+Two owned bulk scan files were removed after exact hash/containment checks and verified
+absent. Durable proof scanning passes; the three local matches are reviewed helper
+variable assignments with no private sentinel. Earlier denied cleanup and ordinary 5032
+remain untouched. No new host, listener or container was created.

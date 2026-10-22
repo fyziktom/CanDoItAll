@@ -1069,3 +1069,38 @@ The existing composition-size finding changes only its line count; no new semant
 finding or cycle appears. Per-worker Unit scheduling is qualified, not sustained native
 backlog capacity. Continue with native one/two-host live/legacy queue progression before
 addressing the whole-journal cost gate and HTTP/status cutover. Enabled remains false.
+
+### Native backlog progression design
+
+Entry gate: Pass after signed worker checkpoint `91ce8b113`. Production remains unchanged.
+Behavioral proof will run the actual registered worker/coordinator/stages with real
+PostgreSQL queues in one and two independent service providers sharing one owned profile.
+Use 32 live roots and eight historical roots. Bound each slice to one operation so both
+origin classes retain a backlog while their scheduling opportunities are observed.
+Seed the historical roots through finite owner pages before worker start; this isolates
+ready-queue scheduling from empty-origin fallback. Retain the durable completed seed row.
+
+Put one deliberately corrupt retained position at the front of the live queue, with a
+valid original intent. Its actual owner must defer it as InvalidEvidence without changing
+the wire intent or consuming every turn. All other roots must obtain durable progress,
+including every legacy root. A test-only queue decorator records preferred origin calls
+per host and delegates every operation to EfProcessCancellationRecoveryQueue. The actual
+registered stage dispatcher remains unchanged. Require the first two 3:1 cycles per host
+while both queues have work, at least one progress checkpoint for each non-corrupt root,
+retained corrupt evidence, finite seed pages and awaited worker shutdown.
+
+This is native backlog progression and poison-root isolation, not a latency/capacity SLA,
+concurrent editor throughput, or proof that every artificial historical shape can finish.
+One/two-host selection must not be generalized into a global cross-host ordering promise.
+Select exactly the new Integration class's two theory rows; prior owner and Unit proofs
+remain trusted through unchanged production source/binary identities. A test-only change
+does not invalidate the prior four OS restart cases. Full portability remains required.
+After this gate, address measured whole-journal cost/contended writes before activation.
+
+The [native backlog qualification](../validation/2026-10-22-recovery-backlog.md) passes both
+rows on unchanged production `91ce8b113`. All 39 non-corrupt roots progress in one/two
+independent providers; each worker preserves its first two 3:1 cycles while the corrupt
+root retains its original intent and is deferred. Full portability and resource closure
+pass. The two providers are in one OS process; do not claim multi-process fairness or a
+sustained capacity SLA. Continue to controlled whole-journal cost/contended-write analysis
+and mitigation before HTTP/status cutover and automatic activation.
