@@ -1,6 +1,15 @@
 # Concurrent mutations implementation bundle
 
-Current behavioral checkpoint: [indexed recovery selection](validation/2026-10-22-recovery-selection-indexes.md).
+Current behavioral checkpoint: [held publication fencing](validation/2026-10-22-held-publication.md).
+All 87 selected Integration cases pass. The original held race reproduced late Agent
+publication after completed root cancellation; a retained Process transaction now fences
+journal/index publication after ordered file keys. Reverse ordering, replay, release
+failures and real Agent recovery pass. Nine production builds, 29 output identities,
+full portability and zero new resource residue qualify this repair. Held registration
+and inherited publication, worker/HTTP activation, capacity/fairness and final E2E remain
+open. SPA stays on its separate branch; main is untouched.
+
+Preceding behavioral checkpoint: [indexed recovery selection](validation/2026-10-22-recovery-selection-indexes.md).
 All 24 selected Integration cases pass after a retained test-only bulk-seeding timeout.
 Both actual readers use bounded composite index plans; exact migration restart/downgrade,
 row preservation, concurrent writes and real Agent recovery pass. Full portability,

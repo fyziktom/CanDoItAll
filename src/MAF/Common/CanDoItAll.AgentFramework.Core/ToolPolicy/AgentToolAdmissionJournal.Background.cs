@@ -93,7 +93,8 @@ public sealed partial class AgentToolAdmissionJournal {
             throw Failure("The background reservation does not match its current owner claim or exact result acknowledgements.");
         }
         await RequireBackgroundDispatchAsync(candidate, cancellationToken);
-        return new(candidate.Id, profile, source.OwnerFingerprint, observation.AcknowledgedExecutionRunIds.ToHashSet());
+        return new(candidate.Id, profile, source.OwnerFingerprint, observation.AcknowledgedExecutionRunIds.ToHashSet(),
+            token => policy.AcquirePublicationAsync(candidate, profile, source.OwnerFingerprint, token));
     }
 
     public Task RequireBackgroundDispatchAsync(ExecutionRunRecord run, CancellationToken cancellationToken = default)

@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Data;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Processes.Application;
 using Microsoft.EntityFrameworkCore;
@@ -18,11 +19,32 @@ public sealed class EfProcessExecutionMutationGuard(
     }
 
     public async Task RequireDispatchAsync(ProcessExecutionDispatchAuthority expected, CancellationToken cancellationToken = default) {
+        await using var context = await transactions.CreateEnlistedAsync(options, static configured => new ProcessPersistenceDbContext(configured), cancellationToken);
+        await RequireDispatchAsync(context, expected, cancellationToken);
+    }
+
+    public async Task<IAsyncDisposable> AcquireDispatchAsync(ProcessExecutionDispatchAuthority expected, CancellationToken cancellationToken = default) {
+        var context = new ProcessPersistenceDbContext(options);
+        try {
+            await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+            await RequireDispatchAsync(context, expected, cancellationToken);
+            return context;
+        } catch (Exception failure) {
+            try {
+                await context.DisposeAsync();
+            } catch (Exception cleanup) {
+                throw new AggregateException("Process dispatch acquisition and transaction release failed.", failure, cleanup);
+            }
+            throw;
+        }
+    }
+
+    private async Task RequireDispatchAsync(ProcessPersistenceDbContext context, ProcessExecutionDispatchAuthority expected,
+        CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(expected);
         if (expected.RootRunId.Value == Guid.Empty) {
             throw new ProcessExecutionAuthorityMismatchException("Process dispatch requires its exact saved root identity.");
         }
-        await using var context = await transactions.CreateEnlistedAsync(options, static configured => new ProcessPersistenceDbContext(configured), cancellationToken);
         if (!context.Database.IsNpgsql()) {
             throw new NotSupportedException("Process native mutation fencing requires the PostgreSQL owner transaction.");
         }

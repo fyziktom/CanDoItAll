@@ -190,3 +190,18 @@ admitted before the barrier cannot publish a journal behind the cursor. Hold pub
 and registration at their actual boundaries and prove safe refusal or retained pending
 evidence before activation. New service scopes and lease takeover do not by themselves
 qualify an operating-system process restart.
+
+Ordinary initial Agent publication is now fenced against the root barrier. Its transient
+Core reservation capability is acquired by File persistence only after the sorted
+Agent/run key set, before reacquiring the workspace gate. The Process module retains
+its own dispatch-guard transaction through the journal and index write. No Process
+implementation dependency enters Core or File persistence. The callback checks original
+SQL claim/source and current profile; it does not reacquire source Agent keys out of
+order. Existing policy checks still precede publication admission and dispatch.
+Standalone ordinary starts use the same reservation owner; original reservation lookup
+does not demand fresh publication authority. The [87-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-held-publication.md)
+reproduces the old race, proves both transaction orderings and preserves original errors
+and journals after publication/release failures. It does not qualify late full-producer
+registration, inherited initial publication, hard I/O bounds or capacity. The transaction
+covers initial publication only; prompt preparation, file-key waits and provider execution
+remain outside it. Existing global workspace contention still needs its separate gate.

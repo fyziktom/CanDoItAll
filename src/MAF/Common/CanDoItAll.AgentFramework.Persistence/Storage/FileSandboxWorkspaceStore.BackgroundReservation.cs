@@ -10,6 +10,7 @@ public sealed partial class FileSandboxWorkspaceStore {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(reservation);
+        ArgumentNullException.ThrowIfNull(reservation.AcquirePublication);
         candidate = FileSandboxWorkspacePreparedValues.Freeze(candidate);
         var journal = candidate.Run.ToolAdmission ?? throw new InvalidOperationException("The candidate has no durable background admission.");
         journal.Validate();
@@ -31,10 +32,9 @@ public sealed partial class FileSandboxWorkspaceStore {
             var catalog = await LoadCatalogCoreAsync(cancellationToken);
             ValidateExecutionRunDetail(catalog, candidate);
             var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.RunRoot(candidate.Run.Id)]);
-            IAsyncDisposable publication;
             try {
-                publication = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Run(null, candidate.Run, readsAgent: true),
-                    witness, cancellationToken);
+                _ = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Run(null, candidate.Run, readsAgent: true),
+                    witness, cancellationToken, acquireAuthority: reservation.AcquirePublication);
             } catch (SandboxWorkspaceConcurrencyException conflict) {
                 try {
                     await RequireCompletedBackgroundPublicationAsync(null, cancellationToken);
@@ -49,10 +49,8 @@ public sealed partial class FileSandboxWorkspaceStore {
                 }
                 throw;
             }
-            await using (publication) {
-                var persisted = await SaveExecutionRunDetailCoreAsync(operation, null, candidate, catalog, cancellationToken);
-                return new(ExecutionRunSourceDisposition.Created, persisted.Run);
-            }
+            var persisted = await SaveExecutionRunDetailCoreAsync(operation, null, candidate, catalog, cancellationToken);
+            return new(ExecutionRunSourceDisposition.Created, persisted.Run);
         } catch (Exception failure) {
             operation.RetainFailure(failure);
             throw;

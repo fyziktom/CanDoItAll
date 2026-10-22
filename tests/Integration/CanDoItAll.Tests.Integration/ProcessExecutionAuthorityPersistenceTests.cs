@@ -241,7 +241,7 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
     public enum PolicyChange { AlreadyGoverned, Added, Removed }
 
     internal static async Task<Fixture> SeedAsync(IServiceProvider services, int channel = 0, bool decisionPolicy = false,
-        bool declaredContract = false, bool admitBackground = false) {
+        bool declaredContract = false, bool admitBackground = false, bool persistExecution = true) {
         var projectId = Guid.NewGuid();
         Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Saved Process source" })).IsSuccess);
         var project = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
@@ -313,7 +313,9 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
                 services.GetRequiredService<TimeProvider>(), services.GetServices<IAgentToolBackgroundSourcePolicy>());
             run = run with { ToolAdmission = await journal.CreateForNewBackgroundRunAsync(run, "Original Process input.") };
         }
-        run = (await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().SaveExecutionRunDetailAsync(new(run, null, [], []))).Run;
+        if (persistExecution) {
+            run = (await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().SaveExecutionRunDetailAsync(new(run, null, [], []))).Run;
+        }
         return new(prepared, run, claim);
     }
 

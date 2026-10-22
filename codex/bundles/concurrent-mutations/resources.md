@@ -1644,3 +1644,24 @@ Proof is 144973 bytes, SHA256
 Secret-pattern/private-password scanning passes. All four exact redundant scan files were
 removed after proof/hash verification and their absence is recorded in the candidate's
 `redundant-scan-cleanup.json`. No earlier denied resource was retried.
+
+### P16 held publication qualification — ownership before creation
+
+Own `.artifacts/concurrent-mutations/validation/c4-held-publication` before creating it.
+Reuse the isolated PostgreSQL 18 fixture on 53619 and the previously audited default,
+API and tool-admission fixture families. Preserve ordinary 5032 and every previously
+blocked cleanup target. This directory contains only bounded command/proof records;
+standard Release outputs remain in their owning projects. Observe each native test
+execution, reconcile leased databases/processes/temporary paths, and retain the initial
+regression failure. The first selection is one held-publication Integration test against
+the signed production candidate; no production source changes precede that result.
+
+Held publication Behavioral closure passes with 87 cases and 29 unchanged owning/copied
+outputs. The confirmed late-publication failure, fixture setup failure and final six-lane
+run all reconcile with zero new resource residue. Full portability passes with 15674
+unchanged reviewed entries. Compact proof is 145174 bytes, SHA256
+`FF1B0D0929577ABA65DB9DDCAEA5547ED03958A43F304E27F4D7C858547027E0`.
+Two redundant scan files were removed by exact proof/hash checks; their absence is
+recorded. Durable proof scanning passes. Three run-folder scanner matches are only the
+retained execution helper's variable assignments; their explicit review and zero private
+password sentinel findings are retained. No earlier denied target was retried.

@@ -164,7 +164,8 @@ public sealed class ProcessInheritedSourcePolicyTests(Xunit.Abstractions.ITestOu
         var services = fixture.Sql.Services;
         var policy = new ProcessToolBackgroundSourcePolicy(services.GetRequiredService<EfProcessExecutionAuthorityQuery>(),
             services.GetRequiredService<ICanonicalRuntimeDatabase>(), fixture.Generations,
-            services.GetRequiredService<IProcessSourceAuthorityObservationPolicy>(), []);
+            services.GetRequiredService<IProcessSourceAuthorityObservationPolicy>(),
+            services.GetRequiredService<IProcessExecutionMutationGuard>(), []);
         probe.Commands.Clear();
         await Assert.ThrowsAsync<NotSupportedException>(() => policy.ObserveInitialInheritedAsync(fixture.Original with { ToolAdmission = null },
             fixture.Profile, fixture.Original.ToolAdmission!.PlanningDecision!.InheritedOrigin!.ParentBinding).AsTask());
@@ -175,7 +176,8 @@ public sealed class ProcessInheritedSourcePolicyTests(Xunit.Abstractions.ITestOu
     private static ProcessToolBackgroundSourcePolicy Policy(ProjectTaskPlanProcessFixture fixture, IProcessSourceAuthorityObservationPolicy source) {
         var services = fixture.Sql.Services;
         return new(services.GetRequiredService<EfProcessExecutionAuthorityQuery>(), services.GetRequiredService<ICanonicalRuntimeDatabase>(),
-            fixture.Generations, source, services.GetServices<ProcessDecisionExecutionRegistration>());
+            fixture.Generations, source, services.GetRequiredService<IProcessExecutionMutationGuard>(),
+            services.GetServices<ProcessDecisionExecutionRegistration>());
     }
 
     private sealed class QueryProbe : DbCommandInterceptor {

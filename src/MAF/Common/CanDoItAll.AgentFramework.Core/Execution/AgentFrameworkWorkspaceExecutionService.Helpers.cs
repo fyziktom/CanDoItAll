@@ -353,6 +353,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         ArgumentNullException.ThrowIfNull(run);
 
+        if (run.ToolAdmission?.Session.Reference.BackgroundSource is not null) {
+            if (store is not ISandboxWorkspaceExecutionRunReservationStore reservations || toolAdmissionJournal is null) {
+                throw new AgentToolAdmissionException("tool-admission.reservation-policy-missing",
+                    "A background start requires its owner's fenced execution reservation.");
+            }
+            var reserved = await reservations.ReserveBackgroundExecutionRunAsync(
+                ExecutionRunSourceKey.ForBackground(run.SourceKind, run.SourceId, run.CorrelationId, run.CausationId),
+                new(run, null, [], []), await toolAdmissionJournal.PrepareBackgroundReservationAsync(run, cancellationToken), cancellationToken);
+            if (reserved.Disposition != ExecutionRunSourceDisposition.Created) {
+                throw new AgentToolAdmissionException("tool-admission.source-already-reserved",
+                    "The original background source already has work. Recover its original execution through the same-source owner.");
+            }
+            return;
+        }
+
         if (TryGetExecutionRunStore() is { } executionRunStore)
         {
             await executionRunStore.SaveExecutionRunDetailAsync(

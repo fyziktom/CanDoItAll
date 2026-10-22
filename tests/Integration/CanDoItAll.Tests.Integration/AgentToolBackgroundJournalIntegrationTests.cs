@@ -291,6 +291,18 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
 
     internal sealed class SourcePolicy(AgentToolAdmissionJournalFixture fixture) : IAgentToolBackgroundReservationPolicy {
         public HashSet<Guid> AcknowledgedExecutionRunIds { get; } = [];
+        public int ActivePublications { get; private set; }
+        public Exception? PublicationReleaseFailure { get; set; }
+        public Task<IAsyncDisposable> AcquirePublicationAsync(ExecutionRunRecord candidate, AgentToolProfileBinding profile,
+            AgentToolSemanticDigest ownerFingerprint, CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            Assert.Equal(fixture.Profile, profile);
+            if (ownerFingerprint != OwnerFingerprint || !ReadAllowed || !DispatchAllowed) {
+                throw new AgentToolAdmissionException("fixture.source-changed", "The original publication source changed.");
+            }
+            ActivePublications++;
+            return Task.FromResult<IAsyncDisposable>(new Publication(this));
+        }
         public ValueTask<AgentToolBackgroundReservationObservation> ObserveReservationAsync(ExecutionRunRecord candidate,
             AgentToolProfileBinding profile, CancellationToken cancellationToken = default)
             => ValueTask.FromResult(new AgentToolBackgroundReservationObservation(OwnerFingerprint, AcknowledgedExecutionRunIds));
@@ -309,6 +321,16 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
             Assert.Equal(StepId, Guid.Parse(execution.ProcessStepId));
             Assert.Equal(StepKey, execution.SourceId);
             return ValueTask.FromResult(new AgentToolBackgroundSourceObservation(OwnerFingerprint, ReadAllowed, DispatchAllowed));
+        }
+
+        private sealed class Publication(SourcePolicy owner) : IAsyncDisposable {
+            public ValueTask DisposeAsync() {
+                owner.ActivePublications--;
+                if (owner.PublicationReleaseFailure is { } failure) {
+                    throw failure;
+                }
+                return ValueTask.CompletedTask;
+            }
         }
     }
 

@@ -13,10 +13,38 @@ public sealed class ProcessToolBackgroundSourcePolicy(
     ICanonicalRuntimeDatabase database,
     IAgentExecutionProfileGenerationSource generations,
     IProcessSourceAuthorityObservationPolicy sourcePolicy,
+    IProcessExecutionMutationGuard mutationGuard,
     IEnumerable<ProcessDecisionExecutionRegistration>? selectedContracts = null) : IAgentToolBackgroundReservationPolicy {
     private readonly IReadOnlyDictionary<ProcessDecisionExecutionContract, ProcessDecisionContentContract?> contracts =
         (selectedContracts ?? []).ToDictionary(item => item.Execution, item => item.Content);
     public string SourceKind => ProcessMockAgentCatalog.ProcessSourceKind;
+
+    public async Task<IAsyncDisposable> AcquirePublicationAsync(ExecutionRunRecord candidate, AgentToolProfileBinding profile,
+        AgentToolSemanticDigest ownerFingerprint, CancellationToken cancellationToken = default) {
+        RequireCurrent(profile);
+        if (candidate.ToolAdmission?.SchemaVersion == AgentToolJournalRecord.InheritedPlanningSchemaVersion) {
+            throw new NotSupportedException("An inherited Process child uses its enrolled child publication owner.");
+        }
+        var evidence = ProcessExecutionClaimEvidenceReader.Read(candidate, out _)
+            ?? throw new ProcessExecutionAuthorityMismatchException("The Process publication has no exact claim evidence.");
+        var current = (await owner.ReadDispatchAsync(evidence, cancellationToken)).Snapshot;
+        if (current is not { ObservedCurrentDispatch: true } || AgentToolProtocolEnvelope.ComputeDigest(current.OwnerFingerprint) != ownerFingerprint) {
+            throw new ProcessExecutionAuthorityMismatchException("The original Process claim no longer permits publication.");
+        }
+        var lease = await mutationGuard.AcquireDispatchAsync(current, cancellationToken);
+        try {
+            RequireCurrent(profile);
+            cancellationToken.ThrowIfCancellationRequested();
+            return lease;
+        } catch (Exception failure) {
+            try {
+                await lease.DisposeAsync();
+            } catch (Exception cleanup) {
+                throw new AggregateException("Process publication admission and transaction release failed.", failure, cleanup);
+            }
+            throw;
+        }
+    }
 
     public async ValueTask<AgentToolBackgroundReservationObservation> ObserveReservationAsync(ExecutionRunRecord candidate,
         AgentToolProfileBinding profile, CancellationToken cancellationToken = default) {

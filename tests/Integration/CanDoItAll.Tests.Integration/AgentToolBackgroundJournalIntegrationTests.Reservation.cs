@@ -9,6 +9,74 @@ using CanDoItAll.AgentFramework.Persistence;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 public sealed partial class AgentToolBackgroundJournalIntegrationTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Publication_rechecks_original_authority_after_waiting_for_file_keys(bool changedFingerprint) {
+        await RunReservationRaceAsync(async race => {
+            var policy = new SourcePolicy(race.Source);
+            var candidate = await PrepareReservationAsync(race.Source, policy);
+            await race.HoldAsync(candidate.Detail.Run);
+            using var wait = new ReservationPublicationWait(1);
+            var pending = race.Track(race.Source.NewStore().ReserveBackgroundExecutionRunAsync(
+                BackgroundKey(policy), candidate.Detail, candidate.Reservation, race.Token));
+            await wait.Entered.Task.WaitAsync(race.Token);
+            Assert.Equal(0, policy.ActivePublications);
+            if (changedFingerprint) {
+                policy.OwnerFingerprint = new(new string('b', 64));
+            } else {
+                policy.DispatchAllowed = false;
+            }
+            await race.ReleaseAsync();
+            await Assert.ThrowsAsync<AgentToolAdmissionException>(() => race.ObserveAsync(pending));
+            Assert.Equal(0, policy.ActivePublications);
+            Assert.Null(await race.Source.NewStore().GetExecutionRunAsync(candidate.Detail.Run.Id, race.Token));
+            await race.RequireKeysAvailableAsync(candidate.Detail.Run);
+        });
+    }
+
+    [Fact]
+    public async Task Original_reservation_replay_does_not_acquire_fresh_publication_authority() {
+        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true);
+        var policy = new SourcePolicy(source);
+        var candidate = await PrepareReservationAsync(source, policy);
+        var created = await source.NewStore().ReserveBackgroundExecutionRunAsync(BackgroundKey(policy), candidate.Detail, candidate.Reservation);
+        Assert.Equal(ExecutionRunSourceDisposition.Created, created.Disposition);
+        Assert.Equal(0, policy.ActivePublications);
+        policy.DispatchAllowed = false;
+        var replay = await source.NewStore().ReserveBackgroundExecutionRunAsync(BackgroundKey(policy), candidate.Detail, candidate.Reservation);
+        Assert.Equal(ExecutionRunSourceDisposition.ExistingActive, replay.Disposition);
+        Assert.Equal(created.Run.Id, replay.Run.Id);
+        Assert.Equal(created.Run.ToolAdmission!.Session, replay.Run.ToolAdmission!.Session);
+        Assert.Equal(0, policy.ActivePublications);
+    }
+
+    [Fact]
+    public async Task Publication_and_authority_release_failures_preserve_both_original_errors_and_recoverable_journal() {
+        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true);
+        var release = new IOException("Original publication authority release failed.");
+        var policy = new SourcePolicy(source) { PublicationReleaseFailure = release };
+        var candidate = await PrepareReservationAsync(source, policy);
+        var write = new IOException("The new execution journal was persisted before acknowledgement.");
+        var store = new FileSandboxWorkspaceStore(source.WorkspaceRoot, source.StorageScope,
+            chatBackedRunCommitBoundary: null, existingRunDetailCommitBoundary: null,
+            genericNewRunCommitBoundary: stage => {
+                Assert.Equal(1, policy.ActivePublications);
+                if (stage == GenericNewRunCommitStage.JournalPersisted) {
+                    throw write;
+                }
+            }, jsonReadDiagnostics: null);
+        var failure = await Assert.ThrowsAsync<AggregateException>(() => store.ReserveBackgroundExecutionRunAsync(
+            BackgroundKey(policy), candidate.Detail, candidate.Reservation));
+        Assert.Contains(write, failure.Flatten().InnerExceptions);
+        Assert.Contains(release, failure.Flatten().InnerExceptions);
+        Assert.Equal(0, policy.ActivePublications);
+        policy.DispatchAllowed = false;
+        var replay = await source.NewStore().ReserveBackgroundExecutionRunAsync(BackgroundKey(policy), candidate.Detail, candidate.Reservation);
+        Assert.Equal(ExecutionRunSourceDisposition.ExistingActive, replay.Disposition);
+        Assert.Equal(candidate.Detail.Run.ToolAdmission!.Session, replay.Run.ToolAdmission!.Session);
+    }
+
     [Fact]
     public async Task Actual_same_source_retry_recovers_the_failed_execution_and_original_input_after_restart() {
         await using var source = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true);

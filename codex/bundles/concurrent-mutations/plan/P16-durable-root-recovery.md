@@ -891,3 +891,49 @@ journal when acquiring that lease; verify no provider request can escape after t
 and no stale finalization overwrites cancellation. Test the reverse order too: an already
 active owner must be signalled or remain explicitly pending. These are proposed race
 checks, not qualified behavior; follow their evidence before choosing the final repair.
+
+The held regression against signed production `cd6a9f3a0` confirms that the root and
+recovery queue complete before the blocked writer publishes successfully. Its initial
+fixture lookup failure and missing-import compile failure are retained separately.
+Both observed executions leave zero new resources. The repair adds a transient Core
+reservation capability, acquired and released by the existing File publication scope,
+and a retained transaction on the existing Process dispatch guard. The module callback
+checks the original SQL source/claim and profile; it must not call the source observation
+policy after file keys are held because an Agent-origin policy can acquire another Agent
+key outside the sorted set. Existing source-policy checks remain before publication
+admission and before dispatch; this fence specifically serializes the Process barrier.
+No Process type enters Core/File persistence and no project reference or partial owner
+is added. Standalone ordinary background starts use the same reservation owner; an
+existing reservation is an explicit refusal directing recovery to the same-source flow.
+Inherited schema 7 remains on its enrolled child path.
+
+Retain the known failing one-case source/binary identity, refresh all affected owners
+and dependent runtime copies, then repeat it alongside positive publication, original
+reservation replay, lease release/failure and mutation-guard regressions. Full static
+qualification and architecture comparison follow the final source. Worker activation
+and the late-registration/inherited-publication producer gates remain open until their
+own actual lifecycle tests pass.
+
+The repaired candidate selects 87 Integration cases before execution: held Process
+publication races 2, saved Process authority 22, inherited source policy 15, background
+journal/reservation 39, registered ordinary stopping 7 and real inherited completion 2.
+The reservation class includes four new cases for delayed authority change, historical
+replay and simultaneous publication/release failures. Ten affected/dependent owners
+build in standard Release; the first Integration attempt exposed two target-typed test
+constructor calls and its corrected refresh succeeds. Exact class discovery, 46 source
+pins and 29 owning/copied outputs qualify the run. This remains focused Behavioral
+validation; broad Stable waits for final integration freeze.
+
+The [held ordinary publication gate](../validation/2026-10-22-held-publication.md) passes
+all 87 selected cases. The old late-publication race is retained as a failing regression;
+both repaired orderings, standalone entry/replay and simultaneous journal/lease-release
+failure now pass. Exact source/29-output identity, unchanged architecture findings/full
+portability and zero new resource residue qualify progression. Next hold the actual
+Core producer before cancellation registration, using its real MAF entry and shared
+registry; prove no provider dispatch and no stale finalization can replace saved parent
+cancellation. Test registration-first signalling separately. Existing source inspection
+shows `MergeAdmissionSnapshot` merges a proposed terminal outcome with the current
+journal, so explicitly check the saved cancellation outcome after an admission failure.
+This is a suspected subsequent window, not yet a confirmed defect. Retain actual
+Process authority/root stopping and observe the saved journal through a fresh store.
+Inherited initial publication still needs its separately held enrolled-child test.
