@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -33,6 +34,9 @@ public static class ProcessDecisionChildMaterialBindingCodec {
         PropertyNameCaseInsensitive = false, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         RespectRequiredConstructorParameters = true, RespectNullableAnnotations = true, NumberHandling = JsonNumberHandling.Strict, MaxDepth = 8
     };
+
+    public static string Fingerprint(ProcessDecisionChildMaterialBinding binding)
+        => "sha256:" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Serialize(binding))));
 
     public static string Serialize(ProcessDecisionChildMaterialBinding binding) {
         ArgumentNullException.ThrowIfNull(binding);

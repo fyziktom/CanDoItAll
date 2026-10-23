@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current work: [atomic Process refresh admission](validation/2026-10-23-process-refresh-admission.md)
+Current work: [original-child refresh stop](validation/2026-10-23-process-refresh-child-stop.md)
+passes all 73 selected cases across a verified test-only cursor assertion repair. Registered
+Workbench/Core stopping requires the exact durable refresh and preserves original work,
+effects and reserved grants. Final portability, source/output and new resource checks pass.
+Reconciliation accounting is next; full P28 refresh/replan and engine E2E remain open.
+SPA stays clean on **codex/concurrent-mutations** for colleague review. Historical cleanup
+denials remain recorded.
+
+Preceding work: [atomic Process refresh admission](validation/2026-10-23-process-refresh-admission.md)
 passes all 343 selected backend cases, eight actual older/current reader checks and final
 portability. It freezes one original local/shared generation and preserves
 exact action replay without stopping the child, spending its grant or exposing a public

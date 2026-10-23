@@ -1,5 +1,27 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: original-child refresh stop (2026-10-23)
+
+Status: Pass with follow-up for [the qualified stop boundary](../validation/2026-10-23-process-refresh-child-stop.md).
+Application declares two genuine owner/IO ports. Persistence checks exact durable refresh
+authority with three indexed metadata queries per observation. Workbench selects the
+correct cancellation or refresh authority before sharing existing mechanics; Core retains
+its original dispatch lease and journal protocol. No SQL transaction spans child work.
+
+Snapshots `snap-20261023162526-64aa5311` and `snap-20261023164356-64aa5311` retain the same
+two scoped project edges and six existing Workbench module/type cycles, with no project
+cycle or new finding. Collector limitations remain 189 WS0002 errors, twelve DI0001
+messages and four DI0002 warnings. Direct affected Release builds pass. No project
+reference, business partial, service locator or generic orchestration layer was added.
+
+All 73 selected cases pass across the documented test-only repair. SQL and registered
+Workbench/Core proof cover both read modes, rejected/changed authority, original-source
+and profile races, actual leases, root cancellation, accepted and uncertain effects,
+missing journals and unchanged reserved grants. Final portability, candidate identity and
+new runtime resource reconciliation pass. Accounting may now implement the concrete P28
+contract; capture, delivery, public activation and final engine E2E remain open. Historical
+cleanup denials remain reported, and SPA remains on its dedicated branch.
+
 ## C# Architecture Gate Result: Process refresh admission (2026-10-23)
 
 Status: Pass with follow-up for [atomic admission](../validation/2026-10-23-process-refresh-admission.md).

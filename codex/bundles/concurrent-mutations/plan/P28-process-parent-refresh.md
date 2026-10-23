@@ -1,8 +1,9 @@
 # P28: parent-owned Process refresh and replan
 
 Status: atomic admission passes its [343-case qualification](../validation/2026-10-23-process-refresh-admission.md),
-including migration, historical readers and portability. Original-child stop is next;
-full refresh activation remains gated by the owner/delivery checkpoints below.
+including migration, historical readers and portability. Original-child stop passes its
+[73-case qualification](../validation/2026-10-23-process-refresh-child-stop.md). Reconciliation
+accounting is next; full refresh activation remains gated by the owner/delivery checkpoints below.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.
 Behavioral proof tier. The current public contract still supports Fail/Pause only.
@@ -283,3 +284,81 @@ the existing cancellation stopper negative and accounting cases. Confirm exact c
 discovery on refreshed Release outputs, rerun full portability, and compare the changed
 Workbench and Process dependency scopes. No public capability changes before reconciliation
 accounting, capture, successor dispatch and restart delivery are qualified together.
+
+### Reconciliation accounting source findings
+
+The existing child-closure command can settle original work while retaining Reconciling
+and a blocked step; no terminal-accounting relaxation is needed for a proposal-only stop.
+Use a deterministic reconciliation command tied to the admitted action, read the original
+owner outcome outside SQL, and commit its exact closure plus local/root settlement once.
+Unclosed work, missing evidence and unresolved effects remain pending with the grant held.
+Do not interpret the Agent's Cancelled outcome alone as permission to refund or capture.
+
+An accepted effect needs a different completion path. Besides the scoped transition's
+Active-only success rule, `ProcessDecisionResultAcceptance` currently rejects a terminal
+result when `SharedScopePending` is true. A Reconciling shared scope deliberately sets that
+flag. Both checks need an explicit original-refresh completion contract, validated under
+the root fence against the retained admission, exact child/material and original waiting
+result. Do not broadly ignore the pending flag or permit every Reconciling scope to finish.
+Reuse the original result preparation and complete-quiescence checks, retain the accepted
+receipt and actual work, and report that refresh was overtaken by terminal completion.
+
+This accounting owner belongs in Application, with SQL preconditions in Persistence and
+pure completion rules in Runtime. It must not give Persistence an Agent callback or extend
+the existing terminal-only coordinator. Prove no-effect settlement, accepted-before-fence
+completion, unknown outcome, root cancellation, competing continuations and lost commit
+acknowledgement in both read modes before capture or public activation.
+
+### Concrete reconciliation accounting contract
+
+Use one Application coordinator for the original admitted action. It reads the retained
+admission and original binding, then checks the deterministic accounting receipt before
+requiring fresh pending state or reading the child owner. The command identity depends
+only on the admission identity and a separate accounting domain. Replay must verify the
+original closure, allocation, grant, work revision, material and result; it cannot derive
+a new command from a changed budget or treat missing evidence as a successful replay.
+The retained admission actor owns this continuation's result events.
+
+A typed optional accounting reference on the in-process runtime commit request selects
+the strict persistence guard. It adds no stored receipt field: the existing version-7
+generation pointer, exact closure/settlement and deterministic command key already retain
+the necessary identity. Ordinary commands preserve their serialization and guards. Do
+not add a receipt version or migration unless implementation disproves this boundary.
+
+The coordinator reads the registered child's verified outcome outside SQL. An open or
+unknown outcome returns its typed pending reason without any write. A verified NoEffect
+closure commits its original local/root settlement and Reconcile closure together, with
+only a monotonic runtime timestamp change. The step stays blocked and the shared material
+scope remains Reconciling. An Accepted closure uses the existing pure review-result
+preparation, its actual terminal status and measured work, then completes that exact
+original child/result/scope. It reports that original completion overtook refresh.
+
+Under the existing root fence, a dedicated persistence guard rechecks the immutable
+admission, accepted input, original child digest, exact admitted generation and shared
+scope, original unsettled allocation/budget, live root and completed waiting claim.
+It verifies the entire permitted mutation shape, including original result history,
+unmodified claims/other runtime fields and exact result events. No capture, reservation,
+Ready step, new claim, outbox action or unrelated command may accompany accounting.
+The completion path receives the validated intent from this guard; it must not trust the
+mere presence of the optional request field. Add a separate pure shared-scope refresh
+completion transition requiring the admitted Reconciling scope/material and its original
+terminal member, then reuse complete membership/allocation quiescence. Ordinary scope
+completion remains unchanged. Root cancellation and stale expectations win atomically.
+
+Reuse existing bounded receipt/child/material queries. The explicit continuation may
+load its selected runtime state through the existing idempotency owner; it is not a
+polling API or global-history worker. Keep the child outcome read outside the transaction
+and avoid serializing runtime history to validate the mutation. No new project reference,
+Core change, service locator, business partial or extra transaction owner is planned.
+
+Qualification must prove both snapshot modes for no-effect settlement and replay,
+accepted-before-fence completion, concurrent continuations, rollback after staged work,
+lost commit acknowledgement, fresh-host receipt recovery without another child read,
+and cancellation after the owner read but before SQL commit. Unknown/missing/open work
+must retain grants. Negative tests must reject substituted admission/binding/input,
+forged mutation/result/scope authority and an unmarked attempt to complete a frozen
+scope. Keep existing terminal/review accounting and run-scope transition cases. Record
+source-derived discovery before execution; use actual SQL and registered Workbench/Core
+owners for the positive and effect-race cases. Rebuild each changed production owner
+and both affected test assemblies in Release, run final portability and scoped architecture
+comparison, and reconcile the reused fixture before the successor-capture checkpoint.

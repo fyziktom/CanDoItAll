@@ -34,8 +34,12 @@ public sealed class ProjectTaskPlanProcessChildStopperTests {
         } else {
             var progress = await owner.InspectNextAsync(fixture.State.RootRunId, fixture.State.RunId, null, default);
             Assert.Equal(new ProcessExecutionRunId(fixture.Waiting.Id), progress.After);
-            Assert.True(progress.Exhausted);
+            Assert.False(progress.Exhausted);
             Assert.Equal(ProcessCancellationRecoveryPending.None, progress.Pending);
+            var exhausted = await owner.InspectNextAsync(fixture.State.RootRunId, fixture.State.RunId, progress.After, default);
+            Assert.Equal(progress.After, exhausted.After);
+            Assert.True(exhausted.Exhausted);
+            Assert.Equal(ProcessCancellationRecoveryPending.None, exhausted.Pending);
         }
         Assert.Equal(before, await RetainedAsync(fixture));
         Assert.Single(fixture.Entry.Wire.Requests);

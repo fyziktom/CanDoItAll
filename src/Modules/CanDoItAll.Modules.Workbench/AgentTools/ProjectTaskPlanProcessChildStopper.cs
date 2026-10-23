@@ -9,11 +9,24 @@ namespace CanDoItAll.Modules.Workbench;
 internal sealed class ProjectTaskPlanProcessChildStopper(ISandboxWorkspaceExecutionRunStore runs,
     AgentInheritedPlanningStopper stopper, IProcessOriginalReceiptAuthorityReader originals,
     IProcessRootCancellationBarrierReader roots, ICanonicalRuntimeDatabase database,
-    IAgentExecutionProfileGenerationSource generations) : IProcessDecisionChildStopper {
+    IAgentExecutionProfileGenerationSource generations, IProcessDecisionRefreshAuthorityReader refreshes)
+    : IProcessDecisionChildStopper, IProcessDecisionRefreshChildStopper {
     public ProcessDecisionExecutionContract Contract => ProjectTaskPlanProcessContract.Execution;
 
-    public async Task<ProcessDecisionChildStopResult> StopAsync(ProcessDecisionChildMaterialBinding original,
-        CancellationToken cancellationToken = default) {
+    public Task<ProcessDecisionChildStopResult> StopAsync(ProcessDecisionChildMaterialBinding original,
+        CancellationToken cancellationToken = default)
+        => StopCoreAsync(original, async token => {
+            if (!await roots.IsStoppedAsync(original.Child.Address.RootRunId, token).ConfigureAwait(false)) {
+                throw new InvalidOperationException("Stopping an inherited Agent requires its durable original root cancellation barrier.");
+            }
+        }, cancellationToken);
+
+    Task<ProcessDecisionChildStopResult> IProcessDecisionRefreshChildStopper.StopAsync(ProcessDecisionChildMaterialBinding original,
+        RuntimeCommandId admissionId, CancellationToken cancellationToken)
+        => StopCoreAsync(original, token => refreshes.RequireCurrentAsync(original, admissionId, token), cancellationToken);
+
+    private async Task<ProcessDecisionChildStopResult> StopCoreAsync(ProcessDecisionChildMaterialBinding original,
+        Func<CancellationToken, Task> requireParent, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(original);
         original.Validate();
         var profileId = database.Profile.Profile.Id;
@@ -26,15 +39,13 @@ internal sealed class ProjectTaskPlanProcessChildStopper(ISandboxWorkspaceExecut
                 throw new InvalidDataException("Parent stopping requires the original profile and a stable current profile generation.");
             }
         }
-        async Task RequireStoppedRootAsync(CancellationToken token) {
+        async Task RequireParentAsync(CancellationToken token) {
             RequireProfile();
-            if (!await roots.IsStoppedAsync(original.Child.Address.RootRunId, token).ConfigureAwait(false)) {
-                throw new InvalidOperationException("Stopping an inherited Agent requires its durable original root cancellation barrier.");
-            }
+            await requireParent(token).ConfigureAwait(false);
             RequireProfile();
         }
         try {
-            await RequireStoppedRootAsync(cancellationToken).ConfigureAwait(false);
+            await RequireParentAsync(cancellationToken).ConfigureAwait(false);
             var run = await runs.GetExecutionRunAsync(original.Child.Address.ChildId.Value, cancellationToken).ConfigureAwait(false);
             if (run?.ToolAdmission is null) {
                 return ProcessDecisionChildStopResult.MissingJournal;
@@ -46,7 +57,7 @@ internal sealed class ProjectTaskPlanProcessChildStopper(ISandboxWorkspaceExecut
             }
             var parent = new AgentInheritedParentStop(origin, async (current, token) => {
                 _ = ProjectTaskPlanProcessOutcome.Read(current, original);
-                await RequireStoppedRootAsync(token).ConfigureAwait(false);
+                await RequireParentAsync(token).ConfigureAwait(false);
                 var source = await originals.ObserveOriginalDecisionForReceiptReadAsync(target.Source.Evidence, original,
                     Contract, ProjectTaskPlanProcessContract.Content, token).ConfigureAwait(false);
                 target.RequireOriginalReceiptSource(source, origin);

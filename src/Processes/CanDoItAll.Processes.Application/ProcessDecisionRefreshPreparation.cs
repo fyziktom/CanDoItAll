@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
@@ -30,8 +28,7 @@ public static class ProcessDecisionRefreshPreparation {
                 admission.WorkspaceNamespaceId != child.Original.Scope.WorkspaceNamespaceId) {
             throw new InvalidDataException("Refresh must retain its original accepted source, workspace and shared material scope.");
         }
-        var digest = "sha256:" + Convert.ToHexStringLower(SHA256.HashData(
-            Encoding.UTF8.GetBytes(ProcessDecisionChildMaterialBindingCodec.Serialize(child.Original))));
+        var digest = ProcessDecisionChildMaterialBindingCodec.Fingerprint(child.Original);
         ProcessDecisionBeginRefresh command = new(new(request, actor, child.Original.Child.MaterialId, input.InputFingerprint, digest));
         _ = ProcessDecisionRefreshAdmission.Begin(state, head, command, admission.Policy);
         return command;
