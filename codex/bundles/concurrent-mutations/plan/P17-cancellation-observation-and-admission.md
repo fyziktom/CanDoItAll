@@ -1,9 +1,9 @@
 # P17 — Cancellation observation and finite root admission
 
-Status: design for the successor to P16. Read-only observation can be implemented
-independently of worker activation. Mutation cutover still requires qualified recovery,
+Status: read-only observation is implemented and qualified by [32 focused cases](../validation/2026-10-22-cancellation-observation.md).
+It remains independent of worker activation. Mutation cutover still requires qualified recovery,
 an explicit deployment/activation contract and the API/native-client proof below.
-The current P16 candidate is under native validation; this document is not its result.
+P16 is now qualified by 90 focused passes; this document is its next implementation design.
 
 ## Source findings and boundaries
 
@@ -117,3 +117,32 @@ remove history-sized canonical publication. Record the supported deployment and 
 envelope from measurements before enabling the worker by default. Do not replace those
 gates with a larger slice deadline or a broader retry loop. This slice does not close
 Process refresh, Workflow inheritance, remaining mutable owners or final Stable/E2E.
+
+## Observation implementation decision
+
+Keep the read port and typed progress in Process Application. A single Persistence
+adapter uses PostgreSQL's unmapped SQL projection to select one runtime primary key and
+left-join only that same run's recovery primary key. The query bounds position bytes
+with `octet_length` before materialization and projects booleans for retained intent/lease
+presence, never their private contents. Runtime status is parsed strictly at the SQL
+boundary; invalid runtime identity/status fails explicitly. The existing canonical codec
+validates the bounded position. Invalid progress returns reconciliation, not completion.
+
+Completion requires a cancelled root, canonical completed position, completed marker,
+positive progress revision, no intent, no lease and no pending work. A child returns
+`ChildRun` without observing its parent's queue. A malformed queue attached to a child
+is reconciliation. A cancelled/cancel-requested root without a queue is `LegacyUntracked`.
+API mapping is a dedicated endpoint owner; the existing mapper gains one registration
+call. Wire enum names and decimal revision strings are explicit display/protocol values;
+Application contracts retain strongly typed identities and enums. The GET inherits the
+existing current Process read policy and returns `no-store`; it makes no worker-availability
+promise. No project reference, migration, new partial or runtime coordinator is needed.
+
+Acceptance uses native PostgreSQL fixtures with independent adapter instances: missing,
+active, child, legacy, pending, real completed checkpoints, corruption and row-byte
+preservation, canonical-profile isolation, cancelled and blocked SQL reads, indexed query
+shape/cost with historical rows, and actual HTTP permissions/privacy. Existing queue and
+codec cases regress the reused owner. New tests do not construct a runtime merely to
+exercise mapping; the real root completion test deliberately uses the real engine and
+queue to establish its evidence. Source/output identity and observed resource closure
+are captured around native execution. Whole-suite Stable remains the final integrated gate.

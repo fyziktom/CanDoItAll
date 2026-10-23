@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current work: [shared local workspace admission](validation/2026-10-22-local-coordination.md)
+Current work: [bounded cancellation observation](validation/2026-10-22-cancellation-observation.md)
+passes all 32 selected database/API/queue/codec cases. Eight Release builds, 456 source
+pins, 50 output identities, architecture, full portability and both zero-residue resource
+reconciliations qualify this read boundary. The selected query uses two primary keys;
+HTTP never claims or repairs recovery and never equates cancelled runtime with finished
+cleanup. Finite root admission/cutover and worker activation remain next. Remaining
+owners/policies, sustained capacity and final E2E remain open. SPA stays on its own branch.
+
+Previous implementation: [shared local workspace admission](validation/2026-10-22-local-coordination.md)
 qualifies the repair with all 90 focused cases, eight Release builds, source/output
 identity, architecture, full portability and zero new observed runtime residue. All six
 previously contended recovery cases now pass without relaxing deadlines; 600 writes are

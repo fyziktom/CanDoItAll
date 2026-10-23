@@ -1862,3 +1862,27 @@ summary remain in the durable proof. The local secret scan has three reviewed so
 heuristic matches, zero credential-sentinel matches and no oversized/unreadable text.
 The exact compact delivery proof scans with zero findings. Documentation and whitespace
 checks pass. Prior denied targets remain untouched.
+
+## Cancellation observation, 2026-10-22
+
+`c4-cancellation-observation` records ownership before creation. Its first observer
+rejected a missing schema discriminator before any test ran; the original ownership
+record and explicit schema correction remain retained. The first native run has 21
+executed cases (19 passed, two fixture failures), and covers both commands with zero new
+process, database-name or temporary-directory residue. Initial compile failure and exact
+test source are retained. No replacement application/database stack was created.
+
+The separately recorded `c4-cancellation-observation-verified` reruns all 32 cases after
+the two test-only corrections. All pass. Observation covers all four commands, with zero
+new processes, database names or temporary paths. Both attempts verify their own source
+and 50 output identities. The same PG18 fixture and ordinary Release outputs are reused.
+Earlier denied handoff directories, baseline junction/worktree and other recorded
+resources remain untouched; their cleanup is not claimed.
+
+Both local secret scans retain three reviewed source-expression matches and zero actual
+credential-sentinel matches, with no oversized/unreadable text skipped. The exact compact
+proof scans with zero findings. Both new bulk scan outputs were removed separately after
+containment and hash verification; their identities and summary remain in proof. Final
+portability enforcement passes with 15,677 reviewed findings, and documentation/whitespace
+checks pass. The compact delivery SHA256 is
+`DD6BFFB7BCFA99563261FB315A10B67D0A46AB895EBB1EF500BB9E62AD5E4C32`.

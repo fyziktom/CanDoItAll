@@ -18,6 +18,7 @@ internal static class ProcessesApi
             .DisableAntiforgery();
         processes.MapProcessRunRecordsApi();
         processes.MapProcessPlanningReviewApi();
+        processes.MapProcessCancellationApi();
 
         processes.MapGet("/contract", GetContract)
             .WithName("GetProcessesApiContract")
@@ -100,6 +101,7 @@ internal static class ProcessesApi
                 "GET /api/processes/launch/{admissionId}",
                 "POST /api/processes/runs/{runId}/dispatch",
                 "POST /api/processes/runs/{runId}/cancel",
+                "GET /api/processes/runs/{runId}/cancellation",
                 "POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework",
                 "GET /api/processes/live",
                 "GET /api/processes/runs",

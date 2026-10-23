@@ -109,6 +109,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessAuthoringContext>(provider => provider.GetRequiredService<ProcessAuthoringAdmissionPolicy>());
         services.TryAddScoped<IProcessAuthoringStore, EfProcessAuthoringStore>();
         services.TryAddScoped<IProcessCancellationRecoveryQueue, EfProcessCancellationRecoveryQueue>();
+        services.TryAddScoped<IProcessCancellationProgressReader, EfProcessCancellationProgressReader>();
         services.TryAddScoped<IProcessCancellationRuntimeReader, EfProcessCancellationRuntimeReader>();
         services.TryAddScoped<ProcessCancellationRuntimeRecoveryStep>();
         services.TryAddScoped<IProcessCancellationQuiescenceReader, EfProcessCancellationQuiescenceReader>();

@@ -1,8 +1,11 @@
 # Process cancellation recovery
 
-The durable queue, finite coordinator and transfer safeguards are implemented and
-qualified. Automatic recovery is not yet activated: actual stage composition, ordinary
-Agent notification selection and bounded HTTP/status integration remain in progress. The existing cancellation HTTP
+The durable queue, finite stages, coordinator, selected Agent lookup, transfer safeguards
+and local workspace admission are implemented and qualified. Automatic recovery is not
+yet activated; sustained and separate-process capacity and bounded HTTP admission remain
+open. The [read-only cancellation status endpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-observation.md)
+is qualified by 32 focused cases.
+The existing cancellation HTTP
 path still performs its synchronous cascade. See the [design and activation criteria](../../../codex/bundles/concurrent-mutations/plan/P16-durable-root-recovery.md)
 and the [queue qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-recovery.md)
 and [58-case coordinator/transfer qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-coordination.md).
@@ -277,3 +280,30 @@ throughput is 3.35% below pre-index production, within the original threshold. S
 32-writer tails and large allocation remain; sibling-root progress under contention and
 HTTP status/activation still require qualification. Automatic review has blocked temporary
 handoff cleanup; the detailed resource record remains open. Enabled stays false.
+
+## Local admission and cancellation observation
+
+The [local queue qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-local-coordination.md)
+now passes all six original contention cases, the listener diagnostic and regression/cost
+selection (90 cases). A shared, cancellable queue per normalized lock path gives selected
+control operations bounded opportunities between ordinary publications. OS file exclusion
+and publication authority remain unchanged. This repairs observed in-process starvation;
+history-sized writes, sustained capacity and cross-process fairness remain open.
+
+`GET /api/processes/runs/{runId}/cancellation` observes one run through Process read
+authorization and returns `Cache-Control: no-store`. It performs one bounded, indexed SQL
+read and never claims, seeds or repairs recovery. Runtime status and cleanup tracking are
+separate fields. Tracking is `NotRequested`, `ChildRun`, `LegacyUntracked`, `Pending`,
+`Completed` or `ReconciliationRequired`. A child response describes that identity; it does
+not substitute the root's progress. A historical stopped root without a queue is untracked.
+
+`Completed` requires the canonical completed checkpoint and a cancelled root with no
+retained intent, lease or pending work. `Cancelled` alone is insufficient. Invalid
+checkpoint material remains unchanged and reports reconciliation. The response includes
+only original barrier identity, stage, pending reason, timestamps and decimal-string
+progress revision; it omits private action/lease payloads and cursors. Revisions are
+observation versions, not edit preconditions. Missing runs return 404; an empty ID returns
+400. Reads work while the worker is disabled and do not promise automatic progress.
+
+The [observation and admission design](../../../codex/bundles/concurrent-mutations/plan/P17-cancellation-observation-and-admission.md)
+retains the remaining root-admission, activation and native-client proof requirements.
