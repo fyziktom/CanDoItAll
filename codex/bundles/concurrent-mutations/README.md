@@ -1,6 +1,13 @@
 # Concurrent mutations implementation bundle
 
-Current work: [Process policy discovery](validation/2026-10-23-process-policy-discovery.md)
+Current work: [Project Process launch client](validation/2026-10-23-project-process-launch-client.md)
+qualifies scoped definition reads, original-intent lookup and the SPA selection/review/
+acceptance flow. Nine backend cases, 135 SPA tests and fourteen rendered states pass;
+full portability and new resource reconciliation pass. SPA remains on
+**codex/concurrent-mutations** for colleague review. Native UI, definition defaults,
+broader lifecycle/policies, capacity, remaining owners and final engine E2E remain open.
+
+Preceding work: [Process policy discovery](validation/2026-10-23-process-policy-discovery.md)
 qualifies server-owned execution identities and supported policy ceilings, with 56 distinct
 backend cases across an exact test/baseline repair and 103 SPA tests. The generated schema
 retains all existing contracts; full portability and resource reconciliation pass. SPA

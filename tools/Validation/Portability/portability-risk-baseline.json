@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-23T12:21:35.330041+00:00",
+  "generated_utc": "2026-10-23T13:09:39.349517+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15690,
+  "allowance_count": 15691,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -7193,6 +7193,12 @@
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
       "source_fingerprint": "79747f65db6b42f8d9b0d65e6b3548665d2e364e1b554995f6f24222d4450537",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
+      "category": "manager-discovery",
+      "source_fingerprint": "7b64a6fe5d7a0d9d81c6337e964f72d958ffb65c479d68987c7ecb364d28069f",
       "count": 1
     },
     {

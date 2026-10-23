@@ -353,3 +353,30 @@ and both public producer flows lend trust to the unchanged admission/dispatch bo
 Catalog construction performs no database/Agent/provider work, and no new polling or
 history-sized operation was added. UI lifecycle, durable drafts and broader policy
 activation still require their own architecture and behavior proof.
+
+## Project Process launch and intent recovery
+
+Status: Pass with follow-up. [P26 validation](../validation/2026-10-23-project-process-launch-client.md)
+qualifies optional project scope through the existing authoring/lifetime owner, and one
+read-only indexed lookup through the existing prepared-launch owner. The specific missing
+project exception is an Application boundary contract; Web maps only that condition to
+404. Both observation routes share mapping and current caller/profile/surface checks.
+They perform no preparation, continuation or dispatch. No project reference, runtime
+registration/lifetime, migration, business partial or service-locator seam was added.
+
+Snapshot `snap-20261023131243-4560d5cf` covers Application, Modules.Processes and Web:
+533 documents, two scoped project-reference edges and no scoped cycle. This excludes
+Workbench, so its earlier cycles remain open. The collector reports 189 WS0002 errors,
+two DEP0002 warnings, two DI0001 messages and three DI0002 warnings; actual affected
+Release builds pass. Existing ProcessesApi complexity findings remain. Its added work
+is HTTP observation orchestration using existing owners, not another runtime capability.
+
+SPA owns a typed launch session and a separate bounded tab-recovery codec; its component
+renders and invokes those effects. The route keys lifetime by project and aborts/disposes
+the previous session. The generated client and existing protected transport retain the
+real protocol instead of introducing manual HTTP or client-side policy resolution.
+Storage precedes dispatch, observations cannot create preparations, and uncertain
+acceptance cannot silently become separate work. No timer, polling, worker, history scan
+or new transaction lifetime is introduced. SQL/HTTP, state, generated-client and final
+rendered proofs cover these boundaries independently. Native UI, broader lifecycle,
+publication review and sustained capacity still require their own qualification.

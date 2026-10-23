@@ -68,6 +68,26 @@ the response for the actual policy instead of assuming requested values were acc
 
 ## Accept and reconcile the original intent
 
+The SPA project Processes page offers definition and planning-contract selection, an
+explicit data read mode or saved Workspace defaults, the returned review, and acceptance.
+It retains one pending intent per browser tab before sending a request. Recovery content
+contains only the original selection and identifiers; the effective review is retrieved
+from the server under the current caller. Browser storage must be available. A retained
+intent for another project links back to that project instead of replacing it.
+
+Definition catalog, overview, role and step reads accept an optional `projectId` query.
+They use current project overlays and lifetime admission; omission preserves global reads.
+Empty IDs are rejected and missing/deleted projects return 404. Editable drafts are not
+silently published when selected for a launch. Read permission is not execution permission.
+
+If the preparation response was lost, use
+`GET /api/processes/launch/intents/{callerIntentId}` before replaying the check. This read
+verifies the original caller, database profile and operator surface. It never prepares or
+continues work. A found observation supplies `admissionId`; include it as
+`preparedAdmissionId` when restoring the saved review through the original check request.
+Missing or forbidden observations must not trigger a fresh preparation in another dataset.
+A 404 is an observation at that instant, not proof that an in-flight request cannot finish.
+
 1. Keep the caller intent, request selection and returned preparation admission identity.
 2. Review the effective policy and the normal launch plan.
 3. Send the same selection and intent to `POST /api/processes/launch`, including the
@@ -89,6 +109,21 @@ checked at the normal acceptance, execution and publication boundaries.
 Unsupported selection/plan/policy returns HTTP 400 with `process.launch_decision_rejected`.
 Missing operator/task authority or caller intent is refused with HTTP 403. Reusing an
 intent with different input returns HTTP 409 with `process.launch_intent_conflict`.
+
+The SPA sends bounded, single-attempt requests and never automatically retries a write.
+After an uncertain acceptance, recover the original intent; even a `Prepared` observation
+cannot prove that the earlier acceptance will not commit later. Retry acceptance with the
+same admission and execution choice. A known accepted run can be observed or explicitly
+continued when its scheduling is pending. Failed or authority-reconciliation states need
+operator attention and are not presented as completion. No automatic navigation assumes
+that a backend UI route exists in the SPA.
+
+An unaccepted review may be explicitly discarded if acceptance was never attempted;
+preparation alone cannot start its run. After acknowledged acceptance, the operator may
+explicitly prepare separate work. Clearing that local recovery slot never cancels or
+repairs an existing run. Closing the browser tab loses tab-local recovery evidence; retain
+the caller intent/admission externally when that recovery horizon is required. This UI
+does not provide a cross-device pending-launch inbox or planning-publication review page.
 
 ## Ownership and compatibility
 

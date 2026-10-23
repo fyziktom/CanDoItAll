@@ -49,6 +49,14 @@ internal static class ProcessesApi
             .Produces(StatusCodes.Status403Forbidden)
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
+        processes.MapGet("/launch/intents/{callerIntentId:guid}", GetLaunchIntentStatusAsync)
+            .WithName("GetProcessLaunchIntentStatus")
+            .WithSummary("Observe the original Process launch by its caller intent.")
+            .WithDescription("Caller, database profile and operator surface must match the original preparation. Reads only; never prepares, resumes or dispatches. A 404 does not prove an earlier in-flight request cannot complete. Retain the intent and use a found admission to restore the saved review before acceptance.")
+            .Produces<ProcessLaunchObservationApiView>()
+            .Produces(StatusCodes.Status403Forbidden)
+            .ProducesApiErrors(StatusCodes.Status404NotFound);
+
         processes.MapPost("/runs/{runId:guid}/dispatch", DispatchRunAsync)
             .WithName("DispatchProcessRun").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .Produces<ProcessDispatchApiResponse>()
@@ -107,6 +115,7 @@ internal static class ProcessesApi
                 "POST /api/processes/launch/check",
                 "POST /api/processes/launch",
                 "GET /api/processes/launch/{admissionId}",
+                "GET /api/processes/launch/intents/{callerIntentId}",
                 "POST /api/processes/runs/{runId}/dispatch",
                 "POST /api/processes/runs/{runId}/cancel",
                 "GET /api/processes/runs/{runId}/cancellation",
@@ -321,12 +330,24 @@ internal static class ProcessesApi
         CancellationToken cancellationToken)
     {
         var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
-        if (await preparations.GetAsync(new(admissionId), cancellationToken) is null) {
+        return await ObserveLaunchAsync(await preparations.GetAsync(new(admissionId), cancellationToken), caller, launchService, cancellationToken);
+    }
+
+    private static async Task<IResult> GetLaunchIntentStatusAsync(Guid callerIntentId, HttpContext context,
+        IProcessLaunchOperatorAuthoritySource authoritySource, IProcessPreparedLaunchStore preparations,
+        ProcessLaunchApplicationService launchService, CancellationToken cancellationToken) {
+        var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
+        return await ObserveLaunchAsync(await preparations.FindByIntentAsync(new(callerIntentId), cancellationToken), caller, launchService, cancellationToken);
+    }
+
+    private static async Task<IResult> ObserveLaunchAsync(ProcessPreparedLaunchSnapshot? snapshot, ProcessLaunchAuthority caller,
+        ProcessLaunchApplicationService launchService, CancellationToken cancellationToken) {
+        if (snapshot is null) {
             return ApiEndpointResults.NotFound("The process launch admission was not found.", "process.launch_not_found");
         }
         try {
             return Results.Ok(MapLaunchObservation(
-                await launchService.GetLaunchStatusAsync(new(admissionId), caller, cancellationToken)));
+                await launchService.GetLaunchStatusAsync(snapshot.Preparation.AdmissionId, caller, cancellationToken)));
         } catch (InvalidOperationException) {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }

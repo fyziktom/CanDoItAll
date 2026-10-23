@@ -144,7 +144,9 @@ public sealed class ProcessLaunchProducerApiTests {
         var retainedBefore = await before.PreparedLaunches.AsNoTracking().SingleAsync(row => row.Id == fixture.Saved.Preparation.AdmissionId.Value);
         var eventsBefore = await before.RuntimeEvents.CountAsync(row => row.RunId == fixture.Saved.Preparation.InitialCommit.Mutation.State.RunId.Value);
         for (var index = 0; index < 2; index++) {
-            using var response = await restarted.Client.GetAsync($"/api/processes/launch/{fixture.Saved.Preparation.AdmissionId.Value:D}");
+            var route = index == 0 ? $"/api/processes/launch/{fixture.Saved.Preparation.AdmissionId.Value:D}"
+                : $"/api/processes/launch/intents/{fixture.Request.CallerIntentId:D}";
+            using var response = await restarted.Client.GetAsync(route);
             using var body = await ReadAsync(response);
             Assert.Equal(fixture.Saved.Preparation.InitialCommit.Mutation.State.RunId.Value, body.RootElement.GetProperty("acceptedRunId").GetGuid());
             Assert.Equal(fixture.Saved.Preparation.AdmissionId.Value, body.RootElement.GetProperty("admissionId").GetGuid());

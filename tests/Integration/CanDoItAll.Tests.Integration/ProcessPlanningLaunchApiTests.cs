@@ -22,6 +22,11 @@ public sealed class ProcessPlanningLaunchApiTests {
     public async Task Public_launch_retains_reviewed_settings_and_reaches_one_real_proposal_publication_and_terminal_accounting(ReadBasisMode mode) {
         await using var fixture = await ProcessPlanningLaunchFixture.CreateAsync(mode);
         using var preview = await fixture.PostAsync("/api/processes/launch/check", fixture.Request);
+        using var recoveredResponse = await fixture.Host.Client.GetAsync($"/api/processes/launch/intents/{fixture.Request.CallerIntentId:D}");
+        using var recovered = await ProcessPlanningLaunchFixture.ReadAsync(recoveredResponse);
+        Assert.Equal(preview.RootElement.GetProperty("observation").GetProperty("admissionId").GetGuid(),
+            recovered.RootElement.GetProperty("admissionId").GetGuid());
+        Assert.Equal("Prepared", recovered.RootElement.GetProperty("continuationState").GetString());
         var original = await fixture.SavedAsync();
         var root = Assert.IsType<ProcessDecisionRunAdmission>(original.Preparation.InitialCommit.InitialRunDecisionAdmission);
         Assert.Equal(mode, root.Policy.ReadBasisMode);
