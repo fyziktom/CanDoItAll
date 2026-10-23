@@ -75,7 +75,9 @@ internal sealed class ProjectTaskPlanProcessBinding(IProcessDecisionDispatchAuth
         var value = AgentToolProtocolEnvelope.Create(ProjectTaskPlanProcessCodec.MaterialFormat, 1, material.PayloadJson);
         AgentPlanningInheritedOrigin origin = new(session.Profile, parent.Scope.WorkspaceNamespaceId, session.AgentId,
             session.Reference.BackgroundSource!, originalParent, parent.Child.MaterialId.Value, material.CapturedAtUtc, value.Digest,
-            policy, new(parent.Child.BudgetId, parent.Child.AllocationId, parent.Child.Grant));
+            policy, new(parent.Child.BudgetId, parent.Child.AllocationId, parent.Child.Grant)) {
+                ChildOnBasisChange = observed.OriginalChildOnBasisChange
+            };
         ProjectTaskPlanProcessTarget target = new(session, project, source, new(true, true), writeContext);
         ProjectTaskPlanProcessCodec.RequireTarget(target, origin);
         var captured = ProjectTaskPlanProcessCodec.ReadBasis(origin, material);

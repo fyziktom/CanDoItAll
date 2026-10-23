@@ -23,6 +23,7 @@ public sealed record ProcessExecutionDispatchAuthorityResult(
     ProcessExecutionAuthorityDisposition Disposition,
     ProcessExecutionDispatchAuthority? Snapshot = null) {
     public DecisionDataPolicy? OriginalDecisionPolicy { get; init; }
+    public OnBasisChange? OriginalChildOnBasisChange { get; init; }
 }
 
 public sealed record ProcessSourceAuthorityObservation(bool ReadAllowed, bool DispatchAllowed);

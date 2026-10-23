@@ -25,7 +25,7 @@ internal sealed record ProjectTaskPlanProcessTarget(AgentToolSessionAdmission Se
         ProjectDefinitionGovernedBindings.ProcessCaller(Source).Key.ToArray());
 
     internal void RequireOriginalReceiptSource(ProcessExecutionDispatchAuthorityResult result, AgentPlanningInheritedOrigin original) {
-        if (result.OriginalDecisionPolicy != original.ParentPolicy ||
+        if (result.OriginalDecisionPolicy != original.ParentPolicy || result.OriginalChildOnBasisChange != original.ChildOnBasisChange ||
                 result.Snapshot is not { ObservedCurrentDispatch: false, SourceAuthority: { } authority } current ||
                 current.Evidence != Source.Evidence || current.OwnerFingerprint != Source.OwnerFingerprint ||
                 current.RootRunId != Source.RootRunId || current.ProjectReference != Source.ProjectReference ||

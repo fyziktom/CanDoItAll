@@ -22,7 +22,9 @@ internal sealed class ProjectTaskPlanProcessLaunchPolicyProvider(WorkspaceSettin
         "One Agent activity proposes Project tasks for review. Requires a saved Workspace policy, current task authority and explicit task publication permission. Additional activities, branches, subprocesses, tools or artifacts are not supported.",
         Array.AsReadOnly(new[] {
             new DecisionDataPolicy(ReadBasisMode.RunSnapshot, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview, Capabilities.BudgetCeiling),
-            new DecisionDataPolicy(ReadBasisMode.StepSnapshot, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview, Capabilities.BudgetCeiling)
+            new DecisionDataPolicy(ReadBasisMode.StepSnapshot, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview, Capabilities.BudgetCeiling),
+            new DecisionDataPolicy(ReadBasisMode.RunSnapshot, PublicationFreshness.RequireCurrent, OnBasisChange.Fail, Capabilities.BudgetCeiling),
+            new DecisionDataPolicy(ReadBasisMode.StepSnapshot, PublicationFreshness.RequireCurrent, OnBasisChange.Fail, Capabilities.BudgetCeiling)
         }));
 
     public ProcessLaunchDecisionDescriptor Descriptor => SupportedContract;
@@ -73,6 +75,7 @@ internal sealed class ProjectTaskPlanProcessLaunchPolicyProvider(WorkspaceSettin
         ProcessDecisionDataPolicyAdmission step = new(root.WorkspaceNamespaceId, root.WorkspaceHeadRevision, definition,
             assignment.StepInstanceId, workspace, null, null, selected.Policy, Capabilities, [policy.Budget], policy) {
             ExecutionContract = Contract,
+            ChildOnBasisChange = policy.OnBasisChange == OnBasisChange.Fail ? OnBasisChange.Fail : null,
             MaterialProtocol = ProcessDecisionMaterialProtocol.SharedContentV1,
             ContentContract = ProjectTaskPlanProcessContract.Content,
             Funding = root.Funding,

@@ -25,7 +25,7 @@ internal sealed class ProjectTaskPlanProcessReadAuthority(IProcessOriginalReceip
             var result = await originals.ObserveOriginalDecisionForReceiptReadAsync(target.Source.Evidence,
                 ProjectTaskPlanProcessCodec.Parent(origin), ProjectTaskPlanProcessContract.Execution,
                 ProjectTaskPlanProcessContract.Content, cancellationToken);
-            if (result.OriginalDecisionPolicy != origin.ParentPolicy ||
+            if (result.OriginalDecisionPolicy != origin.ParentPolicy || result.OriginalChildOnBasisChange != origin.ChildOnBasisChange ||
                 result.Snapshot is not { ObservedCurrentDispatch: false, SourceAuthority: { } authority } current ||
                 current.Evidence != target.Source.Evidence || current.OwnerFingerprint != target.Source.OwnerFingerprint ||
                 current.RootRunId != target.Source.RootRunId || current.ProjectReference != target.Source.ProjectReference ||

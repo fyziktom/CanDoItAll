@@ -20,10 +20,14 @@ public sealed class ProcessLaunchDecisionDiscoveryApiTests {
         var descriptor = Assert.Single(contracts!);
         Assert.Equal(ProjectTaskPlanProcessContract.Execution, descriptor.Execution);
         Assert.Equal("Reviewed Project task planning", descriptor.DisplayName);
-        Assert.Equal(new[] { ReadBasisMode.RunSnapshot, ReadBasisMode.StepSnapshot }, descriptor.SupportedPolicies.Select(item => item.ReadBasisMode));
+        Assert.Equal(new[] {
+            (ReadBasisMode.RunSnapshot, OnBasisChange.PauseForReview),
+            (ReadBasisMode.StepSnapshot, OnBasisChange.PauseForReview),
+            (ReadBasisMode.RunSnapshot, OnBasisChange.Fail),
+            (ReadBasisMode.StepSnapshot, OnBasisChange.Fail)
+        }, descriptor.SupportedPolicies.Select(item => (item.ReadBasisMode, item.OnBasisChange)));
         Assert.All(descriptor.SupportedPolicies, policy => {
             Assert.Equal(PublicationFreshness.RequireCurrent, policy.PublicationFreshness);
-            Assert.Equal(OnBasisChange.PauseForReview, policy.OnBasisChange);
             Assert.Equal(new(0, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10)), policy.Budget);
         });
     }

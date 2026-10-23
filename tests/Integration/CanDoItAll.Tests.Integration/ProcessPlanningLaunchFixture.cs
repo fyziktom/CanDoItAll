@@ -21,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using EntryFixture = CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.EntryFixture;
 using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 
@@ -38,13 +39,13 @@ internal sealed class ProcessPlanningLaunchFixture(CanDoItAllTestEnvironment env
     internal JsonSerializerOptions Json => host.App.Services.GetRequiredService<IOptions<HttpJsonOptions>>().Value.SerializerOptions;
 
     internal static async Task<ProcessPlanningLaunchFixture> CreateAsync(ReadBasisMode mode = ReadBasisMode.StepSnapshot,
-        int activities = 1, bool allowTaskOperation = true) {
+        int activities = 1, bool allowTaskOperation = true, OnBasisChange response = OnBasisChange.PauseForReview) {
         var environment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
         EntryFixture? entry = null;
         ApiTestHost? host = null;
         try {
             var profile = environment.CreatePostgreSqlProfile("primary");
-            entry = await EntryFixture.CreateAsync(new(mode, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview,
+            entry = await EntryFixture.CreateAsync(new(mode, PublicationFreshness.RequireCurrent, response,
                 new(0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10))), environment, profile);
             var providers = entry.Files.Sql.Services.GetRequiredService<IProviderProfileRegistry>();
             var provider = await providers.GetProviderEditorAsync(entry.Files.Provider.Id);
@@ -58,6 +59,7 @@ internal sealed class ProcessPlanningLaunchFixture(CanDoItAllTestEnvironment env
             var selected = new SelectedExecutor(entry.Files.Agent.Id);
             ConcurrentQueue<Exception> startupFailures = new();
             host = await ApiTestHost.CreateAsync(false, services => {
+                services.AddLogging(logging => logging.AddFilter(DbLoggerCategory.Database.Command.Name, LogLevel.Warning));
                 services.Replace(ServiceDescriptor.Singleton<IProcessLaunchExecutorResolver>(selected));
                 services.RemoveAll<IMafProviderAgentFactory>();
                 services.AddSingleton(entry.Files.Sql.Services.GetRequiredService<IMafProviderAgentFactory>());

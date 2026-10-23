@@ -50,10 +50,12 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
                 ProcessDecisionDataPolicyAdmission.SchemaVersion => materialShape,
                 ProcessDecisionDataPolicyAdmission.FundedSchemaVersion => materialShape && wire.Funding is not null,
                 ProcessDecisionDataPolicyAdmission.SharedScopeSchemaVersion => materialShape && wire.Funding is not null && wire.SharedRunScopeId is not null,
+                ProcessDecisionDataPolicyAdmission.ChildResponseSchemaVersion => materialShape && wire.Funding is not null && wire.ChildOnBasisChange is not null,
                 _ => false
             };
-            if (!validSchema || wire.SchemaVersion is not (ProcessDecisionDataPolicyAdmission.FundedSchemaVersion or ProcessDecisionDataPolicyAdmission.SharedScopeSchemaVersion) && document.RootElement.TryGetProperty("funding", out _) ||
-                wire.SchemaVersion != ProcessDecisionDataPolicyAdmission.SharedScopeSchemaVersion && document.RootElement.TryGetProperty("sharedRunScopeId", out _) ||
+            if (!validSchema || wire.SchemaVersion is not (ProcessDecisionDataPolicyAdmission.FundedSchemaVersion or ProcessDecisionDataPolicyAdmission.SharedScopeSchemaVersion or ProcessDecisionDataPolicyAdmission.ChildResponseSchemaVersion) && document.RootElement.TryGetProperty("funding", out _) ||
+                wire.SchemaVersion is not (ProcessDecisionDataPolicyAdmission.SharedScopeSchemaVersion or ProcessDecisionDataPolicyAdmission.ChildResponseSchemaVersion) && document.RootElement.TryGetProperty("sharedRunScopeId", out _) ||
+                wire.SchemaVersion != ProcessDecisionDataPolicyAdmission.ChildResponseSchemaVersion && document.RootElement.TryGetProperty("childOnBasisChange", out _) ||
                 wire.Capabilities is null ||
                 wire.EnclosingBudgets.IsDefault || wire.EnclosingBudgets.Any(budget => budget is null)) {
                 throw new JsonException("The Process decision policy requires its supported schema and original limits.");
@@ -63,7 +65,8 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
                 wire.StepOverride, wire.AuthorizedInvocationOverride, wire.Capabilities.ToModel(),
                 [.. wire.EnclosingBudgets.Select(budget => budget.ToModel())], wire.Policy) {
                 ExecutionContract = wire.ExecutionContract, MaterialProtocol = wire.MaterialProtocol, ContentContract = wire.ContentContract,
-                Funding = wire.Funding?.ToModel(), SharedRunScopeId = wire.SharedRunScopeId is { } scope ? new(scope) : null
+                Funding = wire.Funding?.ToModel(), SharedRunScopeId = wire.SharedRunScopeId is { } scope ? new(scope) : null,
+                ChildOnBasisChange = wire.ChildOnBasisChange
             };
             admission.Validate();
             return admission;
@@ -78,7 +81,8 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
     internal static byte[] Encode(ProcessDecisionDataPolicyAdmission value) {
         ArgumentNullException.ThrowIfNull(value);
         value.Validate();
-        var schema = value.SharedRunScopeId is not null ? ProcessDecisionDataPolicyAdmission.SharedScopeSchemaVersion :
+        var schema = value.ChildOnBasisChange is not null ? ProcessDecisionDataPolicyAdmission.ChildResponseSchemaVersion :
+            value.SharedRunScopeId is not null ? ProcessDecisionDataPolicyAdmission.SharedScopeSchemaVersion :
             value.Funding is not null ? ProcessDecisionDataPolicyAdmission.FundedSchemaVersion :
             value.MaterialProtocol is not null ? ProcessDecisionDataPolicyAdmission.SchemaVersion :
             value.ExecutionContract is null ? ProcessDecisionDataPolicyAdmission.LegacySchemaVersion : ProcessDecisionDataPolicyAdmission.ExecutionContractSchemaVersion;
@@ -87,7 +91,8 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
             value.WorkspacePolicy, value.DefinitionOverride, value.StepOverride, value.AuthorizedInvocationOverride,
             CapabilitiesWire.From(value.OwnerCapabilities), [.. value.EnclosingBudgets.Select(BudgetWire.From)], value.Policy,
             value.ExecutionContract, value.MaterialProtocol, value.ContentContract,
-            value.Funding is { } funding ? new FundingWire(funding.RootRunId.Value, funding.BudgetId.Value) : null, value.SharedRunScopeId?.Value);
+            value.Funding is { } funding ? new FundingWire(funding.RootRunId.Value, funding.BudgetId.Value) : null, value.SharedRunScopeId?.Value,
+            value.ChildOnBasisChange);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(wire, wireOptions);
         if (bytes.Length > ProcessDecisionDataPolicyAdmission.MaximumUtf8Bytes) {
             throw new JsonException("The Process decision policy exceeds its encoding bound.");
@@ -131,7 +136,8 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionMaterialProtocol? MaterialProtocol,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionContentContract? ContentContract,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] FundingWire? Funding,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? SharedRunScopeId);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? SharedRunScopeId,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] OnBasisChange? ChildOnBasisChange);
 
     private sealed record FundingWire([property: JsonRequired] Guid RootRunId, [property: JsonRequired] Guid BudgetId) {
         internal ProcessDecisionFundingReference ToModel() => new(new(RootRunId), new(BudgetId));

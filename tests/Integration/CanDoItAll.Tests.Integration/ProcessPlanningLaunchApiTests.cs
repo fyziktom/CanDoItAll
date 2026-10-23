@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Drivers.Abstractions;
@@ -17,10 +18,17 @@ namespace CanDoItAll.Tests.Integration;
 [Trait("Category", "FileSystemPortability")]
 public sealed class ProcessPlanningLaunchApiTests {
     [Theory]
-    [InlineData(ReadBasisMode.RunSnapshot)]
-    [InlineData(ReadBasisMode.StepSnapshot)]
-    public async Task Public_launch_retains_reviewed_settings_and_reaches_one_real_proposal_publication_and_terminal_accounting(ReadBasisMode mode) {
-        await using var fixture = await ProcessPlanningLaunchFixture.CreateAsync(mode);
+    [InlineData(ReadBasisMode.RunSnapshot, OnBasisChange.PauseForReview, false)]
+    [InlineData(ReadBasisMode.StepSnapshot, OnBasisChange.PauseForReview, false)]
+    [InlineData(ReadBasisMode.RunSnapshot, OnBasisChange.Fail, false)]
+    [InlineData(ReadBasisMode.StepSnapshot, OnBasisChange.Fail, false)]
+    [InlineData(ReadBasisMode.RunSnapshot, OnBasisChange.PauseForReview, true)]
+    [InlineData(ReadBasisMode.StepSnapshot, OnBasisChange.PauseForReview, true)]
+    [InlineData(ReadBasisMode.RunSnapshot, OnBasisChange.Fail, true)]
+    [InlineData(ReadBasisMode.StepSnapshot, OnBasisChange.Fail, true)]
+    public async Task Public_launch_preserves_reviewed_policy_and_accounts_original_publication_or_conflict(
+        ReadBasisMode mode, OnBasisChange response, bool changeBasis) {
+        await using var fixture = await ProcessPlanningLaunchFixture.CreateAsync(mode, response: response);
         using var preview = await fixture.PostAsync("/api/processes/launch/check", fixture.Request);
         using var recoveredResponse = await fixture.Host.Client.GetAsync($"/api/processes/launch/intents/{fixture.Request.CallerIntentId:D}");
         using var recovered = await ProcessPlanningLaunchFixture.ReadAsync(recoveredResponse);
@@ -30,6 +38,9 @@ public sealed class ProcessPlanningLaunchApiTests {
         var original = await fixture.SavedAsync();
         var root = Assert.IsType<ProcessDecisionRunAdmission>(original.Preparation.InitialCommit.InitialRunDecisionAdmission);
         Assert.Equal(mode, root.Policy.ReadBasisMode);
+        Assert.Equal(response, root.Policy.OnBasisChange);
+        var stepAdmission = Assert.Single(original.Preparation.InitialCommit.InitialAssignments!).DecisionDataPolicy!;
+        Assert.Equal(response == OnBasisChange.Fail ? OnBasisChange.Fail : (OnBasisChange?)null, stepAdmission.ChildOnBasisChange);
         Assert.Equal(fixture.Entry.Policy.Expectation.Namespace.Value, root.WorkspaceNamespaceId);
         Assert.Equal(fixture.Entry.Policy.Expectation.Head!.Revision, root.WorkspaceHeadRevision);
         Assert.Equal(root.Policy, preview.RootElement.GetProperty("launchPlan").GetProperty("decision").GetProperty("policy")
@@ -82,16 +93,41 @@ public sealed class ProcessPlanningLaunchApiTests {
         using var reviewBody = await ProcessPlanningLaunchFixture.ReadAsync(reviewResponse);
         var review = reviewBody.RootElement.Deserialize<ProcessPlanningReviewApiView>(fixture.Json)!;
         Assert.Equal(root.Policy, review.ParentPolicy);
+        Assert.Equal(response, review.ChildPolicy.OnBasisChange);
         Assert.Contains(AgentPlanningReviewChoice.Approve, review.AvailableChoices);
         Assert.NotNull(review.Publication);
+        if (changeBasis) {
+            var project = fixture.Entry.Files.Sql.Project;
+            await services.GetRequiredService<ProjectWorkbenchService>().CreateObjectAsync(project.ProjectId,
+                new(ProjectObjectType.WorkItem, "Concurrent task", "Task", "", $"project:{project.ProjectId:D}",
+                    ObjectSubtype: ProjectObjectSubtypePolicy.Task,
+                    MetadataJson: ProjectObjectMetadataSerializer.Serialize(new() {
+                        WorkItem = new() { WorkItemKind = ProjectWorkItemKind.Task, Description = "Concurrent accepted work",
+                            ExecutionState = ProjectTaskExecutionState.NotStarted }
+                    })) { ExpectedProjectAdmission = project });
+        }
         var actionId = Guid.NewGuid();
         ProcessPlanningReviewApiSubmission submission = new(new(actionId, AgentPlanningReviewChoice.Approve, review.Expected,
             review.Publication.Binding, review.Publication.ApprovalId), review.Process!, AgentExecutionOperationId.New());
+        await using var database = Context(services);
+        var budgetBeforePublication = await database.DecisionBudgets.AsNoTracking().SingleAsync(item => item.BudgetId == root.BudgetId.Value);
         using var approveResponse = await fixture.Host.Client.PostAsJsonAsync(route, submission, fixture.Json);
         using var approvedBody = await ProcessPlanningLaunchFixture.ReadAsync(approveResponse);
         var approved = approvedBody.RootElement.Deserialize<ProcessPlanningReviewApiResult>(fixture.Json)!;
-        Assert.False(approved.AccountingPending);
-        Assert.Equal(RunOutcome.Succeeded, approved.Agent.Outcome);
+        var paused = changeBasis && response == OnBasisChange.PauseForReview;
+        RunOutcome? expectedOutcome = paused ? null : changeBasis ? RunOutcome.Failed : RunOutcome.Succeeded;
+        Assert.Equal(paused, approved.AccountingPending);
+        Assert.Equal(expectedOutcome, approved.Agent.Outcome);
+        var settled = (await fixture.Entry.Files.Store.GetExecutionRunAsync(execution))!;
+        var decision = settled.ToolAdmission!.PlanningDecision!;
+        Assert.Null(decision.Work.Open);
+        Assert.Equal(changeBasis ? paused ? AgentPlanningGenerationState.PausedBasisChanged : AgentPlanningGenerationState.Failed
+            : AgentPlanningGenerationState.Completed, decision.Current.State);
+        Assert.Equal(response == OnBasisChange.Fail ? OnBasisChange.Fail : (OnBasisChange?)null, decision.InheritedOrigin!.ChildOnBasisChange);
+        Assert.Equal(1, decision.CurrentGeneration);
+        var charged = decision.Work.ClosedWorkTicks;
+        Assert.True(charged > 0);
+        var budgetBeforeReplay = await database.DecisionBudgets.AsNoTracking().SingleAsync(item => item.BudgetId == root.BudgetId.Value);
         using var duplicateActivity = await fixture.Host.Client.PostAsJsonAsync(route, submission, fixture.Json);
         Assert.Equal(HttpStatusCode.Conflict, duplicateActivity.StatusCode);
         using var duplicateBody = JsonDocument.Parse(await duplicateActivity.Content.ReadAsStringAsync());
@@ -99,16 +135,34 @@ public sealed class ProcessPlanningLaunchApiTests {
         using var replayResponse = await fixture.Host.Client.PostAsJsonAsync(route,
             submission with { ActivityOperationId = AgentExecutionOperationId.New() }, fixture.Json);
         using var replayBody = await ProcessPlanningLaunchFixture.ReadAsync(replayResponse);
-        Assert.True(replayBody.RootElement.Deserialize<ProcessPlanningReviewApiResult>(fixture.Json)!.Replayed);
+        var replay = replayBody.RootElement.Deserialize<ProcessPlanningReviewApiResult>(fixture.Json)!;
+        Assert.True(replay.Replayed);
+        Assert.Equal(paused, replay.AccountingPending);
+        Assert.Equal(expectedOutcome, replay.Agent.Outcome);
         Assert.Single(fixture.Entry.Wire.Requests);
-        await fixture.Entry.Files.Sql.VerifyAsync(1, 1);
-        await using var database = Context(services);
-        var budget = await database.DecisionBudgets.SingleAsync(item => item.BudgetId == root.BudgetId.Value);
-        Assert.Equal(0, budget.ReservedWorkTicks);
-        Assert.True(budget.ConsumedWorkTicks > 0);
-        Assert.Equal(ProcessRuntimeStatus.Completed, (await services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(runId))!.Status);
+        await fixture.Entry.Files.Sql.VerifyAsync(1, changeBasis ? 0 : 1);
+        Assert.Equal(charged, (await fixture.Entry.Files.Store.GetExecutionRunAsync(execution))!.ToolAdmission!.PlanningDecision!.Work.ClosedWorkTicks);
+        var budget = await database.DecisionBudgets.AsNoTracking().SingleAsync(item => item.BudgetId == root.BudgetId.Value);
+        Assert.Equal(budgetBeforeReplay.ReservedWorkTicks, budget.ReservedWorkTicks);
+        Assert.Equal(budgetBeforeReplay.ConsumedWorkTicks, budget.ConsumedWorkTicks);
+        Assert.Equal(budgetBeforePublication.ConsumedWorkTicks + (paused ? 0 : charged), budget.ConsumedWorkTicks);
+        var childAllocation = await database.DecisionBudgetAllocations.SingleAsync(item =>
+            item.BudgetId == decision.InheritedOrigin.Allocation.BudgetId.Value && item.AllocationId == decision.InheritedOrigin.Allocation.Id.Value);
+        Assert.Equal(paused ? (long?)null : charged, childAllocation.ConsumedWorkTicks);
+        var rootAllocations = await database.DecisionBudgetAllocations.Where(item => item.BudgetId == root.BudgetId.Value).ToArrayAsync();
+        Assert.Equal(rootAllocations.Sum(item => item.ConsumedWorkTicks ?? 0), budget.ConsumedWorkTicks);
+        Assert.Equal(rootAllocations.Where(item => item.ConsumedWorkTicks is null).Sum(item => item.GrantedWorkTicks), budget.ReservedWorkTicks);
+        if (paused) {
+            Assert.Equal(budgetBeforePublication.ReservedWorkTicks, budget.ReservedWorkTicks);
+            Assert.Equal(decision.InheritedOrigin.Allocation.Grant.WorkTicks, budget.ReservedWorkTicks);
+            Assert.Equal(ProcessRuntimeStatus.Blocked, (await store.LoadAsync(runId))!.Status);
+        } else {
+            Assert.Equal(0, budget.ReservedWorkTicks);
+            Assert.Equal(changeBasis ? ProcessRuntimeStatus.Failed : ProcessRuntimeStatus.Completed, (await store.LoadAsync(runId))!.Status);
+        }
         if (root.MaterialScope is { } shared) {
-            Assert.Equal(ProcessDecisionRunScopePhase.Completed, (await database.DecisionRunScopes.SingleAsync(item => item.ScopeId == shared.ScopeId.Value)).Phase);
+            Assert.Equal(paused ? ProcessDecisionRunScopePhase.Active : changeBasis ? ProcessDecisionRunScopePhase.Cancelled : ProcessDecisionRunScopePhase.Completed,
+                (await database.DecisionRunScopes.SingleAsync(item => item.ScopeId == shared.ScopeId.Value)).Phase);
         } else {
             Assert.False(await database.DecisionRunScopes.AnyAsync(item => item.BudgetId == root.BudgetId.Value));
         }
@@ -141,7 +195,6 @@ public sealed class ProcessPlanningLaunchApiTests {
 
     [Theory]
     [InlineData(UnsupportedLaunch.Contract, HttpStatusCode.BadRequest)]
-    [InlineData(UnsupportedLaunch.Fail, HttpStatusCode.BadRequest)]
     [InlineData(UnsupportedLaunch.Replan, HttpStatusCode.BadRequest)]
     [InlineData(UnsupportedLaunch.PinnedPublication, HttpStatusCode.BadRequest)]
     [InlineData(UnsupportedLaunch.NoIntent, HttpStatusCode.Forbidden)]
@@ -155,7 +208,6 @@ public sealed class ProcessPlanningLaunchApiTests {
         var selection = fixture.Request.Decision!;
         var input = fixture.Request with { Decision = reason switch {
             UnsupportedLaunch.Contract => selection with { Execution = selection.Execution with { Version = 2 } },
-            UnsupportedLaunch.Fail => selection with { Policy = new(OnBasisChange: OnBasisChange.Fail) },
             UnsupportedLaunch.Replan => selection with { Policy = new(OnBasisChange: OnBasisChange.Replan, MaximumReplans: 1) },
             UnsupportedLaunch.PinnedPublication => selection with { Policy = new(PublicationFreshness: PublicationFreshness.PinnedObservation) },
             _ => selection
@@ -194,5 +246,5 @@ public sealed class ProcessPlanningLaunchApiTests {
         Assert.Empty(fixture.Entry.Wire.Requests);
     }
 
-    public enum UnsupportedLaunch { Contract, Fail, Replan, PinnedPublication, NoIntent, ExecutorPermission, MultipleActivities, MissingWorkspacePolicy, MissingTaskOperation }
+    public enum UnsupportedLaunch { Contract, Replan, PinnedPublication, NoIntent, ExecutorPermission, MultipleActivities, MissingWorkspacePolicy, MissingTaskOperation }
 }

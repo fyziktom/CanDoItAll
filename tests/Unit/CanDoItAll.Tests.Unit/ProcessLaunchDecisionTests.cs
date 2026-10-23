@@ -149,7 +149,6 @@ public sealed class ProcessLaunchDecisionTests {
     }
 
     [Theory]
-    [InlineData(OnBasisChange.Fail)]
     [InlineData(OnBasisChange.Replan)]
     public void Unsupported_parent_change_responses_are_never_silently_coerced(OnBasisChange change) {
         var workspace = new DecisionDataPolicy(ReadBasisMode.StepSnapshot, PublicationFreshness.RequireCurrent, change,

@@ -126,13 +126,16 @@ internal sealed class AgentPlanningDecisionJsonConverter : JsonConverter<AgentPl
         [property: JsonRequired] DecisionDataPolicy ParentPolicy,
         [property: JsonRequired] Guid BudgetId,
         [property: JsonRequired] Guid AllocationId,
-        [property: JsonRequired] long GrantedWorkTicks) {
+        [property: JsonRequired] long GrantedWorkTicks,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] OnBasisChange? ChildOnBasisChange = null) {
         internal static InheritedWire From(AgentPlanningInheritedOrigin value) => new(value.Profile, value.WorkspaceNamespaceId,
             value.AgentId, value.Source, value.ParentBinding, value.BasisId, value.CapturedAtUtc, value.BasisDigest, value.ParentPolicy,
-            value.Allocation.BudgetId.Value, value.Allocation.Id.Value, value.Allocation.Grant.WorkTicks);
+            value.Allocation.BudgetId.Value, value.Allocation.Id.Value, value.Allocation.Grant.WorkTicks, value.ChildOnBasisChange);
 
         internal AgentPlanningInheritedOrigin ToModel() => new(Profile, WorkspaceNamespaceId, AgentId, Source,
-            ParentBinding, BasisId, CapturedAtUtc, BasisDigest, ParentPolicy, new(new(BudgetId), new(AllocationId), new(GrantedWorkTicks, 0)));
+            ParentBinding, BasisId, CapturedAtUtc, BasisDigest, ParentPolicy, new(new(BudgetId), new(AllocationId), new(GrantedWorkTicks, 0))) {
+                ChildOnBasisChange = ChildOnBasisChange
+            };
     }
 
     private sealed record ProvenanceWire(

@@ -61,20 +61,21 @@ public sealed class ProcessLaunchDecisionDiscoveryTests {
     }
 
     [Theory]
-    [InlineData(ReadBasisMode.RunSnapshot)]
-    [InlineData(ReadBasisMode.StepSnapshot)]
-    public void Every_advertised_choice_is_admitted_and_its_ceiling_is_enforced(ReadBasisMode mode) {
+    [InlineData(ReadBasisMode.RunSnapshot, OnBasisChange.PauseForReview)]
+    [InlineData(ReadBasisMode.StepSnapshot, OnBasisChange.PauseForReview)]
+    [InlineData(ReadBasisMode.RunSnapshot, OnBasisChange.Fail)]
+    [InlineData(ReadBasisMode.StepSnapshot, OnBasisChange.Fail)]
+    public void Every_advertised_choice_is_admitted_and_its_ceiling_is_enforced(ReadBasisMode mode, OnBasisChange response) {
         var descriptor = ProjectTaskPlanProcessLaunchPolicyProvider.SupportedContract;
-        var advertised = Assert.Single(descriptor.SupportedPolicies.Where(item => item.ReadBasisMode == mode));
+        var advertised = Assert.Single(descriptor.SupportedPolicies.Where(item => item.ReadBasisMode == mode && item.OnBasisChange == response));
         Assert.Equal(advertised, ProjectTaskPlanProcessLaunchPolicyProvider.ResolvePolicy(advertised, null));
-        Assert.True(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview,
+        Assert.True(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, response,
             new(0, TimeSpan.FromTicks(1), TimeSpan.FromTicks(1)))));
-        Assert.False(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview,
+        Assert.False(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, response,
             new(0, advertised.Budget.MaximumWorkDuration + TimeSpan.FromTicks(1), advertised.Budget.MaximumBasisAge))));
-        Assert.False(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview,
+        Assert.False(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, response,
             new(0, advertised.Budget.MaximumWorkDuration, advertised.Budget.MaximumBasisAge + TimeSpan.FromTicks(1)))));
-        Assert.False(descriptor.Supports(new(mode, PublicationFreshness.PinnedObservation, OnBasisChange.PauseForReview, advertised.Budget)));
-        Assert.False(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, OnBasisChange.Fail, advertised.Budget)));
+        Assert.False(descriptor.Supports(new(mode, PublicationFreshness.PinnedObservation, response, advertised.Budget)));
         Assert.False(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, OnBasisChange.Replan,
             new(1, advertised.Budget.MaximumWorkDuration, advertised.Budget.MaximumBasisAge))));
     }

@@ -96,6 +96,25 @@ public sealed class ProcessInheritedSourceBindingTests {
             new(ProcessExecutionAuthorityDisposition.Bound, fixture.Target.Source) { OriginalDecisionPolicy = observed }));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Original_source_and_receipt_reads_require_the_exact_child_response_grant(bool delegated) {
+        var fixture = ProjectTaskPlanProcessCodecFixture.Create();
+        var policy = new DecisionDataPolicy(fixture.Origin.ParentPolicy.ReadBasisMode, PublicationFreshness.RequireCurrent,
+            OnBasisChange.Fail, new(0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10)));
+        var origin = fixture.Origin with { ParentPolicy = policy, ChildOnBasisChange = delegated ? OnBasisChange.Fail : null };
+        var original = new ProcessExecutionDispatchAuthorityResult(ProcessExecutionAuthorityDisposition.Bound,
+            fixture.Target.Source with { ObservedCurrentDispatch = false }) {
+                OriginalDecisionPolicy = policy, OriginalChildOnBasisChange = origin.ChildOnBasisChange
+            };
+        ProcessInheritedSourceBinding.RequireOriginalPolicy(origin, original);
+        fixture.Target.RequireOriginalReceiptSource(original, origin);
+        var changed = original with { OriginalChildOnBasisChange = delegated ? null : OnBasisChange.Fail };
+        Assert.Throws<AgentToolReceiptAccessDeniedException>(() => ProcessInheritedSourceBinding.RequireOriginalPolicy(origin, changed));
+        Assert.Throws<InvalidDataException>(() => fixture.Target.RequireOriginalReceiptSource(changed, origin));
+    }
+
     private static Dictionary<ProcessDecisionExecutionContract, ProcessDecisionContentContract?> Contracts(ProjectTaskPlanProcessCodecFixture fixture)
         => new() { [fixture.Parent.ExecutionContract] = fixture.Material.ContentContract };
 

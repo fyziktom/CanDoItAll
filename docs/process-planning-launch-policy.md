@@ -40,26 +40,36 @@ published definition selection, and this optional addition to the normal launch 
       "executor": 0
     },
     "policy": {
-      "readBasisMode": 0
+      "readBasisMode": 0,
+      "onBasisChange": 0
     }
   }
 }
 ```
 
 This is a request fragment. `executor: 0` identifies the Agent owner; `readBasisMode: 0`
-selects RunSnapshot and `1` selects StepSnapshot. Omit `policy` to resolve supported values
+selects RunSnapshot and `1` selects StepSnapshot. `onBasisChange: 0` selects Fail and `1`
+selects PauseForReview. Either preference may be omitted independently. Omit `policy` to resolve supported values
 from the saved Workspace policy. Unknown versions and unregistered execution identities
 are refused. The execution identity is an external protocol contract, not an Agent ID.
 
 | Choice | Capture point | When publication facts have changed |
 | --- | --- | --- |
-| RunSnapshot | The root captures its original shared material before dispatch. | Pause for explicit review. |
-| StepSnapshot | The activity captures material when its original work is prepared. | Pause for explicit review. |
+| RunSnapshot | The root captures its original shared material before dispatch. | Fail or pause for review, as admitted. |
+| StepSnapshot | The activity captures material when its original work is prepared. | Fail or pause for review, as admitted. |
 
 Both choices require current facts at publication. This first single-activity planner does
-not support automatic replanning, pinned stale publication or the parent Fail response.
+not support automatic replanning or pinned stale publication.
 It does not refresh material silently. A multi-activity Process needs its own qualified
 lifecycle before these capture points can express differences across successive steps.
+
+Fail is evaluated when the original proposal attempts publication. A changed basis
+publishes no tasks, closes the child and Process as failed, and settles the original work
+grant. The shared run material scope closes with its existing Cancelled phase for a failed
+root; this does not relabel the Agent or Process outcome as cancellation. PauseForReview
+leaves the Process pending with its original grant reserved. Neither response alters the
+provider's starting input while it works. Approval replay retains the original outcome;
+it does not retry publication or call the provider again.
 
 The Workspace policy must already be saved with a real settings revision. The owner bounds
 work duration and basis age to at most ten minutes and permits zero automatic replans;
@@ -69,7 +79,8 @@ the response for the actual policy instead of assuming requested values were acc
 ## Accept and reconcile the original intent
 
 The SPA project Processes page offers definition and planning-contract selection, an
-explicit data read mode or saved Workspace defaults, the returned review, and acceptance.
+explicit read mode and change response or saved Workspace defaults, the returned review,
+and acceptance. Only advertised combinations can be selected for a fresh preparation.
 It retains one pending intent per browser tab before sending a request. Recovery content
 contains only the original selection and identifiers; the effective review is retrieved
 from the server under the current caller. Browser storage must be available. A retained
@@ -137,7 +148,15 @@ serialization. Selected preparations use a separate hash domain so older readers
 them instead of silently ignoring governance. No schema migration or new project reference
 is required for this addition.
 
+New Fail launches save a version-6 step admission with an explicit child response grant.
+The initial Agent binder copies that verified grant into its immutable inherited origin.
+Dispatch and original receipt reads require equality with the saved grant. Legacy step
+admissions and inherited origins without this marker preserve their original pause
+semantics, even if their parent policy says Fail. Older strict codecs reject the new
+admission before child enrollment and reject the new inherited origin after enrollment.
+Do not roll an active Fail launch onto binaries that cannot read these contracts.
+
 See the [design and qualification status](../codex/bundles/concurrent-mutations/plan/P23-process-policy-producer.md).
-Native and SPA selection/review controls, authored definition policy defaults, Workflow
-activation, parent refresh/replan and broader lifecycle support remain separate work.
+Native selection/review controls, planning-publication UI, authored definition policy
+defaults, Workflow activation, parent refresh/replan and broader lifecycle remain open.
 SPA integration stays on branch **codex/concurrent-mutations** for colleague review.

@@ -192,7 +192,8 @@ public sealed class EfProcessExecutionAuthorityQuery(
         return new(ProcessExecutionAuthorityDisposition.Bound, new(evidence, new(state.RootRunId), projectId, fingerprint,
             assignment.ReadinessHash, assignment.AllowedOperations, assignment.OperationTargetScope,
             original.CapabilityScope, source, reference, current, observedAt)) {
-            OriginalDecisionPolicy = selection is null ? null : original.DecisionDataPolicy!.Policy
+            OriginalDecisionPolicy = selection is null ? null : original.DecisionDataPolicy!.Policy,
+            OriginalChildOnBasisChange = selection is null ? null : original.DecisionDataPolicy!.ChildOnBasisChange
         };
     }
 

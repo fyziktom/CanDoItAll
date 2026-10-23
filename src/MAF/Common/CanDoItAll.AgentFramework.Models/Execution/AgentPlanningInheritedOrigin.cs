@@ -17,6 +17,9 @@ public sealed record AgentPlanningInheritedOrigin(
     [property: JsonRequired] DecisionBudgetAllocation Allocation) {
     public const int MaximumBindingUtf8Bytes = 16_384;
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public OnBasisChange? ChildOnBasisChange { get; init; }
+
     public DecisionDataPolicy ResolvePolicy() {
         if (Profile is null || WorkspaceNamespaceId == Guid.Empty || AgentId == Guid.Empty || Source is null ||
             ParentBinding is null || BasisId == Guid.Empty || (CapturedAtUtc == default || CapturedAtUtc.Offset != TimeSpan.Zero) ||
@@ -26,11 +29,15 @@ public sealed record AgentPlanningInheritedOrigin(
         }
         Allocation.Validate();
         _ = DecisionDataPolicyCodec.Serialize(ParentPolicy);
+        if (ChildOnBasisChange is not null &&
+                (ChildOnBasisChange != OnBasisChange.Fail || ParentPolicy.OnBasisChange != OnBasisChange.Fail)) {
+            throw new InvalidDataException("The inherited child response must retain its original parent's failure policy.");
+        }
         if (Allocation.Settlement is not null || Allocation.Grant.WorkTicks <= 0 || Allocation.Grant.Replans != 0 ||
             Allocation.Grant.WorkTicks > ParentPolicy.Budget.MaximumWorkDuration.Ticks) {
             throw new InvalidDataException("The inherited planning origin or grant is invalid.");
         }
-        return new(ReadBasisMode.RunSnapshot, ParentPolicy.PublicationFreshness, OnBasisChange.PauseForReview,
+        return new(ReadBasisMode.RunSnapshot, ParentPolicy.PublicationFreshness, ChildOnBasisChange ?? OnBasisChange.PauseForReview,
             new(0, TimeSpan.FromTicks(Allocation.Grant.WorkTicks), ParentPolicy.Budget.MaximumBasisAge));
     }
 

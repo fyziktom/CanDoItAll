@@ -50,7 +50,7 @@ internal static class ProcessInheritedSourceBinding {
     }
 
     internal static void RequireOriginalPolicy(AgentPlanningInheritedOrigin original, ProcessExecutionDispatchAuthorityResult result) {
-        if (result.OriginalDecisionPolicy != original.ParentPolicy) {
+        if (result.OriginalDecisionPolicy != original.ParentPolicy || result.OriginalChildOnBasisChange != original.ChildOnBasisChange) {
             throw new AgentToolReceiptAccessDeniedException();
         }
     }

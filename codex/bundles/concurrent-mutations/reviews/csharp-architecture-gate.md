@@ -380,3 +380,28 @@ acceptance cannot silently become separate work. No timer, polling, worker, hist
 or new transaction lifetime is introduced. SQL/HTTP, state, generated-client and final
 rendered proofs cover these boundaries independently. Native UI, broader lifecycle,
 publication review and sustained capacity still require their own qualification.
+
+## Process basis-change failure
+
+Status: Pass with follow-up. [P27 validation](../validation/2026-10-23-process-basis-change-failure.md)
+qualifies the optional typed response grant in the existing Agent origin and Process step
+admission. Models retain the provider-neutral child contract; Runtime owns the version-6
+admission, Application its observed original grant, and Persistence projects that saved
+value. Workbench binds the verified grant and both owning modules compare it on original
+source/receipt reads. Legacy absent grants retain their original pause semantics. Actual
+old-binary proof rejects new admissions before child enrollment. No new project reference,
+runtime service, business partial, service locator, migration or settlement path is added.
+
+Scoped snapshots `snap-20261023134255-6f4f0f5b` and `snap-20261023140815-6f4f0f5b`
+retain three project edges and nine existing module/type cycles across 814 documents in
+Models, Core and Workbench. Direct project-file review covers the added Process layers.
+Collector limitations remain 189 WS0002 errors, twelve DI0001 messages and four DI0002
+warnings; this is not a clean solution-wide graph. All affected Release builds pass.
+
+Pure codec/policy/identity tests are independent of the runtime monolith. Public HTTP,
+queued MAF, SQL publication, replay and exact grant-accounting proof exercise current and
+changed material under both modes/responses. Fail settles the original child and root;
+Pause retains its grant and blocked Process. No new polling, provider work, query fan-out
+or lock lifetime is introduced. SPA extends its existing session/storage boundary and
+shared controls. Parent refresh/replan, shared-scope quiescence, broader owner/lifecycle
+integration and sustained capacity remain explicit downstream obligations.

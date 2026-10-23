@@ -25,6 +25,7 @@ public sealed record ProcessDecisionDataPolicyAdmission(
     public const int SchemaVersion = 3;
     public const int FundedSchemaVersion = 4;
     public const int SharedScopeSchemaVersion = 5;
+    public const int ChildResponseSchemaVersion = 6;
     public const int MaximumUtf8Bytes = 32_768;
     public const int MaximumEnclosingPolicies = 32;
 
@@ -33,6 +34,7 @@ public sealed record ProcessDecisionDataPolicyAdmission(
     public ProcessDecisionContentContract? ContentContract { get; init; }
     public ProcessDecisionFundingReference? Funding { get; init; }
     public ProcessDecisionMaterialScopeId? SharedRunScopeId { get; init; }
+    public OnBasisChange? ChildOnBasisChange { get; init; }
 
     public void Validate() {
         if (WorkspaceNamespaceId == Guid.Empty || WorkspaceHeadRevision == Guid.Empty ||
@@ -45,6 +47,10 @@ public sealed record ProcessDecisionDataPolicyAdmission(
         ExecutionContract?.Validate();
         ContentContract?.Validate();
         Funding?.Validate();
+        if (ChildOnBasisChange is not null && (ChildOnBasisChange != OnBasisChange.Fail || Policy.OnBasisChange != OnBasisChange.Fail ||
+                Funding is null || MaterialProtocol is null || ExecutionContract is null)) {
+            throw new InvalidDataException("A child failure response requires the original failure policy, execution contract, material and funding.");
+        }
         var validMaterial = MaterialProtocol switch {
             null => ContentContract is null,
             ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 => ExecutionContract is not null && ContentContract is null,

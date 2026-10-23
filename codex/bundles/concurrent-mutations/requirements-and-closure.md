@@ -1,6 +1,15 @@
 # Requirements and closure ledger
 
-Current work: [Project Process launch client](validation/2026-10-23-project-process-launch-client.md)
+Current work: [Process basis-change failure](validation/2026-10-23-process-basis-change-failure.md)
+qualifies Fail and PauseForReview for both snapshot modes, immutable child response grants,
+and SPA selection/recovery. All 247 distinct backend cases, eight historical-reader checks,
+152 SPA tests and sixteen rendered states pass. Final portability and new resource
+reconciliation pass. SPA signed checkpoint **1139939** stays on **codex/concurrent-mutations**.
+One interrupted-run directory remains blocked by automatic approval review; historical
+cleanup blockers remain. Parent refresh/replan, native/publication UI, broader lifecycle,
+authored defaults, capacity, remaining owners and final engine E2E are still open.
+
+Preceding work: [Project Process launch client](validation/2026-10-23-project-process-launch-client.md)
 qualifies scoped definition reads, original-intent lookup and the SPA selection/review/
 acceptance flow. Nine backend cases, 135 SPA tests and fourteen rendered states pass;
 full portability and new resource reconciliation pass. SPA remains on
