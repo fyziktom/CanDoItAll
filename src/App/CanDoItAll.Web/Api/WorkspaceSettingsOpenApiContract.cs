@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.OpenApi;
@@ -11,6 +12,11 @@ internal static class WorkspaceSettingsOpenApiContract {
     private const string OriginalExpectation = "Original dataset and current-head observation acquired with the draft. Preserve it unchanged; substituting a newer revision does not reconcile older values.";
     private const string ExactSnapshot = "Exact accepted six-field snapshot and resulting head revision. It describes this acceptance, not a later current read; preserve post-dispatch local edits.";
     private const string NonemptyUuidPattern = "^(?!00000000-0000-0000-0000-000000000000)[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?![\\s\\S])";
+
+    internal static string? CreateSchemaReferenceId(JsonTypeInfo typeInfo) =>
+        typeInfo.Type.DeclaringType == typeof(WorkspaceSettingsSaveOutcomeV2)
+            ? $"{nameof(WorkspaceSettingsSaveOutcomeV2)}{typeInfo.Type.Name}"
+            : OpenApiOptions.CreateDefaultSchemaReferenceId(typeInfo);
 
     internal static async Task TransformSchemaAsync(OpenApiSchema schema, OpenApiSchemaTransformerContext context,
         CancellationToken cancellationToken) {

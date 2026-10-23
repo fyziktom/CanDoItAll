@@ -71,6 +71,7 @@ public static class ApiServiceCollectionExtensions
         services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new ProjectOperationEpochHttpJsonConverter()));
         services.AddOpenApi(options =>
         {
+            options.CreateSchemaReferenceId = WorkspaceSettingsOpenApiContract.CreateSchemaReferenceId;
             options.AddOperationTransformer(ApiAccessOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(ApiEndpointDocumentation.TransformAsync);
             options.AddSchemaTransformer(ApiAccessOpenApiContract.TransformSchemaAsync);

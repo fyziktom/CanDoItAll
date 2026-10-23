@@ -315,3 +315,19 @@ regressions exercise the new owner without using the launch monolith for pure te
 The generated SPA client preserves selected/effective semantics and bounded retry behavior.
 Broader lifecycle, refresh/replan, definition defaults and UI selection require their
 own qualification before they may borrow this producer's trust.
+
+## Workspace V2 acceptance and SPA policy editor
+
+Status: Pass with follow-up. [P24 validation](../validation/2026-10-23-workspace-policy-client.md)
+repairs an OpenAPI name collision in the existing Web schema owner and registration.
+Only the three nested V2 Workspace outcome identities change; V1 and unrelated framework
+naming retain their existing contract. There is no project-reference, schema migration,
+runtime owner, business partial or DI lifetime change. Actual generated schema and SDK
+tests prevent a cast or client-side fallback from hiding lost policy fields.
+
+SPA reuses its existing session, bounded transport and shared UI controls. Its new pure
+policy codec has no I/O or state ownership and preserves exact integer ticks. It does not
+add polling, a dependency, global state or a backend policy resolver. The schema export
+preserves all 317 routes, while real SQL/HTTP, state/codec and browser checks prove distinct
+owner responsibilities. Broader launch UI and actor-bound durable draft recovery remain
+separate obligations; this scoped pass does not close engine-wide dependency or runtime gates.

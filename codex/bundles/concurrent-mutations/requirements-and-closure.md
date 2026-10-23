@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current work: [public Process policy producer](validation/2026-10-23-process-policy-producer.md)
+Current work: [Workspace policy client](validation/2026-10-23-workspace-policy-client.md)
+qualifies the SPA policy editor, exact-duration conversion and conditional V2 writes.
+The backend schema collision is repaired; all ten HTTP cases, 100 SPA tests, full
+portability and ten rendered states pass. Source/output and runtime cleanup checks pass.
+SPA stays on **codex/concurrent-mutations** for colleague review. Process launch UI,
+broader lifecycle/policies, durable recovery, capacity, remaining owners and engine E2E
+remain open.
+
+Preceding work: [public Process policy producer](validation/2026-10-23-process-policy-producer.md)
 passes 251 distinct cases across verified test-source repairs, full portability and final
 source/output/resource checks. Public RunSnapshot/StepSnapshot selection reaches queued
 MAF planning, HTTP review, one task publication and terminal accounting. The SPA client

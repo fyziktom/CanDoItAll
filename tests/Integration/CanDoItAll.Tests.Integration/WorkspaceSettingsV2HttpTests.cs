@@ -153,6 +153,20 @@ public sealed class WorkspaceSettingsV2HttpTests {
         Assert.Contains(nullable.EnumerateArray(), item => item.TryGetProperty("type", out var type) && type.GetString() == "null");
         var v1 = Resolve(paths.GetProperty("/api/settings/workspace").GetProperty("put").GetProperty("requestBody").GetProperty("content").GetProperty("application/json").GetProperty("schema"));
         Assert.Equal(new[] { "expected", "values" }, Names(v1.GetProperty("properties")));
+        var acceptedV2 = Response(write, "200");
+        var acceptedV1 = Response(paths.GetProperty("/api/settings/workspace").GetProperty("put"), "200");
+        Assert.NotEqual(acceptedV1.GetRawText(), acceptedV2.GetRawText());
+        var committed = Resolve(Resolve(acceptedV2).GetProperty("properties").GetProperty("snapshot"));
+        Assert.Equal(new[] { "decisionDataPolicy", "expectation", "schemaVersion", "values" }, Names(committed.GetProperty("properties")));
+        Assert.Equal(4, committed.GetProperty("required").GetArrayLength());
+        Assert.Equal(new[] { "expectation", "values" }, Names(Resolve(Resolve(acceptedV1).GetProperty("properties").GetProperty("snapshot")).GetProperty("properties")));
+        var committedPolicy = committed.GetProperty("properties").GetProperty("decisionDataPolicy").GetProperty("anyOf");
+        Assert.Equal(Names(policy.GetProperty("properties")), Names(Resolve(committedPolicy[0]).GetProperty("properties")));
+        Assert.Equal("rejected", Resolve(Response(write, "409")).GetProperty("properties").GetProperty("status").GetProperty("enum")[0].GetString());
+        Assert.Equal("unconfirmed", Resolve(Response(write, "503")).GetProperty("properties").GetProperty("status").GetProperty("enum")[0].GetString());
+
+        static JsonElement Response(JsonElement operation, string status) => operation.GetProperty("responses").GetProperty(status)
+            .GetProperty("content").GetProperty("application/json").GetProperty("schema");
 
         JsonElement Resolve(JsonElement value) {
             while (true) {
