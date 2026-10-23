@@ -1,5 +1,48 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: refresh capture queries (2026-10-23)
+
+Status: Pass with follow-up for [capture preparation/progress](../validation/2026-10-23-process-refresh-capture-query.md).
+
+### Findings
+
+| Severity | Finding | Evidence | Required action |
+| --- | --- | --- | --- |
+| Reviewed | Two member-count findings on immutable identity/selection records | `snap-20261023192129-17b44d93`; each has one cohesive responsibility | Retain typed stage identities and the original funding selection |
+| Existing | 189 WS0002 collector diagnostics | Unchanged before/after; direct production/test builds pass | Preserve the scoped-analysis limitation |
+| Follow-up | Queries do not invoke capture or establish durable recovery | P28 producer entry and failure decisions | Qualify interleaved reads, actual capture and closed/unknown-work recovery before activation |
+
+### Dependency direction
+
+Application owns one genuine read boundary; Persistence supplies bounded metadata and
+reuses existing original-input, child, root and reconciliation owners. The Process module
+registers the query. The same three project edges and zero scoped cycles remain between
+`snap-20261023182501-fb03b32e` and `snap-20261023192129-17b44d93`. No project reference,
+schema, service locator or independent write transaction was added.
+
+### Partial-class policy
+
+No business partial or broad manager was introduced. The identity type owns one stable
+identity domain, the query owns reads, and the shared internal reconciliation reader removes
+the successor's duplicate receipt verification. Existing Runtime behavior remains unchanged.
+
+### Testability proof
+
+All 33 selected cases pass: 3 pure identity, 11 actual PostgreSQL query and 19 successor
+regressions. Tests reject missing accounting and changed identities/ceilings, preserve both
+funding owners, observe outstanding work and verify one progress SQL statement against only
+the idempotency table. The successor dependency still proves capture-backed advance, replay,
+rollback, cancellation and next-attempt enrollment for both modes. Full portability,
+source/output verification, secret coverage and new resource reconciliation pass.
+
+### Closure decision
+
+The capture producer may use the preparation query and stable stage identities. The read
+contract is advisory until mutation expectations are checked under the root fence; progress
+does not authorize recapture. Public refresh, automatic replan, durable interruption recovery
+and whole-engine E2E remain open. SPA remains on the colleague-review branch; previous cleanup
+denials are unchanged.
+
 ## C# Architecture Gate Result: original refresh successor (2026-10-23)
 
 Status: Pass with follow-up for [the successor boundary](../validation/2026-10-23-process-refresh-successor.md).

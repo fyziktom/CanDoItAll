@@ -26,22 +26,9 @@ internal static class EfProcessDecisionRefreshSuccessorGuard {
             database?.Profile.Profile.Id ?? throw new InvalidOperationException("A successor requires the canonical database owner."),
             state.RunId, address.StepInstanceId, cancellationToken).ConfigureAwait(false);
         _ = ProcessDecisionRefreshAccountingPreparation.RequireOriginal(state, input, selected, admission);
-        var accountingId = new ProcessDecisionRefreshAccounting(id).CommandId.Value;
-        var receipt = await context.IdempotencyKeys.AsNoTracking().Where(row => row.RunId == state.RunId.Value && row.CommandId == accountingId)
-            .Select(row => new { row.DecisionReceiptJson, row.DecisionBudgetReceiptJson, row.DecisionRunScopeReceiptJson })
-            .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidDataException("The successor requires its retained original reconciliation accounting receipt.");
-        ProcessRuntimeCommitResult accounting = new(ProcessRuntimeTransitionOutcome.Duplicate, state, [], [], [], []) {
-            Decision = ProcessDecisionReceiptCodec.Read(receipt.DecisionReceiptJson),
-            DecisionBudget = ProcessDecisionBudgetReceiptCodec.Read(receipt.DecisionBudgetReceiptJson),
-            DecisionRunScope = ProcessDecisionRunScopeReceiptCodec.Read(receipt.DecisionRunScopeReceiptJson)
-        };
-        if (ProcessDecisionRefreshAccountingReceipt.Read(accounting, admission, selected.Child!) is not ProcessDecisionRefreshAccountingResult.Reconciled ||
-                selected.Head != accounting.Decision!.Current || selected.Head.Expectation != command.Expectation ||
-                selected.Child!.Observation.Generation != selected.Head ||
-                selected.Child.Observation.Closure != accounting.Decision.Child!.Closure ||
-                selected.Child.Observation.Settlement != accounting.DecisionBudget!.Change.Allocation.Settlement) {
-            throw new InvalidOperationException("Only the exact reconciled no-effect child may acquire a refresh successor.");
+        await EfProcessDecisionRefreshReconciliation.RequireAsync(context, state, admission, selected, cancellationToken).ConfigureAwait(false);
+        if (selected.Head!.Expectation != command.Expectation) {
+            throw new InvalidOperationException("The successor changed its reconciled decision expectation.");
         }
         successor.RequireMutation(request, intent);
         await RequireCaptureAsync(context, request, selected, cancellationToken).ConfigureAwait(false);

@@ -5,7 +5,8 @@ including migration, historical readers and portability. Original-child stop pas
 [73-case qualification](../validation/2026-10-23-process-refresh-child-stop.md). Reconciliation
 accounting passes its [275-case qualification](../validation/2026-10-23-process-refresh-accounting.md).
 The [successor transaction](../validation/2026-10-23-process-refresh-successor.md) passes
-129-case qualification; durable capture orchestration is next. Full refresh activation remains
+129-case qualification. The [capture preparation queries](../validation/2026-10-23-process-refresh-capture-query.md)
+pass 33 selected cases, including successor regression; the actual capture producer is next. Full refresh activation remains
 gated by the owner/delivery checkpoints below.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.
@@ -490,3 +491,22 @@ manufacture measured work from elapsed wall time, refund an unobserved invocatio
 silently charge its whole grant as though it were measured work. Any conservative-charge
 policy would need a distinct reviewed accounting contract and tests, not an incidental
 fallback in this coordinator.
+
+Capture preparation uses one bounded progress projection for the six deterministic
+reservation/completion/abort/successor receipts. It must not call the general idempotency
+reader repeatedly: that reader loads the full runtime history for every receipt. The
+projection returns typed decision, budget and scope receipts, never a fabricated runtime
+commit result. The original admission and accepted-input query remains separate so replay
+can finish before a source read. A completed RunSnapshot capture needs only its persisted
+stamp and captured-at metadata for inheritance; the material store validates the payload
+when committing the successor, so the preparation query need not deserialize it.
+
+The next implementation checkpoint owns this preparation/progress IO boundary and stable
+stage identities. It will verify original funding/ceilings/profile, exact NoEffect
+accounting, current head and shared-scope identity through the actual registered query.
+Negative proof covers missing accounting, changed original identity and unsettled work;
+query-shape proof excludes runtime histories and material payloads. Successor persistence
+tests remain the dependent-flow check because the same reconciliation proof is reused.
+No public action, worker, automatic admission or interrupted-capture retry is enabled by
+this boundary. The following coordinator checkpoint must supply the real capture producer
+and known-failure settlement before those delivery gates can proceed.

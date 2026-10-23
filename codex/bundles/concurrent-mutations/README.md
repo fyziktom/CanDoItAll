@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current work: [original refresh successor](validation/2026-10-23-process-refresh-successor.md)
+Current work: [refresh capture preparation queries](validation/2026-10-23-process-refresh-capture-query.md)
+passes all 33 selected cases. Original-input/funding selection and the one-query progress
+projection are registered; the successor shares the same reconciliation check. Final
+portability, source/output identity, secret review and new resource reconciliation pass.
+Capture orchestration, interrupted-work recovery, delivery and engine E2E remain open.
+SPA stays clean on **codex/concurrent-mutations** for colleague review. Historical cleanup
+denials remain recorded.
+
+Preceding work: [original refresh successor](validation/2026-10-23-process-refresh-successor.md)
 passes all 129 selected cases. Both snapshot modes preserve original history and attempts,
 replay without another settlement and enroll the next scheduler attempt with replacement
 material. Shared inheritance waits for root work; independent step snapshots can proceed.

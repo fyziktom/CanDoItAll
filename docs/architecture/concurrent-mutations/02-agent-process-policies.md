@@ -626,6 +626,12 @@ Cancellation and substituted accounting cannot resume the step. The existing UOW
 the original successful outcome with `CommittedNow=false` without another settlement.
 
 These internal owners do not yet expose refresh or Replan through the public policy API.
+Refresh capture preparation has a separate Application query boundary. Its progress read
+selects the six deterministic stage receipts together without loading runtime histories or
+material payloads. Its preparation read retains the accepted source and policy, exact
+reconciled original child, local/root funding and shared material scope. The query reports
+pending work and root status; it does not reserve work or authorize capture. The successor
+and preparation paths share the same persisted reconciliation check.
 Durable replacement-capture orchestration, interrupted-work recovery and delivery remain gates in
 the [parent refresh design](../../../codex/bundles/concurrent-mutations/plan/P28-process-parent-refresh.md).
 An inherited Agent continues using its admitted material until its owner closes that work;
