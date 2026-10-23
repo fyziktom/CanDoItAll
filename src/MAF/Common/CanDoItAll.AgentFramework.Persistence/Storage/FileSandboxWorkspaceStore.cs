@@ -25,7 +25,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private const string ChatBackedRunCommitJournalVersion = "1.0";
     private const string GenericNewRunCommitJournalVersion = "1.0";
     private const string ExistingRunDetailCommitJournalVersion = "1.0";
-    private readonly SemaphoreSlim gate = new(1, 1);
+    private readonly FileSandboxWorkspaceCoordinationGate gate;
     private readonly FileSandboxWorkspaceStorageLayout layout;
     private readonly FileSandboxWorkspaceJsonStore jsonStore;
     private readonly FileSandboxWorkspaceCatalogNormalizer catalogNormalizer;
@@ -106,6 +106,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         IAgentCatalogMutationPolicy? catalogMutationPolicy = null,
         DurableFileWriter? fileWriter = null) {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
+        gate = new(layout.WorkspaceLockPath);
         physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive);
         var durableFileWriter = fileWriter ?? new DurableFileWriter(physicalPathPolicyFactory);
         runLeaseWriter = durableFileWriter;
@@ -461,7 +462,8 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: FileSandboxWorkspaceAccessPriority.Control);
         try {
             await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await executionSliceStore.LoadRunDetailAsync(executionRunId, cancellationToken);
@@ -473,7 +475,8 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     public async Task<ExecutionRunAdmissionSnapshot?> GetExecutionRunAdmissionSnapshotAsync(
         Guid executionRunId, CancellationToken cancellationToken = default) {
-        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: FileSandboxWorkspaceAccessPriority.Control);
         try {
             await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await executionSliceStore.LoadRunAdmissionSnapshotAsync(executionRunId, cancellationToken);
@@ -501,7 +504,8 @@ public sealed partial class FileSandboxWorkspaceStore :
         ArgumentNullException.ThrowIfNull(query);
         query.Validate();
         cancellationToken.ThrowIfCancellationRequested();
-        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: FileSandboxWorkspaceAccessPriority.Control);
         try {
             if (PendingCommitJournalPaths.Any(File.Exists)) {
                 return ProcessExecutionRunPage.Pending(ProcessExecutionRunPageStatus.PublicationPending);
@@ -557,7 +561,8 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: FileSandboxWorkspaceAccessPriority.Control);
         try {
             await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await executionSliceStore.LoadRunAsync(executionRunId, cancellationToken);
@@ -828,15 +833,17 @@ public sealed partial class FileSandboxWorkspaceStore :
         Func<ExecutionRunDetail, ExecutionRunDetail> update, Func<CancellationToken, Task> requireCurrentAuthority,
         CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(requireCurrentAuthority);
-        return UpdateExecutionRunDetailCoreAsync(executionRunId, update, requireCurrentAuthority, cancellationToken);
+        return UpdateExecutionRunDetailCoreAsync(executionRunId, update, requireCurrentAuthority, cancellationToken,
+            FileSandboxWorkspaceAccessPriority.Control);
     }
 
     private async Task<ExecutionRunDetail> UpdateExecutionRunDetailCoreAsync(Guid executionRunId,
         Func<ExecutionRunDetail, ExecutionRunDetail> update, Func<CancellationToken, Task>? requireCurrentAuthority,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, FileSandboxWorkspaceAccessPriority priority = FileSandboxWorkspaceAccessPriority.Ordinary) {
         ArgumentNullException.ThrowIfNull(update);
 
-        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: priority);
         try {
             await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 

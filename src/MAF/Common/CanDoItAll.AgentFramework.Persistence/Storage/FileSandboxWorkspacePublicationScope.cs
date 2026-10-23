@@ -6,32 +6,35 @@ namespace CanDoItAll.AgentFramework.Persistence;
 
 internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
     private static readonly TimeSpan KeyAcquisitionTimeout = TimeSpan.FromMinutes(1);
-    private readonly SemaphoreSlim gate;
+    private readonly FileSandboxWorkspaceCoordinationGate gate;
     private readonly FileSandboxWorkspaceCrossProcessLock workspaceLock;
     private readonly FileSandboxWorkspaceStorageLayout layout;
     private readonly DurableFileWriter writer;
     private readonly TimeProvider timeProvider;
+    private readonly FileSandboxWorkspaceAccessPriority priority;
     private IAsyncDisposable? heldWorkspace;
-    private bool heldGate;
+    private IDisposable? heldGate;
     private bool disposed;
     private Exception? operationFailure;
     private FileSandboxWorkspaceWriteSet? heldWriteSet;
     private IAsyncDisposable? heldAuthority;
     private readonly List<IAsyncDisposable> heldKeys = [];
 
-    private FileSandboxWorkspacePublicationScope(SemaphoreSlim gate, FileSandboxWorkspaceCrossProcessLock workspaceLock,
-        FileSandboxWorkspaceStorageLayout layout, DurableFileWriter writer, TimeProvider timeProvider) {
+    private FileSandboxWorkspacePublicationScope(FileSandboxWorkspaceCoordinationGate gate, FileSandboxWorkspaceCrossProcessLock workspaceLock,
+        FileSandboxWorkspaceStorageLayout layout, DurableFileWriter writer, TimeProvider timeProvider, FileSandboxWorkspaceAccessPriority priority) {
         this.gate = gate;
         this.workspaceLock = workspaceLock;
         this.layout = layout;
         this.writer = writer;
         this.timeProvider = timeProvider;
+        this.priority = priority;
     }
 
-    internal static async Task<FileSandboxWorkspacePublicationScope> EnterAsync(SemaphoreSlim gate,
+    internal static async Task<FileSandboxWorkspacePublicationScope> EnterAsync(FileSandboxWorkspaceCoordinationGate gate,
         FileSandboxWorkspaceCrossProcessLock workspaceLock, FileSandboxWorkspaceStorageLayout layout,
-        DurableFileWriter writer, CancellationToken cancellationToken, TimeProvider? timeProvider = null) {
-        var scope = new FileSandboxWorkspacePublicationScope(gate, workspaceLock, layout, writer, timeProvider ?? TimeProvider.System);
+        DurableFileWriter writer, CancellationToken cancellationToken, TimeProvider? timeProvider = null,
+        FileSandboxWorkspaceAccessPriority priority = FileSandboxWorkspaceAccessPriority.Ordinary) {
+        var scope = new FileSandboxWorkspacePublicationScope(gate, workspaceLock, layout, writer, timeProvider ?? TimeProvider.System, priority);
         await scope.EnterWorkspaceAsync(cancellationToken).ConfigureAwait(false);
         return scope;
     }
@@ -41,7 +44,7 @@ internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
         Func<CancellationToken, Task>? requireCurrentAuthority = null,
         Func<CancellationToken, Task<IAsyncDisposable>>? acquireAuthority = null) {
         ObjectDisposedException.ThrowIf(disposed, this);
-        if (!heldGate || heldWorkspace is null) {
+        if (heldGate is null || heldWorkspace is null) {
             throw new InvalidOperationException("A prepared workspace publication requires the short workspace guard.");
         }
         if (heldWriteSet is not null) {
@@ -111,7 +114,7 @@ internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
 
     internal ValueTask ReleaseWorkspaceForAuthoritySnapshotAsync() {
         ObjectDisposedException.ThrowIf(disposed, this);
-        if (heldWriteSet is null || !heldGate || heldWorkspace is null) {
+        if (heldWriteSet is null || heldGate is null || heldWorkspace is null) {
             throw new InvalidOperationException("An authorization snapshot requires its complete selected key set before releasing workspace coordination.");
         }
         return ExitWorkspaceAsync();
@@ -146,13 +149,12 @@ internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
     }
 
     private async Task EnterWorkspaceAsync(CancellationToken cancellationToken) {
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        heldGate = true;
+        heldGate = await gate.AcquireAsync(priority, cancellationToken).ConfigureAwait(false);
         try {
             heldWorkspace = await workspaceLock.AcquireAsync(cancellationToken).ConfigureAwait(false);
         } catch {
-            heldGate = false;
-            gate.Release();
+            heldGate.Dispose();
+            heldGate = null;
             throw;
         }
     }
@@ -165,10 +167,8 @@ internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
                 await acquired.DisposeAsync().ConfigureAwait(false);
             }
         } finally {
-            if (heldGate) {
-                heldGate = false;
-                gate.Release();
-            }
+            heldGate?.Dispose();
+            heldGate = null;
         }
     }
 

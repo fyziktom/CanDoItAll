@@ -1,10 +1,16 @@
 # Requirements and closure ledger
 
-Current work: [contended recovery](validation/2026-10-22-recovery-contention.md) exposes
-five concurrent-progress failures in six cases; all 600 writes and final settlements are
-preserved. Five regressions pass. A diagnostic identifies repeated workspace-lock waits
-that exhaust recovery slices. The [local admission design](plan/P16-local-coordination-fairness.md)
-owns the repair; worker activation and HTTP cutover remain blocked pending proof.
+Current work: [shared local workspace admission](validation/2026-10-22-local-coordination.md)
+qualifies the repair with all 90 focused cases, eight Release builds, source/output
+identity, architecture, full portability and zero new observed runtime residue. All six
+previously contended recovery cases now pass without relaxing deadlines; 600 writes are
+preserved. History-sized publication cost and separate-process fairness remain open.
+Next is [cancellation observation and bounded admission](plan/P17-cancellation-observation-and-admission.md).
+Worker activation, remaining owners/policies and final E2E remain open. SPA stays on its
+separate branch. Earlier cleanup denials are retained; no whole-bundle cleanup is claimed.
+
+The [initial contention failures](validation/2026-10-22-recovery-contention.md)
+and diagnostic remain preserved as the repair's before evidence.
 
 Previous implementation checkpoint: [selection publication reuse](validation/2026-10-22-process-selection-reuse.md).
 All 82 focused cases, four actual historical-binary handoffs and full portability pass.

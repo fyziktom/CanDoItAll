@@ -1841,3 +1841,24 @@ The command did not execute; `static-bulk-cleanup-blocked.json` records their id
 `reviewed-delivery` retains the exact two small durable proof copies used for the
 directory-only secret scan. Their ownership sidecar preceded creation. No new host or
 database stack was provisioned; earlier denied resources remain untouched.
+
+## Shared local workspace coordination, 2026-10-22
+
+`c4-recovery-coordination` has its ownership sidecar recorded before creation and reuses
+the existing isolated PostgreSQL fixture and standard Release outputs. All 90 native
+cases pass. Observation covers all 14 execution commands; final reconciliation reports
+no new processes, database names or temporary fixture paths. No replacement stack was
+created. Source and all 50 owning/copied output identities remain unchanged during tests.
+
+The compact proof preserves actual contention/cost observations, source/output identities,
+command/log hashes, architecture and the single reviewed portability-baseline delta.
+Earlier denied handoff folders, `C:/cm-cost`, the retained baseline worktree, previous
+bulk scan outputs and older blockers remain as previously recorded; they were not retried.
+This run's clean runtime reconciliation is not whole-bundle resource closure.
+
+The two bulk scan outputs in this new run were removed separately after exact containment
+and hash checks; absence is verified in `static-bulk-cleanup.json`. Their hashes and
+summary remain in the durable proof. The local secret scan has three reviewed source-code
+heuristic matches, zero credential-sentinel matches and no oversized/unreadable text.
+The exact compact delivery proof scans with zero findings. Documentation and whitespace
+checks pass. Prior denied targets remain untouched.

@@ -13,7 +13,6 @@ public sealed class FileSandboxWorkspacePublicationBudgetTests {
     [Fact]
     public async Task Expired_shared_budget_releases_acquired_keys_and_stops_before_the_next_key() {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        using var gate = new SemaphoreSlim(1, 1);
         var environment = CanDoItAllTestEnvironment.Create("publication-key-budget");
         var failures = new List<Exception>();
         IAsyncDisposable? blocker = null;
@@ -23,6 +22,7 @@ public sealed class FileSandboxWorkspacePublicationBudgetTests {
         var outcomeObserved = false;
         try {
             var layout = new FileSandboxWorkspaceStorageLayout(environment.RootPath);
+            var gate = new FileSandboxWorkspaceCoordinationGate(layout.WorkspaceLockPath);
             var policies = new PhysicalFileSystemPathPolicyFactory();
             var writer = new DurableFileWriter(policies);
             var now = DateTimeOffset.UtcNow;
@@ -50,7 +50,9 @@ public sealed class FileSandboxWorkspacePublicationBudgetTests {
                 using var conflicting = new FileStream(paths[0], FileMode.Open, FileAccess.ReadWrite, FileShare.None);
             });
             Assert.False(File.Exists(paths[2]));
-            Assert.Equal(1, gate.CurrentCount);
+            using (var availableLocal = await gate.AcquireAsync(FileSandboxWorkspaceAccessPriority.Ordinary, deadline.Token)) {
+                Assert.NotNull(availableLocal);
+            }
             await using (var availableWorkspace = await writer.AcquireCoordinationAsync(layout.RootPath,
                     layout.WorkspaceLockPath, TimeSpan.FromSeconds(5), false, deadline.Token)) {
                 Assert.NotNull(availableWorkspace);
@@ -67,7 +69,9 @@ public sealed class FileSandboxWorkspacePublicationBudgetTests {
             Assert.True(clock.ExpiredBudgetObserved);
             Assert.False(File.Exists(paths[2]));
             Assert.Equal(original, await File.ReadAllBytesAsync(payload, deadline.Token));
-            Assert.Equal(1, gate.CurrentCount);
+            using (var availableLocal = await gate.AcquireAsync(FileSandboxWorkspaceAccessPriority.Ordinary, deadline.Token)) {
+                Assert.NotNull(availableLocal);
+            }
             foreach (var path in paths.Take(2).Append(layout.WorkspaceLockPath)) {
                 await using var available = await writer.AcquireCoordinationAsync(layout.RootPath, path,
                     TimeSpan.FromSeconds(5), false, deadline.Token);

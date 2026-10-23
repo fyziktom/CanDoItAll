@@ -1,8 +1,9 @@
 # P16 — Local workspace admission fairness
 
-Status: design selected after native failure and diagnostic evidence; implementation
-and acceptance are still required. This is a process-local scheduling repair, not a
-distributed fairness guarantee or permission to activate the recovery worker.
+Status: implemented and qualified by [90 passing focused cases](../validation/2026-10-22-local-coordination.md),
+eight Release builds, architecture, full portability and resource reconciliation. This
+is a process-local scheduling repair; distributed fairness and worker activation remain
+separate gates. The design below records the evidence and decisions before implementation.
 
 ## Evidence and responsibility
 
