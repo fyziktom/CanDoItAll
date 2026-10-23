@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current work: the [durable capture journal](validation/2026-10-23-process-refresh-capture-journal-storage.md)
+Current work: [actual older-producer retention](validation/2026-10-23-process-refresh-journal-compatibility.md)
+passes all ten cross-binary cases. The previous producer preserves all 36 mapped Process
+tables across five states in both snapshot modes. Normal outputs are restored and final
+portability passes without a baseline change. Cleanup of the temporary build junction and
+checkout awaits an exact retry approval after automatic review rejected the junction removal.
+Delivery, unknown-work resolution, explicit retry and public refresh/Replan remain open.
+SPA stays untouched on **codex/concurrent-mutations** for colleague review.
+
+Preceding work: the [durable capture journal](validation/2026-10-23-process-refresh-capture-journal-storage.md)
 passes all 124 distinct selected cases across a verified test-only repair. Reservation,
 first invocation, returned work and exact settlement survive interruption through the
 original owners. Full portability, source/output and new resource checks pass. Actual

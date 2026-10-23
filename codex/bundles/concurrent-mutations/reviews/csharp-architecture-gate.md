@@ -1,5 +1,31 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: actual older-producer retention (2026-10-23)
+
+Status: Pass with follow-up for the
+[ten-case compatibility check](../validation/2026-10-23-process-refresh-journal-compatibility.md).
+The temporary junction/checkout cleanup awaits an exact retry approval after automatic
+review rejected the junction removal. Delivery/public activation remains closed.
+
+### Findings and dependency direction
+
+No product C#, project reference, migration, runtime configuration or partial-class change
+remains. The previous producer uses its actual state/query/application assemblies against
+current saved rows. The forbidden commit port proves zero attempted writes; canonical
+before/after row fingerprints cover all 36 Process tables, including returned payloads.
+The temporary wire repair reconstructs IDs only in the probe and changes no production
+serializer. Source/output comparison confirms this boundary.
+
+### Testability and closure decision
+
+Both snapshot modes preserve Reserved, Invoking, Returned and legacy reservations as
+Pending; a committed successor remains Advanced. All ten cases and child invocations pass.
+The probes were removed and normal Release outputs rebuilt; 30 production outputs remain
+byte-identical. Full portability passes without a baseline edit. The unchanged product
+owners retain the prior CodeAnalytics dependency/cycle result; no new snapshot is needed
+for removed probes and documentation. This lends read/replay trust to the next delivery
+checkpoint, not mixed-version writer, retry, capacity or public activation trust.
+
 ## C# Architecture Gate Result: durable refresh capture journal (2026-10-23)
 
 Status: Pass with follow-up for the

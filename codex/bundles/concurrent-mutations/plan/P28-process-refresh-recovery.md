@@ -4,6 +4,10 @@ Status: the [pure Runtime journal](../validation/2026-10-23-process-refresh-capt
 passes its 35 selected cases and final static/source/resource closure. The
 [persistent consumer and producer integration](../validation/2026-10-23-process-refresh-capture-journal-storage.md)
 pass 124 distinct selected cases, full static/source/output checks and new resource closure.
+The [actual previous producer](../validation/2026-10-23-process-refresh-journal-compatibility.md)
+passes all ten retained-state cases without changing any of the 36 mapped Process tables.
+Normal output restoration and final static checks pass; temporary junction/checkout cleanup
+awaits an exact retry approval after automatic review rejected the junction removal.
 They follow the
 [registered producer](../validation/2026-10-23-process-refresh-capture-producer.md).
 Behavioral proof tier. The public refresh/replan gate remains closed.
@@ -162,6 +166,26 @@ returns known work: the journal still accepts its exact invocation outcome, whil
 expired delivery owner cannot checkpoint over a newer lease. The next delivery reconciles
 that result and never treats lease ownership as invocation permission.
 
+The source audit identifies a concrete cancellation handoff. Refresh accounting's
+`RequirePending` and `EfProcessDecisionRefreshAuthorityReader` require the original live
+reconciliation; they must not be weakened to accept a cancelled runtime. Cancellation's
+existing decision recovery owns stopping/accounting the original child after its root
+barrier. Refresh delivery must inspect cancellation before attempting that live-only stage
+and continue to drain its own capture journal: close Reserved as NeverInvoked, settle the
+exact Returned outcome, or retain Invoking as unknown. It can finish its delivery only
+when its capture allocations are closed; cancellation's decision/scope sweep then observes
+the released funding and performs finalization. Cover both orderings and a crash between
+those commits so neither owner waits for work only the other abandoned.
+
+`ProjectTaskPlanProcessChildStopper` already uses the original receipt authority and
+stable profile generation for both stop contracts. Its refresh entry additionally checks
+the original live refresh admission; its cancellation entry checks the durable root
+barrier. Keep those contracts distinct. A revoked source is not authorization to capture
+new material, but historical receipt/known-work draining must retain its original identity
+checks. The delivery test must prove this through the real Workbench owner and its
+outcome reader, including source revocation and profile-generation change, before treating
+that path as qualified. These are audited design dependencies, not passing delivery proof.
+
 Root cancellation cannot simply mark refresh delivery complete. Reserved work can drain
 as NeverInvoked; Returned work must settle/abort; Invoking remains explicitly unknown.
 Otherwise the cancellation queue would wait indefinitely for capture funding that the
@@ -177,6 +201,37 @@ retained terminal history, unrelated-root progress beside a slow capture, bounde
 memory and retry fairness. Keep worker/default activation off until those tests and actual
 older-binary retention pass. The current storage tests' old-shaped request is not a
 substitute for an older Application/Persistence assembly reading retained SQL evidence.
+
+### Actual older-producer retention entry
+
+Storage is signed at `e906b22ad`; the immediately preceding producer at `e46625b5a`
+has the pure journal types but no persistent journal consumer. The existing attached
+runtime and cost-baseline worktrees precede that producer and contain retained historical
+work. Preserve them and prepare an isolated checkout of `e46625b5a` for this comparison.
+Use standard Release outputs, the existing local-library repositories and the same
+isolated PG18 server; do not copy a full output graph or start another database stack.
+
+The candidate fixture will retain Reserved, Invoking, Returned and fully Settled refresh
+states in both snapshot modes, plus two legacy reservations without journal evidence.
+The previous Application/Persistence binaries must read the actual saved runtime and
+stage receipts. Their existing producer should report Pending for the first three and
+legacy reservations, and Advanced for a completed successor, without another capture,
+settlement or row/payload change. Preserve before/after SQL and receipt fingerprints.
+This is ten planned cross-binary scenarios, not deserialization through current types.
+
+A bounded test-only probe may be compiled in each checkout; pin the older production
+sources/binaries separately and prove that the probe does not modify them. Transfer only
+typed case identity/context through an owned temporary input and pass the private database
+connection through the child environment, never command arguments or logs. The parent
+owns and bounds the child process and retains its lease until that child exits. Confirm
+the exact owning discovery counts before execution. Remove both temporary probe sources
+after proof and rebuild their standard outputs before claiming candidate identity restored.
+
+Do not infer mixed-version writer safety, automatic retry, delivery or unknown-work
+resolution from this read/replay check. A mismatch stops activation and requires an
+explicit compatibility correction. Record exact new resources before creating them and
+archive the newly created compatibility worktree after its last required use; previously
+denied cleanup targets remain untouched.
 
 ## Explicit retry after a known abort
 

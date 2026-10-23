@@ -656,7 +656,10 @@ outcome/work evidence remains. A restarted producer can settle Returned without 
 while Invoking and legacy reservations without protocol evidence remain unknown.
 The [storage qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-refresh-capture-journal-storage.md)
 passes 124 distinct selected cases. Begin/Return avoid full-runtime history replacement, and returned payload
-reads use one SQL statement. Actual older-binary retention, added-cost measurement,
+reads use one SQL statement. The [actual older-producer check](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-refresh-journal-compatibility.md)
+passes ten retained-state cases across both snapshot modes, preserving all 36 mapped
+Process tables. This qualifies read/replay compatibility for the recorded binaries;
+mixed-version writers are not qualified. Added-cost measurement, unknown-work resolution,
 explicit retry and durable delivery remain gates before worker/public activation.
 An inherited Agent continues using its admitted material until its owner closes that work;
 there is no subscription that silently replaces input during execution.
