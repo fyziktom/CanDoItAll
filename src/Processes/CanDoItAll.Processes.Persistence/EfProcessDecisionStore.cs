@@ -70,7 +70,7 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
             ?? throw new InvalidOperationException("The decision step is not part of the original Process state.");
         var nextStep = proposed.Steps.SingleOrDefault(item => item.StepInstanceId == command.StepInstanceId)
             ?? throw new InvalidOperationException("The decision step is missing from the proposed Process state.");
-        if (command is ProcessDecisionStart or ProcessDecisionEnrollment or ProcessDecisionRefresh or
+        if (command is ProcessDecisionStart or ProcessDecisionEnrollment or ProcessDecisionRefresh or ProcessDecisionBeginRefresh or
                 ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.WaitForReview } or
                 ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Review } &&
                 (ProcessRuntimeTerminalStates.IsStepTerminal(step.Status) || ProcessRuntimeTerminalStates.IsStepTerminal(nextStep.Status) ||
@@ -97,6 +97,10 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
         }
         ProcessDecisionReceipt receipt;
         switch (command) {
+            case ProcessDecisionBeginRefresh begin when accounting is null && material is null:
+                var admission = await ReadAdmissionAsync(state, begin.StepInstanceId, cancellationToken).ConfigureAwait(false);
+                receipt = new(command, true, ProcessDecisionRefreshAdmission.Begin(state, current, begin, admission.Policy));
+                break;
             case ProcessDecisionEnrollment enrollment:
                 receipt = await StageEnrollmentAsync(current, enrollment, accounting, cancellationToken).ConfigureAwait(false);
                 break;
@@ -206,6 +210,7 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
 
     private async Task<ProcessDecisionReceipt> StageRefreshAsync(ProcessRuntimeStateSnapshot state, ProcessDecisionGeneration current,
         ProcessDecisionRefresh command, ProcessDecisionBudgetReceipt? accounting, ProcessDecisionMaterial? material, CancellationToken cancellationToken) {
+        await EfProcessDecisionRefreshGuard.RequireAdvanceAsync(dbContext, state, current, command, cancellationToken).ConfigureAwait(false);
         RequireAccounting(command.StepInstanceId, current.BudgetId, accounting);
         var admission = await ReadAdmissionAsync(state, command.StepInstanceId, cancellationToken).ConfigureAwait(false);
         var policy = admission.Policy;
@@ -336,5 +341,6 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
         entity.Phase = generation.Phase;
         entity.ChildCount = generation.ChildCount;
         entity.UnclosedChildCount = generation.UnclosedChildCount;
+        entity.RefreshCommandId = generation.RefreshCommandId?.Value;
     }
 }

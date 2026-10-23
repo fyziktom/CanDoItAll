@@ -166,6 +166,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         request.DispatchPrecondition?.Validate();
         ProcessDecisionRunScopeCompletion.Require(request);
         EfProcessRootCancellationGuard.ValidateConfirmation(request);
+        EfProcessDecisionRefreshGuard.RequireShape(request);
 
         if (request.InitialRunDecisionAdmission is not null && (request.InitialPlan is null || request.InitialAssignments is null ||
                 request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {
@@ -338,6 +339,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
                 return childLineageRejection;
             }
 
+            await EfProcessDecisionRefreshGuard.RequireFreshAsync(dbContext, runtimeDatabase, request, cancellationToken).ConfigureAwait(false);
             ReplaceState(existing, request.Mutation.State);
         }
 

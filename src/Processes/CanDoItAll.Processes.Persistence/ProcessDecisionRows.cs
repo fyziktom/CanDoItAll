@@ -14,7 +14,9 @@ internal static class ProcessDecisionRows {
 
     internal static ProcessDecisionGeneration ReadGeneration(ProcessDecisionGenerationEntity entity) {
         var generation = new ProcessDecisionGeneration(new(new(entity.DecisionId), entity.Generation), entity.Revision, entity.Phase,
-            new(entity.MaterialId), new(entity.BudgetId), entity.ChildCount, entity.UnclosedChildCount);
+            new(entity.MaterialId), new(entity.BudgetId), entity.ChildCount, entity.UnclosedChildCount) {
+            RefreshCommandId = entity.RefreshCommandId is { } command ? new(command) : null
+        };
         generation.Validate();
         return generation;
     }

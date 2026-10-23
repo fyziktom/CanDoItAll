@@ -8945,6 +8945,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("Phase")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("RefreshCommandId")
+                        .HasColumnType("uuid");
+
                     b.Property<long>("Revision")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
@@ -8962,6 +8965,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("process_decision_generations", null, t =>
                         {
                             t.HasCheckConstraint("CK_process_decision_generations_material", "\"CanonicalMaterialId\" IS NULL OR \"CanonicalMaterialId\" = \"MaterialId\"");
+
+                            t.HasCheckConstraint("CK_process_decision_generations_refresh", "\"RefreshCommandId\" IS NULL OR (\"RefreshCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Phase\" >= 2)");
 
                             t.HasCheckConstraint("CK_process_decision_generations_state", "\"Generation\" BETWEEN 1 AND 32 AND \"Revision\" >= 2 * \"Generation\" - 1\nAND \"Phase\" BETWEEN 0 AND 5 AND \"ChildCount\" BETWEEN 0 AND 64\nAND \"UnclosedChildCount\" BETWEEN 0 AND \"ChildCount\" AND \"Revision\" >= 1 + 2 * \"ChildCount\" - \"UnclosedChildCount\"\nAND (\"Phase\" < 3 OR \"UnclosedChildCount\" = 0)\nAND (\"Phase\" <> 5 OR \"Generation\" < 32)");
                         });

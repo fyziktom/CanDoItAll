@@ -1,5 +1,42 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: Process refresh admission (2026-10-23)
+
+Status: Pass with follow-up for [atomic admission](../validation/2026-10-23-process-refresh-admission.md).
+
+### Findings
+
+| Severity | Finding | Evidence | Required action |
+| --- | --- | --- | --- |
+| Info | Three explicit receipt/request records cross the member threshold | Final snapshot `snap-20261023160924-65134217` | Accepted cohesive wire contracts; no extra owner/layer |
+| Existing | Collector has 189 WS0002 errors | Both scoped snapshots; direct affected builds pass | Retain the limitation; no clean solution-wide claim |
+| Follow-up | Admission is not complete refresh | P28 owner/accounting/capture/delivery plan | Qualify each dependency before exposing manual/automatic refresh |
+
+### Dependency direction
+
+Runtime stays independent; Application owns preparation/replay, and Persistence implements
+the bounded ports and transaction checks. The three existing scoped project-reference
+edges and zero scoped cycles remain unchanged. No project-file change or service locator.
+
+### Partial-class policy
+
+No business partial was added. EF-generated migration/designer partials retain their
+normal generated role. The decision-store growth finding was removed by moving advance
+validation into the dedicated persistence refresh guard.
+
+### Testability proof
+
+All 343 selected backend cases and eight actual older/current reader checks pass. Pure
+admission uses substituted ports; SQL tests exercise registered preparation and real
+Project publication, rollback, immutable replay and cancellation. New work adds no runtime
+history scan or provider call. Final portability, source/output and new resource checks pass.
+
+### Closure decision
+
+The admitted intent may support original-child stop under the explicit P28 authority
+design. Full refresh/replan, public activation and final E2E remain open. SPA remains on
+its dedicated branch for colleague review; historical cleanup denials remain reported.
+
 ## Original requirements and execution clock (2026-10-21)
 
 The [qualified scope](../validation/2026-10-21-original-step-requirements.md) preserves

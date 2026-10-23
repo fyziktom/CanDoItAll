@@ -55,6 +55,12 @@ public abstract record ProcessDecisionCommand(ProcessStepInstanceId StepInstance
             case ProcessDecisionChangePhase phase when phase.Expectation is not null && Enum.IsDefined(phase.Change):
                 phase.Expectation.Validate();
                 return;
+            case ProcessDecisionBeginRefresh begin when begin.Intent is not null:
+                begin.Intent.Validate();
+                if (StepInstanceId != begin.Intent.Request.Child.StepInstanceId) {
+                    throw new InvalidDataException("Refresh admission must address its original step.");
+                }
+                return;
             case ProcessDecisionFinalization finalization when finalization.Expectation is not null && finalization.Budget is not null:
                 finalization.Expectation.Validate();
                 if (finalization.Budget.StepInstanceId != StepInstanceId || finalization.Budget.BudgetId.Value == Guid.Empty ||
@@ -64,6 +70,9 @@ public abstract record ProcessDecisionCommand(ProcessStepInstanceId StepInstance
                 return;
             case ProcessDecisionRefresh refresh when refresh.Expectation is not null && refresh.MaterialId.Value != Guid.Empty && Enum.IsDefined(refresh.Kind):
                 refresh.Expectation.Validate();
+                if (refresh.AdmissionCommandId is { Value: var admission } && admission == Guid.Empty) {
+                    throw new InvalidDataException("A refresh admission reference cannot be empty.");
+                }
                 return;
             default:
                 throw new InvalidDataException("The Process decision command is unsupported or incomplete.");
@@ -75,6 +84,7 @@ public abstract record ProcessDecisionCommand(ProcessStepInstanceId StepInstance
         ProcessDecisionEnrollment enrollment => enrollment.Expectation,
         ProcessDecisionClosure closure => closure.Expectation,
         ProcessDecisionChangePhase phase => phase.Expectation,
+        ProcessDecisionBeginRefresh begin => begin.Intent.Request.Decision,
         ProcessDecisionFinalization finalization => finalization.Expectation,
         ProcessDecisionRefresh refresh => refresh.Expectation,
         _ => throw new InvalidDataException("The Process decision command is unsupported.")
@@ -95,7 +105,10 @@ public sealed record ProcessDecisionChangePhase(ProcessStepInstanceId StepInstan
 public sealed record ProcessDecisionFinalization(ProcessStepInstanceId StepInstanceId, ProcessDecisionExpectation Expectation,
     ProcessDecisionBudgetExpectation Budget, ProcessRuntimeStepStatus StepStatus) : ProcessDecisionCommand(StepInstanceId);
 public sealed record ProcessDecisionRefresh(ProcessStepInstanceId StepInstanceId, ProcessDecisionExpectation Expectation,
-    ProcessDecisionMaterialId MaterialId, ProcessDecisionRefreshKind Kind) : ProcessDecisionCommand(StepInstanceId);
+    ProcessDecisionMaterialId MaterialId, ProcessDecisionRefreshKind Kind) : ProcessDecisionCommand(StepInstanceId) {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public RuntimeCommandId? AdmissionCommandId { get; init; }
+}
 
 public sealed record ProcessDecisionReceipt(ProcessDecisionCommand Command, bool Changed, ProcessDecisionGeneration Current,
     ProcessDecisionGeneration? Previous = null, ProcessDecisionChild? Child = null);

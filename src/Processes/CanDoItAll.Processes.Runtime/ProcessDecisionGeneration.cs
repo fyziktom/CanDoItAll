@@ -60,13 +60,17 @@ public sealed record ProcessDecisionGeneration(ProcessDecisionReference Referenc
 
     public ProcessDecisionExpectation Expectation => new(Reference, Revision);
 
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public RuntimeCommandId? RefreshCommandId { get; init; }
+
     public void Validate() {
         Expectation.Validate();
         if (!Enum.IsDefined(Phase) || MaterialId.Value == Guid.Empty || BudgetId.Value == Guid.Empty ||
                 ChildCount is < 0 or > MaximumChildren || UnclosedChildCount < 0 || UnclosedChildCount > ChildCount ||
                 Revision < 2 * Reference.Generation - 1 || Revision < 1 + 2 * ChildCount - UnclosedChildCount ||
                 Phase is ProcessDecisionPhase.Completed or ProcessDecisionPhase.Cancelled or ProcessDecisionPhase.Superseded && UnclosedChildCount != 0 ||
-                Phase == ProcessDecisionPhase.Superseded && Reference.Generation == MaximumGenerations) {
+                Phase == ProcessDecisionPhase.Superseded && Reference.Generation == MaximumGenerations ||
+                RefreshCommandId is { } refresh && (refresh.Value == Guid.Empty || Phase is ProcessDecisionPhase.Active or ProcessDecisionPhase.WaitingForReview)) {
             throw new InvalidDataException("The retained Process decision generation has an invalid identity, phase or child balance.");
         }
     }

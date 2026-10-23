@@ -7,8 +7,12 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessAcceptedExecutionInputReader(ProcessPersistenceDbContext context, ICanonicalRuntimeDatabase database)
     : IProcessAcceptedExecutionInputReader {
-    public async Task<ProcessAcceptedExecutionInput> ReadAsync(ProcessRunId runId, ProcessStepInstanceId stepId,
-        CancellationToken cancellationToken = default) {
+    public Task<ProcessAcceptedExecutionInput> ReadAsync(ProcessRunId runId, ProcessStepInstanceId stepId,
+        CancellationToken cancellationToken = default)
+        => ReadCoreAsync(context, database.Profile.Profile.Id, runId, stepId, cancellationToken);
+
+    internal static async Task<ProcessAcceptedExecutionInput> ReadCoreAsync(ProcessPersistenceDbContext context, Guid databaseProfileId,
+        ProcessRunId runId, ProcessStepInstanceId stepId, CancellationToken cancellationToken) {
         if (runId.Value == Guid.Empty || stepId.Value == Guid.Empty) {
             throw new ArgumentException("Original Process input requires an exact run and step.");
         }
@@ -45,7 +49,7 @@ public sealed class EfProcessAcceptedExecutionInputReader(ProcessPersistenceDbCo
         var original = ProcessAcceptedSourceCodec.Read(row.AcceptedSourceVersion, new(row.Id), stepId,
             row.PreparationFingerprint, new(headerJson, headerFingerprint), metadata);
         EfProcessAcceptedSource.RequireRuntime(original, row.Runtime);
-        if (original.Header.Authority is not { } authority || authority.DatabaseProfileId != database.Profile.Profile.Id) {
+        if (original.Header.Authority is not { } authority || authority.DatabaseProfileId != databaseProfileId) {
             throw new ProcessExecutionAuthorityMismatchException("The original execution input requires its accepted source and database profile.");
         }
         if (inputRow.InputVersion == ProcessAcceptedExecutionInputVersion.NotCaptured &&

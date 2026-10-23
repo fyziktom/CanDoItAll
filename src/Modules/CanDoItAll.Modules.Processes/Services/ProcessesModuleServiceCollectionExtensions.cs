@@ -133,6 +133,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessDecisionResultQuery, EfProcessDecisionResultQuery>();
         services.TryAddScoped<ProcessDecisionResultCoordinator>();
         services.TryAddScoped<ProcessDecisionReviewCoordinator>();
+        services.TryAddScoped<IProcessDecisionRefreshReceiptReader, EfProcessDecisionRefreshReceiptReader>();
+        services.TryAddScoped<ProcessDecisionRefreshCoordinator>();
         services.TryAddScoped<ProcessDecisionTerminalAccountingCoordinator>();
         services.TryAddScoped<ProcessDecisionFinalizationCoordinator>();
         services.TryAddScoped<IProcessDecisionRootQuery, EfProcessDecisionRootQuery>();

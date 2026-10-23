@@ -1,5 +1,6 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -78,7 +79,8 @@ public sealed class EfProcessDecisionRunScopeStore(ProcessPersistenceDbContext c
             ?? throw new InvalidOperationException("The original shared run scope was not found.");
         var current = loaded.State;
         if (request.OriginalState.RunId != current.Admission.Funding.RootRunId || request.OriginalState.RootRunId != request.OriginalState.RunId ||
-                request.Decision is not null) {
+                request.Decision is not null && !(request.Decision is ProcessDecisionBeginRefresh begin &&
+                    command == ProcessDecisionRefreshReceipt.ScopeCommand(begin.Intent.Request))) {
             throw new InvalidOperationException("Only the original root runtime may transition its shared material scope.");
         }
         if (command.Kind is ProcessDecisionRunScopeCommandKind.BeginCapture or ProcessDecisionRunScopeCommandKind.CompleteCapture &&
@@ -90,6 +92,15 @@ public sealed class EfProcessDecisionRunScopeStore(ProcessPersistenceDbContext c
         if (captureCommand ? accounting is null || accounting.Command.Expectation.StepInstanceId is not null || accounting.Funding is not null ||
                 accounting.Change.Balance.BudgetId != current.Admission.Funding.BudgetId : accounting is not null) {
             throw new InvalidOperationException("The shared scope command has incompatible original root accounting.");
+        }
+        if (request.Decision is ProcessDecisionBeginRefresh refresh) {
+            var members = await ReadMembersAsync(current, cancellationToken).ConfigureAwait(false);
+            var original = refresh.Intent.Request;
+            if (current.CurrentMemberships != 1 || members.Length != 1 || members[0].HasActiveClaim ||
+                    members[0].Membership.RunId != original.Child.RunId || members[0].Membership.StepInstanceId != original.Child.StepInstanceId ||
+                    members[0].Decision.Expectation != original.Decision || members[0].Decision.MaterialId != refresh.Intent.OriginalMaterialId) {
+                throw new InvalidOperationException("Shared refresh admission requires its complete original single-activity membership without live claims.");
+            }
         }
         ProcessDecisionRunScopeState next;
         switch (command.Kind) {

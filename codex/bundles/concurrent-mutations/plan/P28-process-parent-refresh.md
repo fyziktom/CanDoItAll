@@ -1,7 +1,8 @@
 # P28: parent-owned Process refresh and replan
 
-Status: architecture entry qualified for the atomic-admission checkpoint, before production
-edits; full refresh activation remains gated by the owner/delivery checkpoints below.
+Status: atomic admission passes its [343-case qualification](../validation/2026-10-23-process-refresh-admission.md),
+including migration, historical readers and portability. Original-child stop is next;
+full refresh activation remains gated by the owner/delivery checkpoints below.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.
 Behavioral proof tier. The current public contract still supports Fail/Pause only.
@@ -151,9 +152,8 @@ the snapshot is not a clean solution-wide claim. Existing complexity findings re
 P27's unchanged Core/Workbench snapshot remains supporting evidence until those owners
 change. Compact evidence is under `.artifacts/concurrent-mutations/validation/c4-process-refresh-admission`.
 
-The following source-backed refinement resolves the admission mapping and identifies
-the exact downstream completion/delivery changes. No C# implementation, migration, test
-execution or public refresh capability is claimed yet.
+The following source-backed refinement resolved the admission mapping before implementation
+and identifies the downstream completion/delivery changes. Public refresh remains disabled.
 
 ## Admission design refinement from current source
 
@@ -239,3 +239,47 @@ execution. The new unit and integration classes must enumerate their expected ca
 proof manifest. Migration/rollback tests use the existing isolated PostgreSQL server.
 Full portability is mandatory after the actual final source edits. Architecture and
 dependent publication checks gate the next child-stop checkpoint.
+
+Implementation refinement: the first admission command accepts only explicit manager
+refresh. It rejects AutomaticReplan and ParentRefresh, including a caller claiming a System
+actor. A saved Replan policy can permit a manual refresh, but cannot supply the missing
+verified changed-basis evidence or durable automatic delivery. Automatic admission remains
+gated until its original owner evidence and delivery checkpoint are implemented; it must
+not be inferred from a request enum. Shared-scope admission is limited to its original
+root run, consistent with the current single-activity public producer.
+
+## Original-child stop implementation boundary
+
+The next dependency checkpoint gives Workbench explicit refresh authority to retire the
+old Agent. Reuse `AgentInheritedPlanningStopper` and its existing lease/cancellation/journal
+protocol without changing Core or weakening the root-cancellation entry point. The
+Workbench adapter will expose distinct cancellation and refresh contracts, each selecting
+its own authority callback before sharing the existing original-source/profile/child checks.
+An arbitrary manager identity or a historical receipt alone cannot stop a child.
+
+A narrow Application authority port implemented in Persistence will require the durable
+admission command, its canonical original-child digest, the current Reconciling generation
+and pointer, the exact original child/allocation, no active claim, and a nonterminal root
+and step. For RunSnapshot it also requires the original Reconciling scope, material and
+membership. Reuse the existing bounded child query and exact command lookup. A small
+head/scope projection must distinguish current shared reconciliation from obsolete history;
+`IsCurrent` alone deliberately becomes false when the shared scope is frozen. Bound each
+authority observation to three indexed metadata queries, with no runtime/event-history or
+material-payload read. Recheck before cancellation signalling, inside the dispatch lease
+and immediately before the journal write. Hold no SQL transaction while calling Core.
+
+The stop contract returns the existing explicit pending dispositions for open work, busy
+lease, missing journal, unresolved effects or accepted effect awaiting completion. Closed
+work retains its actual measured cost and receipt, and replay does not mutate it. This
+checkpoint cannot settle/refund work, advance material, make a Process step Ready or
+enable automatic delivery. Root cancellation remains a separate authority; a refresh
+continuation must stop when cancellation or terminal progress has superseded it.
+
+Required proof uses the real registered Workbench/Core owners and PostgreSQL in both read
+modes: proposal-only stop and idempotent replay, no refresh/no matching action/wrong child,
+changed source/profile, root cancellation or generation change during a held lease,
+accepted effect before the fence, missing journal, open work and unresolved effects. Keep
+the existing cancellation stopper negative and accounting cases. Confirm exact class
+discovery on refreshed Release outputs, rerun full portability, and compare the changed
+Workbench and Process dependency scopes. No public capability changes before reconciliation
+accounting, capture, successor dispatch and restart delivery are qualified together.

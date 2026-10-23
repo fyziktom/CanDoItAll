@@ -10,7 +10,7 @@ internal readonly record struct ProcessRuntimeWorkAdmission(bool Claims, bool Ne
         var admitsClaims = proposed.Claims.Any(claim => IsActive(claim.Status) &&
             (!claims.TryGetValue(claim.ClaimToken.Value, out var previous) || !SameClaim(previous, claim)));
         var newWork = request.DecisionBudget is ProcessDecisionBudgetReservation ||
-            request.Decision is ProcessDecisionStart or ProcessDecisionEnrollment or ProcessDecisionRefresh or
+            request.Decision is ProcessDecisionStart or ProcessDecisionEnrollment or ProcessDecisionRefresh or ProcessDecisionBeginRefresh or
                 ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.WaitForReview } or
                 ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Review } ||
             request.DecisionRunScope is { Kind: ProcessDecisionRunScopeCommandKind.BeginCapture } ||

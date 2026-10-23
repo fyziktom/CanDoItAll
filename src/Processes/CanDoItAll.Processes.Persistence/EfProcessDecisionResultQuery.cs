@@ -10,6 +10,11 @@ public sealed class EfProcessDecisionResultQuery(IDbContextFactory<ProcessPersis
     public async Task<ProcessDecisionResultSelection?> ReadAsync(ProcessRunId runId, ProcessStepInstanceId stepId,
         ProcessExecutionRunId? executionRunId, CancellationToken cancellationToken = default) {
         await using var context = await factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await ReadCoreAsync(context, runId, stepId, executionRunId, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<ProcessDecisionResultSelection?> ReadCoreAsync(ProcessPersistenceDbContext context,
+        ProcessRunId runId, ProcessStepInstanceId stepId, ProcessExecutionRunId? executionRunId, CancellationToken cancellationToken) {
         var saved = await ReadStateAsync(context, runId, stepId, executionRunId, cancellationToken).ConfigureAwait(false);
         if (saved is null) {
             return null;

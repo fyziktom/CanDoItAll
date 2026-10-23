@@ -26,6 +26,7 @@ public sealed class ProcessDecisionGenerationEntity {
     public Guid CaptureAllocationId { get; set; }
     public int ChildCount { get; set; }
     public int UnclosedChildCount { get; set; }
+    public Guid? RefreshCommandId { get; set; }
 }
 
 public sealed class ProcessDecisionChildEntity {
@@ -68,6 +69,8 @@ internal sealed class ProcessDecisionGenerationConfiguration : IEntityTypeConfig
         builder.HasKey(item => new { item.DecisionId, item.Generation });
         builder.ToTable(table => table.HasCheckConstraint("CK_process_decision_generations_material",
             "\"CanonicalMaterialId\" IS NULL OR \"CanonicalMaterialId\" = \"MaterialId\""));
+        builder.ToTable(table => table.HasCheckConstraint("CK_process_decision_generations_refresh",
+            "\"RefreshCommandId\" IS NULL OR (\"RefreshCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Phase\" >= 2)"));
         builder.HasOne<ProcessDecisionMaterialEntity>().WithMany().HasForeignKey(item => item.CanonicalMaterialId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(item => item.Revision).IsConcurrencyToken();
         builder.HasIndex(item => new { item.BudgetId, item.CaptureAllocationId }).IsUnique();

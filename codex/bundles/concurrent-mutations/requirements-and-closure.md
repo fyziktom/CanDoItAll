@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current work: [Process basis-change failure](validation/2026-10-23-process-basis-change-failure.md)
+Current work: [atomic Process refresh admission](validation/2026-10-23-process-refresh-admission.md)
+passes all 343 selected backend cases, eight actual older/current reader checks and final
+portability. It freezes one original local/shared generation and preserves
+exact action replay without stopping the child, spending its grant or exposing a public
+refresh switch. Source/output identity and new resource reconciliation pass; prior cleanup
+denials remain. Real child stop/accounting/capture is next. Full P28 refresh/replan and engine E2E
+remain open. SPA stays clean on **codex/concurrent-mutations** for colleague review.
+
+Preceding work: [Process basis-change failure](validation/2026-10-23-process-basis-change-failure.md)
 qualifies Fail and PauseForReview for both snapshot modes, immutable child response grants,
 and SPA selection/recovery. All 247 distinct backend cases, eight historical-reader checks,
 152 SPA tests and sixteen rendered states pass. Final portability and new resource
