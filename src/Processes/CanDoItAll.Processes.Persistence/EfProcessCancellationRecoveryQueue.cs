@@ -31,6 +31,15 @@ public sealed class EfProcessCancellationRecoveryQueue(IDbContextFactory<Process
         ProcessCancellationRecoveryClaim claim;
         try {
             claim = ProcessCancellationRecoveryCodec.ReadClaim(changed.Single());
+            if (claim.Position.CoverageVersion < ProcessCancellationRecoveryPosition.CurrentCoverageVersion && claim.Intent is null) {
+                var initial = ProcessCancellationRecoveryCodec.WritePosition(ProcessCancellationRecoveryPosition.Initial);
+                var upgraded = await context.CancellationRecoveries.FromSqlInterpolated($"""
+                    UPDATE process_cancellation_recovery SET "PositionJson" = {initial}, "Pending" = 0,
+                        "ProgressRevision" = "ProgressRevision" + 1, "Cycle" = "Cycle" + 1
+                    WHERE "RootRunId" = {root} AND "LeaseToken" = {token} RETURNING *
+                    """).AsNoTracking().ToArrayAsync(cancellationToken).ConfigureAwait(false);
+                claim = ProcessCancellationRecoveryCodec.ReadClaim(upgraded.Single());
+            }
         } catch (InvalidDataException error) {
             await context.Database.ExecuteSqlInterpolatedAsync($"""
                 WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS now)
@@ -63,12 +72,17 @@ public sealed class EfProcessCancellationRecoveryQueue(IDbContextFactory<Process
         }
         var saved = ProcessCancellationRecoveryCodec.ReadClaim(row);
         checkpoint.Validate(saved);
+        var upgrade = saved.Position.CoverageVersion < ProcessCancellationRecoveryPosition.CurrentCoverageVersion &&
+            saved.Intent is not null && checkpoint.Intent is null;
+        if (upgrade) {
+            checkpoint = new(ProcessCancellationRecoveryPosition.Initial, RetryAfter: TimeSpan.Zero);
+        }
         var position = ProcessCancellationRecoveryCodec.WritePosition(checkpoint.Position);
         var intent = ProcessCancellationRecoveryCodec.WriteIntent(saved.RootRunId, checkpoint.Intent);
         var completed = checkpoint.Position.Stage == ProcessCancellationRecoveryStage.Completed;
         var release = completed || checkpoint.RetryAfter is not null;
         var delay = checkpoint.RetryAfter ?? TimeSpan.Zero;
-        var cycle = checked(saved.Cycle + (saved.Position.Stage == ProcessCancellationRecoveryStage.Quiescence &&
+        var cycle = checked(saved.Cycle + (upgrade || saved.Position.Stage == ProcessCancellationRecoveryStage.Quiescence &&
             checkpoint.Position.Stage == ProcessCancellationRecoveryStage.Runtime ? 1 : 0));
         var changed = await context.CancellationRecoveries.FromSqlInterpolated($"""
             WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS now)
@@ -119,6 +133,7 @@ public sealed class EfProcessCancellationRecoveryQueue(IDbContextFactory<Process
             """;
         var roots = await context.Database.SqlQuery<Guid>(selection).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var inserted = 0;
+        var reopened = 0;
         if (roots.Length > 0) {
             var position = ProcessCancellationRecoveryCodec.WritePosition(ProcessCancellationRecoveryPosition.Initial);
             inserted = await context.Database.ExecuteSqlInterpolatedAsync($"""
@@ -127,6 +142,31 @@ public sealed class EfProcessCancellationRecoveryQueue(IDbContextFactory<Process
                 SELECT root, {(int)ProcessCancellationRecoveryOrigin.LegacySeed}, 0, 0, 0, {position}, {(int)ProcessCancellationRecoveryPending.None}, FALSE
                 FROM unnest({roots}) AS root ON CONFLICT ("RootRunId") DO NOTHING
                 """, cancellationToken).ConfigureAwait(false);
+            var historical = await context.CancellationRecoveries.FromSqlInterpolated($"""
+                SELECT * FROM process_cancellation_recovery WHERE "RootRunId" = ANY({roots}) AND "Completed"
+                ORDER BY "RootRunId" LIMIT {take} FOR UPDATE
+                """).AsNoTracking().ToArrayAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var candidate in historical) {
+                ProcessCancellationRecoveryPosition previousPosition;
+                try {
+                    previousPosition = ProcessCancellationRecoveryCodec.ReadPosition(candidate.PositionJson);
+                    if (candidate.IntentJson is not null || candidate.LeaseToken is not null || candidate.LeaseExpiresAtUtc is not null ||
+                            candidate.Pending != ProcessCancellationRecoveryPending.None || previousPosition.Stage != ProcessCancellationRecoveryStage.Completed) {
+                        throw new InvalidDataException("Historical completed recovery has inconsistent retained evidence.");
+                    }
+                } catch (InvalidDataException failure) {
+                    throw new ProcessCancellationRecoveryCorruptRecordException(new(candidate.RootRunId), failure);
+                }
+                if (previousPosition.CoverageVersion == ProcessCancellationRecoveryPosition.CurrentCoverageVersion) {
+                    continue;
+                }
+                reopened += await context.Database.ExecuteSqlInterpolatedAsync($"""
+                    UPDATE process_cancellation_recovery SET "Completed" = FALSE, "PositionJson" = {position},
+                        "ProgressRevision" = "ProgressRevision" + 1, "Cycle" = "Cycle" + 1,
+                        "UpdatedAtUtc" = clock_timestamp(), "DueAtUtc" = clock_timestamp()
+                    WHERE "RootRunId" = {candidate.RootRunId} AND "PositionJson" = {candidate.PositionJson} AND "Completed"
+                    """, cancellationToken).ConfigureAwait(false);
+            }
         }
         var last = roots.Length == 0 ? saved.LastRootRunId : roots[^1];
         var completed = roots.Length == 0;
@@ -135,7 +175,7 @@ public sealed class EfProcessCancellationRecoveryQueue(IDbContextFactory<Process
             WHERE "Id" = {ProcessCancellationRecoverySeedEntity.SingletonId}
             """, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return new(completed ? ProcessCancellationSeedStatus.Completed : ProcessCancellationSeedStatus.Advanced, roots.Length, inserted);
+        return new(completed ? ProcessCancellationSeedStatus.Completed : ProcessCancellationSeedStatus.Advanced, roots.Length, inserted, reopened);
     }
 
     private async Task<ProcessPersistenceDbContext> OpenAsync(CancellationToken cancellationToken) {

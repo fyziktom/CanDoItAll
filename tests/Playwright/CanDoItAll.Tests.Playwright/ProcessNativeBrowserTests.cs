@@ -32,7 +32,7 @@ public sealed class ProcessNativeBrowserTests {
             attachmentContext = input.GetRawText();
             return new([], attachmentReply);
         }];
-        await using var host = await ProcessNativeBrowserHost.StartAsync(wire.BaseUrl, failFirstRunRead: true);
+        await using var host = await ProcessNativeBrowserHost.StartAsync(wire.BaseUrl, failFirstRunRead: true, cancellationRecovery: true);
         using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
         await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
@@ -205,10 +205,33 @@ public sealed class ProcessNativeBrowserTests {
             var beforeCancellation = await host.ReadAsync(services => services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(waitingRunId));
             Assert.NotEqual(ProcessRuntimeStatus.Cancelled, beforeCancellation!.Status);
             await page.GetByTestId("live-processes-run-open-details").First.ClickAsync();
-            await runDialog.GetByTestId("process-run-cancel").ClickAsync();
-            await Assertions.Expect(runDialog.GetByTestId("process-run-cancellation-result")).ToContainTextAsync("cancel", new() { IgnoreCase = true, Timeout = 60_000 });
+            var waitingChild = Assert.Single(await host.ReadAsync(services => services.GetRequiredService<IWorkflowRuntimeManager>().ListRunsAsync(waitingWorkflow.Id)));
+            await using (var held = await host.ReadAsync(services => ProcessWorkflowCancellationBoundaryLock.AcquireAsync(services, waitingChild.RunId))) {
+                await runDialog.GetByTestId("process-run-cancel").ClickAsync();
+                await Assertions.Expect(runDialog.GetByTestId("process-run-cancellation-result")).ToContainTextAsync("Cleanup is still pending", new() { Timeout = 30_000 });
+                await held.WaitForCancellationAsync();
+                await runDialog.GetByRole(AriaRole.Button, new() { Name = "Refresh status", Exact = true }).ClickAsync();
+                await Assertions.Expect(runDialog.GetByTestId("process-run-cancellation-result")).ToContainTextAsync("Cleanup is still pending");
+                Assert.Equal(WorkflowRunState.WaitingForInput, Assert.Single(await host.ReadAsync(services =>
+                    services.GetRequiredService<IWorkflowRuntimeManager>().ListRunsAsync(waitingWorkflow.Id))).State);
+                Assert.Equal(ProcessCancellationTracking.Pending, (await host.ReadAsync(services =>
+                    services.GetRequiredService<IProcessCancellationProgressReader>().ReadAsync(waitingRunId)))!.Tracking);
+                await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "native-cancellation-pending.png") });
+            }
+            using (var cleanupDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(60))) {
+                while ((await host.ReadAsync(services => services.GetRequiredService<IProcessCancellationProgressReader>()
+                        .ReadAsync(waitingRunId, cleanupDeadline.Token)))!.Tracking != ProcessCancellationTracking.Completed) {
+                    await Task.Delay(100, cleanupDeadline.Token);
+                }
+            }
+            await runDialog.GetByRole(AriaRole.Button, new() { Name = "Refresh status", Exact = true }).ClickAsync();
+            await Assertions.Expect(runDialog.GetByTestId("process-run-cancellation-result")).ToContainTextAsync("Cleanup is complete");
+            await Assertions.Expect(runDialog.GetByTestId("live-processes-run-detail-dialog-content").GetByText("Cancelled", new() { Exact = true }).First).ToBeVisibleAsync();
+            await Assertions.Expect(runDialog.GetByTestId("live-processes-run-detail-dialog-content").GetByText("Active", new() { Exact = true })).ToHaveCountAsync(0);
             var cancelled = await host.ReadAsync(services => services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(waitingRunId));
             Assert.Equal(ProcessRuntimeStatus.Cancelled, cancelled!.Status);
+            Assert.Equal(WorkflowRunState.Cancelled, Assert.Single(await host.ReadAsync(services =>
+                services.GetRequiredService<IWorkflowRuntimeManager>().ListRunsAsync(waitingWorkflow.Id))).State);
             Assert.Equal(ProcessRuntimeStatus.Completed, (await ReadState()).Status);
             await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "native-cancelled-run.png") });
             await File.WriteAllTextAsync(Path.Combine(host.Evidence, "native-oracle.json"), JsonSerializer.Serialize(new {

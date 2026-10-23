@@ -11203,7 +11203,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
-      "sha256_lf": "6a2c6e97581665cf8cd358d600020a59f7c4e83ab1e53fea661da119efccaa1c",
+      "sha256_lf": "c6e777658e8c278e4b87d01eb360b9f3008ed4405d29c1e6c5e780c0566ea763",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions, CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleAssemblyMarker",
@@ -11218,7 +11218,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. Historical receipt review resolves the canonical runtime profile on each invocation through a scoped module service; registration adds no rendering or provider dependency. Inherited planning adds one scoped execution port pointing to the existing current-profile service; no renderer, asset or UI lifetime changes. Original Process outcome accounting registers the existing canonical historical-read owner as a scoped service; no renderer, asset, workspace state or editor lifetime changes. P08 registers a scoped inherited planning detail reader over the existing store and disclosure policies; it avoids execution-runtime construction without adding rendering, assets, UI state or editor lifetime changes. P11 selected parent stopping registers a scoped Core owner over canonical execution ports, cancellation and clock; it adds no renderer or UI lifetime change. P16 registers the paged Process execution read port over the same scoped workspace store; the store owns profile selection and publication exclusion, with no renderer, asset or editor lifetime change. P16 adds the separate explicit Process index preparation port over that same scoped store; preparation is an owner operation and introduces no renderer, asset or editor lifetime change. Ordinary parent stopping adds a scoped Core journal policy over the same selected store and shared cancellation registry; no renderer, asset, editor lifetime or automatic worker activation changes."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. Historical receipt review resolves the canonical runtime profile on each invocation through a scoped module service; registration adds no rendering or provider dependency. Inherited planning adds one scoped execution port pointing to the existing current-profile service; no renderer, asset or UI lifetime changes. Original Process outcome accounting registers the existing canonical historical-read owner as a scoped service; no renderer, asset, workspace state or editor lifetime changes. P08 registers a scoped inherited planning detail reader over the existing store and disclosure policies; it avoids execution-runtime construction without adding rendering, assets, UI state or editor lifetime changes. P11 selected parent stopping registers a scoped Core owner over canonical execution ports, cancellation and clock; it adds no renderer or UI lifetime change. P16 registers the paged Process execution read port over the same scoped workspace store; the store owns profile selection and publication exclusion, with no renderer, asset or editor lifetime change. P16 adds the separate explicit Process index preparation port over that same scoped store; preparation is an owner operation and introduces no renderer, asset or editor lifetime change. Ordinary parent stopping adds a scoped Core journal policy over the same selected store and shared cancellation registry; no renderer, asset, editor lifetime or automatic worker activation changes. P18 registers the scoped native Workflow Process recovery port over existing Workflow persistence, original boundary cancellation and active-run signaling; no renderer, asset or editor lifetime changes. Validation: codex/bundles/concurrent-mutations/validation/2026-10-23-native-workflow-cancellation.md."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/PromptGalleryLlmChatComposerActionContributor.cs",
@@ -12177,7 +12177,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor",
-      "sha256_lf": "2d53804cb38f2b2a493131207276560eadd9b9aa03c14b935cc4eaf6e7db3b3c",
+      "sha256_lf": "7d58f9aef139d7baf01e6ba3fbe9ebc8d55a0b0606d68862e4c78eb2a54d8933",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.LiveProcessesDashboard",
@@ -12197,7 +12197,7 @@
       "assets": "CanDoItAll.Modules.Processes",
       "scenario": "CanDoItAll.Modules.Processes",
       "evidence": "CanDoItAll.Modules.Processes",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. P17 refreshes the existing selected run projection after accepted cancellation and after an explicit status refresh. The initial read does not trigger projection refresh. Selection remains owned by this host; no new state store or timer. Validation: codex/bundles/concurrent-mutations/validation/2026-10-23-native-workflow-cancellation.md.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "LiveProcessesDashboard",
@@ -12211,7 +12211,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessRunCancellationAction.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessRunCancellationAction.razor",
-      "sha256_lf": "201e15652c5f2c7b2d5a7f4b43bf440e89c03f3252a8e06cea60ac5bbe55adf1",
+      "sha256_lf": "de861344cd5e69c648c29495597e9b18d2e0a6bd9d73ad799155a0a770dd4a18",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.ProcessRunCancellationAction",
@@ -12220,7 +12220,7 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor"
       ],
-      "native_owner": "IProcessWorkspaceProjectionClient Client; ILogger<ProcessRunCancellationAction> Logger",
+      "native_owner": "IProcessCancellationClient Client; ILogger<ProcessRunCancellationAction> Logger",
       "visual_owner": "ProcessRunCancellationSurface",
       "descendants": [
         "ProcessRunCancellationSurface"
@@ -12228,12 +12228,12 @@
       "assets": "CanDoItAll.Modules.Processes",
       "scenario": "CanDoItAll.Modules.Processes",
       "evidence": "CanDoItAll.Modules.Processes",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. P17 uses the focused cancellation client and owns read cancellation, selected-run generation, one mutation, uncertain acknowledgement and manual observation. Retired results cannot notify a new selection. Manual status refresh has a separate parent callback; known acceptance survives projection failure. Shared Alert/Button rendering remains in the existing leaf. Validation: codex/bundles/concurrent-mutations/validation/2026-10-23-native-workflow-cancellation.md.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProcessRunCancellationAction",
           "lines": [
-            6
+            7
           ],
           "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
         }
@@ -31318,7 +31318,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessRunCancellationSurface.razor",
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessRunCancellationSurface.razor",
-      "sha256_lf": "77bd1b777cbef4939e89b755e7f98df1bb30d0376799f27019b90d3a4371c061",
+      "sha256_lf": "b95442759c613f795662b9c03f0fc307d9be202628bbfd18117015f69f20426b",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Processes.UI.ProcessRunCancellationSurface",
@@ -31334,7 +31334,7 @@
       "assets": "CanDoItAll.Processes.UI",
       "scenario": "CanDoItAll.Processes.UI",
       "evidence": "CanDoItAll.Processes.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects. P17 adds optional cancel availability and manual refresh presentation/callbacks using the existing shared Alert and Button contracts. No service access, automatic polling, assets or scroll owner is added. Native caller retains permissions, pending/completed semantics and lifetime. Validation: codex/bundles/concurrent-mutations/validation/2026-10-23-native-workflow-cancellation.md."
     },
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessRunFilesSurface.razor",

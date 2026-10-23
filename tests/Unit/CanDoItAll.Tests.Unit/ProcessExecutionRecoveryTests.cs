@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -16,7 +17,7 @@ public sealed class ProcessExecutionRecoveryTests {
         var fixture = new Fixture { Pending = pending };
         var result = await fixture.ReadAsync();
         Assert.Equal(new ProcessExecutionRunId(fixture.Run.Id), result.After);
-        Assert.True(result.Exhausted);
+        Assert.False(result.Exhausted);
         Assert.Equal(pending, result.Pending);
         Assert.Equal(1, fixture.Stops);
         Assert.Equal(new(fixture.Process.Value, null, 1), fixture.Query);
@@ -33,6 +34,7 @@ public sealed class ProcessExecutionRecoveryTests {
         Assert.False(result.Exhausted);
         Assert.NotEqual(ProcessCancellationRecoveryPending.None, result.Pending);
         Assert.Equal(0, fixture.Stops);
+        Assert.Equal(0, fixture.WorkflowReads);
     }
 
     [Fact]
@@ -115,7 +117,81 @@ public sealed class ProcessExecutionRecoveryTests {
         Assert.Equal(0, fixture.Stops);
     }
 
-    private sealed class Fixture : ISandboxWorkspaceProcessRunPageStore, IProcessExecutionStopper, IProcessDecisionChildReader {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Agent_and_Workflow_candidates_share_one_ordered_cursor_without_skipping_either_owner(bool workflowFirst) {
+        var fixture = new Fixture();
+        var low = Guid.Parse("10000000-0000-0000-0000-000000000001");
+        var high = Guid.Parse("20000000-0000-0000-0000-000000000001");
+        fixture.Workflow = new(workflowFirst ? low : high);
+        fixture.Run = fixture.Run with { Id = workflowFirst ? high : low };
+        var result = await fixture.ReadAsync();
+        Assert.Equal(low, result.After!.Value.Value);
+        Assert.False(result.Exhausted);
+        Assert.Equal(workflowFirst ? 0 : 1, fixture.Stops);
+        Assert.Equal(workflowFirst ? 1 : 0, fixture.WorkflowStops);
+        Assert.Equal(1, fixture.WorkflowReads);
+    }
+
+    [Theory]
+    [InlineData(WorkflowProcessCancellationStatus.Closed, ProcessCancellationRecoveryPending.None)]
+    [InlineData(WorkflowProcessCancellationStatus.Pending, ProcessCancellationRecoveryPending.ActiveWork)]
+    [InlineData(WorkflowProcessCancellationStatus.ReconciliationRequired, ProcessCancellationRecoveryPending.InvalidEvidence)]
+    public async Task Equal_GUIDs_visit_both_owners_before_advancing_and_keep_pending_evidence(
+        WorkflowProcessCancellationStatus outcome, ProcessCancellationRecoveryPending expected) {
+        var fixture = new Fixture { WorkflowOutcome = outcome };
+        fixture.Workflow = new(fixture.Run.Id);
+        var result = await fixture.ReadAsync();
+        Assert.Equal(fixture.Run.Id, result.After!.Value.Value);
+        Assert.Equal(expected, result.Pending);
+        Assert.Equal(1, fixture.Stops);
+        Assert.Equal(1, fixture.WorkflowStops);
+        Assert.False(result.Exhausted);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Workflow_stopping_requires_the_original_stopped_root_and_selected_membership(bool wrongRoot) {
+        var fixture = new Fixture { Workflow = new(Guid.NewGuid()), RootStopped = wrongRoot, WrongRoot = wrongRoot };
+        fixture.Page = new(ProcessExecutionRunPageStatus.Ready, [], null, true);
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.ReadAsync());
+        Assert.Equal(0, fixture.Stops);
+        Assert.Equal(0, fixture.WorkflowStops);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Workflow_empty_or_repeated_identity_is_refused_without_an_owner_effect(bool repeated) {
+        var fixture = new Fixture { After = ProcessExecutionRunId.New() };
+        fixture.Page = new(ProcessExecutionRunPageStatus.Ready, [], fixture.After.Value.Value, true);
+        fixture.Workflow = repeated ? new(fixture.After.Value.Value) : default(WorkflowRunId);
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.ReadAsync());
+        Assert.Equal(0, fixture.WorkflowStops);
+    }
+
+    [Fact]
+    public async Task A_Workflow_signal_does_not_erase_pending_Agent_effects_for_the_same_GUID() {
+        var fixture = new Fixture { Pending = ProcessCancellationRecoveryPending.UnresolvedEffects, WorkflowOutcome = WorkflowProcessCancellationStatus.Pending };
+        fixture.Workflow = new(fixture.Run.Id);
+        var result = await fixture.ReadAsync();
+        Assert.Equal(ProcessCancellationRecoveryPending.UnresolvedEffects, result.Pending);
+        Assert.Equal(1, fixture.Stops);
+        Assert.Equal(1, fixture.WorkflowStops);
+    }
+
+    [Fact]
+    public async Task Unknown_Workflow_owner_outcome_is_not_closed() {
+        var fixture = new Fixture { Workflow = new(Guid.NewGuid()), WorkflowOutcome = (WorkflowProcessCancellationStatus)99 };
+        fixture.Page = new(ProcessExecutionRunPageStatus.Ready, [], null, true);
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.ReadAsync());
+        Assert.Equal(1, fixture.WorkflowStops);
+    }
+
+    private sealed class Fixture : ISandboxWorkspaceProcessRunPageStore, IProcessExecutionStopper, IProcessDecisionChildReader,
+        IWorkflowProcessCancellationRecovery, IProcessRootCancellationBarrierReader, IProcessRuntimeStateStore {
         internal Fixture() {
             Run = new AgentInheritedParentStopFixture().Detail!.Run with {
                 ProcessRunId = Process.ToString(), SourceKind = "process-step", ToolAdmission = null
@@ -128,9 +204,37 @@ public sealed class ProcessExecutionRecoveryTests {
         internal ProcessExecutionRunPage? Page { get; set; }
         internal ProcessExecutionRunPageQuery? Query { get; private set; }
         internal int Stops { get; private set; }
+        internal int WorkflowReads { get; private set; }
+        internal int WorkflowStops { get; private set; }
+        internal WorkflowRunId? Workflow { get; set; }
+        internal WorkflowProcessCancellationStatus WorkflowOutcome { get; set; }
+        internal bool RootStopped { get; set; } = true;
+        internal bool WrongRoot { get; set; }
         internal ProcessCancellationRecoveryPending Pending { get; set; }
         internal Task<ProcessCancellationExecutionProgress> ReadAsync(CancellationToken cancellationToken = default)
-            => new AgentFrameworkProcessExecutionRecovery(this, this, this).InspectNextAsync(Root, Process, After, cancellationToken);
+            => new AgentFrameworkProcessExecutionRecovery(this, this, this, this, this, this).InspectNextAsync(Root, Process, After, cancellationToken);
+        public Task<WorkflowRunId?> FindNextAsync(WorkflowProcessRunId runId, WorkflowRunId? after, CancellationToken cancellationToken) {
+            Assert.Equal(Process.Value, runId.Value);
+            Assert.Equal(After?.Value, after?.Value);
+            WorkflowReads++;
+            return Task.FromResult(Workflow);
+        }
+        public Task<WorkflowProcessCancellationStatus> StopAsync(WorkflowProcessRunId runId, WorkflowRunId workflow, CancellationToken cancellationToken) {
+            Assert.Equal(Process.Value, runId.Value);
+            Assert.Equal(Workflow, workflow);
+            WorkflowStops++;
+            return Task.FromResult(WorkflowOutcome);
+        }
+        public Task<bool> IsStoppedAsync(ProcessRunId root, CancellationToken cancellationToken) {
+            Assert.Equal(Root, root);
+            return Task.FromResult(RootStopped);
+        }
+        public Task<ProcessRuntimeStateSnapshot?> LoadAsync(ProcessRunId runId, CancellationToken cancellationToken) {
+            Assert.Equal(Process, runId);
+            ProcessRuntimeStateSnapshot state = new(WrongRoot ? ProcessRunId.New() : Root, Process, new(Guid.NewGuid()), new string('a', 64),
+                ProcessRuntimeStatus.Cancelled, [], [], [], new HashSet<ArtifactSlotId>(), DateTimeOffset.UtcNow);
+            return Task.FromResult<ProcessRuntimeStateSnapshot?>(state);
+        }
         public Task<ProcessExecutionRunPage> ReadProcessExecutionRunPageAsync(ProcessExecutionRunPageQuery query, CancellationToken cancellationToken) {
             cancellationToken.ThrowIfCancellationRequested();
             Query = query;

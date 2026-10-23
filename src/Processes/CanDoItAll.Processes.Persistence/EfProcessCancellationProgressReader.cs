@@ -71,6 +71,9 @@ public sealed class EfProcessCancellationProgressReader(IDbContextFactory<Proces
         if (row.Completed == false) {
             return progress with { Tracking = ProcessCancellationTracking.Pending };
         }
+        if (position.CoverageVersion < ProcessCancellationRecoveryPosition.CurrentCoverageVersion) {
+            return progress;
+        }
         return progress with { Tracking = status == ProcessRuntimeStatus.Cancelled && row.ProgressRevision > 0 &&
             !row.HasIntent && !row.HasLease && recovery.Pending == ProcessCancellationRecoveryPending.None
                 ? ProcessCancellationTracking.Completed : ProcessCancellationTracking.ReconciliationRequired };

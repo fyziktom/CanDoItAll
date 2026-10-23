@@ -1,6 +1,6 @@
 # P18 Workflow coverage of root cancellation
 
-Status: design before implementation, discovered by the P17 native browser gate.
+Status: implemented and qualified in [the P17/P18 validation](../validation/2026-10-23-native-workflow-cancellation.md), following the P17 native browser failure. Default activation remains gated.
 
 ## Evidence and required correction
 
@@ -39,10 +39,14 @@ Workflow cancellation owner. A known terminal outcome differs from a signal, a b
 resume lease, missing original evidence and a refused transition.
 
 The Processes adapter validates the durable stopped root and selected run's original
-root membership before acting. Workflow-origin validation supports typed mapped Process,
-legacy Process-assignment and Process-tool origins only when their retained authorization
-scope and policy evidence bind the current canonical profile. Missing or malformed
-evidence remains pending reconciliation; never manufacture a new launch or origin.
+root membership before acting. Workflow-origin validation requires the exact saved
+Process scope and current policy fingerprint. Mapped dispatch and tool origins also
+carry their original profile binding, which must match the canonical database; a tool
+origin must retain its prepared Workflow ID. Legacy assignment history has no embedded
+profile binding: its exact Process identity and scope are interpreted only inside the
+already selected canonical database, after the Process owner checks the stopped root.
+Missing or malformed evidence remains pending reconciliation; never manufacture a new
+launch or origin.
 
 ## Bounded selection and progress
 
@@ -65,6 +69,29 @@ existing `(OriginProcessRunId, OriginProcessAssignmentId)` index does not provid
 ordering. Prove the native query plan with unrelated rows and a deep cursor, including
 equal GUIDs across owners. Index creation must use the repository migration path and a
 reviewed PostgreSQL deployment strategy; do not silently create indexes during a read.
+
+The pending-request page also needs `(RunId, Id)` filtered by `RespondedAtUtc IS NULL`;
+this is the persisted request owner's existing definition of pending. Select only IDs,
+then inspect the original boundary. The existing response-time index does not provide
+the required key order. Workflow persistence already freezes the full admitted Process
+origin and definition identity in `PersistentWorkflowRunStore.RequireFrozenAuthority`.
+
+The existing mapped admission path also enlists `EfProcessWorkflowDispatchAuthority`
+in the Workflow transaction, takes the Process root advisory lock and rechecks the exact
+active dispatch before commit. The root cancellation barrier uses that same owner lock.
+Consequently a new mapped Workflow cannot commit behind a completed recovery scan after
+the barrier. Keep that fence and the separate Process-tool admission owner intact.
+Legacy Process-assignment origins are readable history; current admission explicitly
+rejects them. Compatibility fixtures must seed historical rows instead of manufacturing
+a new legacy launch through the current admission service.
+
+The migration follows the existing guarded concurrent-index pattern: verify the exact
+owned definition, create outside a transaction, verify again, then reset only the seed
+checkpoint. A conflicting or invalid leftover index stops the upgrade for explicit repair.
+Concurrent creation avoids blocking ordinary writes, but requires extra scans and can
+leave an invalid index after failure; it is not an instantaneous metadata operation.
+See [PostgreSQL CREATE INDEX](https://www.postgresql.org/docs/18/sql-createindex.html)
+and [Npgsql index modeling](https://www.npgsql.org/efcore/modeling/indexes.html).
 
 For WaitingForInput, select at most two pending requests to distinguish exactly one
 from ambiguity. Read its original durable boundary and call the existing native resume
@@ -90,12 +117,19 @@ the queue's checkpoint transaction instead of discarding the original action. An
 outcome must keep its original intent. Preserve the root, live/legacy origin, barrier,
 lease generation and monotonic progress revision.
 
-The existing bounded legacy seeder already cycles stopped roots. Extend each page to
+The existing bounded legacy seeder performs a checkpointed scan of stopped roots. Reset
+that single seed checkpoint in the migration when an older scan has advanced or completed,
+then extend each page to
 reopen valid completed version-1 records with no lease/intent, preserving their barrier
 and resetting only recovery progress. Validate canonical evidence before updating it;
 malformed evidence is not overwritten. Report reopened rows separately from inserted
 rows. This avoids a table-wide rewrite or an unbounded startup backfill. Version-2
 completed records are never reopened by this compatibility path.
+
+A corrupt completed row rolls back its entire bounded seed page and raises the existing
+typed corruption exception with its root identity. The worker logs that root without
+the retained payload. Later legacy pages wait for explicit owner repair; other live
+queue work continues. Advancing past the corrupt row would silently lose required work.
 
 Mixed old/new recovery workers are unsupported: old binaries reject version-2 positions.
 Deployment must stop old workers before enabling the new worker. Downgrade requires

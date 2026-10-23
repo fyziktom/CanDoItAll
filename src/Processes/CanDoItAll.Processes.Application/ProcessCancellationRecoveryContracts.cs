@@ -16,12 +16,14 @@ public enum ProcessCancellationSeedStatus { Advanced, Completed, Busy }
 public sealed record ProcessCancellationRecoveryPosition(ProcessCancellationRecoveryStage Stage,
     ProcessRunId? RunAfter = null, ProcessDecisionId? DecisionAfter = null,
     ProcessDecisionReference? CurrentDecision = null, ProcessDecisionChildId? ChildAfter = null,
-    ProcessRunId? CurrentRun = null, ProcessExecutionRunId? ExecutionAfter = null, bool CycleHadPending = false) {
+    ProcessRunId? CurrentRun = null, ProcessExecutionRunId? ExecutionAfter = null, bool CycleHadPending = false,
+    int CoverageVersion = ProcessCancellationRecoveryPosition.CurrentCoverageVersion) {
+    public const int CurrentCoverageVersion = 2;
     public static ProcessCancellationRecoveryPosition Initial { get; } = new(ProcessCancellationRecoveryStage.Runtime);
 
     public void Validate() {
         CurrentDecision?.Validate();
-        if (!Enum.IsDefined(Stage) || RunAfter?.Value == Guid.Empty || DecisionAfter?.Value == Guid.Empty || ChildAfter?.Value == Guid.Empty ||
+        if (CoverageVersion is < 1 or > CurrentCoverageVersion || !Enum.IsDefined(Stage) || RunAfter?.Value == Guid.Empty || DecisionAfter?.Value == Guid.Empty || ChildAfter?.Value == Guid.Empty ||
                 CurrentRun?.Value == Guid.Empty || ExecutionAfter?.Value == Guid.Empty ||
                 Stage != ProcessCancellationRecoveryStage.Runtime && (RunAfter is not null || CurrentRun is not null || ExecutionAfter is not null) ||
                 ExecutionAfter is not null && CurrentRun is null || CurrentRun is not null && CurrentRun == RunAfter ||
@@ -93,7 +95,7 @@ public sealed record ProcessCancellationRecoveryCheckpoint(ProcessCancellationRe
 }
 
 public sealed record ProcessCancellationCheckpointResult(ProcessCancellationCheckpointStatus Status, ProcessCancellationRecoveryClaim? Claim = null);
-public sealed record ProcessCancellationSeedResult(ProcessCancellationSeedStatus Status, int Selected, int Inserted);
+public sealed record ProcessCancellationSeedResult(ProcessCancellationSeedStatus Status, int Selected, int Inserted, int Reopened = 0);
 
 public sealed class ProcessCancellationRecoveryCorruptRecordException(ProcessRunId rootRunId, Exception innerException)
     : Exception($"Cancellation recovery for root '{rootRunId.Value:D}' contains invalid retained evidence and requires owner repair.", innerException) {

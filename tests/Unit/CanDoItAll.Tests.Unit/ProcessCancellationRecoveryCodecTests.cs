@@ -36,6 +36,7 @@ public sealed class ProcessCancellationRecoveryCodecTests {
             Assert.Null(restored.CurrentRun);
             Assert.Null(restored.ExecutionAfter);
             Assert.False(restored.CycleHadPending);
+            Assert.Equal(1, restored.CoverageVersion);
             Assert.Equal(json, ProcessCancellationRecoveryCodec.WritePosition(restored));
         }
         Assert.Throws<InvalidDataException>(() => ProcessCancellationRecoveryCodec.ReadPosition("{\"version\":1,\"stage\":0,\"cycleHadPending\":false}"));
@@ -84,7 +85,7 @@ public sealed class ProcessCancellationRecoveryCodecTests {
         cancel["terminal"] = final["terminal"]!.DeepClone();
         Assert.Throws<InvalidDataException>(() => ProcessCancellationRecoveryCodec.ReadIntent(RecoveryContractFixture.Root, cancel.ToJsonString()));
         Assert.Throws<InvalidDataException>(() => ProcessCancellationRecoveryCodec.ReadPosition("{\"version\":1,\"stage\":1,\"generation\":1}"));
-        Assert.Throws<InvalidDataException>(() => ProcessCancellationRecoveryCodec.ReadPosition("{\"version\":2,\"stage\":0}"));
+        Assert.Throws<InvalidDataException>(() => ProcessCancellationRecoveryCodec.ReadPosition("{\"version\":3,\"stage\":0}"));
     }
 
     [Fact]

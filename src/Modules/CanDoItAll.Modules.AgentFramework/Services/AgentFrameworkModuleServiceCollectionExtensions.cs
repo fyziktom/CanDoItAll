@@ -463,6 +463,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IWorkflowStructureOutputStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowStructureOutputStore>());
         services.TryAddScoped<IWorkflowProcessAssignmentRunQuery, PersistentWorkflowProcessAssignmentRunQuery>();
+        services.TryAddScoped<IWorkflowProcessCancellationRecovery, PersistentWorkflowProcessCancellationRecovery>();
         services.TryAddScoped<PersistentWorkflowRunStore>();
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());

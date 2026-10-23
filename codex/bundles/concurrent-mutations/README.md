@@ -1,6 +1,16 @@
 # Concurrent mutations implementation bundle
 
-Current work: [finite root cancellation admission](validation/2026-10-22-cancellation-admission.md)
+Current work: [native cancellation and Workflow recovery](validation/2026-10-23-native-workflow-cancellation.md)
+qualifies the native action, exact Workflow boundary cancellation, coverage-version upgrade
+and both held-boundary browser scenarios. The latest passing topic selection contains
+244 cases across explicit repair boundaries, not one clean aggregate run. The final
+494 source pins and 100 outputs remain unchanged. A separate manager-chat workspace
+revision conflict is retained as open; its unchanged rerun is not a repair. Full
+portability and rendering review pass. Legacy API cutover, capacity/activation, remaining
+owners/policies and final E2E stay open. SPA stays on its dedicated branch for colleague
+review. Historical denied cleanup remains recorded.
+
+Preceding [finite root cancellation admission](validation/2026-10-22-cancellation-admission.md)
 passes all 61 selected cases, eight Release builds, architecture and full portability.
 The 464 source pins and 54 outputs remain unchanged through nine observed test commands;
 resource reconciliation finds zero new runtime residue. Concurrent SQL requests preserve

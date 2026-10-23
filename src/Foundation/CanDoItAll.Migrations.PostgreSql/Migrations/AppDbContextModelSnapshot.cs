@@ -3123,6 +3123,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RunId", "Id")
+                        .HasDatabaseName("IX_WorkflowRequests_ProcessRecovery")
+                        .HasFilter("\"RespondedAtUtc\" IS NULL");
+
                     b.HasIndex("RunId", "RespondedAtUtc");
 
                     b.ToTable("AgentFramework_WorkflowExternalRequests", (string)null);
@@ -3398,6 +3402,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("OriginProcessRunId", "OriginProcessAssignmentId")
                         .HasDatabaseName("IX_WorkflowRuns_ProcessAssignment");
+
+                    b.HasIndex("OriginProcessRunId", "RunId")
+                        .HasDatabaseName("IX_WorkflowRuns_ProcessRecovery");
 
                     b.HasIndex("State", "UpdatedAtUtc", "RunId")
                         .IsDescending(false, true, true);

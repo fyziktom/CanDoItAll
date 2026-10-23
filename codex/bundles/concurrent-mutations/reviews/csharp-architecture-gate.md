@@ -220,3 +220,9 @@ accounting without a Core dependency on Processes. Current permission still gate
 final disclosure. Existing interactive behavior, real SQL rollback, exact replay,
 open-work recovery and cancellation are covered. Workspace/Process/API integration,
 parent reconciliation and executor activation remain required.
+
+## Native cancellation and Workflow coverage
+
+Status: Pass with follow-up. [P17/P18 validation](../validation/2026-10-23-native-workflow-cancellation.md) separates Web identity, native host lifetime, Process recovery coordination and native Workflow persistence. No project-reference change, new business partial or dependency cycle is introduced. The two pre-existing AgentFramework module scoped cycles are unchanged; generated EF migration partials retain the existing convention. No added CodeAnalytics findings are present. Pure adapter/component cases and real SQL/HTTP/browser cases prove the owner boundaries, negative authority/metadata paths, original-request recovery and bounded queries.
+
+The final snapshots include `snap-20261023030956-f3b31dd5` (AgentFramework), `snap-20261023032730-6a886db9` (Process persistence), and `snap-20261023032812-721f5c0b` (Processes module); the compact proof includes the earlier UI/Web/Application/Workflow snapshots and diagnostics. Browser evidence corrected a stale parent projection. Legacy root transport, manager-chat session concurrency and sustained/separate-process capacity remain follow-ups before activation and full closure.

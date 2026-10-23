@@ -57,12 +57,14 @@ internal sealed class ProcessCancellationRecoveryWorker(IServiceScopeFactory sco
             await using var scope = scopeFactory.CreateAsyncScope();
             var queue = scope.ServiceProvider.GetRequiredService<IProcessCancellationRecoveryQueue>();
             var result = await queue.SeedLegacyAsync(settings.LegacySeedPageSize, bounded.Token).ConfigureAwait(false);
-            logger.LogDebug("Cancellation recovery legacy seed {Status}: selected {Selected}, inserted {Inserted}.",
-                result.Status, result.Selected, result.Inserted);
+            logger.LogDebug("Cancellation recovery legacy seed {Status}: selected {Selected}, inserted {Inserted}, reopened {Reopened}.",
+                result.Status, result.Selected, result.Inserted, result.Reopened);
         } catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
             throw;
         } catch (OperationCanceledException) when (deadline.IsCancellationRequested) {
             logger.LogWarning("Cancellation recovery legacy seeding exceeded its cooperative deadline; the next scope must read durable progress.");
+        } catch (ProcessCancellationRecoveryCorruptRecordException failure) {
+            logger.LogError("Historical cancellation recovery for root {RootRunId} requires owner repair; the seed page was not advanced.", failure.RootRunId);
         } catch (Exception failure) {
             logger.LogError("Cancellation recovery legacy seeding failed with {FailureType}; durable progress remains with the queue.",
                 failure.GetType().FullName);

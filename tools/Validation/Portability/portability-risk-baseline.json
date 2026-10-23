@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-23T01:17:00.266545+00:00",
+  "generated_utc": "2026-10-23T03:12:18.997719+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15679,
+  "allowance_count": 15691,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13952,6 +13952,54 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023024006_IndexWorkflowProcessCancellation.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "2fded717c0915c3f5151706ee80dc7da69be5af46e07a49977f55201eeb4b330",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023024006_IndexWorkflowProcessCancellation.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "ed292392d6bf268332490e4172c3ff42bbc2bfb3379a30c63832df5f6b1a120c",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023024006_IndexWorkflowProcessCancellation.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "9a1e703540789c2c14ab3222c59508d7bb7bb295e2185bc15d7b71640f7390fa",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023024006_IndexWorkflowProcessCancellation.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "bd7bb163e2a8a3cb27c79cdb49ced4d82c231e52f3b31efd1453f24ee342c4bb",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023024006_IndexWorkflowProcessCancellation.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "c271c3ed4d2b1f311e863627af48eda191c28cd371b9eff73b1f751249ec7128",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023024006_IndexWorkflowProcessCancellation.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "de2866c1c9ff1cc0327fc405befbe752de400da3a3ad1febfaf337904f594d02",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023024006_IndexWorkflowProcessCancellation.cs",
+      "category": "process-domain",
+      "source_fingerprint": "2f9aab78c9acf8b1c77df1b2309958106309818155ea4abe2f03e98de5bd3075",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023024006_IndexWorkflowProcessCancellation.cs",
+      "category": "process-domain",
+      "source_fingerprint": "f9d9cc42596963f6a5559170c02a0f6d7050d0ac8525bde34b000702994eb12d",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "a33075cb8612f67d57d247ef09617e46910b005bc5020353f51528c26c3aca30",
@@ -13966,6 +14014,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
       "category": "process-domain",
+      "source_fingerprint": "057e91941eb83d33c9f965f9c1f7217aa2a6503018422b023484273740c62e12",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
+      "category": "process-domain",
       "source_fingerprint": "18a86b5c1f1c641b447874b56f53e38d1564b3fae2ecc21dd2d31221c5190a0d",
       "count": 1
     },
@@ -13973,6 +14027,12 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
       "category": "process-domain",
       "source_fingerprint": "a05071604fc6dcae3e271ada9b176db2df0473c81d26f9cf73c1a319d13a9fed",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
+      "category": "process-domain",
+      "source_fingerprint": "f35e187a71731b35b3e623ff9b0c0fa868ce342c385721ddd4bf59f069d5f4bc",
       "count": 1
     },
     {
@@ -45779,6 +45839,18 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
       "category": "case-policy",
       "source_fingerprint": "f2f4d56c81b92c514d5295411601d7d5193004e17716a862c1aac4ebedc12a04",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+      "category": "process-domain",
+      "source_fingerprint": "6ec8e1637423ee1f8ed5e5da9a7b388bafe41f31207194add1f83fc37d6a62c3",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+      "category": "process-domain",
+      "source_fingerprint": "c7a8196a71d0006b6c2598ae7160457d8a5550404d4979b997f95bb71dd5c0b6",
       "count": 1
     },
     {

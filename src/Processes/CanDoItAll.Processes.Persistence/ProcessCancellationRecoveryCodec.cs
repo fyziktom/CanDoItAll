@@ -18,14 +18,14 @@ internal static class ProcessCancellationRecoveryCodec {
 
     internal static string WritePosition(ProcessCancellationRecoveryPosition position) {
         position.Validate();
-        return Encode(new PositionDocument(1, position.Stage, position.RunAfter?.Value, position.DecisionAfter?.Value,
+        return Encode(new PositionDocument(position.CoverageVersion, position.Stage, position.RunAfter?.Value, position.DecisionAfter?.Value,
             position.CurrentDecision?.DecisionId.Value, position.CurrentDecision?.Generation, position.ChildAfter?.Value,
             position.CurrentRun?.Value, position.ExecutionAfter?.Value, position.CycleHadPending), MaximumPositionBytes);
     }
 
     internal static ProcessCancellationRecoveryPosition ReadPosition(string json)
         => Decode<PositionDocument, ProcessCancellationRecoveryPosition>(json, MaximumPositionBytes, document => {
-            if (document.Version != 1) {
+            if (document.Version is < 1 or > ProcessCancellationRecoveryPosition.CurrentCoverageVersion) {
                 throw new InvalidDataException("The recovery position version is unsupported.");
             }
             return new(document.Stage, document.RunAfter is { } run ? new(run) : null,
@@ -33,7 +33,7 @@ internal static class ProcessCancellationRecoveryCodec {
                 document.DecisionId is { } decision ? new(new(decision), document.Generation ?? 0) : null,
                 document.ChildAfter is { } child ? new(child) : null,
                 document.CurrentRun is { } current ? new(current) : null,
-                document.ExecutionAfter is { } execution ? new(execution) : null, document.CycleHadPending);
+                document.ExecutionAfter is { } execution ? new(execution) : null, document.CycleHadPending, document.Version);
         }, WritePosition);
 
     internal static string? WriteIntent(ProcessRunId root, ProcessCancellationRecoveryIntent? intent) {
