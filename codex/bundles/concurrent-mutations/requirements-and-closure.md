@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current work: [legacy root cancellation cutover](validation/2026-10-23-legacy-cancellation-cutover.md)
+Current work: [chat-session publication and client integration](validation/2026-10-23-chat-session-publication.md)
+qualifies conditional title changes, selected session creation and late-run title retention.
+There are 365 distinct passing backend cases across the recorded test-only repair, full
+portability passes unchanged, and the SPA has 58 passing tests, a full typecheck/build and
+five rendered states on its own branch. New bulk-scan cleanup is explicitly blocked by
+automatic approval review. Capacity/activation, durable same-source identity, remaining
+owners/policies and final E2E remain open. SPA is not merged or pushed to main.
+
+Preceding work: [legacy root cancellation cutover](validation/2026-10-23-legacy-cancellation-cutover.md)
 qualifies the Application/HTTP cutover and the real MAF provider-wait repair with all 173
 selected cases, 11 Release builds, unchanged source/output evidence and full portability.
 Native and Workflow coverage was qualified in P17/P18. Manager-chat concurrency,
@@ -379,7 +387,7 @@ claim fencing and capacity gates are explicit; this does not close R1 or R6 engi
 
 | ID | Requirement | Owner / proof destination | Current closure |
 | --- | --- | --- | --- |
-| R1 | Prevent concurrent lost edits across human, agent and workflow writers | Owner protocol, enabled writer inventory, SQL/API/tool/browser races; P02/P05/P07 | Partially implemented: Projects original-state and durable-operation/native recovery foundation is committed through `702d0a93`, with focused proof. Workspace W1b and Resource R1 have scoped owner/native/API proof; Resource passed 346 ordinary and four later browser cases under the exact reviewed historical bridge. Complete Projects producer cutover, remaining owners and durable recovery obligations remain open. |
+| R1 | Prevent concurrent lost edits across human, agent and workflow writers | Owner protocol, enabled writer inventory, SQL/API/tool/browser races; P02/P05/P07 | Partially implemented: Projects original-state and durable-operation/native recovery foundation is committed through `702d0a93`, with focused proof. Workspace W1b and Resource R1 have scoped owner/native/API proof; Resource passed 346 ordinary and four later browser cases under the exact reviewed historical bridge. P20 additionally qualifies selected chat creation/title races and preserves current titles through late run outcomes. Complete Projects producer cutover, remaining owners and durable recovery obligations remain open. |
 | R2 | Complete architecture/risk analysis before implementation | Maintained architecture, independent reviews, P00 gates | Architecture direction and P01a passed independent review; later owner/runtime implementation gates remain explicit |
 | R3 | Preserve module ownership and dependency direction | Boundary/pattern map, compiled boundary guards, evaluated project graph | In progress: lifecycle in Infrastructure, owner receipts in Projects, Web/Workbench adapters at existing boundaries; no Infrastructure-to-Projects dependency. Final integrated guards remain open. |
 | R4 | Identify and address performance bottlenecks | Performance plan, baseline/candidate matched measurements | Projects encoding reuse reduced large-definition allocation 7.61% with mixed latency. Journal wire comparison passed 161 correctness cases but only 11/22 performance gates; whole-journal cost remains open. The later [selected publication checkpoint](validation/2026-10-19-selected-publication-cost.md) passes 72 cases, including all six unrelated writers below one second during a real SQL wait. The repaired finite Resource baseline passes 126 batches/2,178 calls and exposes same-project contention. Native planning first review takes about 6.1 seconds including admission/provider/persistence/render. Earlier failed measurements remain retained. Sustained capacity, fairness, maximum-size journal cost and receipt-cleanup qualification remain release gates. |
@@ -539,3 +547,16 @@ The [workspace and Process manager review integration](validation/2026-10-21-man
 ## Native cancellation and Workflow recovery, 2026-10-23
 
 The [P17/P18 validation](validation/2026-10-23-native-workflow-cancellation.md) qualifies the focused native client, bounded Workflow owner, coverage-version upgrade and held-boundary browser completion. The latest passing selection by topic is 244 cases across explicit repair boundaries; earlier failed runs remain retained. Final source/output identity, full portability and new runtime resource cleanup pass. R1/R5/R6 remain open: legacy root transport, current manager-chat create/rename revision conflict, capacity/default activation, remaining owners/policies and final E2E. SPA remains on codex/concurrent-mutations for colleague review.
+
+## Chat-session publication, 2026-10-23
+
+[P20 validation](validation/2026-10-23-chat-session-publication.md) closes the selected
+creation/title lost-update boundary, including the actual Process manager-chat producer
+and native browser regressions. It does not close durable same-source session identity.
+The current compiled SPA passes generated-contract, transport, app and rendered-state
+checks on its dedicated branch. Its older Project definition/lifecycle producers and
+persistent Workspace draft recovery still require their own integration. Signed backend
+checkpoints remain queued behind the existing P17/P18 Pinentry request; P19 is frozen as a
+separate patch and source snapshot. No signing requirement is bypassed and no SPA main
+integration is authorized. Both new bulk portability files are retained after separate
+cleanup denials; source/output/runtime reconciliation passes for the executed P20 lanes.

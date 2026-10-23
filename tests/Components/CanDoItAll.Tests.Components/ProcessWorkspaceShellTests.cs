@@ -2478,6 +2478,7 @@ public sealed partial class ProcessWorkspaceShellTests
         context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         context.Services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
+        context.Services.AddSingleton<IProcessCancellationClient, UnavailableCancellationClient>();
         var contextRegistry = new AgentChatContextRegistry(effectiveTimeProvider);
         context.Services.AddSingleton<IAgentChatContextRegistry>(contextRegistry);
         context.Services.AddSingleton<IAgentChatExecutionOrchestrator>(
@@ -2509,6 +2510,14 @@ public sealed partial class ProcessWorkspaceShellTests
         // The routed hosts read RendererInfo; setting it builds the renderer, so it follows every registration.
         context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
+    }
+
+    private sealed class UnavailableCancellationClient : IProcessCancellationClient {
+        public Task<ProcessCancellationClientView> ReadAsync(ProcessRunId runId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new ProcessCancellationClientView(null, false, false));
+
+        public Task<ProcessCancellationClientResult> RequestAsync(ProcessRunId runId, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("This projection fixture does not admit cancellation.");
     }
 
     private static NavigationManager NavigateTo(BunitContext context, string location)
@@ -3020,7 +3029,7 @@ public sealed partial class ProcessWorkspaceShellTests
         public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
             Guid agentId,
             Guid? chatSessionId = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, string? initialTitle = null)
         {
             if (chatSessionId is { } sessionId)
             {
@@ -3030,7 +3039,7 @@ public sealed partial class ProcessWorkspaceShellTests
             var session = new ChatSessionRecord(
                 Guid.NewGuid(),
                 agentId,
-                "New exploration thread",
+                initialTitle is null ? "New exploration thread" : ChatSessionTitleChange.Normalize(initialTitle),
                 Now,
                 Now,
                 Messages: []);
@@ -3042,6 +3051,7 @@ public sealed partial class ProcessWorkspaceShellTests
             Guid agentId,
             Guid chatSessionId,
             string title,
+            string expectedTitle,
             CancellationToken cancellationToken = default)
         {
             var sessionIndex = sessions.FindIndex(session => session.AgentId == agentId && session.Id == chatSessionId);
@@ -3050,11 +3060,8 @@ public sealed partial class ProcessWorkspaceShellTests
                 throw new InvalidOperationException($"Chat session '{chatSessionId:D}' was not created.");
             }
 
-            sessions[sessionIndex] = sessions[sessionIndex] with
-            {
-                Title = title,
-                UpdatedAtUtc = Now.AddSeconds(sessions.Count)
-            };
+            sessions[sessionIndex] = new ChatSessionTitleChange(agentId, chatSessionId, expectedTitle, title,
+                Now.AddSeconds(sessions.Count)).Apply(sessions[sessionIndex]);
             return Task.FromResult(sessions[sessionIndex]);
         }
 

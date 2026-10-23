@@ -435,6 +435,7 @@ public sealed class AgentChatSessionTests {
         public Func<Guid, CancellationToken, Task<ExecutionRunDetail>>? CancelPending { get; set; }
         public AgentExecutionOperationId? CancellationOperationId { get; private set; }
         public Func<Guid, Guid, string, Task<ChatSessionRecord>>? Rename { get; set; }
+        public string? ExpectedRenameTitle { get; private set; }
         public Func<Guid, Task<ChatSessionRecord>>? CreateThread { get; set; }
         public Func<Guid, Task<AgentEditorModel>>? Editor { get; set; }
         public Func<Guid, CancellationToken, Task<AgentEditorModel>>? EditorWithToken { get; set; }
@@ -457,6 +458,7 @@ public sealed class AgentChatSessionTests {
                     CancellationOperationId = (AgentExecutionOperationId)args![1]!;
                     return CancelPending!((Guid)args![0]!, args.OfType<CancellationToken>().Single());
                 case nameof(IAgentFrameworkWorkspaceService.RenameChatSessionAsync):
+                    ExpectedRenameTitle = (string)args![3]!;
                     return Rename!((Guid)args![0]!, (Guid)args![1]!, (string)args![2]!);
                 case nameof(IAgentFrameworkWorkspaceService.GetOrCreateChatSessionAsync):
                     return CreateThread!((Guid)args![0]!);

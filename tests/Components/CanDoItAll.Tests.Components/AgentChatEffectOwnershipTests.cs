@@ -3,6 +3,7 @@ using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -304,9 +305,35 @@ public sealed class AgentChatEffectOwnershipTests {
         pending.SetResult(first with { Title = "Captured title" });
         await rename;
         Assert.Equal((agent.Id, first.Id, "Captured title"), Assert.Single(mutations));
+        Assert.Equal(first.Title, reads.ExpectedRenameTitle);
         Assert.Equal(2, reads.WorkspaceCalls);
         Assert.Equal(second.Id, Workspace(cut).Session!.Id);
         Assert.False(Workspace(cut).IsBusy);
+    }
+
+    [Fact]
+    public async Task Conflicting_rename_keeps_displayed_session_without_refresh_or_retry() {
+        var (service, reads, agent, first, _) = Reads();
+        var calls = 0;
+        reads.Rename = (_, _, _) => {
+            calls++;
+            throw new ChatSessionTitleConflictException(first.Id);
+        };
+        using var context = Context(service, out _);
+        var cut = Render(context, agent, first);
+
+        var editor = cut.FindComponent<Editable<ChatThreadTitleDraft>>();
+        editor.Instance.Item.Title = "Proposed title";
+        await cut.InvokeAsync(() => editor.Instance.ItemChanged.InvokeAsync(editor.Instance.Item));
+
+        Assert.Equal(1, calls);
+        Assert.Equal(first.Title, reads.ExpectedRenameTitle);
+        Assert.Equal(first.Title, Workspace(cut).Session!.Title);
+        Assert.Equal("Proposed title", editor.Instance.Item.Title);
+        Assert.Equal(1, reads.WorkspaceCalls);
+        Assert.False(Workspace(cut).IsBusy);
+        Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages,
+            message => message.Detail.Contains("Reload before trying again", StringComparison.Ordinal));
     }
 
     [Fact]

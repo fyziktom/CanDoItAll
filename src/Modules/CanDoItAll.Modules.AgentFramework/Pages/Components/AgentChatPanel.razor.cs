@@ -1272,7 +1272,8 @@ public partial class AgentChatPanel : IAsyncDisposable {
     }
 
     private async Task HandleSessionTitleChangedAsync(string title) {
-        if (selectedAgentId is not { } agentId || selectedSessionId is not { } sessionId || isBusy) {
+        if (selectedAgentId is not { } agentId || selectedSessionId is not { } sessionId || isBusy ||
+                workspace?.SelectedSession is not { } originalSession || originalSession.Id != sessionId) {
             return;
         }
         var generation = chatSession.Generation;
@@ -1280,7 +1281,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         var capturedTitle = title.Trim();
         isBusy = true;
         try {
-            await WorkspaceService.RenameChatSessionAsync(agentId, sessionId, capturedTitle);
+            await WorkspaceService.RenameChatSessionAsync(agentId, sessionId, capturedTitle, originalSession.Title);
             if (!chatSession.IsCurrent(generation) || owner != effectOwner) {
                 return;
             }

@@ -7412,7 +7412,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
-      "sha256_lf": "281cf1646907742d9e135201cf4fb0fbaa354bb05af53ac734945f1204df69fa",
+      "sha256_lf": "2c8c965fdcd78d4f30ebf00fbdb204d91e43e3bdd7de57a34ca8a4d1c115e0f2",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.ContextualAgentWorkspaceWindows",
@@ -7429,7 +7429,7 @@
       "assets": "CanDoItAll.AgentFramework.Components",
       "scenario": "CanDoItAll.AgentFramework.Components",
       "evidence": "CanDoItAll.AgentFramework.Components",
-      "rationale": "No current repository product route, symbol caller, component registry or generic/dynamic dialog registration. Test-only consumers do not make it a product surface. Kept intact; no execution claimed.",
+      "rationale": "No current repository product route, symbol caller, component registry or generic/dynamic dialog registration. Test-only consumers do not make it a product surface. Kept intact; no execution claimed. The retained host captures the displayed session title as the rename condition and preserves its existing target-generation checks. No new renderer or product route is introduced.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ContextualAgentWorkspaceWindows",
@@ -9823,7 +9823,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "sha256_lf": "9798fa60ce4813d4eafa85566caa2b8951ffb71abfee10fcc4c60233514eb443",
+      "sha256_lf": "fbd48c3a370d30bee7da814ef7bf584b2454b3e32c9583a7c622bff9304b8354",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel, CanDoItAll.Modules.AgentFramework.Pages.Components.VoiceOperation",
@@ -9838,7 +9838,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. The native owner reconciles the first live run into its selected transcript and runtime detail; older execution entries cannot replace current activity. The native owner now retains bounded immutable submissions in its session service across navigation and disposal. Shared Alert, Stack, TextBlock and Button wrappers show original content and explicit restore/discard intents. Only proven prepublication refusal can restore a matching unchanged draft; uncertain outcomes block automatic resend. Provider, permission and mutation ownership remain outside the renderer."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. The native owner reconciles the first live run into its selected transcript and runtime detail; older execution entries cannot replace current activity. The native owner now retains bounded immutable submissions in its session service across navigation and disposal. Shared Alert, Stack, TextBlock and Button wrappers show original content and explicit restore/discard intents. Only proven prepublication refusal can restore a matching unchanged draft; uncertain outcomes block automatic resend. Provider, permission and mutation ownership remain outside the renderer. Rename captures the displayed session title before awaiting publication. A conflict preserves the displayed session and title draft; an explicit reload is required. The existing effect owner and session generation fence late responses."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDefaultsConfirmationDialog.razor",
@@ -12273,7 +12273,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
-      "sha256_lf": "f017adc7720c34fe42de93d6eb60c70226806ae4039041480c67c3fedc10f111",
+      "sha256_lf": "659a567c8648cca1193ea973432d4a9c4f8ad878f526730718b8e9bbc3b892e1",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.ProcessWorkspaceShell",
@@ -12293,7 +12293,7 @@
       "assets": "CanDoItAll.Modules.Processes",
       "scenario": "CanDoItAll.Modules.Processes",
       "evidence": "CanDoItAll.Modules.Processes",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. Manager-chat rename captures the displayed original title and retains scope/lifetime guards. A new manager session is created with its initial title in one publication. Rendering and styles remain with the existing components.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProcessWorkspaceShell",

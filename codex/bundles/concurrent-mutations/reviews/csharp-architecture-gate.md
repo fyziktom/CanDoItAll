@@ -244,3 +244,27 @@ type cycle remain unchanged. Application removes one large-file finding; its and
 earlier P19 comparisons remain in the proof. Independent model/stopper tests and actual
 MAF/HTTP/worker tests prove the boundary, including hosted uncertainty and historical
 refusal. Manager-chat concurrency, sustained capacity and remaining owners remain next.
+
+
+## Selected chat title and publication boundary
+
+Status: Pass with follow-up. [P20 validation](../validation/2026-10-23-chat-session-publication.md)
+places the pure title condition in Core and current selected-key publication in Persistence.
+It removes the unused whole-session save helper and keeps UI/API orchestration at existing
+boundaries. No new project, reference, interface or business partial is introduced.
+Three Core type cycles, one Persistence type cycle and the existing AgentFramework module
+namespace/nested-builder cycles remain. The only new finding in the comparable owner
+snapshots is the title-change value's informational member count; its five immutable fields
+and three cohesive operations do not justify another abstraction.
+
+Final Core/Persistence/Components snapshots are `snap-20261023051630-3274eeb3`,
+`snap-20261023051708-601c88d2` and `snap-20261023051758-c6457ab2`. Web and product modules were
+also inspected as `snap-20261023061102-3eb59b32` and `snap-20261023061307-3039be43`; their
+broader solution/generated-source scope prevents interpreting older raw totals as deltas.
+The two AgentFramework cycles involve Hosting and the existing nested image-generation
+builder, which this phase does not change. Actual project files are unchanged. Collector
+WS0002 and duplicate embedded-attribute warnings remain explicit limitations.
+Independent title tests, real selected-key races, HTTP conditions, actual Editable callbacks,
+and the native browser scenarios prove this seam. SPA generation preserves the same wire
+condition and has separate runtime serializer and bounded-transport proof. Sustained
+capacity, activation, remaining policy/owner integrations and whole-engine closure remain.

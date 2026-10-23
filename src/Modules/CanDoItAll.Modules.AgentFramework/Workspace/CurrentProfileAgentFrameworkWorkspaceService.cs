@@ -487,14 +487,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().GetChatAgentWorkspaceAsync(agentId, preferredSessionId, cancellationToken);
     }
 
-    public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default)
+    public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default, string? initialTitle = null)
     {
-        return ResolveService().GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken);
+        return ResolveService().GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken, initialTitle);
     }
 
-    public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default)
+    public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, string expectedTitle, CancellationToken cancellationToken = default)
     {
-        return ResolveService().RenameChatSessionAsync(agentId, chatSessionId, title, cancellationToken);
+        return ResolveService().RenameChatSessionAsync(agentId, chatSessionId, title, expectedTitle, cancellationToken);
     }
 
     public Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default)

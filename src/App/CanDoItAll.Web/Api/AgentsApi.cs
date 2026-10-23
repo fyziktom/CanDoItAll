@@ -243,7 +243,10 @@ internal static class AgentsApi
 
         agents.MapPost("/{agentId:guid}/chat-sessions/{chatSessionId:guid}/rename", RenameAgentChatSessionAsync)
             .WithName("RenameAgentChatSession")
-            .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK);
+            .WithSummary("Conditionally rename the selected chat session.")
+            .WithDescription("Requires expectedTitle from the displayed session. A missing expectation is refused before mutation; a changed title returns 409. Only the title changes; transcript, approval and runtime state are preserved. The requested title is normalized to at most 96 characters. Read the selected session after an unconfirmed response before another action.")
+            .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict, StatusCodes.Status428PreconditionRequired);
 
         agents.MapGet("/{agentId:guid}/chat-workspace", GetAgentChatWorkspaceAsync)
             .WithName("GetAgentChatWorkspace")
@@ -1766,36 +1769,26 @@ internal static class AgentsApi
         Results.Ok(AgentApiResponseMapper.ToChatSession(
             await workspaceService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken)));
 
-    /// <summary>
-    /// Rename an agent's chat session.
-    /// </summary>
-    /// <remarks>
-    /// Replaces the session title: runs of white space are collapsed to single spaces and titles longer than 96
-    /// characters are cut. A rename made while a run of the session is still active can be overwritten when that run
-    /// finishes; read the session afterwards to confirm the title.
-    ///
-    /// A blank or null title, an unknown session, or a session of another agent is not translated into the error
-    /// envelope: the request fails with a generic HTTP 500.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="agentId">Identifier of the agent that owns the session.</param>
-    /// <param name="chatSessionId">Identifier of the session to rename.</param>
-    /// <param name="request">The new title.</param>
-    /// <response code="200">The renamed session with its transcript.</response>
     internal static async Task<IResult> RenameAgentChatSessionAsync(
         Guid agentId,
         Guid chatSessionId,
         ChatSessionRenameApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(AgentApiResponseMapper.ToChatSession(
-            await workspaceService.RenameChatSessionAsync(
-                agentId,
-                chatSessionId,
-                request.Title,
-                cancellationToken)));
+        CancellationToken cancellationToken) {
+        if (request.ExpectedTitle is null) {
+            return Results.Json(new ApiErrorResponse([new("chat.title_precondition_required", "The original thread title is required.", CanDoItAll.SharedKernel.ErrorSeverity.Warning)]),
+                statusCode: StatusCodes.Status428PreconditionRequired);
+        }
+        if (agentId == Guid.Empty || chatSessionId == Guid.Empty || string.IsNullOrWhiteSpace(request.Title)) {
+            return ApiEndpointResults.BadRequest("A valid agent, session and title are required.", "chat.title_invalid");
+        }
+        try {
+            return Results.Ok(AgentApiResponseMapper.ToChatSession(await workspaceService.RenameChatSessionAsync(
+                agentId, chatSessionId, request.Title, request.ExpectedTitle, cancellationToken)));
+        } catch (ChatSessionTitleConflictException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, "chat.title_conflict");
+        }
+    }
 
     /// <summary>
     /// Read an agent's chat workspace: its session list, the selected session and its latest runs.
@@ -3075,7 +3068,7 @@ internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds);
 /// <param name="Title">
 /// The title. Runs of white space become single spaces and text beyond 96 characters is cut. It must not be blank.
 /// </param>
-internal sealed record ChatSessionRenameApiRequest(string Title);
+internal sealed record ChatSessionRenameApiRequest(string Title, string? ExpectedTitle = null);
 
 /// <summary>
 /// Chat message to an agent, sent to <c>POST /api/agents/{agentId}/chat</c> and to its streaming variant

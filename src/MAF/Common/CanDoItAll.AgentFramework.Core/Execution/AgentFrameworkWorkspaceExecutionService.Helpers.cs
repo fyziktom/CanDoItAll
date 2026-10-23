@@ -146,7 +146,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 currentDetail =>
                 {
                     var chatSession = mutation.Run.ChatSessionId.HasValue
-                        ? mutation.Session ?? currentDetail.ChatSession
+                        ? ChatSessionTitleChange.PreserveCurrentTitle(currentDetail.ChatSession, mutation.Session ?? currentDetail.ChatSession)
                         : null;
                     var persistedRun = MergeAdmissionSnapshot(currentDetail.Run, mutation.Run);
                     return CreateExecutionRunDetail(
@@ -181,7 +181,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var currentDetail = await executionRunStore.GetExecutionRunDetailAsync(mutation.Run.Id, cancellationToken);
             var chatSession = mutation.Run.ChatSessionId.HasValue
-                ? mutation.Session ?? currentDetail?.ChatSession
+                ? ChatSessionTitleChange.PreserveCurrentTitle(currentDetail?.ChatSession, mutation.Session ?? currentDetail?.ChatSession)
                 : null;
 
             await executionRunStore.SaveExecutionRunDetailAsync(
@@ -212,7 +212,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 : ReplaceExecutionRun(executionState.ExecutionRuns, mutation.Run),
             ChatSessions = mutation.Session is null
                 ? executionState.ChatSessions
-                : ReplaceChatSession(executionState.ChatSessions, mutation.Session),
+                : ReplaceChatSession(executionState.ChatSessions, ChatSessionTitleChange.PreserveCurrentTitle(
+                    executionState.ChatSessions.SingleOrDefault(session => session.Id == mutation.Session.Id), mutation.Session)!),
             ExecutionApprovals = mutation.RunApprovals is null
                 ? executionState.ExecutionApprovals
                 : ReplaceRunApprovals(
@@ -398,19 +399,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run)
             },
             cancellationToken);
-    }
-
-    private async Task SaveChatSessionAsync(
-        ChatSessionRecord session,
-        CancellationToken cancellationToken)
-    {
-        if (store is ISandboxWorkspaceChatSessionStore chatSessionStore)
-        {
-            await chatSessionStore.UpdateChatSessionAsync(session, cancellationToken);
-            return;
-        }
-
-        await PersistExecutionMutationAsync(new ExecutionStateMutation(Session: session), cancellationToken);
     }
 
     private async Task<ExecutionRunDetail> LoadExecutionRunDetailAsync(
@@ -752,22 +740,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return cleaned.Length <= 48
             ? cleaned
             : $"{cleaned[..45]}...";
-    }
-
-    private static string NormalizeChatSessionTitle(string title)
-    {
-        var normalized = string.Join(
-            ' ',
-            title.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-        if (string.IsNullOrWhiteSpace(normalized))
-        {
-            throw new InvalidOperationException("Thread title is required.");
-        }
-
-        const int maxLength = 96;
-        return normalized.Length <= maxLength
-            ? normalized
-            : normalized[..maxLength].TrimEnd();
     }
 
     private ExecutionRunRecord CreatePreparingRun(

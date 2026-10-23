@@ -164,7 +164,8 @@ public sealed class FileSandboxWorkspaceProcessIndexIntegrationTests {
         await fixture.Store.UpdateExecutionAsync(state => state with { ExecutionRuns = [.. state.ExecutionRuns, run] });
         Assert.Equal(run.Id, Assert.Single((await fixture.NewStore().ReadProcessExecutionRunPageAsync(query)).Candidates).Id);
 
-        await fixture.Store.UpdateChatSessionAsync(fixture.Detail.ChatSession! with { Title = "Renamed session" });
+        var session = fixture.Detail.ChatSession!;
+        await fixture.Store.RenameChatSessionAsync(new(session.AgentId, session.Id, session.Title, "Renamed session", session.UpdatedAtUtc));
 
         Assert.Equal(run.Id, Assert.Single((await fixture.NewStore().ReadProcessExecutionRunPageAsync(query)).Candidates).Id);
         await fixture.Store.UpdateExecutionAsync(state => state with { ExecutionRuns = state.ExecutionRuns.Where(item => item.Id != run.Id).ToArray() });

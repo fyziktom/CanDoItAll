@@ -153,3 +153,15 @@ provider-wait producer is now qualified: new immutable local-proposal scope allo
 cancellation while historical and hosted-tool uncertainty remains unresolved. All 173
 selected cases and full portability pass. Manager-chat concurrency, capacity/default
 activation and the other owner rows above remain open.
+
+
+## Selected chat publication checkpoint
+
+[P20 validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-chat-session-publication.md)
+qualifies session creation and conditional rename under selected agent/session keys. Core
+owns the expected-title condition, native Persistence owns current-session/index publication,
+and hosts supply the original displayed title. Late execution snapshots preserve a newer
+title. All 365 distinct selected behaviors pass across the explicit test-only repair; full
+portability is unchanged. The generated SPA client and conditional Workspace defaults page
+are qualified on its separate branch. Durable manager-chat identity across simultaneous
+openings, sustained capacity/default activation, remaining owner rows and final E2E stay open.

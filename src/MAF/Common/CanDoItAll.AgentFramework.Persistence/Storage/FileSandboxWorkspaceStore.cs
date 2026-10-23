@@ -1037,6 +1037,9 @@ public sealed partial class FileSandboxWorkspaceStore :
                 throw new InvalidOperationException($"Chat session '{session.Id:N}' already exists.");
             }
 
+            var witness = await CaptureChatSessionWitnessAsync(session.Id, observeSession: true, cancellationToken);
+            await using var publication = await operation.AcquireAsync(
+                FileSandboxWorkspaceWriteSet.Session(session.Id, session.AgentId), witness, cancellationToken);
             return await SaveChatSessionCoreAsync(operation, previousSession: null, session, cancellationToken);
         } catch (Exception failure) {
             operation.RetainFailure(failure);
@@ -1044,25 +1047,25 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
     }
 
-    public async Task<ChatSessionRecord> UpdateChatSessionAsync(
-        ChatSessionRecord session,
+    public async Task<ChatSessionRecord> RenameChatSessionAsync(
+        ChatSessionTitleChange change,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(session);
-        session = FileSandboxWorkspacePreparedValues.Freeze(session);
+        ArgumentNullException.ThrowIfNull(change);
 
         await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
         try {
             await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
-            var catalog = await LoadCatalogCoreAsync(cancellationToken);
-            ValidateChatSession(catalog, session);
-
-            var existingSession = await chatProjectionStore.GetChatSessionAsync(session.Id, cancellationToken)
-                                  ?? throw new InvalidOperationException($"Chat session '{session.Id:N}' was not found.");
-            if (existingSession.AgentId != session.AgentId)
-            {
-                throw new InvalidOperationException($"Chat session '{session.Id:N}' cannot be moved to a different agent.");
+            var witness = await CaptureChatSessionWitnessAsync(change.SessionId, observeSession: false, cancellationToken);
+            await using var publication = await operation.AcquireAsync(
+                FileSandboxWorkspaceWriteSet.Session(change.SessionId, change.AgentId), witness, cancellationToken);
+            var existingSession = await chatProjectionStore.GetChatSessionAsync(change.SessionId, cancellationToken)
+                ?? throw new InvalidOperationException($"Chat session '{change.SessionId:N}' was not found.");
+            ValidateChatSession(await LoadCatalogCoreAsync(cancellationToken), existingSession);
+            var session = change.Apply(existingSession);
+            if (ReferenceEquals(session, existingSession)) {
+                return existingSession;
             }
 
             return await SaveChatSessionCoreAsync(operation, existingSession, session, cancellationToken);
@@ -1166,6 +1169,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         SandboxWorkspaceCatalog? validatedCatalog,
         CancellationToken cancellationToken,
         FileSandboxWorkspaceRunReadSnapshot? snapshot = null, Func<CancellationToken, Task>? requireCurrentAuthority = null) {
+        detail = detail with { ChatSession = ChatSessionTitleChange.PreserveCurrentTitle(previousDetail?.ChatSession, detail.ChatSession) };
         detail = FileSandboxWorkspacePreparedValues.Freeze(detail);
         var unchanged = previousDetail is not null && executionSliceStore.HasSameRunDetailPayload(previousDetail, detail);
         if (unchanged && requireCurrentAuthority is null) {
@@ -1901,9 +1905,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         CancellationToken cancellationToken)
     {
         var normalizedSession = FileSandboxWorkspacePreparedValues.Freeze(NormalizeChatSession(session));
-        var witness = await CapturePublicationWitnessAsync(cancellationToken, [layout.SessionPath(normalizedSession.Id)]);
-        await using var publication = await operation.AcquireAsync(
-            FileSandboxWorkspaceWriteSet.Session(previousSession, normalizedSession), witness, cancellationToken);
         try {
             var sessionExistedBefore = previousSession is not null;
             var changed = await jsonStore.WriteJsonIfChangedAsync(
@@ -1972,6 +1973,14 @@ public sealed partial class FileSandboxWorkspaceStore :
         FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
             SharedPublicationPaths.Concat(paths ?? []), directories ?? [], PendingCommitJournalPaths,
             physicalPathPolicyFactory, cancellationToken);
+
+    private Task<FileSandboxWorkspaceMutationWitness> CaptureChatSessionWitnessAsync(Guid sessionId,
+        bool observeSession, CancellationToken cancellationToken) =>
+        FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
+            PendingCommitJournalPaths.Concat(new[] { layout.CatalogPath, layout.LegacyExecutionPath })
+                .Concat(observeSession ? [layout.SessionPath(sessionId)] : []),
+            [], PendingCommitJournalPaths, physicalPathPolicyFactory, cancellationToken,
+            pendingPublicationTargets: SharedPublicationPaths.Append(layout.SessionPath(sessionId)));
 
     private string[] PendingCommitJournalPaths =>
         [PendingChatBackedRunCommitJournalPath, PendingGenericNewRunCommitJournalPath,

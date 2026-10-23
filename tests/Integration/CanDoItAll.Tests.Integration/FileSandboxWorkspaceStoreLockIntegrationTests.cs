@@ -217,11 +217,8 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
         Assert.Equal(session.Id, createdSession.Id);
         Assert.Contains(createdSummaries, summary => summary.Id == session.Id && summary.Title == "Projection test");
 
-        var renamedSession = await chatSessionStore.UpdateChatSessionAsync(createdSession with
-        {
-            Title = "Projection test renamed",
-            UpdatedAtUtc = now.AddMinutes(1)
-        });
+        var renamedSession = await chatSessionStore.RenameChatSessionAsync(new(agent.Id, createdSession.Id,
+            createdSession.Title, "Projection test renamed", now.AddMinutes(1)));
         var loadedSession = await chatQueryStore.GetChatSessionAsync(session.Id);
         var renamedSummaries = await chatQueryStore.ListChatSessionSummariesAsync(agent.Id);
 
@@ -590,8 +587,8 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
         var winner = Array.FindIndex(outcomes, outcome => outcome is null);
         Assert.Single(outcomes, outcome => outcome is null);
         var loser = 1 - winner;
-        var conflict = Assert.IsType<SandboxWorkspaceConcurrencyException>(outcomes[loser]);
-        Assert.Equal(conflict.ExpectedRevision + 1, conflict.ActualRevision);
+        var conflict = Assert.IsType<SandboxWorkspacePublicationConflictException>(outcomes[loser]);
+        Assert.Equal(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged, conflict.Kind);
         Assert.Null(accepted[loser]);
         var committed = Assert.IsType<SandboxWorkspaceCatalog>(accepted[winner]);
         var observed = await new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, scope).LoadCatalogSnapshotAsync();
@@ -638,7 +635,7 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
             "Atomic chat start", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, [initialMessage]));
         var request = new ChatBackedRunStartRequest(agent.Id, agent.ProviderProfileId!.Value, catalog.Revision, session.Id);
         var layout = new FileSandboxWorkspaceStorageLayout(profile.WorkspaceRootPath, scope);
-        var key = FileSandboxWorkspaceWriteSet.Session(session, session).LockPaths(layout)[0];
+        var key = FileSandboxWorkspaceWriteSet.Session(session.Id, session.AgentId).LockPaths(layout)[0];
         var calls = new int[2];
         var prepared = new ChatBackedRunStartMutation?[2];
         var accepted = new ChatBackedRunStartResult?[2];

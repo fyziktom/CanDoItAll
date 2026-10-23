@@ -13891,12 +13891,13 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
             Guid agentId,
             Guid? chatSessionId = null,
-            CancellationToken cancellationToken = default) => throw Unused();
+            CancellationToken cancellationToken = default, string? initialTitle = null) => throw Unused();
 
         public Task<ChatSessionRecord> RenameChatSessionAsync(
             Guid agentId,
             Guid chatSessionId,
             string title,
+            string expectedTitle,
             CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<ExecutionRunResult> ContinueExecutionRunAsync(

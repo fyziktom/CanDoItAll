@@ -46,14 +46,8 @@ internal sealed class FileSandboxWorkspaceWriteSet {
         }
     }
 
-    internal static FileSandboxWorkspaceWriteSet Session(ChatSessionRecord? before, ChatSessionRecord after) {
-        var keys = new List<PublicationKey> { Chat(after.Id), Agent(after.AgentId) };
-        if (before is not null) {
-            keys.Add(Chat(before.Id));
-            keys.Add(Agent(before.AgentId));
-        }
-        return new(keys);
-    }
+    internal static FileSandboxWorkspaceWriteSet Session(Guid sessionId, Guid agentId)
+        => new([Chat(sessionId), Agent(agentId)]);
 
     internal static FileSandboxWorkspaceWriteSet Planning(ExecutionRunRecord run, Guid? additionalAgentId) {
         var selected = Run(run, run, readsAgent: true);

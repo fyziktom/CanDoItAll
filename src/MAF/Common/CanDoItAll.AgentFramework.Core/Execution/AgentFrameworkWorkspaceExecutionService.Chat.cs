@@ -37,8 +37,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     public async Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
         Guid agentId,
         Guid? chatSessionId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? initialTitle = null)
     {
+        if (chatSessionId is not null && initialTitle is not null) {
+            throw new ArgumentException("An initial title applies only to a new chat session.", nameof(initialTitle));
+        }
+        var title = initialTitle is null ? "New exploration thread" : ChatSessionTitleChange.Normalize(initialTitle);
         if (chatSessionId.HasValue)
         {
             if (store is ISandboxWorkspaceChatQueryStore chatQueryStore)
@@ -65,7 +70,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 new ChatSessionRecord(
                     Id: Guid.NewGuid(),
                     AgentId: agentId,
-                    Title: "New exploration thread",
+                    Title: title,
                     CreatedAtUtc: now,
                     UpdatedAtUtc: now,
                     RuntimeSessionKey: string.Empty,
@@ -85,7 +90,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             createdSession = new ChatSessionRecord(
                 Id: Guid.NewGuid(),
                 AgentId: agentId,
-                Title: "New exploration thread",
+                Title: title,
                 CreatedAtUtc: executionClock.GetUtcNow(),
                 UpdatedAtUtc: executionClock.GetUtcNow(),
                 RuntimeSessionKey: string.Empty,
@@ -108,26 +113,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid agentId,
         Guid chatSessionId,
         string title,
+        string expectedTitle,
         CancellationToken cancellationToken = default)
     {
-        var normalizedTitle = NormalizeChatSessionTitle(title);
-        if (store is ISandboxWorkspaceChatQueryStore chatQueryStore &&
-            store is ISandboxWorkspaceChatSessionStore chatSessionStore)
-        {
-            var catalog = await store.LoadCatalogAsync(cancellationToken);
-            EnsureAgentExists(catalog, agentId);
-            var session = EnsureAgentOwnsSession(
-                await chatQueryStore.GetChatSessionAsync(chatSessionId, cancellationToken),
-                agentId,
-                chatSessionId);
-
-            return await chatSessionStore.UpdateChatSessionAsync(
-                session with
-                {
-                    Title = normalizedTitle,
-                    UpdatedAtUtc = executionClock.GetUtcNow()
-                },
-                cancellationToken);
+        ArgumentNullException.ThrowIfNull(expectedTitle);
+        var change = new ChatSessionTitleChange(agentId, chatSessionId, expectedTitle,
+            ChatSessionTitleChange.Normalize(title), executionClock.GetUtcNow());
+        if (store is ISandboxWorkspaceChatSessionStore chatSessionStore) {
+            return await chatSessionStore.RenameChatSessionAsync(change, cancellationToken);
         }
 
         ChatSessionRecord? renamedSession = null;
@@ -138,11 +131,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             EnsureAgentExists(catalog, agentId);
 
             var session = EnsureAgentOwnsSession(executionState, agentId, chatSessionId);
-            renamedSession = session with
-            {
-                Title = normalizedTitle,
-                UpdatedAtUtc = executionClock.GetUtcNow()
-            };
+            renamedSession = change.Apply(session);
 
             return SandboxWorkspaceDocument.Combine(
                 catalog,

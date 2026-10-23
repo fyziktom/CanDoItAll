@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current work: [legacy root cancellation cutover](validation/2026-10-23-legacy-cancellation-cutover.md)
+Current work: [chat-session publication and client integration](validation/2026-10-23-chat-session-publication.md)
+qualifies conditional title changes, selected session creation and late-run title retention.
+There are 365 distinct passing backend cases across the recorded test-only repair, full
+portability passes unchanged, and the SPA has 58 passing tests, a full typecheck/build and
+five rendered states on its own branch. New bulk-scan cleanup is explicitly blocked by
+automatic approval review. Capacity/activation, durable same-source identity, remaining
+owners/policies and final E2E remain open. SPA is not merged or pushed to main.
+
+Preceding work: [legacy root cancellation cutover](validation/2026-10-23-legacy-cancellation-cutover.md)
 passes all 173 selected cases, 11 Release builds and full portability. The old synchronous
 root cascade is retired. Real MAF cancellation now distinguishes local proposals from
 hosted-tool uncertainty using immutable original checkpoint evidence. Source/output and

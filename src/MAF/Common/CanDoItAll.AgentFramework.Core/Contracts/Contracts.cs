@@ -283,8 +283,8 @@ public interface ISandboxWorkspaceChatSessionStore
         ChatSessionRecord session,
         CancellationToken cancellationToken = default);
 
-    Task<ChatSessionRecord> UpdateChatSessionAsync(
-        ChatSessionRecord session,
+    Task<ChatSessionRecord> RenameChatSessionAsync(
+        ChatSessionTitleChange change,
         CancellationToken cancellationToken = default);
 }
 
@@ -600,8 +600,8 @@ public interface IAgentFrameworkWorkspaceService :
     Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default);
     Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default);
-    Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default);
-    Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default);
+    Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default, string? initialTitle = null);
+    Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, string expectedTitle, CancellationToken cancellationToken = default);
     Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default);
     Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
         ExecutionRunSourceKey source,

@@ -46,9 +46,9 @@ internal sealed class AgentChatSubmissionBrowserHost : IAsyncDisposable {
                     Instructions = "This owned fixture never enters a model or a tool.", SelectedCapabilityIds = []
                 });
                 var original = await workspace.GetOrCreateChatSessionAsync(host.AgentId);
-                host.OriginalThread = await workspace.RenameChatSessionAsync(host.AgentId, original.Id, "Original retained thread");
+                host.OriginalThread = await workspace.RenameChatSessionAsync(host.AgentId, original.Id, "Original retained thread", original.Title);
                 var other = await workspace.GetOrCreateChatSessionAsync(host.AgentId);
-                host.OtherThread = await workspace.RenameChatSessionAsync(host.AgentId, other.Id, "Other retained thread");
+                host.OtherThread = await workspace.RenameChatSessionAsync(host.AgentId, other.Id, "Other retained thread", other.Title);
             }
             host.app = new(profile, host.Control);
             host.app.UseKestrel(0);

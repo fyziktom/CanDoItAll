@@ -34,10 +34,8 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         await using var scenario = await CreateScenarioAsync(historicalRunCount, includeExistingSession: false);
         var session = await scenario.Store.CreateChatSessionAsync(CreateEmptySession(scenario));
         if (editSession) {
-            session = await scenario.Store.UpdateChatSessionAsync(session with {
-                Title = "Renamed before sending",
-                UpdatedAtUtc = session.UpdatedAtUtc.AddSeconds(1)
-            });
+            session = await scenario.Store.RenameChatSessionAsync(new(session.AgentId, session.Id, session.Title,
+                "Renamed before sending", session.UpdatedAtUtc.AddSeconds(1)));
         }
 
         Assert.Empty(GetHistoricalRunHeaderReads(scenario));
@@ -151,7 +149,7 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         ChatBackedRunStartResult? acceptedAdmission = null;
         ChatBackedRunStartMutation? preparedAdmission = null;
         var admissionCalls = 0;
-        var key = FileSandboxWorkspaceWriteSet.Session(null, emptySession).LockPaths(scenario.Layout)[0];
+        var key = FileSandboxWorkspaceWriteSet.Session(emptySession.Id, emptySession.AgentId).LockPaths(scenario.Layout)[0];
         var outcomes = await PreparedPublicationCompetition.RunAsync(scenario.Layout, key,
             async cancellationToken => acceptedSession = await otherStore.CreateChatSessionAsync(emptySession, cancellationToken),
             async cancellationToken => acceptedAdmission = await scenario.Store.BeginChatBackedRunAsync(
@@ -161,17 +159,21 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
                 }, cancellationToken));
 
         Assert.Equal(1, admissionCalls);
-        Assert.Single(outcomes, outcome => outcome is null);
-        var conflict = Assert.IsType<SandboxWorkspaceConcurrencyException>(Assert.Single(outcomes.OfType<Exception>()));
-        Assert.Equal(conflict.ExpectedRevision + 1, conflict.ActualRevision);
+        Assert.Null(outcomes[0]);
         var admissionWon = acceptedAdmission is not null;
-        Assert.Equal(admissionWon, acceptedSession is null);
-        Assert.Equal(!admissionWon, File.Exists(scenario.Layout.SessionPath(emptySession.Id)));
+        if (admissionWon) {
+            Assert.Null(outcomes[1]);
+        } else {
+            var conflict = Assert.IsType<SandboxWorkspaceConcurrencyException>(outcomes[1]);
+            Assert.Equal(conflict.ExpectedRevision + 1, conflict.ActualRevision);
+        }
+        Assert.Equal(emptySession.Id, acceptedSession!.Id);
+        Assert.True(File.Exists(scenario.Layout.SessionPath(emptySession.Id)));
         Assert.NotNull(preparedAdmission);
         Assert.Equal(admissionWon, Directory.Exists(scenario.Layout.RunRoot(preparedAdmission.Detail.Run.Id)));
         Assert.Equal(admissionWon, File.Exists(scenario.Layout.SessionPath(preparedAdmission.Detail.ChatSession!.Id)));
         var observedProjection = await scenario.Store.LoadUsageProjectionAsync();
-        Assert.Equal(scenario.InitialUsageProjection.Revision + 1, observedProjection.Revision);
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 1 + (admissionWon ? 1 : 0), observedProjection.Revision);
         Assert.Equal(scenario.InitialUsageProjection.UsageObservationCount + (admissionWon ? 1 : 0), observedProjection.UsageObservationCount);
         Assert.Equal(scenario.InitialUsageProjection.TotalTokens + (admissionWon ? AdmissionInputTokens + AdmissionOutputTokens : 0), observedProjection.TotalTokens);
         Assert.Equal(scenario.InitialUsageProjection.KnownCostUsd + (admissionWon ? AdmissionCostUsd : 0), observedProjection.KnownCostUsd);
@@ -180,9 +182,6 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
 
         if (admissionWon) {
             Assert.IsType<ChatBackedRunStarted>(acceptedAdmission);
-            var laterSession = await otherStore.CreateChatSessionAsync(CreateEmptySession(scenario));
-            Assert.NotEqual(emptySession.Id, laterSession.Id);
-            Assert.False(File.Exists(scenario.Layout.SessionPath(emptySession.Id)));
         } else {
             Assert.Equal(emptySession.Id, acceptedSession!.Id);
             Assert.Equal(emptySession.AgentId, acceptedSession.AgentId);
@@ -759,7 +758,12 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         output.WriteLine(
             $"admission-read-budget kind={admissionKind} historical-runs={scenario.HistoricalRunCount} successful-opens={reads.Count} total-bytes={totalBytes}");
         Assert.Single(reads, read => read.PayloadType == typeof(FileUsageIndexHeader));
-        Assert.Equal(expectedPhysicalReadCount, reads.Count);
+        var selectionRead = Assert.Single(reads, read => PathComparer.Equals(read.FullPath,
+            NormalizePath(scenario.Layout.ExecutionProcessIndexPath)));
+        Assert.Equal(FileSandboxWorkspaceJsonReadKind.RawText, selectionRead.Kind);
+        Assert.InRange(selectionRead.LengthBytes, 1, 1024);
+        output.WriteLine($"process-selection-comparison-read bytes={selectionRead.LengthBytes}");
+        Assert.Equal(expectedPhysicalReadCount, reads.Count - 1);
         Assert.All(
             reads,
             read => Assert.True(
