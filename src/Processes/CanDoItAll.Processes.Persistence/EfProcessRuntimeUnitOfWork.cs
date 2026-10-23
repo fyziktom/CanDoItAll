@@ -168,6 +168,9 @@ public sealed class EfProcessRuntimeUnitOfWork(
         EfProcessRootCancellationGuard.ValidateConfirmation(request);
         EfProcessDecisionRefreshGuard.RequireShape(request);
         request.RefreshAccounting?.RequireShape(request);
+        if (request.Decision is ProcessDecisionRefresh { AdmissionCommandId: { } refreshId }) {
+            new ProcessDecisionRefreshSuccessor(refreshId).RequireShape(request);
+        }
 
         if (request.InitialRunDecisionAdmission is not null && (request.InitialPlan is null || request.InitialAssignments is null ||
                 request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {
@@ -316,8 +319,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
         }
 
         var workAdmission = ProcessRuntimeWorkAdmission.Read(existing, request);
-        if (existing is null && request.RefreshAccounting is not null) {
-            throw new InvalidOperationException("Refresh accounting cannot create a missing original runtime.");
+        if (existing is null && (request.RefreshAccounting is not null || request.Decision is ProcessDecisionRefresh { AdmissionCommandId: not null })) {
+            throw new InvalidOperationException("Refresh continuation cannot create a missing original runtime.");
         }
         var previousStatus = existing?.Status;
         var checkCancellationAfterFlush = false;
@@ -347,6 +350,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             await EfProcessDecisionRefreshGuard.RequireFreshAsync(dbContext, runtimeDatabase, request, cancellationToken).ConfigureAwait(false);
             refreshAccounting = await EfProcessDecisionRefreshAccountingGuard.RequireFreshAsync(dbContext, runtimeDatabase,
                 request, cancellationToken).ConfigureAwait(false);
+            await EfProcessDecisionRefreshSuccessorGuard.RequireFreshAsync(dbContext, runtimeDatabase, request, cancellationToken).ConfigureAwait(false);
             ReplaceState(existing, request.Mutation.State);
         }
 

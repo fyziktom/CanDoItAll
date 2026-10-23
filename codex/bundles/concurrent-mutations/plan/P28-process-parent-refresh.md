@@ -4,7 +4,9 @@ Status: atomic admission passes its [343-case qualification](../validation/2026-
 including migration, historical readers and portability. Original-child stop passes its
 [73-case qualification](../validation/2026-10-23-process-refresh-child-stop.md). Reconciliation
 accounting passes its [275-case qualification](../validation/2026-10-23-process-refresh-accounting.md).
-Successor/capture is next; full refresh activation remains gated by the owner/delivery checkpoints below.
+The [successor transaction](../validation/2026-10-23-process-refresh-successor.md) passes
+129-case qualification; durable capture orchestration is next. Full refresh activation remains
+gated by the owner/delivery checkpoints below.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.
 Behavioral proof tier. The current public contract still supports Fail/Pause only.
@@ -434,3 +436,57 @@ RuntimeProjection rows do not contain an original refresh command identity. Do n
 that backlog as refresh work or treat the in-memory dispatch queue as restart delivery.
 Durable refresh delivery needs exact action identity, bounded leased claims/retries,
 expiry recovery, cancellation and source-profile checks, and contention/fairness proof.
+
+## Capture preparation boundary and failure decisions
+
+The next preparation boundary must select a blocked parent by its original run and
+admitted action, not by a synthetic dispatch claim. A narrow Application query contract
+is justified as the Persistence IO boundary: existing root preparation returns no root
+budget for StepSnapshot, while the live step query requires a claim that refresh must
+not invent. Its implementation can reuse the indexed original refresh/result/accepted
+input readers and `EfProcessDecisionBudgetStore` root lookup. Project/Agent content
+capture remains with the registered Workbench capturer.
+
+Selection must retain the accepted source and policy, original content contract/material
+scope, exact reconciled child/head, current local/root balances and shared-scope state.
+Read bounded metadata first; load the one canonical material payload only when inheriting
+an already completed shared capture. Do not fetch the current definition catalog, read a
+different source profile, or load all runtime histories to find an action. Validate local
+funding against the admitted root and both ceilings. Missing source projections are an
+explicit unsupported/recovery outcome, consistent with existing initial preparation.
+
+Stage identities must derive from the admitted action and a typed stage discriminator.
+The successor identity is already fixed by `ProcessDecisionRefreshSuccessor`. Reservation,
+root completion/abort, local abort, material and allocation identities must be distinct
+from admission, accounting, successor and other actions; changing an observed budget
+revision or retry timestamp must not create another attempt. A query is advisory until
+the existing UOW validates its exact expectations under the root fence. A competing
+reservation receipt must not authorize a second caller to invoke the capturer.
+
+The production coordinator must check existing successor/completion/abort receipts before
+reading source content. Raw UOW replay preserves the original outcome and reports
+`CommittedNow=false`; code must not require a synthetic Duplicate outcome. A completed
+shared capture can be inherited after restart without recapturing or charging root work
+again. Local inheritance still reserves a nonempty bounded grant and settles measured
+preparation work. Capture and settlement retries are different operations: bounded SQL
+retries may reuse the exact captured result and closed work but must never repeat the
+external read implicitly.
+
+Known capture refusal, expiry, exception or cancellation must settle its actual closed
+work through an explicit abort path and leave the old generation fenced. Root abort uses
+the existing `AbortCapture` scope transition; local abort must preserve runtime history
+and never emit readiness. The successor cancellation proof intentionally leaves its
+allocation open: the forthcoming capture owner must drain that known work, not reinterpret
+the failed advance as zero work. Logging records action/run/stage and a typed failure
+reason, without source payloads, credentials or raw provider exception text.
+
+There is a distinct unresolved crash window between reserving/invoking capture and
+durably recording its returned material and work. A lease timeout alone does not prove
+that invocation stopped or how much work it consumed. Retaining the grant and reporting
+unknown work is safe but does not by itself provide eventual completion. Before public
+activation, qualify a durable capture-result owner and explicit interrupted-attempt
+recovery, including refused-attempt retry identity and cancellation draining. Do not
+manufacture measured work from elapsed wall time, refund an unobserved invocation, or
+silently charge its whole grant as though it were measured work. Any conservative-charge
+policy would need a distinct reviewed accounting contract and tests, not an incidental
+fallback in this coordinator.

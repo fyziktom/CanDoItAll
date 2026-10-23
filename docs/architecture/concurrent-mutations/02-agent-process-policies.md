@@ -614,8 +614,19 @@ that original result instead of refunding work or producing a replacement propos
 Receipt replay precedes another child read, and SQL rechecks authority under the root
 fence without calling an Agent owner inside the transaction.
 
+The [successor boundary](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-refresh-successor.md)
+requires that exact NoEffect accounting receipt before making the original waiting step
+Ready. It preserves prior results, completed claims and the attempt number; the scheduler
+then increments that attempt and enrolls a child for the new material generation.
+StepSnapshot commits capture settlement, material and readiness together. RunSnapshot
+finishes its one root capture first, then commits local preparation settlement, inherited
+membership and readiness together. Shared inheritance requires root work quiescence;
+unrelated local work also blocks advance.
+Cancellation and substituted accounting cannot resume the step. The existing UOW replays
+the original successful outcome with `CommittedNow=false` without another settlement.
+
 These internal owners do not yet expose refresh or Replan through the public policy API.
-Replacement capture, successor admission and durable delivery remain explicit gates in
+Durable replacement-capture orchestration, interrupted-work recovery and delivery remain gates in
 the [parent refresh design](../../../codex/bundles/concurrent-mutations/plan/P28-process-parent-refresh.md).
 An inherited Agent continues using its admitted material until its owner closes that work;
 there is no subscription that silently replaces input during execution.

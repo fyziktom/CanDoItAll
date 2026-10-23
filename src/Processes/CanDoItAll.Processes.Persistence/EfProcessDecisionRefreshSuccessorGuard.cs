@@ -1,0 +1,73 @@
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Runtime;
+using Microsoft.EntityFrameworkCore;
+
+namespace CanDoItAll.Processes.Persistence;
+
+internal static class EfProcessDecisionRefreshSuccessorGuard {
+    internal static async Task RequireFreshAsync(ProcessPersistenceDbContext context, ICanonicalRuntimeDatabase? database,
+        ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) {
+        if (request.Decision is not ProcessDecisionRefresh { AdmissionCommandId: { } id } command) {
+            return;
+        }
+        ProcessDecisionRefreshSuccessor successor = new(id);
+        successor.RequireShape(request);
+        var state = request.OriginalState;
+        var admission = await EfProcessDecisionRefreshReceiptReader.ReadCoreAsync(context, state.RunId, id, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("The successor lost its original refresh admission.");
+        var intent = ((ProcessDecisionBeginRefresh)admission.Decision.Command).Intent;
+        var address = intent.Request.Child;
+        var selected = await EfProcessDecisionResultQuery.ReadCoreAsync(context, state.RunId, address.StepInstanceId,
+            new ProcessExecutionRunId(address.ChildId.Value), cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("The successor lost its original persisted child.");
+        var input = await EfProcessAcceptedExecutionInputReader.ReadCoreAsync(context,
+            database?.Profile.Profile.Id ?? throw new InvalidOperationException("A successor requires the canonical database owner."),
+            state.RunId, address.StepInstanceId, cancellationToken).ConfigureAwait(false);
+        _ = ProcessDecisionRefreshAccountingPreparation.RequireOriginal(state, input, selected, admission);
+        var accountingId = new ProcessDecisionRefreshAccounting(id).CommandId.Value;
+        var receipt = await context.IdempotencyKeys.AsNoTracking().Where(row => row.RunId == state.RunId.Value && row.CommandId == accountingId)
+            .Select(row => new { row.DecisionReceiptJson, row.DecisionBudgetReceiptJson, row.DecisionRunScopeReceiptJson })
+            .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("The successor requires its retained original reconciliation accounting receipt.");
+        ProcessRuntimeCommitResult accounting = new(ProcessRuntimeTransitionOutcome.Duplicate, state, [], [], [], []) {
+            Decision = ProcessDecisionReceiptCodec.Read(receipt.DecisionReceiptJson),
+            DecisionBudget = ProcessDecisionBudgetReceiptCodec.Read(receipt.DecisionBudgetReceiptJson),
+            DecisionRunScope = ProcessDecisionRunScopeReceiptCodec.Read(receipt.DecisionRunScopeReceiptJson)
+        };
+        if (ProcessDecisionRefreshAccountingReceipt.Read(accounting, admission, selected.Child!) is not ProcessDecisionRefreshAccountingResult.Reconciled ||
+                selected.Head != accounting.Decision!.Current || selected.Head.Expectation != command.Expectation ||
+                selected.Child!.Observation.Generation != selected.Head ||
+                selected.Child.Observation.Closure != accounting.Decision.Child!.Closure ||
+                selected.Child.Observation.Settlement != accounting.DecisionBudget!.Change.Allocation.Settlement) {
+            throw new InvalidOperationException("Only the exact reconciled no-effect child may acquire a refresh successor.");
+        }
+        successor.RequireMutation(request, intent);
+        await RequireCaptureAsync(context, request, selected, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task RequireCaptureAsync(ProcessPersistenceDbContext context, ProcessRuntimeCommitRequest request,
+        ProcessDecisionResultSelection selected, CancellationToken cancellationToken) {
+        var settlement = (ProcessDecisionBudgetSettlement)request.DecisionBudget!;
+        if (settlement.Expectation.StepInstanceId != selected.StepInstanceId || settlement.Expectation.BudgetId != selected.Budget.BudgetId ||
+                settlement.Expectation.Revision != selected.Budget.Revision || settlement.AllocationId == selected.Child!.Original.Child.AllocationId) {
+            throw new InvalidOperationException("A successor requires its distinct current capture allocation.");
+        }
+        var allocation = await context.DecisionBudgetAllocations.AsNoTracking().Where(row =>
+                row.BudgetId == selected.Budget.BudgetId.Value && row.AllocationId == settlement.AllocationId.Value)
+            .Select(row => new { row.OwnerWorkRevision, row.FundingBudgetId, row.FundingAllocationId })
+            .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("The successor capture was not reserved before reading material.");
+        if (allocation.OwnerWorkRevision is not null || await context.DecisionBudgetAllocations.AsNoTracking().AnyAsync(row =>
+                row.BudgetId == selected.Budget.BudgetId.Value && row.AllocationId != settlement.AllocationId.Value &&
+                row.OwnerWorkRevision == null, cancellationToken).ConfigureAwait(false)) {
+            throw new InvalidOperationException("A successor must close only its capture with no other local work left open.");
+        }
+        if (selected.SharedScope is not null && (allocation.FundingBudgetId is null || allocation.FundingAllocationId is null ||
+                await context.DecisionBudgetAllocations.AsNoTracking().AnyAsync(row => row.BudgetId == allocation.FundingBudgetId &&
+                    row.AllocationId != allocation.FundingAllocationId && row.OwnerWorkRevision == null, cancellationToken).ConfigureAwait(false))) {
+            throw new InvalidOperationException("Shared refresh inheritance requires complete root work quiescence apart from its own allocation.");
+        }
+    }
+}

@@ -1,5 +1,48 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: original refresh successor (2026-10-23)
+
+Status: Pass with follow-up for [the successor boundary](../validation/2026-10-23-process-refresh-successor.md).
+
+### Findings
+
+| Severity | Finding | Evidence | Required action |
+| --- | --- | --- | --- |
+| Existing | Collector retains 189 WS0002 errors | Unchanged before/after diagnostics; direct Release builds pass | Preserve this scoped-analysis limitation |
+| Follow-up | Durable capture orchestration and interrupted-work recovery are not activated | P28 capture preparation/failure decisions | Qualify the result owner, recovery and delivery before public refresh/Replan |
+
+### Dependency direction
+
+Runtime owns deterministic successor preparation and exact mutation validation. Persistence
+checks original receipts, current allocation and scope evidence under the existing root
+transaction. Application and Workbench keep their existing contracts. Snapshots
+`snap-20261023173045-65134217` and `snap-20261023182501-fb03b32e` retain the three intended
+project edges, zero scoped cycles and the same 236 findings. No project reference, schema,
+new interface, service locator or external callback inside the Process transaction was added.
+
+### Partial-class policy
+
+No business partial was added. The UOW delegates the new guard to one cohesive persistence
+owner. The pure Runtime record does not require the runtime engine, database or provider.
+
+### Testability proof
+
+All 129 selected cases pass across verified test-only repairs/additions: 67 Unit and 62
+SQL cases. Actual material capture and scheduler enrollment cover both snapshot modes.
+Replay, concurrent commits, rollback, cancellation, restart after lost acknowledgement,
+forged mutation/allocation and root-quiescence cases exercise the real commit owner.
+The shared-root negative and independent-step positive distinguish a necessary shared
+barrier from unnecessary blocking of independent snapshots. No throughput claim is made.
+Final portability enforcement, source/output identity, secret coverage and new resource
+reconciliation pass; reviewed allowances are unchanged.
+
+### Closure decision
+
+The production capture owner may depend on this guarded successor. The test helper's
+capture orchestration is supporting consumer evidence, not a shipped durable producer.
+P28 delivery/recovery and whole-engine E2E remain open; SPA remains on its colleague-review
+branch and historical cleanup denials remain recorded.
+
 ## C# Architecture Gate Result: original refresh accounting (2026-10-23)
 
 Status: Pass with follow-up for [the accounting boundary](../validation/2026-10-23-process-refresh-accounting.md).

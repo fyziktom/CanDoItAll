@@ -1,6 +1,15 @@
 # Requirements and closure ledger
 
-Current work: [original refresh reconciliation accounting](validation/2026-10-23-process-refresh-accounting.md)
+Current work: [original refresh successor](validation/2026-10-23-process-refresh-successor.md)
+passes all 129 selected cases. Both snapshot modes preserve original history and attempts,
+replay without another settlement and enroll the next scheduler attempt with replacement
+material. Shared inheritance waits for root work; independent step snapshots can proceed.
+Final portability, source/output identity and new resource reconciliation pass. Durable
+capture orchestration, interrupted-work recovery, delivery and engine E2E remain open.
+SPA remains clean on **codex/concurrent-mutations** for colleague review; historical
+cleanup denials remain recorded.
+
+Preceding work: [original refresh reconciliation accounting](validation/2026-10-23-process-refresh-accounting.md)
 passes all 275 selected cases across the verified test-only work assertion repair.
 Original stopped work settles once; an already accepted effect completes its original
 result, while unknown/open work stays reserved. Full portability, source/output identity
