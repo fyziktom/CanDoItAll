@@ -18,12 +18,14 @@ public sealed partial class AgentToolJournalSchemaFiveTests {
         string json = JsonSerializer.Serialize(journal);
         Assert.DoesNotContain(nameof(AgentToolInvocationSegment.CheckpointKind), json);
         Assert.DoesNotContain(nameof(AgentToolInvocationSegment.OriginDispatchLeaseId), json);
+        Assert.DoesNotContain(nameof(AgentToolInvocationSegment.ProviderEffectScope), json);
         Assert.DoesNotContain(nameof(AgentToolProposalRecord.OwnerReceipt), json);
         Assert.DoesNotContain(nameof(AgentToolJournalRecord.ToolContinuationRequirement), json);
         var restored = JsonSerializer.Deserialize<AgentToolJournalRecord>(json)!;
         restored.Validate();
         Assert.Equal(json, JsonSerializer.Serialize(restored));
         Assert.Equal(AgentToolCheckpointKind.ProviderRestart, restored.Segments[0].CheckpointKind);
+        Assert.Equal(AgentToolProviderEffectScope.Unknown, restored.Segments[0].ProviderEffectScope);
         Assert.Equal(journal.Segments[0].RestartCheckpoint, restored.Segments[0].RestartCheckpoint);
         var proposal = Proposal(journal);
         var retainedSource = new AgentToolPreparedPayload(proposal.Payload.ToolName, proposal.Payload.SemanticVersion,
@@ -70,7 +72,9 @@ public sealed partial class AgentToolJournalSchemaFiveTests {
             segment with { RestartCheckpoint = Envelope() },
             segment with { ApprovalCheckpoint = Envelope() },
             segment with { CheckpointKind = AgentToolCheckpointKind.ProviderRestart },
-            segment with { CheckpointKind = (AgentToolCheckpointKind)99 }
+            segment with { CheckpointKind = (AgentToolCheckpointKind)99 },
+            segment with { ProviderEffectScope = AgentToolProviderEffectScope.LocalProposalsOnly },
+            segment with { ProviderEffectScope = AgentToolProviderEffectScope.HostedTools }
         }) {
             Assert.Throws<InvalidDataException>(() => (journal with { Segments = [invalid] }).Validate());
         }
@@ -79,6 +83,35 @@ public sealed partial class AgentToolJournalSchemaFiveTests {
         Assert.Throws<InvalidDataException>(() => (journal with { RuntimeContext = TypedContext() }).Validate());
         Assert.Throws<InvalidDataException>(() => (journal with { Support = AgentToolAdmissionSupport.Recoverable }).Validate());
         (journal with { ActiveDispatchLeaseId = Guid.NewGuid() }).Validate();
+    }
+
+    [Theory]
+    [InlineData(AgentToolProviderEffectScope.Unknown, AgentToolProviderEffectScope.LocalProposalsOnly)]
+    [InlineData(AgentToolProviderEffectScope.LocalProposalsOnly, AgentToolProviderEffectScope.Unknown)]
+    [InlineData(AgentToolProviderEffectScope.LocalProposalsOnly, AgentToolProviderEffectScope.HostedTools)]
+    [InlineData(AgentToolProviderEffectScope.HostedTools, AgentToolProviderEffectScope.LocalProposalsOnly)]
+    public void Original_provider_scope_is_immutable_and_survives_serialization(AgentToolProviderEffectScope original,
+        AgentToolProviderEffectScope replacement) {
+        var journal = Create(AgentToolJournalRecord.BackgroundSchemaVersion, effectsOnly: false);
+        journal = journal with { Segments = [journal.Segments[0] with { ProviderEffectScope = original }] };
+        journal.Validate();
+        var restored = JsonSerializer.Deserialize<AgentToolJournalRecord>(JsonSerializer.Serialize(journal))!;
+        restored.Validate();
+        Assert.Equal(original, restored.Segments[0].ProviderEffectScope);
+        Assert.Throws<AgentToolAdmissionException>(() => AgentToolJournalTransitions.ValidatePersistence(journal,
+            journal with { Revision = journal.Revision + 1,
+                Segments = [journal.Segments[0] with { ProviderEffectScope = replacement }] }));
+        Assert.Throws<InvalidDataException>(() => (journal with {
+            Segments = [journal.Segments[0] with { ProviderEffectScope = (AgentToolProviderEffectScope)99 }]
+        }).Validate());
+    }
+
+    [Fact]
+    public void Local_proposal_contract_cannot_contain_a_hosted_provider_dispatch() {
+        var journal = Create(AgentToolJournalRecord.ProviderDispatchSchemaVersion, effectsOnly: false);
+        journal.Validate();
+        var segment = journal.Segments[0] with { ProviderEffectScope = AgentToolProviderEffectScope.LocalProposalsOnly };
+        Assert.Throws<InvalidDataException>(() => (journal with { Segments = [segment] }).Validate());
     }
 
     [Fact]

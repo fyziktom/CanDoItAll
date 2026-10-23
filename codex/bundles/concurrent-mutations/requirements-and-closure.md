@@ -1,6 +1,13 @@
 # Requirements and closure ledger
 
-Current work: [finite root cancellation admission](validation/2026-10-22-cancellation-admission.md)
+Current work: [legacy root cancellation cutover](validation/2026-10-23-legacy-cancellation-cutover.md)
+qualifies the Application/HTTP cutover and the real MAF provider-wait repair with all 173
+selected cases, 11 Release builds, unchanged source/output evidence and full portability.
+Native and Workflow coverage was qualified in P17/P18. Manager-chat concurrency,
+capacity/default activation, remaining mutable owners/policies and final E2E remain open.
+SPA stays on its dedicated branch for colleague review. No whole-engine closure is claimed.
+
+Preceding [finite root cancellation admission](validation/2026-10-22-cancellation-admission.md)
 passes all 61 selected cases, eight Release builds, architecture and full portability.
 The 464 source pins and 54 outputs remain unchanged through nine observed test commands;
 resource reconciliation finds zero new runtime residue. Concurrent SQL requests preserve

@@ -24,8 +24,10 @@ public sealed class AgentBackgroundExecutionStopper(ISandboxWorkspaceExecutionRu
             return AgentParentStopOutcome.UnresolvedEffects;
         }
         var dispatches = journal.ProviderDispatches.IsDefault ? [] : journal.ProviderDispatches;
-        if (journal.SchemaVersion == AgentToolJournalRecord.BackgroundSchemaVersion && journal.ActiveDispatchLeaseId is not null ||
+        if (journal.SchemaVersion == AgentToolJournalRecord.BackgroundSchemaVersion &&
+                journal.ActiveDispatchLeaseId is not null && journal.Segments.IsEmpty ||
                 journal.Segments.Any(segment => segment.CheckpointKind == AgentToolCheckpointKind.ProviderRestart &&
+                    segment.ProviderEffectScope != AgentToolProviderEffectScope.LocalProposalsOnly &&
                     !dispatches.Any(dispatch => dispatch.SegmentId == segment.Id))) {
             return AgentParentStopOutcome.UnresolvedEffects;
         }

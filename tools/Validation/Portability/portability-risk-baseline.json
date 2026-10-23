@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-23T03:12:18.997719+00:00",
+  "generated_utc": "2026-10-23T04:07:35.513826+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15691,
+  "allowance_count": 15688,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -7216,24 +7216,6 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
-      "source_fingerprint": "88965fe71b59d969ab18c0bc5ec87048ca5e76501f0497ff3993d575fdb6e5de",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
-      "category": "manager-discovery",
-      "source_fingerprint": "96d29c12b2632ac27b1bd12b1f7c4dd7608ab78e095636d8223d3f6db23a5523",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
-      "category": "manager-discovery",
-      "source_fingerprint": "99013e70c5824804fb33d2dfb936f526679db40e92945dbcc60aedac61544eb7",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
-      "category": "manager-discovery",
       "source_fingerprint": "9a38af56f1f443802005dc04aa7eb9c8170f14299fd0a2c3bf51915f4130473c",
       "count": 1
     },
@@ -7294,6 +7276,12 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
+      "source_fingerprint": "c0d953458bec79e4e5872803632fdb6fd4f8223173d7defb3a01808c5b1ad6be",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
+      "category": "manager-discovery",
       "source_fingerprint": "cb7ce8ce9dc104435dbb10f7fe88977baf7f79d6f00cbed76e456893a22b7c17",
       "count": 1
     },
@@ -7349,12 +7337,6 @@
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
       "source_fingerprint": "ec2b57fa5b75300a4e385bd2b506b443e47cf99a4c5d91292a4d991860b33a9d",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
-      "category": "manager-discovery",
-      "source_fingerprint": "f1f4fbeb8ec5d8ddfec6eda958602274813eb7ff617d6e9d2d0658f592e6a7fd",
       "count": 1
     },
     {

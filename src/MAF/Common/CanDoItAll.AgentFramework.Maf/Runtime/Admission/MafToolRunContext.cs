@@ -144,7 +144,9 @@ internal sealed class MafToolRunContext {
             var checkpoint = new RestartCheckpoint(serialized, input, isApprovalContinuation,
                 chat.Compatibility?.PendingApprovals.ToArray() ?? []);
             var envelope = MafToolProtocolCodec.Encode(checkpoint);
-            saved = await journal.BeginSegmentAsync(lease, envelope, continuesSegmentId, cancellationToken);
+            var effectScope = MafNativeToolContracts.Capture(capabilities?.Tools ?? []).Count == 0
+                ? AgentToolProviderEffectScope.LocalProposalsOnly : AgentToolProviderEffectScope.HostedTools;
+            saved = await journal.BeginSegmentAsync(lease, envelope, continuesSegmentId, cancellationToken, effectScope);
             segment = saved.Segments[^1];
         }
 
@@ -308,6 +310,10 @@ internal sealed class MafToolRunContext {
         CancellationToken cancellationToken) {
         if (nativeContracts.Count == 0) {
             return null;
+        }
+
+        if (Segment.ProviderEffectScope == AgentToolProviderEffectScope.LocalProposalsOnly) {
+            throw Denied("The original invocation permits local proposals only; hosted provider tools cannot be added.");
         }
 
         var saved = await journal.ReadAsync(lease, cancellationToken);

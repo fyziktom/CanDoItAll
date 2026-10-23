@@ -226,3 +226,21 @@ parent reconciliation and executor activation remain required.
 Status: Pass with follow-up. [P17/P18 validation](../validation/2026-10-23-native-workflow-cancellation.md) separates Web identity, native host lifetime, Process recovery coordination and native Workflow persistence. No project-reference change, new business partial or dependency cycle is introduced. The two pre-existing AgentFramework module scoped cycles are unchanged; generated EF migration partials retain the existing convention. No added CodeAnalytics findings are present. Pure adapter/component cases and real SQL/HTTP/browser cases prove the owner boundaries, negative authority/metadata paths, original-request recovery and bounded queries.
 
 The final snapshots include `snap-20261023030956-f3b31dd5` (AgentFramework), `snap-20261023032730-6a886db9` (Process persistence), and `snap-20261023032812-721f5c0b` (Processes module); the compact proof includes the earlier UI/Web/Application/Workflow snapshots and diagnostics. Browser evidence corrected a stale parent projection. Legacy root transport, manager-chat session concurrency and sustained/separate-process capacity remain follow-ups before activation and full closure.
+
+## Legacy cancellation and original provider scope
+
+Status: Pass with follow-up. [P19 validation](../validation/2026-10-23-legacy-cancellation-cutover.md)
+removes the Application root cascade and hierarchy dependency; Web maps a typed refusal.
+The real MAF producer exposed missing scope evidence. Models now owns its typed immutable
+checkpoint contract, MAF classifies and enforces it before the wire, and the existing Core
+stopper interprets it under the original lease and current authority. No new project,
+reference, interface or partial file is added. The existing journal methods gain only the
+new contract parameter and immutable field check; the broad execution service gains nothing.
+
+Final snapshots are `snap-20261023043334-538a35d8` (Models),
+`snap-20261023043420-3274eeb3` (Core) and `snap-20261023043501-df461bfc` (MAF).
+No findings or project references are added. Three existing Core type cycles and one MAF
+type cycle remain unchanged. Application removes one large-file finding; its and Web's
+earlier P19 comparisons remain in the proof. Independent model/stopper tests and actual
+MAF/HTTP/worker tests prove the boundary, including hosted uncertainty and historical
+refusal. Manager-chat concurrency, sustained capacity and remaining owners remain next.

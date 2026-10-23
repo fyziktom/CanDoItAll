@@ -41,6 +41,7 @@ public static class AgentToolJournalTransitions {
             if (previous.Id != next.Id || previous.Ordinal != next.Ordinal ||
                 previous.FirstBatchOrdinal != next.FirstBatchOrdinal || previous.RestartCheckpoint != next.RestartCheckpoint ||
                 previous.CheckpointKind != next.CheckpointKind || previous.OriginDispatchLeaseId != next.OriginDispatchLeaseId ||
+                previous.ProviderEffectScope != next.ProviderEffectScope ||
                 previous.ContinuesSegmentId != next.ContinuesSegmentId ||
                 previous.CheckpointKind == AgentToolCheckpointKind.ProviderRestart &&
                     (previous.ApprovalCheckpoint is not null || !previous.PendingApprovals.IsEmpty) &&

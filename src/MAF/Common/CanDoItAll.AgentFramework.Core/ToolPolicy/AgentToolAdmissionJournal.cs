@@ -305,7 +305,8 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     }
 
     public Task<AgentToolJournalRecord> BeginSegmentAsync(AgentToolRunLease lease,
-        AgentToolProtocolEnvelope checkpoint, Guid? continuesSegmentId, CancellationToken cancellationToken)
+        AgentToolProtocolEnvelope checkpoint, Guid? continuesSegmentId, CancellationToken cancellationToken,
+        AgentToolProviderEffectScope providerEffectScope = AgentToolProviderEffectScope.Unknown)
         => MutateAsync(lease, true, journal => {
             RequireRecoverable(journal);
             var existing = journal.Segments.SingleOrDefault(segment => segment.ContinuesSegmentId == continuesSegmentId);
@@ -328,7 +329,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             }
 
             var segment = new AgentToolInvocationSegment(Guid.NewGuid(), journal.Segments.Length,
-                journal.Batches.Length, checkpoint, continuesSegmentId, PendingApprovals: []);
+                journal.Batches.Length, checkpoint, continuesSegmentId, PendingApprovals: [], ProviderEffectScope: providerEffectScope);
             return journal with { Revision = checked(journal.Revision + 1), Segments = journal.Segments.Add(segment) };
         }, cancellationToken);
 

@@ -20,7 +20,7 @@ internal static class ProcessCancellationApi {
             .WithName("RequestRootProcessCancellation")
             .WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .WithSummary("Save one root cancellation barrier and return before descendant cleanup.")
-            .WithDescription("Requires Process read and execute grants and an enabled, registered recovery worker. Accepts no body. A child identity is refused without cancelling its root or siblings. Accepted means pending cleanup, not completion. On an unconfirmed response or timeout, observe the Location GET before another action; do not assume rollback. The legacy /cancel route retains its existing behavior during migration.")
+            .WithDescription("Requires Process read and execute grants and an enabled, registered recovery worker. Accepts no body. A child identity is refused without cancelling its root or siblings. Accepted means pending cleanup, not completion. On an unconfirmed response or timeout, observe the Location GET before another action; do not assume rollback. The legacy /cancel route accepts only a selected child and refuses root mutation before writing.")
             .Produces<ProcessCancellationAdmissionApiView>(StatusCodes.Status202Accepted)
             .Produces<ProcessCancellationAdmissionApiView>()
             .Produces<ProcessCancellationAdmissionApiView>(StatusCodes.Status409Conflict)

@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current work: [native cancellation and Workflow recovery](validation/2026-10-23-native-workflow-cancellation.md)
+Current work: [legacy root cancellation cutover](validation/2026-10-23-legacy-cancellation-cutover.md)
+passes all 173 selected cases, 11 Release builds and full portability. The old synchronous
+root cascade is retired. Real MAF cancellation now distinguishes local proposals from
+hosted-tool uncertainty using immutable original checkpoint evidence. Source/output and
+resource reconciliation pass; both failed candidates remain retained. Manager-chat
+concurrency, capacity/default activation, remaining owners/policies and final E2E stay
+open. SPA remains on its dedicated branch for colleague review.
+
+Preceding [native cancellation and Workflow recovery](validation/2026-10-23-native-workflow-cancellation.md)
 qualifies the native action, exact Workflow boundary cancellation, coverage-version upgrade
 and both held-boundary browser scenarios. The latest passing topic selection contains
 244 cases across explicit repair boundaries, not one clean aggregate run. The final

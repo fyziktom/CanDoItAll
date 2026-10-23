@@ -146,3 +146,10 @@ stale-edit safety, and does not require settling later merge or wire migration d
 ## Native cancellation and Workflow recovery checkpoint
 
 The [P17/P18 validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-native-workflow-cancellation.md) now includes native Workflow children in Process cancellation recovery, preserves original durable boundary receipts and reopens historical Agent-only completion through coverage version 2. The native action uses finite admission and explicit read-only refresh; both actual browser scopes pass held-boundary completion. This does not close legacy root API callers, default activation, sustained capacity or other mutable owners. A retained native browser failure also exposes a workspace revision conflict in Process manager-chat session create/rename; an unchanged rerun passes but does not repair that writer. Keep that path in the remaining owner inventory.
+
+The subsequent [P19 cutover](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-legacy-cancellation-cutover.md)
+retires the legacy synchronous root path at Application and HTTP boundaries. The real MAF
+provider-wait producer is now qualified: new immutable local-proposal scope allows safe
+cancellation while historical and hosted-tool uncertainty remains unresolved. All 173
+selected cases and full portability pass. Manager-chat concurrency, capacity/default
+activation and the other owner rows above remain open.

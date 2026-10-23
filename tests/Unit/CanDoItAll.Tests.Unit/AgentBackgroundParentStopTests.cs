@@ -246,6 +246,64 @@ public sealed class AgentBackgroundParentStopTests {
         Assert.Equal(0, store.Writes);
     }
 
+    [Theory]
+    [InlineData(ExecutionState.Running, null, AgentParentStopOutcome.Stopped)]
+    [InlineData(ExecutionState.Completed, RunOutcome.Succeeded, AgentParentStopOutcome.AlreadyClosed)]
+    [InlineData(ExecutionState.Failed, RunOutcome.Cancelled, AgentParentStopOutcome.AlreadyClosed)]
+    public async Task Local_proposal_contract_closes_without_inventing_a_hosted_dispatch(ExecutionState state,
+        RunOutcome? outcome, AgentParentStopOutcome expected) {
+        var (store, owner, parent) = Create();
+        SetJournal(store, store.Detail!.Run.ToolAdmission! with {
+            ActiveDispatchLeaseId = Guid.NewGuid(),
+            Segments = [new(Guid.NewGuid(), 0, 0, Envelope(), PendingApprovals: [],
+                ProviderEffectScope: AgentToolProviderEffectScope.LocalProposalsOnly)]
+        });
+        store.Detail = store.Detail! with { Run = store.Detail.Run with { State = state, Outcome = outcome,
+            CompletedAtUtc = outcome is null ? null : Start } };
+        var before = store.Detail.Run.ToolAdmission!;
+        Assert.Equal(expected, await owner.StopAsync(store.Detail.Run.Id, parent));
+        Assert.Equal(before.Segments, store.Detail.Run.ToolAdmission!.Segments);
+        Assert.True(store.Detail.Run.ToolAdmission.ProviderDispatches.IsDefaultOrEmpty);
+        Assert.Equal(expected == AgentParentStopOutcome.Stopped ? 1 : 0, store.Writes);
+        Assert.Equal(1, store.Leases);
+        Assert.True(store.LeaseDisposed);
+    }
+
+    [Theory]
+    [InlineData(AgentToolProviderEffectScope.Unknown)]
+    [InlineData(AgentToolProviderEffectScope.HostedTools)]
+    public async Task A_terminal_invocation_with_unproven_provider_scope_stays_unresolved(AgentToolProviderEffectScope scope) {
+        var (store, owner, parent) = Create();
+        SetJournal(store, store.Detail!.Run.ToolAdmission! with {
+            Segments = [new(Guid.NewGuid(), 0, 0, Envelope(), PendingApprovals: [], ProviderEffectScope: scope)]
+        });
+        store.Detail = store.Detail! with { Run = store.Detail.Run with { State = ExecutionState.Failed,
+            Outcome = RunOutcome.Cancelled, CompletedAtUtc = Start } };
+        var before = store.Detail;
+        Assert.Equal(AgentParentStopOutcome.UnresolvedEffects, await owner.StopAsync(store.Detail.Run.Id, parent));
+        Assert.Same(before, store.Detail);
+        Assert.Equal(0, store.Writes);
+    }
+
+    [Theory]
+    [InlineData(AgentToolProposalState.Executing, AgentToolEffectState.Unknown, AgentParentStopOutcome.UnresolvedEffects)]
+    [InlineData(AgentToolProposalState.Completed, AgentToolEffectState.Unknown, AgentParentStopOutcome.UnresolvedEffects)]
+    [InlineData(AgentToolProposalState.Completed, AgentToolEffectState.Committed, AgentParentStopOutcome.CompletionPending)]
+    public async Task Local_provider_scope_does_not_erase_dispatched_local_effects(AgentToolProposalState state,
+        AgentToolEffectState effect, AgentParentStopOutcome expected) {
+        var (store, owner, parent) = Create();
+        var journal = WithProposal(store.Detail!.Run.ToolAdmission!, state, effect);
+        SetJournal(store, journal with {
+            SchemaVersion = AgentToolJournalRecord.BackgroundSchemaVersion,
+            Segments = [journal.Segments[0] with { ProviderEffectScope = AgentToolProviderEffectScope.LocalProposalsOnly }],
+            Batches = [journal.Batches[0] with { ProviderDispatchId = null }], ProviderDispatches = []
+        });
+        var before = store.Detail;
+        Assert.Equal(expected, await owner.StopAsync(store.Detail.Run.Id, parent));
+        Assert.Same(before, store.Detail);
+        Assert.Equal(0, store.Writes);
+    }
+
     private static (AgentInheritedParentStopFixture Store, AgentBackgroundExecutionStopper Owner, AgentBackgroundParentStop Parent) Create(
         Func<ExecutionRunRecord, CancellationToken, Task>? requireCurrent = null) {
         var store = new AgentInheritedParentStopFixture();

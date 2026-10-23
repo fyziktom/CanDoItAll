@@ -51,6 +51,12 @@ public enum AgentToolCheckpointKind {
     EffectsOnly
 }
 
+public enum AgentToolProviderEffectScope {
+    Unknown,
+    LocalProposalsOnly,
+    HostedTools
+}
+
 [Description("Continuation requirement: 0 None, 1 ProviderInputRequired, 2 EffectReconciliationRequired. This classification grants no authority to dispatch prepared effects.")]
 public enum AgentToolContinuationRequirement {
     None,
@@ -178,7 +184,9 @@ public sealed record AgentToolInvocationSegment(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     AgentToolCheckpointKind CheckpointKind = AgentToolCheckpointKind.ProviderRestart,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    Guid? OriginDispatchLeaseId = null);
+    Guid? OriginDispatchLeaseId = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    AgentToolProviderEffectScope ProviderEffectScope = AgentToolProviderEffectScope.Unknown);
 
 public sealed record AgentToolJournalRecord(
     int SchemaVersion,
@@ -287,14 +295,15 @@ public sealed record AgentToolJournalRecord(
                 index > 0 && (segment.ContinuesSegmentId != Segments[index - 1].Id ||
                     segment.FirstBatchOrdinal < Segments[index - 1].FirstBatchOrdinal) ||
                 segment.PendingApprovals.IsDefault || segment.PendingApprovals.Length > MaximumCallsPerBatch ||
-                !Enum.IsDefined(segment.CheckpointKind)) {
+                !Enum.IsDefined(segment.CheckpointKind) || !Enum.IsDefined(segment.ProviderEffectScope)) {
                 throw new InvalidDataException("The SDK invocation checkpoint sequence is invalid.");
             }
 
             if (segment.CheckpointKind == AgentToolCheckpointKind.EffectsOnly) {
                 if (!effectJournalSchema || Support != AgentToolAdmissionSupport.EffectJournalOnly ||
                     segment.RestartCheckpoint is not null || segment.ApprovalCheckpoint is not null ||
-                    segment.OriginDispatchLeaseId is null || segment.OriginDispatchLeaseId == Guid.Empty) {
+                    segment.OriginDispatchLeaseId is null || segment.OriginDispatchLeaseId == Guid.Empty ||
+                    segment.ProviderEffectScope != AgentToolProviderEffectScope.Unknown) {
                     throw new InvalidDataException("An effects-only segment requires its original live lease and cannot contain provider checkpoints.");
                 }
                 ValidateEffectApprovals(segment, index);
@@ -302,6 +311,11 @@ public sealed record AgentToolJournalRecord(
                 segment.OriginDispatchLeaseId is not null ||
                 (segment.ApprovalCheckpoint is null) != (segment.PendingApprovals.Length == 0)) {
                 throw new InvalidDataException("A provider-restart segment requires its original checkpoint and approval pairing.");
+            }
+
+            if (segment.ProviderEffectScope == AgentToolProviderEffectScope.LocalProposalsOnly &&
+                    !ProviderDispatches.IsDefaultOrEmpty && ProviderDispatches.Any(dispatch => dispatch.SegmentId == segment.Id)) {
+                throw new InvalidDataException("A local-proposal invocation cannot dispatch hosted provider tools.");
             }
 
             bytes += segment.RestartCheckpoint is null ? 0L : Encoding.UTF8.GetByteCount(segment.RestartCheckpoint.PayloadJson);

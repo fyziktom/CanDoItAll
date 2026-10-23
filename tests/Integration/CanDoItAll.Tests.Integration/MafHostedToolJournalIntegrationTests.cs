@@ -105,6 +105,32 @@ public sealed class MafHostedToolJournalIntegrationTests {
         Assert.Empty(never.Requests);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Hosted_tools_added_after_local_only_admission_are_refused_before_the_wire(bool streaming) {
+        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
+        var journal = fixture.NewJournal();
+        await using var lease = await journal.AcquireRunAsync(fixture.Session, default);
+        using var bound = lease.Bind();
+        var wire = new HostedWire(denyAllRequests: true);
+        using var client = CreateClient(wire);
+        var runtime = CreateRuntime(client);
+        var hosted = runtime.Capabilities.Tools.ToArray();
+        runtime.Capabilities.Tools.Clear();
+        var opened = await OpenAsync(fixture, journal, lease, runtime);
+        Assert.Equal(AgentToolProviderEffectScope.LocalProposalsOnly, opened.Context.Segment.ProviderEffectScope);
+        foreach (var tool in hosted) {
+            runtime.Capabilities.Tools.Add(tool);
+        }
+        using var active = opened.Context.Bind();
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => RunAsync(runtime.Agent, opened.Session, opened.Input, streaming));
+        Assert.Empty(wire.Requests);
+        var saved = await journal.ReadAsync(lease, default);
+        Assert.Empty(saved.Batches);
+        Assert.True(saved.ProviderDispatches.IsDefaultOrEmpty);
+    }
+
     [Fact]
     public async Task Two_distinct_hosted_servers_can_open_one_admitted_runtime_despite_the_sdk_shared_tool_name() {
         await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
