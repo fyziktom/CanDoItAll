@@ -137,6 +137,26 @@ public static class ProcessDecisionRunScopeTransitions {
         return Next(current, cancelled ? ProcessDecisionRunScopePhase.Cancelled : ProcessDecisionRunScopePhase.Completed);
     }
 
+    public static ProcessDecisionRunScopeState FinishRefreshResult(ProcessDecisionRunScopeState current,
+        ProcessDecisionRunScopeExpectation expected, bool cancelled, IReadOnlyList<ProcessDecisionRunScopeMemberObservation> members,
+        DecisionBudgetBalance balance, IReadOnlyList<DecisionBudgetAllocation> allocations, ProcessDecisionRefreshIntent intent) {
+        RequireExpected(current, expected);
+        intent.Validate();
+        var original = intent.Request;
+        if (original.SharedScope is null || current.Phase != ProcessDecisionRunScopePhase.Reconciling ||
+                current.Expectation != original.SharedScope with { Revision = checked(original.SharedScope.Revision + 1) } ||
+                current.Admission.Funding.RootRunId != original.Child.RootRunId || original.Child.RunId != original.Child.RootRunId ||
+                current.Material?.Stamp.Reference.MaterialId != intent.OriginalMaterialId || members.Count != 1 ||
+                members[0].Membership.RunId != original.Child.RunId || members[0].Membership.StepInstanceId != original.Child.StepInstanceId ||
+                members[0].Decision.Reference != original.Child.Reference || members[0].Decision.RefreshCommandId != original.CommandId ||
+                members[0].Decision.Phase is not (ProcessDecisionPhase.Completed or ProcessDecisionPhase.Cancelled) ||
+                !cancelled && members[0].Decision.Phase != ProcessDecisionPhase.Completed) {
+            throw new ProcessDecisionRunScopeException(ProcessDecisionRunScopeRefusal.OriginalMembershipChanged);
+        }
+        RequireQuiescence(current, members, balance, allocations);
+        return Next(current, cancelled ? ProcessDecisionRunScopePhase.Cancelled : ProcessDecisionRunScopePhase.Completed);
+    }
+
     private static void RequireQuiescence(ProcessDecisionRunScopeState current, IReadOnlyList<ProcessDecisionRunScopeMemberObservation> members,
         DecisionBudgetBalance balance, IReadOnlyList<DecisionBudgetAllocation> allocations, DecisionBudgetAllocationId? pending = null) {
         ArgumentNullException.ThrowIfNull(members);

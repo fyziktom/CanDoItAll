@@ -167,6 +167,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         ProcessDecisionRunScopeCompletion.Require(request);
         EfProcessRootCancellationGuard.ValidateConfirmation(request);
         EfProcessDecisionRefreshGuard.RequireShape(request);
+        request.RefreshAccounting?.RequireShape(request);
 
         if (request.InitialRunDecisionAdmission is not null && (request.InitialPlan is null || request.InitialAssignments is null ||
                 request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {
@@ -315,8 +316,12 @@ public sealed class EfProcessRuntimeUnitOfWork(
         }
 
         var workAdmission = ProcessRuntimeWorkAdmission.Read(existing, request);
+        if (existing is null && request.RefreshAccounting is not null) {
+            throw new InvalidOperationException("Refresh accounting cannot create a missing original runtime.");
+        }
         var previousStatus = existing?.Status;
         var checkCancellationAfterFlush = false;
+        ProcessDecisionRefreshIntent? refreshAccounting = null;
         if (existing is null)
         {
             dbContext.RuntimeStates.Add(ProcessPersistenceMappers.ToEntity(request.Mutation.State));
@@ -340,6 +345,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
             }
 
             await EfProcessDecisionRefreshGuard.RequireFreshAsync(dbContext, runtimeDatabase, request, cancellationToken).ConfigureAwait(false);
+            refreshAccounting = await EfProcessDecisionRefreshAccountingGuard.RequireFreshAsync(dbContext, runtimeDatabase,
+                request, cancellationToken).ConfigureAwait(false);
             ReplaceState(existing, request.Mutation.State);
         }
 
@@ -380,10 +387,10 @@ public sealed class EfProcessRuntimeUnitOfWork(
         var persistedState = await LoadAsync(request.Mutation.State.RunId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The Process runtime state was not found after its mutation was saved.");
         await ProcessDecisionResultAcceptance.RequireAsync(dbContext,
-            request with { Mutation = request.Mutation with { State = persistedState } }, cancellationToken).ConfigureAwait(false);
+            request with { Mutation = request.Mutation with { State = persistedState } }, cancellationToken, refreshAccounting).ConfigureAwait(false);
         if (completesScope) {
             decisionScope = await decisionScopes.StageResultCompletionAsync(
-                request with { Mutation = request.Mutation with { State = persistedState } }, cancellationToken).ConfigureAwait(false);
+                request with { Mutation = request.Mutation with { State = persistedState } }, cancellationToken, refreshAccounting).ConfigureAwait(false);
             var receipt = await dbContext.IdempotencyKeys.SingleAsync(item => item.RunId == persistedState.RunId.Value &&
                 item.CommandId == request.CommandId.Value, cancellationToken).ConfigureAwait(false);
             receipt.DecisionRunScopeReceiptJson = ProcessDecisionRunScopeReceiptCodec.Write(decisionScope);

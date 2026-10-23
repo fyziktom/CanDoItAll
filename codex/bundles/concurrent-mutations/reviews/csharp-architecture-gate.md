@@ -1,5 +1,44 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: original refresh accounting (2026-10-23)
+
+Status: Pass with follow-up for [the accounting boundary](../validation/2026-10-23-process-refresh-accounting.md).
+
+### Findings
+
+| Severity | Finding | Evidence | Required action |
+| --- | --- | --- | --- |
+| Existing | Collector retains 189 WS0002 diagnostics | Before/after snapshots; direct Release builds pass | Keep the collector limitation explicit |
+| Follow-up | Capture, successor and delivery are not activated | P28 successor/capture decisions | Qualify those owners before public refresh/Replan |
+
+### Dependency direction
+
+Runtime owns exact mutation rules; Application owns preparation, orchestration and receipt
+interpretation; Persistence rechecks the original evidence under its existing root fence.
+No Agent callback runs inside SQL. Snapshots `snap-20261023170919-65134217` and
+`snap-20261023173045-65134217` retain three intended project edges, zero scoped cycles and
+no new finding. No project reference, service locator or extra transaction owner was added.
+
+### Partial-class policy
+
+No business partial was added. The small accounting preparation, receipt and persistence
+guard each own a separate contract; the existing terminal-only coordinator stays unchanged.
+
+### Testability proof
+
+All 275 selected cases pass: 210 unchanged Unit cases and 65 final SQL cases after a verified
+test-only cost assertion repair. Registered Workbench/Core owners exercise both snapshot
+modes, actual accepted/unknown effects, competing continuations, rollback, cancellation,
+lost SQL acknowledgement and full host restart. Pure negative tests reject substituted
+input, history, claims, result, actor and projection. Final full portability passes with
+15,697 reviewed allowances unchanged; source/output and new resource checks pass.
+
+### Closure decision
+
+The successor/capture checkpoint may depend on original accounting. These tests do not
+qualify public refresh, automatic delivery or whole-engine E2E. Historical cleanup denials
+remain recorded, and SPA remains on its dedicated branch for colleague review.
+
 ## C# Architecture Gate Result: original-child refresh stop (2026-10-23)
 
 Status: Pass with follow-up for [the qualified stop boundary](../validation/2026-10-23-process-refresh-child-stop.md).

@@ -133,7 +133,7 @@ public sealed class EfProcessDecisionRunScopeStore(ProcessPersistenceDbContext c
     }
 
     internal async Task<ProcessDecisionRunScopeReceipt> StageResultCompletionAsync(ProcessRuntimeCommitRequest request,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, ProcessDecisionRefreshIntent? refreshAccounting = null) {
         ProcessDecisionRunScopeCompletion.Require(request);
         var command = request.DecisionRunScope is { CompletesRuntimeResult: true } terminal
             ? terminal : throw new InvalidOperationException("The scope requires its explicit terminal result command.");
@@ -149,10 +149,13 @@ public sealed class EfProcessDecisionRunScopeStore(ProcessPersistenceDbContext c
         if ((pending & ~ProcessRootCancellationPending.SharedScope) != ProcessRootCancellationPending.None) {
             throw new ProcessDecisionRunScopeException(ProcessDecisionRunScopeRefusal.UnclosedWork);
         }
-        var next = ProcessDecisionRunScopeTransitions.FinishResult(current, command.Expectation,
-            command.Kind == ProcessDecisionRunScopeCommandKind.CancelResult,
-            await ReadMembersAsync(current, cancellationToken).ConfigureAwait(false), ReadBalance(loaded.Budget),
-            await ReadAllocationsAsync(current, null, cancellationToken).ConfigureAwait(false));
+        var members = await ReadMembersAsync(current, cancellationToken).ConfigureAwait(false);
+        var allocations = await ReadAllocationsAsync(current, null, cancellationToken).ConfigureAwait(false);
+        var cancelled = command.Kind == ProcessDecisionRunScopeCommandKind.CancelResult;
+        var next = refreshAccounting is null ? ProcessDecisionRunScopeTransitions.FinishResult(current, command.Expectation,
+            cancelled, members, ReadBalance(loaded.Budget), allocations) :
+            ProcessDecisionRunScopeTransitions.FinishRefreshResult(current, command.Expectation, cancelled,
+                members, ReadBalance(loaded.Budget), allocations, refreshAccounting);
         next.Validate();
         Write(loaded.Entity, next);
         return new(command, next);

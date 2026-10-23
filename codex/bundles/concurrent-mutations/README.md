@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current work: [original-child refresh stop](validation/2026-10-23-process-refresh-child-stop.md)
+Current work: [original refresh reconciliation accounting](validation/2026-10-23-process-refresh-accounting.md)
+passes all 275 selected cases across the verified test-only work assertion repair.
+Original stopped work settles once; an already accepted effect completes its original
+result, while unknown/open work stays reserved. Full portability, source/output identity
+and new resource reconciliation pass. Successor and capture decisions are recorded in
+P28; full refresh/replan and engine E2E remain open. SPA stays on
+**codex/concurrent-mutations** for colleague review. Historical cleanup denials remain.
+
+Preceding work: [original-child refresh stop](validation/2026-10-23-process-refresh-child-stop.md)
 passes all 73 selected cases across a verified test-only cursor assertion repair. Registered
 Workbench/Core stopping requires the exact durable refresh and preserves original work,
 effects and reserved grants. Final portability, source/output and new resource checks pass.

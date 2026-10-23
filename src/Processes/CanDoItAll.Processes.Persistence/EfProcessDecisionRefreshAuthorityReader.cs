@@ -15,7 +15,14 @@ public sealed class EfProcessDecisionRefreshAuthorityReader(IDbContextFactory<Pr
         var address = original.Child.Address;
         var receipt = await EfProcessDecisionRefreshReceiptReader.ReadCoreAsync(context, address.RunId, admissionId, cancellationToken)
             .ConfigureAwait(false) ?? throw new InvalidOperationException("Stopping for refresh requires its durable original admission.");
+        await RequireCurrentAsync(context, original, receipt, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task RequireCurrentAsync(ProcessPersistenceDbContext context, ProcessDecisionChildMaterialBinding original,
+        ProcessDecisionRefreshReceipt receipt, CancellationToken cancellationToken) {
+        var address = original.Child.Address;
         var intent = ((ProcessDecisionBeginRefresh)receipt.Decision.Command).Intent;
+        var admissionId = intent.Request.CommandId;
         if (intent.Request.Child != address || intent.OriginalMaterialId != original.Child.MaterialId ||
                 intent.ChildFingerprint != ProcessDecisionChildMaterialBindingCodec.Fingerprint(original)) {
             throw new InvalidDataException("The refresh admission does not authorize this original child and material.");

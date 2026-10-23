@@ -6,7 +6,7 @@ namespace CanDoItAll.Processes.Persistence;
 
 internal static class ProcessDecisionResultAcceptance {
     internal static async Task RequireAsync(ProcessPersistenceDbContext context, ProcessRuntimeCommitRequest request,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, ProcessDecisionRefreshIntent? refreshAccounting = null) {
         var original = request.OriginalState.AppliedResults.Select(item => (item.StepInstanceId, item.StrategyId, item.IdempotencyKey)).ToHashSet();
         var reviewRootChecked = false;
         foreach (var result in request.Mutation.State.AppliedResults.Where(item => !original.Contains((item.StepInstanceId, item.StrategyId, item.IdempotencyKey)))) {
@@ -30,7 +30,10 @@ internal static class ProcessDecisionResultAcceptance {
                 continue;
             }
             if (step.Status is not (ProcessRuntimeStepStatus.Completed or ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled) ||
-                    selection.OtherWorkPending || selection.SharedScopePending) {
+                    selection.OtherWorkPending || selection.SharedScopePending && (refreshAccounting is null ||
+                        refreshAccounting.Request.Child.StepInstanceId != result.StepInstanceId ||
+                        refreshAccounting.Request.Child.ChildId.Value != result.ExecutionRunId?.Value ||
+                        selection.Head?.RefreshCommandId != refreshAccounting.Request.CommandId)) {
                 throw Refuse();
             }
             if (!reviewRootChecked && request.OriginalState.Steps.Single(item => item.StepInstanceId == result.StepInstanceId).Status

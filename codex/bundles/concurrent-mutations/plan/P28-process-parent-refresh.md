@@ -3,7 +3,8 @@
 Status: atomic admission passes its [343-case qualification](../validation/2026-10-23-process-refresh-admission.md),
 including migration, historical readers and portability. Original-child stop passes its
 [73-case qualification](../validation/2026-10-23-process-refresh-child-stop.md). Reconciliation
-accounting is next; full refresh activation remains gated by the owner/delivery checkpoints below.
+accounting passes its [275-case qualification](../validation/2026-10-23-process-refresh-accounting.md).
+Successor/capture is next; full refresh activation remains gated by the owner/delivery checkpoints below.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.
 Behavioral proof tier. The current public contract still supports Fail/Pause only.
@@ -338,7 +339,11 @@ admission, accepted input, original child digest, exact admitted generation and 
 scope, original unsettled allocation/budget, live root and completed waiting claim.
 It verifies the entire permitted mutation shape, including original result history,
 unmodified claims/other runtime fields and exact result events. No capture, reservation,
-Ready step, new claim, outbox action or unrelated command may accompany accounting.
+Ready step, new claim, external outbox action or unrelated command may accompany accounting.
+Accepted completion retains only the existing RuntimeProjection messages derived from
+its exact result events; NoEffect accounting produces neither events nor messages. The
+first Unit run exposed an overly strict prohibition of these required projections, which
+is corrected with explicit event/payload/subscriber checks rather than suppressing them.
 The completion path receives the validated intent from this guard; it must not trust the
 mere presence of the optional request field. Add a separate pure shared-scope refresh
 completion transition requiring the admitted Reconciling scope/material and its original
@@ -362,3 +367,70 @@ source-derived discovery before execution; use actual SQL and registered Workben
 owners for the positive and effect-race cases. Rebuild each changed production owner
 and both affected test assemblies in Release, run final portability and scoped architecture
 comparison, and reconcile the reused fixture before the successor-capture checkpoint.
+
+## Successor and capture implementation decisions
+
+Source review found a separate runtime obligation before capture can be exposed.
+`EfProcessDecisionStore` currently accepts a refresh mutation when the step becomes Ready
+and releases its claim; it does not by itself prove preservation of the old attempt,
+results or unrelated runtime state. The generic rework command resets a blocked step's
+attempt to zero. Refresh must preserve that attempt because the scheduler derives the
+next attempt by incrementing it. Reusing generic rework would conflate identities across
+material generations.
+
+The next dependency checkpoint will add one pure Runtime successor preparation contract,
+bound to the original admitted action. Its deterministic command identity must be stable
+across retries. It may change only the selected waiting step to Ready, reactivate the
+nonterminal run and advance the normalized timestamp. Keep the original attempt number,
+completed claims, waiting receipts, plan, accepted source and all other runtime state.
+Use the existing rework/reactivation/readiness events with the original admission actor
+and exact RuntimeProjection messages; no new external action belongs in this transaction.
+No engine partial or generic rework relaxation is needed.
+
+Persistence must validate that exact mutation under the existing root fence, against the
+original admitted input/child and deterministic NoEffect accounting receipt. A bare
+Reconciling flag, closed-child counter or historical admission is insufficient. Require
+the original child's actual closure/settlement and unchanged reconciled head; accepted
+completion, cancellation, a new claim or a different action must refuse advance. Existing
+material, complete-child, capture-allocation and shared-membership owners still validate
+their own invariants. The old generation retains its action pointer; its sole successor
+clears it. Tests must exercise substituted histories/attempts/events and actual SQL
+rollback, duplicate advance, both read modes and cancellation. This boundary does not
+claim that the capture producer or delivery worker exists.
+
+Capture then uses a narrow blocked-parent preparation query, not a fabricated live dispatch
+claim or a relaxed `IProcessDecisionStepQuery`. Reuse the immutable accepted source,
+original policy/content contract and registered `IProcessDecisionMaterialCapturer`.
+Application coordinates; Persistence selects bounded metadata and enforces transaction
+preconditions; Workbench retains source access and material capture. No new project edge
+or provider callback inside SQL is permitted.
+
+For StepSnapshot, reserve a bounded linked local/root capture allocation before external
+reads, then atomically settle exact closed work, persist material and advance Ready. For
+RunSnapshot, reserve/capture/settle once at the shared root, then inherit that durable
+material through a bounded local preparation allocation and advance Ready. The allocation
+contract forbids an empty grant: reserve only available local/root work and settle the
+measured inheritance operation, without charging another capture or replan. Exhaustion
+stays explicit rather than manufacturing a zero-sized reservation. Shared capture may become
+Active before local advance: the original local Reconciling head must continue fencing old
+publication and dispatch during that gap. Reserve/complete/abort/inherit/advance identities
+must derive from the original action and stage, not a fresh timestamp or current revision.
+Manual work consumes no automatic replan; automatic admission remains separately gated.
+
+Before implementing capture delivery, qualify crash and refusal recovery explicitly.
+The existing initial-capture coordinators deliberately return pending after a retained
+reservation and cannot be reused as evidence that interrupted refresh resumes. A missing
+capture acknowledgement cannot justify recapturing, refunding unknown work or inventing a
+measured settlement. A refused capture must retain its closed cost and expose an explicit
+retry/recovery outcome; the existing one-admission-per-generation contract does not yet
+authorize a second capture attempt. Resolve durable capture ownership, bounded retry
+identity and recovery of closed capture work before enabling a recurring worker or public
+refresh. Preserve the original budget ceilings and 32/64/256 generation/child/allocation
+bounds throughout.
+
+The existing outbox also needs qualification before reuse: its current read-then-update
+claim is not an atomic competing-worker claim and it does not reclaim expired locks.
+RuntimeProjection rows do not contain an original refresh command identity. Do not consume
+that backlog as refresh work or treat the in-memory dispatch queue as restart delivery.
+Durable refresh delivery needs exact action identity, bounded leased claims/retries,
+expiry recovery, cancellation and source-profile checks, and contention/fairness proof.

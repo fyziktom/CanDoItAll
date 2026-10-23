@@ -603,3 +603,19 @@ strict lossless input, current access, both parent snapshot modes, host restart,
 exact retry and pending/lost Process accounting. No project references or scoped
 cycles were added. Full-runtime read scaling and saved v1 intent compatibility
 remain gates before recurring UI invalidation and executor activation.
+
+Parent refresh retains a distinct, durable action against the original waiting child.
+Admission freezes the original local decision and, for RunSnapshot, its shared scope;
+the Workbench adapter then stops that exact child through the existing Agent owner.
+The [reconciliation accounting boundary](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-refresh-accounting.md)
+keeps unknown/open work reserved. A closed proposal settles its actual local/root cost
+once and remains Reconciling. If the original effect was already accepted, it completes
+that original result instead of refunding work or producing a replacement proposal.
+Receipt replay precedes another child read, and SQL rechecks authority under the root
+fence without calling an Agent owner inside the transaction.
+
+These internal owners do not yet expose refresh or Replan through the public policy API.
+Replacement capture, successor admission and durable delivery remain explicit gates in
+the [parent refresh design](../../../codex/bundles/concurrent-mutations/plan/P28-process-parent-refresh.md).
+An inherited Agent continues using its admitted material until its owner closes that work;
+there is no subscription that silently replaces input during execution.
