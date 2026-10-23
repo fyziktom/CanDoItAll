@@ -141,6 +141,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessAcceptedExecutionInputReader, EfProcessAcceptedExecutionInputReader>();
         services.TryAddScoped<ProcessDecisionStepPreparationCoordinator>();
         services.TryAddScoped<ProcessDecisionRootPreparationCoordinator>();
+        services.TryAddScoped<ProcessDecisionLaunchAdmissionCoordinator>();
         services.TryAddScoped<ProcessDecisionChildMaterialReader>();
         services.TryAddScoped<IProcessDecisionPublicationFence, EfProcessDecisionPublicationFence>();
         services.TryAddScoped<ProcessExecutionProjectAuthorityReader>();

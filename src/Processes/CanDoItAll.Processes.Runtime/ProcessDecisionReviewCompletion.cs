@@ -143,9 +143,12 @@ public static class ProcessDecisionReviewCompletion {
     public static bool SupportsRuntimeContract(ProcessRuntimeStepState step) {
         ArgumentNullException.ThrowIfNull(step);
         return step.IsExecutable && step.RequiredArtifactSlots.Count == 0 && step.ProducedArtifactSlots.Count == 0 &&
-            step.RequiredRuntimeToolNames.Count == 0 && step.RequiredHostCapabilities.Count == 0 &&
+            step.RequiredRuntimeToolNames.Count == 0 && SupportsHostCapabilities(step.RequiredHostCapabilities) &&
             step.ArtifactDescriptors.Count == 0 && step.SubprocessArtifactMappings.Count == 0;
     }
+
+    public static bool SupportsHostCapabilities(IEnumerable<ProcessHostCapabilityId> capabilities)
+        => capabilities.All(capability => capability == ProcessHostCapabilityIds.ManagedProcessAdapter);
 
     private static bool IsWaiting(ProcessRuntimeStepStatus status)
         => status is ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.WaitingApproval or ProcessRuntimeStepStatus.Blocked;

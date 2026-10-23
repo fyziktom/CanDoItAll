@@ -53,7 +53,7 @@ public sealed class ProcessLaunchDefinitionApiTests {
             } else {
                 await using var retirement = host.App.Services.CreateAsyncScope();
                 var projects = retirement.ServiceProvider.GetRequiredService<ProjectsService>();
-                await projects.DeleteAsync(project);
+                await new ProjectLifecycleTestDriver(retirement.ServiceProvider).DeleteAsync(project);
                 if (change == BoundaryChange.ProjectRecreation) {
                     Assert.True((await projects.CreateAsync(project, new() { Name = "Successor project lifetime" })).IsSuccess);
                 }

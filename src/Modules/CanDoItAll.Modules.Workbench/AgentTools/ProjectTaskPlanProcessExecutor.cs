@@ -119,7 +119,7 @@ internal sealed class ProjectTaskPlanProcessExecutor(IProcessAcceptedExecutionIn
                 !Guid.TryParse(assignment.ExecutorId, out var agentId) || agentId == Guid.Empty ||
                 input.Source is not { CanCreateTasks: true, ProjectAdmission: not null } ||
                 contract.RequiredArtifacts.Count != 0 || contract.ExpectedProducedArtifacts.Count != 0 ||
-                contract.RequiredRuntimeToolNames.Count != 0 || contract.RequiredHostCapabilities.Count != 0 ||
+                contract.RequiredRuntimeToolNames.Count != 0 || !ProcessDecisionReviewCompletion.SupportsHostCapabilities(contract.RequiredHostCapabilities) ||
                 contract.ArtifactDescriptors.Count != 0 || contract.SubprocessArtifactMappings.Count != 0 ||
                 contract.ConfiguredBranchOutcomeIds.Count != 0) {
             throw new NotSupportedException("The supplied task-plan execution does not match the supported original contract.");

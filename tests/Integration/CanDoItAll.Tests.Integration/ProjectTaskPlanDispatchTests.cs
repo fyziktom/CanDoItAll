@@ -180,13 +180,17 @@ public sealed class ProjectTaskPlanDispatchTests {
     }
 
     [Theory]
-    [InlineData(ReadBasisMode.RunSnapshot)]
-    [InlineData(ReadBasisMode.StepSnapshot)]
-    public async Task Unsupported_obligations_are_refused_before_step_allocation_or_provider_work(ReadBasisMode mode) {
+    [InlineData(ReadBasisMode.RunSnapshot, false)]
+    [InlineData(ReadBasisMode.StepSnapshot, false)]
+    [InlineData(ReadBasisMode.RunSnapshot, true)]
+    [InlineData(ReadBasisMode.StepSnapshot, true)]
+    public async Task Unsupported_obligations_are_refused_before_step_allocation_or_provider_work(ReadBasisMode mode, bool additionalHost) {
         await using var fixture = await ProjectTaskPlanDispatchFixture.CreateAsync(mode);
         var before = JsonSerializer.Serialize(await fixture.Services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(fixture.Request.RunId));
         var result = await fixture.ExecuteAsync(fixture.Request with {
-            StepContract = ProcessStepExecutionContract.Empty with { RequiredRuntimeToolNames = ["unadmitted_tool"] }
+            StepContract = additionalHost
+                ? ProcessStepExecutionContract.Empty with { RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId> { ProcessHostCapabilityIds.ManagedProcessAdapter, new("host.workspace") } }
+                : ProcessStepExecutionContract.Empty with { RequiredRuntimeToolNames = ["unadmitted_tool"] }
         });
         Assert.Equal(StrategyOutcome.Failed, result.Outcome);
         Assert.Null(result.ExecutionRunId);

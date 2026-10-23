@@ -59,6 +59,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectTaskPlanProcessReadAuthority>();
         services.AddScoped<ProjectTaskPlanProcessBinding>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessDecisionStepExecutor, ProjectTaskPlanProcessExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessDecisionLaunchPolicyProvider, ProjectTaskPlanProcessLaunchPolicyProvider>());
         services.AddScoped<ProjectTaskPlanProcessReviewService>();
         services.AddScoped<ProjectTaskPlanProcessReviewReader>();
         services.AddScoped<ProjectTaskPlanProcessReconciliationService>();

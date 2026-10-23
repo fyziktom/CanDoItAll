@@ -83,6 +83,7 @@ internal static class ProcessPreparedLaunchCodec {
     private const string DecisionPolicyHashDomain = "process-decision-policy-v1\n";
     private const string RootDecisionPolicyHashDomain = "process-root-decision-policy-v1\n";
     private const string SharedRunScopeHashDomain = "process-shared-run-scope-v1\n";
+    private const string DecisionSelectionHashDomain = "process-launch-decision-selection/v1\n";
     private static readonly JsonSerializerOptions Options = ProcessInstancePlanPersistenceMapper.CreateSerializerOptions();
 
     public static ProcessPreparedLaunchEntity ToEntity(ProcessPreparedLaunch preparation) {
@@ -174,7 +175,8 @@ internal static class ProcessPreparedLaunchCodec {
             ? DecisionPolicyHashDomain : string.Empty;
         var rootDecisionDomain = preparation.InitialCommit.InitialRunDecisionAdmission is null ? string.Empty : RootDecisionPolicyHashDomain;
         var scopeDomain = preparation.InitialCommit.InitialRunDecisionAdmission?.MaterialScope is null ? string.Empty : SharedRunScopeHashDomain;
-        return Hash(scopeDomain + rootDecisionDomain + decisionDomain + lifetimeDomain + projectDomain + sourceDomain + payload);
+        var selectionDomain = preparation.Request.Decision is null ? string.Empty : DecisionSelectionHashDomain;
+        return Hash(selectionDomain + scopeDomain + rootDecisionDomain + decisionDomain + lifetimeDomain + projectDomain + sourceDomain + payload);
     }
 
     private static void RequireDecisionPolicyBindings(ProcessPreparedLaunch preparation) {
@@ -187,6 +189,16 @@ internal static class ProcessPreparedLaunchCodec {
                 ?? throw new InvalidDataException("A governed root requires the original funded policy of every assignment."));
         }
         preparation.InitialCommit.InitialRunDecisionAdmission?.RequireRoot(preparation.InitialCommit.Mutation.State, plan.Definition.VersionId);
+        if (preparation.Request.Decision is { } selection) {
+            ProcessDecisionLaunchAdmissionCoordinator.RequireRequest(preparation.Request with {
+                Authority = preparation.Authority,
+                ProjectAdmission = preparation.InitialCommit.Mutation.State.ProjectAdmission,
+                ToolSource = preparation.ToolSource
+            });
+            ProcessDecisionLaunchAdmissionCoordinator.RequireBindings(selection, preparation.InitialCommit, preparation.Review.Decision);
+        } else if (preparation.Review.Decision is not null) {
+            throw new InvalidDataException("A selected Process policy review requires its original launch selection.");
+        }
     }
 
     private static bool HasSourceLifetimeSchema(ProcessLaunchAuthority? authority)

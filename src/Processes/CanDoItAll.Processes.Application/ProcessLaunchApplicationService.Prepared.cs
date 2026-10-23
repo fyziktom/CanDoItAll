@@ -116,6 +116,10 @@ public sealed partial class ProcessLaunchApplicationService {
         var initial = new ProcessRuntimeCommitRequest(context.CommandId, initialState, mutation, parent, plan) {
             InitialAssignments = prepared.Assignments
         };
+        if (request.Decision is not null) {
+            var coordinator = decisionAdmissions ?? throw new InvalidOperationException("Selected Process decision preparation requires its configured admission owner.");
+            (initial, review) = await coordinator.PrepareAsync(request, initial, review, cancellationToken).ConfigureAwait(false);
+        }
         var result = await store.PrepareAsync(new(admissionId, request.CallerIntentId, fingerprint, request.Authority,
             request with { PreparedAdmissionId = null }, initial, review, request.LinkTarget, now) {
                 ToolSource = request.ToolSource
@@ -276,7 +280,7 @@ public sealed partial class ProcessLaunchApplicationService {
 
     private static bool UsesPreparedPreview(ProcessLaunchRequest request)
         => request.CallerIntentId is not null || request.PreparedAdmissionId is not null || request.Authority is not null || request.LinkTarget is not null ||
-            request.ToolSource is not null;
+            request.ToolSource is not null || request.Decision is not null;
 
     private static ProcessRuntimeCommitResult ObservedCommit(ProcessRuntimeStateSnapshot state)
         => new(ProcessRuntimeTransitionOutcome.Duplicate, state, [], [], [], []);

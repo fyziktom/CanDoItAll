@@ -33,6 +33,10 @@ public static class ProcessLaunchIntentFingerprint {
             AgentOperation = (request.Authority?.Principal as ProcessLaunchPrincipal.AgentExecution)?.Operation,
             Caller = Caller(request.Authority)
         }));
+        if (request.Decision is { } selection) {
+            selection.Validate();
+            requestHash = Hash("process-launch-decision-selection/v1\n" + JsonSerializer.Serialize(new { Request = requestHash, Decision = selection }));
+        }
         requestHash = request.ProducerInputFingerprint is { } input
             ? Hash(JsonSerializer.Serialize(new { Request = requestHash, ProducerInput = input }))
             : requestHash;

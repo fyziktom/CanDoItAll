@@ -695,6 +695,9 @@ internal static class ProcessesApi
 
             return Results.Ok(MapLaunchResult(result));
         }
+        catch (ProcessLaunchDecisionRejectedException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, "process.launch_decision_rejected");
+        }
         catch (ProcessLaunchIntentConflictException) {
             return Results.Conflict(new ApiErrorResponse([
                 new("process.launch_intent_conflict", "The process launch intent no longer matches its original input.", CanDoItAll.SharedKernel.ErrorSeverity.Error)
@@ -761,7 +764,8 @@ internal static class ProcessesApi
             string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
             variables, request.RunReadiness, request.Execute) {
             CallerIntentId = request.CallerIntentId is { } intent ? new(intent) : null,
-            PreparedAdmissionId = request.PreparedAdmissionId is { } admission ? new(admission) : null
+            PreparedAdmissionId = request.PreparedAdmissionId is { } admission ? new(admission) : null,
+            Decision = request.Decision
         };
         var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
         var replay = await ProcessLaunchProducerRequests.FindReplayAsync(input, caller, preparations, cancellationToken);
@@ -833,7 +837,7 @@ internal static class ProcessesApi
                 result.LaunchPlan.LiveRunProfileKey,
                 result.LaunchPlan.PlanHash,
                 result.LaunchPlan.Steps.Select(MapLaunchStep).ToArray(),
-                result.LaunchPlan.ReadinessFindings.Select(MapReadinessFinding).ToArray()),
+                result.LaunchPlan.ReadinessFindings.Select(MapReadinessFinding).ToArray()) { Decision = result.LaunchPlan.Decision },
             result.Warnings) { Observation = result.Observation is { } observation ? MapLaunchObservation(observation) : null };
     }
 
@@ -1147,7 +1151,8 @@ internal sealed record ProcessLaunchApiRequest(
     bool RunReadiness = true,
     bool Execute = false,
     Guid? CallerIntentId = null,
-    Guid? PreparedAdmissionId = null);
+    Guid? PreparedAdmissionId = null,
+    ProcessLaunchDecisionOptions? Decision = null);
 
 /// <summary>
 /// Body of <c>POST /api/processes/runs/{runId}/dispatch</c>. Every member is optional, but the JSON object itself is
@@ -1312,7 +1317,10 @@ internal sealed record ProcessLaunchPlanApiView(
     string? LiveRunProfileKey,
     string PlanHash,
     IReadOnlyList<ProcessLaunchStepApiView> Steps,
-    IReadOnlyList<ProcessLaunchReadinessFindingApiView> ReadinessFindings);
+    IReadOnlyList<ProcessLaunchReadinessFindingApiView> ReadinessFindings) {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessLaunchDecisionReview? Decision { get; init; }
+}
 
 /// <summary>
 /// One step of a launch plan with the executor assigned to it.

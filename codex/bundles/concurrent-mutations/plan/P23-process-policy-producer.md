@@ -1,7 +1,8 @@
 # P23: admit an explicitly selected Process planning policy
 
-Status: design reviewed before implementation, 2026-10-23. P21/P22 qualification passed
-all 588 focused cases and its source/static/resource gates. This is a public producer slice, not
+Status: qualified, 2026-10-23. [P23 validation](../validation/2026-10-23-process-policy-producer.md)
+passes 251 distinct backend cases across verified test-source repairs and 62 SPA tests,
+with source/output, architecture, full portability and resource gates. This is a public producer slice, not
 whole-engine policy activation. Agent definition, Workflow, shared refresh/replan and
 multi-activity lifecycle remain separate acceptance gates.
 
@@ -150,6 +151,31 @@ The relevant proof is:
 The public producer is not qualified by manually populated consumer fixtures. Native/API
 producer evidence and actual downstream execution must agree before enabling its UI.
 
+## Public-producer finding: the managed execution port
+
+The initial P23 candidate compiled successfully and passed 36 unit cases, but the actual
+HTTP producer rejected its intended single activity. The standard compiler preserves
+the selected driver's `ManagedProcessAdapter` host requirement in both the plan and
+runtime step. P21's manually admitted consumer fixtures had an empty step host contract,
+so its blanket prohibition did not expose this integration gap. The initial HTTP lane
+passed six cases and failed five; later regression lanes were not run. Its source/output
+identity was verified and process/database/temporary-family reconciliation was clean.
+
+Before repair, the design now distinguishes the required managed execution port from
+additional business capabilities. Preserve `ManagedProcessAdapter` in the compiled plan,
+accepted requirements and runtime state, and accept it in the single-activity admission
+and result-completion checks. Continue to refuse every other required host capability.
+The compiler and actual strategy dispatcher retain their existing availability checks;
+no fixture may strip the capability or substitute a special driver to make planning pass.
+Use one pure Runtime predicate shared by the Application and Workbench checks. This adds
+no reference or service boundary. Cover both the allowed port and additional refused
+capabilities, and rerun the public path through the real standard driver and dispatcher.
+
+The initial missing-policy test also attempted a V2 write that correctly rejects a null
+policy. Its replacement must explicitly seed the supported historical settings row with
+no policy, then exercise public launch refusal. Negative HTTP cases must check their
+specific public refusal message, so an unrelated plan refusal cannot count as policy proof.
+
 Before snapshot `snap-20261023083017-64aa5311` covers Application, Persistence and
 Workbench: 1,803 types, 15,961 members, 580 findings and 205 diagnostics. The scoped
 project edges are Workbench-to-Application and Persistence-to-Application. Six existing
@@ -157,3 +183,68 @@ Workbench module/type cycles remain; no project-reference cycle is reported. Dia
 include 189 WS0002 errors, 12 DI0001 informational findings and four DI0002 warnings.
 Direct Release/local-library ProjectReference evaluation passed for all three owners.
 These are limited baseline observations, not a claim that the whole solution is healthy.
+
+## Public execution observation
+
+The managed-port repair passes all 37 selection cases and nine HTTP refusal/replay
+cases. The two positive HTTP cases exposed a test coordination mistake: `Execute=true`
+already enqueues the ordinary dispatch worker, including in the isolated MCP test lane.
+Calling a second dispatcher and immediately reading state races the original claim and
+snapshot capture. The completed run retains its failed results and verified source/output
+identities; process, database and temporary-family reconciliation found no leftovers.
+
+Observe the actual queued operation through bounded reads of its durable runtime state.
+Do not manually dispatch, suppress the queue worker, substitute a driver or seed a result.
+Fail with the observed runtime status if no planning result becomes durable within the
+test deadline. This proves public launch delivery as well as the admission and consumer.
+The production implementation is unchanged by this fixture repair.
+
+The queued path then exposed the remaining executor request guard: it still rejected
+every host capability after admission had accepted the managed execution port. Both
+snapshot modes failed before child enrollment. Apply the same shared predicate to that
+last boundary; preserve the actual driver, request and accepted capability. Add executor
+refusals for an extra host requirement in both modes, and include safe result diagnostics
+in the HTTP assertion. The queue-only candidate retains 46/48 passing executions, a
+passing portability gate and clean source/output/resource verification. Its failures
+prevent public-producer closure and invalidate any claim that P21 alone proved this path.
+
+The next queued execution reached enrollment but closed startup. A diagnostic decorator
+that forwards every call to the real workspace and rethrows the original failure identified
+the retained publication fence: the authored activity lacked `ExecuteExternalAction`.
+P21 consumer fixtures explicitly granted that operation; the new public fixture did not.
+The operation grant must remain mandatory. Reject its absence in the Workbench launch
+provider before preparation/funding, and publish the positive fixture with the explicit
+grant. Add pure and HTTP negative cases proving that selecting the planner does not grant
+an activity an operation its published definition forbids. Do not change the downstream
+publication fence or rewrite the assignment's allowed operations during admission.
+
+## Transport fixture isolation
+
+The admitted child reached the real MAF provider but rejected its output. Narrow runtime,
+preparation and retained-response diagnostics proved that the expected draft prepares
+successfully and satisfies publication bounds. The saved provider envelope instead used
+the Responses SDK with an empty message list while the fixture returned Chat Completions
+JSON. Starting the second actual host normalizes the managed seed provider identity.
+
+Give the public-launch fixture a separate provider identity and bind its selected Agent
+to that profile before starting the second host. Assert the effective transport from the
+second host before authoring or launch. Keep the normal registry, runtime adapter and
+queued delivery; do not reinterpret empty responses, replace the planner or relax output
+validation. Remove temporary response dumping after diagnosis. Both failed diagnostic
+rows and their source/output/resource identities remain preserved.
+
+## Prepared-launch transfer regression
+
+The first broad candidate passes the 12 public cases and the earlier launch/fingerprint
+topics, then fails two older prepared-launch target-inspection cases. Their real cancelled
+roots retain unfinished cancellation recovery, which the existing transfer guard correctly
+refuses. `ProjectTransferOwnerInspectionTests` already defines that refusal for both queued
+and unseeded cancelled roots; terminal runtime status is not proof of quiescence.
+
+Update those two assertions and the misleading allow-history name to the current contract.
+Require the exact residue count, the explicit cancellation refusal and its source-transfer
+block, plus the separate nonblocking mismatched-pointer finding when applicable. Keep the
+unchanged-evidence and restart checks. Do not remove cancellation metadata or relax the
+production transfer guard. Rerun the entire affected persistence topic and all previously
+unexecuted topics; carry the already-passing unrelated topics with an explicit test-source
+repair boundary rather than presenting both candidates as one run.

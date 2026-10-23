@@ -1,13 +1,13 @@
 # Requirements and closure ledger
 
-Current checkpoint: [registered Process planning and terminal shared scope](validation/2026-10-23-process-planning-dispatch.md)
-passes all 588 focused cases, affected Release builds, full portability and final
-source/output/resource verification. Actual dispatch retains original input and claims;
-terminal root results close shared material with decision/work accounting in one SQL
-transaction. Original failed candidates remain preserved. The next [public policy
-producer](plan/P23-process-policy-producer.md) is designed but not implemented. Shared
-refresh/replan, broader lifecycle, capacity and remaining owners remain open. The pending
-signed checkpoint still needs local GPG unlock. SPA stays on its dedicated branch.
+Current work: [public Process policy producer](validation/2026-10-23-process-policy-producer.md)
+passes 251 distinct cases across verified test-source repairs, full portability and final
+source/output/resource checks. Public RunSnapshot/StepSnapshot selection reaches queued
+MAF planning, HTTP review, one task publication and terminal accounting. The SPA client
+passes 62 tests and its typecheck/build; signed commit `0fa527a` stays on
+**codex/concurrent-mutations** for colleague review. Selection UI, shared refresh/replan,
+broader lifecycle, capacity, remaining owners
+and final engine E2E remain open.
 
 Preceding work: [chat-session publication and client integration](validation/2026-10-23-chat-session-publication.md)
 qualifies conditional title changes, selected session creation and late-run title retention.
@@ -565,7 +565,7 @@ and native browser regressions. It does not close durable same-source session id
 The current compiled SPA passes generated-contract, transport, app and rendered-state
 checks on its dedicated branch. Its older Project definition/lifecycle producers and
 persistent Workspace draft recovery still require their own integration. Signed backend
-checkpoints remain queued behind the existing P17/P18 Pinentry request; P19 is frozen as a
-separate patch and source snapshot. No signing requirement is bypassed and no SPA main
-integration is authorized. Both new bulk portability files are retained after separate
+checkpoints were subsequently signed in their exact frozen order through P21/P22. No
+signing requirement was bypassed and no SPA main integration is authorized. Both new
+bulk portability files are retained after separate
 cleanup denials; source/output/runtime reconciliation passes for the executed P20 lanes.

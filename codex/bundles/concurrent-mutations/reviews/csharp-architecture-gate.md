@@ -288,3 +288,30 @@ Independent title tests, real selected-key races, HTTP conditions, actual Editab
 and the native browser scenarios prove this seam. SPA generation preserves the same wire
 condition and has separate runtime serializer and bounded-transport proof. Sustained
 capacity, activation, remaining policy/owner integrations and whole-engine closure remain.
+
+## Explicit public Process planning policy
+
+Status: Pass with follow-up. [P23 validation](../validation/2026-10-23-process-policy-producer.md)
+qualifies 251 distinct backend cases across recorded test-source repairs. Application
+owns typed selection, immutable identity validation and the narrow admission-provider
+boundary. Workbench implements planning eligibility, coherent settings capture and
+current Agent/Project checks. Runtime owns supported host semantics; Persistence binds
+the original selection and admissions to the durable preparation. The existing launch
+partial only delegates at its preparation boundary. There is no new business partial,
+project reference, schema migration or service locator.
+
+The provider closes the Workspace read before acquiring the Agent catalog lease. Neither
+lease spans provider work. Replay restores saved policy and funding instead of reading
+new defaults. The coordinator checks exact assignment coverage and original root/step
+bindings; adding a later owner uses the same registered seam. Unknown or unsupported
+contracts and policies fail explicitly. Selection never grants a missing activity operation.
+
+Final snapshot `snap-20261023100837-da94960e` retains four intended project references,
+six existing Workbench cycles and no new findings. Its 189 WS0002 errors, 12 DI0001
+informational diagnostics and four DI0002 warnings remain collector limitations; direct
+affected Release builds pass. This scoped comparison is not global solution health.
+Pure coordinator/fingerprint tests, real HTTP/SQL/queued MAF review and rollback/replay
+regressions exercise the new owner without using the launch monolith for pure tests.
+The generated SPA client preserves selected/effective semantics and bounded retry behavior.
+Broader lifecycle, refresh/replan, definition defaults and UI selection require their
+own qualification before they may borrow this producer's trust.

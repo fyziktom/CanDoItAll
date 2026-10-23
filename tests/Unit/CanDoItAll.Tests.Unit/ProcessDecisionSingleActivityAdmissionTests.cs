@@ -14,6 +14,26 @@ public sealed class ProcessDecisionSingleActivityAdmissionTests {
         ProcessDecisionSingleActivityAdmission.Require(fixture.State, fixture.Input, fixture.Contract);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Managed_execution_port_is_preserved_but_cannot_authorize_an_additional_host_obligation(bool additional) {
+        var fixture = new ProcessDecisionReviewCoordinatorFixture();
+        ProcessHostCapabilityId[] required = additional
+            ? [ProcessHostCapabilityIds.ManagedProcessAdapter, new("host.workspace")]
+            : [ProcessHostCapabilityIds.ManagedProcessAdapter];
+        var step = fixture.State.Steps[0] with { RequiredHostCapabilities = required.ToHashSet() };
+        var input = fixture.Input with { Requirements = fixture.Input.RequireRequirements() with { RequiredHostCapabilities = required } };
+        Assert.Equal(!additional, ProcessDecisionReviewCompletion.SupportsRuntimeContract(step));
+        if (additional) {
+            Assert.Throws<NotSupportedException>(() => ProcessDecisionSingleActivityAdmission.Require(fixture.State with { Steps = [step] }, input, fixture.Contract));
+        } else {
+            ProcessDecisionSingleActivityAdmission.Require(fixture.State with { Steps = [step] }, input, fixture.Contract);
+        }
+        Assert.Equal(required, input.RequireRequirements().RequiredHostCapabilities);
+        Assert.True(step.RequiredHostCapabilities.SetEquals(required));
+    }
+
     [Fact]
     public void Legacy_input_without_compiled_requirements_refuses_explicitly() {
         var fixture = new ProcessDecisionReviewCoordinatorFixture();

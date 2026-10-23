@@ -2,7 +2,7 @@
 
 Status: P21/P22 behavioral qualification passed, 2026-10-23. All 588 current cases pass.
 This record does not authorize public policy activation or claim end-to-end engine
-completion. Signed checkpoint creation remains pending the existing local GPG prompt.
+completion. The exact frozen checkpoint was subsequently signed as `b149693af`.
 
 Design: [P21 dispatch](../plan/P21-process-planning-dispatch.md) and
 [P22 terminal shared scope](../plan/P22-terminal-shared-scope.md).

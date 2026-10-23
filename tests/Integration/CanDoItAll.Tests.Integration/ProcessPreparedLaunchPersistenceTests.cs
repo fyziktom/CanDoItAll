@@ -26,7 +26,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         => AssertTerminalTargetInspectionAsync(mismatchedPointer: true);
 
     [Fact]
-    public Task Target_inspection_allows_coherent_terminal_non_project_history_after_restart()
+    public Task Target_inspection_rejects_cancelled_history_with_unfinished_recovery_after_restart()
         => AssertTerminalTargetInspectionAsync(mismatchedPointer: false);
 
     [Fact]
@@ -462,10 +462,10 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         var locked = await operations.RunExclusiveImportAsync(Profile(services),
             [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], participant.EntityTypesToLock, InspectAsync);
         foreach (var residues in new[] { independent, locked }) {
+            Assert.Equal(mismatchedPointer ? 2 : 1, residues.Count);
+            Assert.Contains(residues, item => item.Description == "unfinished Process cancellation recovery" && item.BlocksSourceTransfer);
             if (mismatchedPointer) {
-                Assert.Equal("process runtime state with missing or mismatched launch admission evidence", Assert.Single(residues).Description);
-            } else {
-                Assert.Empty(residues);
+                Assert.Contains(residues, item => item.Description == "process runtime state with missing or mismatched launch admission evidence" && !item.BlocksSourceTransfer);
             }
         }
     }

@@ -136,9 +136,8 @@ public sealed class ProcessLaunchProducerApiTests {
             var commit = await services.GetRequiredService<IProcessRuntimeUnitOfWork>().CommitAsync(ProcessPreparedLaunchFixture.Commit(fixture.Saved));
             Assert.True(commit.Succeeded);
             var projectId = fixture.Saved.Preparation.Authority!.ProjectAdmission!.ProjectId;
-            var deletion = await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
-            Assert.Equal(projectId, deletion.ProjectId);
-            Assert.Empty(deletion.Warnings);
+            await new ProjectLifecycleTestDriver(services).DeleteAsync(projectId);
+            Assert.Null(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         }
         await using var restarted = await ApiTestHost.CreateAsync(jwtEnabled: false, sharedTestEnvironment: environment, sharedActiveProfile: profile);
         await using var before = new ProcessPersistenceDbContext(Options(restarted.App.Services));

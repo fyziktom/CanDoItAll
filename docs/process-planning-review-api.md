@@ -33,6 +33,10 @@ displayed Agent expectation and publication binding/approval ID into `agent`, an
 the displayed Process expectation into `process`. Choose only an offered approve
 or reject action. The Process completion key is the Agent action ID. An optional
 `activityOperationId` identifies activity reporting, not a replacement action.
+Omit it to let the server assign an ID for each HTTP attempt. If supplied explicitly,
+use a fresh value for another attempt; reusing a completed activity ID returns
+`agents.execution-operation-duplicate`. Keep the durable `agent.actionId`, original
+expectations, choice and publication binding unchanged when reconciling the action.
 
 All revision fields are canonical positive decimal **strings**, including returned
 child revisions. Preserve them without JavaScript number conversion. Requests are
@@ -42,8 +46,8 @@ incorrectly cased and missing required members are rejected. Responses use
 
 A successful Agent publication can coexist with `accountingPending=true`.
 An uncertain acknowledgement or access refusal does not prove that publication
-failed. Preserve the exact request and use it for recovery; never create another
-action to repeat the effect. Exact retry reads retained intent and evidence without
+failed. Preserve the exact action request and use it for recovery, with the activity
+ID rule above; never create another action to repeat the effect. Exact action retry reads retained intent and evidence without
 another provider call or publication. Missing evidence can keep recovery pending.
 If the original approval request is lost, its digest cannot reconstruct it. Reload
 GET. When `state` is `RecoveryRequired` and `accounting` is present, the child is

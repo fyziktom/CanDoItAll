@@ -24,12 +24,12 @@ public static class ProcessDecisionSingleActivityAdmission {
             throw new InvalidDataException("The accepted decision policy belongs to a different step.");
         }
         if (requirements.Kind != ProcessStepKind.Activity || requirements.StartsSubprocess ||
-                requirements.RequiredRuntimeToolNames.Count != 0 || requirements.RequiredHostCapabilities.Count != 0 ||
+                requirements.RequiredRuntimeToolNames.Count != 0 || !ProcessDecisionReviewCompletion.SupportsHostCapabilities(requirements.RequiredHostCapabilities) ||
                 requirements.ConfiguredBranchOutcomeIds.Count != 0 || requirements.ArtifactDescriptors.Count != 0 ||
                 requirements.SubprocessArtifactMappings.Count != 0 || assignment.RequiredArtifactSlotIds.Count != 0 ||
                 assignment.ProducedArtifactSlotIds.Count != 0 || assignment.BranchGate is not null ||
                 !ProcessDecisionReviewCompletion.SupportsRuntimeContract(step)) {
-            throw new NotSupportedException("The registered decision contract supports a single activity without artifact, tool, host, branch or subprocess obligations.");
+            throw new NotSupportedException("The registered decision contract supports a single activity with its managed execution port and no additional artifact, tool, host, branch or subprocess obligations.");
         }
     }
 }

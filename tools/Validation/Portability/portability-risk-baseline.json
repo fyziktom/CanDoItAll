@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-23T04:07:35.513826+00:00",
+  "generated_utc": "2026-10-23T10:43:23.520042+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15688,
+  "allowance_count": 15689,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59951,6 +59951,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectTaskPlanProcessCodec.cs",
       "category": "case-policy",
       "source_fingerprint": "42f97ae4c532222ef78a674caa1828842461d1e5eda73976eba13afd20b59946",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectTaskPlanProcessLaunchPolicyProvider.cs",
+      "category": "case-policy",
+      "source_fingerprint": "2eaa4f0e231c9187e24ad2facc05667dc4b5e300498ca97cfd6a5886f82278c7",
       "count": 1
     },
     {
