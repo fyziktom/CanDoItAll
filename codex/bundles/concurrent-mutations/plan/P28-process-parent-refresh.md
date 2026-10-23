@@ -1,0 +1,241 @@
+# P28: parent-owned Process refresh and replan
+
+Status: architecture entry qualified for the atomic-admission checkpoint, before production
+edits; full refresh activation remains gated by the owner/delivery checkpoints below.
+Prerequisite P27 is
+signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.
+Behavioral proof tier. The current public contract still supports Fail/Pause only.
+This design must be qualified through the actual producer before advertising Replan.
+
+## Outcome and ownership
+
+An operator can explicitly replace the material of the existing single-activity planner;
+an admitted automatic policy can later use the same mechanism after verified changed
+material. The parent owns generation changes, the finite budget and retirement of its old
+child. The Agent continues using its original material until its owner closes that work.
+No background subscription mutates provider input, and no child independently spends a
+parent replan. Keep the original Process, source authority and accepted preparation.
+
+The existing `ProjectTaskPlanProcessChildStopper` requires a durable root cancellation
+barrier. Refresh must not manufacture that barrier: it would cancel the business Process
+and prevent a successor. Existing terminal accounting likewise requires a terminal step
+and must not be weakened to account for an active refresh. Introduce explicit refresh
+authority and reconciliation accounting at the existing owner boundaries.
+
+| Responsibility | Existing owner and planned change |
+| --- | --- |
+| Exact generation, claims and phase rules | Processes.Runtime: independent typed refresh admission and pure transition; no engine partial growth |
+| Admission, bounded progress and replay | Processes.Application: cohesive refresh coordinator using original accepted input/result and receipt queries |
+| Atomic fence, durable intent and accounting | Processes.Persistence: existing runtime UOW and decision/scope stores; no independent transaction in a collaborator |
+| Original child stop and accepted-effect evidence | Workbench adapter plus existing Agent Core stop/outcome owners; no Process reference in Core |
+| Authentication and explicit action transport | Existing Web/Workbench review boundary after the producer is qualified |
+| Rendering and retained request | Existing SPA review session and controls, on `codex/concurrent-mutations` only |
+
+Application must not reference Workbench. Persistence implements Application contracts;
+Runtime remains provider neutral. Reuse the real child owner rather than adding a generic
+workflow engine or giving SQL a callback into Agent journals. No new project reference,
+service locator or business partial is planned. A separate reconciliation-stop contract
+is justified only if it preserves the current cancellation contract and its negative tests;
+share the Workbench stop mechanics after each path verifies its own durable authority.
+
+## Required state sequence
+
+1. Admit one exact refresh intent against the original waiting result, child, decision,
+   local budget and, for RunSnapshot, shared scope. Verify accepted single-activity input,
+   current caller/source/profile, nonterminal root and completed original dispatch claim.
+   Manual refresh requires a review-capable policy. Automatic refresh additionally needs
+   the original Replan policy, a verified changed-basis outcome and available replan credit.
+2. Under the existing root fence, atomically retain the intent and move the local decision
+   to Reconciling. For RunSnapshot, move the original shared scope to Reconciling in the
+   same commit. Stop new child enrollment, joins, claims and publication before calling
+   any child owner. Do not reserve a replacement grant at this point.
+3. Outside SQL, stop/reconcile the exact old child through its owner. Authority must bind
+   the original root/run/step, decision generation, child and admitted refresh, plus the
+   shared material generation when present. Recheck it inside the Agent dispatch lease.
+   A generic root-is-stopped check, manager identity alone or expired claim is insufficient.
+4. Read the retained owner outcome. Missing journal, active work, lease contention,
+   unresolved external effects and lost acknowledgement stay pending with their original
+   grants reserved. A closed proposal-only child can settle its actual work once while
+   the Process step remains blocked and the decision remains Reconciling.
+5. Reenter the root fence and prove complete quiescence: exact bounded memberships,
+   original children and allocations, no live claims, no unknown work, no terminal root
+   and no concurrent cancellation. Counters or a truncated list alone cannot authorize it.
+6. Reserve one bounded capture grant and persist its original identity before reading
+   business data outside SQL. RunSnapshot captures once at the root; StepSnapshot captures
+   for the step. Complete capture with exact closed usage and original content identity.
+   Manual refresh charges work but no automatic replan. Automatic RunSnapshot refresh
+   charges one root replan; local inheritance charges zero. StepSnapshot charges one
+   linked local/root replan. Preserve overruns and unknown capture outcomes explicitly.
+7. Advance to one successor material/generation under CAS, retaining the retired history.
+   Rebind an unfinished RunSnapshot member to the new parent material through its owner.
+   Make the step Ready only after old work is settled and the new material is durable.
+   Enroll a new deterministic child for that generation and dispatch once. Old proposals,
+   manager approvals, claims and receipt identities cannot authorize new publication.
+
+Every step is bounded and restartable. An HTTP request may report admitted/pending without
+claiming that new material exists. It must not hold a SQL transaction, Project/source
+lease or Agent dispatch lease while waiting for another owner. Existing generation (32),
+child (64) and lineage-allocation (256) bounds remain; retries do not create fresh IDs.
+
+## Publication race and cancellation
+
+The first refresh fence can lose a race to an already accepted business publication.
+An accepted effect is a historical fact. Never cancel it away, refund its consumed work
+or create a second proposal merely because its journal acknowledgement arrived late.
+Reconciliation must classify that original result, complete its original accounting and
+report that refresh was overtaken by completion. Unknown effect outcomes remain pending.
+
+Current `ProcessDecisionRunScopeTransitions.FinishResult` accepts successful completion
+only from Active. A successful effect that committed before the refresh fence can therefore
+need completion from Reconciling. Resolve this explicitly before end-to-end activation:
+allow only verified original terminal result completion with complete quiescence, without
+advancing material or relaxing root cancellation. Add both orderings as real SQL/owner
+races. This is not evidence that the current Fail/Pause checkpoint is incorrect; it is a
+new lifecycle obligation introduced by refresh.
+
+Root cancellation wins over capture/advance through the existing transaction barrier.
+It may use existing cancellation recovery to settle a refresh's old child. The refresh
+owner must then observe cancellation and stop. It must never reopen a cancelled root or
+reuse cancellation completion as permission to advance a generation.
+
+## Durable identity and compatibility decision
+
+Use the existing command-receipt owner for the immutable refresh admission. Add a typed
+admission command rather than reusing a bare BeginReconciliation command: the intent must
+bind its action identity, original request, actor, refresh kind and waiting/child/budget/
+scope expectations. A changed body under the same action must conflict; hashing a changed
+body into a different command ID is not sufficient replay protection.
+
+A small nullable reference from the original generation to its admitted command is the
+proposed discovery mechanism for restart/current-review recovery. Exact command lookup
+uses the existing index; do not scan event or Agent journal history. Confirm the final
+receipt shape and migration against current mappings before implementation. A new table
+is unnecessary unless the existing receipt cannot retain and validate the complete intent.
+Old generations remain null and preserve their bytes. New receipt fields/command kind
+must fail closed in actual older readers. A downgrade must refuse retained new evidence.
+
+Do not implement automatic progress as a timer that scans every run or catalog. Reuse
+durable dispatch/outbox delivery only after verifying its semantics for a blocked Process
+and exact refresh intent. The admission commit must survive a crash before enqueue, and
+delivery must be bounded/idempotent after restart. Worker activation and sustained capacity
+remain separate gates; manual continuation alone cannot qualify automatic Replan.
+
+## Implementation checkpoints and proof
+
+First qualify atomic admission, immutable replay and discovery with no public activation.
+Then qualify real child stop/reconciliation, exact accounting and successor capture. Finally
+wire actual manual/automatic producers and UI, retaining original intent on lost replies.
+These are dependency checkpoints within one feature, not substitutes for final behavior.
+
+For admission, pure tests cover identity/actor/body changes, unsupported policies, stale
+expectations, unknown values, stopped roots, live or mismatched claims and runtime shapes.
+Real PostgreSQL tests cover concurrent admissions, rollback between local/shared changes,
+receipt replay, fresh-context recovery, ordinary legacy byte compatibility and old readers.
+The existing publication owner must demonstrate that a held publication and admission
+serialize under the same root fence. Builds use standard Release outputs serially; reuse
+the isolated PostgreSQL 18 server on 53619. Declare and confirm exact topic discovery before
+execution. Run full portability enforcement after source edits; no broad Stable run is
+justified by a phase boundary alone.
+
+Subsequent owner proof must include both snapshot modes, manager refresh and automatic
+replan limits, proposal-only stop, accepted-before-fence completion, unknown effect/capture,
+lost stop/settlement/capture/advance acknowledgement, root cancellation at every boundary,
+two concurrent actors, replay after later progress, and rejection of every old generation's
+publication. Final HTTP/queued MAF/SQL proof must start from a genuine public preparation;
+browser proof must cover visible pending/refusal/recovery outcomes and the new generation.
+
+Initial scoped CodeAnalytics snapshot `snap-20261023144945-e8f8071c` covers Runtime,
+Application and Persistence: 296 documents, 893 types, 7,501 members, three intended project
+edges and no scoped cycles. There are 189 WS0002 diagnostics and `hasBlockingErrors=true`;
+the snapshot is not a clean solution-wide claim. Existing complexity findings remain.
+P27's unchanged Core/Workbench snapshot remains supporting evidence until those owners
+change. Compact evidence is under `.artifacts/concurrent-mutations/validation/c4-process-refresh-admission`.
+
+The following source-backed refinement resolves the admission mapping and identifies
+the exact downstream completion/delivery changes. No C# implementation, migration, test
+execution or public refresh capability is claimed yet.
+
+## Admission design refinement from current source
+
+The runtime idempotency table already stores a bounded `DecisionReceiptJson` and
+`DecisionRunScopeReceiptJson` independently of runtime history. Its primary key is
+`(RunId, CommandId)`. The generic `FindCompletedCommandAsync(CommandId)` first searches
+by command alone and then reloads the full current runtime state. Do not add that cost to
+refresh discovery. A narrow Application receipt-reader contract should project only the
+original admission receipt and shared-scope receipt through the composite key, then verify
+their typed identity. It must report historical acceptance separately from current progress.
+
+The existing decision receipt format has versions 1-6. Reserve version 7 for the new
+admission command or a generation carrying a refresh-command reference. Preserve the
+canonical bytes of legacy receipts. Keep the complete immutable request and trusted actor
+inside the admission command; use a stable command identity derived from root/run/action,
+without actor or body in that identity. Comparing the stored typed command must reject
+changed body or actor under the same action. A small nullable command reference on the
+original generation allows current-review/restart discovery without scanning history.
+It survives reconciliation/terminal retirement, while a successor starts without it.
+The migration must retain old null rows and refuse downgrade while new evidence remains.
+
+The public single-activity producer is the initial limit. Admission must verify its
+original NeedsManager result, exactly one original child, a completed matching claim,
+no other unsettled local preparation, and an active exact parent scope when RunSnapshot.
+The new command freezes the local generation and parent scope in one UOW commit; it does
+not publish, stop the Agent, settle work, capture data or make the step Ready. Pure rules
+belong in a separate Runtime type, and orchestration belongs in a separate Application
+coordinator. Extend the existing decision store at its command dispatch, with cohesive
+validation in an owning collaborator if needed; do not expand the runtime engine partials.
+
+Source inspection also establishes that `ProcessRuntimeDispatchQueue` is in-memory. The
+existing recovery query walks pages and accumulates run IDs; it is not a bounded durable
+refresh work queue. `EfProcessOutboxStore` has no registered delivery caller in the inspected
+Process projects, and its existing claim operation has neither lease-expiry recovery nor
+an atomic multi-worker claim. Neither mechanism may be described as restart-safe automatic
+refresh delivery. Admission and explicit continuation can be qualified first; automatic
+activation additionally requires a dedicated indexed outbox subscriber with exact owner
+command identity, atomic leased claims, bounded retries and lost-worker recovery. Preserve
+legacy projection messages and do not consume their backlog incidentally. Qualify this in
+the existing outbox owner instead of mixing refresh with the cancellation worker.
+
+Successful publication before the fence must be completed using its verified original
+receipt. The planned scope completion extension may accept Reconciling only when the
+existing exact terminal-result and complete-quiescence checks pass. It must not authorize
+new publication or capture and must still refuse a cancelling/stopped root. This extension
+and durable delivery need their own downstream tests before a public refresh/replan switch
+is enabled. The first admission checkpoint deliberately leaves the public capabilities
+unchanged and cannot be presented as the complete refresh feature.
+
+### Concrete admission edits and validation boundary
+
+- Runtime: a typed refresh request/intent and BeginRefresh command; a pure admission rule
+  that reuses `ProcessDecisionReviewCompletion.ValidatePending`; and an optional admitted
+  command reference on `ProcessDecisionGeneration`. Reject ParentRefresh as a user action,
+  undefined values and mismatched actor kinds. Manual refresh requires Pause/Replan;
+  automatic admission requires original Replan support and finite credit. Bind the exact
+  original input and child material digests in the trusted intent, without copying payloads.
+- Application: a small admission coordinator that checks original accepted single-activity
+  input, selected child/head/budget and absence of unrelated work, derives the stable
+  run/action command identity, and compares a retained typed admission before fresh-state
+  checks. A bounded receipt-reader port returns original admission without loading runtime
+  history. The coordinator neither calls the Agent owner nor dispatches a successor.
+- Persistence: stage BeginRefresh through the existing UOW and decision store. Require
+  the exact paired shared-scope fence for RunSnapshot and its absence for StepSnapshot;
+  validate against the saved policy and child under the root fence. The mutation may
+  advance only its timestamp and decision/scope state, with no business result, settlement,
+  capture, new claim or Ready step. Retain the command reference on the old generation.
+  Add the nullable column and strict version-7 receipt support, with old byte formats
+  unchanged. An exact composite-key projection serves receipt/current-admission discovery.
+- Guard later generic refresh commands against bypassing an admitted intent: an advancing
+  command must carry the same original admission reference when one is present. A new
+  successor drops that reference; the retired generation retains it. Cancellation and
+  verified old-effect completion retain historical admission evidence.
+
+The first checkpoint covers admission only, so it stages no unimplemented delivery and
+exposes no new public capability. Its acceptance criteria are atomic local/shared fencing,
+strict intent replay/body/actor identity, bounded current discovery, no provider/business
+effects, original-child and cancellation races, strict malformed/old-reader rejection,
+rollback/restart behavior and unchanged legacy receipt bytes. Required existing regression
+topics are decision generations/persistence, run scopes, review completion and terminal
+accounting; choose exact class filters and confirm their source-derived case counts before
+execution. The new unit and integration classes must enumerate their expected cases in the
+proof manifest. Migration/rollback tests use the existing isolated PostgreSQL server.
+Full portability is mandatory after the actual final source edits. Architecture and
+dependent publication checks gate the next child-stop checkpoint.
