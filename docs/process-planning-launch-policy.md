@@ -14,6 +14,19 @@ does not add this operation to an existing definition or assignment.
 
 ## Select and review
 
+Read `GET /api/processes/launch/decision-contracts` for registered execution identities,
+operator descriptions and supported policy combinations. Each `supportedPolicies` entry
+contains a complete policy whose durations and replan count are owner ceilings, not the
+effective policy of a launch. Discovery needs Process read permission and does not grant
+execution permission. The existing broad legacy API grant retains its normal access.
+An empty catalog means no planning contract is registered.
+
+Use the returned identity rather than hard-coding the example below. The catalog performs
+no preparation, settings read or Agent/provider work. It does not certify that a selected
+definition, Project or Agent is eligible. The launch check still validates those facts and
+returns the actual policy after applying saved Workspace and requested bounds. Keep a
+prepared intent's original selection even if a later catalog read differs.
+
 Use `POST /api/processes/launch/check` with a nonempty `callerIntentId`, the Project and
 published definition selection, and this optional addition to the normal launch request:
 

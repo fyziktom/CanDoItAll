@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current work: [Workspace policy client](validation/2026-10-23-workspace-policy-client.md)
+Current work: [Process policy discovery](validation/2026-10-23-process-policy-discovery.md)
+qualifies server-owned execution identities and supported policy ceilings, with 56 distinct
+backend cases across an exact test/baseline repair and 103 SPA tests. The generated schema
+retains all existing contracts; full portability and resource reconciliation pass. SPA
+remains on **codex/concurrent-mutations** for colleague review. Process launch UI,
+definition defaults, broader policies/lifecycle, capacity, remaining owners and engine E2E
+remain open.
+
+Preceding work: [Workspace policy client](validation/2026-10-23-workspace-policy-client.md)
 qualifies the SPA policy editor, exact-duration conversion and conditional V2 writes.
 The backend schema collision is repaired; all ten HTTP cases, 100 SPA tests, full
 portability and ten rendered states pass. Source/output and runtime cleanup checks pass.

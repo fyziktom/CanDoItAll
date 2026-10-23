@@ -242,7 +242,8 @@ public sealed class ProcessLaunchDecisionTests {
 
     private sealed class Provider(Func<ProcessDecisionLaunchAdmissions, ProcessDecisionLaunchAdmissions>? change = null) : IProcessDecisionLaunchPolicyProvider {
         internal int Calls { get; private set; }
-        public ProcessDecisionExecutionContract Contract => ProjectTaskPlanProcessContract.Execution;
+        public ProcessLaunchDecisionDescriptor Descriptor => ProjectTaskPlanProcessLaunchPolicyProvider.SupportedContract;
+        private ProcessDecisionExecutionContract Contract => Descriptor.Execution;
 
         public Task<ProcessDecisionLaunchAdmissions> PrepareAsync(ProcessLaunchRequest request, ProcessRuntimeCommitRequest initial, CancellationToken cancellationToken) {
             Calls++;

@@ -7,7 +7,7 @@ public sealed record ProcessDecisionLaunchAdmissions(ProcessDecisionRunAdmission
     IReadOnlyDictionary<ProcessStepInstanceId, ProcessDecisionDataPolicyAdmission> Steps);
 
 public interface IProcessDecisionLaunchPolicyProvider {
-    ProcessDecisionExecutionContract Contract { get; }
+    ProcessLaunchDecisionDescriptor Descriptor { get; }
 
     Task<ProcessDecisionLaunchAdmissions> PrepareAsync(ProcessLaunchRequest request,
         ProcessRuntimeCommitRequest initial, CancellationToken cancellationToken);

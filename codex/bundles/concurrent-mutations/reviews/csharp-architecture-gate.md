@@ -331,3 +331,25 @@ add polling, a dependency, global state or a backend policy resolver. The schema
 preserves all 317 routes, while real SQL/HTTP, state/codec and browser checks prove distinct
 owner responsibilities. Broader launch UI and actor-bound durable draft recovery remain
 separate obligations; this scoped pass does not close engine-wide dependency or runtime gates.
+
+## Process planning contract discovery
+
+Status: Pass with follow-up. [P25 validation](../validation/2026-10-23-process-policy-discovery.md)
+qualifies metadata on the existing Application admission-provider seam. Workbench owns its
+execution identity and supported policy combinations; it validates resolved policy against
+that same descriptor. Application snapshots metadata without invoking preparation. UI can
+discover the contract without referencing Workbench or moving Runtime types into Projections.
+The Web-only item-schema correction reuses the complete policy schema and preserves every
+existing public schema. There is no new project reference, runtime service lifetime,
+business partial, service locator or storage change.
+
+Snapshot `snap-20261023120826-c3ed56ba` covers Application, Workbench and Web before the
+schema-only correction. Direct final review covers that helper. Three scoped project
+edges retain direction, six known Workbench cycles remain, and existing ProcessesApi
+size/member findings are explicit. Collector limitations are 189 WS0002 errors, two
+DEP0002 warnings, 14 DI0001 messages and six DI0002 warnings; this is not global health.
+Affected builds and independent coordinator tests pass. Real HTTP authorization/schema
+and both public producer flows lend trust to the unchanged admission/dispatch boundary.
+Catalog construction performs no database/Agent/provider work, and no new polling or
+history-sized operation was added. UI lifecycle, durable drafts and broader policy
+activation still require their own architecture and behavior proof.

@@ -26,6 +26,11 @@ internal static class ProcessesApi
 
         processes.MapProcessDefinitionsApi();
 
+        processes.MapGet("/launch/decision-contracts", (ProcessDecisionLaunchAdmissionCoordinator admissions) => TypedResults.Ok(admissions.Contracts))
+            .WithName("ListProcessDecisionContracts")
+            .WithSummary("List registered Process planning contracts and supported policy ceilings.")
+            .WithDescription("Read-only discovery, not launch eligibility, Workspace defaults or authorization. Prepare a launch to review its effective policy and current eligibility.");
+
         processes.MapPost("/launch/check", CheckLaunchAsync)
             .WithName("CheckProcessLaunch").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .Produces<ProcessLaunchApiResponse>()
@@ -98,6 +103,7 @@ internal static class ProcessesApi
                 "GET /api/processes/definitions/{definitionKey}",
                 "GET /api/processes/definitions/{definitionKey}/roles",
                 "GET /api/processes/definitions/{definitionKey}/steps",
+                "GET /api/processes/launch/decision-contracts",
                 "POST /api/processes/launch/check",
                 "POST /api/processes/launch",
                 "GET /api/processes/launch/{admissionId}",

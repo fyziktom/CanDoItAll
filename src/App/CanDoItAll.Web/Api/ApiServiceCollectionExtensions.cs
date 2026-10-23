@@ -83,6 +83,7 @@ public static class ApiServiceCollectionExtensions
             options.AddSchemaTransformer(AgentDecisionPolicyOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(ProjectDefinitionOperationOpenApiSchemas.TransformSchemaAsync);
             options.AddSchemaTransformer(WorkspaceSettingsOpenApiContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(ProcessLaunchDecisionOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);

@@ -7,11 +7,14 @@ public sealed class ProcessDecisionLaunchAdmissionCoordinator {
     private readonly IReadOnlyDictionary<ProcessDecisionExecutionContract, IProcessDecisionLaunchPolicyProvider> providers;
 
     public ProcessDecisionLaunchAdmissionCoordinator(IEnumerable<IProcessDecisionLaunchPolicyProvider> providers) {
-        this.providers = providers.ToDictionary(provider => provider.Contract);
-        foreach (var contract in this.providers.Keys) {
-            contract.Validate();
-        }
+        var registrations = providers.Select(provider => (Provider: provider, Descriptor: provider.Descriptor.Snapshot())).ToArray();
+        this.providers = registrations.ToDictionary(item => item.Descriptor.Execution, item => item.Provider);
+        Contracts = Array.AsReadOnly(registrations.Select(item => item.Descriptor)
+            .OrderBy(item => item.Execution.ContractId).ThenBy(item => item.Execution.Version)
+            .ThenBy(item => item.Execution.Executor).ToArray());
     }
+
+    public IReadOnlyList<ProcessLaunchDecisionDescriptor> Contracts { get; }
 
     public static void RequireRequest(ProcessLaunchRequest request) {
         ArgumentNullException.ThrowIfNull(request);

@@ -17,7 +17,16 @@ internal sealed class ProjectTaskPlanProcessLaunchPolicyProvider(WorkspaceSettin
     internal static DecisionDataPolicyCapabilities Capabilities { get; } = new(true, true, false, true, true, false,
         PublicationFreshness.RequireCurrent, new(0, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10)));
 
-    public ProcessDecisionExecutionContract Contract => ProjectTaskPlanProcessContract.Execution;
+    internal static ProcessLaunchDecisionDescriptor SupportedContract { get; } = new(ProjectTaskPlanProcessContract.Execution,
+        "Reviewed Project task planning",
+        "One Agent activity proposes Project tasks for review. Requires a saved Workspace policy, current task authority and explicit task publication permission. Additional activities, branches, subprocesses, tools or artifacts are not supported.",
+        Array.AsReadOnly(new[] {
+            new DecisionDataPolicy(ReadBasisMode.RunSnapshot, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview, Capabilities.BudgetCeiling),
+            new DecisionDataPolicy(ReadBasisMode.StepSnapshot, PublicationFreshness.RequireCurrent, OnBasisChange.PauseForReview, Capabilities.BudgetCeiling)
+        }));
+
+    public ProcessLaunchDecisionDescriptor Descriptor => SupportedContract;
+    private ProcessDecisionExecutionContract Contract => Descriptor.Execution;
 
     public async Task<ProcessDecisionLaunchAdmissions> PrepareAsync(ProcessLaunchRequest request,
         ProcessRuntimeCommitRequest initial, CancellationToken cancellationToken) {
@@ -75,7 +84,7 @@ internal sealed class ProjectTaskPlanProcessLaunchPolicyProvider(WorkspaceSettin
     internal static DecisionDataPolicy ResolvePolicy(DecisionDataPolicy workspace, DecisionDataPolicyOverride? preferences) {
         try {
             var policy = DecisionDataPolicyResolver.Resolve(workspace, Capabilities, authorizedInvocation: preferences);
-            if (policy.OnBasisChange != OnBasisChange.PauseForReview) {
+            if (!SupportedContract.Supports(policy)) {
                 throw new ProcessLaunchDecisionRejectedException(ProcessLaunchDecisionRejection.UnsupportedPolicy);
             }
             return policy;
