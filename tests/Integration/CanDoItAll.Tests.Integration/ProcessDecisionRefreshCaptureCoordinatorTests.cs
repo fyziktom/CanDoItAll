@@ -179,7 +179,7 @@ public sealed class ProcessDecisionRefreshCaptureCoordinatorTests {
     [Theory]
     [InlineData(ReadBasisMode.RunSnapshot)]
     [InlineData(ReadBasisMode.StepSnapshot)]
-    public async Task Lost_reservation_acknowledgement_retains_unknown_grant_without_invocation(ReadBasisMode mode) {
+    public async Task Lost_reservation_acknowledgement_reclaims_never_invoked_journal_and_captures_once(ReadBasisMode mode) {
         await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync(mode, freezeClock: false);
         var admission = await AdmitAsync(fixture);
         var state = await AccountAsync(fixture, admission);
@@ -192,17 +192,18 @@ public sealed class ProcessDecisionRefreshCaptureCoordinatorTests {
             return Task.CompletedTask;
         });
         var coordinator = Coordinator(fixture, capturer, owner);
-        Assert.Equal(ProcessDecisionRefreshCaptureStatus.Pending, (await coordinator.PrepareAsync(state, fixture.CommandContext, admission)).Status);
+        Assert.Equal(ProcessDecisionRefreshCaptureStatus.Advanced, (await coordinator.PrepareAsync(state, fixture.CommandContext, admission)).Status);
         var before = await RetainedAsync(fixture.Services, state);
-        Assert.Equal(ProcessDecisionRefreshCaptureStatus.Pending, (await coordinator.PrepareAsync(state, fixture.CommandContext, admission)).Status);
+        Assert.Equal(ProcessDecisionRefreshCaptureStatus.Advanced, (await coordinator.PrepareAsync(state, fixture.CommandContext, admission)).Status);
         Assert.Equal(before, await RetainedAsync(fixture.Services, state));
-        Assert.Equal(0, capturer.Calls);
+        Assert.Equal(1, capturer.Calls);
         var progress = await ProgressAsync(fixture.Services, state, admission);
         var reservation = mode == ReadBasisMode.RunSnapshot ? progress.RootReservation : progress.LocalReservation;
         Assert.NotNull(reservation);
         Assert.Null(reservation.Budget!.Change.Allocation.Settlement);
         Assert.True(reservation.Budget.Change.Balance.ReservedWorkTicks > 0);
-        Assert.Null(progress.Successor);
+        Assert.NotNull(progress.Successor);
+        Assert.Equal(0, progress.Successor.Budget!.Change.Balance.ReservedWorkTicks);
     }
 
     [Theory]
@@ -384,6 +385,7 @@ public sealed class ProcessDecisionRefreshCaptureCoordinatorTests {
         var services = scope.ServiceProvider;
         CountingCapturer forbidden = new(ActualCapturer(services), (_, _) => throw new InvalidOperationException("Root material was captured again."));
         ProcessDecisionRefreshCaptureCoordinator coordinator = new(services.GetRequiredService<IProcessDecisionRefreshCaptureQuery>(),
+            services.GetRequiredService<IProcessDecisionRefreshCaptureStore>(),
             services.GetRequiredService<IProcessDecisionRootQuery>(), services.GetRequiredService<IProcessDecisionResultQuery>(), [forbidden],
             services.GetRequiredService<IProcessRuntimeStateStore>(), services.GetRequiredService<IProcessRuntimeUnitOfWork>(),
             services.GetRequiredService<TimeProvider>(), NullLogger<ProcessDecisionRefreshCaptureCoordinator>.Instance);
@@ -402,7 +404,8 @@ public sealed class ProcessDecisionRefreshCaptureCoordinatorTests {
     private static ProcessDecisionRefreshCaptureCoordinator Coordinator(ProjectTaskPlanReviewFixture fixture,
         IProcessDecisionMaterialCapturer capturer, IProcessRuntimeUnitOfWork? owner = null, IServiceProvider? services = null) {
         services ??= fixture.Services;
-        return new(services.GetRequiredService<IProcessDecisionRefreshCaptureQuery>(), services.GetRequiredService<IProcessDecisionRootQuery>(),
+        return new(services.GetRequiredService<IProcessDecisionRefreshCaptureQuery>(), services.GetRequiredService<IProcessDecisionRefreshCaptureStore>(),
+            services.GetRequiredService<IProcessDecisionRootQuery>(),
             services.GetRequiredService<IProcessDecisionResultQuery>(), [capturer], services.GetRequiredService<IProcessRuntimeStateStore>(),
             owner ?? services.GetRequiredService<IProcessRuntimeUnitOfWork>(), fixture.Clock, NullLogger<ProcessDecisionRefreshCaptureCoordinator>.Instance);
     }

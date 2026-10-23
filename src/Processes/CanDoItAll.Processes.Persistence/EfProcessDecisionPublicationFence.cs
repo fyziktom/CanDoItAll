@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Data;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
@@ -39,7 +38,7 @@ public sealed class EfProcessDecisionPublicationFence(DbContextOptions<ProcessPe
         if (!context.Database.IsNpgsql() || context.Database.CurrentTransaction?.GetDbTransaction().IsolationLevel != IsolationLevel.ReadCommitted) {
             throw new NotSupportedException("Process decision publication requires the effect owner's PostgreSQL ReadCommitted transaction.");
         }
-        var key = RootLockKey(original.Address.RootRunId.Value);
+        var key = ProcessRootAdvisoryKey.From(original.Address.RootRunId.Value);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken).ConfigureAwait(false);
         var current = await EfProcessDecisionChildQuery.ReadCoreAsync(context, original.Address, cancellationToken).ConfigureAwait(false)
             ?? throw Mismatch("The exact enrolled Process child no longer exists.");
@@ -77,11 +76,6 @@ public sealed class EfProcessDecisionPublicationFence(DbContextOptions<ProcessPe
         _ => false
     });
 
-    private static long RootLockKey(Guid rootRunId) {
-        Span<byte> bytes = stackalloc byte[16];
-        rootRunId.TryWriteBytes(bytes);
-        return BinaryPrimitives.ReadInt64LittleEndian(bytes[..8]) ^ BinaryPrimitives.ReadInt64LittleEndian(bytes[8..]);
-    }
 
     private static ProcessExecutionAuthorityMismatchException Mismatch(string message) => new(message);
 }

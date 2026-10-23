@@ -46,6 +46,10 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessDecisionBudgetAllocationEntity> DecisionBudgetAllocations => Set<ProcessDecisionBudgetAllocationEntity>();
 
+    public DbSet<ProcessDecisionRefreshCaptureEntity> RefreshCaptures => Set<ProcessDecisionRefreshCaptureEntity>();
+
+    public DbSet<ProcessDecisionRefreshCapturePayloadEntity> RefreshCapturePayloads => Set<ProcessDecisionRefreshCapturePayloadEntity>();
+
     public DbSet<ProcessDecisionHeadEntity> DecisionHeads => Set<ProcessDecisionHeadEntity>();
 
     public DbSet<ProcessDecisionGenerationEntity> DecisionGenerations => Set<ProcessDecisionGenerationEntity>();

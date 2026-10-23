@@ -40,6 +40,13 @@ public sealed class EfProcessDecisionRefreshCaptureQuery(IDbContextFactory<Proce
         await context.Database.ExecuteSqlRawAsync(
             "SET TRANSACTION READ ONLY; SET LOCAL transaction_timeout = '5s'; SET LOCAL statement_timeout = '2s'; SET LOCAL lock_timeout = '1s'",
             cancellationToken).ConfigureAwait(false);
+        var result = await ReadCoreAsync(context, database, state, admissionId, cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    internal static async Task<ProcessDecisionRefreshCaptureSelection> ReadCoreAsync(ProcessPersistenceDbContext context,
+        ICanonicalRuntimeDatabase database, ProcessRuntimeStateSnapshot state, RuntimeCommandId admissionId, CancellationToken cancellationToken) {
         var admission = await EfProcessDecisionRefreshReceiptReader.ReadCoreAsync(context, state.RunId, admissionId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("Refresh capture requires its retained original admission.");
         var address = ((ProcessDecisionBeginRefresh)admission.Decision.Command).Intent.Request.Child;
@@ -78,7 +85,6 @@ public sealed class EfProcessDecisionRefreshCaptureQuery(IDbContextFactory<Proce
         }
         var pending = await context.DecisionBudgetAllocations.AsNoTracking().AnyAsync(row =>
             row.BudgetId == balance.BudgetId.Value && row.OwnerWorkRevision == null, cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return new(input, admission, selected, root, balance, row.Status, shared, pending);
     }
 }

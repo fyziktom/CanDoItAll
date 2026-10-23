@@ -12,8 +12,11 @@ distinct selected cases across a verified test-only interleaving repair. Known f
 settle measured work; retained unknown invocations remain pending. Full refresh activation
 remains gated by the [invocation/recovery design](P28-process-refresh-recovery.md), whose
 [pure Runtime journal](../validation/2026-10-23-process-refresh-capture-journal.md) passes
-35 cases with final static/source/resource closure. Persistence/producer integration and the
-owner/delivery checkpoints below remain open.
+35 cases with final static/source/resource closure. The
+[persistent journal and producer recovery](../validation/2026-10-23-process-refresh-capture-journal-storage.md)
+pass all 124 selected cases across a verified test-only repair, with final static/source/
+resource closure. Actual older-binary retention and the owner/delivery checkpoints below
+remain open.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.
 Behavioral proof tier. The current public contract still supports Fail/Pause only.

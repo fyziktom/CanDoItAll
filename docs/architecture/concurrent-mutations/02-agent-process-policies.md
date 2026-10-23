@@ -648,11 +648,15 @@ returned-work handoff, explicit retry and delivery remain gates in the
 [recovery design](../../../codex/bundles/concurrent-mutations/plan/P28-process-refresh-recovery.md).
 The pure Runtime capture journal defines first invocation, immutable returned work and
 exact settlement. Its 35-case qualification rejects zero-work closure after invocation
-and changed invocation/result replay. It has no persistent consumer yet. Storage must
-commit reservation identity with the original budget, record Begin/Return under the same
-root fence through bounded metadata writes, and resolve the journal with settlement in
-the existing UOW. Routing Begin/Return through full-runtime history replacement would add
-unnecessary history-dependent writes. SQL races, restart and added-cost measurement remain
-required before durable recovery or a worker is activated.
+and changed invocation/result replay. The persistent consumer now commits reservation
+identity with the original budget, records Begin/Return under the same root fence through
+bounded metadata writes, and resolves the journal with settlement in the existing UOW.
+Returned payloads live separately and are deleted atomically at settlement; compact
+outcome/work evidence remains. A restarted producer can settle Returned without recapture,
+while Invoking and legacy reservations without protocol evidence remain unknown.
+The [storage qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-refresh-capture-journal-storage.md)
+passes 124 distinct selected cases. Begin/Return avoid full-runtime history replacement, and returned payload
+reads use one SQL statement. Actual older-binary retention, added-cost measurement,
+explicit retry and durable delivery remain gates before worker/public activation.
 An inherited Agent continues using its admitted material until its owner closes that work;
 there is no subscription that silently replaces input during execution.

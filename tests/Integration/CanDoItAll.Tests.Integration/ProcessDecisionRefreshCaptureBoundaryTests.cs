@@ -94,7 +94,8 @@ public sealed class ProcessDecisionRefreshCaptureBoundaryTests {
     }
 
     private static ProcessDecisionRefreshCaptureCoordinator Coordinator(ProjectTaskPlanReviewFixture fixture, Query query)
-        => new(query, fixture.Services.GetRequiredService<IProcessDecisionRootQuery>(), fixture.Services.GetRequiredService<IProcessDecisionResultQuery>(), [],
+        => new(query, fixture.Services.GetRequiredService<IProcessDecisionRefreshCaptureStore>(), fixture.Services.GetRequiredService<IProcessDecisionRootQuery>(),
+            fixture.Services.GetRequiredService<IProcessDecisionResultQuery>(), [],
             fixture.Services.GetRequiredService<IProcessRuntimeStateStore>(), fixture.Services.GetRequiredService<IProcessRuntimeUnitOfWork>(),
             fixture.Clock, NullLogger<ProcessDecisionRefreshCaptureCoordinator>.Instance);
 

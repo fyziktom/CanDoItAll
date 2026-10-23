@@ -1,8 +1,10 @@
 # P28: capture invocation, returned-work handoff and delivery
 
 Status: the [pure Runtime journal](../validation/2026-10-23-process-refresh-capture-journal.md)
-passes its 35 selected cases and final static/source/resource closure. Persistence and producer
-integration below remain designed, not implemented or qualified. It follows the
+passes its 35 selected cases and final static/source/resource closure. The
+[persistent consumer and producer integration](../validation/2026-10-23-process-refresh-capture-journal-storage.md)
+pass 124 distinct selected cases, full static/source/output checks and new resource closure.
+They follow the
 [registered producer](../validation/2026-10-23-process-refresh-capture-producer.md).
 Behavioral proof tier. The public refresh/replan gate remains closed.
 
@@ -133,6 +135,49 @@ binary readers against retained old and new records; document whether each safel
 or remains pending. A downgrade must refuse to discard unresolved new evidence. No public
 API, worker default or automatic Replan admission changes in the persistence checkpoint.
 
+### Delivery owner analysis after storage implementation
+
+`ProcessDecisionRefreshCoordinator.AdmitAsync` currently commits only the original
+decision/scope intent. Delivery must be staged by that same UOW commit, as cancellation
+already does through `ProcessCancellationRecoveryStaging`; enqueueing afterwards leaves
+a crash gap. Use a refresh-specific row keyed by run/admission, foreign-keyed to its
+original receipt. A request replay must retain the original row and due state, not reset
+progress or manufacture another authorization.
+
+`EfProcessCancellationRecoveryQueue` supplies the applicable lease mechanics: a partial
+due index, `FOR UPDATE SKIP LOCKED`, database time, monotonically increasing lease and
+progress revisions, and conditional checkpoint writes. Reuse those semantics in a small
+refresh owner. Its identity is one admitted refresh, not a cancellation root; do not add
+refresh stages to cancellation's position/intent codec or extract a generic queue framework.
+Checkpoints describe delivery progress only. Existing stop, accounting, capture and
+successor receipts remain the authority about business work.
+
+The cancellation coordinator's default two-second slice is unsuitable for a refresh
+capture with a ten-second grant. Blindly copying it would repeatedly interrupt valid
+work and convert queue pressure into failed captures. Size the capture stage's outer
+deadline to include the original grant, bounded Return and settlement; an initial
+25-second stage / 60-second lease is a design candidate, not a measured capacity promise.
+Queue SQL keeps its separate short bounds. A lease may expire while the original owner
+returns known work: the journal still accepts its exact invocation outcome, while the
+expired delivery owner cannot checkpoint over a newer lease. The next delivery reconciles
+that result and never treats lease ownership as invocation permission.
+
+Root cancellation cannot simply mark refresh delivery complete. Reserved work can drain
+as NeverInvoked; Returned work must settle/abort; Invoking remains explicitly unknown.
+Otherwise the cancellation queue would wait indefinitely for capture funding that the
+refresh queue had abandoned. Source/authority refusal is also distinct from corrupt
+evidence: it must surface a typed review reason and bounded backoff. It does not permit a
+new content read or a guessed child accounting result. Audit the existing child stopper
+and accounting reader's source checks before declaring revocation recovery complete.
+
+Delivery proof must interrupt after admission, each owner commit and checkpoint, reclaim
+a lease while the original capture is still running, and exercise both snapshot modes
+through the next real scheduler attempt. Measure indexed due selection with a large
+retained terminal history, unrelated-root progress beside a slow capture, bounded material
+memory and retry fairness. Keep worker/default activation off until those tests and actual
+older-binary retention pass. The current storage tests' old-shaped request is not a
+substitute for an older Application/Persistence assembly reading retained SQL evidence.
+
 ## Explicit retry after a known abort
 
 The original admission currently has one deterministic capture attempt. Its abort receipt
@@ -151,6 +196,49 @@ separate from re-delivering a known returned result and must be qualified before
 a Retry action in the UI. The journal checkpoint does not introduce it implicitly.
 
 ## Required proof and stop conditions
+
+### Durable storage and producer entry
+
+The next coherent checkpoint starts at signed `e46625b5a`. Persist compact typed stage
+columns separately from the temporary returned payload. Foreign keys retain the original
+runtime admission, reservation, budget allocation and material scope; no JSON copy of the
+runtime history or material catalog is needed. The original reservation command is the
+stage key. Scope and budget owners are immutable dependencies and must agree with the
+retained descriptor when read. Returned capture timestamps use exact UTC ticks so storage
+does not change the material fingerprint. A protocol version rejects unknown row formats.
+
+An optional typed capture command accompanies only the existing reservation or settlement
+UOW command. Its absence preserves legacy request bytes. A retained journal allocation
+cannot be settled by the current writer without closing its journal in the same transaction.
+Begin/Return use their invocation token, not another runtime idempotency receipt. A small
+shared advisory-key function retains the existing byte calculation for every participating
+Process fence; transaction ordering is unchanged. Metadata mutations have a five-second
+operation bound and PostgreSQL transaction/statement/lock bounds of 5s/2s/1s.
+
+The producer reads the journal beside existing stage receipts. A missing journal for an
+older reservation remains pending. Reserved can compete for Begin; only its definitive
+winner invokes. Returned can settle from retained material/work after restart. Invoking
+without a return remains unknown. A lost Begin acknowledgement therefore cannot start a
+second capture. Cancellation before Begin can close NeverInvoked; cancellation after Begin
+requires the original outcome. A captured return may later abort because source, scope,
+freshness or runtime eligibility changed; its original outcome/work remain immutable.
+
+Entry selection is the existing 62 producer/query/successor Integration cases, 35 journal
+and three identity Unit cases, plus the five existing publication-fence cases in
+`A_transaction_snapshot_cannot_authorize_a_generation_after_waiting_for_its_fence`,
+`An_admitted_effect_holds_the_root_until_its_commit_or_rollback_while_an_unrelated_root_progresses`
+and `Quiescence_committing_first_refuses_the_waiting_effect_without_a_write`.
+New owning targets are `ProcessDecisionRefreshCaptureJournalPersistenceTests` (16 planned
+cases) and `ProcessDecisionRefreshCaptureJournalMigrationTests` (three planned cases), all
+under `CanDoItAll.Tests.Integration`. Planned total: 124. Confirm discovery from the final
+test inventory before execution. The new cases must exercise actual registered producers,
+reservation rollback, both cancellation orders, lost Begin/Return acknowledgement,
+restarted returned-work settlement, changed invocation/result evidence, bounded metadata
+SQL, allocation bypass refusal and migration retention/downgrade guards. Schema/UOW/producer
+changes invalidate their owners' proof. The focused shared-fence and migration cases bound
+the additive change; any shared serialization or unrelated writer regression promotes the
+corresponding wider gate. Actual older-binary retention proof remains required before
+recovery activation; a current reader of old-shaped rows is not equivalent.
 
 The first implementation slice defines the pure Runtime reservation/invocation/return/
 settlement protocol. Its entry prerequisite is signed producer `3f5415f62`; it adds no schema,

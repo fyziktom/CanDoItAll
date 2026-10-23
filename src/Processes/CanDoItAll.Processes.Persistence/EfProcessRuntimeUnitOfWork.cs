@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Data;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
@@ -29,6 +28,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
     private readonly EfProcessDecisionBudgetStore decisionBudgets = new(dbContext, runtimeDatabase);
     private readonly EfProcessDecisionStore decisions = new(dbContext, runtimeDatabase);
     private readonly EfProcessDecisionRunScopeStore decisionScopes = new(dbContext, runtimeDatabase);
+    private readonly ProcessDecisionRefreshCaptureStaging refreshCaptures = new(dbContext, runtimeDatabase);
 
     public async Task<ProcessRuntimeStateSnapshot?> LoadAsync(
         ProcessRunId runId,
@@ -168,6 +168,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         EfProcessRootCancellationGuard.ValidateConfirmation(request);
         EfProcessDecisionRefreshGuard.RequireShape(request);
         request.RefreshAccounting?.RequireShape(request);
+        ProcessDecisionRefreshCaptureStaging.RequireShape(request);
         if (request.Decision is ProcessDecisionRefresh { AdmissionCommandId: { } refreshId }) {
             new ProcessDecisionRefreshSuccessor(refreshId).RequireShape(request);
         }
@@ -271,6 +272,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             ProcessDecisionBudgetReceiptCodec.RequireSameCommand(request.DecisionBudget, duplicate.DecisionBudget);
             ProcessDecisionReceiptCodec.RequireSameCommand(request.Decision, duplicate.Decision);
             ProcessDecisionRunScopeReceiptCodec.RequireSameCommand(request.DecisionRunScope, duplicate.DecisionRunScope);
+            await refreshCaptures.RequireReplayAsync(request, cancellationToken).ConfigureAwait(false);
             if (request.DecisionMaterial is { } material) {
                 await decisions.RequireOriginalMaterialAsync(material, cancellationToken).ConfigureAwait(false);
             }
@@ -361,6 +363,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         var decisionScope = completesScope ? null : await decisionScopes.StageAsync(request, decisionBudget, cancellationToken).ConfigureAwait(false);
         var decision = await decisions.StageAsync(request.OriginalState, request.Mutation.State, request.Decision, decisionBudget,
             request.DecisionMaterial, cancellationToken).ConfigureAwait(false);
+        await refreshCaptures.StageAsync(request, decisionBudget, cancellationToken).ConfigureAwait(false);
         await AppendEventsAsync(request.Mutation.Events, cancellationToken).ConfigureAwait(false);
         AddOutboxMessages(request.Mutation.OutboxMessages, request.Mutation.State.UpdatedAtUtc);
         AddArtifactLedgerEvents(request.Mutation.ArtifactLedgerEvents);
@@ -624,7 +627,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             return;
         }
 
-        var lockKey = CreateAdvisoryLockKey(rootRunId);
+        var lockKey = ProcessRootAdvisoryKey.From(rootRunId);
         await dbContext.Database
             .ExecuteSqlInterpolatedAsync(
                 $"SELECT pg_advisory_xact_lock({lockKey})",
@@ -632,13 +635,6 @@ public sealed class EfProcessRuntimeUnitOfWork(
             .ConfigureAwait(false);
     }
 
-    private static long CreateAdvisoryLockKey(Guid rootRunId)
-    {
-        Span<byte> bytes = stackalloc byte[16];
-        rootRunId.TryWriteBytes(bytes);
-        return BinaryPrimitives.ReadInt64LittleEndian(bytes[..8]) ^
-               BinaryPrimitives.ReadInt64LittleEndian(bytes[8..]);
-    }
 
     private async Task StageInitialPlanAsync(
         ProcessRuntimeCommitRequest request,

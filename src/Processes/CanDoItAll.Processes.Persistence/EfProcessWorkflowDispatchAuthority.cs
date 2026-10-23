@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -26,7 +25,7 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
         if (!context.Database.IsNpgsql()) {
             throw new NotSupportedException("Mapped Workflow dispatch fencing requires the actual PostgreSQL owner transaction.");
         }
-        var key = RootLockKey(expected.RootRunId.Value);
+        var key = ProcessRootAdvisoryKey.From(expected.RootRunId.Value);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken);
         var request = expected.Request;
         await context.RuntimeStates.FromSqlInterpolated($"""
@@ -63,7 +62,7 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
         if (!context.Database.IsNpgsql()) {
             throw new NotSupportedException("Mapped Workflow continuation fencing requires the actual PostgreSQL owner transaction.");
         }
-        var key = RootLockKey(expected.Dispatch.RootRunId.Value);
+        var key = ProcessRootAdvisoryKey.From(expected.Dispatch.RootRunId.Value);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken);
         var request = expected.Request;
         await context.RuntimeStates.FromSqlInterpolated($"""
@@ -232,11 +231,6 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
         return new(request, new(state.RootRunId), assignment, fingerprint, source, current, now);
     }
 
-    private static long RootLockKey(Guid rootRunId) {
-        Span<byte> bytes = stackalloc byte[16];
-        rootRunId.TryWriteBytes(bytes);
-        return BinaryPrimitives.ReadInt64LittleEndian(bytes[..8]) ^ BinaryPrimitives.ReadInt64LittleEndian(bytes[8..]);
-    }
 
     private static ProcessExecutionAuthorityMismatchException Mismatch(string message) => new(message);
 }

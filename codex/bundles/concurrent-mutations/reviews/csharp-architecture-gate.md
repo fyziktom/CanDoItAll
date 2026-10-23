@@ -1,5 +1,52 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: durable refresh capture journal (2026-10-23)
+
+Status: Pass with follow-up for the
+[persistent journal](../validation/2026-10-23-process-refresh-capture-journal-storage.md),
+including final static/source/resource closure.
+
+### Findings and dependency direction
+
+CodeAnalytics `snap-20261023220305-17b44d93` covers 327 documents, 959 types and 7,860
+members. The same three scoped project edges and zero cycles remain. The three new
+COMPLEXITY-002 findings are the cohesive settlement owner (11 members), store boundary
+(9) and typed persistence row (24). Their members describe one responsibility each;
+partial splitting would not improve ownership. The 189 existing WS0002 package-audit
+collector diagnostics remain; the actual Release builds provide compilation evidence.
+
+Runtime retains the pure protocol and optional typed UOW handoff. Application owns the
+capture lifecycle and known-work settlement; Persistence implements the narrow store
+interface and stages atomic handoffs in the existing UOW. Workbench remains the content
+owner. The shared advisory-key helper preserves existing bytes and lock ordering. There
+is no new assembly reference, service locator, business partial or callback into another
+owner under SQL. The generated EF migration partial is schema output.
+
+### Testability and cost
+
+The 124-case selection includes pure transitions, actual producer and restart paths,
+real PostgreSQL migration/constraint/race tests and successor/fence consumers. The
+returned-payload query translation defect was repaired without weakening consistency.
+The later valid-root-abort test repair changes no production or Unit output; the exact
+source reconstruction and output comparison retain 55 unaffected passing cases while
+69 cases pass on the final test candidate. All 124 distinct cases are qualified with zero
+skipped or unexecuted selected cases. Earlier failures remain recorded.
+
+Begin/Return use bounded indexed metadata transactions rather than two extra rewrites
+of runtime history. Payload reads are one coherent statement; exact returned work,
+original scope and current publication eligibility remain separate checks. Existing
+reservation/settlement UOW history cost, the added allocation lookup and sustained
+throughput still require capacity proof before worker activation.
+
+### Closure boundary
+
+Final static/source/resource checks pass for this checkpoint. Its scope is
+known-work persistence and replay, not arbitrary unknown-work resolution. Actual older
+binary retention, explicit retry, durable delivery, public refresh/Replan and engine
+E2E remain open. The delivery analysis explicitly avoids cancellation's two-second
+slice for ten-second refresh captures and requires draining known work after root stop.
+SPA stays on its colleague-review branch.
+
 ## C# Architecture Gate Result: pure capture invocation journal (2026-10-23)
 
 Status: Pass with follow-up for the [Runtime protocol](../validation/2026-10-23-process-refresh-capture-journal.md),

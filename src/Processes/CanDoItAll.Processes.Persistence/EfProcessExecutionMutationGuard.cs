@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Data;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Processes.Application;
@@ -48,7 +47,7 @@ public sealed class EfProcessExecutionMutationGuard(
         if (!context.Database.IsNpgsql()) {
             throw new NotSupportedException("Process native mutation fencing requires the PostgreSQL owner transaction.");
         }
-        var key = RootLockKey(expected.RootRunId.Value);
+        var key = ProcessRootAdvisoryKey.From(expected.RootRunId.Value);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken);
         var evidence = expected.Evidence;
         await ProcessExecutionSourceRowLocks.AcquireAsync(context, expected.RootRunId, evidence, cancellationToken);
@@ -60,9 +59,4 @@ public sealed class EfProcessExecutionMutationGuard(
         }
     }
 
-    private static long RootLockKey(Guid rootRunId) {
-        Span<byte> bytes = stackalloc byte[16];
-        rootRunId.TryWriteBytes(bytes);
-        return BinaryPrimitives.ReadInt64LittleEndian(bytes[..8]) ^ BinaryPrimitives.ReadInt64LittleEndian(bytes[8..]);
-    }
 }

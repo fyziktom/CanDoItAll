@@ -10,11 +10,12 @@ public enum ProcessDecisionRefreshCaptureStatus { Advanced, Pending, ReviewRequi
 
 public sealed record ProcessDecisionRefreshCaptureResult(ProcessDecisionRefreshCaptureStatus Status, ProcessRuntimeStateSnapshot State);
 
-public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRefreshCaptureQuery query,
+public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRefreshCaptureQuery query, IProcessDecisionRefreshCaptureStore journal,
     IProcessDecisionRootQuery roots, IProcessDecisionResultQuery budgets, IEnumerable<IProcessDecisionMaterialCapturer> capturers,
     IProcessRuntimeStateStore states, IProcessRuntimeUnitOfWork unitOfWork, TimeProvider clock,
     ILogger<ProcessDecisionRefreshCaptureCoordinator> logger) {
     private const int MaximumAttempts = 3;
+    private readonly ProcessDecisionRefreshCaptureSettlement settlement = new(query, roots, budgets, states, unitOfWork, clock, logger);
 
     public async Task<ProcessDecisionRefreshCaptureResult> PrepareAsync(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context,
         RuntimeCommandId admissionId, CancellationToken cancellationToken = default) {
@@ -31,8 +32,14 @@ public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRef
             if (progress.RootAbort is not null || progress.LocalAbort is not null) {
                 return new(Stopped(state.Status) ? ProcessDecisionRefreshCaptureStatus.Stopped : ProcessDecisionRefreshCaptureStatus.ReviewRequired, state);
             }
-            if (progress.LocalReservation is not null) {
-                return new(ProcessDecisionRefreshCaptureStatus.Pending, state);
+            var pending = progress.LocalReservation is not null ? identity.LocalReserve
+                : progress.RootReservation is not null && progress.RootCompletion is null ? identity.RootReserve : (RuntimeCommandId?)null;
+            if (pending is { } reservationId) {
+                var resumed = await ResumeAsync(state, context, identity, reservationId, progress, cancellationToken).ConfigureAwait(false);
+                if (reservationId == identity.RootReserve && resumed.Status == ProcessDecisionRefreshCaptureStatus.Advanced) {
+                    continue;
+                }
+                return resumed;
             }
             var captureInvoked = false;
             try {
@@ -68,7 +75,7 @@ public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRef
                     return new(ProcessDecisionRefreshCaptureStatus.Pending, reserved.State);
                 }
                 captureInvoked = true;
-                var result = await CaptureAsync(reserved.State, context, attempt, capturer, cancellationToken).ConfigureAwait(false);
+                var result = await InvokeAsync(reserved.State, context, attempt, capturer, cancellationToken).ConfigureAwait(false);
                 if (!root || result.Status != ProcessDecisionRefreshCaptureStatus.Advanced) {
                     return result;
                 }
@@ -88,10 +95,12 @@ public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRef
     }
 
     private async Task<ProcessDecisionRefreshCaptureResult> CaptureAsync(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context,
-        ProcessDecisionRefreshCaptureAttempt attempt, IProcessDecisionMaterialCapturer? capturer, CancellationToken cancellationToken) {
+        ProcessDecisionRefreshCaptureAttempt attempt, ProcessDecisionCaptureInvocationId invocation,
+        IProcessDecisionMaterialCapturer? capturer, CancellationToken cancellationToken) {
         ProcessDecisionMaterial? material = null;
         ProcessDecisionRunScopeMaterial? basis = null;
         Exception? failure = null;
+        var kind = ProcessDecisionRefreshCaptureOutcomeKind.Refused;
         using var deadline = new CancellationTokenSource(TimeSpan.FromTicks(attempt.Grant.WorkTicks), clock);
         using var captureCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         var started = clock.GetTimestamp();
@@ -105,6 +114,7 @@ public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRef
                             throw new InvalidDataException("Refresh capture changed its original scope, material identity or content contract.");
                         }
                         basis = ProcessDecisionRunScopeMaterial.From(material);
+                        kind = ProcessDecisionRefreshCaptureOutcomeKind.Captured;
                         break;
                     case ProcessDecisionMaterialCaptureResult.Refused refused when Enum.IsDefined(refused.Reason):
                         logger.LogWarning("Refresh {AdmissionId} in run {RunId} was refused by its content owner: {Reason}.",
@@ -121,17 +131,22 @@ public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRef
                     throw new ProcessDecisionRunScopeException(ProcessDecisionRunScopeRefusal.StaleExpectation);
                 }
                 basis = shared.Scope.Material;
+                kind = ProcessDecisionRefreshCaptureOutcomeKind.Captured;
             }
             if (basis is not null && !Fresh(basis, attempt)) {
                 basis = null;
                 material = null;
                 logger.LogWarning("Refresh {AdmissionId} in run {RunId} returned expired material.", attempt.Identity.AdmissionId.Value, state.RunId.Value);
+                kind = ProcessDecisionRefreshCaptureOutcomeKind.Expired;
             }
         } catch (OperationCanceledException) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
             material = null;
             basis = null;
+            kind = ProcessDecisionRefreshCaptureOutcomeKind.DeadlineExceeded;
         } catch (Exception exception) {
             failure = exception;
+            kind = exception is OperationCanceledException && cancellationToken.IsCancellationRequested
+                ? ProcessDecisionRefreshCaptureOutcomeKind.Cancelled : ProcessDecisionRefreshCaptureOutcomeKind.Faulted;
             material = null;
             basis = null;
             logger.LogWarning("Refresh {AdmissionId} in run {RunId} ended capture with {FailureKind}.",
@@ -144,10 +159,14 @@ public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRef
         if (elapsed.Ticks > attempt.Grant.WorkTicks || captureCancellation.IsCancellationRequested) {
             material = null;
             basis = null;
+            kind = elapsed.Ticks > attempt.Grant.WorkTicks || deadline.IsCancellationRequested
+                ? ProcessDecisionRefreshCaptureOutcomeKind.DeadlineExceeded : ProcessDecisionRefreshCaptureOutcomeKind.Cancelled;
         }
         using var accountingDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(5), clock);
-        var result = await FinishAsync(state.RunId, context, attempt, material, basis,
-            new(1, new(elapsed.Ticks, 0)), accountingDeadline.Token).ConfigureAwait(false);
+        ProcessDecisionRefreshCaptureReturned returned = new(new(kind, new(1, new(elapsed.Ticks, 0)), basis), material);
+        await journal.ReturnAsync(attempt.JournalReservation, invocation, returned, accountingDeadline.Token).ConfigureAwait(false);
+        var result = await settlement.FinishAsync(state.RunId, context, attempt, material, basis,
+            returned.Outcome.Work, accountingDeadline.Token).ConfigureAwait(false);
         if (failure is not null) {
             ExceptionDispatchInfo.Capture(failure).Throw();
         }
@@ -155,97 +174,68 @@ public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRef
         return result;
     }
 
-    private async Task<ProcessDecisionRefreshCaptureResult> FinishAsync(ProcessRunId runId, RuntimeCommandContext context,
-        ProcessDecisionRefreshCaptureAttempt attempt, ProcessDecisionMaterial? material, ProcessDecisionRunScopeMaterial? basis,
-        DecisionBudgetSettlement work, CancellationToken cancellationToken) {
-        for (var retry = 0; retry < MaximumAttempts; retry++) {
-            var state = await ReloadAsync(runId, cancellationToken).ConfigureAwait(false);
-            var progress = await ProgressAsync(state, attempt.Identity, cancellationToken).ConfigureAwait(false);
-            var completed = attempt.IsRoot ? progress.RootCompletion : progress.Successor;
-            var aborted = attempt.IsRoot ? progress.RootAbort : progress.LocalAbort;
-            if (completed is not null || aborted is not null) {
-                attempt.RequireReceipt(completed ?? aborted!, completed is not null ? attempt.Complete : attempt.Abort,
-                    work, completed is not null ? basis?.Stamp : null);
-                return new(completed is not null ? ProcessDecisionRefreshCaptureStatus.Advanced
-                    : Stopped(state.Status) ? ProcessDecisionRefreshCaptureStatus.Stopped : ProcessDecisionRefreshCaptureStatus.ReviewRequired, state);
-            }
-            try {
-                ProcessDecisionRefreshCaptureSelection? current = null;
-                if (basis is not null && !Stopped(state.Status)) {
-                    try {
-                        current = await query.ReadAsync(state, attempt.Identity.AdmissionId, cancellationToken).ConfigureAwait(false);
-                    } catch (ProcessExecutionAuthorityMismatchException) {
-                        logger.LogWarning("Refresh {AdmissionId} in run {RunId} lost original source eligibility before attachment.",
-                            attempt.Identity.AdmissionId.Value, runId.Value);
-                    }
-                }
-                var publish = basis is not null && current is not null && !Stopped(current.RootStatus) &&
-                    !current.Original.Budget.OverrunDetected && !current.RootBudget.OverrunDetected &&
-                    work.Consumed.WorkTicks <= attempt.Grant.WorkTicks && Fresh(basis, attempt) &&
-                    current.Input.InputFingerprint == attempt.Original.Input.InputFingerprint &&
-                    (attempt.IsRoot || current.SharedScope is null || current.SharedScope.Material == basis);
-                var request = await CompletionAsync(state, context, attempt, current, publish ? material : null,
-                    publish ? basis : null, work, cancellationToken).ConfigureAwait(false);
-                var result = await unitOfWork.CommitAsync(request, cancellationToken).ConfigureAwait(false);
-                attempt.RequireReceipt(result, request.CommandId, work, publish ? basis!.Stamp : null);
-                return new(publish ? ProcessDecisionRefreshCaptureStatus.Advanced : Stopped(result.State.Status)
-                    ? ProcessDecisionRefreshCaptureStatus.Stopped : ProcessDecisionRefreshCaptureStatus.ReviewRequired, result.State);
-            } catch (ProcessDecisionException failure) when (failure.Reason == ProcessDecisionRefusal.UnclosedWork) {
-                material = null;
-                basis = null;
-                logger.LogWarning("Refresh {AdmissionId} in run {RunId} cannot advance while other work is open; settling its closed capture.",
-                    attempt.Identity.AdmissionId.Value, runId.Value);
-            } catch (Exception failure) when (IsStale(failure) || failure is IOException or ProcessExecutionAuthorityMismatchException) {
-                logger.LogWarning("Refresh {AdmissionId} in run {RunId} requires capture settlement reconciliation after {FailureKind}.",
-                    attempt.Identity.AdmissionId.Value, runId.Value, failure.GetType().Name);
-            }
+    private async Task<ProcessDecisionRefreshCaptureResult> InvokeAsync(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context,
+        ProcessDecisionRefreshCaptureAttempt attempt, IProcessDecisionMaterialCapturer? capturer, CancellationToken cancellationToken) {
+        if (cancellationToken.IsCancellationRequested) {
+            using var draining = new CancellationTokenSource(TimeSpan.FromSeconds(5), clock);
+            var neverInvoked = await journal.CloseNeverInvokedAsync(attempt.JournalReservation, draining.Token).ConfigureAwait(false);
+            await settlement.AbortAsync(neverInvoked, draining.Token).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
         }
-        throw new IOException("Refresh capture closed locally but its original settlement receipt could not be reconciled.");
+        ProcessDecisionCaptureInvocationId invocation = new(Guid.NewGuid());
+        var admission = await journal.BeginAsync(attempt.JournalReservation, invocation, cancellationToken).ConfigureAwait(false);
+        if (admission.Status == ProcessDecisionRefreshCaptureInvocationStatus.PreviouslyAdmitted) {
+            return new(ProcessDecisionRefreshCaptureStatus.Pending, state);
+        }
+        if (admission.Status == ProcessDecisionRefreshCaptureInvocationStatus.Stopped) {
+            var neverInvoked = await journal.CloseNeverInvokedAsync(attempt.JournalReservation, cancellationToken).ConfigureAwait(false);
+            return await settlement.AbortAsync(neverInvoked, cancellationToken).ConfigureAwait(false);
+        }
+        return await CaptureAsync(state, context, attempt, invocation, capturer, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<ProcessRuntimeCommitRequest> CompletionAsync(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context,
-        ProcessDecisionRefreshCaptureAttempt attempt, ProcessDecisionRefreshCaptureSelection? current, ProcessDecisionMaterial? material,
-        ProcessDecisionRunScopeMaterial? basis, DecisionBudgetSettlement work, CancellationToken cancellationToken) {
-        DecisionBudgetBalance balance;
-        ProcessDecisionRunScopeState? scope = null;
-        if (attempt.IsRoot) {
-            var root = await roots.ReadAsync(state, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidDataException("Refresh settlement lost its original root budget.");
-            balance = root.Budget;
-            scope = root.Scope;
-            if (scope.Admission != attempt.Original.SharedScope!.Admission || scope.Capture != attempt.RootCapture) {
-                throw new ProcessDecisionRunScopeException(ProcessDecisionRunScopeRefusal.StaleExpectation);
+    private async Task<ProcessDecisionRefreshCaptureResult> ResumeAsync(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context,
+        ProcessDecisionRefreshCaptureIdentity identity, RuntimeCommandId reservationId, ProcessDecisionRefreshCaptureProgress progress, CancellationToken cancellationToken) {
+        var saved = await journal.ReadAsync(state.RunId, reservationId, cancellationToken).ConfigureAwait(false);
+        if (saved is null) {
+            return new(ProcessDecisionRefreshCaptureStatus.Pending, state);
+        }
+        var original = saved.Reservation;
+        var receipt = original.IsRoot ? progress.RootReservation : progress.LocalReservation;
+        if (original.RunId != state.RunId || original.RootRunId != state.RootRunId || original.ReservationId != reservationId ||
+                original.AdmissionId != identity.AdmissionId || receipt?.Budget?.Command != original.Budget) {
+            throw new InvalidDataException("Refresh recovery journal differs from its original reservation receipt.");
+        }
+        if (saved.Phase is ProcessDecisionRefreshCapturePhase.Invoking or ProcessDecisionRefreshCapturePhase.Settled) {
+            return new(ProcessDecisionRefreshCaptureStatus.Pending, state);
+        }
+        ProcessDecisionRefreshCaptureSelection? selected = null;
+        try {
+            selected = await query.ReadAsync(state, identity.AdmissionId, cancellationToken).ConfigureAwait(false);
+        } catch (Exception failure) when (failure is ProcessExecutionAuthorityMismatchException or
+                ProcessDecisionSourceProjectionRequiredException or ProcessAcceptedExecutionInputRequiredException) {
+            logger.LogWarning("Refresh {AdmissionId} in run {RunId} lost source eligibility while recovering known work: {FailureKind}.",
+                identity.AdmissionId.Value, state.RunId.Value, failure.GetType().Name);
+        }
+        if (selected is null || Stopped(state.Status) || Stopped(selected.RootStatus) ||
+                saved.Outcome is { Kind: not ProcessDecisionRefreshCaptureOutcomeKind.Captured }) {
+            if (saved.Phase == ProcessDecisionRefreshCapturePhase.Reserved) {
+                saved = await journal.CloseNeverInvokedAsync(original, cancellationToken).ConfigureAwait(false);
             }
-        } else {
-            var selected = await budgets.ReadAsync(state.RunId, attempt.Original.Original.StepInstanceId, null, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidDataException("Refresh settlement lost its original local budget.");
-            selected.RequireOriginal(state, attempt.Original.Original.StepInstanceId, null);
-            balance = selected.Budget;
+            return await settlement.AbortAsync(saved, cancellationToken).ConfigureAwait(false);
         }
-        if (balance.BudgetId != attempt.Budget.BudgetId) {
-            throw new InvalidDataException("Refresh capture cannot settle a replacement budget.");
+        var attempt = ProcessDecisionRefreshCaptureAttempt.Restore(selected, original);
+        if (saved.Phase == ProcessDecisionRefreshCapturePhase.Returned) {
+            var returned = await journal.ReadReturnedAsync(state.RunId, reservationId, cancellationToken).ConfigureAwait(false);
+            if (returned is null) {
+                return new(ProcessDecisionRefreshCaptureStatus.Pending, state);
+            }
+            return await settlement.FinishAsync(state.RunId, context, attempt, returned.Payload, returned.Outcome.Material,
+                returned.Outcome.Work, cancellationToken).ConfigureAwait(false);
         }
-        var request = ProcessDecisionRefreshCaptureAttempt.TimestampOnly(state, basis is not null ? attempt.Complete : attempt.Abort, clock.GetUtcNow()) with {
-            DecisionBudget = new ProcessDecisionBudgetSettlement(new(attempt.IsRoot ? null : attempt.Original.Original.StepInstanceId,
-                balance.BudgetId, balance.Revision), attempt.Allocation, work)
-        };
-        if (attempt.IsRoot) {
-            return request with { DecisionRunScope = new(scope!.Expectation, basis is not null
-                ? ProcessDecisionRunScopeCommandKind.CompleteCapture : ProcessDecisionRunScopeCommandKind.AbortCapture, Material: basis?.Stamp),
-                DecisionMaterial = material };
-        }
-        if (basis is null) {
-            return request;
-        }
-        ProcessDecisionRefresh command = new(attempt.Original.Original.StepInstanceId, current!.Original.Head!.Expectation, attempt.Identity.Material,
-            current.SharedScope is null ? ProcessDecisionRefreshKind.ManagerRefresh : ProcessDecisionRefreshKind.ParentRefresh) {
-            AdmissionCommandId = attempt.Identity.AdmissionId, Material = basis.Stamp, InheritedScope = current.SharedScope?.Expectation
-        };
-        return request with {
-            Mutation = new ProcessDecisionRefreshSuccessor(attempt.Identity.AdmissionId).Prepare(state,
-                context with { OccurredAtUtc = clock.GetUtcNow() }, attempt.Intent, command),
-            Decision = command, DecisionMaterial = material
-        };
+        var capturer = original.InheritsMaterial ? null : capturers.SingleOrDefault(item => item.ContentContract == original.ContentContract)
+            ?? throw new InvalidOperationException("The original refresh content contract has no registered capturer.");
+        return await InvokeAsync(state, context, attempt, capturer, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<ProcessDecisionRefreshCaptureProgress> ProgressAsync(ProcessRuntimeStateSnapshot state,

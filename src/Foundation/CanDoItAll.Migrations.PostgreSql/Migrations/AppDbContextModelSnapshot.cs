@@ -9109,6 +9109,129 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCaptureEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReservationCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdmissionCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("CapturedAtUtcTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("ConsumedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("DecisionGeneration")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Disposition")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("GrantedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("InputFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<Guid?>("InvocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MaterialFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("MaterialGeneration")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("OriginalBudgetRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Phase")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProtocolVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SettlementCommandId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RunId", "ReservationCommandId");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("ScopeId");
+
+                    b.HasIndex("BudgetId", "AllocationId")
+                        .IsUnique();
+
+                    b.HasIndex("DecisionId", "DecisionGeneration");
+
+                    b.HasIndex("RunId", "AdmissionCommandId");
+
+                    b.HasIndex("RunId", "SettlementCommandId");
+
+                    b.ToTable("process_decision_refresh_captures", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_refresh_capture_identity", "\"ProtocolVersion\" = 1 AND \"RunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"ReservationCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"AdmissionCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"AdmissionCommandId\" <> \"ReservationCommandId\"\nAND \"MaterialId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"MaterialGeneration\" BETWEEN 2 AND 32\nAND \"OriginalBudgetRevision\" > 0 AND \"GrantedWorkTicks\" BETWEEN 1 AND 100000000\nAND \"InputFingerprint\" ~ '^sha256:[0-9a-f]{64}$'");
+
+                            t.HasCheckConstraint("CK_process_refresh_capture_outcome", "((\"Outcome\" IS NULL AND \"ConsumedWorkTicks\" IS NULL)\n    OR (\"Outcome\" IS NOT NULL AND \"Outcome\" BETWEEN 1 AND 7 AND \"ConsumedWorkTicks\" IS NOT NULL AND \"ConsumedWorkTicks\" >= 0))\nAND (\"Outcome\" IS NULL OR \"Outcome\" <> 7 OR \"ConsumedWorkTicks\" = 0)\nAND ((\"Outcome\" IS NOT NULL AND \"Outcome\" = 1 AND \"ConsumedWorkTicks\" <= \"GrantedWorkTicks\"\n        AND \"MaterialFingerprint\" IS NOT NULL AND \"MaterialFingerprint\" ~ '^[0-9A-F]{64}$'\n        AND \"CapturedAtUtcTicks\" IS NOT NULL AND \"CapturedAtUtcTicks\" BETWEEN 1 AND 3155378975999999999)\n    OR ((\"Outcome\" IS NULL OR \"Outcome\" <> 1) AND \"MaterialFingerprint\" IS NULL AND \"CapturedAtUtcTicks\" IS NULL))");
+
+                            t.HasCheckConstraint("CK_process_refresh_capture_phase", "(\"InvocationId\" IS NULL OR \"InvocationId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\nAND ((\"Phase\" = 1 AND \"Revision\" = 1 AND \"InvocationId\" IS NULL AND \"Outcome\" IS NULL)\n    OR (\"Phase\" = 2 AND \"Revision\" = 2 AND \"InvocationId\" IS NOT NULL AND \"Outcome\" IS NULL)\n    OR (\"Phase\" IN (3, 4) AND \"Outcome\" IS NOT NULL\n        AND ((\"InvocationId\" IS NULL AND \"Outcome\" = 7 AND \"Revision\" = \"Phase\" - 1)\n            OR (\"InvocationId\" IS NOT NULL AND \"Outcome\" BETWEEN 1 AND 6 AND \"Revision\" = \"Phase\"))))\nAND ((\"Phase\" = 4 AND \"Disposition\" IS NOT NULL AND \"Disposition\" IN (1, 2) AND \"SettlementCommandId\" IS NOT NULL\n        AND \"SettlementCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\n    OR (\"Phase\" <> 4 AND \"Disposition\" IS NULL AND \"SettlementCommandId\" IS NULL))\nAND (\"Disposition\" IS NULL OR \"Disposition\" <> 1 OR \"Outcome\" = 1)");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCapturePayloadEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReservationCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("RunId", "ReservationCommandId");
+
+                    b.ToTable("process_decision_refresh_capture_payloads", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_refresh_capture_payload", "octet_length(\"PayloadJson\") BETWEEN 2 AND 1048576");
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", b =>
                 {
                     b.Property<Guid>("ScopeId")
@@ -10973,6 +11096,61 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .WithMany()
                         .HasForeignKey("OwnerRunId", "StepInstanceId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCaptureEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RootRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId", "AllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("DecisionId", "DecisionGeneration")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "AdmissionCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "ReservationCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_decision_refresh_captures_process_runtime_idempote~1");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "SettlementCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_decision_refresh_captures_process_runtime_idempote~2");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCapturePayloadEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCaptureEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "ReservationCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", b =>

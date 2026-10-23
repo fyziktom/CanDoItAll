@@ -1,6 +1,14 @@
 # Requirements and closure ledger
 
-Current work: the [pure capture invocation journal](validation/2026-10-23-process-refresh-capture-journal.md)
+Current work: the [durable capture journal](validation/2026-10-23-process-refresh-capture-journal-storage.md)
+passes all 124 distinct selected cases across a verified test-only repair. Reservation,
+first invocation, returned work and exact settlement survive interruption through the
+original owners. Full portability, source/output and new resource checks pass. Actual
+older-binary retention, unknown-work resolution, explicit retry, delivery, public refresh/
+Replan and engine E2E remain open. SPA stays on **codex/concurrent-mutations** for colleague
+review; historical cleanup denials remain recorded.
+
+Preceding work: the [pure capture invocation journal](validation/2026-10-23-process-refresh-capture-journal.md)
 passes all 35 selected cases. It distinguishes never-invoked cancellation from unknown
 work, binds immutable returned material/work, and checks exact budget settlement. Final
 portability, source/output and owned resource checks pass. Storage and registered producer integration are next; no

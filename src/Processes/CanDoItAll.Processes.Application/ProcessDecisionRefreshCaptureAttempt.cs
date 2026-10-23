@@ -4,7 +4,8 @@ using CanDoItAll.SharedKernel;
 namespace CanDoItAll.Processes.Application;
 
 internal sealed record ProcessDecisionRefreshCaptureAttempt(ProcessDecisionRefreshCaptureIdentity Identity,
-    ProcessDecisionRefreshCaptureSelection Original, bool IsRoot, DecisionBudgetAmount Grant) {
+    ProcessDecisionRefreshCaptureSelection Original, bool IsRoot, DecisionBudgetAmount Grant,
+    ProcessDecisionRefreshCaptureReservation? RetainedReservation = null) {
     internal ProcessDecisionRefreshIntent Intent => ((ProcessDecisionBeginRefresh)Original.Admission.Decision.Command).Intent;
     internal DecisionBudgetBalance Budget => IsRoot ? Original.RootBudget : Original.Original.Budget;
     internal DecisionBudgetAllocationId Allocation => IsRoot ? Identity.RootAllocation : Identity.LocalAllocation;
@@ -15,6 +16,22 @@ internal sealed record ProcessDecisionRefreshCaptureAttempt(ProcessDecisionRefre
     internal ProcessDecisionMaterialCaptureRequest CaptureRequest => new(Original.Input.Source,
         Original.Original.Child!.Original.Scope, Original.Input.Assignment.DecisionDataPolicy!.ContentContract!,
         new(Original.Original.Child.Original.Scope.Id, checked(Original.Original.Child.Original.Material.Reference.Generation + 1), Identity.Material));
+    internal ProcessDecisionRefreshCaptureReservation JournalReservation => RetainedReservation ?? Describe(Budget.Revision);
+
+    private ProcessDecisionRefreshCaptureReservation Describe(long revision) => new(Original.Original.RunId, Identity.AdmissionId, Reserve,
+        new(new(IsRoot ? null : Original.Original.StepInstanceId, Budget.BudgetId, revision), Allocation, Grant),
+        CaptureRequest.Scope, CaptureRequest.ContentContract, CaptureRequest.Material, Original.Input.InputFingerprint);
+
+    internal static ProcessDecisionRefreshCaptureAttempt Restore(ProcessDecisionRefreshCaptureSelection selected,
+        ProcessDecisionRefreshCaptureReservation reservation) {
+        reservation.Validate();
+        var attempt = new ProcessDecisionRefreshCaptureAttempt(new(reservation.AdmissionId), selected, reservation.IsRoot,
+            reservation.Budget.Grant, reservation);
+        if (attempt.Describe(reservation.Budget.Expectation.Revision) != reservation) {
+            throw new InvalidDataException("Refresh recovery changed the original reservation, source, contract or material.");
+        }
+        return attempt;
+    }
 
     internal static ProcessDecisionRefreshCaptureAttempt Create(ProcessDecisionRefreshCaptureIdentity identity,
         ProcessDecisionRefreshCaptureSelection selected, bool root) {
@@ -49,8 +66,8 @@ internal sealed record ProcessDecisionRefreshCaptureAttempt(ProcessDecisionRefre
 
     internal ProcessRuntimeCommitRequest Reservation(ProcessRuntimeStateSnapshot state, DateTimeOffset now)
         => TimestampOnly(state, Reserve, now) with {
-            DecisionBudget = new ProcessDecisionBudgetReservation(new(IsRoot ? null : Original.Original.StepInstanceId,
-                Budget.BudgetId, Budget.Revision), Allocation, Grant),
+            DecisionBudget = JournalReservation.Budget,
+            RefreshCapture = new(JournalReservation),
             DecisionRunScope = IsRoot ? new(Original.SharedScope!.Expectation, ProcessDecisionRunScopeCommandKind.BeginCapture, RootCapture) : null
         };
 
@@ -69,7 +86,7 @@ internal sealed record ProcessDecisionRefreshCaptureAttempt(ProcessDecisionRefre
         if (command != Reserve && command != Complete && command != Abort || budget.Command.Expectation.BudgetId != Budget.BudgetId ||
                 budget.Command.Expectation.StepInstanceId != (IsRoot ? null : Original.Original.StepInstanceId) ||
                 budget.Change.Allocation.Grant != Grant || budget.Change.Allocation.Settlement != work ||
-                command == Reserve && budget.Command.Expectation.Revision != Budget.Revision ||
+                command == Reserve && budget.Command.Expectation.Revision != JournalReservation.Budget.Expectation.Revision ||
                 command == Complete && (IsRoot ? receipt.Scope?.State.Material?.Stamp != material : receipt.Decision?.Command.Material != material)) {
             throw new InvalidDataException("Refresh capture changed its original reservation, material or closed work.");
         }
