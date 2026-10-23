@@ -60,7 +60,7 @@ public sealed class EfProcessDecisionResultQuery(IDbContextFactory<ProcessPersis
             saved = saved with { Budget = original.Balance };
         }
         return new(new(saved.State.RootRunId), runId, stepId, saved.Budget, saved.Head, child,
-            saved.OtherWorkPending, saved.SharedScopePending);
+            saved.OtherWorkPending, saved.SharedScopePending) { SharedScope = saved.SharedScope };
     }
 
     internal static async Task<ProcessDecisionResultState?> ReadStateAsync(ProcessPersistenceDbContext context,
@@ -93,6 +93,7 @@ public sealed class EfProcessDecisionResultQuery(IDbContextFactory<ProcessPersis
                     ProjectAdmissionProjectId = state.ProjectAdmissionProjectId, ProjectAdmissionLifetimeId = state.ProjectAdmissionLifetimeId
                 },
                 HasPolicy = assignment != null && assignment.DecisionDataPolicyJson != null, Budget = budget, Head = head, Generation = generation,
+                ScopeId = scope == null ? (Guid?)null : scope.ScopeId, ScopeRevision = scope == null ? (long?)null : scope.Revision,
                 ChildGeneration = head == null || actualId == null ? null :
                     context.DecisionChildren.Where(child => child.DecisionId == head.DecisionId && child.ChildId == actualId)
                     .Select(child => (int?)child.Generation).SingleOrDefault(),
@@ -116,9 +117,13 @@ public sealed class EfProcessDecisionResultQuery(IDbContextFactory<ProcessPersis
         }
         return new(row.State, ProcessDecisionRows.ReadBalance(row.Budget),
             row.Head is null ? null : ProcessDecisionRows.RequireHead(row.Head, row.Generation!),
-            row.ChildGeneration, row.OtherWorkPending, row.SharedScopePending);
+            row.ChildGeneration, row.OtherWorkPending, row.SharedScopePending) {
+            SharedScope = row.ScopeId is { } scopeId ? new(new(scopeId), row.ScopeRevision!.Value) : null
+        };
     }
 }
 
 internal sealed record ProcessDecisionResultState(ProcessRuntimeStateEntity State, CanDoItAll.SharedKernel.DecisionBudgetBalance Budget,
-    ProcessDecisionGeneration? Head, int? ChildGeneration, bool OtherWorkPending, bool SharedScopePending);
+    ProcessDecisionGeneration? Head, int? ChildGeneration, bool OtherWorkPending, bool SharedScopePending) {
+    internal ProcessDecisionRunScopeExpectation? SharedScope { get; init; }
+}

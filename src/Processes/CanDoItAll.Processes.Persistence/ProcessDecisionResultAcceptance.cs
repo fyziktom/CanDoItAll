@@ -15,6 +15,10 @@ internal static class ProcessDecisionResultAcceptance {
             if (selection is null) {
                 continue;
             }
+            var expectedScope = ProcessDecisionRunScopeCompletion.Prepare(selection.SharedScope, request.OriginalState, request.Mutation);
+            if (expectedScope is not null && request.DecisionRunScope != expectedScope) {
+                throw new ProcessDecisionRunScopeException(ProcessDecisionRunScopeRefusal.StaleExpectation);
+            }
             var step = request.Mutation.State.Steps.Single(item => item.StepInstanceId == result.StepInstanceId);
             if (step.Status != result.AppliedStepStatus || step.ActiveClaimToken is not null) {
                 throw Refuse();

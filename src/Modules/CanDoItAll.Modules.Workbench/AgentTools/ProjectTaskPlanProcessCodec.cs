@@ -11,6 +11,8 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectTaskPlanProcessContract {
     internal const string SourceKind = "process-step";
+    internal const string ProcessRequester = "process-runtime";
+    internal const string SystemRequesterKind = "system";
     internal static ProcessDecisionExecutionContract Execution { get; } = new(
         new("a8a1bce7-dfbd-40a2-8b5c-6c15f1558790"), 1, ProcessDecisionChildOwner.Agent);
     internal static ProcessDecisionContentContract Content { get; } = new(new("53294440-a9fa-4964-af95-96605ec88217"), 1);

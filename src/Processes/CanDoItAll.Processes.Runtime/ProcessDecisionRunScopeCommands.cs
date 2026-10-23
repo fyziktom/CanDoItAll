@@ -1,9 +1,13 @@
 namespace CanDoItAll.Processes.Runtime;
 
-public enum ProcessDecisionRunScopeCommandKind { BeginReconciliation, BeginCapture, CompleteCapture, AbortCapture, Complete, Cancel }
+public enum ProcessDecisionRunScopeCommandKind { BeginReconciliation, BeginCapture, CompleteCapture, AbortCapture, Complete, Cancel,
+    CompleteResult, CancelResult }
 
 public sealed record ProcessDecisionRunScopeCommand(ProcessDecisionRunScopeExpectation Expectation, ProcessDecisionRunScopeCommandKind Kind,
     ProcessDecisionRunScopeCapture? Capture = null, ProcessDecisionMaterialStamp? Material = null) {
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool CompletesRuntimeResult => Kind is ProcessDecisionRunScopeCommandKind.CompleteResult or ProcessDecisionRunScopeCommandKind.CancelResult;
+
     public void Validate() {
         ArgumentNullException.ThrowIfNull(Expectation);
         Expectation.Validate();

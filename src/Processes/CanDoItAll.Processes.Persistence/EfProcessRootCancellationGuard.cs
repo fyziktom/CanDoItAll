@@ -83,7 +83,8 @@ internal static class EfProcessRootCancellationGuard {
     }
 
     private static bool HasAtomicCancelledResult(ProcessRuntimeCommitRequest request)
-        => request.Decision is ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Cancel } closure &&
+        => request.DecisionRunScope is { Kind: ProcessDecisionRunScopeCommandKind.CancelResult } ||
+            request.Decision is ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Cancel } closure &&
             request.DecisionBudget is ProcessDecisionBudgetSettlement &&
             request.Mutation.State.AppliedResults.Any(result => result.StepInstanceId == closure.StepInstanceId &&
                 result.AppliedStepStatus == ProcessRuntimeStepStatus.Cancelled && result.Outcome == StrategyOutcome.Canceled &&

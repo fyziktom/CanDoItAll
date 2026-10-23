@@ -165,3 +165,16 @@ title. All 365 distinct selected behaviors pass across the explicit test-only re
 portability is unchanged. The generated SPA client and conditional Workspace defaults page
 are qualified on its separate branch. Durable manager-chat identity across simultaneous
 openings, sustained capacity/default activation, remaining owner rows and final E2E stay open.
+
+## Registered Process planning checkpoint
+
+[P21/P22 validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-planning-dispatch.md)
+qualifies the real Process adapter for an already admitted Workbench task-planning
+contract. It preserves original prompts, material and child accounting through concurrent
+preparation/provider waits and replay. Final root results close shared material and save
+the exact receipt in the runtime/decision/budget SQL transaction. All 588 focused cases,
+affected Release builds, full portability and resource reconciliation pass. Public policy
+admission, multi-activity and mixed-contract lifecycle, shared refresh/replan, Workflow
+activation, sustained capacity and remaining mutable owners are still open. Inherited
+Agent children currently pause on basis change; public parent Fail/Replan choices require
+their own implemented response owner and cannot be advertised from vocabulary alone.

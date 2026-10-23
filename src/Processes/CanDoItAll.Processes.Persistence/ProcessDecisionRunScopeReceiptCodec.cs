@@ -26,8 +26,8 @@ internal static class ProcessDecisionRunScopeReceiptCodec {
             ProcessDecisionRunScopeCommandKind.BeginCapture => ProcessDecisionRunScopePhase.Capturing,
             ProcessDecisionRunScopeCommandKind.CompleteCapture => ProcessDecisionRunScopePhase.Active,
             ProcessDecisionRunScopeCommandKind.AbortCapture => state.Material is null ? ProcessDecisionRunScopePhase.AwaitingCapture : ProcessDecisionRunScopePhase.Reconciling,
-            ProcessDecisionRunScopeCommandKind.Complete => ProcessDecisionRunScopePhase.Completed,
-            ProcessDecisionRunScopeCommandKind.Cancel => ProcessDecisionRunScopePhase.Cancelled,
+            ProcessDecisionRunScopeCommandKind.Complete or ProcessDecisionRunScopeCommandKind.CompleteResult => ProcessDecisionRunScopePhase.Completed,
+            ProcessDecisionRunScopeCommandKind.Cancel or ProcessDecisionRunScopeCommandKind.CancelResult => ProcessDecisionRunScopePhase.Cancelled,
             _ => throw new InvalidDataException("The shared scope command is unsupported.")
         };
         if (command.Expectation.ScopeId != admission.ScopeId || state.Revision <= command.Expectation.Revision ||
@@ -36,7 +36,7 @@ internal static class ProcessDecisionRunScopeReceiptCodec {
                 command.Kind == ProcessDecisionRunScopeCommandKind.CompleteCapture && command.Material != state.Material?.Stamp) {
             throw new InvalidDataException("The shared scope receipt differs from its original command and result.");
         }
-        var json = JsonSerializer.Serialize(new Document(1, command.Expectation, command.Kind, CaptureDocument.From(command.Capture), command.Material,
+        var json = JsonSerializer.Serialize(new Document(command.CompletesRuntimeResult ? 2 : 1, command.Expectation, command.Kind, CaptureDocument.From(command.Capture), command.Material,
             new(admission.ScopeId, admission.Funding.RootRunId.Value, admission.Funding.BudgetId.Value, admission.DatabaseProfileId,
                 admission.WorkspaceNamespaceId, admission.ContentContract), state.Revision, state.Phase, state.Material,
             state.TotalMemberships, state.CurrentMemberships, CaptureDocument.From(state.Capture)), Options);
@@ -51,7 +51,7 @@ internal static class ProcessDecisionRunScopeReceiptCodec {
         RequireBound(json);
         var wire = JsonSerializer.Deserialize<Document>(json, Options)
             ?? throw new InvalidDataException("The shared scope receipt is empty.");
-        if (wire.Version != 1 || wire.Admission is not { } admission) {
+        if (wire.Version is not (1 or 2) || wire.Admission is not { } admission) {
             throw new InvalidDataException("The shared scope receipt has an unsupported version or missing original admission.");
         }
         ProcessDecisionRunScopeReceipt result = new(new(wire.Expected, wire.Kind, wire.RequestedCapture?.ToModel(), wire.RequestedMaterial),

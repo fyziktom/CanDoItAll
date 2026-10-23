@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -228,6 +229,82 @@ public sealed class ProcessDecisionRunScopeTests {
         Assert.Equal(ProcessDecisionRunScopeRefusal.GenerationCapacity,
             Assert.Throws<ProcessDecisionRunScopeException>(() => Capture(current, root, ProcessDecisionRunCaptureKind.ManagerRefresh)).Reason);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Terminal_result_closes_active_scope_with_canonical_version_two_receipt(bool cancelled) {
+        var root = Root();
+        var (capturing, reserved, material) = Capture(Create(root.MaterialScope!), root);
+        var settled = Settle(reserved);
+        var current = CompleteCapture(capturing, capturing.Expectation, material, settled);
+        var next = FinishResult(current, current.Expectation, cancelled, [], settled.Balance, [settled.Allocation]);
+        ProcessDecisionRunScopeReceipt receipt = new(new(current.Expectation, cancelled
+            ? ProcessDecisionRunScopeCommandKind.CancelResult : ProcessDecisionRunScopeCommandKind.CompleteResult), next);
+        var encoded = ProcessDecisionRunScopeReceiptCodec.Write(receipt)!;
+        Assert.Equal(receipt, ProcessDecisionRunScopeReceiptCodec.Read(encoded));
+        var document = JsonNode.Parse(encoded)!.AsObject();
+        Assert.Equal(2, document["version"]!.GetValue<int>());
+        document["version"] = 1;
+        Assert.Throws<InvalidDataException>(() => ProcessDecisionRunScopeReceiptCodec.Read(document.ToJsonString()));
+        Assert.Equal(current.Revision + 1, next.Revision);
+        Assert.Equal(cancelled ? ProcessDecisionRunScopePhase.Cancelled : ProcessDecisionRunScopePhase.Completed, next.Phase);
+        if (cancelled) {
+            Assert.Equal(ProcessDecisionRunScopeRefusal.InvalidPhase,
+                Assert.Throws<ProcessDecisionRunScopeException>(() => Finish(current, current.Expectation, true, [],
+                    settled.Balance, [settled.Allocation])).Reason);
+        }
+        var oldCommand = receipt with { Command = receipt.Command with { Kind = cancelled
+            ? ProcessDecisionRunScopeCommandKind.Cancel : ProcessDecisionRunScopeCommandKind.Complete } };
+        var legacy = ProcessDecisionRunScopeReceiptCodec.Write(oldCommand)!;
+        Assert.StartsWith("{\"version\":1,", legacy, StringComparison.Ordinal);
+        Assert.Equal(legacy, ProcessDecisionRunScopeReceiptCodec.Write(ProcessDecisionRunScopeReceiptCodec.Read(legacy)));
+    }
+
+    [Theory]
+    [InlineData(TerminalRefusal.StaleScope)]
+    [InlineData(TerminalRefusal.OpenClaim)]
+    [InlineData(TerminalRefusal.OpenDecision)]
+    [InlineData(TerminalRefusal.OpenAllocation)]
+    public void Terminal_scope_transition_cannot_skip_original_quiescence(TerminalRefusal refusal) {
+        var root = Root();
+        var (capturing, reserved, material) = Capture(Create(root.MaterialScope!), root);
+        var settled = Settle(reserved);
+        var current = CompleteCapture(capturing, capturing.Expectation, material, settled);
+        var member = Member(current);
+        current = Join(current, current.Expectation, member).State;
+        ProcessDecisionGeneration decision = new(member.Decision, 1,
+            refusal == TerminalRefusal.OpenDecision ? ProcessDecisionPhase.Active : ProcessDecisionPhase.Completed,
+            material.Reference.MaterialId, new(Guid.NewGuid()), 0, 0);
+        var balance = settled.Balance;
+        List<DecisionBudgetAllocation> allocations = [settled.Allocation];
+        if (refusal == TerminalRefusal.OpenAllocation) {
+            var open = DecisionBudgetTransitions.Reserve(balance, new(Guid.NewGuid()), new(1, 0));
+            balance = open.Balance;
+            allocations.Add(open.Allocation);
+        }
+        var expected = refusal == TerminalRefusal.StaleScope ? current.Expectation with { Revision = current.Revision - 1 } : current.Expectation;
+        var failure = Assert.Throws<ProcessDecisionRunScopeException>(() => FinishResult(current, expected, true,
+            [new(member, decision, refusal == TerminalRefusal.OpenClaim)], balance, allocations));
+        Assert.Equal(refusal == TerminalRefusal.StaleScope ? ProcessDecisionRunScopeRefusal.StaleExpectation
+            : ProcessDecisionRunScopeRefusal.UnclosedWork, failure.Reason);
+    }
+
+    [Fact]
+    public void Uncaptured_cancelled_scope_does_not_fabricate_material_or_allow_a_live_capture() {
+        var root = Root();
+        var current = Create(root.MaterialScope!);
+        var balance = DecisionBudgetTransitions.Create(root.BudgetId, root.Policy.Budget);
+        var next = FinishResult(current, current.Expectation, true, [], balance, []);
+        next.Validate();
+        Assert.Null(next.Material);
+        var (capturing, reserved, _) = Capture(current, root);
+        Assert.Equal(ProcessDecisionRunScopeRefusal.InvalidPhase,
+            Assert.Throws<ProcessDecisionRunScopeException>(() => FinishResult(capturing, capturing.Expectation, true, [],
+                reserved.Balance, [reserved.Allocation])).Reason);
+    }
+
+    public enum TerminalRefusal { StaleScope, OpenClaim, OpenDecision, OpenAllocation }
 
     private static ProcessDecisionRunAdmission Root(OnBasisChange change = OnBasisChange.PauseForReview)
         => ProcessDecisionRunPolicyFixture.WithSharedScope(ProcessDecisionRunPolicyFixture.Root(ProcessRunId.New(), ProcessDefinitionVersionId.New(),

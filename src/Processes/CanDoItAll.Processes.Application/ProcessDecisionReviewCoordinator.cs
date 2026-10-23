@@ -93,6 +93,7 @@ public sealed class ProcessDecisionReviewCoordinator(IProcessAcceptedExecutionIn
         var input = await ReadOriginalInputAsync(state, request.Child.StepInstanceId, cancellationToken).ConfigureAwait(false);
         context = context with { CommandId = ProcessDecisionReviewIdentity.Derive(request, input, child.Original, context.Actor) };
         if (await receipts.FindCompletedCommandAsync(context.CommandId, cancellationToken).ConfigureAwait(false) is { } replay) {
+            ProcessDecisionRunScopeCompletion.RequireReceipt(replay, selection.SharedScope?.ScopeId);
             RequireReceipt(replay, context, request, child);
             return replay with { Outcome = ProcessRuntimeTransitionOutcome.Duplicate, CommittedNow = false };
         }
@@ -121,7 +122,8 @@ public sealed class ProcessDecisionReviewCoordinator(IProcessAcceptedExecutionIn
             Decision = new ProcessDecisionClosure(request.Child.StepInstanceId, request.Decision, request.Child.ChildId, closed.Closure) {
                 Completion = outcome == StrategyOutcome.Canceled ? ProcessDecisionCompletion.Cancel : ProcessDecisionCompletion.Complete
             },
-            DecisionBudget = new ProcessDecisionBudgetSettlement(request.Budget, child.Original.Child.AllocationId, closed.Work)
+            DecisionBudget = new ProcessDecisionBudgetSettlement(request.Budget, child.Original.Child.AllocationId, closed.Work),
+            DecisionRunScope = ProcessDecisionRunScopeCompletion.Prepare(selection.SharedScope, state, mutation)
         }, cancellationToken).ConfigureAwait(false);
     }
 

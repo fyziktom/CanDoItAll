@@ -54,6 +54,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
     private readonly ProcessSubprocessContractResolver subprocessContractResolver;
     private readonly ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator;
     private readonly ProcessExecutionMetadataComposer executionMetadataComposer;
+    private readonly IReadOnlyDictionary<ProcessDecisionExecutionContract, IProcessDecisionStepExecutor> decisionExecutors;
     private readonly ILogger<AgentFrameworkProcessStepExecutor> logger;
 
     public AgentFrameworkProcessStepExecutor(
@@ -69,7 +70,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         ProcessSubprocessContractResolver subprocessContractResolver,
         ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator,
         ProcessExecutionMetadataComposer executionMetadataComposer,
-        ILogger<AgentFrameworkProcessStepExecutor> logger)
+        ILogger<AgentFrameworkProcessStepExecutor> logger,
+        IEnumerable<IProcessDecisionStepExecutor> decisionExecutors)
     {
         this.workspaceFactory = workspaceFactory;
         this.agentReferenceDataProvider = agentReferenceDataProvider;
@@ -87,6 +89,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         this.executionMetadataComposer = executionMetadataComposer ??
             throw new ArgumentNullException(nameof(executionMetadataComposer));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this.decisionExecutors = decisionExecutors.ToDictionary(executor => executor.Contract);
     }
 
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
@@ -114,9 +117,14 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             return Failed("process.adapter.assignment_missing", $"No runtime assignment exists for step '{stepId}'.", stepId.ToString());
         }
 
-        if (assignment.DecisionDataPolicy is not null) {
-            return Failed(ProcessExecutionAdapterDiagnosticCodes.DecisionDataPolicyUnsupported,
-                "This Process executor cannot execute an admitted decision-data policy.", stepId.ToString());
+        if (assignment.DecisionDataPolicy is { } policy) {
+            if (policy.ExecutionContract is not { } contract || !decisionExecutors.TryGetValue(contract, out var executor)) {
+                return Failed(ProcessExecutionAdapterDiagnosticCodes.DecisionDataPolicyUnsupported,
+                    "This Process executor cannot execute an admitted decision-data policy.", stepId.ToString());
+            }
+            var result = await executor.ExecuteAsync(request, original => executionMetadataComposer.ComposeClaimedExecution(
+                original, request.DispatchClaimIdentity, request.DispatchHostCapabilityEvidence), cancellationToken).ConfigureAwait(false);
+            return AttachHostCapabilityEvidence(result, request.DispatchHostCapabilityEvidence);
         }
 
         if (!ProcessRequiredRuntimeToolNames.IsValidBoundedContract(

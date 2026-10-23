@@ -131,7 +131,8 @@ public sealed class EfProcessDecisionMaterialStore(ProcessPersistenceDbContext d
         ProcessDecisionRunScopeCommand? scope = null) {
         command?.Validate();
         scope?.Validate();
-        if (scope is not null && command is not null) {
+        if (scope is not null && command is not null && !(scope.CompletesRuntimeResult &&
+                command is ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Complete or ProcessDecisionCompletion.Cancel })) {
             throw new InvalidDataException("A root scope command cannot also mutate a local decision.");
         }
         var expected = command?.InheritedScope is null ? command?.Material : null;

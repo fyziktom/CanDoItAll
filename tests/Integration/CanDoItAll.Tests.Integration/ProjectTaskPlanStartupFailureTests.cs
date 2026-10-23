@@ -16,6 +16,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Integration.Processes;
 using CanDoItAll.Tests.Integration.Runtime;
 using CanDoItAll.Tests.Support;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -47,13 +48,117 @@ public sealed class ProjectTaskPlanStartupFailureTests {
         Assert.Equal(0, result.DecisionBudget.Change.Balance.ReservedWorkTicks);
         Assert.Equal(evidence.Value.WorkTicks > fixture.Parent.Child.Grant.WorkTicks, result.DecisionBudget.Change.Balance.OverrunDetected);
         Assert.Equal(0, result.Decision.Current.UnclosedChildCount);
+        if (mode == ReadBasisMode.RunSnapshot) {
+            var finished = Assert.IsType<ProcessDecisionRunScopeReceipt>(result.DecisionRunScope);
+            Assert.Equal(ProcessDecisionRunScopePhase.Cancelled, finished.State.Phase);
+            await using var database = Context(fixture.Services);
+            Assert.Equal(finished.State, await ProcessDecisionRunScopeFixture.Scopes(database, fixture.Services)
+                .ReadAsync(finished.Command.Expectation.ScopeId));
+        } else {
+            Assert.Null(result.DecisionRunScope);
+        }
         Assert.Empty(result.State.AppliedResults.Single().ProducedArtifacts);
         Assert.Empty(fixture.Entry.Wire.Requests);
         var replay = await coordinator.SubmitAsync(result.State, fixture.ResultContext,
             command with { Result = command.Result with { OwnerEvidence = null } });
         Assert.Equal(ProcessRuntimeTransitionOutcome.Duplicate, replay.Outcome);
         Assert.Equal(result.DecisionBudget, replay.DecisionBudget);
+        Assert.Equal(result.DecisionRunScope, replay.DecisionRunScope);
         await fixture.Entry.Files.Sql.VerifyAsync(0, 0);
+    }
+
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    public async Task Terminal_scope_flush_failure_rolls_back_runtime_child_budget_scope_and_receipt(int failAt, bool cancelled) {
+        await using var fixture = await Fixture.CreateAsync(ReadBasisMode.RunSnapshot);
+        var evidence = await fixture.FailAsync(cancelled: cancelled);
+        var command = fixture.Command(evidence, cancelled ? StrategyOutcome.Canceled : StrategyOutcome.Failed);
+        var state = (await fixture.Services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(fixture.Process.State.RunId))!;
+        await using var original = Context(fixture.Services);
+        var before = await TerminalStateAsync(original, fixture);
+        var fault = new TerminalFlushFault(failAt);
+        await using (var failing = Context(fixture.Services, fault)) {
+            var owner = fixture.Process.Owner(failing);
+            var coordinator = new ProcessDecisionResultCoordinator(fixture.Services.GetRequiredService<IProcessDecisionResultQuery>(),
+                fixture.Services.GetServices<IProcessDecisionChildOutcomeReader>(), owner, owner,
+                NullLogger<ProcessDecisionResultCoordinator>.Instance);
+            Assert.Same(fault.Failure, await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                coordinator.SubmitAsync(state, fixture.ResultContext, command)));
+        }
+        Assert.Equal(failAt, fault.Observed.Count);
+        Assert.Equal(ProcessDecisionRunScopePhase.Active, fault.Observed[0]);
+        if (failAt == 2) {
+            Assert.Equal(ProcessDecisionRunScopePhase.Cancelled, fault.Observed[1]);
+        }
+        await using var reopened = Context(fixture.Services);
+        Assert.Equal(before, await TerminalStateAsync(reopened, fixture));
+        var accepted = await fixture.Services.GetRequiredService<ProcessDecisionResultCoordinator>()
+            .SubmitAsync(state, fixture.ResultContext, command);
+        Assert.True(accepted.CommittedNow);
+        var duplicate = await fixture.Services.GetRequiredService<ProcessDecisionResultCoordinator>()
+            .SubmitAsync(accepted.State, fixture.ResultContext, command with { Result = command.Result with { OwnerEvidence = null } });
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Duplicate, duplicate.Outcome);
+        Assert.Equal(accepted.DecisionRunScope, duplicate.DecisionRunScope);
+        Assert.Equal(accepted.DecisionBudget, duplicate.DecisionBudget);
+        Assert.Empty(fixture.Entry.Wire.Requests);
+        await fixture.Entry.Files.Sql.VerifyAsync(0, 0);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Terminal_scope_refuses_stale_expectation_or_unclosed_root_work_without_partial_settlement(bool openWork) {
+        await using var fixture = await Fixture.CreateAsync(ReadBasisMode.RunSnapshot);
+        var evidence = await fixture.FailAsync(cancelled: true);
+        var command = fixture.Command(evidence, StrategyOutcome.Canceled);
+        await using var database = Context(fixture.Services);
+        var owner = fixture.Process.Owner(database);
+        var state = (await owner.LoadAsync(fixture.Process.State.RunId))!;
+        ProcessDecisionBudgetReceipt? reservation = null;
+        if (openWork) {
+            var root = (await new EfProcessDecisionBudgetStore(database).ReadAsync(state.RunId, null))!;
+            var reserved = await owner.CommitAsync(Request(state, null,
+                new ProcessDecisionBudgetReservation(new(null, root.BudgetId, root.Revision), new(Guid.NewGuid()), new(1, 0))));
+            reservation = reserved.DecisionBudget!;
+            state = reserved.State;
+        }
+        var before = await TerminalStateAsync(database, fixture);
+        var query = fixture.Services.GetRequiredService<IProcessDecisionResultQuery>();
+        var coordinator = new ProcessDecisionResultCoordinator(openWork ? query : new StaleScopeQuery(query),
+            fixture.Services.GetServices<IProcessDecisionChildOutcomeReader>(), owner, owner,
+            NullLogger<ProcessDecisionResultCoordinator>.Instance);
+        var refusal = await Assert.ThrowsAsync<ProcessDecisionRunScopeException>(() => coordinator.SubmitAsync(state, fixture.ResultContext, command));
+        Assert.Equal(openWork ? ProcessDecisionRunScopeRefusal.UnclosedWork : ProcessDecisionRunScopeRefusal.StaleExpectation, refusal.Reason);
+        await using var reopened = Context(fixture.Services);
+        Assert.Equal(before, await TerminalStateAsync(reopened, fixture));
+        if (reservation is not null) {
+            state = (await owner.CommitAsync(Request(state, null, new ProcessDecisionBudgetSettlement(
+                new(null, reservation.Change.Balance.BudgetId, reservation.Change.Balance.Revision), reservation.Command.AllocationId,
+                new(1, new(0, 0)))))).State;
+        }
+        var accepted = await fixture.Services.GetRequiredService<ProcessDecisionResultCoordinator>()
+            .SubmitAsync(state, fixture.ResultContext, command);
+        Assert.True(accepted.CommittedNow);
+        Assert.Equal(ProcessDecisionRunScopePhase.Cancelled, accepted.DecisionRunScope!.State.Phase);
+        Assert.Empty(fixture.Entry.Wire.Requests);
+        await fixture.Entry.Files.Sql.VerifyAsync(0, 0);
+    }
+
+    private static async Task<string> TerminalStateAsync(ProcessPersistenceDbContext database, Fixture fixture) {
+        var owner = fixture.Process.Owner(database);
+        return JsonSerializer.Serialize(new {
+            Runtime = await owner.LoadAsync(fixture.Process.State.RunId),
+            Decision = await new EfProcessDecisionStore(database).ReadAsync(fixture.Process.State.RunId, fixture.Process.Claim.StepInstanceId),
+            Child = await fixture.Services.GetRequiredService<IProcessDecisionChildReader>().ReadAsync(fixture.Parent.Child.Address),
+            RootBudget = await new EfProcessDecisionBudgetStore(database).ReadAsync(fixture.Process.State.RunId, null),
+            StepBudget = await new EfProcessDecisionBudgetStore(database).ReadAsync(fixture.Process.State.RunId, fixture.Process.Claim.StepInstanceId),
+            Scope = await ProcessDecisionRunScopeFixture.Scopes(database, fixture.Services).ReadAsync(fixture.Parent.Scope.Id),
+            Receipts = await database.IdempotencyKeys.AsNoTracking().OrderBy(item => item.CommandId).ToArrayAsync(),
+            EventCount = await database.RuntimeEvents.CountAsync()
+        });
     }
 
     [Theory]
@@ -180,6 +285,29 @@ public sealed class ProjectTaskPlanStartupFailureTests {
     }
 
     public enum Substitution { Agent, Parent, Grant, Child, Scope, Project, Generation, Wrapper }
+
+    private sealed class StaleScopeQuery(IProcessDecisionResultQuery inner) : IProcessDecisionResultQuery {
+        public async Task<ProcessDecisionResultSelection?> ReadAsync(ProcessRunId runId, ProcessStepInstanceId stepId,
+            ProcessExecutionRunId? executionRunId, CancellationToken cancellationToken = default) {
+            var selected = (await inner.ReadAsync(runId, stepId, executionRunId, cancellationToken))!;
+            return selected with { SharedScope = selected.SharedScope! with { Revision = selected.SharedScope.Revision - 1 } };
+        }
+    }
+
+    private sealed class TerminalFlushFault(int failAt) : SaveChangesInterceptor {
+        internal InvalidOperationException Failure { get; } = new("Injected failure after terminal scope SQL flush.");
+        internal List<ProcessDecisionRunScopePhase> Observed { get; } = [];
+
+        public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+            CancellationToken cancellationToken = default) {
+            var context = Assert.IsType<ProcessPersistenceDbContext>(eventData.Context);
+            Observed.Add(await context.DecisionRunScopes.AsNoTracking().Select(scope => scope.Phase).SingleAsync(cancellationToken));
+            if (Observed.Count == failAt) {
+                throw Failure;
+            }
+            return result;
+        }
+    }
 
     private sealed class ReadForbidden : IProcessDecisionChildOutcomeReader {
         public ProcessDecisionExecutionContract Contract => ProjectTaskPlanProcessContract.Execution;

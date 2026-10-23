@@ -949,6 +949,32 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 .Count(runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepCompleted));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteReady_preserves_claim_when_original_preparation_or_child_still_owns_work(bool preparationPending) {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var stateStore = new InMemoryRuntimeStateStore(new(RunId, RunId, PlanId, "sha256:plan", ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Pending)], [], [], new HashSet<ArtifactSlotId>(), observedAtUtc));
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var service = new ProcessRuntimeDispatchApplicationService(new TestProcessProjectionClock(observedAtUtc), stateStore, unitOfWork,
+            new InMemoryPlanStore(NewSingleStepPlan(stepId, "original-planning")), new InMemoryAssignmentStore([]),
+            new PendingDecisionResolver(stateStore, preparationPending), NewNoOpCatchupService(),
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork), ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessRuntimeStatus.Active, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Running, FindStep(stateStore.State, stepId).Status);
+        var claim = Assert.Single(stateStore.State.Claims);
+        Assert.Equal(DispatchClaimStatus.Claimed, claim.Status);
+        Assert.Equal(claim.ClaimToken, FindStep(stateStore.State, stepId).ActiveClaimToken);
+        Assert.Empty(stateStore.State.AppliedResults);
+        Assert.DoesNotContain(unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
+            item => item.EventType == ProcessRuntimeEventTypes.DispatchClaimReleased);
+    }
+
     [Fact]
     public async Task ExecuteReady_defers_ready_step_without_blocking_when_strategy_reports_active_child_run()
     {
@@ -2364,6 +2390,16 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 branchOutcomeKey,
                 producedArtifactsByStep ?? new Dictionary<ProcessStepInstanceId, IReadOnlyList<ProducedArtifactRef>>(),
                 ExecutionContexts));
+        }
+    }
+
+    private sealed class PendingDecisionResolver(InMemoryRuntimeStateStore states, bool preparationPending) : IProcessRuntimeStrategyFactoryResolver {
+        public ValueTask<IProcessStrategyFactory> ResolveAsync(ProcessStrategyBindingSnapshot binding, CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            var claim = Assert.Single(states.State.Claims);
+            throw preparationPending
+                ? new ProcessDecisionPreparationInProgressException(new(claim.StepInstanceId, claim.ClaimToken, claim.OwnerId))
+                : new ProcessRuntimeDispatchInProgressException(new(Guid.NewGuid()));
         }
     }
 

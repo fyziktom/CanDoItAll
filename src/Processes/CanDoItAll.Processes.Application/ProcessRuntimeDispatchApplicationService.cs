@@ -464,7 +464,8 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     await Task.Delay(ClaimCleanupConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
                     reloadAfterConcurrentClaimChange = true;
                 }
-                catch (ProcessRuntimeDispatchInProgressException exception) when (claimCreated && !resultSubmitted) {
+                catch (Exception exception) when (claimCreated && !resultSubmitted &&
+                        exception is ProcessRuntimeDispatchInProgressException or ProcessDecisionPreparationInProgressException) {
                     diagnostics.Add(exception.Message);
                     var active = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? state;
                     return new ProcessRuntimeDispatchResult(runId, ToStage(active.Status), active.Status, diagnostics);

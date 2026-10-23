@@ -246,6 +246,26 @@ MAF/HTTP/worker tests prove the boundary, including hosted uncertainty and histo
 refusal. Manager-chat concurrency, sustained capacity and remaining owners remain next.
 
 
+## Process planning dispatch and terminal shared scope
+
+Status: Pass with follow-up. [P21/P22 validation](../validation/2026-10-23-process-planning-dispatch.md)
+passes all 588 current cases and retains the original failures and exact repairs. The Process module routes a typed
+execution contract to the Workbench-owned executor without a reverse module reference.
+Runtime owns terminal scope eligibility; Persistence finishes the scope and its receipt
+after child/accounting flush in the same root transaction. No provider work enters the
+transaction. Existing cancellation and result-acceptance guards remain enforced.
+
+The comparable P21 snapshots retain the same project references and existing cycles;
+its sole new finding is the cohesive executor's informational member count. P22 starts
+from `snap-20261023072639-65134217`, with no scoped cycle and three intended references.
+Final snapshot `snap-20261023081255-fb03b32e` retains those edges and zero scoped cycles,
+with no new findings. Collector workspace errors remain explicit limitations. Actual SQL
+rollback at both flushes, stale/open-work refusal, real dispatch/review, all affected
+Release builds, full portability and final source/output reconciliation pass. No new
+project reference, business partial or provider wait in the transaction is introduced.
+Public policy producers and broader lifecycle activation remain open; the P23 design
+must preserve these owners and qualify its actual producer before UI activation.
+
 ## Selected chat title and publication boundary
 
 Status: Pass with follow-up. [P20 validation](../validation/2026-10-23-chat-session-publication.md)

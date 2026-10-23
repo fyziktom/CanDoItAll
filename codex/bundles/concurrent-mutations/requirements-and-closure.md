@@ -1,6 +1,15 @@
 # Requirements and closure ledger
 
-Current work: [chat-session publication and client integration](validation/2026-10-23-chat-session-publication.md)
+Current checkpoint: [registered Process planning and terminal shared scope](validation/2026-10-23-process-planning-dispatch.md)
+passes all 588 focused cases, affected Release builds, full portability and final
+source/output/resource verification. Actual dispatch retains original input and claims;
+terminal root results close shared material with decision/work accounting in one SQL
+transaction. Original failed candidates remain preserved. The next [public policy
+producer](plan/P23-process-policy-producer.md) is designed but not implemented. Shared
+refresh/replan, broader lifecycle, capacity and remaining owners remain open. The pending
+signed checkpoint still needs local GPG unlock. SPA stays on its dedicated branch.
+
+Preceding work: [chat-session publication and client integration](validation/2026-10-23-chat-session-publication.md)
 qualifies conditional title changes, selected session creation and late-run title retention.
 There are 365 distinct passing backend cases across the recorded test-only repair, full
 portability passes unchanged, and the SPA has 58 passing tests, a full typecheck/build and

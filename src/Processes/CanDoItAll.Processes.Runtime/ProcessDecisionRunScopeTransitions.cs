@@ -125,6 +125,18 @@ public static class ProcessDecisionRunScopeTransitions {
         }
     }
 
+    public static ProcessDecisionRunScopeState FinishResult(ProcessDecisionRunScopeState current,
+        ProcessDecisionRunScopeExpectation expected, bool cancelled, IReadOnlyList<ProcessDecisionRunScopeMemberObservation> members,
+        DecisionBudgetBalance balance, IReadOnlyList<DecisionBudgetAllocation> allocations) {
+        RequireExpected(current, expected);
+        if (cancelled ? current.Phase is not (ProcessDecisionRunScopePhase.Active or ProcessDecisionRunScopePhase.Reconciling or ProcessDecisionRunScopePhase.AwaitingCapture)
+                : current.Phase != ProcessDecisionRunScopePhase.Active) {
+            throw new ProcessDecisionRunScopeException(ProcessDecisionRunScopeRefusal.InvalidPhase);
+        }
+        RequireQuiescence(current, members, balance, allocations);
+        return Next(current, cancelled ? ProcessDecisionRunScopePhase.Cancelled : ProcessDecisionRunScopePhase.Completed);
+    }
+
     private static void RequireQuiescence(ProcessDecisionRunScopeState current, IReadOnlyList<ProcessDecisionRunScopeMemberObservation> members,
         DecisionBudgetBalance balance, IReadOnlyList<DecisionBudgetAllocation> allocations, DecisionBudgetAllocationId? pending = null) {
         ArgumentNullException.ThrowIfNull(members);

@@ -121,6 +121,32 @@ public sealed class EfProcessDecisionRunScopeStore(ProcessPersistenceDbContext c
         return new(command, next);
     }
 
+    internal async Task<ProcessDecisionRunScopeReceipt> StageResultCompletionAsync(ProcessRuntimeCommitRequest request,
+        CancellationToken cancellationToken) {
+        ProcessDecisionRunScopeCompletion.Require(request);
+        var command = request.DecisionRunScope is { CompletesRuntimeResult: true } terminal
+            ? terminal : throw new InvalidOperationException("The scope requires its explicit terminal result command.");
+        RequireTransaction();
+        var loaded = await LoadAsync(command.Expectation.ScopeId, true, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("The original shared run scope was not found.");
+        var current = loaded.State;
+        if (request.OriginalState.RunId != current.Admission.Funding.RootRunId) {
+            throw new InvalidOperationException("Only the original root result may finish its shared material scope.");
+        }
+        var pending = await EfProcessRootCancellationGuard.ReadPendingAsync(context, current.Admission.Funding.RootRunId,
+            cancellationToken, includeRootLocal: true).ConfigureAwait(false);
+        if ((pending & ~ProcessRootCancellationPending.SharedScope) != ProcessRootCancellationPending.None) {
+            throw new ProcessDecisionRunScopeException(ProcessDecisionRunScopeRefusal.UnclosedWork);
+        }
+        var next = ProcessDecisionRunScopeTransitions.FinishResult(current, command.Expectation,
+            command.Kind == ProcessDecisionRunScopeCommandKind.CancelResult,
+            await ReadMembersAsync(current, cancellationToken).ConfigureAwait(false), ReadBalance(loaded.Budget),
+            await ReadAllocationsAsync(current, null, cancellationToken).ConfigureAwait(false));
+        next.Validate();
+        Write(loaded.Entity, next);
+        return new(command, next);
+    }
+
     internal async Task RequireActiveDecisionAsync(ProcessDecisionHeadEntity head, ProcessDecisionGeneration generation,
         CancellationToken cancellationToken) {
         if (head.SharedRunScopeId is not { } scopeId) {

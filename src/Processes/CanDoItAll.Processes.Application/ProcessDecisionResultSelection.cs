@@ -13,10 +13,13 @@ public sealed record ProcessDecisionResultChild(ProcessDecisionChildMaterialBind
 public sealed record ProcessDecisionResultSelection(ProcessRunId RootRunId, ProcessRunId RunId, ProcessStepInstanceId StepInstanceId,
     DecisionBudgetBalance Budget, ProcessDecisionGeneration? Head, ProcessDecisionResultChild? Child,
     bool OtherWorkPending, bool SharedScopePending) {
+    public ProcessDecisionRunScopeExpectation? SharedScope { get; init; }
+
     public void RequireOriginal(ProcessRuntimeStateSnapshot state, ProcessStepInstanceId stepId, ProcessExecutionRunId? execution) {
         ArgumentNullException.ThrowIfNull(Budget);
         Budget.Validate();
         Head?.Validate();
+        SharedScope?.Validate();
         if (RootRunId != state.RootRunId || RunId != state.RunId || StepInstanceId != stepId ||
                 Head is not null && Head.BudgetId != Budget.BudgetId) {
             throw new InvalidDataException("The Process result selection differs from its original run, step or budget.");

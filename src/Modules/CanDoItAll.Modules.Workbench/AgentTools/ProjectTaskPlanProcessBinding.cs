@@ -11,9 +11,6 @@ internal sealed class ProjectTaskPlanProcessBinding(IProcessDecisionDispatchAuth
     IProcessDecisionMaterialReader materials, IAgentCatalogReadLeaseStore catalog,
     ProjectProcessLaunchAuthorityService sources, ProjectWriteAdmissionService projects, ProjectTaskPlanPublisher publisher,
     ICanonicalRuntimeDatabase database, IAgentExecutionProfileGenerationSource generations) {
-    private const string ProcessRequester = "process-runtime";
-    private const string SystemRequesterKind = "system";
-
     internal static bool Supports(AgentToolProtocolEnvelope parent)
         => parent.Format == ProcessDecisionChildMaterialBindingCodec.Format &&
             parent.Version == ProcessDecisionChildMaterialBindingCodec.Version &&
@@ -104,7 +101,8 @@ internal sealed class ProjectTaskPlanProcessBinding(IProcessDecisionDispatchAuth
             !Guid.TryParse(candidate.ProcessStepId, out var stepId) || stepId != evidence.StepInstanceId.Value ||
             !Guid.TryParse(candidate.CorrelationId, out var correlation) || correlation != runId ||
             !Guid.TryParse(candidate.CausationId, out var causation) || causation != stepId ||
-            candidate.RequestedBy != ProcessRequester || candidate.RequestedByKind != SystemRequesterKind ||
+            candidate.RequestedBy != ProjectTaskPlanProcessContract.ProcessRequester ||
+            candidate.RequestedByKind != ProjectTaskPlanProcessContract.SystemRequesterKind ||
             candidate.CreatedAtUtc != evidence.ExecutionCreatedAtUtc || candidate.Revision != 1 ||
             candidate.State != ExecutionState.Preparing || candidate.Outcome is not null || candidate.ToolAdmission is not null ||
             candidate.ChatSessionId is not null || candidate.CompletedAtUtc is not null) {

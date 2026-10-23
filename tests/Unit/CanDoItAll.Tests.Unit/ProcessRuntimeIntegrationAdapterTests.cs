@@ -12950,7 +12950,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             [
                 new BrowserExecutionMetadataContribution()
             ]),
-            logger ?? NullLogger<AgentFrameworkProcessStepExecutor>.Instance);
+            logger ?? NullLogger<AgentFrameworkProcessStepExecutor>.Instance, []);
         return new AgentFrameworkProcessExecutionAdapter(executor);
     }
 

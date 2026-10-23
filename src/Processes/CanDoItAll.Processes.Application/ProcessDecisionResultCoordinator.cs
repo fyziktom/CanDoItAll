@@ -76,7 +76,8 @@ public sealed class ProcessDecisionResultCoordinator(IProcessDecisionResultQuery
                 selection.Child!.Original.Child.AllocationId, terminal.Work)
             : null;
         return await unitOfWork.CommitAsync(new(context.CommandId, state, mutation) {
-            Decision = decision, DecisionBudget = settlement
+            Decision = decision, DecisionBudget = settlement,
+            DecisionRunScope = ProcessDecisionRunScopeCompletion.Prepare(selection.SharedScope, state, mutation)
         }, cancellationToken).ConfigureAwait(false);
     }
 
@@ -132,6 +133,7 @@ public sealed class ProcessDecisionResultCoordinator(IProcessDecisionResultQuery
     }
 
     private static void RequireOriginalReceipt(ProcessRuntimeCommitResult replay, SubmitStrategyResultCommand command, ProcessDecisionResultSelection selection) {
+        ProcessDecisionRunScopeCompletion.RequireReceipt(replay, selection.SharedScope?.ScopeId);
         var result = replay.State.AppliedResults.SingleOrDefault(item => item.StepInstanceId == command.StepInstanceId &&
             item.StrategyId == command.Result.StrategyId && item.IdempotencyKey == command.IdempotencyKey);
         if (replay.State.RunId != selection.RunId || replay.State.RootRunId != selection.RootRunId || result is null ||

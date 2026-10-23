@@ -42,6 +42,16 @@ public sealed class ProjectTaskPlanProcessReviewTests {
         Assert.Equal(TimeSpan.FromSeconds(choice == AgentPlanningReviewChoice.Approve ? 3 : 1).Ticks,
             result.Completion.DecisionBudget!.Change.Allocation.Settlement!.Consumed.WorkTicks);
         Assert.Equal(0, result.Completion.DecisionBudget.Change.Balance.ReservedWorkTicks);
+        if (mode == ReadBasisMode.RunSnapshot) {
+            var finished = Assert.IsType<ProcessDecisionRunScopeReceipt>(result.Completion.DecisionRunScope);
+            Assert.Equal(choice == AgentPlanningReviewChoice.Approve ? ProcessDecisionRunScopePhase.Completed
+                : ProcessDecisionRunScopePhase.Cancelled, finished.State.Phase);
+            await using var database = Context(fixture.Services);
+            Assert.Equal(finished.State, await Processes.ProcessDecisionRunScopeFixture.Scopes(database, fixture.Services)
+                .ReadAsync(finished.Command.Expectation.ScopeId));
+        } else {
+            Assert.Null(result.Completion.DecisionRunScope);
+        }
         await using var scope = fixture.Services.CreateAsyncScope();
         var replay = await scope.ServiceProvider.GetRequiredService<ProjectTaskPlanProcessReviewService>()
             .ReviewAsync(request, await ManagerAsync(fixture, access), AgentExecutionOperationId.New());
@@ -49,6 +59,7 @@ public sealed class ProjectTaskPlanProcessReviewTests {
         Assert.False(replay.Completion.CommittedNow);
         Assert.Equal(ProcessRuntimeTransitionOutcome.Duplicate, replay.Completion.Outcome);
         Assert.Equal(result.Completion.DecisionBudget, replay.Completion.DecisionBudget);
+        Assert.Equal(result.Completion.DecisionRunScope, replay.Completion.DecisionRunScope);
         Assert.Equal(result.ActionId, replay.ActionId);
         Assert.Single(fixture.Entry.Wire.Requests);
         await fixture.Entry.Files.Sql.VerifyAsync(choice == AgentPlanningReviewChoice.Approve ? 1 : 0,
