@@ -1,6 +1,8 @@
 # P28: capture invocation, returned-work handoff and delivery
 
-Status: design for the next checkpoint, not implemented or qualified. It follows the
+Status: the [pure Runtime journal](../validation/2026-10-23-process-refresh-capture-journal.md)
+passes its 35 selected cases and final static/source/resource closure. Persistence and producer
+integration below remain designed, not implemented or qualified. It follows the
 [registered producer](../validation/2026-10-23-process-refresh-capture-producer.md).
 Behavioral proof tier. The public refresh/replan gate remains closed.
 
@@ -32,15 +34,18 @@ not assert eventual automatic completion for a lost invocation.
 
 Runtime owns typed stage identity, invocation/returned-result invariants and pure transition
 rules. Application owns the capture lifecycle and its narrow journal read contract.
-Persistence owns the retained rows and participates in the existing Process UOW/root fence.
+Persistence owns the retained rows and participates in the existing Process root fence.
 Workbench continues implementing the content capturer; it does not acquire a Process
 dependency or call a recovery queue from inside the Project transaction. No provider, Agent
 journal, content read or external callback runs under a Process SQL mutation fence.
 
 Do not add a file-based ledger or an independent reservation transaction. Reservation and
-its new-protocol journal identity must commit together. Invocation admission and returned
-work recording are separate bounded Process commands because the external read must occur
-between transactions. A returned result must remain recordable after root cancellation or
+its new-protocol journal identity must commit together through the runtime UOW. Invocation
+admission and returned-work recording are separate bounded metadata transactions because
+the external read must occur between transactions. They must share the exact existing
+PostgreSQL root advisory key and lock order, without loading or replacing runtime history.
+The original invocation token and immutable result provide their idempotence; do not add
+general runtime command receipts merely to obtain a retry key. A returned result must remain recordable after root cancellation or
 source revocation so known work can drain; it must not thereby become publishable.
 
 The existing cancellation recovery queue demonstrates atomic due selection, lease generation,
@@ -55,7 +60,8 @@ for RunSnapshot, or local capture for StepSnapshot. Their keys bind original roo
 stage and allocation. They retain protocol version, accepted-input fingerprint, content
 contract/material identity, original grant and one invocation token. Mutable budget revisions
 and retry timestamps must not create another stage. Existing stage identity vectors remain
-unchanged; new invocation/result command discriminators must be explicitly appended.
+unchanged. Each journal row is selected by its original reservation command; its invocation
+token identifies one actual invocation, rather than changing the reservation or material ID.
 
 1. Reserve through the existing budget/scope transaction and create a Reserved journal row
    in the same commit. A missing row beside an older reservation remains legacy unknown;
@@ -88,6 +94,17 @@ Keep scheduling/progress metadata separate from material payload. Indexed progre
 must never load all runtime history or all capture payloads. The maximum two stage keys are
 selected by the exact admitted action; no catalog scan is needed. The UOW compares current
 expectations when mutating even if earlier metadata was read consistently.
+
+Source inspection found that `EfProcessRuntimeUnitOfWork.BuildStateQuery` includes all steps,
+claims, result receipts and artifact collections, while `ReplaceState` removes and replaces
+those collections even for timestamp-only mutations. Routing two additional journal marks
+through that path would add history-dependent reads and writes. The journal's Begin/Return
+owner must instead read the root status, original allocation and its one retained row under
+the existing root fence. Reservation and final budget/scope/successor changes remain atomic
+runtime UOW operations. Extract or reuse the existing advisory-key calculation without
+changing its bytes; prove serialization with actual existing runtime/publication writers.
+Do not turn the metadata owner into a second general runtime writer. Existing full-runtime
+history cost remains a separate measured capacity gate; this checkpoint must not amplify it.
 
 The returned row may temporarily retain one bounded canonical material payload until the
 existing material/successor transaction accepts it. After settlement, retain its original
@@ -134,6 +151,19 @@ separate from re-delivering a known returned result and must be qualified before
 a Retry action in the UI. The journal checkpoint does not introduce it implicitly.
 
 ## Required proof and stop conditions
+
+The first implementation slice defines the pure Runtime reservation/invocation/return/
+settlement protocol. Its entry prerequisite is signed producer `3f5415f62`; it adds no schema,
+queue, public API or automatic retry. The planned owning Unit filter is
+`FullyQualifiedName~CanDoItAll.Tests.Unit.ProcessDecisionRefreshCaptureJournalTests.` with
+35 cases (all discovered and passing): three capture/inheritance lifecycles, three never-invoked closures, five known
+failure kinds, eight changed reservations, eight invalid state shapes, exact return replay,
+four changed returns, invalid never-invoked cost, unknown invocation, and changed settlement.
+Pure budget transitions provide the accounting consumer check. Runtime/model/test changes
+invalidate this selection. The storage/UOW consumer must pass its real SQL and producer
+qualification before this protocol can authorize durable recovery. No unfiltered gate is
+needed for an as-yet-unconsumed pure protocol; the later schema/UOW slice has the broader
+invalidation described below.
 
 Pure tests must cover legal/illegal stage transitions, changed identities/work, duplicate
 returns, cancellation versus invocation and unknown-state handling without database or host

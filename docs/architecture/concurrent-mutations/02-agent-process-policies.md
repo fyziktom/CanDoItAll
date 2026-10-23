@@ -646,5 +646,13 @@ The [65-case proof](../../../codex/bundles/concurrent-mutations/validation/2026-
 covers the actual producer, exact replay and the next scheduler attempt. Durable invocation,
 returned-work handoff, explicit retry and delivery remain gates in the
 [recovery design](../../../codex/bundles/concurrent-mutations/plan/P28-process-refresh-recovery.md).
+The pure Runtime capture journal defines first invocation, immutable returned work and
+exact settlement. Its 35-case qualification rejects zero-work closure after invocation
+and changed invocation/result replay. It has no persistent consumer yet. Storage must
+commit reservation identity with the original budget, record Begin/Return under the same
+root fence through bounded metadata writes, and resolve the journal with settlement in
+the existing UOW. Routing Begin/Return through full-runtime history replacement would add
+unnecessary history-dependent writes. SQL races, restart and added-cost measurement remain
+required before durable recovery or a worker is activated.
 An inherited Agent continues using its admitted material until its owner closes that work;
 there is no subscription that silently replaces input during execution.

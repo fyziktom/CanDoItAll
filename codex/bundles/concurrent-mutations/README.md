@@ -1,6 +1,13 @@
 # Concurrent mutations implementation bundle
 
-Current work: [registered refresh capture producer](validation/2026-10-23-process-refresh-capture-producer.md)
+Current work: the [pure capture invocation journal](validation/2026-10-23-process-refresh-capture-journal.md)
+passes all 35 selected cases. It distinguishes never-invoked cancellation from unknown
+work, binds immutable returned material/work, and checks exact budget settlement. Final
+portability, source/output and owned resource checks pass. Storage and registered producer integration are next; no
+durable recovery or public refresh activation is claimed. SPA remains on its colleague-review
+branch, and historical cleanup denials remain recorded.
+
+Preceding work: [registered refresh capture producer](validation/2026-10-23-process-refresh-capture-producer.md)
 passes 65 distinct selected cases across a verified test-only repair. Both snapshot modes
 capture and advance through the original owners; known failure/cancellation settles actual
 work, and restart can inherit completed root material. Full portability, source/output

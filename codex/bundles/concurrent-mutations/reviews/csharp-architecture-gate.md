@@ -1,5 +1,45 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: pure capture invocation journal (2026-10-23)
+
+Status: Pass with follow-up for the [Runtime protocol](../validation/2026-10-23-process-refresh-capture-journal.md),
+including final static and owned resource closure.
+
+### Findings
+
+| Severity | Finding | Evidence | Required action |
+| --- | --- | --- | --- |
+| Reviewed | The reservation has 14 source members for one immutable original-work descriptor | `snap-20261023211340-17b44d93`; one new COMPLEXITY-002 finding | Keep its identities, scope and budget together; no partial splitting |
+| Existing | 189 WS0002 collector diagnostics | Same package-audit diagnostics; direct Runtime and Unit builds pass | Retain the scoped-analysis limitation |
+| Follow-up | Pure transition proof is not durable recovery | No persistent consumer or producer wiring in this checkpoint | Prove atomic reservation, Begin/Return root fencing and final handoff through actual SQL and producer paths |
+
+### Dependency direction
+
+The new owner is in Runtime and uses existing provider-neutral contracts and SharedKernel
+budget values. The same three scoped edges and zero cycles remain relative to
+`snap-20261023201727-17b44d93`. No project, schema, composition or provider dependency changed.
+
+### Partial-class policy
+
+No partial class, service locator or new interface was introduced. The descriptor owns
+original reservation identity, the value records validate outcomes/state, and the pure
+journal owns transitions. Persistence and Application are not simulated inside Runtime.
+
+### Testability proof
+
+All 35 discovered Unit cases pass without a host, filesystem, database or network fixture.
+Real budget transitions supply the dependent accounting check. Both capture placements and
+shared inheritance settle once; changed identities/results fail, unknown work cannot be
+refunded, and never-invoked cancellation prevents a later invocation. Source/output identity
+matches the candidate. Full static validation and bounded command reconciliation pass.
+
+### Closure decision
+
+The pure protocol can inform storage implementation. It does not
+authorize recapture, unknown-work charging or worker activation. The narrow metadata writer
+must reuse the actual root lock domain and avoid full-runtime history replacement. Persistence,
+producer recovery, explicit retry, delivery and engine E2E remain open; SPA stays on its branch.
+
 ## C# Architecture Gate Result: registered refresh capture producer (2026-10-23)
 
 Status: Pass with follow-up for [the capture producer](../validation/2026-10-23-process-refresh-capture-producer.md).
