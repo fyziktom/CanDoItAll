@@ -2,8 +2,10 @@
 
 The durable queue, finite stages, coordinator, selected Agent lookup, transfer safeguards
 and local workspace admission are implemented and qualified. Automatic recovery is not
-yet activated; sustained and separate-process capacity and bounded HTTP admission remain
-open. The [read-only cancellation status endpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-observation.md)
+yet activated; sustained and separate-process capacity and native/legacy client cutover
+remain open. [Finite root admission](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-admission.md)
+is qualified by 61 cases, including HTTP pending under a real child lock and registered
+worker completion in both snapshot modes. The [read-only cancellation status endpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-cancellation-observation.md)
 is qualified by 32 focused cases.
 The existing cancellation HTTP
 path still performs its synchronous cascade. See the [design and activation criteria](../../../codex/bundles/concurrent-mutations/plan/P16-durable-root-recovery.md)
@@ -307,3 +309,29 @@ observation versions, not edit preconditions. Missing runs return 404; an empty 
 
 The [observation and admission design](../../../codex/bundles/concurrent-mutations/plan/P17-cancellation-observation-and-admission.md)
 retains the remaining root-admission, activation and native-client proof requirements.
+
+## Finite root admission endpoint
+
+`POST /api/processes/runs/{runId}/cancellation` accepts an empty body and requires current
+Process read and execute grants. It captures the authenticated actor, checks current
+access before each of at most three conflict attempts, and retains one original command
+identity. Application performs no hierarchy walk, observer notification or projection
+refresh. The barrier and recovery row commit together. A known commit returns immediately;
+an unconfirmed outcome requires the existing GET before another action.
+
+The five-second cooperative request budget includes authentication, selected reads and
+commit. It awaits the owner after cancellation and never detaches work. Repeated pending
+requests preserve the original barrier. Runtime modification time advances monotonically
+at database precision while event time remains the original caller time.
+
+Pending returns 202; verified completion returns 200. Responses identify the authorized
+observation Location and prohibit caching. Selected children are refused without touching
+ancestors or siblings. Disabled recovery or a host lane without a registered worker
+returns unavailable before mutation. Explicit local authorization-disabled access uses a
+system actor. Current credential checks are request scoped, not atomic with SQL commit;
+accepted recovery continues after caller access changes. No credential-file callback is
+introduced inside the SQL transaction.
+
+The legacy `/cancel` route and native client retain their existing behavior until their
+joint cutover. Activation remains explicit and disabled by default pending the remaining
+capacity and deployment proof. See P17 for client lifetime and rollout requirements.

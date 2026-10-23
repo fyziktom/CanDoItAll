@@ -11,6 +11,21 @@ namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessCancellationRecoveryRegistrationTests {
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void Finite_admission_requires_both_enabled_recovery_and_worker_registration(bool enabled, bool mcp) {
+        var services = Register(new() {
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = mcp ? LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind : null,
+            [Key(nameof(ProcessCancellationRecoveryOptions.Enabled))] = enabled.ToString()
+        });
+        using var provider = services.BuildServiceProvider();
+        Assert.Equal(enabled && !mcp, provider.GetRequiredService<ProcessRootCancellationAvailability>().Enabled);
+        Assert.Contains(services, item => item.ServiceType == typeof(ProcessRootCancellationAdmissionService));
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void Worker_respects_host_lane(bool mcp) {

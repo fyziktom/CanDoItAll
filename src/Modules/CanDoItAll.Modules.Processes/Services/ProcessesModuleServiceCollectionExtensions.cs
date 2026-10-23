@@ -281,6 +281,9 @@ public static class ProcessesModuleServiceCollectionExtensions
             .Bind(configuration.GetSection(ProcessCancellationRecoveryOptions.ConfigurationSectionName))
             .Validate(ProcessCancellationRecoveryOptions.IsValid, "Process cancellation recovery options are invalid.")
             .ValidateOnStart();
+        services.TryAddSingleton(provider => new ProcessRootCancellationAvailability(backgroundWorkersEnabled &&
+            provider.GetRequiredService<IOptions<ProcessCancellationRecoveryOptions>>().Value.Enabled));
+        services.TryAddScoped<ProcessRootCancellationAdmissionService>();
         services.AddOptions<ProcessRuntimeDispatchOptions>()
             .Bind(configuration.GetSection(ProcessRuntimeDispatchOptions.ConfigurationSectionName))
             .Validate(

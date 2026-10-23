@@ -1,6 +1,7 @@
 # P17 — Cancellation observation and finite root admission
 
-Status: read-only observation is implemented and qualified by [32 focused cases](../validation/2026-10-22-cancellation-observation.md).
+Status: observation is qualified by [32 focused cases](../validation/2026-10-22-cancellation-observation.md),
+and finite root admission is qualified by [61 cases](../validation/2026-10-22-cancellation-admission.md).
 It remains independent of worker activation. Mutation cutover still requires qualified recovery,
 an explicit deployment/activation contract and the API/native-client proof below.
 P16 is now qualified by 90 focused passes; this document is its next implementation design.
@@ -146,3 +147,56 @@ codec cases regress the reused owner. New tests do not construct a runtime merel
 exercise mapping; the real root completion test deliberately uses the real engine and
 queue to establish its evidence. Source/output identity and observed resource closure
 are captured around native execution. Whole-suite Stable remains the final integrated gate.
+
+## Finite root admission decision before implementation
+
+The next owner is a small Application service, separate from the current 500-line
+operator service. It accepts only an explicit selected root and a trusted requester
+(actor plus current-access check supplied by the host); it never accepts an actor from
+request JSON. It uses the existing runtime engine and unit of work for the atomic
+barrier/queue transition. No new journal, coordinator, descendant enumeration, observer
+notification or projection catch-up belongs in admission.
+
+The Processes composition root exposes immutable availability derived from BOTH the
+registered background-worker lane and validated recovery `Enabled` setting. Application
+does not depend on module options or hosted services. Unavailable admission returns an
+explicit refusal before mutation. Observation remains usable independently. Initially
+expose an explicit root-only POST alongside the qualified GET; keep the legacy cancel
+adapter until the joint native/HTTP cutover is qualified. This is an explicit migration
+boundary, never an exception-triggered fallback to the synchronous cascade.
+
+One shared five-second cooperative deadline covers authorization, reads, bounded CAS
+retries and commit. At most three optimistic-conflict retries reuse one original command
+context. Existing pending/completed progress is observed before loading the root runtime;
+legacy-untracked or invalid progress requires reconciliation. A selected child is refused
+without resolving it into a root request. No late task is detached on timeout.
+
+Source review found that `BeginRootCancellation` currently assigns the context time
+straight to runtime `UpdatedAtUtc`. Reusing that context across a conflicting update can
+move the runtime timestamp backwards. Preserve the original event/command context while
+advancing the saved runtime timestamp monotonically, as final-root cancellation already
+does. Qualify this with a real competing revision and one original barrier receipt.
+
+A known committed barrier returns accepted/pending immediately, without a second status
+read or projection refresh that could obscure the commit. A read-back of a valid completed
+checkpoint is the only completed outcome. Lost commit acknowledgement or a deadline after
+submission is explicitly unconfirmed; clients use the authorized GET, never assume rollback.
+A duplicate request observes the original barrier rather than fabricating a second intent.
+
+HTTP authentication remains with the existing Web principal/token/session owners. Capture
+a trusted actor and require the same principal/current grant before each admission attempt.
+A request label is only display text and is not used as authority. The admission deadline
+bounds waiting after that final check. Do not add credential-file callbacks inside a
+runtime SQL transaction: that would introduce an unreviewed SQL-to-File lock dependency.
+This is request-scoped authorization, not a new atomic transaction spanning credential
+revocation and Process storage. Already accepted cleanup continues under its durable owner
+when the request ends or the caller later loses access. Any stronger revocation-after-lock
+contract must use an owner-designed authority lease, not an ad hoc callback.
+
+Acceptance: pure tests for availability, child refusal, terminal/reconciliation states,
+original-context retries, deadlines and known/unknown commit distinction; native PostgreSQL
+concurrent admission/replay and timestamp monotonicity; actual HTTP permission/current
+actor/disabled-lane behavior; and a held real child publication key showing admission returns
+pending before any child cleanup. Continue the existing worker on that exact root to verify
+original accounting and final completion. Cutover and default activation still require the
+remaining supported deployment/capacity and native UI proof.

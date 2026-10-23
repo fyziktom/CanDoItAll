@@ -1,5 +1,22 @@
 # Resource ownership and cleanup
 
+## Finite cancellation admission (2026-10-22)
+
+`c4-cancellation-admission` retains 61 passing cases, exact discovery, 464 source pins,
+54 output identities, eight successful project builds and the initial compile/discovery
+corrections. Its complete ownership sidecar preceded creation. The 238.408-second observer
+covers all nine native/Unit commands; no observed process, database name or temporary
+fixture path remains. The existing isolated PostgreSQL 18 server and standard Release
+outputs were reused. No new stack or output tree was created. Ordinary 5032, SPA branch
+ownership and all historical cleanup denials remain preserved. See the
+[validation record](validation/2026-10-22-cancellation-admission.md).
+
+Automatic review rejected the separate verified removal of this run's
+`portability-scan-1.json` (31,972,751 bytes) with `blocked by policy`. The related
+`portability-scan-1.csv` (18,296,794 bytes) was not attempted. Both remain with hashes and
+reviewed summaries; no alternate removal or retry was made. This is retained static
+evidence, separate from the verified zero remaining native test resources.
+
 ## Cancellation barrier and accounting replay (2026-10-21)
 
 `c4-cancellation-barrier-replay` retains reviewed proof for 84 passing selected cases,

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-23T00:42:20.139524+00:00",
+  "generated_utc": "2026-10-23T01:17:00.266545+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15677,
+  "allowance_count": 15679,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -6824,6 +6824,12 @@
       "count": 1
     },
     {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessCancellationApi.cs",
+      "category": "manager-discovery",
+      "source_fingerprint": "1580560223fba330a90c7f1548bf2afb301710f8e792f47fbfca5823f0f9f9c7",
+      "count": 1
+    },
+    {
       "path": "src/App/CanDoItAll.Web/Api/ProcessDefinitionsApi.cs",
       "category": "case-policy",
       "source_fingerprint": "9ab5fba7c007be580cf05dad352e732deee61ba588184ca57dc640bb8a1ba120",
@@ -7313,6 +7319,12 @@
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
       "source_fingerprint": "d790c62a15ca28739a45944cc1b99bad13c679266309dfff3bd228ba3debad1d",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
+      "category": "manager-discovery",
+      "source_fingerprint": "dc95950a1b9ed05edcd37760fd13538a18ac2a8244167270144a61a2904acdb6",
       "count": 1
     },
     {

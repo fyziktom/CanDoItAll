@@ -102,6 +102,7 @@ internal static class ProcessesApi
                 "POST /api/processes/runs/{runId}/dispatch",
                 "POST /api/processes/runs/{runId}/cancel",
                 "GET /api/processes/runs/{runId}/cancellation",
+                "POST /api/processes/runs/{runId}/cancellation",
                 "POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework",
                 "GET /api/processes/live",
                 "GET /api/processes/runs",

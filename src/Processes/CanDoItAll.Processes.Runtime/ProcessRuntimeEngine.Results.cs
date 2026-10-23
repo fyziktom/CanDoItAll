@@ -159,7 +159,7 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot be cancelled again.");
         }
 
-        var next = CancelOpenWork(state, ProcessRuntimeStatus.CancelRequested, context.OccurredAtUtc);
+        var next = CancelOpenWork(state, ProcessRuntimeStatus.CancelRequested, AdvanceCancellationTimestamp(state, context));
         return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelRequested, state.RunId.ToString());
     }
 
@@ -185,14 +185,18 @@ public sealed partial class ProcessRuntimeEngine
                 "Root cancellation can only be finalized after the cancellation barrier was committed.");
         }
 
-        var occurred = context.OccurredAtUtc.UtcTicks;
-        var updated = Math.Max(occurred - occurred % 10, checked(state.UpdatedAtUtc.UtcTicks + 10));
         var next = state with
         {
             Status = ProcessRuntimeStatus.Cancelled,
-            UpdatedAtUtc = new(updated, TimeSpan.Zero)
+            UpdatedAtUtc = AdvanceCancellationTimestamp(state, context)
         };
         return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
+    }
+
+    private static DateTimeOffset AdvanceCancellationTimestamp(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context) {
+        var occurred = context.OccurredAtUtc.UtcTicks;
+        var updated = Math.Max(occurred - occurred % 10, checked(state.UpdatedAtUtc.UtcTicks + 10));
+        return new(updated, TimeSpan.Zero);
     }
 
     private static ProcessRuntimeStateSnapshot CancelOpenWork(
