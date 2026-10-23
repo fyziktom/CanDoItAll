@@ -1,5 +1,52 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: registered refresh capture producer (2026-10-23)
+
+Status: Pass with follow-up for [the capture producer](../validation/2026-10-23-process-refresh-capture-producer.md).
+
+### Findings
+
+| Severity | Finding | Evidence | Required action |
+| --- | --- | --- | --- |
+| Reviewed | Three member-count findings on the attempt, coordinator and refusal enum | `snap-20261023201727-17b44d93`; 18/11/9 source members, one responsibility each | Retain cohesive original-attempt data and one capture lifecycle; no partial splitting |
+| Existing | 189 WS0002 collector diagnostics | Unchanged before/after; direct Runtime/Application/Persistence/module builds pass | Preserve the scoped-analysis limitation |
+| Follow-up | Unknown invocation and explicit retry are not qualified | Retained grants stay pending; no public action or worker added | Follow the invocation/returned-work design before recovery or Replan activation |
+
+### Dependency direction
+
+Application reserves, invokes its existing content interface and settles known work through
+existing query/UOW boundaries. Persistence owns coherent metadata reads and mutation guards;
+Workbench remains the content owner. The same three project edges and zero scoped cycles
+remain from `snap-20261023192129-17b44d93`. No project reference, schema, service locator or
+provider callback inside a Process SQL transaction was added. Composition registers one
+scoped coordinator at the existing module boundary.
+
+### Partial-class policy
+
+No business partial was added. The immutable attempt owns original identities/grant and
+preflight, the receipt validator owns stage evidence, and the coordinator owns one lifecycle.
+Typed UnclosedWork distinguishes retryable quiescence refusal from corrupt funding; existing
+domain accounting and successor owners still enforce the actual changes.
+
+### Testability proof
+
+All 65 distinct selected cases pass: 3 unchanged pure identity cases plus 62 Integration
+cases on the corrected candidate. Production/Unit hashes are identical across the test-only
+interleaving repair. Real registered capture and scheduler enrollment cover both modes.
+Competing callers, lost acknowledgements, expiry/overrun, exception/cancellation, restart,
+capacity/receipt boundaries and real read/write interleaving have positive and negative
+proof. The nineteen successor regressions supply the dependent-flow gate. Full portability,
+source/output verification and new resource reconciliation pass.
+
+### Closure decision
+
+Known capture production may support the next recovery boundary. Completed root inheritance
+is a qualified restart path; a retained reservation alone does not prove invocation or
+closed work. The [next design](../plan/P28-process-refresh-recovery.md) separates first
+invocation, returned outcome, unknown work and explicit retry. Public refresh, automatic
+replan, durable delivery and whole-engine E2E remain open. SPA stays on its colleague-review
+branch; historical cleanup denials remain unchanged.
+
 ## C# Architecture Gate Result: refresh capture queries (2026-10-23)
 
 Status: Pass with follow-up for [capture preparation/progress](../validation/2026-10-23-process-refresh-capture-query.md).

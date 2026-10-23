@@ -211,7 +211,8 @@ public sealed class ProcessDecisionRefreshSuccessorTests {
             DecisionBudget = settlement with { Expectation = settlement.Expectation with { Revision = reserved.DecisionBudget!.Change.Balance.Revision } }
         };
         var before = await RetainedAsync(fixture.Services, fixture.State.RunId);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Services.GetRequiredService<IProcessRuntimeUnitOfWork>().CommitAsync(request));
+        var failure = await Assert.ThrowsAsync<ProcessDecisionException>(() => fixture.Services.GetRequiredService<IProcessRuntimeUnitOfWork>().CommitAsync(request));
+        Assert.Equal(ProcessDecisionRefusal.UnclosedWork, failure.Reason);
         Assert.Equal(before, await RetainedAsync(fixture.Services, fixture.State.RunId));
     }
 
@@ -238,7 +239,8 @@ public sealed class ProcessDecisionRefreshSuccessorTests {
         };
         if (mode == ReadBasisMode.RunSnapshot) {
             var before = await RetainedAsync(fixture.Services, state.RunId);
-            await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Services.GetRequiredService<IProcessRuntimeUnitOfWork>().CommitAsync(request));
+            var failure = await Assert.ThrowsAsync<ProcessDecisionException>(() => fixture.Services.GetRequiredService<IProcessRuntimeUnitOfWork>().CommitAsync(request));
+            Assert.Equal(ProcessDecisionRefusal.UnclosedWork, failure.Reason);
             Assert.Equal(before, await RetainedAsync(fixture.Services, state.RunId));
         } else {
             var result = await fixture.Services.GetRequiredService<IProcessRuntimeUnitOfWork>().CommitAsync(request);

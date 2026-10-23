@@ -6,8 +6,12 @@ including migration, historical readers and portability. Original-child stop pas
 accounting passes its [275-case qualification](../validation/2026-10-23-process-refresh-accounting.md).
 The [successor transaction](../validation/2026-10-23-process-refresh-successor.md) passes
 129-case qualification. The [capture preparation queries](../validation/2026-10-23-process-refresh-capture-query.md)
-pass 33 selected cases, including successor regression; the actual capture producer is next. Full refresh activation remains
-gated by the owner/delivery checkpoints below.
+pass 33 selected cases, including successor regression. The registered
+[capture producer](../validation/2026-10-23-process-refresh-capture-producer.md) passes 65
+distinct selected cases across a verified test-only interleaving repair. Known failures
+settle measured work; retained unknown invocations remain pending. Full refresh activation
+remains gated by the [invocation/recovery design](P28-process-refresh-recovery.md) and
+owner/delivery checkpoints below.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.
 Behavioral proof tier. The current public contract still supports Fail/Pause only.
@@ -510,3 +514,60 @@ tests remain the dependent-flow check because the same reconciliation proof is r
 No public action, worker, automatic admission or interrupted-capture retry is enabled by
 this boundary. The following coordinator checkpoint must supply the real capture producer
 and known-failure settlement before those delivery gates can proceed.
+
+## Capture producer entry decisions
+
+Preparation spans several metadata reads. The producer must not interpret a mixture of
+pre-reservation and post-reservation metadata as corrupt original evidence. The Persistence
+preparation query will use a short PostgreSQL REPEATABLE READ, READ ONLY transaction,
+completed before returning to Application. Its server transaction/statement/lock limits
+will be 5s/2s/1s; these bound the transaction, not initial connection establishment. Progress
+remains one SQL statement. Neither read takes the Process root mutation fence or invokes
+Workbench. PostgreSQL's [snapshot isolation contract](https://www.postgresql.org/docs/18/transaction-iso.html)
+keeps successive reads on one snapshot; its [transaction timeout](https://www.postgresql.org/docs/18/runtime-config-client.html)
+bounds retained transaction resources. The existing UOW still rechecks actual mutation
+expectations, so a consistent read does not become write authority.
+
+The Application producer will own one bounded orchestration loop and one immutable attempt
+description. It must consume only the original admission, accepted policy/content contract,
+stable stage identities and registered material capturer. Entry reads progress before source
+selection. An existing local reservation without completion/abort returns unresolved; an
+existing root completion can continue through inheritance without another source capture.
+Only the caller whose reservation reports `CommittedNow=true` may invoke external reads.
+Stale pre-reservation expectations can retry at most three times. A lost reservation
+acknowledgement cannot be treated as a fresh invocation grant.
+
+Known capture work uses monotonic measured duration and an original nonempty grant capped
+at ten seconds and both available budgets. RunSnapshot root capture is charged once; local
+inheritance reserves separately and measures the metadata preparation. No manual path
+consumes an automatic replan. Material must retain the original scope/contract, the next
+bounded generation and deterministic material identity, and pass freshness validation.
+Scope/generation/child/allocation capacity refusal happens before reading business content.
+
+| Observed outcome | Required producer behavior |
+| --- | --- |
+| Fresh material returned | Reuse that exact result and measured work for bounded settlement retries; advance through the existing successor guard |
+| Source refusal, expired result or elapsed grant | Abort and settle actual closed work; keep the original generation fenced and require review |
+| Caller cancellation or capturer exception after reservation | Drain known closed work using a separate bounded accounting token before propagating cancellation/failure |
+| Root completion acknowledged or found after restart | Verify its original receipt/material and inherit; do not capture or charge the root again |
+| Settlement acknowledgement lost | Reconcile completion/abort receipts and retry only the SQL commit with the same material/work |
+| Reservation retained without a returned/durable result | Keep its grant reserved and report unresolved work; no implicit recapture or invented settlement |
+
+Cancellation draining must use the original accounting owners even if current dispatch or
+source eligibility has changed. Local abort can read the original result budget without a
+live claim; shared abort uses the original root scope. This does not authorize publishing
+material after cancellation. Receipt validation must retain the original allocation/grant,
+closed work, scope and action, including raw UOW replay's original outcome plus
+`CommittedNow=false`.
+
+Producer proof must include actual registered Workbench capture for both modes, next-attempt
+scheduler enrollment, exact replay, competing invocation, lost acknowledgement, refusal,
+expiry/exception/cancellation draining and read/write interleaving. Read-snapshot proof must
+show a concurrent writer can commit while preparation retains its earlier coherent view,
+then prove the UOW rejects stale mutation expectations. These checks do not close the
+separate durable capture-result, unknown-work resolution, explicit retry and delivery gates.
+
+The next [invocation, returned-work and delivery design](P28-process-refresh-recovery.md)
+separates never-invoked reservations from returned outcomes and unknown work. It records
+atomic ownership, cancellation orderings, compatibility and performance obligations before
+adding persistence or enabling recovery.

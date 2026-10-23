@@ -1,6 +1,14 @@
 # Concurrent mutations implementation bundle
 
-Current work: [refresh capture preparation queries](validation/2026-10-23-process-refresh-capture-query.md)
+Current work: [registered refresh capture producer](validation/2026-10-23-process-refresh-capture-producer.md)
+passes 65 distinct selected cases across a verified test-only repair. Both snapshot modes
+capture and advance through the original owners; known failure/cancellation settles actual
+work, and restart can inherit completed root material. Full portability, source/output
+identity and new resource reconciliation pass. Unknown-work recovery, explicit retry,
+delivery and engine E2E remain open in the new recovery design. SPA stays clean on
+**codex/concurrent-mutations** for colleague review; historical cleanup denials remain.
+
+Preceding work: [refresh capture preparation queries](validation/2026-10-23-process-refresh-capture-query.md)
 passes all 33 selected cases. Original-input/funding selection and the one-query progress
 projection are registered; the successor shares the same reconciliation check. Final
 portability, source/output identity, secret review and new resource reconciliation pass.

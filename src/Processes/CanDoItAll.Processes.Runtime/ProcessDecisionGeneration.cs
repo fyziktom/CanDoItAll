@@ -77,7 +77,7 @@ public sealed record ProcessDecisionGeneration(ProcessDecisionReference Referenc
 }
 
 public enum ProcessDecisionRefusal { StaleExpectation, InvalidPhase, ChildCapacity, GenerationCapacity, UnclosedChildren,
-    OriginalChildChanged, OriginalClosureChanged, ChildNotOpen }
+    OriginalChildChanged, OriginalClosureChanged, ChildNotOpen, UnclosedWork }
 
 public sealed class ProcessDecisionException(ProcessDecisionRefusal reason)
     : InvalidOperationException($"The Process decision refused the transition: {reason}.") {

@@ -632,7 +632,19 @@ material payloads. Its preparation read retains the accepted source and policy, 
 reconciled original child, local/root funding and shared material scope. The query reports
 pending work and root status; it does not reserve work or authorize capture. The successor
 and preparation paths share the same persisted reconciliation check.
-Durable replacement-capture orchestration, interrupted-work recovery and delivery remain gates in
-the [parent refresh design](../../../codex/bundles/concurrent-mutations/plan/P28-process-parent-refresh.md).
+The registered [capture producer](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-refresh-capture-producer.md)
+now invokes only after winning the original reservation. It captures once for RunSnapshot,
+or for the selected StepSnapshot step, and settles actual closed work on success, refusal,
+expiry, overrun, cancellation or exception. Known settlement retries reuse the returned
+material and work. Completed shared material can be inherited after restart; a reservation
+without a durable returned result keeps its grant and remains pending. Other local work
+blocks advance, and shared inheritance also waits for root work.
+
+Preparation reads metadata in a bounded read-only snapshot, completed before content
+capture or mutation. The UOW still verifies fresh expectations under the root fence.
+The [65-case proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-refresh-capture-producer.md)
+covers the actual producer, exact replay and the next scheduler attempt. Durable invocation,
+returned-work handoff, explicit retry and delivery remain gates in the
+[recovery design](../../../codex/bundles/concurrent-mutations/plan/P28-process-refresh-recovery.md).
 An inherited Agent continues using its admitted material until its owner closes that work;
 there is no subscription that silently replaces input during execution.

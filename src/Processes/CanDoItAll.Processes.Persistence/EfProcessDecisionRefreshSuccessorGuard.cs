@@ -46,15 +46,23 @@ internal static class EfProcessDecisionRefreshSuccessorGuard {
             .Select(row => new { row.OwnerWorkRevision, row.FundingBudgetId, row.FundingAllocationId })
             .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidDataException("The successor capture was not reserved before reading material.");
-        if (allocation.OwnerWorkRevision is not null || await context.DecisionBudgetAllocations.AsNoTracking().AnyAsync(row =>
+        if (allocation.OwnerWorkRevision is not null) {
+            throw new InvalidOperationException("The successor capture allocation is already closed.");
+        }
+        if (await context.DecisionBudgetAllocations.AsNoTracking().AnyAsync(row =>
                 row.BudgetId == selected.Budget.BudgetId.Value && row.AllocationId != settlement.AllocationId.Value &&
                 row.OwnerWorkRevision == null, cancellationToken).ConfigureAwait(false)) {
-            throw new InvalidOperationException("A successor must close only its capture with no other local work left open.");
+            throw new ProcessDecisionException(ProcessDecisionRefusal.UnclosedWork);
         }
-        if (selected.SharedScope is not null && (allocation.FundingBudgetId is null || allocation.FundingAllocationId is null ||
-                await context.DecisionBudgetAllocations.AsNoTracking().AnyAsync(row => row.BudgetId == allocation.FundingBudgetId &&
-                    row.AllocationId != allocation.FundingAllocationId && row.OwnerWorkRevision == null, cancellationToken).ConfigureAwait(false))) {
-            throw new InvalidOperationException("Shared refresh inheritance requires complete root work quiescence apart from its own allocation.");
+        if (selected.SharedScope is null) {
+            return;
+        }
+        if (allocation.FundingBudgetId is null || allocation.FundingAllocationId is null) {
+            throw new InvalidDataException("Shared refresh inheritance requires its original root-funded allocation.");
+        }
+        if (await context.DecisionBudgetAllocations.AsNoTracking().AnyAsync(row => row.BudgetId == allocation.FundingBudgetId &&
+                row.AllocationId != allocation.FundingAllocationId && row.OwnerWorkRevision == null, cancellationToken).ConfigureAwait(false)) {
+            throw new ProcessDecisionException(ProcessDecisionRefusal.UnclosedWork);
         }
     }
 }

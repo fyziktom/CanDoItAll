@@ -19,10 +19,12 @@ internal static class EfProcessDecisionRefreshReconciliation {
             DecisionRunScope = ProcessDecisionRunScopeReceiptCodec.Read(receipt.DecisionRunScopeReceiptJson)
         };
         if (ProcessDecisionRefreshAccountingReceipt.Read(accounting, admission, selected.Child!) is not ProcessDecisionRefreshAccountingResult.Reconciled ||
-                selected.Head != accounting.Decision!.Current || selected.Child!.Observation.Generation != selected.Head ||
-                selected.Child.Observation.Closure != accounting.Decision.Child!.Closure ||
+                selected.Child!.Observation.Closure != accounting.Decision!.Child!.Closure ||
                 selected.Child.Observation.Settlement != accounting.DecisionBudget!.Change.Allocation.Settlement) {
             throw new InvalidOperationException("Only the exact reconciled no-effect child may acquire refresh material.");
+        }
+        if (selected.Head != accounting.Decision!.Current || selected.Child!.Observation.Generation != selected.Head) {
+            throw new ProcessDecisionException(ProcessDecisionRefusal.StaleExpectation);
         }
     }
 }

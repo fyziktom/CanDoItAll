@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using static CanDoItAll.Tests.Integration.Processes.ProcessDecisionPersistenceFixture;
+using static CanDoItAll.Tests.Integration.ProcessDecisionRefreshCaptureFixture;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -164,25 +165,6 @@ public sealed class ProcessDecisionRefreshCaptureQueryTests {
         Assert.Equal(empty, await query.ReadProgressAsync(new(Guid.NewGuid()), admission));
         Assert.Equal(empty, await query.ReadProgressAsync(fixture.State.RunId, admission));
         Assert.Equal(empty, await query.ReadProgressAsync(fixture.State.RunId, RuntimeCommandId.New()));
-    }
-
-    private static async Task<RuntimeCommandId> AdmitAsync(ProjectTaskPlanReviewFixture fixture) {
-        var selected = (await fixture.Services.GetRequiredService<IProcessDecisionResultQuery>().ReadAsync(
-            fixture.State.RunId, fixture.Request.Child.StepInstanceId, new(fixture.Waiting.Id)))!;
-        var original = fixture.Request;
-        ProcessDecisionRefreshRequest request = new(new(Guid.NewGuid()), original.Child, original.StrategyId, original.WaitingResultKey,
-            original.Decision, original.Budget, selected.SharedScope, ProcessDecisionRefreshKind.ManagerRefresh);
-        Assert.True((await fixture.Services.GetRequiredService<ProcessDecisionRefreshCoordinator>()
-            .AdmitAsync(fixture.State, fixture.CommandContext, request)).CommittedNow);
-        return request.CommandId;
-    }
-
-    private static async Task<ProcessRuntimeStateSnapshot> AccountAsync(ProjectTaskPlanReviewFixture fixture, RuntimeCommandId admission) {
-        Assert.Equal(ProcessDecisionChildStopResult.ReadyForAccounting, await Assert.Single(fixture.Services
-            .GetServices<IProcessDecisionRefreshChildStopper>()).StopAsync(fixture.Parent, admission));
-        var state = (await fixture.Services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(fixture.State.RunId))!;
-        return Assert.IsType<ProcessDecisionRefreshAccountingResult.Reconciled>(await fixture.Services
-            .GetRequiredService<ProcessDecisionRefreshAccountingCoordinator>().ReconcileAsync(state, fixture.CommandContext, admission)).Commit.State;
     }
 
     private static ProcessRuntimeCommitRequest TimestampOnly(ProcessRuntimeStateSnapshot state, RuntimeCommandId command)
