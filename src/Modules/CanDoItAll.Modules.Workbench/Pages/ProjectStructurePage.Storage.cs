@@ -45,7 +45,7 @@ public partial class ProjectStructurePage
                     new StorageSummaryFact("Content type", string.IsNullOrWhiteSpace(storageReference.ContentType) ? "Unknown" : storageReference.ContentType)
                 ],
                 Footnote = storageReference.ContentLength.HasValue
-                    ? $"Stored size: {FormatContentLength(storageReference.ContentLength.Value)}"
+                    ? $"Size when attached: {FormatContentLength(storageReference.ContentLength.Value)}"
                     : string.Empty
             };
         }

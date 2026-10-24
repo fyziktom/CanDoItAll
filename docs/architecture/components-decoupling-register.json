@@ -14310,7 +14310,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Storage.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Storage.cs",
-      "sha256_lf": "e2b58f218c3b24084b43d0ff3f96ab3bc350b1bd15bdf60e726ea4ee301f740a",
+      "sha256_lf": "c7f34d11b8bec152144f1cdf8d08991febe8860237e818b8b4c3a906841dc3ed",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -33959,7 +33959,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningGanttTaskEditor.razor",
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningGanttTaskEditor.razor",
-      "sha256_lf": "3f492d0d31b9fe41c440066735eec60419b44c8c9db87b64fb920332d8eeca70",
+      "sha256_lf": "a6ae67fab4e39f4d94a4abd8ff7cdd77a35ba2ea0d5632476485d54226d3f749",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Planning.UI.PlanningGanttTaskEditor",

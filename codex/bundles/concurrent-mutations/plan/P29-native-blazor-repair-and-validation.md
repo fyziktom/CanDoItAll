@@ -15,9 +15,9 @@ This is a focused successor to P28. It does not close the remaining refresh-deli
 
 | Requirement | Acceptance and proof | State |
 | --- | --- | --- |
-| BUI-1 | Diagnose the reported run; repair generic engine causes; prove the normal process path through runtime validation and result recording, with receipts for existing effects before any rework. | Investigating; scaffolding defects reproduced |
-| BUI-2 | Inventory every action exposed by native Project Structure and Gantt; exercise each applicable action, assets and information readback; record disabled prerequisites and repair failures. | Pending |
-| BUI-3 | Use a real process and floating agent chat while editing the same project through native UI; verify non-conflicting writes survive, stale writes are handled explicitly, drafts and assets remain correct after reload. | Pending |
+| BUI-1 | Diagnose the reported run; repair generic engine causes; prove the normal process path through runtime validation and result recording, with receipts for existing effects before any rework. | Passed: Succeeded / Complete, zero escalations |
+| BUI-2 | Inventory every action exposed by native Project Structure and Gantt; exercise each applicable action, assets and information readback; record disabled prerequisites and repair failures. | In progress; action evidence in validation record |
+| BUI-3 | Use a real process and floating agent chat while editing the same project through native UI; verify non-conflicting writes survive, stale writes are handled explicitly, drafts and assets remain correct after reload. | Both real overlap lanes passed; stale-file and stale-task checks remain |
 | BUI-4 | Keep tests, docs and incremental signed commits current; preserve the SPA review branch and ordinary data. | In progress |
 
 Work order: generic process repair and focused regression proof; native action inventory
@@ -112,6 +112,60 @@ The ordinary managed host was stopped only after confirming there were no active
 then restarted in standard Debug with its explicit 5032/7271 endpoints. These automated
 checks establish the scaffold repair; they do not close process E2E or native UI proof.
 
+## Native Gantt lifetime repair entry
+
+During native Gantt-to-Canvas navigation with a floating agent completing, the host logged
+`NullReferenceException` in `GanttTaskDragSource.DisposeRegistrationAsync`. Its render
+callback and component disposal both used the mutable registration field across awaits.
+One cleanup cleared the field while the other still expected it. A pending registration
+could also complete after disposal and retain its browser listeners.
+
+Repair the existing shared Gantt component on `codex/native-gantt-lifetime` in Components.
+Serialize registration/replacement/disposal with one component-local async gate, mark
+disposal before waiting, and detach the owned registration before awaited cleanup. Preserve
+the current parameters, markup, JS protocol and application mutation owners. No cross-module
+reference, global lock, database access, new service or CSS is justified. The gate covers
+only this component's interop lifetime and does not serialize users or project mutations.
+
+Prove delayed registration versus disposal, replacement cleanup versus disposal, parameter
+changes during registration, and cleanup failure/resource release with controlled interop.
+Build the Gantt library and its test owner in standard Release, discover and run the bounded
+lifetime selection, then rebuild the ordinary host in Debug and repeat native navigation
+and drag/drop. Existing Gantt scheduling tests remain relevant to the final interaction lane.
+The installed Components MCP was queried; it has no GanttTaskDragSource catalog entry, so
+the owning component, existing Gantt lifetime tests and current consuming surface supply
+the contract. No component selection or composition changes are needed.
+
+## Follow-up display corrections
+
+Native checks found three bounded presentation defects. A rejected cyclic dependency
+reaches the UI as an interop exception with a server stack trace; catch only the planner's
+typed `GanttScheduleException` before host dispatch, show its safe business message and
+keep later valid interactions usable. Test add and reconnect cycles with zero host writes,
+unchanged controlled inputs and a subsequent accepted request. Unexpected host failures
+must still propagate and be logged.
+
+The Gantt task editor initializes its "Actual progress" input from the stored canvas hint
+(28 for Draft), while the bar and summary correctly apply execution state (0 for NotStarted,
+100 for Completed and -1 for Cancelled). Keep the original edit model and local editable
+draft unchanged; derive only the visible value through the existing execution-progress
+policy, including explicit execution-state changes. Lock the input for those three states.
+Test five initial states, execution-state transitions preserving the editable draft, and
+unchanged submission of the stored hint through the real native dialog host. This avoids
+altering the compare-and-swap baseline or silently persisting a display-only normalization.
+
+The inspector's attachment size comes from the immutable attachment reference, not a fresh
+storage stat after content edits. Label it "Size when attached" rather than claiming current
+size. This preserves the storage boundary and avoids a remote stat on every selection or
+render. Current content and revision checks remain owned by governed file interaction.
+No new dependency, service, network call or CSS is needed for these corrections.
+
+Build-backed discovery will freeze the GanttChartComponentTests class (including both
+cycle cases) in Components and ProjectStructureGanttTaskDialogTests (including seven
+progress cases) in the engine before filtered execution. Build their production owners
+and test assemblies in Release; refresh rendering hashes only after reviewing the two
+changed native rendering inputs, then regenerate and enforce the portability scan.
+
 ## Retained evidence and resources
 
 Ignored proof root: `.artifacts/concurrent-mutations/blazor-ui-repairs-20261024`.
@@ -120,5 +174,5 @@ out of commits; commit the reasoning, generic tests and bounded validation resul
 The ordinary application is managed by the shared DotNetWatch backend. Retain it for the
 user after testing. Keep SPA on `codex/concurrent-mutations`, without source edits or merge.
 
-Closure: BUI-1, BUI-2 and BUI-3 are not yet proven. Historical cleanup denials and open P28
-work remain recorded in the preceding validation documents.
+Closure: BUI-1 is proven. BUI-2 and the additional stale-editor checks remain in progress.
+Historical cleanup denials and open P28 work remain recorded in preceding validation documents.
