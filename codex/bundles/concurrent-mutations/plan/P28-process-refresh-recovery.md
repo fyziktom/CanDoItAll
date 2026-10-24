@@ -10,7 +10,10 @@ Normal output restoration and final static checks pass; temporary junction/check
 remains blocked: automatic review rejected the exact user-authorized junction retry too.
 They follow the
 [registered producer](../validation/2026-10-23-process-refresh-capture-producer.md).
-Behavioral proof tier. The public refresh/replan gate remains closed.
+The [registered delivery continuation](../validation/2026-10-23-process-refresh-delivery.md)
+passes all 110 distinct selected cases, final static/source/output checks and new resource
+closure. Durable queue/wake delivery, source revocation, unknown-work resolution, explicit
+retry and capacity remain open. Behavioral proof tier; the public refresh/replan gate remains closed.
 
 ## Problem and bounded outcome
 

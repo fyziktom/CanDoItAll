@@ -2,8 +2,8 @@
 
 ## C# Architecture Gate Result: refresh delivery continuation checkpoint (2026-10-23)
 
-Status: source/dependency review and all 36 new cases pass; final behavioral closure awaits
-the 74 existing owner regressions and final resource reconciliation in the
+Status: Pass with follow-up for this Behavioral continuation. All 110 distinct selected
+cases, final static/source/output checks and new resource reconciliation pass in the
 [validation record](../validation/2026-10-23-process-refresh-delivery.md).
 
 The Application coordinator composes original stop/account/capture ports, deriving its
@@ -20,7 +20,7 @@ eight members; neither it nor the accounting owner has a reported finding. The e
 and registered consumer tests verify compilation and DI. Thirty production/supporting output
 hashes remain unchanged across the test-only repair. Final portability passes unchanged.
 
-The continuation can proceed through its remaining regression proof. Queue staging, wake
+The continuation is qualified for the next durable-delivery implementation. Queue staging, wake
 revision races, old-writer rollout, source revocation, explicit unknown-work resolution,
 capacity and public activation still need their own proof. SPA remains on its review branch.
 

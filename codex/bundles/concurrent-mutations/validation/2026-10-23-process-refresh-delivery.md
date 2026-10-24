@@ -1,8 +1,9 @@
 # Process refresh continuation and cancellation handoff
 
-Status: all 36 new continuation cases pass across the verified test-only repair below;
-74 existing capture/accounting regressions are still running. Final portability passes
-without a baseline change. Behavioral proof tier; no background worker, durable queue,
+Status: Pass for this Behavioral continuation. All 110 distinct selected cases pass across
+the verified test-only repair below, including 74 capture/accounting regressions. Final
+portability, source/output identity, secret review and new resource closure pass without
+a baseline change. No background worker, durable queue,
 public refresh/Replan activation or capacity qualification.
 
 ## Entry and owned requirement
@@ -99,8 +100,8 @@ The verified proof root is
 `reuse-review.json` verifies 1,298 unchanged source inputs and all 30 production/supporting
 outputs. Only the two corrected methods and Integration DLL/PDB changed. The three
 unchanged methods retain the original ten passing cases. The four repaired cases and all
-22 new recovery cases pass, yielding 36 distinct passing new cases. The remaining 74 cases
-are recorded separately and must pass before behavioral closure. The first run's four
+22 new recovery cases pass, yielding 36 distinct passing new cases. All 74 existing capture/
+accounting cases also pass, yielding 110 distinct passing cases. The first run's four
 failures remain preserved; they are not relabelled as successful execution.
 
 Application and Modules.Processes were built directly, then the standard Integration
@@ -114,7 +115,21 @@ The final complete portability scan includes untracked protected files: 10,161 f
 unchanged and no baseline edit. Six portability-tool, four secret-tool and seven rendering
 tool tests pass, as do the rendering register and documentation checks. The earlier run's
 observer closes with zero remaining processes, database-name deltas or temporary paths.
-Final verified-run resource and secret reconciliation remain due after its last test.
+The verified observer covers all seven execution commands and closes with zero remaining
+owned processes, database-name deltas or temporary-path deltas. Both proof roots pass secret
+review, including supplementary excluded files and checks against the private fixture
+credential; only the three exact reviewed script expressions remain. All bounded command
+records reconcile, retaining the first failed delivery run as an expected failed attempt.
+The shared isolated PostgreSQL fixture remains available for subsequent lanes; ordinary
+port 5032, unrelated resources and historical cleanup denials remain preserved.
+
+`distinct-qualification.json` combines the ten eligible unchanged cases with the 100 final
+passing cases and verifies a passing replacement for each original failed case. Final lane
+durations were 83.847 seconds (four repaired delivery cases), 310.409 (22 recovery),
+341.345 (26 capture), 73.513 (four boundary), 45.516 (two concurrency), 216.260 (16 journal)
+and 428.225 (26 accounting). These are test durations, not production capacity measurements.
+Source and standard-output identity still match signed implementation checkpoint
+`1ae54a4f86f7ae8392699636685a471397386f7b`.
 
 Architecture snapshot `snap-20261023234316-59d5ae0f` covers Application, Runtime, Persistence
 and Modules.Processes: 521 documents, 1,340 types, 10,827 members, six scoped project edges,
@@ -125,3 +140,9 @@ NuGet audit errors and one existing DI0002 warning at registration line 42; its 
 service registration is not proof of the new scoped registration. Direct builds and the
 actual registered continuation tests establish that registration. `architecture-review.json`
 retains the bounded result; this is not a clean collector/compiler claim.
+
+Closure gate: Pass for the original stop/account/capture continuation, with its source
+and registered consumer proof usable by the queue implementation. Durable staging/wake,
+source revocation, unknown-work resolution, explicit retry, old-writer rollout, capacity
+and public refresh/Replan activation remain open. This is not engine E2E closure. SPA
+remains clean on `codex/concurrent-mutations` at `11399398e4b836116a6a9b06291f2619368fd4db`.

@@ -1,10 +1,10 @@
 # Requirements and closure ledger
 
 Current work: [refresh delivery continuation](validation/2026-10-23-process-refresh-delivery.md)
-passes its 36 new cases across a verified test-only repair. Original receipts resume the
+passes all 110 distinct selected cases across a verified test-only repair. Original receipts resume the
 stop/account/capture flow, cancellation drains known work, and unknown work stays funded.
-Final portability passes without a baseline change; the 74 existing owner regressions
-are still running. Durable queue/wake delivery, source revocation, unknown-work resolution,
+Final portability, source/output identity, secret review and new resource reconciliation
+pass without a baseline change. Durable queue/wake delivery, source revocation, unknown-work resolution,
 explicit retry, capacity and public activation remain open. SPA stays untouched on
 **codex/concurrent-mutations** for colleague review. Historical cleanup denials remain,
 including the exact user-authorized junction retry rejected by automatic review.
