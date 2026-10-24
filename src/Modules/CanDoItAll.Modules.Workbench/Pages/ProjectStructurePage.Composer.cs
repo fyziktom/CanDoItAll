@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 
@@ -138,7 +139,8 @@ public partial class ProjectStructurePage {
             }
         } catch (Exception failure) {
             opening.RequiresObservation = invoked && failure is not (ArgumentException or InvalidDataException or
-                ProjectStructureEditConflictException or ProjectWriteAdmissionRejectedException);
+                ProjectStructureEditConflictException or ProjectWriteAdmissionRejectedException or
+                ProjectStructureAgentException { EffectState: AgentToolEffectState.None or AgentToolEffectState.NotCommitted });
             outcome = outcome with {
                 Kind = outcome.Node is not null ? ProjectStructureAuthoringResultKind.PartialCommit :
                     opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,

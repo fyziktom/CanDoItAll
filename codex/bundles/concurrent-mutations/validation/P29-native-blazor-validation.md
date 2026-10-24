@@ -121,9 +121,24 @@ marker remains absent. Fresh text-file readback retains the explicitly reconcile
 
 FileTools is signed commit `7885f6098e1bc0e202f8e2cc8ee26a9e89945af7` on
 `codex/native-media-preview`. CI now records this exact revision and Components
-`567b41d922bbbbfe7fdc3c122445357e25698ce3`, so builds consume both repairs. These local
-feature-branch revisions must be available to the remote before CI can check them out;
-this record does not claim a remote CI run. No sibling branch has been merged.
+`567b41d922bbbbfe7fdc3c122445357e25698ce3`, so builds consume both repairs. Both feature
+branches were pushed and their remote heads verified against these revisions. This record
+does not claim a remote CI run. No sibling branch has been merged.
+
+## Runtime validation outcome
+
+An incomplete Console script is now shown as a known validation rejection when the runtime
+owner explicitly reports no effect. Unknown and committed outcomes retain their existing
+observation requirements. The consumed opening cannot replay; cancelling and opening a
+corrected form commits exactly one script. Native browser readback confirmed both absence
+after rejection and presence after the corrected submission.
+
+Workbench and the component test owner build in standard Release. All 16 discovered
+ProjectStructureComposerLifetimeTests cases pass, none skipped, against the reused isolated
+PostgreSQL 18 fixture. The first execution identified an obsolete direct-delete test setup;
+the fixture now dispatches the existing admitted native lifecycle command. Final rendering
+validation passes for 1,212 inputs and regenerated portability enforcement passes with
+15,712 reviewed findings unchanged.
 
 ## Evidence and retention
 

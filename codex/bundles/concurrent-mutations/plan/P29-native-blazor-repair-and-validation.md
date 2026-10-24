@@ -199,5 +199,18 @@ out of commits; commit the reasoning, generic tests and bounded validation resul
 The ordinary application is managed by the shared DotNetWatch backend. Retain it for the
 user after testing. Keep SPA on `codex/concurrent-mutations`, without source edits or merge.
 
+### Native runtime validation outcome repair entry
+
+Submitting a Console script with neither a command nor a path reaches the runtime metadata
+validator, which returns typed `NotCommitted` evidence before the node write. The generic
+composer ignores that evidence and presents an unconfirmed write. Recognize only the
+existing explicit no-effect exception states in its outcome classification; retain unknown
+or committed outcomes as observation-required. Keep the consumed opening and original
+authority rules: correction uses a fresh opening, and a replay cannot write again.
+Use the real native service and isolated database to prove rejection, absence of a created
+node, the actionable validation message, ignored replay and a successful corrected opening.
+Retain the existing lost-reply and stale-lifetime regression cases. No new UI/domain
+dependency, retry loop or validation bypass is needed.
+
 Closure: BUI-1 is proven. BUI-2 and the additional stale-editor checks remain in progress.
 Historical cleanup denials and open P28 work remain recorded in preceding validation documents.

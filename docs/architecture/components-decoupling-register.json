@@ -13890,7 +13890,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
-      "sha256_lf": "65f407c272442400ef8715a48e31cc9a1fb8e4dacb6f51623433703798058807",
+      "sha256_lf": "1ea7b03b24f5a3af1783e1272caa97af57ca5c02fa2928d6c65a11f6feb0c888",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureComposerOpening",
