@@ -678,3 +678,13 @@ reconciliation. Unknown work remains funded and requires its original return or 
 resolution. A stopped refresh continuation does not itself assert that the Process is
 fully cancelled. The durable queue, wake/park race, old-writer rollout, source revocation
 and sustained capacity gates remain before enabling background or public refresh.
+
+New admissions now stage a small durable delivery row in their original transaction.
+Capture Return updates its wake revision atomically with returned work. Claims and
+checkpoints use database-time leases and never hold the root fence while running the
+continuation. A pending checkpoint cannot park over a newer wake; a wake cannot bypass a
+live lease or automatically reopen explicit review. Scheduling records contain no copied
+material and authorize no new invocation. The
+[persistence qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-24-process-refresh-delivery-queue.md)
+records focused proof. Background delivery, old-writer rollout, source revocation,
+unknown-work resolution, retry policy and capacity still gate public activation.

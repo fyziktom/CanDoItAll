@@ -9232,6 +9232,72 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshDeliveryEntity", b => {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdmissionCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<int>("Disposition")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("DueAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("LeaseGeneration")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ProgressRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ProtocolVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<long>("WakeRevision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RunId", "AdmissionCommandId");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("DueAtUtc", "RunId", "AdmissionCommandId")
+                        .HasDatabaseName("IX_process_refresh_delivery_due")
+                        .HasFilter("\"Disposition\" = 0");
+
+                    b.ToTable("process_decision_refresh_delivery", null, t => {
+                            t.HasCheckConstraint("CK_process_refresh_delivery_identity", "\"ProtocolVersion\" = 1 AND \"RunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"AdmissionCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_process_refresh_delivery_lease", "\"LeaseGeneration\" >= 0 AND \"ProgressRevision\" >= 0 AND \"WakeRevision\" >= 0\nAND ((\"LeaseToken\" IS NULL AND \"LeaseExpiresAtUtc\" IS NULL)\n    OR (\"LeaseToken\" IS NOT NULL AND \"LeaseToken\" <> '00000000-0000-0000-0000-000000000000'::uuid\n        AND \"LeaseGeneration\" > 0 AND \"LeaseExpiresAtUtc\" IS NOT NULL\n        AND \"DueAtUtc\" = \"LeaseExpiresAtUtc\" AND \"Disposition\" = 0))");
+
+                            t.HasCheckConstraint("CK_process_refresh_delivery_outcome", "(\"Disposition\" = 0 AND \"Reason\" BETWEEN 0 AND 4)\nOR (\"Disposition\" = 1 AND \"Reason\" = 5)\nOR (\"Disposition\" = 2 AND \"Reason\" BETWEEN 6 AND 9)\nOR (\"Disposition\" = 3 AND \"Reason\" BETWEEN 10 AND 12)");
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", b =>
                 {
                     b.Property<Guid>("ScopeId")
@@ -11149,6 +11215,20 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCaptureEntity", null)
                         .WithMany()
                         .HasForeignKey("RunId", "ReservationCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshDeliveryEntity", b => {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RootRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "AdmissionCommandId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

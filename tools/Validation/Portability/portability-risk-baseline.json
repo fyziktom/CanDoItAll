@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-23T22:03:39.991601+00:00",
+  "generated_utc": "2026-10-24T00:46:53.885246+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15703,
+  "allowance_count": 15709,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -14063,6 +14063,42 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261023214201_AddProcessRefreshCaptureJournal.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "df6b02ea617a65b58853551473d1dd12bb086d5b5783c5e5dcf79abc0a5a8277",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261024003418_AddProcessRefreshDelivery.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0c05d7a669ed6bf46413ee48604f34479b6a5385a13cdb2e95cbd707b4763b6d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261024003418_AddProcessRefreshDelivery.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e32b2af813639d08d979f3fcab0b1175fbdbdc187b0404a234c68baaa9d8b301",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261024003418_AddProcessRefreshDelivery.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "5cafe829153c0ea0f8eae6c2856d14351b704ee7eb3db943366b6cf4fbfaf829",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261024003418_AddProcessRefreshDelivery.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "7c110544886fba263081e3d5cc52639109c50312b71865b12d36650e61c1acb9",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261024003418_AddProcessRefreshDelivery.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "c7b3f60b7d8f80ac1a0205194cc3b734e234da8f5c57d12c462575d8be3734ee",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261024003418_AddProcessRefreshDelivery.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "e877b407430ecdb04bf99bea173a08488c93a141999c9bbd2dc8a067e3595d55",
       "count": 1
     },
     {

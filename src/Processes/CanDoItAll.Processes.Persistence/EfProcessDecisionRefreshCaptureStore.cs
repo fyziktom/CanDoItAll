@@ -116,6 +116,9 @@ public sealed class EfProcessDecisionRefreshCaptureStore(IDbContextFactory<Proce
             context.RefreshCaptures.Attach(row.Capture);
             ProcessDecisionRefreshCaptureRows.Write(row.Capture, result.State);
             await context.SaveChangesAsync(token).ConfigureAwait(false);
+            if (result.State.Phase == ProcessDecisionRefreshCapturePhase.Returned) {
+                await ProcessDecisionRefreshDeliveryStaging.WakeAsync(context, reservation, token).ConfigureAwait(false);
+            }
         }
         await transaction.CommitAsync(token).ConfigureAwait(false);
         return result.State;

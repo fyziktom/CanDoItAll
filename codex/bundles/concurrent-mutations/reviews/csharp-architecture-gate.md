@@ -1,5 +1,34 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: refresh delivery queue persistence (2026-10-24)
+
+Status: source/dependency review passes with three reviewed informational findings;
+Behavioral closure awaits the [69-case qualification](../validation/2026-10-24-process-refresh-delivery-queue.md)
+and final static/source/resource checks.
+
+Application owns scheduling contracts; Persistence stages metadata in the existing
+admission UOW and wakes it in the capture Return transaction. The module supplies one
+scoped registration. Queue SQL never acquires the root fence or invokes business owners;
+Return's root-then-queue lock order has no reverse path. The delivery continuation remains
+the business authority. No new project reference, partial expansion, framework extraction,
+provider dependency, Runtime wire change, worker or public activation.
+
+Snapshot `snap-20261024004134-6b7e48c7` covers 525 documents, 1,350 types, 10,888 members
+and 37 entities in four projects. Six project edges and zero cycles remain. The findings
+are 66 COMPLEXITY-001 and 325 COMPLEXITY-002, an increase of three informational member-count
+findings: the immutable claim's original identity/lease fields, the typed reason enum and
+the single scheduling row. These are cohesive protocol data, not mixed responsibilities;
+splitting their fields across artificial owners would weaken validation. The existing
+123 WS0002 NuGet audit diagnostics and one DI0002 warning remain. No non-audit errors are
+reported. The collector captures only one registration, so actual direct builds and
+registered producer/queue tests must prove DI.
+
+The additive migration retains receipt/root foreign keys and refuses downgrade when any
+delivery row remains. Snapshot changes are limited to the new mapping. Unknown invocation
+remains funded; wake revisions affect scheduling only. Old-writer wake compatibility,
+source revocation, worker orchestration, retention/fairness/capacity and public activation
+remain separate gates. SPA remains on its colleague-review branch.
+
 ## C# Architecture Gate Result: refresh delivery continuation checkpoint (2026-10-23)
 
 Status: Pass with follow-up for this Behavioral continuation. All 110 distinct selected

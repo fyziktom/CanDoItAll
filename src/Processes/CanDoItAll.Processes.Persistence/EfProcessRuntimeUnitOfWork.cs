@@ -358,6 +358,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
 
         await decisionScopes.RequireWorkAdmissionAsync(request, workAdmission.Claims, cancellationToken).ConfigureAwait(false);
         ProcessCancellationRecoveryStaging.Stage(dbContext, request, previousStatus);
+        ProcessDecisionRefreshDeliveryStaging.Stage(dbContext, request);
         var decisionBudget = await decisionBudgets.StageAsync(request.OriginalState, request.DecisionBudget, cancellationToken).ConfigureAwait(false);
         var completesScope = request.DecisionRunScope?.CompletesRuntimeResult == true;
         var decisionScope = completesScope ? null : await decisionScopes.StageAsync(request, decisionBudget, cancellationToken).ConfigureAwait(false);

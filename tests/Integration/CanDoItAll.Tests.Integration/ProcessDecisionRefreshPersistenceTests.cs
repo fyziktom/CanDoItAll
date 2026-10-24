@@ -31,6 +31,11 @@ public sealed class ProcessDecisionRefreshPersistenceTests(ITestOutputHelper out
         var accepted = await fixture.Services.GetRequiredService<ProcessDecisionRefreshCoordinator>()
             .AdmitAsync(fixture.State, fixture.CommandContext, request);
         Assert.True(accepted.CommittedNow);
+        var delivery = await database.RefreshDeliveries.AsNoTracking().SingleAsync();
+        Assert.Equal(fixture.State.RootRunId.Value, delivery.RootRunId);
+        Assert.Equal(fixture.State.RunId.Value, delivery.RunId);
+        Assert.Equal(request.CommandId.Value, delivery.AdmissionCommandId);
+        Assert.Equal(ProcessDecisionRefreshDeliveryDisposition.Ready, delivery.Disposition);
         Assert.Equal(ProcessDecisionPhase.Reconciling, accepted.Receipt.Decision.Current.Phase);
         Assert.Equal(request.CommandId, accepted.Receipt.Decision.Current.RefreshCommandId);
         Assert.Equal(mode == ReadBasisMode.RunSnapshot, accepted.Receipt.SharedScope is not null);
@@ -89,6 +94,7 @@ public sealed class ProcessDecisionRefreshPersistenceTests(ITestOutputHelper out
         Assert.Equal(ProcessDecisionPhase.WaitingForReview, head.Phase);
         Assert.Null(head.RefreshCommandId);
         Assert.False(await check.IdempotencyKeys.AnyAsync(row => row.RunId == fixture.State.RunId.Value && row.CommandId == request.CommandId.Value));
+        Assert.False(await check.RefreshDeliveries.AnyAsync());
         if (request.DecisionRunScope is { } scope) {
             var state = (await new EfProcessDecisionRunScopeStore(check, fixture.Services.GetRequiredService<ICanonicalRuntimeDatabase>())
                 .ReadAsync(scope.Expectation.ScopeId))!;
@@ -97,6 +103,7 @@ public sealed class ProcessDecisionRefreshPersistenceTests(ITestOutputHelper out
         }
         Assert.Equal(before, await BalanceAsync(check));
         Assert.True((await Owner(fixture, check).CommitAsync(request)).CommittedNow);
+        Assert.Equal(request.CommandId.Value, (await check.RefreshDeliveries.AsNoTracking().SingleAsync()).AdmissionCommandId);
         await fixture.Entry.Files.Sql.VerifyAsync(0, 0);
     }
 
@@ -121,6 +128,7 @@ public sealed class ProcessDecisionRefreshPersistenceTests(ITestOutputHelper out
         await using var check = Context(fixture.Services);
         Assert.Equal(1, await check.IdempotencyKeys.CountAsync(row => row.RunId == fixture.State.RunId.Value &&
             (row.CommandId == first.CommandId.Value || row.CommandId == second.CommandId.Value)));
+        Assert.Equal(1, await check.RefreshDeliveries.CountAsync());
         await fixture.Entry.Files.Sql.VerifyAsync(0, 0);
 
         async Task<(ProcessRuntimeCommitResult? Result, Exception? Error)> AttemptAsync(ProcessPersistenceDbContext context, ProcessRuntimeCommitRequest request) {

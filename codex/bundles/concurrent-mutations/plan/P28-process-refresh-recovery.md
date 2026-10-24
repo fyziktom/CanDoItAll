@@ -15,6 +15,11 @@ passes all 110 distinct selected cases, final static/source/output checks and ne
 closure. Durable queue/wake delivery, source revocation, unknown-work resolution, explicit
 retry and capacity remain open. Behavioral proof tier; the public refresh/replan gate remains closed.
 
+The [queue persistence checkpoint](../validation/2026-10-24-process-refresh-delivery-queue.md)
+implements atomic admission staging, bounded leases/checkpoints and original Return wake.
+Its 33 new cases, direct builds and final portability pass; 36 existing regressions and
+final resource closure are pending. Worker activation and old-writer rollout are not enabled.
+
 ## Problem and bounded outcome
 
 The current producer can reconcile a lost settlement acknowledgement and inherit completed
@@ -178,6 +183,49 @@ atomic competing claims, explicit pending reasons and bounded retry delays. A de
 may be reclaimed; that does not authorize repeating an admitted capture invocation. Stop,
 accounting, capture and successor must each reconcile original receipts before new work.
 Poisoned evidence must remain visible and throttled rather than busy-looping or disappearing.
+
+### Queue persistence entry after continuation qualification
+
+The continuation now passes 110 distinct selected cases at signed `1ae54a4f8`, with
+closure recorded at `725c880e4`. Implement one refresh-specific scheduling row and port
+in Application/Persistence, wired by Modules.Processes. Stage only a newly committed
+`ProcessDecisionBeginRefresh` beside its original idempotency receipt. No replay/backfill
+creates scheduling authority for an older admission. Add no Runtime command payload,
+project reference, hosted worker, public endpoint or default activation.
+
+The row holds original root/run/admission, protocol version 1, database timestamps,
+lease token/generation/expiry, progress and wake revisions, disposition and typed reason.
+Disposition is Ready, AwaitingCapture, ReviewRequired or Completed. Reasons distinguish
+pending stop/child/capture, contention, unknown invocation, legacy unknown, source
+projection, invalid evidence and the three definite completion outcomes. Validate the
+reason/disposition pair in code and SQL. A composite foreign key retains the original
+run/admission receipt; a separate root key retains its root. Store no JSON or material.
+
+Claim selects one Ready due row through the partial due index using SKIP LOCKED. Claim
+and checkpoint have five-second operation/transaction limits, two-second statements and
+one-second lock waits. Neither takes the root mutation fence. Checkpoint always releases
+the lease and compares original root, run, admission, token, generation and progress
+revision against retained state and database-time expiry. Scheduling completion records
+the trusted continuation's outcome; business receipts and grants remain exclusively owned
+by the existing continuation. The queue itself never settles, invokes or advances work.
+
+An actual changed capture Return (including NeverInvoked closure) increments WakeRevision
+inside its journal transaction. AwaitingCapture becomes Ready. A leased Ready row retains
+its lease and due timestamp; the wake cannot make it concurrently claimable. A subsequent
+pending checkpoint from the older wake revision releases Ready with immediate due time
+instead of parking or delaying that return. ReviewRequired and Completed remain closed
+to automatic wake. An unchanged Return replay does not increment the wake again. Missing
+delivery beside older capture evidence is allowed but is not adopted or called delivered.
+
+The migration is additive and refuses Down while any delivery evidence exists. Test
+atomic admission/rollback/replay through the real registered producer; distinct and busy
+claims; expiry, stale/spoofed identity and concurrent checkpoints; Return-before/after
+park and leased-wake races; retained unknown work; schema constraints and downgrade.
+Use the existing isolated PG18 fixture and standard Release outputs. Select the owning
+new Integration queue/migration classes plus changed admission and journal regressions;
+declare exact discovery counts before execution. Full portability, source/output identity,
+architecture and owned resource closure remain mandatory. Actual older-writer rollout,
+100k-terminal-history capacity and worker activation remain subsequent gates.
 
 ### Queue design refinement from the continuation review
 

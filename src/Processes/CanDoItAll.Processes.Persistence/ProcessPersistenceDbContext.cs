@@ -48,6 +48,8 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessDecisionRefreshCaptureEntity> RefreshCaptures => Set<ProcessDecisionRefreshCaptureEntity>();
 
+    public DbSet<ProcessDecisionRefreshDeliveryEntity> RefreshDeliveries => Set<ProcessDecisionRefreshDeliveryEntity>();
+
     public DbSet<ProcessDecisionRefreshCapturePayloadEntity> RefreshCapturePayloads => Set<ProcessDecisionRefreshCapturePayloadEntity>();
 
     public DbSet<ProcessDecisionHeadEntity> DecisionHeads => Set<ProcessDecisionHeadEntity>();
