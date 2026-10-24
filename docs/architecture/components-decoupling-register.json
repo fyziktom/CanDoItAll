@@ -13970,7 +13970,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
-      "sha256_lf": "94909b3121e5a70b54d19b3bf071ed5c83c6c52ff789517e911c4ef7b2eb551b",
+      "sha256_lf": "89bb9e760afed812c4fc24835628cbfc7daa3dc4c100da136b0de0ac1fe03dfb",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.InsightsContext, CanDoItAll.Modules.Workbench.Pages.InsightsEffect",
@@ -33513,7 +33513,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor",
       "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor",
-      "sha256_lf": "7efc677e5c0d22f8d29ddc8c794e3fb91eb1a464a2a8540ff13dda65bcdf77d5",
+      "sha256_lf": "de3bfa2405902d1dac2dceb296c0da68f130cca90a093898fc8011db9eb0a2bd",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureObjectIndexWindow",

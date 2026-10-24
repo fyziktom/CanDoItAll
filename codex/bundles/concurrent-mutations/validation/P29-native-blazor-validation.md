@@ -140,6 +140,36 @@ the fixture now dispatches the existing admitted native lifecycle command. Final
 validation passes for 1,212 inputs and regenerated portability enforcement passes with
 15,712 reviewed findings unchanged.
 
+## Date, graph and projection repair checkpoint
+
+Generic create/edit dates now preserve the entered instant as UTC. Invalid nonblank create
+dates fail explicitly; unchanged edit echoes retain the original precision. Online and
+onsite meetings save through the native forms. Changing a meeting to 12:15–13:45 local
+time persisted 16:15–17:45 UTC; a work-item due date at 09:30 persisted 13:30 UTC.
+
+Object-index reconnect and dependency actions now use the canvas's existing original-owner
+workflow. Native reconnect, dependency creation and parent disconnection passed, with
+canonical graph readback. Unreferenced duplicate gallery projections are suppressed while
+saved layouts, canonical children and user links retain their legacy projected identity.
+The three native Flow/Session/Step records now appear once with their correct node kinds.
+
+Build-backed discovery and final execution passed 40 composer/graph lifetime cases, 13 node
+editor cases and nine owner projection integration cases, none skipped. The first graph
+execution found an obsolete direct-delete fixture; the corrected fixture uses the captured
+native lifecycle command. Standard Release builds passed for Workbench, Insights.UI,
+OverlayLib and all three test owners; existing unrelated engine warnings remain. Rendering
+validation passes for 1,212 inputs and portability enforcement for 15,712 reviewed findings.
+
+Components commit `39d6cac3b156068dd5de7aa4d069218612325918` adds centered default placement
+to the existing floating-window runtime. Native reset places Toolbox, Object index and
+Inspector separately at the supported desktop viewport; saved coordinates remain supported.
+The signed commit was pushed on `codex/native-gantt-lifetime`, and the engine CI pin follows
+it. No sibling branch has been merged. The ordinary rebuilt host is healthy.
+
+Additional native evidence: Python environment creation with an owned temporary environment;
+clipboard node id readback; canvas image export saved as an attached artifact and decoded
+at 1,730 × 952 pixels. Remaining action coverage is still in progress.
+
 ## Evidence and retention
 
 Raw execution records, readbacks, screenshots, exports and test logs remain in the ignored

@@ -212,5 +212,45 @@ node, the actionable validation message, ignored replay and a successful correct
 Retain the existing lost-reply and stale-lifetime regression cases. No new UI/domain
 dependency, retry loop or validation bypass is needed.
 
+### Native date conversion repair entry
+
+Meeting creation reached PostgreSQL with a nonzero local offset and was rejected before
+insertion. Normalize parsed form dates to UTC in the existing create composer and node
+editor, including work-item due dates. Keep omitted optional values and unchanged edit
+echoes intact, preserving their original precision and compare-and-swap baseline. Invalid
+nonblank creation dates must fail explicitly rather than silently becoming null. No domain,
+database, provider or project dependency change is needed. Prove positive and negative
+offsets, local input, missing and invalid values, unchanged precision and real native
+meeting persistence/readback; build Workbench and discover the bounded owning tests.
+
+### Object-index graph action repair entry
+
+The index selects a node while reconnect is armed and bypasses the original captured
+dependency owner when connecting. Route both intents through the same existing reconnect
+and dependency workflows used by the canvas. Preserve their captured source, admission,
+expected graph/node state, outcome handling and one-shot ownership. Add native-host tests
+for both actions and stale-source rejection through the index callback. No new mutation
+service or renderer-side persistence is needed.
+
+### Duplicate prompt projection repair entry
+
+Creating Flow, Session or Step persists a native node bound to its prompt artifact; the
+gallery contributor then adds a second node for the same artifact. Suppress only redundant
+unreferenced gallery projections. Retain a legacy projected identity if it has a saved
+layout, a canonical child or a user link, so existing graph references cannot disappear.
+Build hash sets once per assembly from the already loaded nodes/links; add no database
+roundtrips or writes. Preserve standalone gallery prompts and canonical node kinds, bindings
+and positions. Prove each retained-reference case and the ordinary single-node case.
+
+### Floating-window default placement
+
+Toolbox and Object index both default to the same left position, obscuring the controls.
+The Components MCP recommends the existing CanvasFloatingWindow/OverlayWindow owner; its
+runtime currently implements only left and right defaults. Add the existing placement
+protocol's top-center option in OverlayLib and select it for Object index. Saved coordinates,
+clamping, safe toolbar inset, resizing and narrow-container behavior take precedence exactly
+as before. Verify three simultaneous windows at the supported desktop size, manual drag,
+reset and reload through the native UI. No product CSS or additional overlay owner is needed.
+
 Closure: BUI-1 is proven. BUI-2 and the additional stale-editor checks remain in progress.
 Historical cleanup denials and open P28 work remain recorded in preceding validation documents.

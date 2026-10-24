@@ -253,15 +253,12 @@ public partial class ProjectStructurePage {
     }
 
     private async Task FocusInsightsAsync(InsightsContext context, string nodeId) {
+        if (!string.IsNullOrWhiteSpace(reconnectNodeId)) {
+            await HandleReconnectSelectionAsync(nodeId);
+            return;
+        }
         if (IsDependencyMode && !string.IsNullOrWhiteSpace(linkModeSourceId) && linkModeSourceId != nodeId) {
-            var sourceId = linkModeSourceId;
-            await ProjectWorkbenchService.LinkObjectsAsync(context.Origin.ProjectId, sourceId, nodeId,
-                ProjectObjectLinkKind.DependsOn, expectedProjectAdmission: context.Native.Admission);
-            RecordInsightsEffect(context, "Dependency", [sourceId, nodeId], [sourceId, nodeId], "The dependency was added.");
-            if (IsCurrentInsights(context)) {
-                await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
-                await ReloadSurfaceAsync(nodeId);
-            }
+            await CreateDependencyAsync(linkModeSourceId, nodeId);
             return;
         }
         await SelectInsightsAsync(context, [nodeId]);

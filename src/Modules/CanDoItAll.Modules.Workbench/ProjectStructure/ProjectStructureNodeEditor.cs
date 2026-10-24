@@ -543,7 +543,7 @@ internal static class ProjectStructureNodeEditor
             return currentValue;
         }
         return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed)
-            ? parsed : throw new InvalidOperationException($"{key} must be a date and time.");
+            ? parsed.ToUniversalTime() : throw new InvalidOperationException($"{key} must be a date and time.");
     }
 
     private static TEnum ResolveEnum<TEnum>(

@@ -3,10 +3,12 @@ using System.Data.Common;
 using Bunit;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Structure.UI;
+using CanDoItAll.Workbench.Insights.UI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -17,6 +19,42 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureGraphLifetimeTests {
+    [Theory]
+    [InlineData("reconnect", false)]
+    [InlineData("reconnect", true)]
+    [InlineData("connect", false)]
+    [InlineData("connect", true)]
+    public async Task Index_graph_actions_use_the_original_source_and_report_stale_rejection(string action, bool changeSource) {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var project = (await projects.SaveAsync(new() { Name = "Index graph owner" })).Value;
+        var rootId = $"project:{project:D}";
+        var source = await workbench.CreateObjectAsync(project, new(ProjectObjectType.Note, "Source", "", "Original", rootId));
+        var target = await workbench.CreateObjectAsync(project, new(ProjectObjectType.Note, "Target", "", "Untouched", rootId));
+        var page = Render(harness, project);
+        var canvas = page.FindComponent<CanvasWorkbench>().Instance;
+        await page.InvokeAsync(() => canvas.OnSelectionChanged(source.Id, JsonSerializer.Serialize(new[] { source.Id })));
+        await page.InvokeAsync(() => canvas.OnContextAction(source.Id, action, source.X, source.Y));
+        if (changeSource) {
+            await workbench.ReclassifyObjectAsync(project, source.Id,
+                new(ProjectObjectType.ProjectBlock, "decision", "Changed source", "", source.Notes) {
+                    ExpectedNode = source, ExpectedProjectAdmission = (await workbench.GetStructureAsync(project)).ExpectedProjectAdmission
+                });
+        }
+        await page.InvokeAsync(() => page.Find("[data-testid='project-structure-object-index-toggle']").ClickAsync(new MouseEventArgs()));
+        var index = page.FindComponent<ProjectStructureObjectIndexWindow>().Instance;
+        await page.InvokeAsync(() => index.OnSelectNode.InvokeAsync(new InsightsFocusIntent(index.Origin, target.Id)));
+        var outcome = Assert.Single(page.Instance.AuthoringOutcomes);
+        Assert.Equal(changeSource ? ProjectStructureAuthoringResultKind.Rejected : ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
+        var stored = await workbench.GetStructureAsync(project);
+        var persistedSource = Assert.Single(stored.Nodes, node => node.Id == source.Id);
+        Assert.Equal(changeSource ? "Changed source" : source.Title, persistedSource.Title);
+        Assert.Equal(action == "reconnect" && !changeSource ? target.Id : rootId, persistedSource.ParentId);
+        Assert.Equal(action == "connect" && !changeSource, stored.Links.Any(link =>
+            link.SourceId == source.Id && link.TargetId == target.Id && link.Kind == ProjectObjectLinkKind.DependsOn));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -291,7 +329,11 @@ public sealed class ProjectStructureGraphLifetimeTests {
         var root = await workbench.CreateObjectAsync(project, new(ProjectObjectType.Note, "Original", "", "Original", $"project:{project:D}"));
         var page = Render(harness, project);
         await ClipboardAsync(page, CanvasWorkbenchClipboardAction.Copy, [root.Id]);
-        await projects.DeleteAsync(project, expectedProjectAdmission: (await projects.GetAsync(project)).ExpectedProjectAdmission);
+        var native = harness.Context.Services.GetRequiredService<ProjectNativeLifecycleOperations>();
+        var context = await native.GetContextAsync();
+        var original = native.Freeze(new ProjectLifecycleCommand.Delete((await projects.GetAsync(project)).ExpectedDefinition!),
+            ProjectNativeLifecycleOperations.Scope(context), context, Guid.NewGuid());
+        Assert.IsType<ProjectLifecycleOutcome.Accepted>(await native.DispatchAsync(original.Submission));
         Assert.True((await projects.CreateAsync(project, new() { Name = "Replacement clipboard lifetime" })).IsSuccess);
         var replacement = await workbench.CreateObjectAsync(project, new(ProjectObjectType.Note, "Replacement", "", "Replacement", $"project:{project:D}"));
         await using (var db = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync()) {
