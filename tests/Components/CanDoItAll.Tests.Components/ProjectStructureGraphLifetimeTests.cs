@@ -19,6 +19,36 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureGraphLifetimeTests {
+    [Fact]
+    public async Task Disposal_waits_for_an_index_selection_write_before_releasing_its_gate() {
+        var gate = new ViewStateWriteGate();
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider => new PooledDbContextFactory<WorkbenchDbContext>(
+                new DbContextOptionsBuilder<WorkbenchDbContext>(provider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>())
+                    .AddInterceptors(gate).Options));
+        });
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var project = (await projects.SaveAsync(new() { Name = "Retiring index selection" })).Value;
+        var node = await workbench.CreateObjectAsync(project, new(ProjectObjectType.Note, "Selection", "", "Retained", $"project:{project:D}"));
+        var page = Render(harness, project);
+        await page.InvokeAsync(() => page.Find("[data-testid='project-structure-object-index-toggle']").ClickAsync(new MouseEventArgs()));
+        var index = page.FindComponent<ProjectStructureObjectIndexWindow>().Instance;
+        gate.Armed = true;
+        var selection = page.InvokeAsync(() => index.OnSelectNode.InvokeAsync(new InsightsFocusIntent(index.Origin, node.Id)));
+        Task disposal = Task.CompletedTask;
+        try {
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await page.InvokeAsync(() => { disposal = harness.Context.DisposeRenderedComponentsAsync(); });
+            Assert.False(disposal.IsCompleted);
+        } finally {
+            gate.Release.TrySetResult();
+        }
+        await Task.WhenAll(selection, disposal).WaitAsync(TimeSpan.FromSeconds(20));
+        var persisted = CanvasWorkbenchUiState.Parse((await workbench.GetStructureAsync(project)).ViewStateJson);
+        Assert.Equal(new[] { node.Id }, persisted.SelectedNodeIds);
+    }
+
     [Theory]
     [InlineData("reconnect", false)]
     [InlineData("reconnect", true)]

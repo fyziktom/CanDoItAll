@@ -2056,7 +2056,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
     }
 
-    private async Task<bool> PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default) {
+    private Task<bool> PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default)
+        => IsCurrentAction(context) ? TrackAuthoringOperationAsync(PersistCapturedViewStateCoreAsync(context, stateJson, cancellationToken)) : Task.FromResult(false);
+
+    private async Task<bool> PersistCapturedViewStateCoreAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken) {
         await canvasViewStateCommitGate.WaitAsync(cancellationToken);
         try {
             if (!IsCurrentAction(context)) {

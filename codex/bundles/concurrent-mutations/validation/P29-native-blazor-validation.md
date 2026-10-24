@@ -170,6 +170,23 @@ Additional native evidence: Python environment creation with an owned temporary 
 clipboard node id readback; canvas image export saved as an attached artifact and decoded
 at 1,730 × 952 pixels. Remaining action coverage is still in progress.
 
+## View-state disposal repair
+
+Diagnostics exposed a selection save releasing its semaphore after page disposal. The
+shared view-state persistence entry now tracks its actual operation in the existing page
+drain and rejects retired entries before touching the gate. A controlled database-write
+test proves disposal waits for an index selection, then releases cleanly and retains the
+committed selection. All 25 discovered graph-lifetime cases pass, none skipped. Workbench
+and its component test owner build in standard Release. Rendering passes for 1,212 inputs;
+regenerated portability enforcement passes with 15,712 reviewed findings unchanged.
+
+Native follow-up also passed JSON/log/plain-text authoring, screenshot attachment, a new
+synthetic Generic vault record and its reference, and one configured image-provider
+generation through the native dialog. The file browser's filter and inline read-only view
+retain the reconciled text and Unicode. Stored summary exports render their Review/78%
+workbook row and the unscheduled Mermaid timeline. Its empty action menu is reported as
+unavailable; no download action is claimed for that collection.
+
 ## Evidence and retention
 
 Raw execution records, readbacks, screenshots, exports and test logs remain in the ignored

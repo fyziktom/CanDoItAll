@@ -252,5 +252,16 @@ clamping, safe toolbar inset, resizing and narrow-container behavior take preced
 as before. Verify three simultaneous windows at the supported desktop size, manual drag,
 reset and reload through the native UI. No product CSS or additional overlay owner is needed.
 
+### View-state disposal repair entry
+
+Native navigation logged SemaphoreSlim.Release after disposal while an index selection was
+still persisting. Canvas callbacks already participate in the page's authoring-operation
+drain; an Insights callback reaches the same persistence gate without that tracking. Track
+the actual persistence task at its shared entry point, reject retired entries before gate
+access, and retain the existing ordered writes and disposal drain. Do not hide disposal
+exceptions or remove serialization. Hold an index-originated database write, dispose the
+rendered page, prove disposal waits, then release and verify the accepted selection. Retain
+the existing window-order, navigation and graph lifetime cases in the focused selection.
+
 Closure: BUI-1 is proven. BUI-2 and the additional stale-editor checks remain in progress.
 Historical cleanup denials and open P28 work remain recorded in preceding validation documents.

@@ -44,6 +44,11 @@ public partial class ProjectStructurePage {
         }
     }
 
+    private async Task<T> TrackAuthoringOperationAsync<T>(Task<T> operation) {
+        await TrackAuthoringOperationAsync((Task)operation);
+        return await operation;
+    }
+
     private static bool IsKnownGraphRejection(Exception failure)
         => failure is ArgumentException or InvalidDataException or ProjectWriteAdmissionRejectedException or
             ProjectStructureClipboardMutationInputException or ProjectStructureEditConflictException;
