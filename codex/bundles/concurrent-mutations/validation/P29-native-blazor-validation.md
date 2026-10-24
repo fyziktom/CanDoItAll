@@ -306,7 +306,10 @@ markers, four persisted task schedules, one dependency, reconciled Unicode file 
 transcript outputs and transferred child Evidence. The fifth task remains explicitly
 projected until its schedule is edited. The 88-entry creation matrix reconciles again.
 Documentation validation passes for 438 maintained Markdown files. The maintained bundle
-secret scan covers 1,010 text files with zero findings and no oversized or unreadable skips.
+secret scan covers 1,011 text files with zero findings and no oversized or unreadable skips.
+The [closure and architecture review](../reviews/P29-native-closure-review.md) records the
+signed implementation checkpoint, source-boundary review, CodeAnalytics health limitation,
+desktop composition findings and the remaining exact cleanup blocker.
 
 ## Creation catalog and operation coverage
 
