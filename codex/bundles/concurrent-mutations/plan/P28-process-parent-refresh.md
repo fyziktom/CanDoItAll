@@ -17,7 +17,8 @@ remains gated by the [invocation/recovery design](P28-process-refresh-recovery.m
 pass all 124 selected cases across a verified test-only repair, with final static/source/
 resource closure. [Actual older-producer retention](../validation/2026-10-23-process-refresh-journal-compatibility.md)
 passes ten cases in both snapshot modes, with restored outputs and final static checks.
-Its temporary junction/checkout cleanup awaits an exact retry approval; the owner/delivery
+Its temporary junction/checkout cleanup remains blocked after automatic review rejected
+the exact user-authorized retry; the owner/delivery
 checkpoints below remain open.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.

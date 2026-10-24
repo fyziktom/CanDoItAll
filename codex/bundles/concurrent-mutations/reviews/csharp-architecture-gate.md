@@ -1,11 +1,35 @@
 # C# architecture entry review
 
+## C# Architecture Gate Result: refresh delivery continuation checkpoint (2026-10-23)
+
+Status: source/dependency review and all 36 new cases pass; final behavioral closure awaits
+the 74 existing owner regressions and final resource reconciliation in the
+[validation record](../validation/2026-10-23-process-refresh-delivery.md).
+
+The Application coordinator composes original stop/account/capture ports, deriving its
+actor from the admitted action. The accounting owner shares its original-input validation
+with a completed-receipt read; no duplicate full receipt read is introduced. Stopped capture
+draining bypasses live reconciliation while preserving the journal/budget guards. Nested
+records describe typed outcomes, not hidden owner implementations. No partial expansion,
+new project reference, provider dependency, service locator, schema or worker is added.
+
+Snapshot `snap-20261023234316-59d5ae0f` contains 521 documents, 1,340 types and 10,827 members
+across four projects, with six scoped project references and no cycles. The coordinator has
+eight members; neither it nor the accounting owner has a reported finding. The existing
+123 WS0002 NuGet audit errors and DI0002 warning limit collector claims; actual direct builds
+and registered consumer tests verify compilation and DI. Thirty production/supporting output
+hashes remain unchanged across the test-only repair. Final portability passes unchanged.
+
+The continuation can proceed through its remaining regression proof. Queue staging, wake
+revision races, old-writer rollout, source revocation, explicit unknown-work resolution,
+capacity and public activation still need their own proof. SPA remains on its review branch.
+
 ## C# Architecture Gate Result: actual older-producer retention (2026-10-23)
 
 Status: Pass with follow-up for the
 [ten-case compatibility check](../validation/2026-10-23-process-refresh-journal-compatibility.md).
-The temporary junction/checkout cleanup awaits an exact retry approval after automatic
-review rejected the junction removal. Delivery/public activation remains closed.
+The temporary junction/checkout cleanup remains blocked after automatic review rejected
+the exact user-authorized retry too. Delivery/public activation remains closed.
 
 ### Findings and dependency direction
 

@@ -140,6 +140,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessDecisionRefreshCaptureQuery, EfProcessDecisionRefreshCaptureQuery>();
         services.TryAddScoped<IProcessDecisionRefreshCaptureStore, EfProcessDecisionRefreshCaptureStore>();
         services.TryAddScoped<ProcessDecisionRefreshCaptureCoordinator>();
+        services.TryAddScoped<ProcessDecisionRefreshDeliveryCoordinator>();
         services.TryAddScoped<ProcessDecisionTerminalAccountingCoordinator>();
         services.TryAddScoped<ProcessDecisionFinalizationCoordinator>();
         services.TryAddScoped<IProcessDecisionRootQuery, EfProcessDecisionRootQuery>();

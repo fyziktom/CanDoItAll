@@ -1,10 +1,19 @@
 # Concurrent mutations implementation bundle
 
-Current work: [actual older-producer retention](validation/2026-10-23-process-refresh-journal-compatibility.md)
+Current work: [refresh delivery continuation](validation/2026-10-23-process-refresh-delivery.md)
+passes its 36 new cases across a verified test-only repair. Original receipts resume the
+stop/account/capture flow, cancellation drains known work, and unknown work stays funded.
+Final portability passes without a baseline change; the 74 existing owner regressions
+are still running. Durable queue/wake delivery, source revocation, unknown-work resolution,
+explicit retry, capacity and public activation remain open. SPA stays untouched on
+**codex/concurrent-mutations** for colleague review. Historical cleanup denials remain,
+including the exact user-authorized junction retry rejected by automatic review.
+
+Preceding work: [actual older-producer retention](validation/2026-10-23-process-refresh-journal-compatibility.md)
 passes all ten cross-binary cases. The previous producer preserves all 36 mapped Process
 tables across five states in both snapshot modes. Normal outputs are restored and final
 portability passes without a baseline change. Cleanup of the temporary build junction and
-checkout awaits an exact retry approval after automatic review rejected the junction removal.
+checkout remains blocked: automatic review rejected the exact user-authorized retry too.
 Delivery, unknown-work resolution, explicit retry and public refresh/Replan remain open.
 SPA stays untouched on **codex/concurrent-mutations** for colleague review.
 

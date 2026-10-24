@@ -1,7 +1,7 @@
 # Actual older-producer refresh journal retention
 
 Status: all ten cross-binary behavioral cases, final restoration and static checks pass.
-Temporary junction/checkout cleanup awaits the exact retry approval described below.
+Temporary junction/checkout cleanup remains blocked after the user-authorized retry was rejected.
 This qualifies the specified historical
 read/replay paths; it does not activate delivery, retry or public refresh/Replan.
 
@@ -113,9 +113,10 @@ distinguished from the passing final qualification.
 Automatic approval review rejected the non-recursive removal of the verified temporary
 junction `C:\repositories\jrc` with **blocked by policy**, before the command executed.
 It points to the owned managed checkout
-`C:\Users\lucys\.codex\worktrees\jrc\CanDoItAll`. The exact retry was requested; both
-resources remain preserved until that cleanup can proceed. The checkout has not yet been
-archived. `alias-cleanup-blocked.json` records the verified path/target and rejection.
+`C:\Users\lucys\.codex\worktrees\jrc\CanDoItAll`. The user authorized that exact retry.
+Automatic review again rejected the verified non-recursive command before execution with
+**blocked by policy**. Both resources remain preserved; the checkout has not been archived.
+`alias-cleanup-blocked.json` and `alias-cleanup-authorized-retry.json` retain both rejections.
 
 The exact historical producer can safely read/replay these five retained states in both
 snapshot modes. This is not a mixed-version writer qualification, a schema downgrade

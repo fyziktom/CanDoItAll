@@ -211,7 +211,9 @@ public sealed class ProcessDecisionRefreshCaptureCoordinator(IProcessDecisionRef
         }
         ProcessDecisionRefreshCaptureSelection? selected = null;
         try {
-            selected = await query.ReadAsync(state, identity.AdmissionId, cancellationToken).ConfigureAwait(false);
+            if (!Stopped(state.Status)) {
+                selected = await query.ReadAsync(state, identity.AdmissionId, cancellationToken).ConfigureAwait(false);
+            }
         } catch (Exception failure) when (failure is ProcessExecutionAuthorityMismatchException or
                 ProcessDecisionSourceProjectionRequiredException or ProcessAcceptedExecutionInputRequiredException) {
             logger.LogWarning("Refresh {AdmissionId} in run {RunId} lost source eligibility while recovering known work: {FailureKind}.",

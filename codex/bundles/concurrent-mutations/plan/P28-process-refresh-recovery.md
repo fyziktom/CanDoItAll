@@ -7,7 +7,7 @@ pass 124 distinct selected cases, full static/source/output checks and new resou
 The [actual previous producer](../validation/2026-10-23-process-refresh-journal-compatibility.md)
 passes all ten retained-state cases without changing any of the 36 mapped Process tables.
 Normal output restoration and final static checks pass; temporary junction/checkout cleanup
-awaits an exact retry approval after automatic review rejected the junction removal.
+remains blocked: automatic review rejected the exact user-authorized junction retry too.
 They follow the
 [registered producer](../validation/2026-10-23-process-refresh-capture-producer.md).
 Behavioral proof tier. The public refresh/replan gate remains closed.
@@ -60,6 +60,49 @@ without refactoring an unrelated queue into a new generic framework. The generic
 outbox does not yet provide the required claim/expiry behavior or original refresh identity.
 
 ## Original invocation protocol
+
+### Delivery continuation entry decision
+
+Continue the Behavioral checkpoint with one registered Application coordinator, selected
+only by original run/admission identity. It derives the actor from the validated retained
+admission, consults completion receipts before stopping again, delegates original-child
+stop/accounting to existing owners, then invokes the journal-aware capture coordinator.
+Typed outcomes distinguish completed original work, advanced successor, stopped refresh,
+source projection/review, contention, pending child work and unknown/legacy capture work.
+The coordinator does not create a replacement admission or infer work from a timeout.
+
+Cancellation owns the original child's terminal accounting. Refresh delivery may finish
+its own action without asserting that the Process is cancelled, provided it has no open
+capture reservation. With a reservation, Reserved/Returned must drain first; Invoking and
+legacy evidence remain pending with their grant held. A nested run waits for cancellation's
+runtime sweep to stop it before draining. In the capture resume path, an already stopped
+runtime must bypass the live reconciliation query: cancellation may have finalized that
+decision while a root capture still needs exact settlement. Original journal/receipt and
+budget guards still validate the drain. This is the concrete defect this slice repairs.
+
+No queue, schema, worker, public endpoint, retry authorization, new project reference or
+Workbench dependency is introduced here. The later durable queue will consume this
+continuation; it must retain admission atomically and supply bounded execution/concurrency.
+The accounting owner exposes validated completed-receipt reads, sharing its existing
+original-input validation. Delivery reads that receipt once and never repeats a child
+stop merely to discover a completed accounting action. Retained runtime JSON is still
+part of that receipt; measure it with the queue's capacity gate rather than claiming
+constant-history cost. A verified cancellation that wins during stop produces contention
+and hands work to cancellation; a live source-authority mismatch requires source projection.
+Other invalid evidence/errors propagate rather than becoming successful delivery.
+
+Use registered PostgreSQL/Workbench producers in both snapshot modes. Prove normal advance,
+accepted original effects, stop/account/return/successor acknowledgement loss, cancellation
+before accounting and during capture, cancellation-finalization before root capture drain,
+unknown and legacy grant retention, and typed pending stop outcomes. Assert exact budgets,
+single invocation/successor, original actor and no duplicate Project writes. Use the new
+`ProcessDecisionRefreshDeliveryTests` and `ProcessDecisionRefreshDeliveryRecoveryTests`
+Integration filters, with exact counts recorded before execution. Re-run the changed capture
+coordinator and its boundary/concurrency owners. Registering this one scoped Application
+service invalidates its DI/real-consumer proof, bounded by those integration paths; it does
+not change global composition or authorize an unfiltered Stable run. Build Application,
+Modules.Processes and Integration in standard Release; run final portability, documentation,
+source/output/resource checks and the architecture gate. Existing broader failures remain.
 
 At most two stage rows belong to one admitted refresh: root capture plus local inheritance
 for RunSnapshot, or local capture for StepSnapshot. Their keys bind original root/run/action,
@@ -132,6 +175,59 @@ atomic competing claims, explicit pending reasons and bounded retry delays. A de
 may be reclaimed; that does not authorize repeating an admitted capture invocation. Stop,
 accounting, capture and successor must each reconcile original receipts before new work.
 Poisoned evidence must remain visible and throttled rather than busy-looping or disappearing.
+
+### Queue design refinement from the continuation review
+
+The continuation's typed outcomes make a single undifferentiated retry delay unsuitable.
+Unknown capture work can persist indefinitely. Repeatedly loading its full runtime and
+receipt every two seconds would turn an unavailable original owner into permanent database
+load. The queue checkpoint must distinguish runnable/transient work, waiting for the
+original invocation, operator review and a completed original delivery. It must not label
+unknown work completed or authorize a replacement invocation.
+
+Use one small row per original run/admission, with protocol version, original root,
+database-time due/lease timestamps, token, lease generation, progress revision, a wake
+revision and typed outcome/pending fields. Material and runtime JSON remain with their
+existing owners. A partial due index excludes completed and parked rows. Claim uses
+`SKIP LOCKED`; checkpoint requires the exact token/generation/revision and a lease that
+is still live by database time. No worker holds the claim transaction while calling the
+continuation. The receipt FK prevents delivery identity from surviving removal of its
+original admission. Replay never resets due state or creates another row.
+
+Park an unknown new-protocol invocation until its original Return wakes delivery in that
+same narrow journal transaction. Increment a wake revision even while delivery is leased;
+a pending checkpoint that observed an older revision must release as runnable rather than
+overwrite that wake with a parked state. A terminal business receipt remains authoritative
+even when cancellation later changes the Process. Claim/checkpoint never acquire the root
+fence, so Return's root-fence-then-delivery-row order does not gain a reverse lock path.
+Prove Return versus park/checkpoint, expired leases and a late original return with actual
+SQL races before relying on this mechanism. Legacy unknown reservations require review;
+there is no fabricated Return or zero settlement for them.
+
+Original child work has no cross-module completion notification contract here. Retry that
+typed pending outcome with a bounded, capped delay and fair due selection. Do not introduce
+an Agent/Workbench dependency on the Process queue. Explicit transient failures may back
+off; invalid identity/protocol evidence must be visible as repair-required. Do not add an
+unbounded timer/task per item or repeatedly scan terminal history. The worker owns a finite
+number of DI scopes and in-memory capture payloads. Confirm actual stop/account/capture
+duration before fixing its lease/slice defaults: 25/60 seconds remain a candidate, not a
+qualified bound for the entire sequential continuation.
+
+Activation must also address admissions and in-flight invocations created before the new
+delivery protocol. A replay of an old admission must not silently manufacture authorization.
+An old producer does not publish the new wake revision; current older-reader retention
+proof alone does not qualify mixed-version writers or allow an event-only queue to assume
+every old Return wakes it. Keep the worker disabled until the rollout/retained-admission
+plan and actual older-writer behavior are qualified. A bounded explicit adoption command
+may reuse a validated original admission, but its ownership and idempotence require their
+own proof. No such command or automatic backfill is implemented by this checkpoint.
+
+Source revocation/profile changes are a separate gate from cancellation. A current profile
+must not be substituted for the original owner to make accounting succeed. Exact returned
+work remains retained if the original owner cannot be reopened. Exercise the registered
+Workbench receipt reader and capturer under revocation and changed profile generations,
+and distinguish an explicit repair requirement from transient contention before public
+activation. The current cancellation tests do not claim to cover those cases.
 
 An additive migration needs exact check constraints, indexes and foreign-key ownership.
 Unknown/new protocol records must not become legacy never-invoked work. Run actual older

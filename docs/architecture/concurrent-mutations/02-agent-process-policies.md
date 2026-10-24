@@ -663,3 +663,18 @@ mixed-version writers are not qualified. Added-cost measurement, unknown-work re
 explicit retry and durable delivery remain gates before worker/public activation.
 An inherited Agent continues using its admitted material until its owner closes that work;
 there is no subscription that silently replaces input during execution.
+
+The internal [delivery continuation](../../../codex/bundles/concurrent-mutations/validation/2026-10-23-process-refresh-delivery.md)
+composes the existing stop, accounting and capture owners from the retained run/admission
+identity. It derives the actor from that admission and consults completion receipts before
+repeating a stop. The accounting owner validates completed receipts with one read. Typed
+outcomes preserve the distinction between pending child work, unknown capture invocation,
+legacy unknown reservation, source projection, review, contention and completed delivery.
+
+Cancellation owns terminal accounting for the original child. Refresh still owns draining
+its Reserved/Returned capture work, even if cancellation has already finalized the local
+decision. That drain uses original journal/budget evidence without requiring a live
+reconciliation. Unknown work remains funded and requires its original return or an explicit
+resolution. A stopped refresh continuation does not itself assert that the Process is
+fully cancelled. The durable queue, wake/park race, old-writer rollout, source revocation
+and sustained capacity gates remain before enabling background or public refresh.
