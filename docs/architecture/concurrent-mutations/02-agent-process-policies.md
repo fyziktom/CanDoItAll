@@ -660,7 +660,7 @@ reads use one SQL statement. The [actual older-producer check](../../../codex/bu
 passes ten retained-state cases across both snapshot modes, preserving all 36 mapped
 Process tables. This qualifies read/replay compatibility for the recorded binaries;
 mixed-version writers are not qualified. Added-cost measurement, unknown-work resolution,
-explicit retry and durable delivery remain gates before worker/public activation.
+explicit retry and background delivery remain gates before worker/public activation.
 An inherited Agent continues using its admitted material until its owner closes that work;
 there is no subscription that silently replaces input during execution.
 
@@ -676,7 +676,7 @@ its Reserved/Returned capture work, even if cancellation has already finalized t
 decision. That drain uses original journal/budget evidence without requiring a live
 reconciliation. Unknown work remains funded and requires its original return or an explicit
 resolution. A stopped refresh continuation does not itself assert that the Process is
-fully cancelled. The durable queue, wake/park race, old-writer rollout, source revocation
+fully cancelled. Background delivery, old-writer rollout, source revocation
 and sustained capacity gates remain before enabling background or public refresh.
 
 New admissions now stage a small durable delivery row in their original transaction.

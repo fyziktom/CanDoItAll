@@ -2,9 +2,9 @@
 
 ## C# Architecture Gate Result: refresh delivery queue persistence (2026-10-24)
 
-Status: source/dependency review passes with three reviewed informational findings;
-Behavioral closure awaits the [69-case qualification](../validation/2026-10-24-process-refresh-delivery-queue.md)
-and final static/source/resource checks.
+Status: Pass with follow-up for the [69-case qualification](../validation/2026-10-24-process-refresh-delivery-queue.md),
+including final static/source/output, secret and new resource closure. Three informational
+member-count findings are reviewed below. Worker/public activation remains gated.
 
 Application owns scheduling contracts; Persistence stages metadata in the existing
 admission UOW and wakes it in the capture Return transaction. The module supplies one

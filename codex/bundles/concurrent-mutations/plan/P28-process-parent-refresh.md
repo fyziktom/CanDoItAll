@@ -20,10 +20,10 @@ passes ten cases in both snapshot modes, with restored outputs and final static 
 Its temporary junction/checkout cleanup remains blocked after automatic review rejected
 the exact user-authorized retry. The [registered delivery continuation](../validation/2026-10-23-process-refresh-delivery.md)
 passes 110 distinct selected cases with final static/source/output and new resource closure.
-Durable queue/wake delivery, source revocation, unknown-work resolution, explicit retry,
+Background delivery, source revocation, unknown-work resolution, explicit retry,
 capacity and public activation remain open.
 The [queue persistence checkpoint](../validation/2026-10-24-process-refresh-delivery-queue.md)
-passes 33 new cases and final portability; existing regression/resource closure is pending.
+passes all 69 selected cases with final static/source/output, secret and new resource closure.
 It adds durable scheduling metadata, without activating a worker or public refresh.
 Prerequisite P27 is
 signed backend `8b11d7d1c` and SPA `1139939`; both worktrees were clean at entry.

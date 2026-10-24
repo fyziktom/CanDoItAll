@@ -1,10 +1,10 @@
 # Requirements and closure ledger
 
 Current work: [atomic refresh delivery persistence](validation/2026-10-24-process-refresh-delivery-queue.md)
-passes its 33 new queue, wake and migration cases. Admission stages delivery atomically;
+passes all 69 selected cases. Admission stages delivery atomically;
 capture Return wakes it without losing a concurrent park or disturbing a live lease.
 All builds and final portability pass, with six reviewed generated metadata allowances.
-The 36 existing admission/journal regressions and final resource closure are still running.
+All admission/journal regressions, source/output identity, secret review and new resource closure pass.
 Worker activation, source revocation, legacy rollout, unknown-work resolution, retry and
 capacity remain open. SPA stays on **codex/concurrent-mutations** for colleague review.
 Historical cleanup denials remain, including the rejected user-authorized junction retry.

@@ -12,13 +12,13 @@ They follow the
 [registered producer](../validation/2026-10-23-process-refresh-capture-producer.md).
 The [registered delivery continuation](../validation/2026-10-23-process-refresh-delivery.md)
 passes all 110 distinct selected cases, final static/source/output checks and new resource
-closure. Durable queue/wake delivery, source revocation, unknown-work resolution, explicit
+closure. Background delivery, source revocation, unknown-work resolution, explicit
 retry and capacity remain open. Behavioral proof tier; the public refresh/replan gate remains closed.
 
 The [queue persistence checkpoint](../validation/2026-10-24-process-refresh-delivery-queue.md)
 implements atomic admission staging, bounded leases/checkpoints and original Return wake.
-Its 33 new cases, direct builds and final portability pass; 36 existing regressions and
-final resource closure are pending. Worker activation and old-writer rollout are not enabled.
+All 69 selected cases, direct builds, final portability, source/output identity, secret
+review and new resource closure pass. Worker activation and old-writer rollout are not enabled.
 
 ## Problem and bounded outcome
 
@@ -286,14 +286,49 @@ binary readers against retained old and new records; document whether each safel
 or remains pending. A downgrade must refuse to discard unresolved new evidence. No public
 API, worker default or automatic Replan admission changes in the persistence checkpoint.
 
+### Next worker boundary after queue persistence
+
+The scheduling port is now implemented; host execution remains a separate activation
+decision. Use a finite number of consumers, each with one async DI scope across claim,
+the awaited original continuation and checkpoint. The Process context factory is scoped;
+`ICanonicalRuntimeDatabase` is currently a singleton with an immutable resolved Profile.
+Reuse that binding throughout one delivery, and prove the registered path under the
+supported profile lifecycle. Do not select a different current profile between claim
+and checkpoint or substitute a current principal for the original admission actor.
+
+Map every typed continuation result explicitly. Advanced, CompletedOriginal and Stopped
+close scheduling; UnknownInvocation parks for its original Return; LegacyUnknown,
+SourceProjectionRequired and explicit review park for owner action. Pending stop/child,
+unsettled capture and contention yield with finite delay. Invalid retained evidence is
+visible as repair-required. Only classified transient failures may retry; an unclassified
+exception must retain identity and evidence and produce an actionable error, never a
+successful checkpoint or a guessed settlement. Measure and bound retry fairness before
+choosing defaults; the current row records monotonic progress, not an invocation count.
+
+Cancellation's two-second loop is not a refresh deadline. Bound the complete awaited
+stop/account/capture turn while leaving room for the capture's existing five-second
+returned-work drain. Deadline expiry may lose queue ownership; it must not discard the
+original task, dispose its live scope or free a consumer slot while its capture is still
+running. The original invocation token remains the only invocation authority. Bound the
+number of live scopes/tasks and report a non-cooperating owner; never accumulate detached
+tasks or infer zero work from lease expiry. Actual restart/late-Return tests, whole-turn
+duration and memory observations are prerequisites for enabling the hosted worker.
+
+The indexed queue still needs measured selection beside large retained terminal history,
+unrelated-root progress while a capture is slow, and bounded retry delay without hot-loop
+polling. Keep these measurements separate from test-suite duration. Existing business
+receipt/runtime reads have history-dependent cost, so constant-size queue rows do not
+establish constant-cost delivery. The next implementation must preserve the independent
+source-revocation, older-writer/adoption and explicit unknown-work resolution gates.
+
 ### Delivery owner analysis after storage implementation
 
-`ProcessDecisionRefreshCoordinator.AdmitAsync` currently commits only the original
-decision/scope intent. Delivery must be staged by that same UOW commit, as cancellation
-already does through `ProcessCancellationRecoveryStaging`; enqueueing afterwards leaves
-a crash gap. Use a refresh-specific row keyed by run/admission, foreign-keyed to its
-original receipt. A request replay must retain the original row and due state, not reset
-progress or manufacture another authorization.
+The pre-queue audit found that `ProcessDecisionRefreshCoordinator.AdmitAsync` committed
+only the original decision/scope intent. Queue persistence now stages delivery in that
+same UOW commit, following cancellation's atomic staging pattern; enqueueing afterwards
+would leave a crash gap. Its refresh-specific row is keyed by run/admission and
+foreign-keyed to the original receipt. Request replay retains the original row and due
+state without resetting progress or manufacturing another authorization.
 
 `EfProcessCancellationRecoveryQueue` supplies the applicable lease mechanics: a partial
 due index, `FOR UPDATE SKIP LOCKED`, database time, monotonically increasing lease and

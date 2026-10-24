@@ -1,7 +1,7 @@
 # Atomic Process refresh delivery and returned-work wake
 
-Status: all 33 new queue/wake/migration cases pass. The 36 existing owner regressions and
-final resource reconciliation remain in progress. Direct builds and final portability pass.
+Status: Pass for this Behavioral persistence checkpoint. All 69 selected cases, direct
+builds, final portability, source/output identity, secret review and new resource closure pass.
 This extends the qualified [original continuation](2026-10-23-process-refresh-delivery.md).
 No worker, public refresh/Replan activation, legacy adoption or capacity claim.
 
@@ -106,8 +106,25 @@ six allowances plus timestamp/count (15,703 to 15,709), with no policy change or
 entry. Final enforcement without `--write-baseline` passes. Portability/secret/rendering
 tool tests, rendering register, documentation and whitespace checks pass. Reviewed bulk
 scan JSON/CSV files were removed separately after exact path/hash checks; the compact
-summary and enforcement logs remain. Preliminary secret review passes; repeat it after
-final resource reconciliation and commit logs are captured.
+summary and enforcement logs remain. Final secret review passes, including supplementary
+excluded files and the private fixture sentinel; only three exact reviewed script
+expressions remain. The initial static refusal and both observer setup failures are retained.
+
+The existing admission cases pass 17/17 in 216.718 seconds, journal persistence 16/16 in
+222.500 seconds and journal migration 3/3 in 52.315 seconds. All 69 cases ran on the pinned
+candidate without a source/test repair. Signed implementation checkpoint
+`f4a51c39a9ad8954f7f11de884278d17f9bb0bea` retains those exact source and output identities.
+
+The successful observer covers all six execution commands. Final reconciliation finds
+zero remaining owned test processes, database-name changes or temporary-path deltas.
+All command records reconcile, with the observer setup refusal and first baseline
+enforcement refusal explicitly classified as repaired expected failures. The shared
+isolated PostgreSQL fixture remains for subsequent lanes; no replacement stack or host
+was created. Ordinary port 5032 and historical blocked resources remain preserved.
+
+Closure gate: Pass for atomic scheduling, lease/checkpoint ownership and original Return
+wake. The subsequent worker can rely on these invariants after satisfying the remaining
+activation gates below. This does not close the user's whole-engine E2E requirement.
 
 ## Open downstream gates
 
