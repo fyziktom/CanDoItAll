@@ -187,6 +187,24 @@ retain the reconciled text and Unicode. Stored summary exports render their Revi
 workbook row and the unscheduled Mermaid timeline. Its empty action menu is reported as
 unavailable; no download action is claimed for that collection.
 
+## Consecutive hierarchy edits
+
+Native descendant transfer created an owned child with exactly one moved Evidence node.
+Creating and attaching a second owned project succeeded. Its immediate reconnect exposed
+an accepted recovery record blocking the next edit. The host now clears only its own exact
+accepted record after reconciliation and publication by that original reload. A superseded
+reload cannot acknowledge another read. The shared pending-operation guard is unchanged;
+retired openings, failed retention, failed refresh and changed or failed cleanup retain
+recovery evidence. Cleanup failure still reports the write as committed.
+
+All 28 discovered hierarchy-lifetime cases pass, none skipped, including consecutive
+add/reconnect, acceptance retention failure, cleanup failure and retirement during refresh.
+The first 27-case execution passed before the explicit publication callback and additional
+retirement case. Final Workbench and component-owner Release compilation passed with
+existing warnings. Rendering passes for 1,212 inputs and regenerated final portability
+enforcement passes with 15,712 reviewed findings unchanged. Native reconnection on the
+rebuilt host and final coverage closure remain pending.
+
 ## Evidence and retention
 
 Raw execution records, readbacks, screenshots, exports and test logs remain in the ignored

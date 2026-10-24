@@ -549,7 +549,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
     }
 
-    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null)
+    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null, Action? onPublished = null)
     {
         IReadOnlyList<string>? liveSelectionSnapshot = surface?.ProjectId == ProjectId
             ? selectedNodeIds.ToArray()
@@ -741,6 +741,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             if (IsCurrentSurfaceReload(request))
             {
                 agentChatContextAccessState = AgentChatContextAccessState.Ready;
+                onPublished?.Invoke();
             }
         }
         catch (Exception exception)

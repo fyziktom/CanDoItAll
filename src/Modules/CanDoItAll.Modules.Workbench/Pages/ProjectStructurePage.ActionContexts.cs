@@ -146,15 +146,18 @@ public partial class ProjectStructurePage {
         }
     }
 
-    private async Task RefreshAuthoringSurfaceAsync(ProjectStructureAuthoringOpening opening,
+    private async Task<bool> RefreshAuthoringSurfaceAsync(ProjectStructureAuthoringOpening opening,
         ProjectStructureAuthoringOutcome outcome, string selection, Func<bool> canPublish) {
+        var published = false;
         try {
-            await ReloadSurfaceAsync(selection, () => IsCurrentAction(opening.Context) && canPublish());
+            await ReloadSurfaceAsync(selection, () => IsCurrentAction(opening.Context) && canPublish(), () => published = true);
+            return published && IsCurrentAction(opening.Context) && canPublish();
         } catch (Exception exception) {
             RecordAuthoringOutcome(opening, outcome with {
                 Message = $"{outcome.Message} The accepted change could not be refreshed. Reload the original project; do not repeat the write.",
                 Failure = exception
             }, IsCurrentAction(opening.Context) && canPublish());
+            return false;
         }
     }
 

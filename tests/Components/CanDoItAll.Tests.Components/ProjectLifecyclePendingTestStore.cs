@@ -9,6 +9,7 @@ internal sealed class ProjectLifecyclePendingTestStore : IProjectLifecyclePendin
     private long revision;
     public Func<Task>? BeforeAccept { get; set; }
     public Exception? AcceptFailure { get; set; }
+    public Exception? ClearFailure { get; set; }
     public IReadOnlyCollection<ProjectLifecyclePendingRecord> Records => records.Values;
     public int DispatchClaims { get; private set; }
 
@@ -96,7 +97,7 @@ internal sealed class ProjectLifecyclePendingTestStore : IProjectLifecyclePendin
         => Clear(original, current => current.Stage == ProjectPendingStage.Prepared);
 
     public ValueTask<ProjectLifecyclePendingChange> ClearResolvedAsync(ProjectLifecyclePendingRecord original, CancellationToken cancellationToken = default)
-        => Clear(original, current => current.Stage is ProjectPendingStage.Accepted or ProjectPendingStage.ClosedAbsent);
+        => ClearFailure is { } failure ? throw failure : Clear(original, current => current.Stage is ProjectPendingStage.Accepted or ProjectPendingStage.ClosedAbsent);
 
     private ValueTask<ProjectLifecyclePendingChange> Clear(ProjectLifecyclePendingRecord original, Func<ProjectLifecyclePendingRecord, bool> allowed) {
         if (!Matches(original, out var current)) {

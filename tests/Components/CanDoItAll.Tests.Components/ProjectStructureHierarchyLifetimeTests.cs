@@ -433,7 +433,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
     }
 
     [Fact]
-    public async Task Retained_hierarchy_operation_blocks_a_second_opening_before_dispatch() {
+    public async Task Unretained_hierarchy_acceptance_blocks_a_second_opening_before_dispatch() {
         await using var harness = await CreateHarnessAsync();
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         var parent = await CreateProjectAsync(projects, "Retained parent");
@@ -441,16 +441,95 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         var other = await CreateProjectAsync(projects, "Second choice");
         var page = Render(harness, parent);
         await OpenHierarchyAsync(page, parent, child);
+        PendingStore(harness).AcceptFailure = new IOException("Synthetic evidence retention failure");
         await SubmitHierarchyAsync(page);
         var store = PendingStore(harness);
         var original = Assert.Single(store.Records);
-        Assert.NotNull(original.Accepted);
+        Assert.Null(original.Accepted);
         await OpenHierarchyAsync(page, parent, other);
         await SubmitHierarchyAsync(page);
         Assert.Equal(original, Assert.Single(store.Records));
         Assert.Equal(1, store.DispatchClaims);
         Assert.DoesNotContain(await projects.ListHierarchyLinksAsync(), link => link.ChildProjectId == other);
         Assert.Contains(original.Operation.Id.ToString("D"), page.Instance.AuthoringOutcomes.Last().Message);
+    }
+
+    [Fact]
+    public async Task Observed_hierarchy_add_allows_a_subsequent_reconnect_without_recovery() {
+        await using var harness = await CreateHarnessAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Original parent");
+        var child = await CreateProjectAsync(projects, "Child");
+        var destination = await CreateProjectAsync(projects, "Destination parent");
+        var page = Render(harness, parent);
+        await OpenHierarchyAsync(page, parent, child);
+        await SubmitHierarchyAsync(page);
+        Assert.Empty(PendingStore(harness).Records);
+        Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes, node => node.Id == $"project-child:{child:D}");
+
+        await ContextActionAsync(page, $"project-child:{child:D}", "project:reconnect-subproject");
+        await page.InvokeAsync(() => page.Find("[data-testid='project-structure-hierarchy-project-select']").Change(destination.ToString("D")));
+        await SubmitHierarchyAsync(page);
+
+        var link = Assert.Single(await projects.ListHierarchyLinksAsync());
+        Assert.Equal((destination, child), (link.ParentProjectId, link.ChildProjectId));
+        Assert.Equal(2, PendingStore(harness).DispatchClaims);
+        Assert.Empty(PendingStore(harness).Records);
+        Assert.All(page.Instance.AuthoringOutcomes, outcome => Assert.Equal(ProjectStructureAuthoringResultKind.Committed, outcome.Kind));
+    }
+
+    [Fact]
+    public async Task Retired_refresh_keeps_the_accepted_hierarchy_record_for_recovery() {
+        var read = new OwnerReadGate();
+        await using var harness = await CreateHarnessAsync(read: read);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Refresh owner");
+        var child = await CreateProjectAsync(projects, "Accepted child");
+        var replacement = await CreateProjectAsync(projects, "Replacement surface");
+        var page = Render(harness, parent);
+        await OpenHierarchyAsync(page, parent, child);
+        PendingStore(harness).BeforeAccept = () => {
+            read.ArmHierarchy();
+            return Task.CompletedTask;
+        };
+        var pending = SubmitHierarchyAsync(page);
+        try {
+            await read.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await page.InvokeAsync(() => page.Render(parameters => parameters.Add(component => component.ProjectId, replacement)));
+            page.WaitForAssertion(() => Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes,
+                node => node.Id == $"project:{replacement:D}"));
+        } finally {
+            read.Release.TrySetResult();
+        }
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.NotNull(Assert.Single(PendingStore(harness).Records).Accepted);
+        Assert.Equal(child, Assert.Single(await projects.ListHierarchyLinksAsync()).ChildProjectId);
+        Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes, node => node.Id == $"project:{replacement:D}");
+    }
+
+    [Fact]
+    public async Task Failed_acknowledgement_cleanup_keeps_acceptance_and_blocks_another_dispatch() {
+        await using var harness = await CreateHarnessAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Cleanup parent");
+        var child = await CreateProjectAsync(projects, "Accepted child");
+        var other = await CreateProjectAsync(projects, "Unchanged child");
+        var page = Render(harness, parent);
+        var store = PendingStore(harness);
+        store.ClearFailure = new IOException("Synthetic cleanup failure");
+        await OpenHierarchyAsync(page, parent, child);
+        await SubmitHierarchyAsync(page);
+        var retained = Assert.Single(store.Records);
+        Assert.NotNull(retained.Accepted);
+        var outcome = page.Instance.AuthoringOutcomes.Last();
+        Assert.Equal(ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
+        Assert.Same(store.ClearFailure, outcome.Failure);
+        Assert.Contains("recovery record could not be cleared", outcome.Message, StringComparison.Ordinal);
+        await OpenHierarchyAsync(page, parent, other);
+        await SubmitHierarchyAsync(page);
+        Assert.Equal(retained, Assert.Single(store.Records));
+        Assert.Equal(1, store.DispatchClaims);
+        Assert.Equal(child, Assert.Single(await projects.ListHierarchyLinksAsync()).ChildProjectId);
     }
 
     [Fact]

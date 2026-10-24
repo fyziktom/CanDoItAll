@@ -265,3 +265,14 @@ the existing window-order, navigation and graph lifetime cases in the focused se
 
 Closure: BUI-1 is proven. BUI-2 and the additional stale-editor checks remain in progress.
 Historical cleanup denials and open P28 work remain recorded in preceding validation documents.
+
+### Native hierarchy acknowledgement follow-up
+
+The browser found that a successful Add subproject leaves its accepted recovery record
+blocking the next reconnect. Preserve the shared pending-operation guard. The native host
+may clear only its own exact, durably acknowledged record after the original opening has
+reconciled and published a fresh surface. Retired openings, failed refreshes, storage errors
+and concurrent record changes keep recovery evidence and an explicit recovery message.
+Reuse the existing revision-checked clear operation; add no persistence or dependency layer.
+Validate consecutive add/reconnect, retained uncertain acceptance, failed evidence cleanup,
+and existing late-completion/disposal cases before repeating the browser sequence.

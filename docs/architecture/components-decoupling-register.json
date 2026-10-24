@@ -13810,7 +13810,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ActionContexts.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ActionContexts.cs",
-      "sha256_lf": "b6ed0cbed68175820ecce57ab1fa5ea81287b8981c6e550706e95b76e3c23553",
+      "sha256_lf": "8b4b7d77039ff261c728ce17dcda2e6cf32b91dfe92f97e4f2e811fb2a93d8cc",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureAuthoringOpening, CanDoItAll.Modules.Workbench.Pages.ProjectStructureActionContext",
@@ -14170,7 +14170,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
-      "sha256_lf": "426b31e28ae273d8c2e0e2865103107fab6930c8e9804cded7e7b920f9757a87",
+      "sha256_lf": "7cc665908ce6fd61aa3d551d4f5d440bdffab6aec7c4c994cc398b276391ede2",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14410,7 +14410,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "d6aa011cf854332b413f28d49d5bd10ab2869d17228fad08a5cf0badedfb5932",
+      "sha256_lf": "9346a30520f5f6709b93a34b7e3c1f07bcee58014634eb90b59da9726f117169",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",

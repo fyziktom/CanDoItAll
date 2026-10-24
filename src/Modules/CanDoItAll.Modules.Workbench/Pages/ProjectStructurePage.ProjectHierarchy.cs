@@ -72,6 +72,7 @@ public partial class ProjectStructurePage
                 HierarchyProjects = participants, TargetProjectId = selectedId
             };
         ProjectLifecyclePendingSession? pending = null;
+        ProjectLifecyclePendingRecord? reconciledRecord = null;
         var apply = false;
         try {
             ProjectLifecycleCommand command = dialog.Mode switch {
@@ -100,10 +101,11 @@ public partial class ProjectStructurePage
                     ? $"The link from {dialog.SubjectProjectTitle} to {selected.Name} was accepted."
                     : $"The move of {dialog.SubjectProjectTitle} to {selected.Name} was accepted.";
                 outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
-                    Message = $"{acceptedChange} Its original operation {submissionId:D} is retained in Projects recovery." };
+                    Message = $"{acceptedChange} Original operation: {submissionId:D}." };
                 apply = pending.CanReconcile && IsCurrentAuthoring(opening, hierarchyOpening);
                 if (apply) {
                     pending.Reconcile(_ => opening.RequiresObservation = false);
+                    reconciledRecord = pending.Record;
                 }
             } else {
                 outcome = outcome with { Message = $"The hierarchy operation {submissionId:D} remains unresolved. Check its original outcome in Projects recovery before another write." };
@@ -122,7 +124,18 @@ public partial class ProjectStructurePage
                 projectHierarchyDialog = null;
                 var selection = BuildProjectChildNodeKey(dialog.Mode == ProjectStructureProjectHierarchyDialogMode.AddSubproject
                     ? selectedId : dialog.SubjectProjectId);
-                await RefreshAuthoringSurfaceAsync(opening, outcome, selection, () => ReferenceEquals(opening, hierarchyOpening));
+                var refreshed = await RefreshAuthoringSurfaceAsync(opening, outcome, selection, () => ReferenceEquals(opening, hierarchyOpening));
+                if (refreshed && reconciledRecord is not null) {
+                    try {
+                        var cleared = await HierarchyPendingStore.ClearResolvedAsync(reconciledRecord, deferredCompletionCts.Token);
+                        if (cleared.Status != ProjectPendingStoreStatus.Applied || cleared.Record is not null) {
+                            throw new InvalidOperationException("The retained hierarchy evidence changed before acknowledgement cleanup.");
+                        }
+                    } catch (Exception exception) {
+                        RecordAuthoringOutcome(opening, outcome with { Failure = exception,
+                            Message = $"{outcome.Message} Its recovery record could not be cleared. Review this operation in Projects recovery before another hierarchy write." });
+                    }
+                }
                 if (ReferenceEquals(opening, hierarchyOpening)) {
                     hierarchyOpening = null;
                 }
