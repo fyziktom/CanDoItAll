@@ -2302,7 +2302,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
             Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
-            Assert.Equal(["new", "webapp", "-n", "TrailheadSnackBox.Web"], processHost.LastRequest.Arguments);
+            Assert.Equal(["new", "webapp", "-n", "TrailheadSnackBox.Web", "--output", "TrailheadSnackBox.Web"], processHost.LastRequest.Arguments);
             Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
             Assert.Contains("apps/TrailheadSnackBox.Web", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
         }
@@ -2362,7 +2362,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
             Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
-            Assert.Equal(["new", "blazorwasm", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+            Assert.Equal(["new", "blazorwasm", "-n", "TetrisGame", "--output", "TetrisGame"], processHost.LastRequest.Arguments);
             Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
             Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
         }
@@ -2387,7 +2387,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
             Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
-            Assert.Equal(["new", "blazorwasm", "--pwa", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+            Assert.Equal(["new", "blazorwasm", "--pwa", "-n", "TetrisGame", "--output", "TetrisGame"], processHost.LastRequest.Arguments);
             Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
             Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
         }
@@ -2438,7 +2438,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
             Assert.Equal(
-                ["new", "blazorwasm", "--framework", "net8.0", "-n", "FrameworkScopedApp"],
+                ["new", "blazorwasm", "--framework", "net8.0", "-n", "FrameworkScopedApp", "--output", "FrameworkScopedApp"],
                 processHost.LastRequest!.Arguments);
         }
         finally
@@ -2555,7 +2555,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
             Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
-            Assert.Equal(["new", "blazorwasm-empty", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+            Assert.Equal(["new", "blazorwasm-empty", "-n", "TetrisGame", "--output", "TetrisGame"], processHost.LastRequest.Arguments);
             Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
             Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
         }
@@ -2614,6 +2614,58 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
         finally
         {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData("Sample.sln", "console")]
+    [InlineData("Sample.slnx", "classlib")]
+    [InlineData("Sample.sln", "webapi")]
+    [InlineData("Sample.slnx", "xunit")]
+    public async Task DotnetNew_creates_named_children_under_a_solution_root(string solutionFile, string template) {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(workspaceRoot, "product");
+        Directory.CreateDirectory(productRoot);
+        var solutionPath = Path.Combine(productRoot, solutionFile);
+        await File.WriteAllTextAsync(solutionPath, "preserve solution");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
+
+        try {
+            var result = await service.DotnetNew(template, "Sample.Child", "product");
+
+            Assert.True(result.Succeeded, result.Message);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal(["new", template, "-n", "Sample.Child", "--output", "Sample.Child"], processHost.LastRequest.Arguments);
+            Assert.Equal(productRoot, processHost.LastRequest.WorkingDirectory);
+            Assert.Equal(["product/Sample.Child"], result.Receipt.TargetPaths);
+            Assert.Equal("preserve solution", await File.ReadAllTextAsync(solutionPath));
+        } finally {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData(".")]
+    [InlineData("..")]
+    [InlineData(" . ")]
+    public async Task DotnetNew_directory_references_are_prohibited_before_any_effect(string name) {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
+
+        try {
+            using var capture = AgentToolInvocationEffectScope.Begin();
+            var result = await service.DotnetNew("console", name, "missing");
+
+            Assert.False(result.Succeeded);
+            Assert.True(capture.ProhibitedBeforeEffect);
+            Assert.False(Directory.Exists(Path.Combine(workspaceRoot, "missing")));
+            Assert.Null(processHost.LastRequest);
+            Assert.Contains("repair the existing project", result.Message, StringComparison.Ordinal);
+        } finally {
             TryDeleteDirectory(workspaceRoot);
         }
     }

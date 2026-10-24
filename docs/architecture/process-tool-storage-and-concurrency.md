@@ -24,6 +24,8 @@ Blazor QA exercises declared controls through native click/key actions and recor
 
 The scaffold command owner rejects a solution template with a target framework before resolving or creating directories or launching a process. MAF's existing retry correlation requires the exact scaffold parent, name and template. A later committed correction resolves only a proven no-effect rejection for that identity; unknown effects and other targets remain unresolved. Completion and authority gates are unchanged.
 
+Solution scaffolds write their solution file into the declared parent. Other templates explicitly write into the named child directory, matching their receipt and overwrite checks. A solution file in the parent permits child projects; an existing project in the parent or target still prohibits scaffolding. The directory references `.` and `..` are prohibited before any effect, with guidance to inspect and repair existing files or choose a named child.
+
 ## Process asset approval
 
 Process-native asset tools explicitly declare `GovernedProcessAuthority` approval policy. The runtime honors that policy only when approval suppression was requested for an admitted, recoverable background Process session without interactive governance. Both prepared admission and current owner authorization callbacks are required. Interactive/default tools retain their approval wrappers. Toolset fingerprints include the effective wrapper, so the change cannot silently reinterpret a retained approval checkpoint.

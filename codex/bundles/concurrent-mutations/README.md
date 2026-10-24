@@ -1,6 +1,11 @@
 # Concurrent mutations implementation bundle
 
-Current work: [atomic refresh delivery persistence](validation/2026-10-24-process-refresh-delivery-queue.md)
+Current work: [native Blazor repairs and concurrent editing proof](plan/P29-native-blazor-repair-and-validation.md).
+The reported process failure is traced to generic scaffolding behavior; the native
+Project Structure/Gantt action inventory and process/chat overlap proof remain open.
+SPA remains on its review branch. This successor does not close the remaining P28 work.
+
+Preceding work: [atomic refresh delivery persistence](validation/2026-10-24-process-refresh-delivery-queue.md)
 passes all 69 selected cases. Admission stages delivery atomically;
 capture Return wakes it without losing a concurrent park or disturbing a live lease.
 All builds and final portability pass, with six reviewed generated metadata allowances.

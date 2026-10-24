@@ -1,6 +1,11 @@
 # Requirements and closure ledger
 
-Current work: [atomic refresh delivery persistence](validation/2026-10-24-process-refresh-delivery-queue.md)
+Current work: [native Blazor repairs and concurrent editing proof](plan/P29-native-blazor-repair-and-validation.md).
+Requirements BUI-1 through BUI-4 cover the reported process failure, every native
+Project Structure/Gantt action, assets, concurrent process/chat/UI edits, and validation.
+All behavioral closure remains open; no SPA merge or broader P28 completion is claimed.
+
+Preceding work: [atomic refresh delivery persistence](validation/2026-10-24-process-refresh-delivery-queue.md)
 passes all 69 selected cases. Admission stages delivery atomically;
 capture Return wakes it without losing a concurrent park or disturbing a live lease.
 All builds and final portability pass, with six reviewed generated metadata allowances.
