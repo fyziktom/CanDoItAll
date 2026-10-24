@@ -1,8 +1,10 @@
 # Native Blazor validation — P29
 
-Status: in progress. This records observed native UI behavior, not a substitute for the
-remaining action matrix. The ordinary application and its retained database were used only
-for explicitly owned manual records. Automated tests used temporary SDK workspaces.
+Status: behavioral acceptance passed for the documented Windows desktop lane. Exact
+Python-folder cleanup remains blocked. The reconciled action matrix and operation coverage
+below define the proof's scope and limits. The ordinary application and retained database
+were used for authorized process recovery and explicitly owned manual records; automated
+tests used temporary SDK workspaces and the separate PostgreSQL 18 fixture.
 
 ## Process recovery
 
@@ -255,6 +257,94 @@ both from the parent project (with two children) and from a child (with its pare
 The moved Evidence node remains readable in that child's inspector.
 Final regenerated portability enforcement passes with 15,712 reviewed findings unchanged.
 
+## Floating-window lifetime repair
+
+Reset followed immediately by Hide reopened Signals in all three native trials. Captured
+browser events confirmed both button clicks, 79 ms apart. Three controlled regression
+cases reproduced geometry publication while Hide was pending, while hidden and after
+disposal had begun. OverlayWindow now rejects those late notifications; ordinary and
+minimized geometry still publish, and a host rejection of Hide still propagates and leaves
+the visible window usable. The guard is component-local and adds no dependency or lock.
+
+Components signed commit `14cf7b15fe0902cfc0b460e661aa30b809d03edb` is pushed on
+`codex/native-gantt-lifetime`; the remote head and engine CI pin match. The exact filter
+`FullyQualifiedName~OverlayWindowLifetimeTests|FullyQualifiedName~LayoutNavigationOverlayBehaviorTests`
+discovers 15 cases: six lifecycle cases and nine existing state/contract cases. Before the
+repair, the three race cases failed; the final standard Release build has zero warnings or
+errors and all 15 pass without skips. The Web production graph also builds in Release,
+with 194 existing warnings and no errors. Its copied OverlayLib binary matches the tested
+library hash. This component correction alone did not close the native rapid sequence:
+the host also retired the renderer origin after a view-state echo, dropping queued Hide.
+The existing viewport update now shares one helper with the other three view-state updates,
+preserving only the exact original content/selection/actor/lifetime context. Data changes
+and navigation continue to invalidate old actions. The focused native-host proof includes
+geometry followed by a queued hide and rejection against a successor project.
+
+The first 35-case host execution exposed two obsolete recreated-project fixture calls and
+the remaining feedback-only origin invalidation. The fixture now deletes through its
+captured native lifecycle submission. Save feedback updates the selection presentation
+without retiring an otherwise-current origin; any prior content, selection, actor or
+lifetime change still prevents that reuse. The corrected standard Release Web build passes
+with 183 existing warnings and no errors. The refreshed component test owner passes with
+215 existing warnings and no errors. These include existing NuGet vulnerability warnings;
+this repair does not resolve the repository's package-upgrade work.
+
+Build-backed discovery for
+`FullyQualifiedName~ProjectStructureGraphLifetimeTests|FullyQualifiedName~ProjectStructurePageActionLifetimeTests.Insights_`
+finds exactly 35 cases. All 35 pass, none skipped, including both new queued-window cases,
+selection A/B/A, forged targets, recreated lifetime rejection and disposal during persistence.
+Final browser proof passes three rapid Reset/Hide sequences, minimize/expand/hide and two
+Canvas/Gantt round trips, ending on Canvas with no page errors. The persisted maximized
+canvas was docked before using its underlying view tabs. The final host logs contain no
+unhandled, null-reference or disposed-object errors.
+
+Fresh portability enforcement passes with 15,712 reviewed executable-source findings
+unchanged; no baseline update was needed. Rendering validation passes for 1,212 inputs.
+The portability-baseline, artifact-secret and rendering-validator checks pass 6, 4 and 7
+cases respectively. Final canonical readback retains the successful process, both overlap
+markers, four persisted task schedules, one dependency, reconciled Unicode file edits,
+transcript outputs and transferred child Evidence. The fifth task remains explicitly
+projected until its schedule is edited. The 88-entry creation matrix reconciles again.
+Documentation validation passes for 438 maintained Markdown files. The maintained bundle
+secret scan covers 1,010 text files with zero findings and no oversized or unreadable skips.
+
+## Creation catalog and operation coverage
+
+The [88-entry creation matrix](P29-native-create-action-matrix.csv) reconciles native
+receipts with final canonical records. There are 87 successful creations: 85 remain
+readable, while the screenshot and Python nodes were explicitly deleted after their proof.
+The POSIX shell entry was rejected as unsupported on this Windows host before insertion.
+The inventory comprises 23 blocks, 19 assets, 12 runtime entries, nine infrastructure
+entries, six people, six work items, four meeting/recording/transcript entries, three prompt
+types, and two each for assurance, capture and planning. The native Task toolbox dialog was
+exercised separately from Gantt task creation.
+
+| Operation group | Observed result and boundary |
+| --- | --- |
+| Structure editing | Typed creation, metadata/notes edits, note conversion, block type change and reversal, markers/priority/progress modes, copy/paste, cut/paste and deletion passed. |
+| Graph relationships | Connect, source/target reconnect, disconnect, descendant transfer, add existing/new subproject and consecutive parent reconnects passed; fresh child readback retains moved Evidence. |
+| Navigation and inspection | Object-index search/selection, active-root focus in parent and child, child structure tab and project-scoped Test Lab navigation passed. Open on a generic record retains its inspector; specialized assets use their preview. |
+| Assets | All 19 create entries are accounted for. Native metadata, authorized content, supported previews, text edit/history/save/conflict recovery, file browsing/filtering, export and delete-with-file behavior passed as detailed above. Unsupported DOCX/ZIP previews show explicit metadata. |
+| Process | The reported run completed through normal implementation, QA and writeback. Native Estimate reached nine resolved roles with provider pricing; Start showed the correct task target and was cancelled before another costly execution. |
+| Workflow | An owned deterministic three-step fixture was prepared through the definition API, then linked, launched and observed through native Blazor controls. It completed 3/3; observing the original start retained the same single run. The existing shared file-diff definition was only reviewed. |
+| Transcript | Recording-to-transcript scaffold, source text edit, summary, requester tasks and others' deliveries passed; no speech transcription or task creation is implied. |
+| Runtime | Console direct execution returned SDK 10.0.303/exit zero; terminal presentation was acknowledged and its owned process cleaned up. Python environment creation passed. Other runtime records establish creation/readback, not execution of every configured runtime or elevation mode. |
+| Gantt | Creation, inline/detail edits, assignees and process/workflow attachment, ordering, move/resize/reflow, dependency add/reconnect/insert/remove, cycle rejection, execution progress, scales/zoom/pan/columns/table toggles, exports and stale-draft recovery passed. |
+| Concurrency | Real process/UI and agent/UI overlaps retained both changes. Two-circuit note, file and Gantt stale writes were rejected with retained drafts and explicit current-state recovery. |
+
+The workflow fixture uses no provider, network, external command or external file path.
+Its run is `4e0c61d3-43d7-46f4-8c93-080253a86d5a`; canonical runtime records and project
+status agree on Completed, three of three steps, with persisted executor artifacts.
+The Start dialog intentionally retains an Observe original start action after acceptance;
+an initial automation wait for automatic closure was corrected to inspect that receipt.
+
+This Windows desktop lane does not claim external infrastructure provisioning, payments,
+message delivery, elevated/UAC execution, every configured runtime launch, remote CI, an
+unfiltered full suite or cross-platform native UI coverage. Creation of those typed records
+is distinct from performing their external effects. Final Copy info content verification
+remains limited by the browser/system clipboard roundtrip described above. These explicit
+limits do not replace the covered mutation and stale-write contracts.
+
 ## Resource closure limits
 
 The temporary Python node is deleted. Its seven-file test environment remains at
@@ -266,6 +356,9 @@ The exact target, owned host and stopped build/terminal processes are recorded i
 reference support the user's follow-up testing; ordinary databases and installed tools
 remain intact. Managed watch rebuilds stalled, so final manual testing uses the ordinary
 standard Release no-build host with its existing development profile and database.
+The existing shared isolated PostgreSQL 18 fixture remains reserved for open P28 work;
+P29 created no replacement container, volume or network. Its current loopback endpoint and
+retained database inventory are recorded separately from the ordinary development database.
 
 ## Evidence and retention
 

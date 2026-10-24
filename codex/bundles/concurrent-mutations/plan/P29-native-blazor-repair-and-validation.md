@@ -1,7 +1,42 @@
 # P29 — Native Blazor repairs and concurrent editing proof
 
-Status: in progress. Proof tier: Behavioral, with retained real-host/process evidence.
+Status: behavioral acceptance passed for the documented Windows desktop lane; temporary
+Python-folder cleanup remains blocked. Proof tier: Behavioral, with retained real-host/process evidence.
 This is a focused successor to P28. It does not close the remaining refresh-delivery work.
+
+## Floating-window hide race entry
+
+The final native sequence Reset then Hide failed three times. A browser capture confirms
+both button clicks reached their controls, 79 ms apart. OverlayWindow's delayed geometry
+callback constructs a visible state, so geometry arriving after a hide can reopen it.
+Keep visibility ownership in the existing component/host contract: ignore geometry while
+Hide is pending, when the controlled state is hidden, and after disposal. Mark disposal
+before awaiting interop. Preserve ordinary drag/resize and minimized dimensions; add no
+global lock, persistence layer or module dependency. The callback's failure still propagates.
+
+Prove delayed geometry during a held hide callback, hidden state, retired instance and
+normal/minimized geometry in the existing Components test owner. Discover that bounded
+selection with the existing overlay-state tests before execution. Rebuild standard Release
+outputs after stopping the owned ordinary host, repeat Reset/Hide and navigation natively,
+and rerun the rendering, portability and documentation gates before closure.
+
+### Native host origin follow-up
+
+The component guard passed its controlled tests, but the native rapid sequence still
+failed. Host analysis found a second cause: each window-state save replaces the surface
+snapshot and retires the renderer origin, causing a queued Hide to be rejected. Factor the
+existing viewport-only snapshot update into one helper and use it for all four view-state
+updates. Preserve the same origin only when the exact previous surface and current
+selection/actor/lifetime still match. Data, project, runtime and selection changes retain
+their existing invalidation rules. Add queued geometry/Hide and successor-project cases;
+run the graph-lifetime class and all Insights-prefixed action-lifetime cases, including
+selection A/B/A, forged targets and recreated project lifetime rejection.
+
+The first host regression also exposed feedback-only invalidation: recording a view-state
+save changes the selection presentation key. Rebase that presentation on the existing
+origin only if it was still current immediately before the feedback update. Do not relax
+surface, selection, actor or admission checks. Final proof passes all 35 selected host
+cases and three consecutive rapid Reset/Hide sequences in the native browser.
 
 ## Owned user input
 
@@ -16,9 +51,9 @@ This is a focused successor to P28. It does not close the remaining refresh-deli
 | Requirement | Acceptance and proof | State |
 | --- | --- | --- |
 | BUI-1 | Diagnose the reported run; repair generic engine causes; prove the normal process path through runtime validation and result recording, with receipts for existing effects before any rework. | Passed: Succeeded / Complete, zero escalations |
-| BUI-2 | Inventory every action exposed by native Project Structure and Gantt; exercise each applicable action, assets and information readback; record disabled prerequisites and repair failures. | In progress; action evidence in validation record |
+| BUI-2 | Inventory every action exposed by native Project Structure and Gantt; exercise each applicable action, assets and information readback; record disabled prerequisites and repair failures. | Passed for the documented Windows lane: 88 creation entries and operation coverage; external effects and clipboard limits recorded |
 | BUI-3 | Use a real process and floating agent chat while editing the same project through native UI; verify non-conflicting writes survive, stale writes are handled explicitly, drafts and assets remain correct after reload. | Passed: both real overlaps and stale note, file and Gantt editors |
-| BUI-4 | Keep tests, docs and incremental signed commits current; preserve the SPA review branch and ordinary data. | In progress |
+| BUI-4 | Keep tests, docs and incremental signed commits current; preserve the SPA review branch and ordinary data. | Validation and branch preservation passed; signed checkpoints retained; exact Python-folder cleanup blocked |
 
 Work order: generic process repair and focused regression proof; native action inventory
 and repairs; overlapping process/chat/browser proof; final static checks and closure.
@@ -265,8 +300,10 @@ exceptions or remove serialization. Hold an index-originated database write, dis
 rendered page, prove disposal waits, then release and verify the accepted selection. Retain
 the existing window-order, navigation and graph lifetime cases in the focused selection.
 
-Closure: BUI-1 and BUI-3 are proven. BUI-2 final coverage and BUI-4 closure remain in progress.
-Historical cleanup denials and open P28 work remain recorded in preceding validation documents.
+Closure: BUI-1, BUI-2 and BUI-3 pass within the explicit validation scope. BUI-4 build,
+test, documentation and branch checks pass. The Python-folder cleanup retry was rejected
+by automatic approval review despite explicit authorization; resource cleanup is not
+complete. Historical cleanup denials and open P28 work remain recorded separately.
 
 ### Native hierarchy acknowledgement follow-up
 

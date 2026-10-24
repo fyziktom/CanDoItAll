@@ -19,6 +19,42 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureGraphLifetimeTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Queued_window_hide_survives_geometry_echo_but_cannot_target_a_successor_project(bool navigate) {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var project = (await projects.SaveAsync(new() { Name = "Window geometry owner" })).Value;
+        var next = navigate ? (await projects.SaveAsync(new() { Name = "Successor geometry owner" })).Value : project;
+        var page = Render(harness, project);
+        await page.InvokeAsync(() => page.Find("[data-testid='project-structure-object-index-toggle']").ClickAsync(new MouseEventArgs()));
+        var index = page.FindComponent<ProjectStructureObjectIndexWindow>().Instance;
+        var origin = index.Origin;
+        var receiver = index.StateChanged;
+        await page.InvokeAsync(() => receiver.InvokeAsync(new InsightsWindowIntent(origin, InsightsWindow.ObjectIndex,
+            new() { IsVisible = true, Left = 40, Top = 50, Width = 400, Height = 600 })));
+        if (navigate) {
+            page.Render(parameters => parameters.Add(component => component.ProjectId, next));
+            page.WaitForAssertion(() => Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes,
+                node => node.Id == $"project:{next:D}"));
+            await page.InvokeAsync(() => page.Find("[data-testid='project-structure-object-index-toggle']").ClickAsync(new MouseEventArgs()));
+            page.WaitForElement("[data-testid='project-structure-object-index-window']");
+        }
+
+        await page.InvokeAsync(() => receiver.InvokeAsync(new InsightsWindowIntent(origin, InsightsWindow.ObjectIndex,
+            new() { IsVisible = false })));
+
+        page.WaitForAssertion(() => Assert.Equal(navigate, page.FindAll("[data-testid='project-structure-object-index-window']").Count == 1));
+        var stored = CanvasWorkbenchUiState.Parse((await workbench.GetStructureAsync(project)).ViewStateJson);
+        Assert.Equal(navigate, stored.WindowStates["project-structure.objectIndex"].IsVisible);
+        if (navigate) {
+            Assert.True(CanvasWorkbenchUiState.Parse((await workbench.GetStructureAsync(next)).ViewStateJson)
+                .WindowStates["project-structure.objectIndex"].IsVisible);
+        }
+    }
+
     [Fact]
     public async Task Disposal_waits_for_an_index_selection_write_before_releasing_its_gate() {
         var gate = new ViewStateWriteGate();

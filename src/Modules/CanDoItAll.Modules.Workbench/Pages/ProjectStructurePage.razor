@@ -1121,14 +1121,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
         pendingClientSelectionId = null;
         selectedNodeIds = uiState.SelectedNodeIds.ToList();
-        currentViewStateJson = normalizedStateJson;
-        var previousSurface = surface;
-        surface = surface with { ViewStateJson = currentViewStateJson };
-        if (insightsContext is { } currentInsights &&
-            ReferenceEquals(currentInsights.Native.Surface, previousSurface) && IsCurrentInsights(currentInsights)) {
-            // A client viewport update preserves the original node snapshot and its admitted actions.
-            insightsContext = currentInsights with { Native = currentInsights.Native with { Surface = surface } };
-        }
+        ApplyCanvasViewState(normalizedStateJson);
         if (canvasSurface is not null)
         {
             canvasSurface.UiState = uiState;
@@ -1767,8 +1760,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         uiState.SelectedNodeIds = [.. selectedNodeIds];
         EnsureSelectionScopedToolboxWindowState(uiState);
         graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
-        currentViewStateJson = uiState.ToJson();
-        surface = surface with { ViewStateJson = currentViewStateJson };
+        ApplyCanvasViewState(uiState.ToJson());
         RefreshCanvasSurface();
         await PersistCurrentViewStateAsync();
     }
@@ -1966,8 +1958,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         uiState = NormalizePersistedCanvasUiState(uiState);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
         graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
-        currentViewStateJson = uiState.ToJson();
-        surface = surface with { ViewStateJson = currentViewStateJson };
+        ApplyCanvasViewState(uiState.ToJson());
         RefreshCanvasSurface();
         await InvokeAsync(StateHasChanged);
         await PersistCurrentViewStateAsync();

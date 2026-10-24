@@ -1,9 +1,12 @@
 # Concurrent mutations implementation bundle
 
-Current work: [native Blazor repairs and concurrent editing proof](plan/P29-native-blazor-repair-and-validation.md).
-The reported process failure is traced to generic scaffolding behavior; the native
-Project Structure/Gantt action inventory and process/chat overlap proof remain open.
-SPA remains on its review branch. This successor does not close the remaining P28 work.
+Latest checkpoint: [native Blazor repairs and concurrent editing proof](validation/P29-native-blazor-validation.md).
+The recovered process is Succeeded/Complete without escalations. The documented Windows
+lane passes its 88-entry creation reconciliation, structure/Gantt/assets operations,
+process/chat overlaps and stale-draft recovery. Final window lifetime, native navigation,
+build and static checks pass. Cleanup of the exact temporary Python folder remains blocked
+by automatic approval review. SPA remains unchanged on its review branch; P28 refresh
+delivery activation and the other recorded P28 work remain open.
 
 Preceding work: [atomic refresh delivery persistence](validation/2026-10-24-process-refresh-delivery-queue.md)
 passes all 69 selected cases. Admission stages delivery atomically;
