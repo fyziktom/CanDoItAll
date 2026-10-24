@@ -89,6 +89,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
             .AddZoomPanRenderers()
             .AddMarkdown()
             .AddWorkbenchMermaid()
+            .AddMetadataFallback()
             .AddSpreadsheet());
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddScoped<ISpreadsheetWorkbookContentPreviewService>(serviceProvider =>

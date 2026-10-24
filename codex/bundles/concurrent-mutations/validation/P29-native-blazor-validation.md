@@ -80,15 +80,50 @@ remain. The attachment-size label now describes its attachment-time metadata acc
 The rendering register passes for 1,212 current inputs after reviewing and refreshing only
 the two affected native entries. A regenerated scan including untracked files passes final
 portability enforcement with 15,709 reviewed executable-source findings unchanged. Browser
-verification of these three display changes is pending on the refreshed ordinary host.
+verification passed: plain cycle rejection, NotStarted progress locked at zero, and the
+attachment-time size label all match the repaired behavior.
 
 The generic scaffold fix is signed commit `e8747b22e` in the engine. Components and SPA
 remain on their separate branches; neither was merged.
 
-Remaining: plain cycle-message browser verification, stale task details and workflow resource
-attachment; structure selection/link/subproject/delete and presentation actions; additional
+Two circuits also passed stale Gantt detail rejection with retained draft, disabled Save and
+explicit Read current project. Workflow attachment, all four time scales, zoom, panning and
+pointer column resizing passed. File edits passed a separate two-circuit conflict: fresh
+readback retained the newer committed value, the rejected draft remained available, and an
+explicit manual reconciliation saved against the current revision.
+
+Remaining: structure selection/link/subproject/delete and presentation actions; additional
 asset and authoring paths; final readback, browser diagnostics and durable coverage.
 Catalog inspection found 88 create entries; inspection alone is not execution proof.
+
+## Native media repair
+
+Native PDF rendering and XLSX cell readback passed. Audio/video and unsupported DOCX/ZIP
+attachments exposed blank generic browser frames. FileTools now selects typed native audio
+and video controls, keeps autoplay disabled and releases playback and owned object URLs.
+Workbench explicitly selects an inert metadata renderer for unsupported formats; it opens
+the authorized lease for metadata without reading payload bytes. SVG retains its existing
+fully sandboxed frame. No storage, authorization, persistence or project dependency changed.
+
+Build-backed discovery and execution passed all 40 selected FileTools render/lifetime cases,
+16 native attachment-dialog cases and 21 native interaction-policy cases, none skipped.
+The changed production owners, sandbox and component/unit/browser test owners build in
+standard Release. Existing unrelated engine warnings remain. The rendering register passes
+for 1,212 inputs. The final portability enforcement passes with 15,712 reviewed findings:
+the three intentional additions are explicit ordinal MIME comparisons and a documentation
+reference. The reviewed CI checkout label replaces one existing finding without changing
+the count. Documentation validation passes for 438 maintained Markdown files.
+Native WAV and MP4 playback passed on the rebuilt host: both report their one-second
+duration, start only after a control click, and close with playback paused, source removed
+and readyState reset to zero. DOCX/ZIP show metadata with no embedded document. SVG renders
+its text in the unchanged sandbox; the browser blocks its synthetic script and its script
+marker remains absent. Fresh text-file readback retains the explicitly reconciled changes.
+
+FileTools is signed commit `7885f6098e1bc0e202f8e2cc8ee26a9e89945af7` on
+`codex/native-media-preview`. CI now records this exact revision and Components
+`567b41d922bbbbfe7fdc3c122445357e25698ce3`, so builds consume both repairs. These local
+feature-branch revisions must be available to the remote before CI can check them out;
+this record does not claim a remote CI run. No sibling branch has been merged.
 
 ## Evidence and retention
 

@@ -347,7 +347,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
             await Assertions.Expect(preview).ToContainTextAsync("Inputs");
             await Assertions.Expect(preview).ToContainTextAsync("Discover");
         } else {
-            await Assertions.Expect(preview).ToContainTextAsync("SVG stays metadata-only and is never inserted as active markup.");
+            await Assertions.Expect(preview).ToContainTextAsync("SVG renders in a sandboxed frame with scripts disabled and is never inserted into the host document.");
         }
         await fixture.ScreenshotAsync(evidenceName + "-preview");
         await preview.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();

@@ -10,6 +10,11 @@ save port, starts in View mode, and guards dirty/conflicted/pending close reques
 file and Markdown-fence renderers share strict options. CanvasLib owns the neutral scoped
 overlay; this leaf has no Structure UI or application module dependency.
 
+Native Workbench and the Content sandbox explicitly select FileTools' metadata fallback for
+unsupported formats. Supported audio/video use native controls with bounded content leases;
+unknown formats display metadata without reading payload bytes or creating document frames.
+Opening a file externally and revealing its folder remain native host actions.
+
 Progress Summary renders accepted hierarchy rows, inline statuses and explicit stored-export
 commands. Transcript confirmation displays safe provider choices and distinguishes pending,
 completed and observation-required states. Image setup retains an immutable submitted draft,

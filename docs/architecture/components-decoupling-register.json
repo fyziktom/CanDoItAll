@@ -21017,7 +21017,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
       "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
-      "sha256_lf": "0677cfd9b211b9bb0dcb9f78e7571d15cfe0e31d1d54f392ddeeb9de42185fb4",
+      "sha256_lf": "aa996c07acdd122ace28fd6e5d92143543d74895f370c48138c280907e62e849",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "SCENARIO",
       "type": "Top-level program / compile input",

@@ -17,7 +17,8 @@ public sealed class ProjectStructureFileInteractionPolicyTests
     [InlineData("photo.png", "application/octet-stream", FileInteractionBuiltInProfileIds.Image, false)]
     [InlineData("report.pdf", "application/octet-stream", FileInteractionBuiltInProfileIds.Pdf, false)]
     [InlineData("hostile.svg", "image/png", FileInteractionBuiltInProfileIds.Svg, false)]
-    [InlineData("clip.mp4", "video/mp4", FileInteractionBuiltInProfileIds.Object, false)]
+    [InlineData("clip.mp4", "video/mp4", FileInteractionBuiltInProfileIds.Video, false)]
+    [InlineData("sound.wav", "audio/wav", FileInteractionBuiltInProfileIds.Audio, false)]
     [InlineData("archive.zip", "application/zip", FileInteractionBuiltInProfileIds.Object, false)]
     [InlineData("forecast.xlsx", "application/octet-stream", FileInteractionSpreadsheetProfileIds.Spreadsheet, false)]
     public void Explicit_composition_resolves_only_claimed_profiles(
@@ -129,11 +130,27 @@ public sealed class ProjectStructureFileInteractionPolicyTests
         Assert.DoesNotContain("without loading", notice, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Unsupported_renderer_requests_metadata_without_payload_content() {
+        var resolution = BuildComposition().Renderers.Resolve(FileInteractionBuiltInProfileIds.Object, FileInteractionMode.View);
+        Assert.True(resolution.IsResolved);
+        Assert.Equal(FileInteractionContentRequirement.MetadataOnly, resolution.Renderer?.ContentRequirement);
+    }
+
+    [Theory]
+    [InlineData("sound.wav", "audio/wav")]
+    [InlineData("clip.mp4", "video/mp4")]
+    public void Media_notice_describes_native_controls(string name, string mediaType) {
+        var request = new FileInteractionRequest(new FileReference("test", "media"), name, mediaType: mediaType);
+        Assert.Contains("native browser controls", ProjectStructureFileInteractionPolicy.ResolveHostNotice(request, false));
+    }
+
     private static FileInteractionComponentComposition BuildComposition()
         => new FileInteractionComponentBuilder()
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
+            .AddMetadataFallback()
             .AddSpreadsheet()
             .Build();
 

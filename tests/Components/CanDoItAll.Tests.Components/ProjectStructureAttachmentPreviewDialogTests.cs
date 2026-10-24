@@ -25,6 +25,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [InlineData(ProjectObjectType.File, "application/pdf", "report.pdf")]
     [InlineData(ProjectObjectType.File, "text/plain", "notes.txt")]
     [InlineData(ProjectObjectType.VideoAsset, "video/mp4", "clip.mp4")]
+    [InlineData(ProjectObjectType.File, "audio/wav", "sound.wav")]
     [InlineData(ProjectObjectType.File, "image/svg+xml", "hostile.svg")]
     public void Storage_backed_dialogs_render_direct_interaction_without_a_browser_or_route(
         ProjectObjectType objectType,
@@ -55,14 +56,14 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
         cut.WaitForAssertion(() =>
         {
-            bool expectsBrowserFrame = mediaType is "video/mp4" or "image/svg+xml";
+            bool expectsBrowserFrame = mediaType is "image/svg+xml";
             Assert.Single(cut.FindComponents<FileInteraction>());
             Assert.Empty(cut.FindComponents<FileBrowser>());
             Assert.NotNull(cut.Find("[data-testid='project-structure-direct-file-interaction']"));
             Assert.DoesNotContain($"/managed-files/{fileName}", cut.Markup, StringComparison.Ordinal);
             Assert.Equal(expectsBrowserFrame, cut.FindAll("iframe").Count == 1);
-            Assert.DoesNotContain("<video", cut.Markup, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("<audio", cut.Markup, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(mediaType == "video/mp4", cut.FindAll("video").Count == 1);
+            Assert.Equal(mediaType == "audio/wav", cut.FindAll("audio").Count == 1);
         });
     }
 
@@ -424,18 +425,19 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         });
     }
 
-    [Fact]
-    public void Unknown_file_uses_sandboxed_browser_fallback_with_bounded_content()
-    {
+    [Theory]
+    [InlineData("archive.zip", "application/zip")]
+    [InlineData("document.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")]
+    public void Unsupported_file_shows_metadata_without_reading_or_embedding_payload(string fileName, string mediaType) {
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
-        var node = CreateNode(ProjectObjectType.File, "application/zip", "archive.zip");
+        var node = CreateNode(ProjectObjectType.File, mediaType, fileName);
         var file = new FileReference("authorized", "archive-handle");
-        var source = new MetadataOnlyContentSource("application/zip", 128);
+        var source = new MetadataOnlyContentSource(mediaType, 128);
         var session = new FileToolsKnownFileSession(file, source, FileToolsKnownFileIntent.ReadOnly);
         var interaction = new ProjectStructureKnownFileInteraction(
-            new FileInteractionRequest(file, "archive.zip", FileInteractionMode.View, "application/zip", 128),
+            new FileInteractionRequest(file, fileName, FileInteractionMode.View, mediaType, 128),
             session,
             new NoopSessionReleaser());
 
@@ -443,9 +445,11 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.NotNull(cut.Find("[data-testid='interaction-browser-view']"));
-            Assert.True(source.ReadCount > 0);
-            Assert.Equal(string.Empty, cut.Find("iframe").GetAttribute("sandbox"));
+            var metadata = cut.Find("[data-testid='interaction-metadata-view']");
+            Assert.Contains(fileName, metadata.TextContent, StringComparison.Ordinal);
+            Assert.Contains(mediaType, metadata.TextContent, StringComparison.Ordinal);
+            Assert.Equal(0, source.ReadCount);
+            Assert.Empty(cut.FindAll("iframe, object, embed, audio, video"));
         });
     }
 
@@ -456,6 +460,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
+            .AddMetadataFallback()
             .AddSpreadsheet()
             .Build());
         context.Services.AddSingleton<IMarkdownFencedCodeComponentRegistration,

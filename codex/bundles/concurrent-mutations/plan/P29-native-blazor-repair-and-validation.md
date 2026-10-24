@@ -168,6 +168,31 @@ changed native rendering inputs, then regenerate and enforce the portability sca
 
 ## Retained evidence and resources
 
+### Native media and unsupported-file repair entry
+
+Native PDF rendering and XLSX cell readback passed. WAV and MP4 instead resolve to the
+generic browser fallback, whose fully sandboxed iframe fails to load the nested blob in
+Chromium. DOCX and ZIP also show blank fallback frames rather than an explicit unavailable
+preview. This is a renderer/composition defect, not a storage or concurrency failure.
+
+Keep bounded byte leases, object-URL ownership and the sandbox for SVG unchanged. Add typed
+Audio/Video targets and media profiles in FileTools' existing object-view owner, using
+native controls without autoplay and explicit decode-error handling. Do not relax iframe
+permissions or put codecs, storage drivers or product dependencies into FileTools.
+
+Provide an opt-in metadata fallback renderer through the existing composition builder;
+Workbench and its Content sandbox select it explicitly. The library's existing generic
+browser fallback remains available to other hosts. Unsupported Workbench files show their
+metadata and host-owned open/reveal actions without reading payload bytes or embedding a
+document. Fix host notices to describe native media controls and the existing SVG sandbox.
+
+Before filtered execution, discover FileObjectUrlInteropTests and FileInteractionRenderTests
+in FileTools plus ProjectStructureAttachmentPreviewDialogTests in the engine. Cover native
+media targets, load/error/replacement/disposal, profile selection, encoded metadata without
+payload reads and unchanged SVG isolation. Build the changed production owners in standard
+Release; then rebuild the ordinary host in Debug, verify WAV/MP4 metadata/playback and
+DOCX/ZIP inert metadata, and rerun the required rendering/portability/docs gates.
+
 Ignored proof root: `.artifacts/concurrent-mutations/blazor-ui-repairs-20261024`.
 It contains ownership and the reported process/agent records. Keep raw application data
 out of commits; commit the reasoning, generic tests and bounded validation results.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-24T00:46:53.885246+00:00",
+  "generated_utc": "2026-10-24T14:35:37.168344+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15709,
+  "allowance_count": 15712,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -106,7 +106,7 @@
     {
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
-      "source_fingerprint": "e58fe2b85f0309ae9608657a70f5b581fe7a4671284cada602407b2060fd7acc",
+      "source_fingerprint": "f836e167a8e398a5a40ba8aa90e607cfadeab53e05c7ee580af9c6a11291a1a4",
       "count": 1
     },
     {
@@ -63430,6 +63430,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileInteractionPolicy.cs",
       "category": "case-policy",
+      "source_fingerprint": "1f04a9f8826587d5b533e2e23e3ecf873acf4ef7336ace464358acfede42fb13",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileInteractionPolicy.cs",
+      "category": "case-policy",
       "source_fingerprint": "265e8f52a94fb28ce5762363a9d4c61f47329663445d7fedebfe4946be959c05",
       "count": 1
     },
@@ -63449,6 +63455,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileInteractionPolicy.cs",
       "category": "case-policy",
       "source_fingerprint": "beb33167e9c83974a5782720bc7417e6f652a3ad59c21adfff9c073c3b1c58bf",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileInteractionPolicy.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e323057f694d8ae909a7e0ec1cf4eea6978cfe24c31c992b73b43bc17afda1a1",
       "count": 1
     },
     {
@@ -78041,6 +78053,12 @@
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/WorkbenchMarkdownMermaidBlock.razor",
       "category": "external-tool",
       "source_fingerprint": "7c102963d0c2654c397e819949ffc14e26082a8574c3b88826ece5ad8bb1ded0",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/README.md",
+      "category": "external-tool",
+      "source_fingerprint": "e2eb017e7290ce65451f9b4776ff42b3e8e440ea389c8e537b1e62fecae138dd",
       "count": 1
     },
     {

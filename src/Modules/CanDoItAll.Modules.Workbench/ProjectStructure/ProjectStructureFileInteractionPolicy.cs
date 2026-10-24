@@ -67,10 +67,13 @@ internal static class ProjectStructureFileInteractionPolicy
         ArgumentNullException.ThrowIfNull(request);
         return request.Extension switch
         {
-            ".svg" => "SVG stays metadata-only and is never inserted as active markup.",
+            ".svg" => "SVG renders in a sandboxed frame with scripts disabled and is never inserted into the host document.",
             ".pdf" => "PDF uses the browser-native viewer; embedded PDF actions are controlled by that viewer.",
             ".mmd" or ".mermaid" => "Mermaid renders in strict mode with HTML labels and source actions disabled.",
             ".xlsx" => "This workbook uses a bounded, read-only preview of its stored cells and formulas.",
+            _ when request.MediaType?.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) == true ||
+                request.MediaType?.StartsWith("video/", StringComparison.OrdinalIgnoreCase) == true =>
+                "Media uses native browser controls. Playback depends on the browser's supported codecs.",
             _ when canEdit => "Text edits use bounded history and an awaited revision-aware save.",
             _ => "This file is read-only. Unsupported formats remain inert and expose metadata only."
         };

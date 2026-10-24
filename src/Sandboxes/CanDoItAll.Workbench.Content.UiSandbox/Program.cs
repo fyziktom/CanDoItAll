@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 ContentAssets.ValidateRequestedMode(builder.Configuration[nameof(ContentAssetMode)]);
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddCanDoItAllBaseLib();
-builder.Services.AddFileInteractionComponents(builder => builder.AddBuiltIns().AddMarkdown().AddContentMermaid().AddSpreadsheet());
+builder.Services.AddFileInteractionComponents(builder => builder.AddBuiltIns().AddMarkdown().AddContentMermaid().AddMetadataFallback().AddSpreadsheet());
 builder.Services.AddSingleton<IMarkdownFencedCodeComponentRegistration, ContentMarkdownMermaidRegistration>();
 var app = builder.Build();
 app.UseAntiforgery();
