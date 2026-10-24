@@ -23,7 +23,7 @@ second browser circuit committed a newer edit while the first retained a draft: 
 stale draft was rejected, its text remained in the editor, and canonical readback retained
 the newer value. The stale editor was cancelled after capturing evidence.
 
-## Native action evidence so far
+## Native action evidence
 
 | Surface | Observed result |
 | --- | --- |
@@ -92,9 +92,9 @@ pointer column resizing passed. File edits passed a separate two-circuit conflic
 readback retained the newer committed value, the rejected draft remained available, and an
 explicit manual reconciliation saved against the current revision.
 
-Remaining: structure selection/link/subproject/delete and presentation actions; additional
-asset and authoring paths; final readback, browser diagnostics and durable coverage.
-Catalog inspection found 88 create entries; inspection alone is not execution proof.
+The later checkpoints below extend this initial evidence to structure, hierarchy, content
+and presentation actions. The create catalog contains 88 entries; inspection alone is not
+execution proof.
 
 ## Native media repair
 
@@ -168,7 +168,7 @@ it. No sibling branch has been merged. The ordinary rebuilt host is healthy.
 
 Additional native evidence: Python environment creation with an owned temporary environment;
 clipboard node id readback; canvas image export saved as an attached artifact and decoded
-at 1,730 × 952 pixels. Remaining action coverage is still in progress.
+at 1,730 × 952 pixels.
 
 ## View-state disposal repair
 
@@ -202,8 +202,70 @@ add/reconnect, acceptance retention failure, cleanup failure and retirement duri
 The first 27-case execution passed before the explicit publication callback and additional
 retirement case. Final Workbench and component-owner Release compilation passed with
 existing warnings. Rendering passes for 1,212 inputs and regenerated final portability
-enforcement passes with 15,712 reviewed findings unchanged. Native reconnection on the
-rebuilt host and final coverage closure remain pending.
+enforcement passes with 15,712 reviewed findings unchanged. On the rebuilt host, native
+recovery observed and cleared the original accepted record without resubmitting it.
+Three consecutive native parent reconnections then committed successfully, ending with
+the owned leaf directly under the validation project. No pending acceptance blocked the
+next operation. Signed engine checkpoint: `5cef0fe19`.
+
+## Final action extensions
+
+Native copy/paste created one Decision branch under Architecture. Cut/paste moved that
+same copied branch under Backlog, preserving its identity and content; native deletion then
+removed only that test copy. Earlier system clipboard id/tree readback passed. Final Copy
+info displayed its success receipt, but system clipboard roundtrip could not be verified
+in the final browser session: a direct browser-only synthetic write/read also returned an
+empty value. This is a recorded environment limit, not a claimed clipboard-content pass.
+
+The screenshot asset's metadata and notes were edited, its parent changed to Architecture,
+and its preview still decoded at 1,552 × 184 pixels. Delete node and file then removed the
+canonical node and returned 404 for its authorized content route. JSON, log and plain-text
+previews retained their markers and Unicode; the generated image decoded at 1,024 × 1,024.
+
+Create transcript saved a scaffold and its recording relationship with the explicit notice
+that no audio recognition was requested. The three provider actions saved a summary, the
+requester's Friday checklist task, and Avery's Thursday delivery separately while preserving
+the synthetic source text. These actions save analysis; they do not create project tasks.
+
+The Console script's native Run launched `dotnet --version` in the owned fixture directory,
+returned SDK 10.0.303 and exited with code zero. Open terminal acknowledged its presentation
+launch; its exact owned PowerShell process was identified and stopped after use. No native
+terminal pixel inspection or elevated launch is claimed.
+
+Help pages, menu-size adjustment and restoration, minimap, diagnostics, zoom, maximize/dock
+and recomposition passed. Fit showed all 100 current nodes at 18% in the live diagnostics.
+These are functional observations, not a performance benchmark.
+
+## Explicit root focus repair
+
+The last control check found Focus root selecting a child project because every related
+project uses the root visual family. Components now accepts an optional root node identity
+from its host. Workbench supplies the typed ActiveProject identity without changing node
+order or appearance. A missing explicit identity does not select another node; existing
+unbound hosts retain their selection rule. No persistence or project references changed.
+
+Components signed commit `cd50ee735bc27b90a845402844b1391559984bfd` is pushed on
+`codex/native-gantt-lifetime`; the engine CI pin uses that exact revision. All 12 discovered
+root-focus/state-commit cases pass, none skipped, with a zero-warning Release build. The
+first execution exposed a test fixture without the focus toolbar enabled; the corrected
+fixture enables the real control. All six discovered engine adapter cases pass, none
+skipped. The owning component test assembly and Web production graph build in standard
+Release with existing warnings and no errors. Native Focus root selects the active project
+both from the parent project (with two children) and from a child (with its parent present).
+The moved Evidence node remains readable in that child's inspector.
+Final regenerated portability enforcement passes with 15,712 reviewed findings unchanged.
+
+## Resource closure limits
+
+The temporary Python node is deleted. Its seven-file test environment remains at
+`.artifacts/concurrent-mutations/blazor-ui-repairs-20261024/asset-fixtures/python-env`.
+Automatic approval review rejected the original cleanup attempts and the user's explicitly
+authorized retry with "blocked by policy". No cleanup success is claimed for that folder.
+The exact target, owned host and stopped build/terminal processes are recorded in
+`ownership.json` and companion inventories. Retained manual projects and synthetic vault
+reference support the user's follow-up testing; ordinary databases and installed tools
+remain intact. Managed watch rebuilds stalled, so final manual testing uses the ordinary
+standard Release no-build host with its existing development profile and database.
 
 ## Evidence and retention
 

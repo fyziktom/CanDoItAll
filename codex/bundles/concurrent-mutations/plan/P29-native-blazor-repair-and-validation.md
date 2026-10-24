@@ -17,7 +17,7 @@ This is a focused successor to P28. It does not close the remaining refresh-deli
 | --- | --- | --- |
 | BUI-1 | Diagnose the reported run; repair generic engine causes; prove the normal process path through runtime validation and result recording, with receipts for existing effects before any rework. | Passed: Succeeded / Complete, zero escalations |
 | BUI-2 | Inventory every action exposed by native Project Structure and Gantt; exercise each applicable action, assets and information readback; record disabled prerequisites and repair failures. | In progress; action evidence in validation record |
-| BUI-3 | Use a real process and floating agent chat while editing the same project through native UI; verify non-conflicting writes survive, stale writes are handled explicitly, drafts and assets remain correct after reload. | Both real overlap lanes passed; stale-file and stale-task checks remain |
+| BUI-3 | Use a real process and floating agent chat while editing the same project through native UI; verify non-conflicting writes survive, stale writes are handled explicitly, drafts and assets remain correct after reload. | Passed: both real overlaps and stale note, file and Gantt editors |
 | BUI-4 | Keep tests, docs and incremental signed commits current; preserve the SPA review branch and ordinary data. | In progress |
 
 Work order: generic process repair and focused regression proof; native action inventory
@@ -196,8 +196,10 @@ DOCX/ZIP inert metadata, and rerun the required rendering/portability/docs gates
 Ignored proof root: `.artifacts/concurrent-mutations/blazor-ui-repairs-20261024`.
 It contains ownership and the reported process/agent records. Keep raw application data
 out of commits; commit the reasoning, generic tests and bounded validation results.
-The ordinary application is managed by the shared DotNetWatch backend. Retain it for the
-user after testing. Keep SPA on `codex/concurrent-mutations`, without source edits or merge.
+Use the shared DotNetWatch backend for useful hot reload. The final managed watch rebuild
+stalled; its owned sessions were stopped. Retain the ordinary application using the same
+standard Release outputs and development launch profile after validation. Keep SPA on
+`codex/concurrent-mutations`, without source edits or merge.
 
 ### Native runtime validation outcome repair entry
 
@@ -263,7 +265,7 @@ exceptions or remove serialization. Hold an index-originated database write, dis
 rendered page, prove disposal waits, then release and verify the accepted selection. Retain
 the existing window-order, navigation and graph lifetime cases in the focused selection.
 
-Closure: BUI-1 is proven. BUI-2 and the additional stale-editor checks remain in progress.
+Closure: BUI-1 and BUI-3 are proven. BUI-2 final coverage and BUI-4 closure remain in progress.
 Historical cleanup denials and open P28 work remain recorded in preceding validation documents.
 
 ### Native hierarchy acknowledgement follow-up
@@ -276,3 +278,14 @@ and concurrent record changes keep recovery evidence and an explicit recovery me
 Reuse the existing revision-checked clear operation; add no persistence or dependency layer.
 Validate consecutive add/reconnect, retained uncertain acceptance, failed evidence cleanup,
 and existing late-completion/disposal cases before repeating the browser sequence.
+
+### Explicit canvas root focus
+
+Native Focus root selects a child when several project-shaped nodes precede the active
+project. Keep their shared appearance and ordering. Add an optional root identity to the
+existing CanvasWorkbench surface contract; Workbench maps its typed ActiveProject role to
+that identity. An explicit missing identity must not focus an unrelated node. Existing
+hosts without an explicit root retain their current selection rule. No persistence,
+service, project reference or product dependency belongs in Components. Prove active-project
+mapping with both parent and child projections, component dispatch and missing identity,
+then native focus with both hierarchy contexts after the rebuilt host is ready.
