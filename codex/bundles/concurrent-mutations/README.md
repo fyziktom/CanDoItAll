@@ -1,12 +1,18 @@
 # Concurrent mutations implementation bundle
 
-Latest checkpoint: [compact floating chat and runtime QA proof](validation/P30-floating-chat-runtime-proof.md).
+Latest checkpoint: [canvas click and drag intent repair](validation/P31-canvas-drag-intent.md).
+Crowded nodes remain still during a click, stationary hold or small pointer jitter.
+The reported screenshot opens by double-click; deliberate dragging and one release
+publication pass browser proof. Components assets, focused build and final static gates
+pass. The ordinary 5032/7271 host stays running; SPA remains unchanged on its review branch.
+
+Previous checkpoint: [compact floating chat and runtime QA proof](validation/P30-floating-chat-runtime-proof.md).
 The reported run is Succeeded/Complete with zero escalations after one QA rework and the
 normal generated-app repair branch. The compact native chat, resize ordering, retained
 minimized draft and fixed window frame pass focused and native browser checks. The
 standard 5032/7271 instance is refreshed; SPA stays unchanged on its review branch.
 
-Previous checkpoint: [native Blazor repairs and concurrent editing proof](validation/P29-native-blazor-validation.md).
+Preceding checkpoint: [native Blazor repairs and concurrent editing proof](validation/P29-native-blazor-validation.md).
 The recovered process is Succeeded/Complete without escalations. The documented Windows
 lane passes its 88-entry creation reconciliation, structure/Gantt/assets operations,
 process/chat overlaps and stale-draft recovery. Final window lifetime, native navigation,
