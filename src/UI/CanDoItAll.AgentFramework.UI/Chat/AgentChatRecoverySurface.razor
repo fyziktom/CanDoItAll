@@ -32,11 +32,12 @@
     </Alert>
 }
 
-@if (rendered.HistoricalReceipts is { } historical) {
+@if (ShowHistoricalReceipts && rendered.HistoricalReceipts is { } historical) {
     <AgentChatHistoricalReceiptSurface State="historical" Origin="rendered.Origin" Intent="Intent" />
 }
 
 @code {
+    [Parameter] public bool ShowHistoricalReceipts { get; set; } = true;
     [Parameter, EditorRequired] public AgentChatActionState State { get; set; } = default!;
     [Parameter] public EventCallback<AgentChatActionIntent> Intent { get; set; }
 }

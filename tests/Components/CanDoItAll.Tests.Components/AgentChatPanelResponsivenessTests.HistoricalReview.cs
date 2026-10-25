@@ -20,6 +20,7 @@ public sealed partial class AgentChatPanelResponsivenessTests {
     [Fact]
     public async Task Saved_receipt_review_retains_original_selection_after_detail_failure_and_pages_only_on_explicit_intent() {
         await using var fixture = CreateHistoricalPanel(detailUnavailable: true);
+        await OpenSavedReceiptDetailsAsync(fixture);
         var reader = Assert.IsAssignableFrom<HistoricalReviewOrchestratorProxy>(fixture.Orchestrator);
         fixture.Cut.WaitForAssertion(() => Assert.False(fixture.Cut.Find(HistoricalReviewSelector).HasAttribute("disabled")));
         Assert.Single(fixture.Workspace.ExecutionRunDetailRequests);
@@ -116,6 +117,7 @@ public sealed partial class AgentChatPanelResponsivenessTests {
             });
             var known = fixture.Cut.FindComponent<AgentChatRecoverySurface>().Instance.State.EffectRecovery;
             reader.Read = (request, _) => Task.FromResult(HistoricalAccepted(request, fixture.Generation.Value));
+            await OpenSavedReceiptDetailsAsync(fixture);
             await fixture.Cut.Find(HistoricalReviewSelector).ClickAsync(new MouseEventArgs());
             Assert.Single(reader.Requests);
             Assert.Single(fixture.Cut.FindAll(HistoricalObservationSelector));
@@ -140,6 +142,7 @@ public sealed partial class AgentChatPanelResponsivenessTests {
                 started.TrySetResult();
                 return completion.Task;
             };
+            await OpenSavedReceiptDetailsAsync(fixture);
             fixture.Cut.WaitForAssertion(() => Assert.False(fixture.Cut.Find(HistoricalReviewSelector).HasAttribute("disabled")));
             var pending = fixture.Cut.Find(HistoricalReviewSelector).ClickAsync(new MouseEventArgs());
             try {
@@ -178,6 +181,16 @@ public sealed partial class AgentChatPanelResponsivenessTests {
                 await pending;
             }
         }
+    }
+
+    private static async Task OpenSavedReceiptDetailsAsync(RecoveryPanelFixture fixture) {
+        fixture.Cut.WaitForAssertion(() => Assert.NotNull(
+            fixture.Cut.FindComponent<AgentChatRecoverySurface>().Instance.State.HistoricalReceipts));
+        if (fixture.Cut.FindAll(HistoricalReviewSelector).Count > 0) {
+            return;
+        }
+        fixture.Cut.WaitForElement("[data-testid='chat-conversation-details']");
+        await fixture.Cut.InvokeAsync(() => fixture.Cut.Find("[data-testid='chat-conversation-details']").ClickAsync());
     }
 
     private static RecoveryPanelFixture CreateHistoricalPanel(bool detailUnavailable) {

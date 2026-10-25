@@ -59,3 +59,12 @@
     gap: 0.35rem;
     max-width: 100%;
 }
+
+.chat-panel-header--compact .chat-panel-header__row {
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+}
+
+.chat-panel-header--compact .chat-panel-header__identity {
+    flex-basis: 0;
+}

@@ -1,6 +1,27 @@
 @{ var rendered = State; }
 
 <div class="agent-floating-conversation-content" data-testid="floating-agent-chat-content">
+    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap" Class="agent-floating-context-summary">
+        <Button Icon="@(rendered.Detached ? "link_off" : "link")" Text="@(rendered.ContextLabel ?? "No module context")"
+                ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Class="agent-floating-context-button"
+                aria-label="Context details" title="@rendered.Affinity" Click="@(() => contextOpen = true)"
+                data-testid="floating-agent-chat-context-details" />
+        @if (rendered.ContextLabel is not null && !rendered.ContextAllowed) {
+            <StatusBadge Tone="warning" Text="Context blocked" />
+        }
+        @if (rendered.Detached) {
+            <StatusBadge Tone="warning" Text="Detached" />
+        }
+        @if (rendered.PendingContext is not null) {
+            <StatusBadge Tone="info" Text="Context change pending" title="@rendered.PendingContext" />
+        }
+    </Cluster>
+    @ChildContent
+</div>
+
+@if (contextOpen) {
+    <Dialog IsOpen="true" Title="Conversation context" Size="ModalSize.Compact" DenseChrome="true"
+            OnClose="@(() => contextOpen = false)" TestId="floating-agent-chat-context-dialog">
     <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
         @if (rendered.ContextLabel is not null) {
             <StatusBadge Tone="info" Text="@rendered.ContextLabel" />
@@ -19,11 +40,20 @@
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.Detached ? AgentConversationContextMode.FollowCurrentSurface : AgentConversationContextMode.Detached)))"
                 data-testid="floating-agent-chat-affinity-toggle" />
     </Cluster>
-    @ChildContent
-</div>
+    </Dialog>
+}
 
 @code {
     [Parameter, EditorRequired] public AgentConversationContextState State { get; set; } = default!;
     [Parameter] public EventCallback<AgentConversationContextIntent> Intent { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
+    private bool contextOpen;
+    private Guid? activation;
+
+    protected override void OnParametersSet() {
+        if (activation != State.Origin.Activation) {
+            contextOpen = false;
+            activation = State.Origin.Activation;
+        }
+    }
 }

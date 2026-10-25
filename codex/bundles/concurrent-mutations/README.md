@@ -1,5 +1,7 @@
 # Concurrent mutations implementation bundle
 
+Current work: [compact floating chat and runtime QA proof](validation/P30-floating-chat-runtime-proof.md).
+
 Latest checkpoint: [native Blazor repairs and concurrent editing proof](validation/P29-native-blazor-validation.md).
 The recovered process is Succeeded/Complete without escalations. The documented Windows
 lane passes its 88-entry creation reconciliation, structure/Gantt/assets operations,

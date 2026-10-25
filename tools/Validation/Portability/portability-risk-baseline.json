@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-24T14:35:37.168344+00:00",
+  "generated_utc": "2026-10-25T01:23:47.776342+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15712,
+  "allowance_count": 15713,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -50555,6 +50555,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessStepBriefBuilder.cs",
       "category": "case-policy",
       "source_fingerprint": "ce26bf4f657c74d873bc06c639829036db574a0e9c90545e9ef7209045b464c3",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessStepBriefBuilder.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d79b83a6636580517b0a37dc9a56ab6717eef6b206806bc793e85aacf19eb1a8",
       "count": 1
     },
     {

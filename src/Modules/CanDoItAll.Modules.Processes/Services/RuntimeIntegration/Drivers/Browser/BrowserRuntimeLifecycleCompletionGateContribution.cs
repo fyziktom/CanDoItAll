@@ -96,7 +96,7 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
         {
             return CreateIssue(
                 context,
-                $"Browser proof is not correlated to the host URL reported by {runToolName}. Retry QA by navigating the browser to the current run's loopback host URL before collecting screenshots, snapshots, and console proof.",
+                $"Browser proof is not correlated to the latest host URL reported by {runToolName}. After every start or restart, navigate to that returned loopback URL and collect fresh browser proof before stopping that host. Earlier or cached/offline evidence does not prove the latest host lifecycle.",
                 observedToolReceipts);
         }
 

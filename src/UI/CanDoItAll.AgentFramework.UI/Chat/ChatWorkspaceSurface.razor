@@ -3,8 +3,15 @@
 
 <ConversationWorkspacePanel>
     <Header>
-        <ConversationHeader Presentation="@HeaderPresentation"
-                            Actions="@HeaderActions">
+        <ConversationHeader Presentation="@HeaderPresentation" Compact="Compact">
+            <Actions>
+                @if (Compact) {
+                    <Button Icon="info" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="@(() => detailsOpen = true)" aria-label="Conversation details" title="Conversation details"
+                            data-testid="chat-conversation-details" />
+                }
+                @HeaderActions
+            </Actions>
             <TitleContent>
                 @if (Session is null) {
                     <p class="chat-panel-header__empty-title">Select or create a thread</p>
@@ -143,7 +150,7 @@
                               SendRequested="@(() => EmitAsync(ChatWorkspaceAction.Send))"
                               IsBusy="@IsBusy"
                               IsSendDisabled="@(Presentation.IsSendBlocked || IsBusy || HasPendingApprovals)"
-                              ComposerKey="@ComposerKey">
+                              ComposerKey="@ComposerKey" Compact="Compact">
             <LeadingActions>
                     @ComposerActions
                     @AttachmentPicker
@@ -249,8 +256,22 @@
     </Composer>
 </ConversationWorkspacePanel>
 
+@if (Compact && detailsOpen) {
+    <Dialog IsOpen="true" Title="Conversation details" Size="ModalSize.Compact" DenseChrome="true"
+            OnClose="@(() => detailsOpen = false)" TestId="chat-conversation-details-dialog">
+        <Stack GapScale="LayoutGap.Medium">
+            <ConversationHeader Presentation="@HeaderPresentation">
+                <TitleContent><TextBlock Value="@(Session?.Title ?? "New conversation")" /></TitleContent>
+            </ConversationHeader>
+            @HeaderDetails
+        </Stack>
+    </Dialog>
+}
 
 @code {
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public RenderFragment? HeaderDetails { get; set; }
+    private bool detailsOpen;
     [Parameter, EditorRequired] public ChatWorkspacePresentation Presentation { get; set; } = new();
     [Parameter] public EventCallback<ChatWorkspaceIntent> Intent { get; set; }
     [Parameter] public RenderFragment? HeaderActions { get; set; }
@@ -293,6 +314,9 @@
         var pending = PendingApprovals.Select(item => item.ApprovalId).ToHashSet(StringComparer.Ordinal);
         foreach (var id in approvalChoices.Keys.Where(id => !pending.Contains(id)).ToArray()) {
             approvalChoices.Remove(id);
+        }
+        if (titleSession != Session?.Id) {
+            detailsOpen = false;
         }
         if (titleSession != Session?.Id || acceptedTitle != Session?.Title) {
             titleSession = Session?.Id;

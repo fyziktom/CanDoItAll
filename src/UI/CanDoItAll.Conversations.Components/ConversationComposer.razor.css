@@ -40,6 +40,20 @@
     margin-top: 0.75rem;
 }
 
+.chat-composer-panel--compact .chat-composer {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.chat-composer-panel--compact .chat-composer__tools {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.chat-composer-panel--compact ::deep .chat-composer__textarea {
+    min-height: 3.5rem;
+    max-height: 8rem;
+}
+
 @media (max-width: 560px) {
     .chat-composer {
         grid-template-columns: minmax(0, 1fr);

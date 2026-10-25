@@ -1,18 +1,21 @@
 @using CanDoItAll.Conversations.Components.Presentation
 
-<div class="chat-panel-header">
+<div class="@(Compact ? "chat-panel-header chat-panel-header--compact" : "chat-panel-header")">
     <div class="chat-panel-header__row">
         <div class="chat-panel-header__identity">
+            @if (!Compact) {
             <Avatar Alt="@Presentation.Avatar.Alt"
                     ImageUrl="@Presentation.Avatar.ImageUrl"
                     FallbackText="@Presentation.Avatar.FallbackText"
                     DefaultImageSeed="@Presentation.Avatar.Seed"
                     Size="AvatarSize.Medium"
                     Shape="AvatarShape.Rounded" />
+            }
 
             <div class="chat-panel-header__main">
+                @if (VisibleBadges.Count > 0) {
                 <div class="chat-panel-header__meta">
-                    @foreach (var badge in Presentation.Badges)
+                    @foreach (var badge in VisibleBadges)
                     {
                         <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
                                      Text="@badge.Text"
@@ -20,6 +23,7 @@
                                      data-testid="@badge.TestId" />
                     }
                 </div>
+                }
 
                 <div class="chat-panel-header__title-row">
                     @TitleContent
@@ -37,6 +41,11 @@
 </div>
 
 @code {
+    [Parameter] public bool Compact { get; set; }
+    private IReadOnlyList<PresentationBadge> VisibleBadges => Compact
+        ? Presentation.Badges.Where(badge => badge.Tone is PresentationTone.Warning or PresentationTone.Danger).ToArray()
+        : Presentation.Badges;
+
     [Parameter, EditorRequired]
     public ConversationHeaderPresentation Presentation { get; set; } = default!;
 

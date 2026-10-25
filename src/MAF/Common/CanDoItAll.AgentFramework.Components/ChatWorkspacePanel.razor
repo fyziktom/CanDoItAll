@@ -15,7 +15,7 @@
     }
 } else {
 <AgentChatSurface Presentation="@MapPresentation()" Intent="HandleIntentAsync" Navigation="@Navigation" NavigationIntent="@NavigationIntent"
-                  HeaderActions="@HeaderActions" ComposerActions="@ComposerActions">
+                  HeaderActions="@HeaderActions" HeaderDetails="@HeaderDetails" ComposerActions="@ComposerActions">
     <ActivityContent>
         @if (ActivityStreamId is not null) {
             <AgentExecutionActivityStatus @key="ActivityStreamId"
@@ -87,6 +87,8 @@
 
     [Parameter]
     public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter] public RenderFragment? HeaderDetails { get; set; }
 
     [Parameter]
     public RenderFragment? ComposerActions { get; set; }

@@ -1,5 +1,9 @@
 # Concurrent mutations architecture
 
+The [floating chat and runtime proof repair](12-floating-chat-and-runtime-proof.md)
+defines compact native conversation disclosure, local resize ownership and current-host
+QA evidence. Its validation is tracked separately from the historical checkpoints below.
+
 The [durable Process cancellation queue](11-process-cancellation-recovery.md) is qualified
 with 136 distinct selected cases. Automatic worker and bounded owner/HTTP/transfer
 integration remain in progress; the schema alone does not enable automatic recovery.

@@ -3,8 +3,24 @@
     min-height: 0;
     height: 100%;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.35rem;
     overflow: hidden;
+}
+
+.agent-floating-conversation-content ::deep .agent-floating-context-summary {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.agent-floating-conversation-content ::deep .agent-floating-context-button {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.agent-floating-conversation-content ::deep .agent-floating-context-button .rz-button-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .agent-floating-conversation-content ::deep .agents-chat-panel-shell {
