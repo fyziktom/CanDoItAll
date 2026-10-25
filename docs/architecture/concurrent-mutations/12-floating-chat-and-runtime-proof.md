@@ -23,7 +23,20 @@ not overwrite a newer local size. Explicit reset/minimize/hide must still take e
 and disposal must remove gesture listeners and pending callbacks. No per-pointer-move
 Blazor round trip, new layout service or feature-specific resize implementation is needed.
 
-The reported process reached runtime QA with passing product checks, then restarted its
+Native verification additionally exposed draft loss on minimize: the shared window removed
+its entire child component. Add an opt-in `KeepContentMountedWhenMinimized` contract to
+OverlayLib and enable it in the conversation window wrapper. Its body remains mounted but
+hidden and inaccessible while minimized; the same editor and subscriptions resume on
+restore. Other overlay consumers retain their disposal behavior. Hide/close and the shell's
+selection ownership remain unchanged. Prove both default disposal and retained identity,
+then repeat the native draft/minimize/restore sequence.
+
+Keep the outer window frame at zero scroll offsets. Browser focus after a resize can
+otherwise scroll the overflow-hidden frame and clip its header. The shared runtime resets
+only that frame's scroll; the body and transcript retain their own scrolling. This adds
+no server round trip, and disposal removes the frame listener with the other owned events.
+
+The reported process reached runtime QA and claimed passing product checks, then restarted its
 preview host for a service-worker update check. That last browser evaluation did not
 record the host URL, so the current-execution lifecycle gate correctly rejected the
 completion claim. Keep host/startup-receipt correlation and latest-lifecycle validation.

@@ -11,6 +11,25 @@ namespace CanDoItAll.Tests.Components.Conversations;
 public sealed class ConversationFloatingComponentsTests
 {
     [Fact]
+    public void Minimize_and_restore_keep_the_same_conversation_composer() {
+        using var context = CreateContext();
+        var cut = context.Render<ConversationFloatingWindow>(parameters => parameters
+            .Add(component => component.WindowId, "draft-window")
+            .AddChildContent<ConversationComposer>(composer => composer
+                .Add(component => component.DraftPrompt, "Unsent draft")));
+        var composer = cut.FindComponent<ConversationComposer>().Instance;
+
+        cut.Render(parameters => parameters.Add(component => component.State, new() { IsMinimized = true }));
+        Assert.Same(composer, cut.FindComponent<ConversationComposer>().Instance);
+        Assert.True(cut.Find(".cda-overlay-window__body").HasAttribute("hidden"));
+
+        cut.Render(parameters => parameters.Add(component => component.State, new()));
+        Assert.Same(composer, cut.FindComponent<ConversationComposer>().Instance);
+        Assert.Equal("Unsent draft", cut.Find("textarea").GetAttribute("value"));
+        Assert.False(cut.Find(".cda-overlay-window__body").HasAttribute("hidden"));
+    }
+
+    [Fact]
     public void Floating_window_preserves_controlled_state_and_default_geometry()
     {
         using var context = CreateContext();

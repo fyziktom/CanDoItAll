@@ -27974,7 +27974,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor",
-      "sha256_lf": "38f3aae7c28a24f3448df5ef4bb86ee394ec71af9488febad5aba90ed482ee5b",
+      "sha256_lf": "0f282c7b61e5ac93dc4e722755994517c7f5daf96c4e50df08a71bed66a08b88",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Conversations.Components.ConversationFloatingWindow",
