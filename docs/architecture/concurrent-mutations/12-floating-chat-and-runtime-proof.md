@@ -36,6 +36,13 @@ otherwise scroll the overflow-hidden frame and clip its header. The shared runti
 only that frame's scroll; the body and transcript retain their own scrolling. This adds
 no server round trip, and disposal removes the frame listener with the other owned events.
 
+The conversation wrapper lays out its body as a vertical flex container. Its child chat
+surface stretches across the available width when the window grows; a horizontal flex
+container lets the child stop at its intrinsic width and leaves unused space beside it.
+Keep this presentation rule in the shared conversation wrapper so both agent and Simple
+Chat windows inherit it. Transcript overflow remains owned by the transcript. Verify the
+inner surface and composer width at minimum, default and maximum floating-window sizes.
+
 The reported process reached runtime QA and claimed passing product checks, then restarted its
 preview host for a service-worker update check. That last browser evaluation did not
 record the host URL, so the current-execution lifecycle gate correctly rejected the

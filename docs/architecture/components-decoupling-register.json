@@ -27994,7 +27994,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor.css",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor.css",
-      "sha256_lf": "97f707e81ca80c2ab677380d4a6b6a25a19e73e7574b9ee1f27a28ec8572349c",
+      "sha256_lf": "c18583a062e6e406c0c0fa246665a3564e9742acffba939857a55bc29819a1d5",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",

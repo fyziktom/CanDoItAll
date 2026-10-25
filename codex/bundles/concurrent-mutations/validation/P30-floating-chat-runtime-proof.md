@@ -124,3 +124,38 @@ completed, with a historical pending approval preserved. Its 5032 endpoint retur
 The temporary browser draft was cleared without submission. The ordinary databases,
 shared isolated PostgreSQL endpoint, installed MCP tools and SPA instance are preserved.
 P29's separately recorded blocked Python fixture cleanup is unchanged.
+
+## Width regression follow-up (2026-10-25)
+
+The reported wide window exposed an intrinsic-width constraint in the conversation
+wrapper's horizontal flex body. At a 979 px window width, the agent surface stopped at
+765 px. Setting that existing body to `flex-direction: column` stretches its child across
+the available width. This one-rule presentation fix adds no runtime handlers, server
+calls or dependencies; the rendering-register hash and architecture record are updated.
+
+Native Chromium proof uses the same saved conversation on Project Structure at the
+1920 × 1080 desktop viewport. Twelve-sample pointer gestures exercise 520, 760, 1100 and
+979 px window widths. Every sample progresses monotonically; the surface fills the body
+and the composer fills the panel within one pixel of rounding. At the reported width,
+the inner surface now measures 936 px; at maximum width it measures 1057 px and the full
+table fits without horizontal transcript overflow. At minimum width, the wide table
+remains horizontally scrollable. The outer frame stays at zero scroll offsets.
+
+The same editor and unsent draft survive the gestures and minimize/restore. The final
+lifetime assertion waits for Blazor's hidden-body attribute before checking identity;
+the initial immediate assertion ran before that render. The fixture draft was cleared
+without submission. Screenshots at the reported and maximum widths were inspected: the
+unused right strip is gone, the header and composer are visible, and controls remain
+readable. The conversation catalog also fills its available body width.
+
+The Release Web build passes with zero errors and 194 warnings. The six baseline-tool,
+four secret-scanner and seven rendering-register tests pass. Final portability-static
+enforcement passes without baseline writes: 15,713 reviewed executable-source findings
+unchanged. Rendering enforcement passes for all 1,212 inputs. This CSS repair uses native
+browser proof; no additional .NET test suite is claimed.
+
+Proof is retained under the existing ignored evidence root as `width-native-proof.json`,
+`width-*-after.png`, `width-web-release.log` and `width-portability-final.*`. The ordinary
+5032/7271 host was refreshed after verifying no active executions from its lifetime, and
+returns HTTP 200. Ownership records identify its replacement launcher/runtime. No new
+fixture, database or container was created; Components and SPA sources are unchanged.
