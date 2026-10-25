@@ -1,0 +1,971 @@
+{
+  "candidate": "c4-parent-saved-continuation-final",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-core-final",
+      "Arguments": [
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T06:47:12.4785141+00:00",
+      "State": "Completed",
+      "RunnerPid": 53236,
+      "ChildPid": 51712,
+      "ChildStartedUtc": "2026-10-20T06:47:12.4823476Z",
+      "ExitCode": 0,
+      "Seconds": 7.0157343,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4242,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-final",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T06:47:29.2593058+00:00",
+      "State": "Completed",
+      "RunnerPid": 53236,
+      "ChildPid": 53716,
+      "ChildStartedUtc": "2026-10-20T06:47:29.2623819Z",
+      "ExitCode": 0,
+      "Seconds": 64.0539061,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 349755,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-maf-final",
+      "Arguments": [
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T06:47:21.8075126+00:00",
+      "State": "Completed",
+      "RunnerPid": 53236,
+      "ChildPid": 15760,
+      "ChildStartedUtc": "2026-10-20T06:47:21.8104780Z",
+      "ExitCode": 0,
+      "Seconds": 7.4296968,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 21345,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-runtime-final",
+      "Arguments": [
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/CanDoItAll.AgentFramework.Runtime.Abstractions.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T06:47:09.3301415+00:00",
+      "State": "Completed",
+      "RunnerPid": 53236,
+      "ChildPid": 31044,
+      "ChildStartedUtc": "2026-10-20T06:47:09.3473936Z",
+      "ExitCode": 0,
+      "Seconds": 3.1028503,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1600,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-tooling-final",
+      "Arguments": [
+        "build",
+        "src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T06:47:19.5081909+00:00",
+      "State": "Completed",
+      "RunnerPid": 53236,
+      "ChildPid": 52872,
+      "ChildStartedUtc": "2026-10-20T06:47:19.5118777Z",
+      "ExitCode": 0,
+      "Seconds": 2.2875183,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1773,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T06:49:16.5887205+00:00",
+      "State": "Completed",
+      "RunnerPid": 34152,
+      "ChildPid": 44608,
+      "ChildStartedUtc": "2026-10-20T06:49:16.5933649Z",
+      "ExitCode": 0,
+      "Seconds": 0.1157219,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 903,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-parent-saved-regressions",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~AgentInheritedPlanning|FullyQualifiedName~AgentPlanningSavedActionTests|FullyQualifiedName~AgentSavedEffectDispatchTests|FullyQualifiedName~MafSavedEffectDispatcherTests|FullyQualifiedName~AgentToolBackgroundJournalIntegrationTests"
+      ],
+      "StartedUtc": "2026-10-20T06:49:48.6501550+00:00",
+      "State": "Completed",
+      "RunnerPid": 60280,
+      "ChildPid": 37852,
+      "ChildStartedUtc": "2026-10-20T06:49:48.6536072Z",
+      "ExitCode": 0,
+      "Seconds": 2.1761683,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 31289,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-parent-saved-runtime",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~MafInheritedSavedEffectDispatcherTests"
+      ],
+      "StartedUtc": "2026-10-20T06:49:46.4700082+00:00",
+      "State": "Completed",
+      "RunnerPid": 60280,
+      "ChildPid": 24396,
+      "ChildStartedUtc": "2026-10-20T06:49:46.5088184Z",
+      "ExitCode": 0,
+      "Seconds": 2.1114307,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2486,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T06:49:11.0959959+00:00",
+      "State": "Completed",
+      "RunnerPid": 34152,
+      "ChildPid": 3924,
+      "ChildStartedUtc": "2026-10-20T06:49:11.0980333Z",
+      "ExitCode": 0,
+      "Seconds": 5.4731239,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-parent-saved-runtime",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~MafInheritedSavedEffectDispatcherTests",
+        "--logger",
+        "trx;LogFileName=parent-saved-runtime.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-parent-saved-continuation-final"
+      ],
+      "StartedUtc": "2026-10-20T06:51:05.2705182+00:00",
+      "State": "Completed",
+      "RunnerPid": 32328,
+      "ChildPid": 40336,
+      "ChildStartedUtc": "2026-10-20T06:51:05.3016921Z",
+      "ExitCode": 1,
+      "Seconds": 25.7977801,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 5699,
+      "StderrRetainedBytes": 230,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-parent-saved-continuation-final/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T06:50:53.2702979+00:00",
+      "State": "Completed",
+      "RunnerPid": 10844,
+      "ChildPid": 3468,
+      "ChildStartedUtc": "2026-10-20T06:50:53.2868001Z",
+      "ExitCode": 0,
+      "Seconds": 38.5245295,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T06:47:35.6614812+00:00",
+      "State": "Completed",
+      "RunnerPid": 34152,
+      "ChildPid": 54992,
+      "ChildStartedUtc": "2026-10-20T06:47:35.6927185Z",
+      "ExitCode": 0,
+      "Seconds": 0.1496939,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-parent-saved-continuation-final/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T06:49:10.6065559+00:00",
+      "State": "Completed",
+      "RunnerPid": 34152,
+      "ChildPid": 18036,
+      "ChildStartedUtc": "2026-10-20T06:49:10.6098064Z",
+      "ExitCode": 0,
+      "Seconds": 0.4758195,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-parent-saved-continuation-final/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T06:47:39.3048931+00:00",
+      "State": "Completed",
+      "RunnerPid": 34152,
+      "ChildPid": 51800,
+      "ChildStartedUtc": "2026-10-20T06:47:39.3080983Z",
+      "ExitCode": 0,
+      "Seconds": 91.2866693,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 454,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T06:47:35.8669976+00:00",
+      "State": "Completed",
+      "RunnerPid": 34152,
+      "ChildPid": 53880,
+      "ChildStartedUtc": "2026-10-20T06:47:35.8699235Z",
+      "ExitCode": 0,
+      "Seconds": 0.4955307,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T06:47:36.5166321+00:00",
+      "State": "Completed",
+      "RunnerPid": 34152,
+      "ChildPid": 56280,
+      "ChildStartedUtc": "2026-10-20T06:47:36.5202986Z",
+      "ExitCode": 0,
+      "Seconds": 2.7714791,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T06:47:36.3768201+00:00",
+      "State": "Completed",
+      "RunnerPid": 34152,
+      "ChildPid": 30608,
+      "ChildStartedUtc": "2026-10-20T06:47:36.3796762Z",
+      "ExitCode": 0,
+      "Seconds": 0.1228035,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "29e7cc78-e5f3-44a7-93ef-e21b1823ef4a",
+      "testId": "e7deccc3-5ab8-8dda-578a-fd118534c61d",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Inherited_context_cannot_substitute_original_identity(changed: Agent)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0002969",
+      "startTime": "2026-10-20T02:51:13.8696879-04:00",
+      "endTime": "2026-10-20T02:51:13.8698781-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "29e7cc78-e5f3-44a7-93ef-e21b1823ef4a",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "6639061f-31b4-491f-9dae-456fbda84530",
+      "testId": "4c5c6e09-34df-d8a4-88c4-9bacf5e606ca",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Source_revocation_during_restore_cannot_probe_receipt_or_claim",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.6221054",
+      "startTime": "2026-10-20T02:51:27.8281635-04:00",
+      "endTime": "2026-10-20T02:51:29.4500397-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6639061f-31b4-491f-9dae-456fbda84530",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "2f801e00-21bd-427f-9926-a32c5a6829d4",
+      "testId": "c2086bc9-1c23-7de3-2c41-a1d687ed99fd",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Provider_must_support_the_original_governed_purpose_before_restoration(purpose: InteractiveChat)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.6323657",
+      "startTime": "2026-10-20T02:51:26.1954557-04:00",
+      "endTime": "2026-10-20T02:51:27.8276355-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "2f801e00-21bd-427f-9926-a32c5a6829d4",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "25eeacd5-2386-4e96-b2f3-b09e136c79ca",
+      "testId": "a58780b3-5a6b-39bb-0d04-0c777b7d2685",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Provider_must_support_the_original_governed_purpose_before_restoration(purpose: AutoApprovedNonInteractive)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.7495923",
+      "startTime": "2026-10-20T02:51:22.7522660-04:00",
+      "endTime": "2026-10-20T02:51:24.5018540-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "25eeacd5-2386-4e96-b2f3-b09e136c79ca",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "e486eecb-4221-4605-a3c9-085c79c728bb",
+      "testId": "c29da88d-a0df-7764-6379-a44523921cbf",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Request_factory_preserves_session_kind_and_cannot_grant_a_dispatch_lease",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.4828119",
+      "startTime": "2026-10-20T02:51:29.4505905-04:00",
+      "endTime": "2026-10-20T02:51:30.9338758-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e486eecb-4221-4605-a3c9-085c79c728bb",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "3ec42c86-2875-4d80-93cc-a03d5eeca7ff",
+      "testId": "8874ed2e-7d96-41d1-14de-89d0e35a07f2",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Inherited_saved_effect_preserves_original_scope_and_source_through_policy_and_real_publication",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.0218956",
+      "startTime": "2026-10-20T02:51:07.4540018-04:00",
+      "endTime": "2026-10-20T02:51:11.4822904-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3ec42c86-2875-4d80-93cc-a03d5eeca7ff",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "a7d48db5-370f-4b92-8c6a-88412b799200",
+      "testId": "b5b0e4b3-eebc-0518-57d6-ca9bb0331d69",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Inherited_context_cannot_substitute_original_identity(changed: Profile)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0011536",
+      "startTime": "2026-10-20T02:51:13.8695339-04:00",
+      "endTime": "2026-10-20T02:51:13.8695957-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a7d48db5-370f-4b92-8c6a-88412b799200",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "5b45a7a7-d7c0-414e-a74b-790640df3ceb",
+      "testId": "22e0b35a-c205-7975-f1d1-8b18e2cc014c",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Missing_process_policy_contributor_cannot_enter_the_effect",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.8724777",
+      "startTime": "2026-10-20T02:51:20.8795819-04:00",
+      "endTime": "2026-10-20T02:51:22.7518333-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5b45a7a7-d7c0-414e-a74b-790640df3ceb",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "7166bbe0-98a3-47a6-875d-245a36d6bc98",
+      "testId": "75267ff6-4d39-509f-20d2-a828a85c51cc",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Inherited_context_cannot_substitute_original_identity(changed: Source)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0001039",
+      "startTime": "2026-10-20T02:51:13.8700334-04:00",
+      "endTime": "2026-10-20T02:51:13.8700800-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7166bbe0-98a3-47a6-875d-245a36d6bc98",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "c7b65158-8bba-4561-9a9b-d1f13d5f2636",
+      "testId": "116740e5-19bd-798e-fa1b-b4b9038e7edd",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Actual_committed_effect_remains_recorded_when_source_is_revoked_before_acknowledgement",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.3843744",
+      "startTime": "2026-10-20T02:51:11.4938370-04:00",
+      "endTime": "2026-10-20T02:51:13.8681328-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c7b65158-8bba-4561-9a9b-d1f13d5f2636",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "869c28d2-62c0-4d19-9ad3-dc36e8cd64ff",
+      "testId": "5efe94de-006b-34c2-4098-68c6e1fc70ed",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Current_permissions_and_normal_policy_still_deny_inherited_effects(denial: Policy)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.2961294",
+      "startTime": "2026-10-20T02:51:13.8701951-04:00",
+      "endTime": "2026-10-20T02:51:16.1664495-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "869c28d2-62c0-4d19-9ad3-dc36e8cd64ff",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "ca5131af-ec97-4afb-9703-478bae03bf5b",
+      "testId": "d560674f-b6c7-d5b0-f145-6c5068887668",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Current_permissions_and_normal_policy_still_deny_inherited_effects(denial: Agent)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.6395919",
+      "startTime": "2026-10-20T02:51:16.1665969-04:00",
+      "endTime": "2026-10-20T02:51:18.8135439-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ca5131af-ec97-4afb-9703-478bae03bf5b",
+      "trx": "parent-saved-runtime.trx",
+      "error": "\n          \nAssert.Equal() Failure: Values differ\r\nExpected: NotCommitted\r\nActual:   Committed\n\n          \n   at CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Current_permissions_and_normal_policy_still_deny_inherited_effects(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\MafInheritedSavedEffectDispatcherTests.cs:line 86\r\n   at CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Current_permissions_and_normal_policy_still_deny_inherited_effects(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\MafInheritedSavedEffectDispatcherTests.cs:line 88\r\n   at CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Current_permissions_and_normal_policy_still_deny_inherited_effects(Denial denial) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\MafInheritedSavedEffectDispatcherTests.cs:line 88\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "2f6e0672-ca61-4eed-889b-6acf542be1f9",
+      "testId": "e6feb884-e613-6e27-7bb4-8f4c5c48e50f",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Current_permissions_and_normal_policy_still_deny_inherited_effects(denial: Module)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.0655595",
+      "startTime": "2026-10-20T02:51:18.8180447-04:00",
+      "endTime": "2026-10-20T02:51:20.8790325-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "2f6e0672-ca61-4eed-889b-6acf542be1f9",
+      "trx": "parent-saved-runtime.trx"
+    },
+    {
+      "executionId": "28d2900a-2f21-4c9a-91c8-e00c177271d4",
+      "testId": "afe30e4c-d5a5-3e27-c1b4-a00f0ffca6fa",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedSavedEffectDispatcherTests.Provider_must_support_the_original_governed_purpose_before_restoration(purpose: A2AEndpoint)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.6927908",
+      "startTime": "2026-10-20T02:51:24.5025871-04:00",
+      "endTime": "2026-10-20T02:51:26.1949727-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "28d2900a-2f21-4c9a-91c8-e00c177271d4",
+      "trx": "parent-saved-runtime.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "beforeSnapshot": "snap-20261020064515-e6db4b7b",
+      "afterSnapshot": "snap-20261020064944-e6db4b7b",
+      "before": {
+        "projectCount": 6,
+        "typeCount": 2137,
+        "memberCount": 16074,
+        "serviceRegistrationCount": 0,
+        "entityCount": 0,
+        "findingCount": 646,
+        "openQuestionCount": 0,
+        "diagnosticCount": 189
+      },
+      "after": {
+        "projectCount": 6,
+        "typeCount": 2137,
+        "memberCount": 16076,
+        "serviceRegistrationCount": 0,
+        "entityCount": 0,
+        "findingCount": 646,
+        "openQuestionCount": 0,
+        "diagnosticCount": 189
+      },
+      "newFindings": [],
+      "changedFindings": [],
+      "cyclesUnchanged": true,
+      "cycles": [
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-152cf43aa7bb",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-1a990fe814d7",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-244216b46507",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-6783a14556a8",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9ad3f723b960",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9c7b9e7ebdc1",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-ddf87e625d14",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-fb60e0ed084c"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-5b51f78cf7ac",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-dde9fb0d855d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-maf-candoitall-agent-b621f40b165c",
+            "type-proj-candoitall-agentframework-maf-candoitall-agent-db62890836a2"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-persistence-candoita-8151ee395c7b",
+            "type-proj-candoitall-agentframework-persistence-candoita-ab270b8b396a"
+          ]
+        }
+      ],
+      "initialScope": {
+        "beforeSnapshot": "snap-20261020061528-d47ccae3",
+        "afterSnapshot": "snap-20261020063437-d47ccae3",
+        "before": {
+          "projectCount": 5,
+          "typeCount": 2112,
+          "memberCount": 15916,
+          "serviceRegistrationCount": 0,
+          "entityCount": 0,
+          "findingCount": 641,
+          "openQuestionCount": 0,
+          "diagnosticCount": 189
+        },
+        "after": {
+          "projectCount": 5,
+          "typeCount": 2113,
+          "memberCount": 15930,
+          "serviceRegistrationCount": 0,
+          "entityCount": 0,
+          "findingCount": 641,
+          "openQuestionCount": 0,
+          "diagnosticCount": 189
+        },
+        "newFindings": [],
+        "changedFindings": [
+          {
+            "findingId": "finding-file-size-doc-src-maf-common-candoitall-agentframew-5e5c40b7bd4d",
+            "ruleId": "COMPLEXITY-001",
+            "severity": "Warning",
+            "category": "Complexity",
+            "title": "Large source file detected",
+            "description": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentPlanningDecisionOwner.cs has 380 lines.",
+            "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+            "confidence": 0.88,
+            "relatedIds": [
+              "doc-src-maf-common-candoitall-agentframework-core-execu-95c123fdac34"
+            ],
+            "source": {
+              "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentPlanningDecisionOwner.cs"
+            }
+          },
+          {
+            "findingId": "finding-file-size-doc-src-maf-common-candoitall-agentframew-6dcfc3830328",
+            "ruleId": "COMPLEXITY-001",
+            "severity": "Warning",
+            "category": "Complexity",
+            "title": "Large source file detected",
+            "description": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.SavedEffects.cs has 424 lines.",
+            "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+            "confidence": 0.88,
+            "relatedIds": [
+              "doc-src-maf-common-candoitall-agentframework-core-toolp-3b8facbdb244"
+            ],
+            "source": {
+              "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.SavedEffects.cs"
+            }
+          },
+          {
+            "findingId": "finding-type-size-type-proj-candoitall-agentframework-core-61f1f0130e38",
+            "ruleId": "COMPLEXITY-002",
+            "severity": "Info",
+            "category": "Complexity",
+            "title": "Type with many members",
+            "description": "CanDoItAll.AgentFramework.Core.AgentPlanningDecisionOwner exposes 27 source members.",
+            "rationale": "Large types often become aggregation points for unrelated behavior.",
+            "confidence": 0.71,
+            "relatedIds": [
+              "type-proj-candoitall-agentframework-core-candoitall-agen-152cf43aa7bb"
+            ],
+            "source": {
+              "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentPlanningDecisionOwner.cs",
+              "line": 7,
+              "column": 1,
+              "endLine": 380,
+              "endColumn": 2
+            }
+          },
+          {
+            "findingId": "finding-type-size-type-proj-candoitall-agentframework-core-5714d45852a3",
+            "ruleId": "COMPLEXITY-002",
+            "severity": "Info",
+            "category": "Complexity",
+            "title": "Type with many members",
+            "description": "CanDoItAll.AgentFramework.Core.AgentToolAdmissionJournal exposes 115 source members.",
+            "rationale": "Large types often become aggregation points for unrelated behavior.",
+            "confidence": 0.71,
+            "relatedIds": [
+              "type-proj-candoitall-agentframework-core-candoitall-agen-1a990fe814d7"
+            ],
+            "source": {
+              "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.Background.cs",
+              "line": 6,
+              "column": 1,
+              "endLine": 111,
+              "endColumn": 2
+            }
+          },
+          {
+            "findingId": "finding-type-size-type-proj-candoitall-agentframework-core-799879ddc042",
+            "ruleId": "COMPLEXITY-002",
+            "severity": "Info",
+            "category": "Complexity",
+            "title": "Type with many members",
+            "description": "CanDoItAll.AgentFramework.Core.AgentToolInvocationClaim exposes 13 source members.",
+            "rationale": "Large types often become aggregation points for unrelated behavior.",
+            "confidence": 0.71,
+            "relatedIds": [
+              "type-proj-candoitall-agentframework-core-candoitall-agen-6783a14556a8"
+            ],
+            "source": {
+              "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolRunLease.cs",
+              "line": 200,
+              "column": 1,
+              "endLine": 247,
+              "endColumn": 2
+            }
+          }
+        ],
+        "cyclesUnchanged": true,
+        "cycles": [
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-agentframework-core-candoitall-agen-152cf43aa7bb",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-1a990fe814d7",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-244216b46507",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-6783a14556a8",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-9ad3f723b960",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-9c7b9e7ebdc1",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-ddf87e625d14",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-fb60e0ed084c"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-agentframework-core-candoitall-agen-5b51f78cf7ac",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-dde9fb0d855d"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+              "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-agentframework-maf-candoitall-agent-b621f40b165c",
+              "type-proj-candoitall-agentframework-maf-candoitall-agent-db62890836a2"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-agentframework-persistence-candoita-8151ee395c7b",
+              "type-proj-candoitall-agentframework-persistence-candoita-ab270b8b396a"
+            ]
+          }
+        ],
+        "review": "One typed trusted parent continuation contract in Core; Tooling gains explicit immutable inherited context, with no Core reference. Core retains canonical metadata parsing behind bound saved lease. Existing MAF path uses ordinary provider ownership, Process policy, receipt and claim checks. No project references, new runtime partials, containers, registries or service locators. Existing journal/file-size findings grow within the same saved-effect responsibility; callbacks execute outside catalog/SQL publication holds. Direct builds pass; 189 existing analysis diagnostics mean snapshot alone is not build proof. Focused behavioral proof pending; actual Workbench/Process producer, manager and historical paths remain closed.",
+        "validation": "190/200 passed, including all 30 new Core continuation cases. Ten inherited MAF paths failed at the unchanged interactive-only AgentSavedEffectDispatchRequest constructor, before dispatch. Architecture and behavior closure are blocked until the runtime request boundary is explicitly extended and the full selected regression set repeats."
+      },
+      "review": "Explicit inherited factory remains a data request and grants no dispatch lease. Public interactive constructor stays closed to background sessions. No project references, runtime partials or module dependencies added. Direct Runtime.Abstractions/Core/Tooling/MAF/Integration builds pass. Architecture snapshots retain 189 existing diagnostics and are supplementary to direct build proof. Exact 14-case inherited runtime and 187-case Core/background/interactive regression discovery confirmed; behavior validation pending.",
+      "validation": "13/14 inherited runtime cases pass; Agent permission denial fixture used a canonical built-in Agent whose default normalization restored permission. No regression lane executed. Production request repair works; test fixture must use an ordinary Agent and prove persisted revocation before full selection repeats. Historical cleanup denials unchanged."
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9601,
+      "runtimeFiles": 2472,
+      "sourceSha256": "40D87CD336867C777EF6AF2943B80EEB2206E6804859968658558F02C7A164C7",
+      "runtimeSha256": "C4A47C1249B433F5010E58372476F0178447BD77C5265902AA44AC03EA68F980"
+    },
+    "final-resource-reconciliation.json": {
+      "remainingObservedProcesses": [],
+      "outcome": "13/14 inherited runtime cases pass; Agent permission denial fixture used a canonical built-in Agent whose default normalization restored permission. No regression lane executed. Production request repair works; test fixture must use an ordinary Agent and prove persisted revocation before full selection repeats. Historical cleanup denials unchanged.",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\a43zbj0g.l0x",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\cwleeicq.0bd",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_40336_20261020_025105_497.log",
+          "family": "anonymous-and-package-temp-files"
+        }
+      ],
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "databaseNameDelta": [],
+      "recordedUtc": "2026-10-20T06:53:30.0977536+00:00"
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T06:50:53.2702979+00:00",
+      "observerSeconds": 38.5245295,
+      "commands": [
+        {
+          "command": "execute-parent-saved-runtime",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T06:51:05.2705182+00:00",
+          "seconds": 25.7977801
+        }
+      ]
+    },
+    "observer-start-confirmation.json": {
+      "observerPid": 3468,
+      "confirmedUtc": "2026-10-20T06:51:04.9612181+00:00",
+      "observerStartedUtc": "2026-10-20T06:50:53.2868001Z",
+      "identityConfirmed": true
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

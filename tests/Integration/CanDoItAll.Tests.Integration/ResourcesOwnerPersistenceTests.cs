@@ -25,6 +25,12 @@ public sealed class ResourcesOwnerPersistenceTests {
             schema.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(ProjectResource)));
         Assert.Equal(completeEntity.ToDebugString(MetadataDebugStringOptions.LongDefault),
             entity.ToDebugString(MetadataDebugStringOptions.LongDefault));
+        var revision = Assert.IsAssignableFrom<IProperty>(entity.FindProperty(nameof(ProjectResource.Revision)));
+        Assert.True(revision.IsConcurrencyToken);
+        Assert.Equal(ValueGenerated.Never, revision.ValueGenerated);
+        Assert.Contains(entity.GetCheckConstraints(), constraint => constraint.Name == "CK_Resources_ProjectResources_Revision");
+        Assert.Contains(entity.GetIndexes(), index => index.Properties.Select(property => property.Name).SequenceEqual(
+            new[] { nameof(ProjectResource.ProjectId), nameof(ProjectResource.ProjectLifetimeId), nameof(ProjectResource.ConnectorPluginKey) }));
         Assert.Throws<InvalidOperationException>(() => owner.Set<Project>().ToQueryString());
     }
 
@@ -67,16 +73,16 @@ public sealed class ResourcesOwnerPersistenceTests {
         await using var restarted = await TestApplication.CreateAsync(options);
         await using var scope = restarted.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<ResourcesService>();
-        var editor = await service.GetAsync(resourceId);
+        var originalSnapshot = await ResourceMetadataTestCommands.FoundAsync(service, resourceId);
+        var editor = service.CreateEditor(originalSnapshot);
         Assert.Equal(resourceId, editor.Id);
         Assert.Equal(responsibleId, editor.OwnerPartyId);
         Assert.Equal(maintainerId, editor.MaintainerPartyId);
         Assert.Equal(location, editor.LocationOrIdentifier);
         Assert.Equal("Resource ownership project", Assert.Single(await service.ListAsync()).ProjectName);
         editor.Name = "Edited through Resources";
-        var saved = await service.SaveAsync(editor);
-        Assert.True(saved.IsSuccess);
-        Assert.Equal(resourceId, saved.Value);
+        var saved = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await service.SaveAsync(ResourceMetadataTestCommands.Replace(originalSnapshot, editor)));
+        Assert.Equal(resourceId, saved.Snapshot.Expected.ResourceId);
 
         await using var owner = await restarted.Services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>()
             .CreateDbContextAsync();
@@ -100,7 +106,7 @@ public sealed class ResourcesOwnerPersistenceTests {
         await using var otherScope = other.Services.CreateAsyncScope();
         var otherService = otherScope.ServiceProvider.GetRequiredService<ResourcesService>();
         Assert.Empty(await otherService.ListAsync());
-        Assert.Null((await otherService.GetAsync(resourceId)).Id);
+        Assert.IsType<ResourceMetadataReadResult.Missing>(await otherService.ReadAsync(resourceId));
         Assert.Equal(resourceId, Assert.Single(await service.ListAsync()).Id);
     }
 
@@ -126,9 +132,11 @@ public sealed class ResourcesOwnerPersistenceTests {
         var writer = scope.ServiceProvider.GetRequiredService<IStorageObjectResourceWriter>();
         var missingProjectId = Guid.NewGuid();
         var missingAdmission = new ProjectWriteAdmission(scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().DatabaseProfileId, missingProjectId, Guid.NewGuid());
-        var denied = await Assert.ThrowsAsync<ResourcePromotionException>(() => writer.SaveAsync(
-            new StorageObjectResourceWriteRequest(missingProjectId, "Missing project", ResourceSensitivity.Normal, config, missingAdmission)));
-        Assert.Equal(ResourcePromotionFailureCode.TargetUnavailable, denied.Code);
+        var metadata = scope.ServiceProvider.GetRequiredService<ResourcesService>();
+        var denied = Assert.IsType<StorageObjectResourceWriteResult.Rejected>(await writer.SaveAsync(
+            new StorageObjectResourceWriteRequest(missingProjectId, "Missing project", ResourceSensitivity.Normal, config,
+                missingAdmission, await metadata.ReadContextAsync(), Guid.NewGuid())));
+        Assert.Equal(ResourceMetadataRejectionReason.ProjectUnavailable, denied.Reason);
         await using var owner = await application.Services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>()
             .CreateDbContextAsync();
         Assert.Empty(await owner.Set<ProjectResource>().ToArrayAsync());

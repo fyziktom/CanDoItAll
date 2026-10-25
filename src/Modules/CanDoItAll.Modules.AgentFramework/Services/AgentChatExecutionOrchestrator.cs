@@ -1,3 +1,5 @@
+using CanDoItAll.Infrastructure.Persistence;
+using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -12,7 +14,9 @@ public sealed class AgentChatExecutionOrchestrator(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
     IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
-    IAgentConversationContextService? conversationContextService = null)
+    IAgentConversationContextService? conversationContextService = null,
+    Func<IAgentHistoricalReceiptReviewService>? historicalReceipts = null,
+    IDatabaseRuntimeState? historicalRuntimeState = null)
     : IAgentChatExecutionOrchestrator
 {
     private const string SendAcceptedMessage = "Agent request accepted.";
@@ -23,6 +27,43 @@ public sealed class AgentChatExecutionOrchestrator(
     private const string ResolvingSessionMessage = "Loading the conversation awaiting an approval response.";
     private const string CancelledMessage = "The agent operation was cancelled.";
     private const string FailedMessage = "The agent operation failed.";
+
+    public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPlanningAction(
+        Guid agentId, AgentPlanningActionRequest request, CancellationToken cancellationToken = default) {
+        ValidateAgentId(agentId);
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        var operation = AdmitOperation(agentId, request.ChatSessionId, "Planning action accepted.");
+        return (operation.StreamId, ApplyPlanningActionAsync(operation, request, cancellationToken));
+    }
+
+    private async Task<ExecutionRunDetail> ApplyPlanningActionAsync(IAgentExecutionActivityOperationLease operation,
+        AgentPlanningActionRequest request, CancellationToken cancellationToken) {
+        using (operation) {
+            try {
+                operation.Report(AgentExecutionActivityPhase.ResolvingSession, "Loading the original planning decision.");
+                await Task.Yield();
+                var result = await workspaceExecutionService.ApplyPlanningActionWithinOperationAsync(operation, request, cancellationToken)
+                    .ConfigureAwait(false);
+                EnsureTerminalized(operation);
+                await PublishCompletionAsync(AgentChatContextInvocationFactory.CreateCompletionNotification(result.Run)).ConfigureAwait(false);
+                return result;
+            } catch (OperationCanceledException) {
+                TerminalizeCancellation(operation);
+                throw;
+            } catch {
+                TerminalizeFailure(operation);
+                throw;
+            }
+        }
+    }
+
+    public Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
+        CancellationToken cancellationToken = default) {
+        AgentHistoricalReceiptReviewService.RequireInitialized(historicalRuntimeState);
+        return (historicalReceipts ?? throw new NotSupportedException("Historical receipt review is not registered."))()
+            .ReadSavedEffectReceiptsAsync(request, cancellationToken);
+    }
 
     public AgentChatOperationHandle StartSendMessage(
         AgentChatSendRequest request,
@@ -48,6 +89,7 @@ public sealed class AgentChatExecutionOrchestrator(
             request.AttachmentPaths?.ToArray(),
             request.Behavior,
             conversationKey,
+            request.PlanningOwner,
             cancellationToken);
         return new AgentChatOperationHandle(operation.StreamId, completion);
     }
@@ -160,6 +202,7 @@ public sealed class AgentChatExecutionOrchestrator(
         IReadOnlyList<string>? attachmentPaths,
         AgentChatExecutionBehavior behavior,
         AgentConversationKey? conversationKey,
+        AgentPlanningOwner? planningOwner,
         CancellationToken cancellationToken)
     {
         using (operation)
@@ -180,7 +223,8 @@ public sealed class AgentChatExecutionOrchestrator(
                             operation.StreamId.OperationId,
                             operation.StreamId.DatabaseProfileGeneration,
                             behavior,
-                            conversationKey),
+                            conversationKey,
+                            planningOwner),
                         cancellationToken)
                     .ConfigureAwait(false);
                 if (capture.Context is { } context)
@@ -194,14 +238,13 @@ public sealed class AgentChatExecutionOrchestrator(
                     AgentExecutionActivityPhase.PreparingInput,
                     PreparingInputMessage);
                 var invocation = capture.Invocation;
-                var options = invocation.Options;
                 var result = await workspaceExecutionService
                     .SendMessageWithinOperationAsync(
                         operation,
                         agentId,
                         chatSessionId,
                         invocation.Prompt,
-                        options,
+                        invocation.Options,
                         cancellationToken,
                         attachmentPaths)
                     .ConfigureAwait(false);
@@ -268,14 +311,31 @@ public sealed class AgentChatExecutionOrchestrator(
 
     private async Task<ExecutionRunResult> RecoverRunCoreAsync(IAgentExecutionActivityOperationLease operation,
         Guid executionRunId, CancellationToken cancellationToken) {
+        ExecutionRunResult? result = null;
+        Exception? primary = null;
+        try {
+            operation.Report(AgentExecutionActivityPhase.ResolvingSession, "Loading the original run for recovery.");
+            await Task.Yield();
+            result = await workspaceExecutionService.RecoverExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken).ConfigureAwait(false);
+        } catch (Exception exception) {
+            primary = exception;
+        }
+        if (result?.EffectContinuation is { } || AgentEffectActivityFinalization.IsEffectFailure(primary)) {
+            primary = AgentEffectActivityFinalization.Publish(operation, result?.EffectContinuation, primary);
+            primary = AgentEffectActivityFinalization.Dispose(operation, result?.EffectContinuation, primary);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
+            return result!;
+        }
         using (operation) {
             try {
-                operation.Report(AgentExecutionActivityPhase.ResolvingSession, "Loading the original run for recovery.");
-                await Task.Yield();
-                var result = await workspaceExecutionService.RecoverExecutionRunWithinOperationAsync(
-                    operation, executionRunId, cancellationToken).ConfigureAwait(false);
+                if (primary is not null) {
+                    ExceptionDispatchInfo.Capture(primary).Throw();
+                }
                 EnsureTerminalized(operation);
-                await PublishCompletionAsync(result.ContextCompletionNotification).ConfigureAwait(false);
+                await PublishCompletionAsync(result!.ContextCompletionNotification).ConfigureAwait(false);
                 return result;
             } catch (OperationCanceledException) {
                 TerminalizeCancellation(operation);

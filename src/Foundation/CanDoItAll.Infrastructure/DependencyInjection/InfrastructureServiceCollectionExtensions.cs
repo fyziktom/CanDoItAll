@@ -153,11 +153,17 @@ public static class InfrastructureServiceCollectionExtensions
             var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
             AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
         });
+        services.AddPooledDbContextFactory<FiniteOperationDbContext>((serviceProvider, optionsBuilder) => {
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
+        services.AddScoped<FiniteOperationEpochStore>();
+        services.AddSingleton<FiniteOperationReceiptMaintenance>();
         services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
         services.AddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
         services.AddSingleton<DurableFileWriter>();
+        services.AddSingleton<DatasetActivationService>();
         services.AddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.AddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
         services.AddSingleton<StorageCatalogService>();

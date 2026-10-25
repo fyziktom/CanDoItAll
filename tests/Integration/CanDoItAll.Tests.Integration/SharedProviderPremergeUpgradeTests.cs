@@ -15,6 +15,8 @@ using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -98,7 +100,17 @@ public sealed class SharedProviderPremergeUpgradeTests {
         Assert.Equal(db.Database.GetMigrations(), await db.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
-        Assert.Equal(164, db.Model.GetEntityTypes().Count());
+        Assert.Equal(169, db.Model.GetEntityTypes().Count());
+        (Type EntityType, string TableName)[] operationLifecycleEntities = [
+            (typeof(DatasetLifecycleRecord), DatasetLifecycleRecord.TableName),
+            (typeof(FiniteOperationStateRecord), FiniteOperationStateRecord.TableName),
+            (typeof(FiniteOperationEpochRecord), FiniteOperationEpochRecord.TableName),
+            (typeof(ProjectDefinitionReceiptRecord), ProjectDefinitionReceiptRecord.TableName),
+            (typeof(ProjectTaskPlanReceiptRecord), ProjectTaskPlanReceiptRecord.TableName)
+        ];
+        foreach (var (entityType, tableName) in operationLifecycleEntities) {
+            Assert.Equal(tableName, Assert.IsAssignableFrom<IEntityType>(db.Model.FindEntityType(entityType)).GetTableName());
+        }
         var preservedProfile = await db.Set<PersistedProviderProfile>().SingleAsync();
         Assert.Equal(profile.Id, preservedProfile.Id);
         Assert.Equal(profile.ExtraSettingsJson, preservedProfile.ExtraSettingsJson);

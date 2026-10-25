@@ -141,6 +141,11 @@ public sealed class OwnerPostcommitTestProbe {
             await ReturnedAsync(sourceType, sourceKey, true, cancellationToken);
         }
 
+        public async Task DeleteForMutationAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default) {
+            await actual.DeleteForMutationAsync(sourceType, sourceKey, cancellationToken);
+            await ReturnedAsync(sourceType, sourceKey, true, cancellationToken);
+        }
+
         public Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default)
             => actual.SearchAsync(query, take, cancellationToken);
 

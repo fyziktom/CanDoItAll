@@ -755,37 +755,7 @@ public sealed class DatabaseProfileControlPlaneService(
     }
 
     private ResolvedDatabaseProfile BuildResolvedProfile(DatabaseProfileRecord profile, DatabaseProfileResolutionSource resolutionSource)
-    {
-        HostBoundPathPolicy.ResolveRequired(profile.Storage.WorkspacePath, "database profile workspace");
-        var connectionString = profile.ProviderKind switch
-        {
-            DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(profile),
-            DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? throw new InvalidOperationException("In-memory profile is missing a database name."),
-            _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
-        };
-
-        return new ResolvedDatabaseProfile(profile, resolutionSource, connectionString);
-    }
-
-    private string BuildPostgreSqlConnectionString(DatabaseProfileRecord profile)
-    {
-        var descriptor = profile.PostgreSql
-            ?? throw new InvalidOperationException("PostgreSQL profile is missing connection metadata.");
-        var builder = new NpgsqlConnectionStringBuilder
-        {
-            Host = descriptor.Host,
-            Port = descriptor.Port,
-            Database = descriptor.DatabaseName,
-            Username = descriptor.Username
-        };
-
-        if (!string.IsNullOrWhiteSpace(descriptor.EncryptedPassword))
-        {
-            builder.Password = secretProtector.Unprotect(descriptor.EncryptedPassword);
-        }
-
-        return builder.ConnectionString;
-    }
+        => DatabaseProfileConnection.Resolve(profile, resolutionSource, secretProtector);
 
     private DatabaseProfileSummary CreateSummary(DatabaseProfileRecord profile, bool isActive)
     {

@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Text;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -17,6 +17,28 @@ public sealed partial class AgentToolAdmissionJournal {
     public async Task<AgentToolJournalRecord> CreateForNewBackgroundRunAsync(ExecutionRunRecord run, string input,
         AgentToolAdmissionSupport support = AgentToolAdmissionSupport.Recoverable,
         AgentRuntimeTransientContext? runtimeContext = null, CancellationToken cancellationToken = default) {
+        var session = await CreateNewBackgroundSessionAsync(run, runtimeContext, null, cancellationToken);
+        var journal = new AgentToolJournalRecord(AgentToolJournalRecord.BackgroundSchemaVersion, 1, session, [], [], Support: support,
+            RuntimeContext: runtimeContext is null ? null : new(runtimeContext.Content, runtimeContext.WorkspaceScope),
+            BackgroundInput: new(input));
+        journal.Validate();
+        return journal;
+    }
+
+    internal Task<AgentToolSessionAdmission> CreateForNewInheritedBackgroundSessionAsync(ExecutionRunRecord run, string input,
+        AgentToolProtocolEnvelope originalParent, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(originalParent);
+        if (Encoding.UTF8.GetByteCount(originalParent.PayloadJson) > AgentPlanningInheritedOrigin.MaximumBindingUtf8Bytes) {
+            throw new InvalidDataException("The original inherited parent binding exceeds its supported bound.");
+        }
+        if (string.IsNullOrWhiteSpace(input) || Encoding.UTF8.GetByteCount(input) > AgentToolProtocolEnvelope.MaximumUtf8Bytes) {
+            throw new InvalidDataException("The original inherited input is empty or exceeds its supported bound.");
+        }
+        return CreateNewBackgroundSessionAsync(run, null, originalParent, cancellationToken);
+    }
+
+    private async Task<AgentToolSessionAdmission> CreateNewBackgroundSessionAsync(ExecutionRunRecord run, AgentRuntimeTransientContext? runtimeContext,
+        AgentToolProtocolEnvelope? originalParent, CancellationToken cancellationToken) {
         if (run.ToolAdmission is not null || run.ChatSessionId is not null || run.PendingApprovals.Count != 0 ||
                 run.Revision != 1 || run.State != ExecutionState.Preparing || run.Outcome is not null ||
                 await reader.GetExecutionRunAsync(run.Id, cancellationToken) is not null) {
@@ -31,28 +53,29 @@ public sealed partial class AgentToolAdmissionJournal {
                 AgentChatContextDigest.Compute(runtimeContext) != ExecutionInvocationMetadata.ResolveTransientContextDigest(run))) {
             throw Failure("The background runtime context has no matching retained input digest.");
         }
-        var observation = await RequireBackgroundPolicy(run.SourceKind).ObserveAsync(run, profile, cancellationToken);
+        var policy = RequireBackgroundPolicy(run.SourceKind);
+        var observation = originalParent is null ? await policy.ObserveAsync(run, profile, cancellationToken)
+            : await policy.ObserveInitialInheritedAsync(run, profile, originalParent, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!observation.ReadAllowed || !observation.DispatchAllowed) {
             throw Failure("The source owner denied the new background execution.");
         }
         var binding = new AgentToolBackgroundSourceBinding(run.SourceKind, run.SourceId, observation.OwnerFingerprint,
             BackgroundExecutionFingerprint(run));
-        var session = new AgentToolSessionAdmission(new(run.Id, Guid.Empty, default, binding), run.AgentId,
+        return new(new(run.Id, Guid.Empty, default, binding), run.AgentId,
             AgentRuntimeContextPurpose.GovernedProcessAutomation, profile);
-        var journal = new AgentToolJournalRecord(AgentToolJournalRecord.BackgroundSchemaVersion, 1, session, [], [], Support: support,
-            RuntimeContext: runtimeContext is null ? null : new(runtimeContext.Content, runtimeContext.WorkspaceScope),
-            BackgroundInput: new(input));
-        journal.Validate();
-        return journal;
     }
 
-    public async Task<bool> CanReadBackgroundResultAsync(ExecutionRunRecord run, CancellationToken cancellationToken = default) {
+    public Task<bool> CanReadBackgroundResultAsync(ExecutionRunRecord run, CancellationToken cancellationToken = default)
+        => CanAccessBackgroundSourceAsync(run, readOnly: true, cancellationToken);
+
+    private async Task<bool> CanAccessBackgroundSourceAsync(ExecutionRunRecord run, bool readOnly, CancellationToken cancellationToken) {
         var journal = run.ToolAdmission ?? throw Failure("The execution has no saved tool journal.");
         journal.Validate();
         var background = journal.Session.Reference.BackgroundSource ?? throw Failure("The execution is not admitted from a background source.");
         RequireBackgroundIdentity(journal.Session, run, background);
         var current = await RequireBackgroundPolicy(background.SourceKind).ObserveAsync(run, profile, cancellationToken);
-        return current.OwnerFingerprint == background.OwnerFingerprint && current.ReadAllowed;
+        return current.OwnerFingerprint == background.OwnerFingerprint && current.ReadAllowed && (readOnly || current.DispatchAllowed);
     }
 
     public async Task<AgentToolBackgroundReservation> PrepareBackgroundReservationAsync(ExecutionRunRecord candidate,
@@ -70,7 +93,8 @@ public sealed partial class AgentToolAdmissionJournal {
             throw Failure("The background reservation does not match its current owner claim or exact result acknowledgements.");
         }
         await RequireBackgroundDispatchAsync(candidate, cancellationToken);
-        return new(candidate.Id, profile, source.OwnerFingerprint, observation.AcknowledgedExecutionRunIds.ToHashSet());
+        return new(candidate.Id, profile, source.OwnerFingerprint, observation.AcknowledgedExecutionRunIds.ToHashSet(),
+            token => policy.AcquirePublicationAsync(candidate, profile, source.OwnerFingerprint, token));
     }
 
     public Task RequireBackgroundDispatchAsync(ExecutionRunRecord run, CancellationToken cancellationToken = default)
@@ -78,33 +102,21 @@ public sealed partial class AgentToolAdmissionJournal {
 
     private async Task RequireBackgroundSourceAsync(ExecutionRunRecord run, bool readOnly, CancellationToken cancellationToken) {
         using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("tool.journal.source-authority");
-        if (run.ToolAdmission?.Session.Reference.BackgroundSource is not { } source) {
+        if (run.ToolAdmission?.Session.Reference.BackgroundSource is null) {
             return;
         }
-        RequireBackgroundIdentity(run.ToolAdmission.Session, run, source);
-        var current = await RequireBackgroundPolicy(source.SourceKind).ObserveAsync(run, profile, cancellationToken);
-        if (current.OwnerFingerprint != source.OwnerFingerprint || !current.ReadAllowed || !readOnly && !current.DispatchAllowed) {
+        if (!await CanAccessBackgroundSourceAsync(run, readOnly, cancellationToken)) {
             throw Failure("The original background source binding or current owner authorization no longer permits this operation.");
         }
     }
 
-    private void RequireBackgroundIdentity(AgentToolSessionAdmission session, ExecutionRunRecord run, AgentToolBackgroundSourceBinding source) {
-        if (session.Profile != profile || session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation ||
-                session.Reference.ChatSessionId != Guid.Empty || session.Reference.AuthorityId.Value != Guid.Empty ||
-                run.Id != session.Reference.ExecutionRunId || run.AgentId != session.AgentId || run.ChatSessionId is not null ||
-                run.SourceKind != source.SourceKind || run.SourceId != source.SourceId ||
-                BackgroundExecutionFingerprint(run) != source.ExecutionFingerprint) {
-            throw Failure("The saved background execution, source, profile or immutable input binding changed.");
-        }
-    }
+    private void RequireBackgroundIdentity(AgentToolSessionAdmission session, ExecutionRunRecord run, AgentToolBackgroundSourceBinding source)
+        => AgentBackgroundExecutionIdentity.Require(session, run, source, profile);
 
     private IAgentToolBackgroundSourcePolicy RequireBackgroundPolicy(string sourceKind)
         => backgroundSources.TryGetValue(sourceKind, out var source) ? source :
             throw new AgentToolAdmissionException("tool-admission.source-policy-missing", "The saved background source has no installed owner policy.");
 
     private static AgentToolSemanticDigest BackgroundExecutionFingerprint(ExecutionRunRecord run)
-        => AgentToolProtocolEnvelope.ComputeDigest(JsonSerializer.Serialize(new {
-            run.Id, run.AgentId, run.SourceKind, run.SourceId, run.CorrelationId, run.CausationId, run.RequestedBy,
-            run.RequestedByKind, run.ProcessRunId, run.ProcessStepId, run.SchedulerRunId, run.MetadataJson, run.CreatedAtUtc
-        }));
+        => AgentBackgroundExecutionIdentity.Fingerprint(run);
 }

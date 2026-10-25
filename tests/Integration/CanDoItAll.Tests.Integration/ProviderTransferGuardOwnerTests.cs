@@ -26,7 +26,7 @@ public sealed class ProviderTransferGuardOwnerTests {
         targetDb.Add(remote);
         await targetDb.SaveChangesAsync();
         var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
-        var harness = new TransferHarness(source.Profile, target.Profile);
+        var harness = new TransferHarness(source.Profile, target.Profile, await target.ActivateDatasetAsync());
 
         var blocked = await harness.Handler.PreviewAsync(context);
 
@@ -70,7 +70,7 @@ public sealed class ProviderTransferGuardOwnerTests {
         var sourceProvider = await SeedProviderAsync(sourceDb);
         var targetProvider = await SeedProviderAsync(targetDb);
         var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
-        var harness = new TransferHarness(source.Profile, target.Profile);
+        var harness = new TransferHarness(source.Profile, target.Profile, await target.ActivateDatasetAsync());
         Assert.True((await harness.Handler.PreviewAsync(context)).IsAvailable);
         AssertIndependentOwnerReads(harness, source.Profile, target.Profile);
         var publication = SharedProviderPublicationTransitions.Create(targetProvider.Id, SharedProviderPublicationId.New(), DateTimeOffset.UtcNow);
@@ -110,8 +110,8 @@ public sealed class ProviderTransferGuardOwnerTests {
         var remote = RemoteSource(secretId);
         var publication = SharedProviderPublicationTransitions.Create(targetProvider.Id, SharedProviderPublicationId.New(), DateTimeOffset.UtcNow);
         var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
-        var harness = new TransferHarness(source.Profile, target.Profile);
-        var independent = new TransferHarness(source.Profile, target.Profile);
+        var harness = new TransferHarness(source.Profile, target.Profile, await target.ActivateDatasetAsync());
+        var independent = new TransferHarness(source.Profile, target.Profile, await target.ActivateDatasetAsync());
         Assert.True((await harness.Handler.PreviewAsync(context)).IsAvailable);
         DbConnection? sourceConnection = null;
         DbConnection? targetConnection = null;
@@ -201,9 +201,9 @@ public sealed class ProviderTransferGuardOwnerTests {
     };
 
     private sealed class TransferHarness {
-        public TransferHarness(ResolvedDatabaseProfile source, ResolvedDatabaseProfile target) {
+        public TransferHarness(ResolvedDatabaseProfile source, ResolvedDatabaseProfile target, DatasetActivationService activation) {
             Contexts = new ProfileContexts([source, target], Probe);
-            Operations = new DatabaseTransferOperationRunner(Contexts, Owners, Inspections);
+            Operations = new DatabaseTransferOperationRunner(Contexts, Owners, Inspections, activation);
             Secrets = new ObservedSecrets(new SecretDatabaseTransferParticipant(Owners));
             Handler = new AiProvidersDatabaseTransferHandler(Secrets, Owners, Operations, [new SharedProviderDatabaseTransferGuard()]);
         }
@@ -235,6 +235,7 @@ public sealed class ProviderTransferGuardOwnerTests {
     }
 
     private sealed class ObservedSecrets(ISecretDatabaseTransferParticipant inner) : ISecretDatabaseTransferParticipant {
+        public IReadOnlyCollection<Type> TargetEntityTypes => inner.TargetEntityTypes;
         public Func<DatabaseTransferOwnerRequest, CancellationToken, Task>? BeforeTargetLocks { get; set; }
         public int TableCalls { get; private set; }
         public int CopyCalls { get; private set; }

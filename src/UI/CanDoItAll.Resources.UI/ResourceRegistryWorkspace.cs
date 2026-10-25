@@ -5,37 +5,64 @@ using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Resources.UI;
 
-public enum ResourceEditorField { Name, Description, Owner, Maintainer, Secret, Validation, Sensitivity, Preview, Indexing }
-public enum ResourceEffectState { Pending, Refused, Committed, CommittedWarning, Unknown, Reviewed }
+public enum ResourceEditorField { Name, Description, Owner, Maintainer, Secret, Validation, Sensitivity, Preview, Indexing, Project }
+public enum ResourceEffectState { Pending, Refused, Committed, CommittedWarning, Unknown }
 
-public sealed class ResourceMutationReceipt(Guid origin, ResourceMutationKind kind, ResourceEditorModel command) {
+public sealed class ResourceMutationReceipt(Guid origin, ResourceMutationKind kind, ResourceMetadataExpectation expected, string name,
+    ReplaceResourceMetadataCommand? command = null) {
     public Guid Id { get; } = Guid.NewGuid();
     public Guid Origin { get; } = origin;
     public ResourceMutationKind Kind { get; } = kind;
-    public ResourceEditorModel Command { get; } = command;
-    public Guid? ResourceId { get; set; } = command.Id;
+    public ResourceMetadataExpectation Expected { get; } = expected;
+    public ReplaceResourceMetadataCommand? Command { get; } = command;
+    public string Name { get; } = name;
+    public Guid ResourceId => Expected.ResourceId;
+    public ResourceMetadataSnapshot? AcceptedSnapshot { get; set; }
+    public ResourceMetadataExpectation.Existing? Deleted { get; set; }
     public ResourceEffectState State { get; set; } = ResourceEffectState.Pending;
     public string Message { get; set; } = "Waiting for the owner.";
     public bool IsReviewing { get; set; }
-    public ResourceEditorModel? ReviewedResource { get; set; }
+    public ResourceMetadataReadResult? Observation { get; set; }
     public bool BlocksDispatch => State is ResourceEffectState.Pending or ResourceEffectState.Unknown;
 }
 
-public sealed class ResourceRegistryDraft(ResourceEditorModel editor) {
+public sealed class ResourceRegistryDraft(ResourceEditorModel editor, ResourceMetadataExpectation? expected = null,
+    ResourceMetadataSnapshot? snapshot = null, ResourceMetadataReadOnlyReason? readOnlyReason = null) {
     private readonly Dictionary<ResourceEditorField, long> versions = [];
-    public Guid Origin { get; private set; } = Guid.NewGuid();
+    public Guid Origin { get; } = Guid.NewGuid();
     public ResourceEditorModel Editor { get; } = editor;
     public EditContext EditContext { get; } = new(editor);
-    public ConfigurationInputDraft Configuration { get; } = new(editor.Configuration);
+    public ConfigurationInputDraft Configuration { get; private set; } = new(editor.Configuration);
+    public ResourceMetadataExpectation? Expected { get; private set; } = expected;
+    public ResourceMetadataSnapshot? AcceptedSnapshot { get; private set; } = snapshot;
+    public ResourceMetadataReadOnlyReason? ReadOnlyReason { get; } = readOnlyReason;
+    public bool ProjectionFailed { get; set; }
+    public bool EditorUnavailable { get; set; }
+    public long ConfigurationGeneration { get; private set; }
     public long MutationVersion { get; private set; }
     public long AdmitMutation() => ++MutationVersion;
-    public void ChangeTarget() => Origin = Guid.NewGuid();
+    public void ChangeConnector(ConnectorPluginManifest manifest) {
+        Editor.ConnectorPluginKey = manifest.PluginKey;
+        Editor.ConfigSchemaVersion = manifest.ConfigurationSchema.Version;
+        Editor.Configuration.KeepOnly(manifest.ConfigurationSchema.Fields.Select(field => field.Key));
+        Editor.ConfigJson = "{}";
+        Configuration = new(Editor.Configuration);
+        ConfigurationGeneration++;
+    }
+    public void Accept(ResourceMetadataSnapshot accepted) {
+        if (Expected is null || accepted.Expected.ResourceId != Expected.ResourceId || accepted.Expected.Context != Expected.Context) {
+            throw new InvalidOperationException("The accepted Resource identity does not match this draft.");
+        }
+        AcceptedSnapshot = accepted;
+        Expected = accepted.Expected;
+        Editor.Id = accepted.Expected.ResourceId;
+    }
     public void Edited(ResourceEditorField field) => versions[field] = Version(field) + 1;
     public long Version(ResourceEditorField field) => versions.GetValueOrDefault(field);
     public IReadOnlyDictionary<ResourceEditorField, long> CaptureVersions() => new Dictionary<ResourceEditorField, long>(versions);
 
     public void Reconcile(ResourceEditorModel submitted, ResourceEditorModel stored, IReadOnlyDictionary<ResourceEditorField, long> submittedVersions,
-        IReadOnlyDictionary<string, long> configurationVersions) {
+        IReadOnlyDictionary<string, long> configurationVersions, long configurationGeneration) {
         Apply(ResourceEditorField.Name, submitted.Name, stored.Name, () => Editor.Name, value => Editor.Name = value);
         Apply(ResourceEditorField.Description, submitted.Description, stored.Description, () => Editor.Description, value => Editor.Description = value);
         Apply(ResourceEditorField.Owner, submitted.OwnerPartyId, stored.OwnerPartyId, () => Editor.OwnerPartyId, value => Editor.OwnerPartyId = value);
@@ -45,9 +72,22 @@ public sealed class ResourceRegistryDraft(ResourceEditorModel editor) {
         Apply(ResourceEditorField.Sensitivity, submitted.Sensitivity, stored.Sensitivity, () => Editor.Sensitivity, value => Editor.Sensitivity = value);
         Apply(ResourceEditorField.Preview, submitted.SupportsPreview, stored.SupportsPreview, () => Editor.SupportsPreview, value => Editor.SupportsPreview = value);
         Apply(ResourceEditorField.Indexing, submitted.SupportsIndexing, stored.SupportsIndexing, () => Editor.SupportsIndexing, value => Editor.SupportsIndexing = value);
-        Configuration.Reconcile(submitted.Configuration, stored.Configuration, configurationVersions);
-        Editor.ConfigJson = stored.ConfigJson;
-        Editor.LocationOrIdentifier = stored.LocationOrIdentifier;
+        Apply(ResourceEditorField.Project, (submitted.ProjectId, submitted.ExpectedProjectAdmission), (stored.ProjectId, stored.ExpectedProjectAdmission),
+            () => (Editor.ProjectId, Editor.ExpectedProjectAdmission), value => {
+                Editor.ProjectId = value.ProjectId;
+                Editor.ExpectedProjectAdmission = value.ExpectedProjectAdmission;
+            });
+        if (ConfigurationGeneration == configurationGeneration && Editor.ConnectorPluginKey == submitted.ConnectorPluginKey &&
+            Editor.ConfigSchemaVersion == submitted.ConfigSchemaVersion) {
+            var unchanged = submitted.Configuration.Values.Keys.Concat(Editor.Configuration.Values.Keys).Distinct(StringComparer.OrdinalIgnoreCase)
+                .All(key => Configuration.Version(key) == configurationVersions.GetValueOrDefault(key) &&
+                    Editor.Configuration.GetText(key) == submitted.Configuration.GetText(key));
+            Configuration.Reconcile(submitted.Configuration, stored.Configuration, configurationVersions);
+            if (unchanged) {
+                Editor.ConfigJson = stored.ConfigJson;
+                Editor.LocationOrIdentifier = stored.LocationOrIdentifier;
+            }
+        }
 
         void Apply<T>(ResourceEditorField field, T oldValue, T storedValue, Func<T> current, Action<T> assign) {
             if (Version(field) == submittedVersions.GetValueOrDefault(field) && EqualityComparer<T>.Default.Equals(current(), oldValue)) {
@@ -71,6 +111,8 @@ public interface IResourceRegistryWorkspace {
     ResourceViewAccess Access { get; }
     ResourceViewAccess EditorAccess { get; }
     bool CanMutate { get; }
+    bool CanSave { get; }
+    bool CanDelete { get; }
     string? Error { get; }
     IReadOnlyList<string> ReferenceErrors { get; }
     string? SelectedProjectName { get; }
@@ -84,6 +126,7 @@ public interface IResourceRegistryWorkspace {
     ResourceValidationStatus? ValidationFilter { get; set; }
     Task RefreshAsync();
     Task SelectAsync(Guid id);
+    Task ReloadAsync();
     Task NewAsync();
     Task ChangeProjectAsync(Guid? projectId);
     Task ChangeConnectorAsync(string key);

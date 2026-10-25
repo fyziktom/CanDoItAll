@@ -17,6 +17,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     private readonly object _cleanupLock = new();
     private Task? _stopTask;
     private Task? _disposeTask;
+    private Task<OwnedHostRestart>? _restartTask;
     private Process? _process;
     private Task? _stdoutPump;
     private Task? _stderrPump;
@@ -155,9 +156,45 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     internal Task StopOwnedApplicationAsync() {
         lock (_cleanupLock) {
-            return _stopTask ??= StopOwnedApplicationCoreAsync();
+            return _stopTask ??= StopAfterRestartAsync();
         }
     }
+
+    internal Task<OwnedHostRestart> RestartOwnedApplicationAsync() {
+        lock (_cleanupLock) {
+            if (_process is null || _activeProfile is null || _stopTask is not null || _disposeTask is not null || _restartTask is not null) {
+                throw new InvalidOperationException("Only a running, owned Playwright host can be restarted once.");
+            }
+            return _restartTask = RestartOwnedApplicationCoreAsync();
+        }
+    }
+
+    private async Task<OwnedHostRestart> RestartOwnedApplicationCoreAsync() {
+        var previous = _process!;
+        var previousId = previous.Id;
+        var previousStartedUtc = previous.StartTime.ToUniversalTime();
+        var startInfo = previous.StartInfo;
+        await StopOwnedApplicationCoreAsync();
+        previous.Dispose();
+        _process = null;
+        _process = Process.Start(startInfo) ?? throw new InvalidOperationException("The owned Playwright host could not restart.");
+        _stdoutPump = PumpAsync(_process.StandardOutput);
+        _stderrPump = PumpAsync(_process.StandardError);
+        await WaitForRuntimeReadyAsync();
+        return new(previousId, previousStartedUtc, _process.Id, _process.StartTime.ToUniversalTime());
+    }
+
+    private async Task StopAfterRestartAsync() {
+        try {
+            if (_restartTask is not null) {
+                await _restartTask;
+            }
+        } finally {
+            await StopOwnedApplicationCoreAsync();
+        }
+    }
+
+    internal sealed record OwnedHostRestart(int PreviousId, DateTime PreviousStartedUtc, int CurrentId, DateTime CurrentStartedUtc);
 
     private async Task StopOwnedApplicationCoreAsync() {
         if (_process is not null && !_process.HasExited) {

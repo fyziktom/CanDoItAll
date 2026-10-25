@@ -21,7 +21,9 @@ public sealed class ProjectStructureProjectCreateLifetimeTests {
     [InlineData(true)]
     public async Task Project_creation_completion_retains_acknowledged_identity_without_restoring_a_successor(bool reopen) {
         var gate = new CreationGate();
+        var store = new ProjectPendingSubmissionTestStore();
         await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IProjectPendingSubmissionStore>(store);
             services.AddSingleton<IDbContextFactory<ProjectsDbContext>>(provider => new PooledDbContextFactory<ProjectsDbContext>(
                 new DbContextOptionsBuilder<ProjectsDbContext>(provider.GetRequiredService<DbContextOptions<ProjectsDbContext>>())
                     .AddInterceptors(gate).Options));
@@ -56,8 +58,11 @@ public sealed class ProjectStructureProjectCreateLifetimeTests {
         var outcome = Assert.Single(page.Instance.AuthoringOutcomes);
         Assert.Equal(ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
         Assert.Equal(gate.CreatedProjectId, outcome.TargetProjectId);
-        Assert.Equal(gate.CreatedProjectId, draft.Model.Id);
-        Assert.Equal(draft.Acknowledgement, outcome.Editor);
+        Assert.Null(draft.Model.Id);
+        Assert.Null(draft.Acknowledgement);
+        Assert.Equal(draft.AcceptedOutcome!.Accepted, outcome.Editor);
+        Assert.Equal(gate.CreatedProjectId, draft.AcceptedOutcome.Accepted.Project.ProjectId);
+        Assert.Equal(ProjectPendingStage.Accepted, Assert.Single(store.Records).Stage);
         Assert.Equal("Original created project", (await projects.GetAsync(gate.CreatedProjectId)).Name);
         Assert.DoesNotContain(await projects.ListAsync(), project => project.Name == "Unsubmitted project draft");
         Assert.Empty(await projects.ListHierarchyLinksAsync());
@@ -66,6 +71,9 @@ public sealed class ProjectStructureProjectCreateLifetimeTests {
             Assert.Null(successor!.Model.Id);
             Assert.Equal("Unsubmitted project draft", successor.Model.Name);
             Assert.True(successor.CanMutate);
+            Assert.False(page.FindComponent<ProjectModalHost>().Instance.SubmissionReady);
+            await page.InvokeAsync(() => page.FindComponent<ProjectModalHost>().Instance.Save.InvokeAsync(successor.Capture()));
+            Assert.Equal(1, store.DispatchClaims);
         } else {
             var restored = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!;
             Assert.Equal(hierarchyId, restored.OpeningId);

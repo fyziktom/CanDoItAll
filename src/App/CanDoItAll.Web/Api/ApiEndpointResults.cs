@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using CanDoItAll.AgentFramework.Models;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.SharedKernel;
@@ -20,6 +22,18 @@ internal sealed record ApiAck(bool Ok);
 /// <param name="Errors">The reasons the request was rejected or failed, in the order they were detected.</param>
 internal sealed record ApiErrorResponse(IReadOnlyList<ApiErrorItem> Errors)
 {
+    [Description("Bounded currently authorized effect knowledge after checkpoint or lease cleanup failure; absence never negates previously known commitment. No owner receipt contents are included.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentEffectContinuation? EffectContinuation { get; init; }
+
+    [Description("True when release of the original run coordination lease is unconfirmed. Preserve checkpoint knowledge and inspect cleanup before another slice.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool EffectLeaseReleaseUnconfirmed { get; init; }
+
+    [Description("True when saved-effect activity publication or disposal failed. Preserve supplied effect knowledge; this flag does not imply file-lease cleanup failure or authorize another effect.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool EffectActivityFinalizationFailed { get; init; }
+
     /// <summary>
     /// Server trace identifier of the failed request, for support and log correlation. Present on agent run and
     /// agent command failures; omitted otherwise. It is not an idempotency key and does not identify a committed

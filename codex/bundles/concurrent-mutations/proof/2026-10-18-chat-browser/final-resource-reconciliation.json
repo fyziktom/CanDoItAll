@@ -1,0 +1,40 @@
+{
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\3dae18a3-184a-4307-b657-9c1be5826751.tmp",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\zkm5u1ii.tl2",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\c4vwiyaw.i5z",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_55496_20261018_130201_112.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\opjw4l1l.khh",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_40772_20261018_130202_605.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\iay5jnve.mmp",
+      "family": "shared-temp-directory-entries"
+    }
+  ],
+  "databaseNameDelta": [],
+  "remainingObservedProcesses": [],
+  "recordedUtc": "2026-10-18T17:03:00.1240163+00:00",
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "outcome": "Browser passed all three submissions and all four native UI outcome observations; shared fixture remains for next lanes"
+}

@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,6 +17,7 @@ public enum ProjectCreationReservationState {
 public sealed class ProjectCreationReservationRecord {
     public Guid Id { get; set; }
     public Guid DatabaseProfileId { get; set; }
+    public Guid? NamespaceId { get; set; }
     public Guid ProjectId { get; set; }
     public Guid LifetimeId { get; set; }
     public Guid RequesterId { get; set; }
@@ -30,9 +32,12 @@ public sealed class ProjectCreationReservationRecord {
 
 internal sealed class ProjectCreationReservationRecordConfiguration : IEntityTypeConfiguration<ProjectCreationReservationRecord> {
     public void Configure(EntityTypeBuilder<ProjectCreationReservationRecord> builder) {
-        builder.ToTable("Projects_ProjectCreationReservations", table => table.HasCheckConstraint(
-            "CK_Projects_CreationReservation_Parent",
-            "(\"ParentProjectId\" IS NULL AND \"ParentLifetimeId\" IS NULL) OR (\"ParentProjectId\" IS NOT NULL AND \"ParentLifetimeId\" IS NOT NULL)"));
+        builder.ToTable("Projects_ProjectCreationReservations", table => {
+            table.HasCheckConstraint("CK_Projects_CreationReservation_Parent",
+                "(\"ParentProjectId\" IS NULL AND \"ParentLifetimeId\" IS NULL) OR (\"ParentProjectId\" IS NOT NULL AND \"ParentLifetimeId\" IS NOT NULL)");
+            table.HasCheckConstraint("CK_Projects_CreationReservation_Namespace",
+                "\"NamespaceId\" IS NULL OR \"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+        });
         builder.HasKey(record => record.Id);
         builder.Property(record => record.ImportedHistory).HasRetainedEvidenceImportConversion();
         builder.Property(record => record.State).HasConversion<int>();
@@ -44,25 +49,53 @@ internal sealed class ProjectCreationReservationRecordConfiguration : IEntityTyp
 }
 
 public sealed partial class ProjectWriteAdmissionService {
+    public async Task<ProjectCreationReservation?> FindCreationReservationAsync(Guid operationId, Guid requesterId,
+        CancellationToken cancellationToken = default) {
+        if (operationId == Guid.Empty || requesterId == Guid.Empty) {
+            throw new ArgumentException("Creation evidence requires nonempty operation and requester identities.");
+        }
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var record = await context.Set<ProjectCreationReservationRecord>().AsNoTracking()
+            .SingleOrDefaultAsync(row => row.Id == operationId, cancellationToken);
+        if (record is null) {
+            return null;
+        }
+        RetainedEvidenceImport.RequireNative(record.ImportedHistory);
+        if (record.DatabaseProfileId != DatabaseProfileId || record.RequesterId != requesterId) {
+            throw new InvalidOperationException("The stored creation evidence does not belong to this profile and requester.");
+        }
+        if (record.State == ProjectCreationReservationState.Cancelled) {
+            return null;
+        }
+        if (record.State is not (ProjectCreationReservationState.Reserved or ProjectCreationReservationState.Consumed)) {
+            throw new InvalidOperationException("The stored creation evidence has an unsupported state.");
+        }
+        var reservation = ToReservation(record);
+        ValidateReservation(reservation);
+        return reservation;
+    }
+
     public async Task<ProjectCreationReservation> ReserveCreationAsync(Guid projectId, Guid requesterId, Guid operationId,
         Guid? parentProjectId = null, CancellationToken cancellationToken = default,
         ProjectMutationAuthorization? authorization = null, ProjectWriteAdmission? expectedParentAdmission = null) {
         if (projectId == Guid.Empty || requesterId == Guid.Empty || operationId == Guid.Empty || parentProjectId == Guid.Empty || parentProjectId == projectId) {
             throw new ArgumentException("A reservation requires nonempty project, requester and operation identifiers and a different parent project.");
         }
+        var original = await CaptureCreationBindingAsync(cancellationToken);
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutation = await ProjectSourceMutationScope.BeginAsync(context,
+        await using var mutation = await ProjectSourceMutationScope.BeginBoundAsync(context,
             ReservationScopeKeys(projectId, parentProjectId), parentProjectId.HasValue ? ProjectMutationPurpose.ReserveChild : ProjectMutationPurpose.ReserveRoot,
             projectId, parentProjectId.HasValue ? [parentProjectId.Value] : [], authorization, this, coordinatedTransaction,
-            cancellationToken, requesterId: requesterId,
+            original, cancellationToken, requesterId: requesterId,
             expectedProjectAdmissions: expectedParentAdmission is null ? null : [expectedParentAdmission]);
         var existing = await context.Set<ProjectCreationReservationRecord>().SingleOrDefaultAsync(record => record.Id == operationId, cancellationToken);
         if (existing is not null) {
-            RetainedEvidenceImport.RequireNative(existing.ImportedHistory);
+            RequireReservationNamespace(existing, original.Binding.Namespace);
             if (existing.DatabaseProfileId != DatabaseProfileId || existing.ProjectId != projectId || existing.RequesterId != requesterId ||
                 existing.ParentProjectId != parentProjectId || existing.State is not (ProjectCreationReservationState.Reserved or ProjectCreationReservationState.Consumed)) {
                 throw new InvalidOperationException("The creation operation is already bound to a different or cancelled project reservation.");
             }
+            await RequireCreationBindingAsync(original, cancellationToken);
             return ToReservation(existing);
         }
         if (await context.Set<Project>().AnyAsync(project => project.Id == projectId, cancellationToken) ||
@@ -79,55 +112,39 @@ public sealed partial class ProjectWriteAdmissionService {
             }
         }
         var record = new ProjectCreationReservationRecord {
-            Id = operationId, DatabaseProfileId = DatabaseProfileId, ProjectId = projectId, LifetimeId = Guid.NewGuid(),
+            Id = operationId, DatabaseProfileId = original.Profile.Profile.Id, NamespaceId = original.Binding.Namespace.Value,
+            ProjectId = projectId, LifetimeId = Guid.NewGuid(),
             RequesterId = requesterId, ParentProjectId = parentProjectId, ParentLifetimeId = parentLifetimeId,
             State = ProjectCreationReservationState.Reserved, CreatedAtUtc = DateTimeOffset.UtcNow
         };
         context.Add(record);
         await context.SaveChangesAsync(cancellationToken);
+        await RequireCreationBindingAsync(original, cancellationToken);
         await mutation.CommitAsync(cancellationToken);
         return ToReservation(record);
     }
 
     public async Task RequireCreationGrantAsync(ProjectCreationReservation reservation, CancellationToken cancellationToken = default) {
         ValidateReservation(reservation);
-        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var record = await context.Set<ProjectCreationReservationRecord>().AsNoTracking()
-            .SingleOrDefaultAsync(record => record.Id == reservation.Id, cancellationToken);
-        if (record is null || !Matches(record, reservation) || record.State is not (ProjectCreationReservationState.Reserved or ProjectCreationReservationState.Consumed) ||
-            record.State == ProjectCreationReservationState.Consumed && !await context.Set<Project>().AnyAsync(
-                project => project.Id == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId, cancellationToken)) {
-            throw new InvalidOperationException("The exact project creation reservation no longer admits an access grant.");
-        }
-        if (record.State == ProjectCreationReservationState.Reserved && record.ParentProjectId is { } parentId &&
-            !await context.Set<Project>().AnyAsync(project => project.Id == parentId && project.LifetimeId == record.ParentLifetimeId, cancellationToken)) {
-            throw new InvalidOperationException("The parent lifetime no longer admits the reserved child project.");
-        }
+        var original = await CaptureCreationBindingAsync(cancellationToken);
+        await ReadCreationAuthorityAsync(original, dbContextFactory.CreateDbContextAsync, async context => {
+            var record = await context.Set<ProjectCreationReservationRecord>().AsNoTracking()
+                .SingleOrDefaultAsync(record => record.Id == reservation.Id, cancellationToken);
+            if (record is null || !Matches(record, reservation) || record.State is not (ProjectCreationReservationState.Reserved or ProjectCreationReservationState.Consumed) ||
+                record.State == ProjectCreationReservationState.Consumed && !await context.Set<Project>().AnyAsync(
+                    project => project.Id == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId, cancellationToken)) {
+                throw new InvalidOperationException("The exact project creation reservation no longer admits an access grant.");
+            }
+            RequireReservationNamespace(record, original.Binding.Namespace);
+            if (record.State == ProjectCreationReservationState.Reserved && record.ParentProjectId is { } parentId &&
+                !await context.Set<Project>().AnyAsync(project => project.Id == parentId && project.LifetimeId == record.ParentLifetimeId, cancellationToken)) {
+                throw new InvalidOperationException("The parent lifetime no longer admits the reserved child project.");
+            }
+        }, cancellationToken);
     }
 
-    public async Task CancelCreationAsync(ProjectCreationReservation reservation, CancellationToken cancellationToken = default) {
-        ValidateReservation(reservation);
-        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutation = await SerializableMutationScope.BeginAsync(context,
-            ReservationScopeKeys(reservation.ProjectId, reservation.ParentProjectId), cancellationToken);
-        var record = await context.Set<ProjectCreationReservationRecord>().SingleOrDefaultAsync(record => record.Id == reservation.Id, cancellationToken);
-        if (record is null || !Matches(record, reservation)) {
-            throw new InvalidOperationException("The exact project creation reservation was not found.");
-        }
-        if (record.State == ProjectCreationReservationState.Cancelled) {
-            return;
-        }
-        if (record.State is not (ProjectCreationReservationState.Reserved or ProjectCreationReservationState.Consumed)) {
-            throw new InvalidOperationException("The creation reservation has an unknown state.");
-        }
-        if (await context.Set<Project>().AnyAsync(project => project.Id == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId, cancellationToken)) {
-            throw new InvalidOperationException("A live project lifetime cannot have its creation grant cancelled as an uncommitted operation.");
-        }
-        record.State = ProjectCreationReservationState.Cancelled;
-        record.CancelledAtUtc = DateTimeOffset.UtcNow;
-        await context.SaveChangesAsync(cancellationToken);
-        await mutation.CommitAsync(cancellationToken);
-    }
+    public Task CancelCreationAsync(ProjectCreationReservation reservation, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Reservation cancellation requires its captured original request and the durable ProjectReservationCancellationOwner.");
 
     public async Task<ProjectCreationReservation?> CaptureReservedCreationForMutationAsync(Guid projectId, CancellationToken cancellationToken = default) {
         await using var context = await coordinatedTransaction.CreateEnlistedAsync(contextOptions,
@@ -141,13 +158,14 @@ public sealed partial class ProjectWriteAdmissionService {
     }
 
     internal async Task<bool> TryConsumeCreationAsync(ProjectsDbContext context, ProjectCreationReservation reservation,
-        Guid? parentProjectId, CancellationToken cancellationToken) {
+        Guid? parentProjectId, DatasetNamespaceId originalNamespace, CancellationToken cancellationToken) {
         ValidateReservation(reservation);
         var record = await context.Set<ProjectCreationReservationRecord>().SingleOrDefaultAsync(record => record.Id == reservation.Id, cancellationToken);
         if (record is null || !Matches(record, reservation) || record.State != ProjectCreationReservationState.Reserved ||
             record.ParentProjectId != parentProjectId) {
             return false;
         }
+        RequireReservationNamespace(record, originalNamespace);
         if (record.ParentProjectId is { } parentId && !await context.Set<Project>().AnyAsync(project =>
             project.Id == parentId && project.LifetimeId == record.ParentLifetimeId, cancellationToken)) {
             return false;
@@ -169,15 +187,31 @@ public sealed partial class ProjectWriteAdmissionService {
     }
 
     public async Task RequireConsumedCreationForMutationAsync(ProjectCreationReservation reservation, CancellationToken cancellationToken = default) {
-        await using var context = await coordinatedTransaction.CreateEnlistedAsync(contextOptions,
-            static options => new ProjectsDbContext(options), cancellationToken);
-        if (!await IsConsumedCreationAsync(context, reservation, cancellationToken)) {
-            throw new InvalidOperationException("The exact created project reservation is not consumed by this live target lifetime.");
-        }
+        var original = await CaptureCreationBindingAsync(cancellationToken);
+        await ReadCreationAuthorityAsync(original, token => coordinatedTransaction.CreateEnlistedAsync(contextOptions,
+            static options => new ProjectsDbContext(options), token), async context => {
+            if (!await IsConsumedCreationAsync(context, reservation, original.Binding.Namespace, cancellationToken)) {
+                throw new InvalidOperationException("The exact created project reservation is not consumed by this live target lifetime.");
+            }
+        }, cancellationToken);
     }
 
-    public async Task RequireConsumedCreationsForMutationAsync(IReadOnlyCollection<ProjectCreationReservation> reservations,
-        CancellationToken cancellationToken = default) {
+    public Task RequireConsumedCreationsForMutationAsync(IReadOnlyCollection<ProjectCreationReservation> reservations,
+        CancellationToken cancellationToken = default)
+        => RequireConsumedCreationsAsync(reservations, null, true, cancellationToken);
+
+    public Task RequireConsumedCreationsForReadAsync(IReadOnlyCollection<ProjectCreationReservation> reservations,
+        DatasetNamespaceId expectedNamespace, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(expectedNamespace);
+        ArgumentNullException.ThrowIfNull(reservations);
+        if (reservations.Count > 3) {
+            throw new ArgumentOutOfRangeException(nameof(reservations), "A hierarchy read can verify at most three created endpoints.");
+        }
+        return RequireConsumedCreationsAsync(reservations, expectedNamespace, false, cancellationToken);
+    }
+
+    private async Task RequireConsumedCreationsAsync(IReadOnlyCollection<ProjectCreationReservation> reservations,
+        DatasetNamespaceId? expectedNamespace, bool enlisted, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(reservations);
         var expected = reservations.Distinct().ToArray();
         foreach (var reservation in expected) {
@@ -190,50 +224,64 @@ public sealed partial class ProjectWriteAdmissionService {
                 expected.Select(item => item.ProjectId).Distinct().Count() != expected.Length) {
             throw new InvalidOperationException("The original reservations bind conflicting target identities.");
         }
-        await using var context = await coordinatedTransaction.CreateEnlistedAsync(contextOptions,
-            static options => new ProjectsDbContext(options), cancellationToken);
-        var ids = expected.Select(item => item.Id).ToArray();
-        var projects = expected.Select(item => item.ProjectId).ToArray();
-        var records = await context.Set<ProjectCreationReservationRecord>().AsNoTracking().Where(item => ids.Contains(item.Id))
-            .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var lifetimes = await context.Set<Project>().AsNoTracking().Where(item => projects.Contains(item.Id))
-            .ToDictionaryAsync(item => item.Id, item => item.LifetimeId, cancellationToken);
-        if (expected.Any(item => !records.TryGetValue(item.Id, out var record) || !Matches(record, item) ||
-                record.State != ProjectCreationReservationState.Consumed || lifetimes.GetValueOrDefault(item.ProjectId) != item.LifetimeId)) {
-            throw new InvalidOperationException("An exact created project reservation is not consumed by its live target lifetime.");
+        var original = await CaptureCreationBindingAsync(cancellationToken);
+        if (expectedNamespace is not null && original.Binding.Namespace != expectedNamespace) {
+            throw new InvalidOperationException("The consumed creation observation belongs to another dataset.");
         }
+        await ReadCreationAuthorityAsync(original, token => enlisted
+            ? coordinatedTransaction.CreateEnlistedAsync(contextOptions, static options => new ProjectsDbContext(options), token)
+            : dbContextFactory.CreateDbContextAsync(token), async context => {
+            var ids = expected.Select(item => item.Id).ToArray();
+            var projects = expected.Select(item => item.ProjectId).ToArray();
+            var records = await context.Set<ProjectCreationReservationRecord>().AsNoTracking().Where(item => ids.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, cancellationToken);
+            var lifetimes = await context.Set<Project>().AsNoTracking().Where(item => projects.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, item => item.LifetimeId, cancellationToken);
+            if (expected.Any(item => !records.TryGetValue(item.Id, out var record) || !Matches(record, item) ||
+                    record.State != ProjectCreationReservationState.Consumed || lifetimes.GetValueOrDefault(item.ProjectId) != item.LifetimeId)) {
+                throw new InvalidOperationException("An exact created project reservation is not consumed by its live target lifetime.");
+            }
+            foreach (var reservation in expected) {
+                RequireReservationNamespace(records[reservation.Id], original.Binding.Namespace);
+            }
+        }, cancellationToken);
     }
 
     internal async Task<bool> IsConsumedCreationAsync(ProjectsDbContext context, ProjectCreationReservation reservation,
-        CancellationToken cancellationToken) {
+        DatasetNamespaceId originalNamespace, CancellationToken cancellationToken) {
         ValidateReservation(reservation);
         var record = await context.Set<ProjectCreationReservationRecord>().AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == reservation.Id, cancellationToken);
-        return record is not null && Matches(record, reservation) && record.State == ProjectCreationReservationState.Consumed &&
-            await context.Set<Project>().AnyAsync(project => project.Id == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId, cancellationToken);
+        if (record is null || !Matches(record, reservation) || record.State != ProjectCreationReservationState.Consumed) {
+            return false;
+        }
+        RequireReservationNamespace(record, originalNamespace);
+        return await context.Set<Project>().AnyAsync(project => project.Id == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId, cancellationToken);
+    }
+
+    internal async Task<bool> IsExactConsumedCreationAsync(ProjectsDbContext context,
+        ProjectCreationReservation reservation, DatasetNamespaceId originalNamespace, CancellationToken cancellationToken) {
+        ValidateReservation(reservation);
+        var record = await context.Set<ProjectCreationReservationRecord>().AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == reservation.Id, cancellationToken);
+        if (record is null || !Matches(record, reservation) || record.State != ProjectCreationReservationState.Consumed) {
+            return false;
+        }
+        RequireReservationNamespace(record, originalNamespace);
+        return true;
     }
 
     internal async Task CancelConsumedCreationForCompensationAsync(ProjectsDbContext context,
-        ProjectCreationReservation reservation, CancellationToken cancellationToken) {
+        ProjectCreationReservation reservation, DatasetNamespaceId originalNamespace, CancellationToken cancellationToken) {
         ValidateReservation(reservation);
         var record = await context.Set<ProjectCreationReservationRecord>()
             .SingleOrDefaultAsync(item => item.Id == reservation.Id, cancellationToken);
         if (record is null || !Matches(record, reservation) || record.State != ProjectCreationReservationState.Consumed) {
             throw new InvalidOperationException("The original consumed creation reservation changed before compensation.");
         }
+        RequireReservationNamespace(record, originalNamespace);
         record.State = ProjectCreationReservationState.Cancelled;
         record.CancelledAtUtc = DateTimeOffset.UtcNow;
-    }
-
-    internal static async Task CancelCreationForDeletionAsync(ProjectsDbContext context, Guid projectId, CancellationToken cancellationToken) {
-        var reservations = await context.Set<ProjectCreationReservationRecord>().Where(record =>
-            (record.ProjectId == projectId || record.ParentProjectId == projectId) &&
-            record.State == ProjectCreationReservationState.Reserved && record.ImportedHistory == null).ToArrayAsync(cancellationToken);
-        var now = DateTimeOffset.UtcNow;
-        foreach (var reservation in reservations) {
-            reservation.State = ProjectCreationReservationState.Cancelled;
-            reservation.CancelledAtUtc = now;
-        }
     }
 
     private void ValidateReservation(ProjectCreationReservation reservation) {

@@ -1,0 +1,1308 @@
+{
+  "candidate": "c4-catalog-dependency-validation",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-release",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-19T02:29:08.2652540+00:00",
+      "State": "Completed",
+      "RunnerPid": 58308,
+      "ChildPid": 51224,
+      "ChildStartedUtc": "2026-10-19T02:29:08.2960308Z",
+      "ExitCode": 0,
+      "Seconds": 66.5223082,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 175915,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-19T02:31:55.9908131+00:00",
+      "State": "Completed",
+      "RunnerPid": 57600,
+      "ChildPid": 53648,
+      "ChildStartedUtc": "2026-10-19T02:31:55.9943614Z",
+      "ExitCode": 0,
+      "Seconds": 0.1951461,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 10527,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-catalog-dependencies-expanded",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~FileCatalogPublicationDependencyTests|FullyQualifiedName~FileAgentPlanningPublicationSnapshotTests|FullyQualifiedName~FileSandboxWorkspacePublicationValidationTests|FullyQualifiedName~FileSandboxWorkspacePublicationRecoveryTests|FullyQualifiedName~FileSandboxWorkspacePublicationBudgetTests|FullyQualifiedName~AgentProjectCatalogPolicyIntegrationTests|FullyQualifiedName~AgentDecisionDataPolicyOwnerIntegrationTests",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T02:31:46.3009714+00:00",
+      "State": "Completed",
+      "RunnerPid": 33828,
+      "ChildPid": 52172,
+      "ChildStartedUtc": "2026-10-19T02:31:46.3314489Z",
+      "ExitCode": 0,
+      "Seconds": 1.9462273,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 7110,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-catalog-dependencies",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~FileCatalogPublicationDependencyTests|FullyQualifiedName~FileAgentPlanningPublicationSnapshotTests|FullyQualifiedName~FileSandboxWorkspacePublicationValidationTests|FullyQualifiedName~FileSandboxWorkspacePublicationRecoveryTests|FullyQualifiedName~FileSandboxWorkspacePublicationBudgetTests|FullyQualifiedName~AgentProjectCatalogPolicyIntegrationTests",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T02:30:58.6961634+00:00",
+      "State": "Completed",
+      "RunnerPid": 52920,
+      "ChildPid": 16460,
+      "ChildStartedUtc": "2026-10-19T02:30:58.7352294Z",
+      "ExitCode": 0,
+      "Seconds": 1.9486001,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 5271,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-selected-publication-cost",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName=CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_selected_authority_keeps_unrelated_writers_responsive_during_actual_SQL_wait",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T02:31:00.7055819+00:00",
+      "State": "Completed",
+      "RunnerPid": 52920,
+      "ChildPid": 10620,
+      "ChildStartedUtc": "2026-10-19T02:31:00.7095477Z",
+      "ExitCode": 0,
+      "Seconds": 1.923735,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 367,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-19T02:31:51.1679576+00:00",
+      "State": "Completed",
+      "RunnerPid": 57600,
+      "ChildPid": 20376,
+      "ChildStartedUtc": "2026-10-19T02:31:51.1704845Z",
+      "ExitCode": 0,
+      "Seconds": 4.8087043,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-catalog-dependencies",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~FileCatalogPublicationDependencyTests|FullyQualifiedName~FileAgentPlanningPublicationSnapshotTests|FullyQualifiedName~FileSandboxWorkspacePublicationValidationTests|FullyQualifiedName~FileSandboxWorkspacePublicationRecoveryTests|FullyQualifiedName~FileSandboxWorkspacePublicationBudgetTests|FullyQualifiedName~AgentProjectCatalogPolicyIntegrationTests|FullyQualifiedName~AgentDecisionDataPolicyOwnerIntegrationTests",
+        "--logger",
+        "trx;LogFileName=catalog-dependencies.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-catalog-dependency-validation"
+      ],
+      "StartedUtc": "2026-10-19T02:32:41.2602445+00:00",
+      "State": "Completed",
+      "RunnerPid": 56008,
+      "ChildPid": 55980,
+      "ChildStartedUtc": "2026-10-19T02:32:41.2995713Z",
+      "ExitCode": 1,
+      "Seconds": 85.7435058,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 16284,
+      "StderrRetainedBytes": 472,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-selected-publication-cost",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName=CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_selected_authority_keeps_unrelated_writers_responsive_during_actual_SQL_wait",
+        "--logger",
+        "trx;LogFileName=selected-publication-cost.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-catalog-dependency-validation"
+      ],
+      "StartedUtc": "2026-10-19T02:34:07.0675853+00:00",
+      "State": "Completed",
+      "RunnerPid": 56008,
+      "ChildPid": 56036,
+      "ChildStartedUtc": "2026-10-19T02:34:07.0724238Z",
+      "ExitCode": 1,
+      "Seconds": 27.7839733,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2066,
+      "StderrRetainedBytes": 218,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-chat-browser-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-catalog-dependency-validation/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-19T02:32:23.4024826+00:00",
+      "State": "Completed",
+      "RunnerPid": 58112,
+      "ChildPid": 42360,
+      "ChildStartedUtc": "2026-10-19T02:32:23.4262274Z",
+      "ExitCode": 0,
+      "Seconds": 132.8928766,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 55,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-catalog-dependency-validation/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-19T02:30:46.3322903+00:00",
+      "State": "Completed",
+      "RunnerPid": 4580,
+      "ChildPid": 7812,
+      "ChildStartedUtc": "2026-10-19T02:30:46.3353188Z",
+      "ExitCode": 0,
+      "Seconds": 0.4606197,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-catalog-dependency-validation/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-19T02:29:18.4010127+00:00",
+      "State": "Completed",
+      "RunnerPid": 4580,
+      "ChildPid": 4640,
+      "ChildStartedUtc": "2026-10-19T02:29:18.4297116Z",
+      "ExitCode": 0,
+      "Seconds": 87.8775799,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 448,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-final",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-19T02:31:48.9962028+00:00",
+      "State": "Completed",
+      "RunnerPid": 57600,
+      "ChildPid": 52712,
+      "ChildStartedUtc": "2026-10-19T02:31:49.0258273Z",
+      "ExitCode": 0,
+      "Seconds": 2.1201169,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "c805b138-b2df-4d0d-95ba-6cf4a136cb58",
+      "testId": "5966515b-529b-b488-cb18-50d80e039b89",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Run)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.3151641",
+      "startTime": "2026-10-18T22:33:18.3149588-04:00",
+      "endTime": "2026-10-18T22:33:19.6302732-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c805b138-b2df-4d0d-95ba-6cf4a136cb58",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "35f902f6-3694-40d2-be47-64bc4eaf5d06",
+      "testId": "979df5c9-16fd-dd5f-fd70-88f3839c387f",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Raw_catalog_full_document_and_transfer_shaped_replacements_preserve_policy_and_reject_new_identity_injection",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.6687546",
+      "startTime": "2026-10-18T22:33:02.2063457-04:00",
+      "endTime": "2026-10-18T22:33:03.8752660-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "35f902f6-3694-40d2-be47-64bc4eaf5d06",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "1c7c8e3f-8810-495e-bd69-b4dd36c35a88",
+      "testId": "f0ae31c6-4fa0-f7fe-74ee-1177d004381d",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Acknowledged_catalog_with_later_index_failure_keeps_exact_acceptance",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.9395821",
+      "startTime": "2026-10-18T22:32:54.8426527-04:00",
+      "endTime": "2026-10-18T22:32:57.7821017-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1c7c8e3f-8810-495e-bd69-b4dd36c35a88",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "85b6db7a-e7f8-443d-bc37-c842d61a2d92",
+      "testId": "1bfd4d93-622f-95fa-0e00-2c872f64d6bd",
+      "testName": "CanDoItAll.Tests.Integration.FileCatalogPublicationDependencyTests.Shared_pending_publication_still_refuses_the_catalog_only_write",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.1531155",
+      "startTime": "2026-10-18T22:33:10.2174415-04:00",
+      "endTime": "2026-10-18T22:33:11.3705115-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "85b6db7a-e7f8-443d-bc37-c842d61a2d92",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "20a58fb0-85d8-4217-ab11-044cbee6fc3f",
+      "testId": "913a945d-bff7-3fad-3a41-562483dc960d",
+      "testName": "CanDoItAll.Tests.Integration.FileCatalogPublicationDependencyTests.Run_checkpoint_during_catalog_wait_preserves_the_declared_dependency(expectedWorkspaceRevision: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.5973312",
+      "startTime": "2026-10-18T22:33:11.3706402-04:00",
+      "endTime": "2026-10-18T22:33:12.9681240-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "20a58fb0-85d8-4217-ab11-044cbee6fc3f",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "82fd138e-a109-4557-9e9b-b7187bcb1a63",
+      "testId": "5ec78477-aa7c-c9a1-8616-2cbfb23d6cac",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Concurrent_policy_change_refuses_a_prepared_provisioning_receipt_without_returning_its_configuration_version",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.5481987",
+      "startTime": "2026-10-18T22:32:50.4479592-04:00",
+      "endTime": "2026-10-18T22:32:52.9964037-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "82fd138e-a109-4557-9e9b-b7187bcb1a63",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "ff838088-46a4-4758-847a-ed9b209a75fb",
+      "testId": "287b7b52-aa1e-391d-1455-7404615ae4ad",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileAgentPlanningPublicationSnapshotTests.Shared_pending_publication_during_key_wait_refuses_and_preserves_original_evidence",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.6143193",
+      "startTime": "2026-10-18T22:33:57.8581301-04:00",
+      "endTime": "2026-10-18T22:33:59.4726435-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ff838088-46a4-4758-847a-ed9b209a75fb",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "02baaaea-79bc-4e3d-ad3c-6f16ec2c8cbc",
+      "testId": "0cc55ff5-54d6-b151-4b04-26c36730501a",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Deletion_recovery_preserves_the_retained_target_policy_and_never_adopts_a_new_default",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.7236486",
+      "startTime": "2026-10-18T22:32:57.7824935-04:00",
+      "endTime": "2026-10-18T22:32:59.5060004-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "02baaaea-79bc-4e3d-ad3c-6f16ec2c8cbc",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "af83830c-dde3-482d-a762-a42aa612bb0b",
+      "testId": "b37f0ea9-a15f-1b32-09d3-eff1b07dc70f",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Product_catalog_accepts_only_the_requesting_agent_reservation_and_rejects_stale_new_binding",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:13.1244588",
+      "startTime": "2026-10-18T22:33:31.0494655-04:00",
+      "endTime": "2026-10-18T22:33:44.1740283-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "af83830c-dde3-482d-a762-a42aa612bb0b",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "49b3a50e-ccd5-40dd-a510-629067944d4a",
+      "testId": "e0e0ab1a-af70-35f9-494d-65293eaab2ef",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: AgentDeletion)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.4587435",
+      "startTime": "2026-10-18T22:33:19.6303722-04:00",
+      "endTime": "2026-10-18T22:33:21.0893189-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "49b3a50e-ccd5-40dd-a510-629067944d4a",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "c69cde8c-416b-4d77-9dde-c4ad103b858d",
+      "testId": "d37925ff-8ee2-bbb5-ef8e-eb2e7b0035d2",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Delayed_catalog_snapshot_cannot_resurrect_a_retired_grant_after_removal_and_same_id_recreation",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.5842249",
+      "startTime": "2026-10-18T22:33:48.3854965-04:00",
+      "endTime": "2026-10-18T22:33:51.9657097-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c69cde8c-416b-4d77-9dde-c4ad103b858d",
+      "trx": "catalog-dependencies.trx",
+      "error": "\n          \nCanDoItAll.Modules.Projects.ProjectLifecycleOriginalIntentRequiredException : Project deletion and hierarchy changes require an already captured original lifecycle submission. A current read cannot replace the caller's original expectation.\n\n          \n   at CanDoItAll.Modules.Projects.ProjectsService.DeleteAsync(Guid id, CancellationToken cancellationToken, ProjectWriteAdmission expectedProjectAdmission) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Projects\\ProjectModels.cs:line 563\r\n   at CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Delayed_catalog_snapshot_cannot_resurrect_a_retired_grant_after_removal_and_same_id_recreation() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentProjectCatalogPolicyIntegrationTests.cs:line 98\r\n   at CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Delayed_catalog_snapshot_cannot_resurrect_a_retired_grant_after_removal_and_same_id_recreation() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentProjectCatalogPolicyIntegrationTests.cs:line 106\r\n   at CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Delayed_catalog_snapshot_cannot_resurrect_a_retired_grant_after_removal_and_same_id_recreation() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentProjectCatalogPolicyIntegrationTests.cs:line 106\r\n   at CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Delayed_catalog_snapshot_cannot_resurrect_a_retired_grant_after_removal_and_same_id_recreation() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentProjectCatalogPolicyIntegrationTests.cs:line 106\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "fbc1b22c-4c15-4549-9645-9cb98176b1a2",
+      "testId": "0210488d-91a4-21e5-1768-01bc33ee75c0",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Legacy_bootstrap_binds_only_upgrade_eligible_rows_and_never_rebinds_missing_new_or_recreated_ids",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.2008840",
+      "startTime": "2026-10-18T22:33:44.1744610-04:00",
+      "endTime": "2026-10-18T22:33:48.3812767-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fbc1b22c-4c15-4549-9645-9cb98176b1a2",
+      "trx": "catalog-dependencies.trx",
+      "error": "\n          \nCanDoItAll.Modules.Projects.ProjectLifecycleOriginalIntentRequiredException : Project deletion and hierarchy changes require an already captured original lifecycle submission. A current read cannot replace the caller's original expectation.\n\n          \n   at CanDoItAll.Modules.Projects.ProjectsService.DeleteAsync(Guid id, CancellationToken cancellationToken, ProjectWriteAdmission expectedProjectAdmission) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Projects\\ProjectModels.cs:line 563\r\n   at CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Legacy_bootstrap_binds_only_upgrade_eligible_rows_and_never_rebinds_missing_new_or_recreated_ids() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentProjectCatalogPolicyIntegrationTests.cs:line 42\r\n   at CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Legacy_bootstrap_binds_only_upgrade_eligible_rows_and_never_rebinds_missing_new_or_recreated_ids() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentProjectCatalogPolicyIntegrationTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Legacy_bootstrap_binds_only_upgrade_eligible_rows_and_never_rebinds_missing_new_or_recreated_ids() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentProjectCatalogPolicyIntegrationTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Legacy_bootstrap_binds_only_upgrade_eligible_rows_and_never_rebinds_missing_new_or_recreated_ids() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentProjectCatalogPolicyIntegrationTests.cs:line 55\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "25298e86-e053-4293-9232-e8bce69a45a4",
+      "testId": "40a8b161-82f4-68de-8014-a702474619ef",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileAgentPlanningPublicationSnapshotTests.Held_selected_keys_allow_unrelated_publication_and_exclude_source_changes",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.1762860",
+      "startTime": "2026-10-18T22:33:55.6814547-04:00",
+      "endTime": "2026-10-18T22:33:57.8580138-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "25298e86-e053-4293-9232-e8bce69a45a4",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "6dd0b936-9d60-4f62-8721-8950d411a713",
+      "testId": "9a2bff98-e085-dd19-b719-bcd27c86a341",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Dedicated_CAS_returns_exact_policy_and_next_revision_even_for_equal_explicit_submission",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.1167497",
+      "startTime": "2026-10-18T22:32:59.5063505-04:00",
+      "endTime": "2026-10-18T22:33:00.6230887-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6dd0b936-9d60-4f62-8721-8950d411a713",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "a4344767-4f2e-458e-91ad-dce92507bd5a",
+      "testId": "aa4e6335-8177-8727-70ae-813e8e396ee5",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ExistingRun)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.8214415",
+      "startTime": "2026-10-18T22:33:27.5247648-04:00",
+      "endTime": "2026-10-18T22:33:29.3461917-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a4344767-4f2e-458e-91ad-dce92507bd5a",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "28102416-56ff-493e-b046-1579d41c225f",
+      "testId": "8b9a40d0-60a0-d264-93d1-3f360f471471",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.FileSandboxWorkspacePublicationValidationTests.Noop_still_runs_final_validation_and_refusal_preserves_exact_catalog_and_index",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.6975390",
+      "startTime": "2026-10-18T22:32:45.9893697-04:00",
+      "endTime": "2026-10-18T22:32:47.6750993-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "28102416-56ff-493e-b046-1579d41c225f",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "f4775e6b-2a8c-4867-81bf-43c1f7f365f1",
+      "testId": "638f94df-37a6-1f9e-3130-bb490723028b",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: AgentDeletion)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.2740999",
+      "startTime": "2026-10-18T22:33:23.0705854-04:00",
+      "endTime": "2026-10-18T22:33:25.3448728-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f4775e6b-2a8c-4867-81bf-43c1f7f365f1",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "f6235f09-79cb-4478-beb1-f595a356bc52",
+      "testId": "572fd17a-59c0-22b9-6dd8-75434b1ce05e",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Provisioning_and_package_receipts_hash_the_real_persisted_definition_with_owner_policy",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.5556226",
+      "startTime": "2026-10-18T22:33:07.6609113-04:00",
+      "endTime": "2026-10-18T22:33:10.2167340-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f6235f09-79cb-4478-beb1-f595a356bc52",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "9ee46832-34c4-4f24-9a3e-62073a6f4c23",
+      "testId": "499f7734-d454-ed51-add8-d05878cb4245",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.FileSandboxWorkspacePublicationValidationTests.Final_validation_observes_one_frozen_target_after_key_wait_without_replaying_callback",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.3473426",
+      "startTime": "2026-10-18T22:32:49.0973702-04:00",
+      "endTime": "2026-10-18T22:32:50.4448022-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9ee46832-34c4-4f24-9a3e-62073a6f4c23",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "3b69ae85-fd46-40ec-99d0-867aecc8ee36",
+      "testId": "608bfcdb-3d61-0e18-3568-3f4391670938",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Same_size_run_bytes_changed_without_a_revision_change_cannot_be_overwritten_by_a_prepared_target",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.2381904",
+      "startTime": "2026-10-18T22:33:15.6781619-04:00",
+      "endTime": "2026-10-18T22:33:16.9167903-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3b69ae85-fd46-40ec-99d0-867aecc8ee36",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "d11a8b43-19c0-46dd-996d-71b0b289ceb1",
+      "testId": "a1f7cd62-957b-ad3c-6815-24f1d515c8b7",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileAgentPlanningPublicationSnapshotTests.Current_revocation_and_complete_capability_configuration_do_not_replace_original_decision_inputs",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.0267450",
+      "startTime": "2026-10-18T22:34:04.8443180-04:00",
+      "endTime": "2026-10-18T22:34:06.8710825-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d11a8b43-19c0-46dd-996d-71b0b289ceb1",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "e406cb70-94a7-4ee4-a097-fbdc52b2e412",
+      "testId": "6fa0f061-8053-5bca-cbc2-52d28568e91e",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Workspace)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.3977227",
+      "startTime": "2026-10-18T22:33:16.9168838-04:00",
+      "endTime": "2026-10-18T22:33:18.3148253-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e406cb70-94a7-4ee4-a097-fbdc52b2e412",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "d163501f-6a04-4802-88fa-4a5a8396e091",
+      "testId": "b5d39765-59f8-c94e-b1fd-b4bdfd83d33f",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileAgentPlanningPublicationSnapshotTests.Original_run_writer_waits_until_the_authorization_snapshot_is_released",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.7831594",
+      "startTime": "2026-10-18T22:34:03.0606806-04:00",
+      "endTime": "2026-10-18T22:34:04.8440326-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d163501f-6a04-4802-88fa-4a5a8396e091",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "fa301de0-c977-4c98-bab8-314c83b71a7e",
+      "testId": "4e243b19-4034-ec0b-704e-c975cda2c92f",
+      "testName": "CanDoItAll.Tests.Integration.FileCatalogPublicationDependencyTests.Intervening_catalog_edit_refuses_without_rebasing_or_replaying_the_callback",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.2337809",
+      "startTime": "2026-10-18T22:33:14.4439547-04:00",
+      "endTime": "2026-10-18T22:33:15.6779694-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fa301de0-c977-4c98-bab8-314c83b71a7e",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "7eaba8c3-84d5-4078-9b86-ec0394e80000",
+      "testId": "d3eb5ea6-d05c-09c4-d5dd-b09aa5247f76",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Corrupt_reserved_members_survive_ordinary_writes_and_explicit_original_CAS_repairs_them",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.8454215",
+      "startTime": "2026-10-18T22:32:52.9968218-04:00",
+      "endTime": "2026-10-18T22:32:54.8421656-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7eaba8c3-84d5-4078-9b86-ec0394e80000",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "78439c74-dd53-45a3-9af1-398eef0f256f",
+      "testId": "bf161ac3-b253-6ae6-a534-fe84f7bb192e",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Generation_change_during_actual_key_wait_refuses_without_policy_write_and_releases_guards",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.9344802",
+      "startTime": "2026-10-18T22:33:06.7263545-04:00",
+      "endTime": "2026-10-18T22:33:07.6608004-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "78439c74-dd53-45a3-9af1-398eef0f256f",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "b02ae3fa-a520-4c5d-b1ce-6eca89cbbb39",
+      "testId": "e9a293f2-68e1-271a-2ef2-86556fd6ff00",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Entered_catalog_write_without_acknowledgement_retains_original_unconfirmed_intent",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.8504340",
+      "startTime": "2026-10-18T22:33:03.8753719-04:00",
+      "endTime": "2026-10-18T22:33:06.7259919-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b02ae3fa-a520-4c5d-b1ce-6eca89cbbb39",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "fd4b30ee-0c3c-43ef-b045-1287cafe4078",
+      "testId": "f262ba3c-0d70-8c76-ddf5-77de7fcba026",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.Many_catalog_agents_use_two_bulk_owner_reads_per_publication_phase_without_a_carried_transaction_and_profile_mismatch_is_denied",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.6084461",
+      "startTime": "2026-10-18T22:33:51.9668065-04:00",
+      "endTime": "2026-10-18T22:33:55.5745157-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fd4b30ee-0c3c-43ef-b045-1287cafe4078",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "6e048adc-95cd-4d6e-a9cf-4744b117522a",
+      "testId": "6cec26c8-452b-a976-764d-607ae36ec20c",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.FileSandboxWorkspacePublicationBudgetTests.Expired_shared_budget_releases_acquired_keys_and_stops_before_the_next_key",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.1063075",
+      "startTime": "2026-10-18T22:33:55.5751130-04:00",
+      "endTime": "2026-10-18T22:33:55.6813300-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6e048adc-95cd-4d6e-a9cf-4744b117522a",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "b2a5fd72-5018-4c4d-9d40-1435433bb2b0",
+      "testId": "ceef20a5-63c0-1dc6-07fc-6266efb169e1",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ChatStart)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.1792891",
+      "startTime": "2026-10-18T22:33:25.3451524-04:00",
+      "endTime": "2026-10-18T22:33:27.5244310-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b2a5fd72-5018-4c4d-9d40-1435433bb2b0",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "9cc2c393-3156-46bf-a475-3c47b30a4c96",
+      "testId": "4627f1ed-4308-ffb5-6b64-636cd4015860",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: GenericRun)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.9808667",
+      "startTime": "2026-10-18T22:33:21.0894184-04:00",
+      "endTime": "2026-10-18T22:33:23.0705038-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9cc2c393-3156-46bf-a475-3c47b30a4c96",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "56ece8bc-f454-4f1b-8c11-8ec09405b5e6",
+      "testId": "5441cdde-c4e3-168a-a9a0-0301b8fb5e08",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileAgentPlanningPublicationSnapshotTests.Cancellation_after_partial_acquisition_releases_selected_keys_without_publishing",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.6161509",
+      "startTime": "2026-10-18T22:34:01.4444134-04:00",
+      "endTime": "2026-10-18T22:34:03.0605650-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "56ece8bc-f454-4f1b-8c11-8ec09405b5e6",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "c711be2c-cae1-429f-962b-40846ecc4208",
+      "testId": "06327406-4586-5c2e-694b-4444383d1a93",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileAgentPlanningPublicationSnapshotTests.Original_scope_authority_profile_and_revisions_are_not_replaced_by_current_values",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.9711545",
+      "startTime": "2026-10-18T22:33:59.4727361-04:00",
+      "endTime": "2026-10-18T22:34:01.4442372-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c711be2c-cae1-429f-962b-40846ecc4208",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "fff0804e-b62d-4845-8dfe-d2fb78714084",
+      "testId": "380fadf0-6c04-d8c1-d1f1-878cae275455",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.AgentDecisionDataPolicyOwnerIntegrationTests.Concurrent_policy_change_refuses_a_prepared_package_receipt_without_replaying_package_read",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.5828144",
+      "startTime": "2026-10-18T22:33:00.6232141-04:00",
+      "endTime": "2026-10-18T22:33:02.2062134-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fff0804e-b62d-4845-8dfe-d2fb78714084",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "38a3db5e-023e-4f73-b21a-312d52553822",
+      "testId": "401e5637-1eee-080e-9719-53da855c52ef",
+      "testName": "CanDoItAll.Tests.Integration.FileCatalogPublicationDependencyTests.Run_checkpoint_during_catalog_wait_preserves_the_declared_dependency(expectedWorkspaceRevision: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.4752833",
+      "startTime": "2026-10-18T22:33:12.9682334-04:00",
+      "endTime": "2026-10-18T22:33:14.4438159-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "38a3db5e-023e-4f73-b21a-312d52553822",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "16374011-fb36-41c3-9b57-033ff9464d9c",
+      "testId": "474eaa08-e782-24bc-d6df-18300f9eb1a3",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.FileSandboxWorkspacePublicationValidationTests.Provider_invalidation_during_real_key_wait_refuses_capability_publication_without_catalog_change",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.7045642",
+      "startTime": "2026-10-18T22:32:43.2651929-04:00",
+      "endTime": "2026-10-18T22:32:45.9761498-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "16374011-fb36-41c3-9b57-033ff9464d9c",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "b6d10f08-f6f8-45e9-867f-fd28958044eb",
+      "testId": "79fb2451-8aad-ebdc-a724-a4109dd72d30",
+      "testName": "CanDoItAll.Tests.Integration.AgentFramework.FileSandboxWorkspacePublicationValidationTests.Unsupported_owner_refuses_final_validation_without_invoking_legacy_write_or_replaying_diagnostic",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.4217569",
+      "startTime": "2026-10-18T22:32:47.6771452-04:00",
+      "endTime": "2026-10-18T22:32:49.0972210-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b6d10f08-f6f8-45e9-867f-fd28958044eb",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "588df35e-3d38-43f8-af3e-6a4da9f5a91b",
+      "testId": "56f45971-e6c5-08cd-f9df-8142a40e6cec",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.A_waiting_run_only_publication_allows_unrelated_commit_and_uses_fresh_shared_indexes_without_callback_replay",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.7025643",
+      "startTime": "2026-10-18T22:33:29.3465225-04:00",
+      "endTime": "2026-10-18T22:33:31.0490602-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "588df35e-3d38-43f8-af3e-6a4da9f5a91b",
+      "trx": "catalog-dependencies.trx"
+    },
+    {
+      "executionId": "c3a01b81-c5c5-4ada-9b20-fc3088e367fd",
+      "testId": "35af77f5-55bc-712e-4e0b-77846d6d92b8",
+      "testName": "CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_selected_authority_keeps_unrelated_writers_responsive_during_actual_SQL_wait",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:25.6305047",
+      "startTime": "2026-10-18T22:34:09.0430873-04:00",
+      "endTime": "2026-10-18T22:34:34.6863476-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c3a01b81-c5c5-4ada-9b20-fc3088e367fd",
+      "trx": "selected-publication-cost.trx",
+      "error": "\n          \nThe publication guard failed the declared one-second unrelated-writer reference; complete timing and cleanup evidence was retained.\n\n          \n   at CanDoItAll.Tests.Integration.AgentPlanningPublicationCostFixture.RunAsync(AgentPlanningPublicationGuard guard) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentPlanningPublicationCostFixture.cs:line 94\r\n--- End of stack trace from previous location ---\n\n        "
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "snapshotId": "snap-20261019023033-a1c12fef",
+      "baselineSnapshot": "snap-20261019021109-85d8bb99",
+      "documents": 408,
+      "types": 1730,
+      "dependencies": 3516,
+      "cycles": [
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-1a990fe814d7",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-6783a14556a8",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9ad3f723b960",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9c7b9e7ebdc1",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-ddf87e625d14",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-fb60e0ed084c"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-5b51f78cf7ac",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-dde9fb0d855d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-persistence-candoita-8151ee395c7b",
+            "type-proj-candoitall-agentframework-persistence-candoita-ab270b8b396a"
+          ]
+        }
+      ],
+      "newCycles": [],
+      "nonAdvisoryWorkspaceErrors": [],
+      "scope": [
+        "CanDoItAll.AgentFramework.Core",
+        "CanDoItAll.AgentFramework.Models",
+        "CanDoItAll.AgentFramework.Persistence"
+      ]
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9159,
+      "runtimeFiles": 6436,
+      "sourceSha256": "8A1D9B38AB5BD2605A4213C7BBB357F30158A7351F0A70751D576990C86DA9D4",
+      "runtimeSha256": "0EA894F2F6B5ACEFC820BE6D1CD959F38C29AB1C8E9330EE96CFFC5A7C2239D4"
+    },
+    "final-resource-reconciliation.json": {
+      "outcome": "36 functional cases passed; two old deletion fixture calls refused; all writers committed but two cancellations exceeded one second. Retain all evidence.",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_55980_20261018_223241_487.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ro0nebyu.wye",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_56036_20261018_223407_268.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ywdm4bqv.3gt",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\3enleurs.lvj",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\vjtfnciv.fo3",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "recordedUtc": "2026-10-19T02:34:58.0633964+00:00",
+      "databaseNameDelta": [],
+      "remainingObservedProcesses": [],
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "postgres|1"
+      ]
+    },
+    "queryPlans": [],
+    "measurements": [
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\001-allocation-intent.json",
+        "data": {
+          "Phase": "allocation-intent",
+          "ObservedAtUtc": "2026-10-19T02:34:09.0774683+00:00",
+          "Evidence": {
+            "DatabasePrefix": "cditall_fac9e9a43a32448297a3_",
+            "MaximumDatabases": 1,
+            "EnvironmentParent": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-catalog-dependency-validation\\measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787",
+            "FileWorkspacePrefix": "tool-admission"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\002-environment.json",
+        "data": {
+          "Phase": "environment",
+          "ObservedAtUtc": "2026-10-19T02:34:09.083876+00:00",
+          "Evidence": {
+            "RootPath": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-catalog-dependency-validation\\measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\coarse-sql\\4f3e61523adf4d7fac343f67ed52565e"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\003-database.json",
+        "data": {
+          "Phase": "database",
+          "ObservedAtUtc": "2026-10-19T02:34:09.2826381+00:00",
+          "Evidence": {
+            "DatabaseName": "cditall_fac9e9a43a32448297a3_29ff9697552e40919eff0b413bb97e96",
+            "ProfileRootPath": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-catalog-dependency-validation\\measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\coarse-sql\\4f3e61523adf4d7fac343f67ed52565e\\profiles\\fac9e9a43a32448297a3"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\004-workspace.json",
+        "data": {
+          "Phase": "workspace",
+          "ObservedAtUtc": "2026-10-19T02:34:24.1064725+00:00",
+          "Evidence": {
+            "WorkspaceRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-catalog-dependency-validation\\measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\tool-admission\\505218416e0f454b851753473445267b\\profiles\\primary\\workspace",
+            "Scope": "d5bcf154f9c0e856ad419d614b56c235",
+            "RunBytes": 3669,
+            "CatalogBytes": 816071,
+            "RunSha256": "00BC58A1D62633F4C9CEED8E0C322B6E9A96E9FA918158EE91156E743AB09863",
+            "CatalogSha256": "041A61F00BB1E522B33FFACD233A3B54929CB33F1C98CD03FA17C068DF703551"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\005-workspace.json",
+        "data": {
+          "Phase": "workspace",
+          "ObservedAtUtc": "2026-10-19T02:34:28.3849549+00:00",
+          "Evidence": {
+            "WorkspaceRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-catalog-dependency-validation\\measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\tool-admission\\7051c6502752462ab2e4193f33f49462\\profiles\\primary\\workspace",
+            "Scope": "d5bcf154f9c0e856ad419d614b56c235",
+            "RunBytes": 3669,
+            "CatalogBytes": 816071,
+            "RunSha256": "CE6F9EF6D1824D5D440E73073B5E09B276A0B7B50390FAD8F395411FD97D7C6B",
+            "CatalogSha256": "1031240F3525FEA1BE1997F09284A423C5DAF19D5A08D82B2D1EA74888839AC3"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\006-cohort.json",
+        "data": {
+          "Phase": "cohort",
+          "ObservedAtUtc": "2026-10-19T02:34:33.8878316+00:00",
+          "Evidence": {
+            "observation": {
+              "TasksRequested": 1,
+              "HolderPid": 129864,
+              "PublisherPid": 129929,
+              "ActualBlockingObservedAtMilliseconds": 380.7844,
+              "HolderReleasedAtMilliseconds": 5373.9728,
+              "EffectiveSqlCommandTimeoutSeconds": 15,
+              "CooperativeHolderBudgetSeconds": 30,
+              "Authority": {
+                "Guard": "SelectedAgent",
+                "Entered": 2670517633803,
+                "Acquired": 2670520105301,
+                "Released": 2670570765389,
+                "AcquireMilliseconds": 247.1498,
+                "HeldMilliseconds": 5066.0088
+              },
+              "OutcomeType": "Rejected",
+              "Rejection": "Unavailable",
+              "ProcessAllocatedBytes": 252111984,
+              "AllocationScope": "whole cohort process-wide, not per-operation allocations or peak memory",
+              "ObservedWorkbenchEfCommands": 10,
+              "SqlCoverage": "Workbench interceptor only; raw ADO lifecycle/other enlisted commands excluded; not network roundtrips",
+              "LogicalRunReadBytes": 3669,
+              "PhysicalDeviceIoMeasured": false,
+              "FileReadCoverage": "Single saved run-file size only; repeated owner reads, pending scans and catalog bytes excluded"
+            },
+            "samples": [
+              {
+                "Name": "publisher",
+                "StartedAtMilliseconds": 0.4872,
+                "EndedAtMilliseconds": 5371.0851,
+                "ElapsedMilliseconds": 5370.597900000001,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-checkpoint",
+                "StartedAtMilliseconds": 383.271,
+                "EndedAtMilliseconds": 1003.6434,
+                "ElapsedMilliseconds": 620.3724,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-cancel",
+                "StartedAtMilliseconds": 410.1481,
+                "EndedAtMilliseconds": 1556.0826,
+                "ElapsedMilliseconds": 1145.9344999999998,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-grant",
+                "StartedAtMilliseconds": 431.0091,
+                "EndedAtMilliseconds": 1160.7576,
+                "ElapsedMilliseconds": 729.7484999999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-checkpoint",
+                "StartedAtMilliseconds": 452.5136,
+                "EndedAtMilliseconds": 1107.2078,
+                "ElapsedMilliseconds": 654.6941999999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-cancel",
+                "StartedAtMilliseconds": 481.1692,
+                "EndedAtMilliseconds": 1581.9773,
+                "ElapsedMilliseconds": 1100.8081,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-grant",
+                "StartedAtMilliseconds": 500.7083,
+                "EndedAtMilliseconds": 895.3736,
+                "ElapsedMilliseconds": 394.6653,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              }
+            ]
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\007-effects-verified.json",
+        "data": {
+          "Phase": "effects-verified",
+          "ObservedAtUtc": "2026-10-19T02:34:34.5476879+00:00",
+          "Evidence": {
+            "TaskRows": 0,
+            "ReceiptRows": 0,
+            "Writers": 6,
+            "FileAndProjectGuardsReacquired": true,
+            "ReferenceResponsivenessPassed": false
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\008-cleanup.json",
+        "data": {
+          "Phase": "cleanup",
+          "ObservedAtUtc": "2026-10-19T02:34:34.6704256+00:00",
+          "Evidence": {
+            "Confirmed": true,
+            "AllocationUnknown": false,
+            "Failures": []
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787\\009-result.json",
+        "data": {
+          "Phase": "result",
+          "ObservedAtUtc": "2026-10-19T02:34:34.6735719+00:00",
+          "Evidence": {
+            "SourceOnlyReference": "actual SelectedAgent exclusion, synthetic task-plan authority; no live-provider provenance",
+            "observation": {
+              "TasksRequested": 1,
+              "HolderPid": 129864,
+              "PublisherPid": 129929,
+              "ActualBlockingObservedAtMilliseconds": 380.7844,
+              "HolderReleasedAtMilliseconds": 5373.9728,
+              "EffectiveSqlCommandTimeoutSeconds": 15,
+              "CooperativeHolderBudgetSeconds": 30,
+              "Authority": {
+                "Guard": "SelectedAgent",
+                "Entered": 2670517633803,
+                "Acquired": 2670520105301,
+                "Released": 2670570765389,
+                "AcquireMilliseconds": 247.1498,
+                "HeldMilliseconds": 5066.0088
+              },
+              "OutcomeType": "Rejected",
+              "Rejection": "Unavailable",
+              "ProcessAllocatedBytes": 252111984,
+              "AllocationScope": "whole cohort process-wide, not per-operation allocations or peak memory",
+              "ObservedWorkbenchEfCommands": 10,
+              "SqlCoverage": "Workbench interceptor only; raw ADO lifecycle/other enlisted commands excluded; not network roundtrips",
+              "LogicalRunReadBytes": 3669,
+              "PhysicalDeviceIoMeasured": false,
+              "FileReadCoverage": "Single saved run-file size only; repeated owner reads, pending scans and catalog bytes excluded"
+            },
+            "samples": [
+              {
+                "Name": "publisher",
+                "StartedAtMilliseconds": 0.4872,
+                "EndedAtMilliseconds": 5371.0851,
+                "ElapsedMilliseconds": 5370.597900000001,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-checkpoint",
+                "StartedAtMilliseconds": 383.271,
+                "EndedAtMilliseconds": 1003.6434,
+                "ElapsedMilliseconds": 620.3724,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-cancel",
+                "StartedAtMilliseconds": 410.1481,
+                "EndedAtMilliseconds": 1556.0826,
+                "ElapsedMilliseconds": 1145.9344999999998,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-grant",
+                "StartedAtMilliseconds": 431.0091,
+                "EndedAtMilliseconds": 1160.7576,
+                "ElapsedMilliseconds": 729.7484999999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-checkpoint",
+                "StartedAtMilliseconds": 452.5136,
+                "EndedAtMilliseconds": 1107.2078,
+                "ElapsedMilliseconds": 654.6941999999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-cancel",
+                "StartedAtMilliseconds": 481.1692,
+                "EndedAtMilliseconds": 1581.9773,
+                "ElapsedMilliseconds": 1100.8081,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-grant",
+                "StartedAtMilliseconds": 500.7083,
+                "EndedAtMilliseconds": 895.3736,
+                "ElapsedMilliseconds": 394.6653,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              }
+            ],
+            "ReferenceResponsivenessPassed": false,
+            "WorkloadFailureType": null,
+            "CleanupFailureType": null,
+            "CleanupConfirmed": true,
+            "CapacityQualified": false,
+            "Limit": "One forced small-file cohort; no normal p95, maximum-size, sustained-load or fairness qualification"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787.intent.json",
+        "data": {
+          "Owner": "AgentPlanningPublicationCostTests",
+          "Guard": "SelectedAgent",
+          "RowRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-catalog-dependency-validation\\measurements\\selected-0c49cb89da7f4cf480ab2915a72f0787",
+          "ProcessId": 48952,
+          "RecordedAtUtc": "2026-10-19T02:34:09.0497058+00:00",
+          "CooperativeRowSeconds": 600,
+          "Profile": "small-file/one-task/one-forced-SQL-wait",
+          "MaximumPostgresLeases": 1,
+          "MaximumFileWorkspaces": 2
+        }
+      }
+    ]
+  }
+}

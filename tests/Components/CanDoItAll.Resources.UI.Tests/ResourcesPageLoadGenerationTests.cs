@@ -8,7 +8,7 @@ public sealed class ResourcesPageLoadGenerationTests {
     public async Task Older_save_refresh_cannot_replace_a_newer_editor_selection() {
         var store = new ResourceScenarioStore();
         using var controller = await ResourceRegistryTests.OpenAsync(store);
-        var gate = store.HoldNext(ResourceScenarioLane.EditorRead);
+        var gate = store.HoldNext(ResourceScenarioLane.RegistryRead);
         var save = controller.SaveAsync();
         await gate.Entered.Task;
         await controller.SelectAsync(store.Records.Keys.Last());

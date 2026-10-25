@@ -1,6 +1,6 @@
 @namespace CanDoItAll.AgentFramework.UI.Chat
 @if (Navigation is null) {
-    <ChatWorkspaceSurface Presentation="@Presentation" Intent="@Intent" HeaderActions="@HeaderActions"
+    <ChatWorkspaceSurface Presentation="@Presentation" Intent="@Intent" HeaderActions="@HeaderActions" HeaderDetails="@HeaderDetails"
                           ComposerActions="@ComposerActions" ActivityContent="@ActivityContent" AttachmentPicker="@AttachmentPicker" />
 } else {
 
@@ -87,7 +87,7 @@
                         Title="Unable to open chat"
                         Description="@Navigation.ErrorMessage" />
         } else {
-        <ChatWorkspaceSurface Presentation="@Presentation" Intent="@Intent" HeaderActions="@HeaderActions"
+        <ChatWorkspaceSurface Presentation="@Presentation" Intent="@Intent" HeaderActions="@HeaderActions" HeaderDetails="@HeaderDetails" Compact="Navigation.Focused"
                               ComposerActions="@ComposerActions" ActivityContent="@ActivityContent" AttachmentPicker="@AttachmentPicker" />
         }
     </Grid>
@@ -104,6 +104,7 @@
     [Parameter] public AgentChatNavigationPresentation? Navigation { get; set; }
     [Parameter] public EventCallback<AgentChatNavigationIntent> NavigationIntent { get; set; }
     [Parameter] public RenderFragment? HeaderActions { get; set; }
+    [Parameter] public RenderFragment? HeaderDetails { get; set; }
     [Parameter] public RenderFragment? ComposerActions { get; set; }
     [Parameter] public RenderFragment? ActivityContent { get; set; }
     [Parameter] public RenderFragment? AttachmentPicker { get; set; }

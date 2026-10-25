@@ -12,7 +12,7 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
     private const string ResolvePath = "/api/projects/by-external-key/partner.integration/workspace";
 
     [Fact]
-    public async Task Identity_survives_rename_legacy_save_and_archiving_and_rejects_rebinding_or_duplicates() {
+    public async Task Identity_survives_rename_and_archiving_and_rejects_legacy_save_rebinding_or_duplicates() {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
         using var created = await host.Client.PostAsJsonAsync("/api/projects/", NewProject());
         Assert.Equal(HttpStatusCode.OK, created.StatusCode);
@@ -31,9 +31,12 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
         using var renamed = await host.Client.PostAsJsonAsync("/api/projects/", editor);
         Assert.Equal(HttpStatusCode.OK, renamed.StatusCode);
         using var legacy = await host.Client.PostAsJsonAsync("/api/projects/", new { id, name = "Legacy client edit", status = editor.Status });
-        Assert.Equal(HttpStatusCode.OK, legacy.StatusCode);
+        await AssertErrorAsync(legacy, HttpStatusCode.BadRequest, ProjectErrorCodes.DefinitionChildInvalid);
         Assert.Equal(resolution, await host.Client.GetFromJsonAsync<ProjectExternalIdentityResolution>(ResolvePath));
 
+        editor = (await host.Client.GetFromJsonAsync<ProjectEditorModel>($"/api/projects/{id}"))!;
+        Assert.Equal("Renamed synthetic project", editor.Name);
+        Assert.Equal(ProjectStatus.Archived, editor.Status);
         editor.ExternalKey = "another-key";
         using var rebound = await host.Client.PostAsJsonAsync("/api/projects/", editor);
         await AssertErrorAsync(rebound, HttpStatusCode.Conflict, ProjectErrorCodes.ExternalIdentityImmutable);
@@ -44,27 +47,31 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
     }
 
     [Fact]
-    public async Task Binding_an_existing_project_requires_current_lifetime_and_unknown_ids_do_not_create_projects() {
+    public async Task Binding_uses_original_definition_and_rejects_conflicting_lifetime_mirrors_and_deleted_targets() {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
         using var created = await host.Client.PostAsJsonAsync("/api/projects/", new ProjectEditorModel { Name = "Unbound synthetic project" });
         created.EnsureSuccessStatusCode();
         var id = await created.Content.ReadFromJsonAsync<Guid>();
         var editor = (await host.Client.GetFromJsonAsync<ProjectEditorModel>($"/api/projects/{id}"))!;
-        var lifetime = editor.ExpectedLifetimeId;
         editor.ExternalNamespace = "partner.integration";
         editor.ExternalKey = "workspace";
-        editor.ExpectedLifetimeId = null;
-        using var missingLifetime = await host.Client.PostAsJsonAsync("/api/projects/", editor);
-        await AssertErrorAsync(missingLifetime, HttpStatusCode.BadRequest, ProjectErrorCodes.ExternalIdentityLifetimeRequired);
         editor.ExpectedLifetimeId = Guid.NewGuid();
-        using var stale = await host.Client.PostAsJsonAsync("/api/projects/", editor);
-        await AssertErrorAsync(stale, HttpStatusCode.BadRequest, ProjectErrorCodes.LifetimeChanged);
-        editor.ExpectedLifetimeId = lifetime;
+        using var contradictory = await host.Client.PostAsJsonAsync("/api/projects/", editor);
+        await AssertErrorAsync(contradictory, HttpStatusCode.BadRequest, ProjectErrorCodes.DefinitionExpectationInvalid);
+        Assert.Equal(editor.ExpectedDefinition,
+            (await host.Client.GetFromJsonAsync<ProjectEditorModel>($"/api/projects/{id}"))!.ExpectedDefinition);
+        editor.ExpectedLifetimeId = null;
         using var bound = await host.Client.PostAsJsonAsync("/api/projects/", editor);
         Assert.Equal(HttpStatusCode.OK, bound.StatusCode);
-        editor.Id = Guid.NewGuid();
+
+        editor = (await host.Client.GetFromJsonAsync<ProjectEditorModel>($"/api/projects/{id}"))!;
+        using var deleted = await host.Client.DeleteAsync($"/api/projects/{id}");
+        deleted.EnsureSuccessStatusCode();
+        editor.Name = "Deleted project must not be recreated";
         using var missing = await host.Client.PostAsJsonAsync("/api/projects/", editor);
         await AssertErrorAsync(missing, HttpStatusCode.NotFound, ProjectErrorCodes.NotFound);
+        using var stillMissing = await host.Client.GetAsync($"/api/projects/{id}/definition");
+        Assert.Equal(HttpStatusCode.NotFound, stillMissing.StatusCode);
     }
 
     [Fact]

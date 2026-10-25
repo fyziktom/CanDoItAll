@@ -1,0 +1,3606 @@
+{
+  "schemaVersion": 1,
+  "qualifiedCases": 66,
+  "executedCasesIncludingBaseline": 93,
+  "baselineCases": 4,
+  "retainedHistoricalFailures": 1,
+  "qualification": [
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"nonProcessRunCount\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.6917419"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runs\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.6825234"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Agent_deletion_removes_only_its_original_membership_from_the_compact_projection",
+      "outcome": "Passed",
+      "duration": "00:00:02.0417166"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runCount\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.6722886"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Same_stamp_index_changes_are_reread_instead_of_using_cached_membership",
+      "outcome": "Passed",
+      "duration": "00:00:00.8821063"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.6652072"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_repairs_a_corrupt_projection_without_rewriting_business_evidence",
+      "outcome": "Passed",
+      "duration": "00:00:00.8822456"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"revision\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.7011046"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: False)",
+      "outcome": "Passed",
+      "duration": "00:00:03.1201435"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Duplicate_source_identities_refuse_preparation_before_publication",
+      "outcome": "Passed",
+      "duration": "00:00:00.9230931"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"schemaVersion\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.6807829"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Pre_cancelled_preparation_does_not_read_or_publish",
+      "outcome": "Passed",
+      "duration": "00:00:00.7191527"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.9332901"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureEntry)",
+      "outcome": "Passed",
+      "duration": "00:00:00.7651597"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: True)",
+      "outcome": "Passed",
+      "duration": "00:00:03.0619549"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Count)",
+      "outcome": "Passed",
+      "duration": "00:00:01.6251456"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Bulk_addition_removal_and_session_update_publish_current_selection_evidence",
+      "outcome": "Passed",
+      "duration": "00:00:01.8129923"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.9518965"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Revision)",
+      "outcome": "Passed",
+      "duration": "00:00:00.7661819"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"supportedProjection\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.6997963"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureHeader)",
+      "outcome": "Passed",
+      "duration": "00:00:00.8344296"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.6764609"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Missing)",
+      "outcome": "Passed",
+      "duration": "00:00:00.7857432"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration(historyCount: 100000)",
+      "outcome": "Passed",
+      "duration": "00:00:03.7799202"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Selected_record_same_stamp_and_revision_changes_are_visible_on_repeated_reads",
+      "outcome": "Passed",
+      "duration": "00:00:00.8534851"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion(missing: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.9188117"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Invalid_input_and_pre_cancelled_calls_do_not_access_storage",
+      "outcome": "Passed",
+      "duration": "00:00:00.7506316"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: LegacyLayout)",
+      "outcome": "Passed",
+      "duration": "00:00:00.8000615"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Empty_storage_is_exhausted_without_seeding_business_files",
+      "outcome": "Passed",
+      "duration": "00:00:00.6527482"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Future_selection_projection_evidence_is_pending_and_does_not_trigger_journal_reads",
+      "outcome": "Passed",
+      "duration": "00:00:00.6649459"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 16)",
+      "outcome": "Passed",
+      "duration": "00:00:03.3963826"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: Stale)",
+      "outcome": "Passed",
+      "duration": "00:00:00.8092397"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 1)",
+      "outcome": "Passed",
+      "duration": "00:00:03.3680341"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Prepared_publication_is_reported_without_recovery_and_becomes_readable_after_its_owner_recovers",
+      "outcome": "Passed",
+      "duration": "00:00:01.1250330"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion(missing: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.9574479"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Identical_process_ids_in_other_workspaces_do_not_cross_the_selected_owner",
+      "outcome": "Passed",
+      "duration": "00:00:01.6204346"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration(historyCount: 20000)",
+      "outcome": "Passed",
+      "duration": "00:00:01.7499612"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Legacy_projection_rows_are_conservative_candidates_and_are_never_silently_omitted",
+      "outcome": "Passed",
+      "duration": "00:00:01.4624086"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: Missing)",
+      "outcome": "Passed",
+      "duration": "00:00:00.8186456"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 3)",
+      "outcome": "Passed",
+      "duration": "00:00:03.3240488"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Duplicate_metadata_identities_fail_before_any_journal_is_hydrated",
+      "outcome": "Passed",
+      "duration": "00:00:01.0006517"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"stale\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.9619325"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Independent_commit_and_same_revision_edit_are_visible",
+      "outcome": "Passed",
+      "duration": "00:00:00.8727771"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Process_query_reads_only_selected_current_records(unrelatedCount: 4)",
+      "outcome": "Passed",
+      "duration": "00:00:01.2957638"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"legacy\")",
+      "outcome": "Passed",
+      "duration": "00:00:01.0468092"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"newer-reporting\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.9507001"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Exact_execution_selection_does_not_enumerate_unrelated_corrupt_records",
+      "outcome": "Passed",
+      "duration": "00:00:00.8450529"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"older-reporting\")",
+      "outcome": "Passed",
+      "duration": "00:00:01.8107854"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Process_query_reads_only_selected_current_records(unrelatedCount: 96)",
+      "outcome": "Passed",
+      "duration": "00:00:03.5898087"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Candidate_read_recovers_a_prepared_commit_before_selecting",
+      "outcome": "Passed",
+      "duration": "00:00:01.0895790"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"missing\")",
+      "outcome": "Passed",
+      "duration": "00:00:00.9906480"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Missing_or_corrupt_selected_record_is_an_explicit_failure(missing: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.9251766"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Missing_or_corrupt_selected_record_is_an_explicit_failure(missing: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.9691930"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.A_waiting_run_only_publication_allows_unrelated_commit_and_uses_fresh_shared_indexes_without_callback_replay",
+      "outcome": "Passed",
+      "duration": "00:00:01.4368583"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ExistingRun)",
+      "outcome": "Passed",
+      "duration": "00:00:01.7149818"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Same_size_run_bytes_changed_without_a_revision_change_cannot_be_overwritten_by_a_prepared_target",
+      "outcome": "Passed",
+      "duration": "00:00:02.4230538"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Workspace)",
+      "outcome": "Passed",
+      "duration": "00:00:01.7648258"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Run)",
+      "outcome": "Passed",
+      "duration": "00:00:01.5503575"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: AgentDeletion)",
+      "outcome": "Passed",
+      "duration": "00:00:02.3214811"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: GenericRun)",
+      "outcome": "Passed",
+      "duration": "00:00:01.9657880"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ChatStart)",
+      "outcome": "Passed",
+      "duration": "00:00:01.7787791"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: AgentDeletion)",
+      "outcome": "Passed",
+      "duration": "00:00:01.7595454"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 32)",
+      "outcome": "Passed",
+      "duration": "00:01:10.6024795"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 8)",
+      "outcome": "Passed",
+      "duration": "00:01:04.9370987"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 1)",
+      "outcome": "Passed",
+      "duration": "00:01:04.8559568"
+    },
+    {
+      "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 0, writers: 1)",
+      "outcome": "Passed",
+      "duration": "00:00:14.3544379"
+    }
+  ],
+  "attempts": [
+    {
+      "candidate": "c4-process-selection-baseline",
+      "discovery": {
+        "expectedTotal": 4.0,
+        "lanes": [
+          {
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 0, writers: 1)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 1)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 8)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 32)"
+            ],
+            "id": "Integration-FileSandboxWorkspaceProcessIndexCostTests",
+            "actualDiscovery": 4,
+            "sourceMethods": [
+              "Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision"
+            ],
+            "expectedDiscovery": 4,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.",
+            "sourceMethodsMatched": true,
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj"
+          }
+        ],
+        "actualTotal": 4.0
+      },
+      "results": {
+        "Integration-FileSandboxWorkspaceProcessIndexCostTests": [
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 0, writers: 1)",
+            "outcome": "Passed",
+            "duration": "00:00:12.4515899"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 32)",
+            "outcome": "Passed",
+            "duration": "00:01:08.3892474"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 1)",
+            "outcome": "Passed",
+            "duration": "00:01:03.3024353"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 8)",
+            "outcome": "Passed",
+            "duration": "00:01:04.2264521"
+          }
+        ]
+      },
+      "commands": [
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "build-baseline-integration",
+          "Arguments": [
+            "build",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-restore",
+            "--no-dependencies",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1"
+          ],
+          "StartedUtc": "2026-10-22T14:54:51.3840413+00:00",
+          "State": "Completed",
+          "RunnerPid": 46812,
+          "ChildPid": 51832,
+          "ChildStartedUtc": "2026-10-22T14:54:51.4240499Z",
+          "ExitCode": 0,
+          "Seconds": 34.1621711,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 149242,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessIndexCostTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T14:57:12.3284292+00:00",
+          "State": "Completed",
+          "RunnerPid": 54096,
+          "ChildPid": 47540,
+          "ChildStartedUtc": "2026-10-22T14:57:12.3686077Z",
+          "ExitCode": 0,
+          "Seconds": 3.9802553,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 970,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "execute-Integration-FileSandboxWorkspaceProcessIndexCostTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.",
+            "--logger",
+            "trx;LogFileName=Integration-FileSandboxWorkspaceProcessIndexCostTests.trx",
+            "--logger",
+            "console;verbosity=normal",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-baseline"
+          ],
+          "StartedUtc": "2026-10-22T14:57:35.6535795+00:00",
+          "State": "Completed",
+          "RunnerPid": 59768,
+          "ChildPid": 44812,
+          "ChildStartedUtc": "2026-10-22T14:57:35.6925584Z",
+          "ExitCode": 0,
+          "Seconds": 212.6591049,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 1745,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 3660,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "observer-product-planning-v2",
+          "Arguments": [
+            "-NoProfile",
+            "-File",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-baseline\\Observe-BrowserV2.ps1",
+            "-DeadlineSeconds",
+            "3600"
+          ],
+          "StartedUtc": "2026-10-22T14:57:25.7985157+00:00",
+          "State": "Completed",
+          "RunnerPid": 61336,
+          "ChildPid": 25928,
+          "ChildStartedUtc": "2026-10-22T14:57:25.8466471Z",
+          "ExitCode": 0,
+          "Seconds": 222.6505199,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 54,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        }
+      ],
+      "candidateIdentity": {
+        "localLibraries": true,
+        "baseCommit": "4a35d5311aa23c5294b6fabadc5f4930ebd863d1",
+        "outputs": [
+          {
+            "bytes": 2554880,
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+            "sha256": "1227F6F4EF9D39A9D9177518D2809AC447BF910C8DE3E6E048E49C4DCD03D57D"
+          },
+          {
+            "bytes": 493344,
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.pdb",
+            "sha256": "5A78B93015C62842DC4844377D750BB10602E75B47ED227BBCD8EB1A64D14DBD"
+          },
+          {
+            "bytes": 958976,
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+            "sha256": "E17C3C9034FD43F17AFB3CF77D7438E3693EAFD33986E8259B388C7115EF22F1"
+          },
+          {
+            "bytes": 177668,
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.pdb",
+            "sha256": "90E0D122D2FDF4D8F10AB3D85D4F81029E65A6C2283A4A0A40D62011E8F5F9F2"
+          },
+          {
+            "bytes": 3451904,
+            "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+            "sha256": "7504C72D40A1F806789E71197A6EBA96DF36BB4B9F656B62206CE96520F3A622"
+          },
+          {
+            "bytes": 720456,
+            "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.pdb",
+            "sha256": "47AE987F3D64A3B2B19C430A9744F3A10AEBFCC0324CB04EAD6D4623D20EDE3D"
+          },
+          {
+            "bytes": 6496768,
+            "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll",
+            "sha256": "31E68DEC50A96DDFF0AB501F90957FB29FC0147DD12A46A07A933C2ACE7391E4"
+          },
+          {
+            "bytes": 930316,
+            "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb",
+            "sha256": "DC8C703B609332721CCEE4580A14F50EA330AB017891674A42C77710E3F9C274"
+          },
+          {
+            "bytes": 21785088,
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+            "sha256": "75A188D858988DFD6D2FF557A9D1154164C059FF33626090C6420AC312EED136"
+          },
+          {
+            "bytes": 3225636,
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+            "sha256": "09887BF63C7D0CBF84D987E23CFCF7AA1C392DCC10563E347B5ACA39BF113255"
+          },
+          {
+            "bytes": 2554880,
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+            "sha256": "1227F6F4EF9D39A9D9177518D2809AC447BF910C8DE3E6E048E49C4DCD03D57D"
+          },
+          {
+            "bytes": 958976,
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+            "sha256": "E17C3C9034FD43F17AFB3CF77D7438E3693EAFD33986E8259B388C7115EF22F1"
+          },
+          {
+            "bytes": 3451904,
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+            "sha256": "7504C72D40A1F806789E71197A6EBA96DF36BB4B9F656B62206CE96520F3A622"
+          },
+          {
+            "bytes": 6496768,
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Web.dll",
+            "sha256": "31E68DEC50A96DDFF0AB501F90957FB29FC0147DD12A46A07A933C2ACE7391E4"
+          }
+        ],
+        "sourcePins": [
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexCostTests.cs",
+            "bytes": 5760,
+            "sha256": "9EC16B254C8FEAED6DC6658A187EA23C5CAE2F82E5E25452C25F63C3E1726F42"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+            "bytes": 12508,
+            "sha256": "81DB10A4BA3DBE6F6407ECEFF25E7317D000B0129381E2BD365F2DB918448248"
+          }
+        ],
+        "configuration": "Release"
+      },
+      "resourceReconciliation": {
+        "recordedUtc": "2026-10-22T15:01:43.8367525+00:00",
+        "postgres": [
+          "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+          "cditall_primary_40a332c695a94161a74b78718c28b907|0",
+          "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+          "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+          "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+          "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+          "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1|0",
+          "postgres|1"
+        ],
+        "ownedValidationDirectory": "Retained for producer integration: small reviewed logs, source/runtime manifests and shared validation helpers; no new compiled outputs or host.",
+        "previousHttpBlockedCleanup": {
+          "state": "BlockedByAutomaticApprovalReview",
+          "database": "cditall_primary_40a332c695a94161a74b78718c28b907",
+          "reason": "Observed API-test host finalizer crash; exact original run metadata binds this fixture directory to its new primary database. All observed processes exited.",
+          "activeConnections": 0,
+          "recordedUtc": "2026-10-21T13:19:09.6396158-04:00",
+          "sourceEvidence": [
+            {
+              "sha256": "3D27E32BCE667F2802FF368DE5BE67ED72016BD091F6C7CF21223E5F46FA8EF0",
+              "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/6f716289a47642e590153bef907eadc2/run.json"
+            },
+            {
+              "sha256": "8113A3D3E76338D0E0E3F3C70AA78A4C5FD5C5FF6673BC60A866096AA30C9FE4",
+              "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/a46b7f22c3468762959f3308ae040e76/run.json"
+            }
+          ],
+          "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+          "root": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-api-tests\\069475322dcc45a2816c596f2d8beb24",
+          "rejection": "The combined exact DROP DATABASE and Remove-Item command was rejected before execution: blocked by policy. Neither action executed; no alternative route will be attempted."
+        },
+        "databaseNameDelta": [],
+        "inheritedBlockedCleanup": {
+          "requiredAction": "Manual cleanup or an explicit approval-system change is required for these exact resources. They remain excluded from subsequent cleanup attempts.",
+          "journalSha256": "8A8165E2B2250EED621740669396B6870172ABF8D4E10CEB7859BBAB7CCCFD6F",
+          "reason": "Automatic approval review rejected the combined exact test database and temporary-directory removal with blocked by policy before execution. No deletion was attempted through another route.",
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewCompletionTests.cs:159",
+          "recordedUtc": "2026-10-21T08:05:31.9832225-04:00",
+          "evidence": "The sole new isolated database has the declared reviewed-completion profile prefix and is named inside this exact pending-run journal. The test command and its observed child processes have exited. The latest database observation has zero active connections.",
+          "state": "CleanupRejected",
+          "test": "ProjectTaskPlanReviewCompletionTests.Lost_commit_acknowledgement_replays_after_full_host_restart_without_another_outcome_read",
+          "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+          "path": "C:/Users/lucys/AppData/Local/Temp/process-reviewed-completion/6ea9ebeae3b74434ab0dfcda9483bd27",
+          "database": "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1"
+        },
+        "historicalCleanupDenials": "Earlier denials remain. Automatic approval review additionally rejected c4-process-owner-outcome-verified and c4-process-owner-outcome-final cleanup with blocked by policy. Both remain; no denied resource was retried.",
+        "temporaryDeltasPreservedWithoutOwnership": [],
+        "remainingObservedProcesses": []
+      },
+      "observationCoverage": {
+        "commands": [
+          {
+            "endedUtc": "2026-10-22T11:01:08.3126843-04:00",
+            "startedUtc": "2026-10-22T10:57:35.6535795-04:00",
+            "covered": true,
+            "command": "execute-Integration-FileSandboxWorkspaceProcessIndexCostTests"
+          }
+        ],
+        "observerStartedUtc": "2026-10-22T10:57:26.9507096-04:00",
+        "allCovered": true,
+        "observerEndedUtc": "2026-10-22T11:01:08.3822574-04:00"
+      }
+    },
+    {
+      "candidate": "c4-process-selection-index",
+      "discovery": {
+        "actualTotal": 66.0,
+        "expectedTotal": 66.0,
+        "lanes": [
+          {
+            "sourceMethodsMatched": true,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.",
+            "id": "Integration-FileSandboxWorkspaceProcessIndexIntegrationTests",
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "actualDiscovery": 23,
+            "expectedDiscovery": 23,
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: True)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Missing)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Revision)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Count)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureHeader)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureEntry)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Duplicate_source_identities_refuse_preparation_before_publication",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: True)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Bulk_addition_removal_and_session_update_publish_current_selection_evidence",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"schemaVersion\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"supportedProjection\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runCount\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"nonProcessRunCount\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runs\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"revision\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Pre_cancelled_preparation_does_not_read_or_publish",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Same_stamp_index_changes_are_reread_instead_of_using_cached_membership",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_repairs_a_corrupt_projection_without_rewriting_business_evidence",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Agent_deletion_removes_only_its_original_membership_from_the_compact_projection",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: True)"
+            ],
+            "sourceMethods": [
+              "Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source",
+              "Unavailable_source_is_not_repaired_or_reported_as_exhaustion",
+              "Duplicate_source_identities_refuse_preparation_before_publication",
+              "Interrupted_companion_publication_retains_the_original_journal_and_recovers_once",
+              "Bulk_addition_removal_and_session_update_publish_current_selection_evidence",
+              "Required_selection_fields_cannot_default_to_an_empty_success",
+              "Pre_cancelled_preparation_does_not_read_or_publish",
+              "Same_stamp_index_changes_are_reread_instead_of_using_cached_membership",
+              "Explicit_preparation_repairs_a_corrupt_projection_without_rewriting_business_evidence",
+              "Agent_deletion_removes_only_its_original_membership_from_the_compact_projection",
+              "An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace"
+            ]
+          },
+          {
+            "sourceMethodsMatched": true,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.",
+            "id": "Integration-FileSandboxWorkspaceProcessPageIntegrationTests",
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "actualDiscovery": 18,
+            "expectedDiscovery": 18,
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 1)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 3)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 16)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: Missing)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: Stale)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: LegacyLayout)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Legacy_projection_rows_are_conservative_candidates_and_are_never_silently_omitted",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Future_selection_projection_evidence_is_pending_and_does_not_trigger_journal_reads",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Duplicate_metadata_identities_fail_before_any_journal_is_hydrated",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Selected_record_same_stamp_and_revision_changes_are_visible_on_repeated_reads",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Prepared_publication_is_reported_without_recovery_and_becomes_readable_after_its_owner_recovers",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Invalid_input_and_pre_cancelled_calls_do_not_access_storage",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion(missing: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion(missing: True)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Empty_storage_is_exhausted_without_seeding_business_files",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Identical_process_ids_in_other_workspaces_do_not_cross_the_selected_owner",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration(historyCount: 20000)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration(historyCount: 100000)"
+            ],
+            "sourceMethods": [
+              "Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration",
+              "Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals",
+              "Legacy_projection_rows_are_conservative_candidates_and_are_never_silently_omitted",
+              "Future_selection_projection_evidence_is_pending_and_does_not_trigger_journal_reads",
+              "Duplicate_metadata_identities_fail_before_any_journal_is_hydrated",
+              "Selected_record_same_stamp_and_revision_changes_are_visible_on_repeated_reads",
+              "Prepared_publication_is_reported_without_recovery_and_becomes_readable_after_its_owner_recovers",
+              "Invalid_input_and_pre_cancelled_calls_do_not_access_storage",
+              "Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion",
+              "Empty_storage_is_exhausted_without_seeding_business_files",
+              "Identical_process_ids_in_other_workspaces_do_not_cross_the_selected_owner",
+              "Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration"
+            ]
+          },
+          {
+            "sourceMethodsMatched": true,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.",
+            "id": "Integration-FileSandboxWorkspaceProcessQueryIntegrationTests",
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "actualDiscovery": 12,
+            "expectedDiscovery": 12,
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Process_query_reads_only_selected_current_records(unrelatedCount: 4)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Process_query_reads_only_selected_current_records(unrelatedCount: 96)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"missing\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"stale\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"legacy\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"older-reporting\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"newer-reporting\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Independent_commit_and_same_revision_edit_are_visible",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Missing_or_corrupt_selected_record_is_an_explicit_failure(missing: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Missing_or_corrupt_selected_record_is_an_explicit_failure(missing: True)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Candidate_read_recovers_a_prepared_commit_before_selecting",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Exact_execution_selection_does_not_enumerate_unrelated_corrupt_records"
+            ],
+            "sourceMethods": [
+              "Process_query_reads_only_selected_current_records",
+              "Index_recovery_never_omits_a_matching_run",
+              "Independent_commit_and_same_revision_edit_are_visible",
+              "Missing_or_corrupt_selected_record_is_an_explicit_failure",
+              "Candidate_read_recovers_a_prepared_commit_before_selecting",
+              "Exact_execution_selection_does_not_enumerate_unrelated_corrupt_records"
+            ]
+          },
+          {
+            "sourceMethodsMatched": true,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.",
+            "id": "Integration-FileSandboxWorkspacePublicationRecoveryTests",
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "actualDiscovery": 9,
+            "expectedDiscovery": 9,
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ChatStart)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: GenericRun)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ExistingRun)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: AgentDeletion)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Same_size_run_bytes_changed_without_a_revision_change_cannot_be_overwritten_by_a_prepared_target",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.A_waiting_run_only_publication_allows_unrelated_commit_and_uses_fresh_shared_indexes_without_callback_replay",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Run)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Workspace)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: AgentDeletion)"
+            ],
+            "sourceMethods": [
+              "Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it",
+              "Same_size_run_bytes_changed_without_a_revision_change_cannot_be_overwritten_by_a_prepared_target",
+              "A_waiting_run_only_publication_allows_unrelated_commit_and_uses_fresh_shared_indexes_without_callback_replay",
+              "Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect"
+            ]
+          },
+          {
+            "sourceMethodsMatched": true,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.",
+            "id": "Integration-FileSandboxWorkspaceProcessIndexCostTests",
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "actualDiscovery": 4,
+            "expectedDiscovery": 4,
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 0, writers: 1)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 1)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 8)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 32)"
+            ],
+            "sourceMethods": [
+              "Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision"
+            ]
+          }
+        ]
+      },
+      "results": {
+        "Integration-FileSandboxWorkspaceProcessIndexIntegrationTests": [
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Pre_cancelled_preparation_does_not_read_or_publish",
+            "outcome": "Passed",
+            "duration": "00:00:00.6799501"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Duplicate_source_identities_refuse_preparation_before_publication",
+            "outcome": "Passed",
+            "duration": "00:00:00.9939639"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: False)",
+            "outcome": "Passed",
+            "duration": "00:00:00.6823932"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: False)",
+            "outcome": "Passed",
+            "duration": "00:00:03.2479353"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"revision\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.7317280"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureEntry)",
+            "outcome": "Passed",
+            "duration": "00:00:00.8264872"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Revision)",
+            "outcome": "Passed",
+            "duration": "00:00:00.8211232"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Agent_deletion_removes_only_its_original_membership_from_the_compact_projection",
+            "outcome": "Failed",
+            "duration": "00:00:01.6957555",
+            "failure": "CanDoItAll.AgentFramework.Core.AgentDeletionConflictException : Agent 'f08afeb0-aa46-459b-8cf1-3ccaf767f61b' cannot be deleted while execution run '4a3af456-e409-47fa-9ac4-c063a806ff31' is active."
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Missing)",
+            "outcome": "Passed",
+            "duration": "00:00:00.8306711"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Count)",
+            "outcome": "Passed",
+            "duration": "00:00:01.6832625"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureHeader)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9102519"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runs\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6880236"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"supportedProjection\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.7179463"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Same_stamp_index_changes_are_reread_instead_of_using_cached_membership",
+            "outcome": "Passed",
+            "duration": "00:00:00.8808279"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: True)",
+            "outcome": "Passed",
+            "duration": "00:00:03.1434177"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runCount\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6966241"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Bulk_addition_removal_and_session_update_publish_current_selection_evidence",
+            "outcome": "Passed",
+            "duration": "00:00:01.7366917"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: True)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9910428"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"schemaVersion\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6892104"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: True)",
+            "outcome": "Passed",
+            "duration": "00:00:00.6901020"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_repairs_a_corrupt_projection_without_rewriting_business_evidence",
+            "outcome": "Passed",
+            "duration": "00:00:00.9260062"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"nonProcessRunCount\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6856236"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: False)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9794570"
+          }
+        ]
+      },
+      "commands": [
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "build-1-agent-module",
+          "Arguments": [
+            "build",
+            "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+            "--configuration",
+            "Release",
+            "--no-restore",
+            "--no-dependencies",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1"
+          ],
+          "StartedUtc": "2026-10-22T15:08:07.9264032+00:00",
+          "State": "Completed",
+          "RunnerPid": 51136,
+          "ChildPid": 6980,
+          "ChildStartedUtc": "2026-10-22T15:08:07.9342890Z",
+          "ExitCode": 0,
+          "Seconds": 15.9384702,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 70253,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "build-1-agent-persistence",
+          "Arguments": [
+            "build",
+            "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj",
+            "--configuration",
+            "Release",
+            "--no-restore",
+            "--no-dependencies",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1"
+          ],
+          "StartedUtc": "2026-10-22T15:08:04.2969612+00:00",
+          "State": "Completed",
+          "RunnerPid": 51136,
+          "ChildPid": 59364,
+          "ChildStartedUtc": "2026-10-22T15:08:04.3030291Z",
+          "ExitCode": 0,
+          "Seconds": 3.6085497,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 6291,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "build-1-core",
+          "Arguments": [
+            "build",
+            "src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj",
+            "--configuration",
+            "Release",
+            "--no-restore",
+            "--no-dependencies",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1"
+          ],
+          "StartedUtc": "2026-10-22T15:07:58.3331572+00:00",
+          "State": "Completed",
+          "RunnerPid": 51136,
+          "ChildPid": 31044,
+          "ChildStartedUtc": "2026-10-22T15:07:58.3886587Z",
+          "ExitCode": 0,
+          "Seconds": 5.8948286,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 971,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "build-1-integration",
+          "Arguments": [
+            "build",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-restore",
+            "--no-dependencies",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1"
+          ],
+          "StartedUtc": "2026-10-22T15:08:40.2415371+00:00",
+          "State": "Completed",
+          "RunnerPid": 51136,
+          "ChildPid": 32640,
+          "ChildStartedUtc": "2026-10-22T15:08:40.2496179Z",
+          "ExitCode": 0,
+          "Seconds": 21.7737166,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 149242,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "build-1-web",
+          "Arguments": [
+            "build",
+            "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+            "--configuration",
+            "Release",
+            "--no-restore",
+            "--no-dependencies",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1"
+          ],
+          "StartedUtc": "2026-10-22T15:08:23.8826654+00:00",
+          "State": "Completed",
+          "RunnerPid": 51136,
+          "ChildPid": 28240,
+          "ChildStartedUtc": "2026-10-22T15:08:23.8904454Z",
+          "ExitCode": 0,
+          "Seconds": 16.3393385,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 109264,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessIndexCostTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:16:23.5515223+00:00",
+          "State": "Completed",
+          "RunnerPid": 58172,
+          "ChildPid": 60636,
+          "ChildStartedUtc": "2026-10-22T15:16:23.5586129Z",
+          "ExitCode": 0,
+          "Seconds": 4.0451202,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 970,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessIndexIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:16:08.2363636+00:00",
+          "State": "Completed",
+          "RunnerPid": 58172,
+          "ChildPid": 7760,
+          "ChildStartedUtc": "2026-10-22T15:16:08.2795441Z",
+          "ExitCode": 0,
+          "Seconds": 4.2283673,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 4211,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessPageIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:16:12.5799395+00:00",
+          "State": "Completed",
+          "RunnerPid": 58172,
+          "ChildPid": 6560,
+          "ChildStartedUtc": "2026-10-22T15:16:12.5884939Z",
+          "ExitCode": 0,
+          "Seconds": 3.6792227,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 3376,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessQueryIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:16:16.2852870+00:00",
+          "State": "Completed",
+          "RunnerPid": 58172,
+          "ChildPid": 39648,
+          "ChildStartedUtc": "2026-10-22T15:16:16.2905131Z",
+          "ExitCode": 0,
+          "Seconds": 3.6331919,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 2116,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspacePublicationRecoveryTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:16:19.9390036+00:00",
+          "State": "Completed",
+          "RunnerPid": 58172,
+          "ChildPid": 43060,
+          "ChildStartedUtc": "2026-10-22T15:16:19.9456207Z",
+          "ExitCode": 0,
+          "Seconds": 3.5847048,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 1960,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "execute-Integration-FileSandboxWorkspaceProcessIndexIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.",
+            "--logger",
+            "trx;LogFileName=Integration-FileSandboxWorkspaceProcessIndexIntegrationTests.trx",
+            "--logger",
+            "console;verbosity=normal",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-index"
+          ],
+          "StartedUtc": "2026-10-22T15:16:48.7326764+00:00",
+          "State": "Completed",
+          "RunnerPid": 25624,
+          "ChildPid": 16900,
+          "ChildStartedUtc": "2026-10-22T15:16:48.7749802Z",
+          "ExitCode": 1,
+          "Seconds": 29.9741933,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 9447,
+          "StderrRetainedBytes": 238,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 3660,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "observer-product-planning-v2",
+          "Arguments": [
+            "-NoProfile",
+            "-File",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-index\\Observe-BrowserV2.ps1",
+            "-DeadlineSeconds",
+            "3600"
+          ],
+          "StartedUtc": "2026-10-22T15:16:35.2490830+00:00",
+          "State": "Completed",
+          "RunnerPid": 29132,
+          "ChildPid": 22080,
+          "ChildStartedUtc": "2026-10-22T15:16:35.2746920Z",
+          "ExitCode": 0,
+          "Seconds": 43.7365395,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 53,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        }
+      ],
+      "candidateIdentity": {
+        "configuration": "Release",
+        "localLibraries": true,
+        "baseCommit": "4a35d5311aa23c5294b6fabadc5f4930ebd863d1",
+        "sourcePins": [
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/ProcessExecutionRunPage.cs",
+            "bytes": 1528,
+            "sha256": "E8ED96CF8B9E3B8C0FCB0E580E7CA842DE3064F29CCDE51566F8253D1962BA47"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionIndex.cs",
+            "bytes": 8082,
+            "sha256": "897F71C757DB7D56CCB0E987039CE681ACD218F0E4175A9A3B9A8DB8CE95165B"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionRunPageReader.cs",
+            "bytes": 2660,
+            "sha256": "4D033153C3EC3A3ACE2F46308EB673A976DCF59328499238BE3ACC5E368E0A17"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+            "bytes": 59270,
+            "sha256": "A0FFD8F4E6DECB5FD04D5E788A92CE13B98881150A07D159CA08DA356868FD90"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+            "bytes": 147220,
+            "sha256": "ECBD9F29D59D449185415DBE36B03AF12BF989C3B4F2299AD532B417553D623D"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+            "bytes": 25572,
+            "sha256": "12D431B7FC9F685EA0881B3DEA723A45441938C5F1D4991D232D5D04BBBF9B3C"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+            "bytes": 11684,
+            "sha256": "7DCA200D60EF8D1CAED4D346A92B676ACF8DE337684F17028C47E32CB8445840"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStorageLayout.cs",
+            "bytes": 3780,
+            "sha256": "0618D75036B8DF7279DD008C5AC3DF1878A2DA384FE3DFC84B8A4C7CC8FF3F79"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+            "bytes": 122647,
+            "sha256": "06FF3025A5B1733E87A0EF185D0852ED89554DFF807F219320935F27A457F0AA"
+          },
+          {
+            "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+            "bytes": 38393,
+            "sha256": "BA400ABCC995EB7DB9BFF1B553F362FBFBCEC6B0DD75C3D07B6ECDF113032A46"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+            "bytes": 12508,
+            "sha256": "81DB10A4BA3DBE6F6407ECEFF25E7317D000B0129381E2BD365F2DB918448248"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexCostTests.cs",
+            "bytes": 5760,
+            "sha256": "9EC16B254C8FEAED6DC6658A187EA23C5CAE2F82E5E25452C25F63C3E1726F42"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexIntegrationTests.cs",
+            "bytes": 16579,
+            "sha256": "0E60C6F561452F72B2EFD958A55E1BDD606BDB6C91F745262FCEA2927E62C974"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessPageIntegrationTests.cs",
+            "bytes": 19692,
+            "sha256": "2797E1EE83DDFC5B94CF906F73147C659D8B0F8F7BD2CE906A46D40F97DC9DDF"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessQueryIntegrationTests.cs",
+            "bytes": 7921,
+            "sha256": "B801742D2A0651C6C3DC5D855E0AF38C9B016EC794360DB4812EEBD2338BBEE6"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePublicationRecoveryTests.cs",
+            "bytes": 27419,
+            "sha256": "D92FECB7160A640C9B091D44253C420B2C9618083EF498048D112EBBD0A612FA"
+          }
+        ],
+        "outputs": [
+          {
+            "bytes": 2555392,
+            "sha256": "BB2F0255EA71DB5241EAD2C1F235A9B37C2E8E328F1A3F77BB1AA4C147CAA0AF",
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll"
+          },
+          {
+            "bytes": 493360,
+            "sha256": "C972B1B34080CB5A3CE3752A3246CCB2A52BF352D9AEB3B8157558005ADEAC98",
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.pdb"
+          },
+          {
+            "bytes": 972288,
+            "sha256": "FCAEC9B6C233F09726459A1CCFFF0136DC21C2EDE62DD08CE8F1B5F6A282E9E0",
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll"
+          },
+          {
+            "bytes": 179868,
+            "sha256": "011980809C20ECF0017528D03E31FD2F21BC78BB2659F4E350D8D13292D739A3",
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.pdb"
+          },
+          {
+            "bytes": 3451904,
+            "sha256": "E94806C96C9226E0BD6737D15629FEA4A1823906FDF8FDACB3C1491F804DFDAC",
+            "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll"
+          },
+          {
+            "bytes": 720496,
+            "sha256": "06602EF348F841CE75B0CE59186809EB9CA6E6C7D8809A30BB66E3A98CD68E06",
+            "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.pdb"
+          },
+          {
+            "bytes": 6496768,
+            "sha256": "887C16205E0FDB8E8EDE1BBAA8174344A66E81453BCC25B034DE574EBEEAC5AC",
+            "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll"
+          },
+          {
+            "bytes": 930312,
+            "sha256": "5F65A5C602D42EBCD7580A310B85874B7A02080CC39B087138DB8B2E3757E216",
+            "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb"
+          },
+          {
+            "bytes": 21822976,
+            "sha256": "2D5B41903C05435FF1D54A58B8A27ECF009C682D0F9485F9AC81FD56570AB2D4",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll"
+          },
+          {
+            "bytes": 3230912,
+            "sha256": "627D7649F507B054C9A718B0E30C6C878AC8DA3FA2E3053D5AFDA57DE04F3CEA",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb"
+          },
+          {
+            "bytes": 2555392,
+            "sha256": "BB2F0255EA71DB5241EAD2C1F235A9B37C2E8E328F1A3F77BB1AA4C147CAA0AF",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll"
+          },
+          {
+            "bytes": 972288,
+            "sha256": "FCAEC9B6C233F09726459A1CCFFF0136DC21C2EDE62DD08CE8F1B5F6A282E9E0",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll"
+          },
+          {
+            "bytes": 3451904,
+            "sha256": "E94806C96C9226E0BD6737D15629FEA4A1823906FDF8FDACB3C1491F804DFDAC",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll"
+          },
+          {
+            "bytes": 6496768,
+            "sha256": "887C16205E0FDB8E8EDE1BBAA8174344A66E81453BCC25B034DE574EBEEAC5AC",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Web.dll"
+          }
+        ]
+      },
+      "resourceReconciliation": {
+        "databaseNameDelta": [],
+        "temporaryDeltasPreservedWithoutOwnership": [],
+        "ownedValidationDirectory": "Retained for producer integration: small reviewed logs, source/runtime manifests and shared validation helpers; no new compiled outputs or host.",
+        "inheritedBlockedCleanup": {
+          "requiredAction": "Manual cleanup or an explicit approval-system change is required for these exact resources. They remain excluded from subsequent cleanup attempts.",
+          "journalSha256": "8A8165E2B2250EED621740669396B6870172ABF8D4E10CEB7859BBAB7CCCFD6F",
+          "reason": "Automatic approval review rejected the combined exact test database and temporary-directory removal with blocked by policy before execution. No deletion was attempted through another route.",
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewCompletionTests.cs:159",
+          "recordedUtc": "2026-10-21T08:05:31.9832225-04:00",
+          "evidence": "The sole new isolated database has the declared reviewed-completion profile prefix and is named inside this exact pending-run journal. The test command and its observed child processes have exited. The latest database observation has zero active connections.",
+          "state": "CleanupRejected",
+          "test": "ProjectTaskPlanReviewCompletionTests.Lost_commit_acknowledgement_replays_after_full_host_restart_without_another_outcome_read",
+          "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+          "path": "C:/Users/lucys/AppData/Local/Temp/process-reviewed-completion/6ea9ebeae3b74434ab0dfcda9483bd27",
+          "database": "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1"
+        },
+        "remainingObservedProcesses": [],
+        "historicalCleanupDenials": "Earlier denials remain. Automatic approval review additionally rejected c4-process-owner-outcome-verified and c4-process-owner-outcome-final cleanup with blocked by policy. Both remain; no denied resource was retried.",
+        "recordedUtc": "2026-10-22T15:17:47.6066536+00:00",
+        "postgres": [
+          "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+          "cditall_primary_40a332c695a94161a74b78718c28b907|0",
+          "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+          "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+          "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+          "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+          "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1|0",
+          "postgres|1"
+        ],
+        "previousHttpBlockedCleanup": {
+          "state": "BlockedByAutomaticApprovalReview",
+          "database": "cditall_primary_40a332c695a94161a74b78718c28b907",
+          "reason": "Observed API-test host finalizer crash; exact original run metadata binds this fixture directory to its new primary database. All observed processes exited.",
+          "activeConnections": 0,
+          "recordedUtc": "2026-10-21T13:19:09.6396158-04:00",
+          "sourceEvidence": [
+            {
+              "sha256": "3D27E32BCE667F2802FF368DE5BE67ED72016BD091F6C7CF21223E5F46FA8EF0",
+              "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/6f716289a47642e590153bef907eadc2/run.json"
+            },
+            {
+              "sha256": "8113A3D3E76338D0E0E3F3C70AA78A4C5FD5C5FF6673BC60A866096AA30C9FE4",
+              "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/a46b7f22c3468762959f3308ae040e76/run.json"
+            }
+          ],
+          "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+          "root": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-api-tests\\069475322dcc45a2816c596f2d8beb24",
+          "rejection": "The combined exact DROP DATABASE and Remove-Item command was rejected before execution: blocked by policy. Neither action executed; no alternative route will be attempted."
+        }
+      },
+      "observationCoverage": {
+        "commands": [
+          {
+            "startedUtc": "2026-10-22T11:16:48.7326764-04:00",
+            "endedUtc": "2026-10-22T11:17:18.7068696-04:00",
+            "command": "execute-Integration-FileSandboxWorkspaceProcessIndexIntegrationTests",
+            "covered": true
+          }
+        ],
+        "observerStartedUtc": "2026-10-22T11:16:36.4590661-04:00",
+        "observerEndedUtc": "2026-10-22T11:17:18.9433178-04:00",
+        "allCovered": true
+      }
+    },
+    {
+      "candidate": "c4-process-selection-index-confirmed",
+      "discovery": {
+        "actualTotal": 66.0,
+        "expectedTotal": 66.0,
+        "lanes": [
+          {
+            "id": "Integration-FileSandboxWorkspaceProcessIndexIntegrationTests",
+            "sourceMethodsMatched": true,
+            "sourceMethods": [
+              "Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source",
+              "Unavailable_source_is_not_repaired_or_reported_as_exhaustion",
+              "Duplicate_source_identities_refuse_preparation_before_publication",
+              "Interrupted_companion_publication_retains_the_original_journal_and_recovers_once",
+              "Bulk_addition_removal_and_session_update_publish_current_selection_evidence",
+              "Required_selection_fields_cannot_default_to_an_empty_success",
+              "Pre_cancelled_preparation_does_not_read_or_publish",
+              "Same_stamp_index_changes_are_reread_instead_of_using_cached_membership",
+              "Explicit_preparation_repairs_a_corrupt_projection_without_rewriting_business_evidence",
+              "Agent_deletion_removes_only_its_original_membership_from_the_compact_projection",
+              "An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace"
+            ],
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: True)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Missing)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Revision)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Count)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureHeader)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureEntry)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Duplicate_source_identities_refuse_preparation_before_publication",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: True)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Bulk_addition_removal_and_session_update_publish_current_selection_evidence",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"schemaVersion\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"supportedProjection\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runCount\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"nonProcessRunCount\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runs\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"revision\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Pre_cancelled_preparation_does_not_read_or_publish",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Same_stamp_index_changes_are_reread_instead_of_using_cached_membership",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_repairs_a_corrupt_projection_without_rewriting_business_evidence",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Agent_deletion_removes_only_its_original_membership_from_the_compact_projection",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: True)"
+            ],
+            "actualDiscovery": 23,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.",
+            "expectedDiscovery": 23,
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj"
+          },
+          {
+            "id": "Integration-FileSandboxWorkspaceProcessPageIntegrationTests",
+            "sourceMethodsMatched": true,
+            "sourceMethods": [
+              "Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration",
+              "Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals",
+              "Legacy_projection_rows_are_conservative_candidates_and_are_never_silently_omitted",
+              "Future_selection_projection_evidence_is_pending_and_does_not_trigger_journal_reads",
+              "Duplicate_metadata_identities_fail_before_any_journal_is_hydrated",
+              "Selected_record_same_stamp_and_revision_changes_are_visible_on_repeated_reads",
+              "Prepared_publication_is_reported_without_recovery_and_becomes_readable_after_its_owner_recovers",
+              "Invalid_input_and_pre_cancelled_calls_do_not_access_storage",
+              "Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion",
+              "Empty_storage_is_exhausted_without_seeding_business_files",
+              "Identical_process_ids_in_other_workspaces_do_not_cross_the_selected_owner",
+              "Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration"
+            ],
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 1)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 3)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 16)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: Missing)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: Stale)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: LegacyLayout)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Legacy_projection_rows_are_conservative_candidates_and_are_never_silently_omitted",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Future_selection_projection_evidence_is_pending_and_does_not_trigger_journal_reads",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Duplicate_metadata_identities_fail_before_any_journal_is_hydrated",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Selected_record_same_stamp_and_revision_changes_are_visible_on_repeated_reads",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Prepared_publication_is_reported_without_recovery_and_becomes_readable_after_its_owner_recovers",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Invalid_input_and_pre_cancelled_calls_do_not_access_storage",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion(missing: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion(missing: True)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Empty_storage_is_exhausted_without_seeding_business_files",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Identical_process_ids_in_other_workspaces_do_not_cross_the_selected_owner",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration(historyCount: 20000)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration(historyCount: 100000)"
+            ],
+            "actualDiscovery": 18,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.",
+            "expectedDiscovery": 18,
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj"
+          },
+          {
+            "id": "Integration-FileSandboxWorkspaceProcessQueryIntegrationTests",
+            "sourceMethodsMatched": true,
+            "sourceMethods": [
+              "Process_query_reads_only_selected_current_records",
+              "Index_recovery_never_omits_a_matching_run",
+              "Independent_commit_and_same_revision_edit_are_visible",
+              "Missing_or_corrupt_selected_record_is_an_explicit_failure",
+              "Candidate_read_recovers_a_prepared_commit_before_selecting",
+              "Exact_execution_selection_does_not_enumerate_unrelated_corrupt_records"
+            ],
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Process_query_reads_only_selected_current_records(unrelatedCount: 4)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Process_query_reads_only_selected_current_records(unrelatedCount: 96)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"missing\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"stale\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"legacy\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"older-reporting\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"newer-reporting\")",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Independent_commit_and_same_revision_edit_are_visible",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Missing_or_corrupt_selected_record_is_an_explicit_failure(missing: False)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Missing_or_corrupt_selected_record_is_an_explicit_failure(missing: True)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Candidate_read_recovers_a_prepared_commit_before_selecting",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Exact_execution_selection_does_not_enumerate_unrelated_corrupt_records"
+            ],
+            "actualDiscovery": 12,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.",
+            "expectedDiscovery": 12,
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj"
+          },
+          {
+            "id": "Integration-FileSandboxWorkspacePublicationRecoveryTests",
+            "sourceMethodsMatched": true,
+            "sourceMethods": [
+              "Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it",
+              "Same_size_run_bytes_changed_without_a_revision_change_cannot_be_overwritten_by_a_prepared_target",
+              "A_waiting_run_only_publication_allows_unrelated_commit_and_uses_fresh_shared_indexes_without_callback_replay",
+              "Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect"
+            ],
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ChatStart)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: GenericRun)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ExistingRun)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: AgentDeletion)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Same_size_run_bytes_changed_without_a_revision_change_cannot_be_overwritten_by_a_prepared_target",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.A_waiting_run_only_publication_allows_unrelated_commit_and_uses_fresh_shared_indexes_without_callback_replay",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Run)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Workspace)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: AgentDeletion)"
+            ],
+            "actualDiscovery": 9,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.",
+            "expectedDiscovery": 9,
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj"
+          },
+          {
+            "id": "Integration-FileSandboxWorkspaceProcessIndexCostTests",
+            "sourceMethodsMatched": true,
+            "sourceMethods": [
+              "Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision"
+            ],
+            "testNames": [
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 0, writers: 1)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 1)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 8)",
+              "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 32)"
+            ],
+            "actualDiscovery": 4,
+            "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.",
+            "expectedDiscovery": 4,
+            "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj"
+          }
+        ]
+      },
+      "results": {
+        "Integration-FileSandboxWorkspaceProcessIndexIntegrationTests": [
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"nonProcessRunCount\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6917419"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runs\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6825234"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Agent_deletion_removes_only_its_original_membership_from_the_compact_projection",
+            "outcome": "Passed",
+            "duration": "00:00:02.0417166"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"runCount\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6722886"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Same_stamp_index_changes_are_reread_instead_of_using_cached_membership",
+            "outcome": "Passed",
+            "duration": "00:00:00.8821063"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: False)",
+            "outcome": "Passed",
+            "duration": "00:00:00.6652072"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_repairs_a_corrupt_projection_without_rewriting_business_evidence",
+            "outcome": "Passed",
+            "duration": "00:00:00.8822456"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"revision\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.7011046"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: False)",
+            "outcome": "Passed",
+            "duration": "00:00:03.1201435"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Duplicate_source_identities_refuse_preparation_before_publication",
+            "outcome": "Passed",
+            "duration": "00:00:00.9230931"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"schemaVersion\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6807829"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Pre_cancelled_preparation_does_not_read_or_publish",
+            "outcome": "Passed",
+            "duration": "00:00:00.7191527"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: False)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9332901"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureEntry)",
+            "outcome": "Passed",
+            "duration": "00:00:00.7651597"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Interrupted_companion_publication_retains_the_original_journal_and_recovers_once(newRun: True)",
+            "outcome": "Passed",
+            "duration": "00:00:03.0619549"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Count)",
+            "outcome": "Passed",
+            "duration": "00:00:01.6251456"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Bulk_addition_removal_and_session_update_publish_current_selection_evidence",
+            "outcome": "Passed",
+            "duration": "00:00:01.8129923"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Explicit_preparation_uses_complete_metadata_without_hydrating_journals_or_rewriting_its_source(legacy: True)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9518965"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Revision)",
+            "outcome": "Passed",
+            "duration": "00:00:00.7661819"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Required_selection_fields_cannot_default_to_an_empty_success(field: \"supportedProjection\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.6997963"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: FutureHeader)",
+            "outcome": "Passed",
+            "duration": "00:00:00.8344296"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.An_orphan_projection_without_a_canonical_index_is_not_an_empty_workspace(compact: True)",
+            "outcome": "Passed",
+            "duration": "00:00:00.6764609"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.Unavailable_source_is_not_repaired_or_reported_as_exhaustion(gap: Missing)",
+            "outcome": "Passed",
+            "duration": "00:00:00.7857432"
+          }
+        ],
+        "Integration-FileSandboxWorkspaceProcessPageIntegrationTests": [
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration(historyCount: 100000)",
+            "outcome": "Passed",
+            "duration": "00:00:03.7799202"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Selected_record_same_stamp_and_revision_changes_are_visible_on_repeated_reads",
+            "outcome": "Passed",
+            "duration": "00:00:00.8534851"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion(missing: False)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9188117"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Invalid_input_and_pre_cancelled_calls_do_not_access_storage",
+            "outcome": "Passed",
+            "duration": "00:00:00.7506316"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: LegacyLayout)",
+            "outcome": "Passed",
+            "duration": "00:00:00.8000615"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Empty_storage_is_exhausted_without_seeding_business_files",
+            "outcome": "Passed",
+            "duration": "00:00:00.6527482"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Future_selection_projection_evidence_is_pending_and_does_not_trigger_journal_reads",
+            "outcome": "Passed",
+            "duration": "00:00:00.6649459"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 16)",
+            "outcome": "Passed",
+            "duration": "00:00:03.3963826"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: Stale)",
+            "outcome": "Passed",
+            "duration": "00:00:00.8092397"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 1)",
+            "outcome": "Passed",
+            "duration": "00:00:03.3680341"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Prepared_publication_is_reported_without_recovery_and_becomes_readable_after_its_owner_recovers",
+            "outcome": "Passed",
+            "duration": "00:00:01.1250330"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Missing_or_corrupt_selected_records_cannot_be_reported_as_exhaustion(missing: True)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9574479"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Identical_process_ids_in_other_workspaces_do_not_cross_the_selected_owner",
+            "outcome": "Passed",
+            "duration": "00:00:01.6204346"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Large_metadata_diagnostic_records_fresh_and_repeated_read_cost_with_fixed_journal_hydration(historyCount: 20000)",
+            "outcome": "Passed",
+            "duration": "00:00:01.7499612"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Legacy_projection_rows_are_conservative_candidates_and_are_never_silently_omitted",
+            "outcome": "Passed",
+            "duration": "00:00:01.4624086"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Incomplete_indexes_report_pending_without_rebuilding_or_reading_journals(state: Missing)",
+            "outcome": "Passed",
+            "duration": "00:00:00.8186456"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Restarted_pages_select_only_matching_records_in_key_order_without_detail_hydration(take: 3)",
+            "outcome": "Passed",
+            "duration": "00:00:03.3240488"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.Duplicate_metadata_identities_fail_before_any_journal_is_hydrated",
+            "outcome": "Passed",
+            "duration": "00:00:01.0006517"
+          }
+        ],
+        "Integration-FileSandboxWorkspaceProcessQueryIntegrationTests": [
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"stale\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.9619325"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Independent_commit_and_same_revision_edit_are_visible",
+            "outcome": "Passed",
+            "duration": "00:00:00.8727771"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Process_query_reads_only_selected_current_records(unrelatedCount: 4)",
+            "outcome": "Passed",
+            "duration": "00:00:01.2957638"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"legacy\")",
+            "outcome": "Passed",
+            "duration": "00:00:01.0468092"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"newer-reporting\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.9507001"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Exact_execution_selection_does_not_enumerate_unrelated_corrupt_records",
+            "outcome": "Passed",
+            "duration": "00:00:00.8450529"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"older-reporting\")",
+            "outcome": "Passed",
+            "duration": "00:00:01.8107854"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Process_query_reads_only_selected_current_records(unrelatedCount: 96)",
+            "outcome": "Passed",
+            "duration": "00:00:03.5898087"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Candidate_read_recovers_a_prepared_commit_before_selecting",
+            "outcome": "Passed",
+            "duration": "00:00:01.0895790"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Index_recovery_never_omits_a_matching_run(indexState: \"missing\")",
+            "outcome": "Passed",
+            "duration": "00:00:00.9906480"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Missing_or_corrupt_selected_record_is_an_explicit_failure(missing: True)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9251766"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.Missing_or_corrupt_selected_record_is_an_explicit_failure(missing: False)",
+            "outcome": "Passed",
+            "duration": "00:00:00.9691930"
+          }
+        ],
+        "Integration-FileSandboxWorkspacePublicationRecoveryTests": [
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.A_waiting_run_only_publication_allows_unrelated_commit_and_uses_fresh_shared_indexes_without_callback_replay",
+            "outcome": "Passed",
+            "duration": "00:00:01.4368583"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ExistingRun)",
+            "outcome": "Passed",
+            "duration": "00:00:01.7149818"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Same_size_run_bytes_changed_without_a_revision_change_cannot_be_overwritten_by_a_prepared_target",
+            "outcome": "Passed",
+            "duration": "00:00:02.4230538"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Workspace)",
+            "outcome": "Passed",
+            "duration": "00:00:01.7648258"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: Run)",
+            "outcome": "Passed",
+            "duration": "00:00:01.5503575"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: AgentDeletion)",
+            "outcome": "Passed",
+            "duration": "00:00:02.3214811"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: GenericRun)",
+            "outcome": "Passed",
+            "duration": "00:00:01.9657880"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Recovery_releases_workspace_before_keys_and_refuses_a_changed_journal_without_replaying_it(kind: ChatStart)",
+            "outcome": "Passed",
+            "duration": "00:00:01.7787791"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.Pending_publication_evidence_appearing_during_key_wait_refuses_before_any_new_effect(mutation: AgentDeletion)",
+            "outcome": "Passed",
+            "duration": "00:00:01.7595454"
+          }
+        ],
+        "Integration-FileSandboxWorkspaceProcessIndexCostTests": [
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 32)",
+            "outcome": "Passed",
+            "duration": "00:01:10.6024795"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 8)",
+            "outcome": "Passed",
+            "duration": "00:01:04.9370987"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 2000, writers: 1)",
+            "outcome": "Passed",
+            "duration": "00:01:04.8559568"
+          },
+          {
+            "testName": "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.Actual_owner_writes_and_concurrent_pages_preserve_each_accepted_revision(historyCount: 0, writers: 1)",
+            "outcome": "Passed",
+            "duration": "00:00:14.3544379"
+          }
+        ]
+      },
+      "commands": [
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "build-1-integration",
+          "Arguments": [
+            "build",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-restore",
+            "--no-dependencies",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1"
+          ],
+          "StartedUtc": "2026-10-22T15:18:39.3976229+00:00",
+          "State": "Completed",
+          "RunnerPid": 61488,
+          "ChildPid": 28868,
+          "ChildStartedUtc": "2026-10-22T15:18:39.4434364Z",
+          "ExitCode": 0,
+          "Seconds": 20.8428863,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 149242,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "diff-check-1",
+          "Arguments": [
+            "diff",
+            "--check"
+          ],
+          "StartedUtc": "2026-10-22T15:33:10.1327703+00:00",
+          "State": "Completed",
+          "RunnerPid": 59696,
+          "ChildPid": 33804,
+          "ChildStartedUtc": "2026-10-22T15:33:10.1385483Z",
+          "ExitCode": 0,
+          "Seconds": 0.1731843,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 0,
+          "StderrRetainedBytes": 906,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessIndexCostTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:19:40.7633394+00:00",
+          "State": "Completed",
+          "RunnerPid": 58620,
+          "ChildPid": 51528,
+          "ChildStartedUtc": "2026-10-22T15:19:40.7676894Z",
+          "ExitCode": 0,
+          "Seconds": 3.1141224,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 970,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessIndexIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:19:26.4949201+00:00",
+          "State": "Completed",
+          "RunnerPid": 58620,
+          "ChildPid": 51696,
+          "ChildStartedUtc": "2026-10-22T15:19:26.5341890Z",
+          "ExitCode": 0,
+          "Seconds": 3.4927868,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 4211,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessPageIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:19:30.0790323+00:00",
+          "State": "Completed",
+          "RunnerPid": 58620,
+          "ChildPid": 26456,
+          "ChildStartedUtc": "2026-10-22T15:19:30.0846597Z",
+          "ExitCode": 0,
+          "Seconds": 3.3523507,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 3376,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspaceProcessQueryIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:19:33.4567886+00:00",
+          "State": "Completed",
+          "RunnerPid": 58620,
+          "ChildPid": 12568,
+          "ChildStartedUtc": "2026-10-22T15:19:33.4624543Z",
+          "ExitCode": 0,
+          "Seconds": 3.25778,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 2116,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "discover-readonly-1-Integration-FileSandboxWorkspacePublicationRecoveryTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.",
+            "--list-tests"
+          ],
+          "StartedUtc": "2026-10-22T15:19:36.7308555+00:00",
+          "State": "Completed",
+          "RunnerPid": 58620,
+          "ChildPid": 10856,
+          "ChildStartedUtc": "2026-10-22T15:19:36.7349665Z",
+          "ExitCode": 0,
+          "Seconds": 4.0041791,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 1960,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "documentation-1",
+          "Arguments": [
+            "-NoProfile",
+            "-File",
+            "tools/Validation/Test-Documentation.ps1"
+          ],
+          "StartedUtc": "2026-10-22T15:33:03.9916503+00:00",
+          "State": "Completed",
+          "RunnerPid": 59696,
+          "ChildPid": 57884,
+          "ChildStartedUtc": "2026-10-22T15:33:04.0284926Z",
+          "ExitCode": 0,
+          "Seconds": 6.0757092,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 68,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "execute-Integration-FileSandboxWorkspaceProcessIndexCostTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexCostTests.",
+            "--logger",
+            "trx;LogFileName=Integration-FileSandboxWorkspaceProcessIndexCostTests.trx",
+            "--logger",
+            "console;verbosity=normal",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-index-confirmed"
+          ],
+          "StartedUtc": "2026-10-22T15:21:50.3693946+00:00",
+          "State": "Completed",
+          "RunnerPid": 36580,
+          "ChildPid": 58564,
+          "ChildStartedUtc": "2026-10-22T15:21:50.3759657Z",
+          "ExitCode": 0,
+          "Seconds": 218.4536585,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 1753,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "execute-Integration-FileSandboxWorkspaceProcessIndexIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessIndexIntegrationTests.",
+            "--logger",
+            "trx;LogFileName=Integration-FileSandboxWorkspaceProcessIndexIntegrationTests.trx",
+            "--logger",
+            "console;verbosity=normal",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-index-confirmed"
+          ],
+          "StartedUtc": "2026-10-22T15:20:09.1838142+00:00",
+          "State": "Completed",
+          "RunnerPid": 36580,
+          "ChildPid": 56012,
+          "ChildStartedUtc": "2026-10-22T15:20:09.2192025Z",
+          "ExitCode": 0,
+          "Seconds": 29.1883136,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 5349,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "execute-Integration-FileSandboxWorkspaceProcessPageIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessPageIntegrationTests.",
+            "--logger",
+            "trx;LogFileName=Integration-FileSandboxWorkspaceProcessPageIntegrationTests.trx",
+            "--logger",
+            "console;verbosity=normal",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-index-confirmed"
+          ],
+          "StartedUtc": "2026-10-22T15:20:38.4406027+00:00",
+          "State": "Completed",
+          "RunnerPid": 36580,
+          "ChildPid": 21580,
+          "ChildStartedUtc": "2026-10-22T15:20:38.4539472Z",
+          "ExitCode": 0,
+          "Seconds": 32.2566105,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 4406,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "execute-Integration-FileSandboxWorkspaceProcessQueryIntegrationTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceProcessQueryIntegrationTests.",
+            "--logger",
+            "trx;LogFileName=Integration-FileSandboxWorkspaceProcessQueryIntegrationTests.trx",
+            "--logger",
+            "console;verbosity=normal",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-index-confirmed"
+          ],
+          "StartedUtc": "2026-10-22T15:21:10.7226940+00:00",
+          "State": "Completed",
+          "RunnerPid": 36580,
+          "ChildPid": 11344,
+          "ChildStartedUtc": "2026-10-22T15:21:10.7299370Z",
+          "ExitCode": 0,
+          "Seconds": 18.9761357,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 3045,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "execute-Integration-FileSandboxWorkspacePublicationRecoveryTests",
+          "Arguments": [
+            "test",
+            "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--no-restore",
+            "-p:UseLocalCanDoItAllLibraries=true",
+            "/m:1",
+            "--filter",
+            "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePublicationRecoveryTests.",
+            "--logger",
+            "trx;LogFileName=Integration-FileSandboxWorkspacePublicationRecoveryTests.trx",
+            "--logger",
+            "console;verbosity=normal",
+            "--results-directory",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-index-confirmed"
+          ],
+          "StartedUtc": "2026-10-22T15:21:29.7141263+00:00",
+          "State": "Completed",
+          "RunnerPid": 36580,
+          "ChildPid": 48500,
+          "ChildStartedUtc": "2026-10-22T15:21:29.7284304Z",
+          "ExitCode": 0,
+          "Seconds": 20.6363866,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 2814,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 3660,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "observer-product-planning-v2",
+          "Arguments": [
+            "-NoProfile",
+            "-File",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-selection-index-confirmed\\Observe-BrowserV2.ps1",
+            "-DeadlineSeconds",
+            "3600"
+          ],
+          "StartedUtc": "2026-10-22T15:19:54.8949632+00:00",
+          "State": "Completed",
+          "RunnerPid": 61760,
+          "ChildPid": 51152,
+          "ChildStartedUtc": "2026-10-22T15:19:54.9142782Z",
+          "ExitCode": 0,
+          "Seconds": 334.781968,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 55,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "portability-enforce-1",
+          "Arguments": [
+            "tools/Validation/Portability/enforce_portability_baseline.py",
+            "--scan",
+            ".artifacts/concurrent-mutations/validation/c4-process-selection-index-confirmed/portability-scan-1.json",
+            "--baseline",
+            "tools/Validation/Portability/portability-risk-baseline.json"
+          ],
+          "StartedUtc": "2026-10-22T15:30:21.6479275+00:00",
+          "State": "Completed",
+          "RunnerPid": 11096,
+          "ChildPid": 8032,
+          "ChildStartedUtc": "2026-10-22T15:30:21.6519262Z",
+          "ExitCode": 1,
+          "Seconds": 0.6960986,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 0,
+          "StderrRetainedBytes": 293,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "portability-enforce-2",
+          "Arguments": [
+            "tools/Validation/Portability/enforce_portability_baseline.py",
+            "--scan",
+            ".artifacts/concurrent-mutations/validation/c4-process-selection-index-confirmed/portability-scan-1.json",
+            "--baseline",
+            "tools/Validation/Portability/portability-risk-baseline.json"
+          ],
+          "StartedUtc": "2026-10-22T15:31:38.8902457+00:00",
+          "State": "Completed",
+          "RunnerPid": 60008,
+          "ChildPid": 29032,
+          "ChildStartedUtc": "2026-10-22T15:31:38.9298560Z",
+          "ExitCode": 0,
+          "Seconds": 0.6129932,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 68,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "portability-reviewed-refresh",
+          "Arguments": [
+            "tools/Validation/Portability/enforce_portability_baseline.py",
+            "--scan",
+            ".artifacts/concurrent-mutations/validation/c4-process-selection-index-confirmed/portability-scan-1.json",
+            "--baseline",
+            "tools/Validation/Portability/portability-risk-baseline.json",
+            "--write-baseline"
+          ],
+          "StartedUtc": "2026-10-22T15:31:20.4244707+00:00",
+          "State": "Completed",
+          "RunnerPid": 47252,
+          "ChildPid": 50148,
+          "ChildStartedUtc": "2026-10-22T15:31:20.4585278Z",
+          "ExitCode": 0,
+          "Seconds": 0.6848256,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 120,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "portability-scan-1",
+          "Arguments": [
+            "tools/Validation/Portability/scan_portability.py",
+            "--repo-root",
+            ".",
+            "--output",
+            ".artifacts/concurrent-mutations/validation/c4-process-selection-index-confirmed/portability-scan-1.json"
+          ],
+          "StartedUtc": "2026-10-22T15:28:51.8102488+00:00",
+          "State": "Completed",
+          "RunnerPid": 11096,
+          "ChildPid": 4512,
+          "ChildStartedUtc": "2026-10-22T15:28:51.8157335Z",
+          "ExitCode": 0,
+          "Seconds": 89.8194392,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 466,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "portability-tool-tests",
+          "Arguments": [
+            "tools/Validation/Portability/test_enforce_portability_baseline.py"
+          ],
+          "StartedUtc": "2026-10-22T15:28:50.6272261+00:00",
+          "State": "Completed",
+          "RunnerPid": 11096,
+          "ChildPid": 46180,
+          "ChildStartedUtc": "2026-10-22T15:28:50.6345385Z",
+          "ExitCode": 0,
+          "Seconds": 0.1794942,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 0,
+          "StderrRetainedBytes": 109,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "rendering-register-1",
+          "Arguments": [
+            "tools/Validation/Rendering/check_rendering_register.py",
+            "--repo",
+            "."
+          ],
+          "StartedUtc": "2026-10-22T15:28:47.6516031+00:00",
+          "State": "Completed",
+          "RunnerPid": 11096,
+          "ChildPid": 16204,
+          "ChildStartedUtc": "2026-10-22T15:28:47.6830026Z",
+          "ExitCode": 0,
+          "Seconds": 2.9104997,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 115,
+          "StderrRetainedBytes": 0,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "rendering-tool-tests",
+          "Arguments": [
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tools/Validation/Rendering",
+            "-p",
+            "test_*.py"
+          ],
+          "StartedUtc": "2026-10-22T15:28:51.5963381+00:00",
+          "State": "Completed",
+          "RunnerPid": 11096,
+          "ChildPid": 29204,
+          "ChildStartedUtc": "2026-10-22T15:28:51.6014629Z",
+          "ExitCode": 0,
+          "Seconds": 0.1967264,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 0,
+          "StderrRetainedBytes": 110,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        },
+        {
+          "DeadlineSeconds": 900,
+          "ResourceClosure": "ParentReconciliationRequired",
+          "Name": "secret-scanner-tool-tests",
+          "Arguments": [
+            "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+          ],
+          "StartedUtc": "2026-10-22T15:28:50.8219937+00:00",
+          "State": "Completed",
+          "RunnerPid": 11096,
+          "ChildPid": 36688,
+          "ChildStartedUtc": "2026-10-22T15:28:50.8270665Z",
+          "ExitCode": 0,
+          "Seconds": 0.7560287,
+          "DeadlineExceeded": false,
+          "OutputPumpFailures": [],
+          "CleanupFailures": [],
+          "DeadlineFailureType": null,
+          "StdoutRetainedBytes": 0,
+          "StderrRetainedBytes": 107,
+          "StdoutDiscardedBytes": 0,
+          "StderrDiscardedBytes": 0
+        }
+      ],
+      "candidateIdentity": {
+        "configuration": "Release",
+        "sourcePins": [
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/ProcessExecutionRunPage.cs",
+            "bytes": 1528,
+            "sha256": "E8ED96CF8B9E3B8C0FCB0E580E7CA842DE3064F29CCDE51566F8253D1962BA47"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionIndex.cs",
+            "bytes": 8082,
+            "sha256": "897F71C757DB7D56CCB0E987039CE681ACD218F0E4175A9A3B9A8DB8CE95165B"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionRunPageReader.cs",
+            "bytes": 2660,
+            "sha256": "4D033153C3EC3A3ACE2F46308EB673A976DCF59328499238BE3ACC5E368E0A17"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+            "bytes": 59270,
+            "sha256": "A0FFD8F4E6DECB5FD04D5E788A92CE13B98881150A07D159CA08DA356868FD90"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+            "bytes": 147220,
+            "sha256": "ECBD9F29D59D449185415DBE36B03AF12BF989C3B4F2299AD532B417553D623D"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+            "bytes": 25572,
+            "sha256": "12D431B7FC9F685EA0881B3DEA723A45441938C5F1D4991D232D5D04BBBF9B3C"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+            "bytes": 11684,
+            "sha256": "7DCA200D60EF8D1CAED4D346A92B676ACF8DE337684F17028C47E32CB8445840"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStorageLayout.cs",
+            "bytes": 3780,
+            "sha256": "0618D75036B8DF7279DD008C5AC3DF1878A2DA384FE3DFC84B8A4C7CC8FF3F79"
+          },
+          {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+            "bytes": 122647,
+            "sha256": "06FF3025A5B1733E87A0EF185D0852ED89554DFF807F219320935F27A457F0AA"
+          },
+          {
+            "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+            "bytes": 38393,
+            "sha256": "BA400ABCC995EB7DB9BFF1B553F362FBFBCEC6B0DD75C3D07B6ECDF113032A46"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+            "bytes": 12508,
+            "sha256": "81DB10A4BA3DBE6F6407ECEFF25E7317D000B0129381E2BD365F2DB918448248"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexCostTests.cs",
+            "bytes": 5760,
+            "sha256": "9EC16B254C8FEAED6DC6658A187EA23C5CAE2F82E5E25452C25F63C3E1726F42"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexIntegrationTests.cs",
+            "bytes": 16750,
+            "sha256": "0A4D1FD0A9EA6DE5CE690D4EBAAFA2CDE5B41E0601DE6DDC3A1112CFF76026E2"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessPageIntegrationTests.cs",
+            "bytes": 19692,
+            "sha256": "2797E1EE83DDFC5B94CF906F73147C659D8B0F8F7BD2CE906A46D40F97DC9DDF"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessQueryIntegrationTests.cs",
+            "bytes": 7921,
+            "sha256": "B801742D2A0651C6C3DC5D855E0AF38C9B016EC794360DB4812EEBD2338BBEE6"
+          },
+          {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePublicationRecoveryTests.cs",
+            "bytes": 27419,
+            "sha256": "D92FECB7160A640C9B091D44253C420B2C9618083EF498048D112EBBD0A612FA"
+          }
+        ],
+        "outputs": [
+          {
+            "bytes": 2555392,
+            "sha256": "BB2F0255EA71DB5241EAD2C1F235A9B37C2E8E328F1A3F77BB1AA4C147CAA0AF",
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll"
+          },
+          {
+            "bytes": 493360,
+            "sha256": "C972B1B34080CB5A3CE3752A3246CCB2A52BF352D9AEB3B8157558005ADEAC98",
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.pdb"
+          },
+          {
+            "bytes": 972288,
+            "sha256": "FCAEC9B6C233F09726459A1CCFFF0136DC21C2EDE62DD08CE8F1B5F6A282E9E0",
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll"
+          },
+          {
+            "bytes": 179868,
+            "sha256": "011980809C20ECF0017528D03E31FD2F21BC78BB2659F4E350D8D13292D739A3",
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.pdb"
+          },
+          {
+            "bytes": 3451904,
+            "sha256": "E94806C96C9226E0BD6737D15629FEA4A1823906FDF8FDACB3C1491F804DFDAC",
+            "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll"
+          },
+          {
+            "bytes": 720496,
+            "sha256": "06602EF348F841CE75B0CE59186809EB9CA6E6C7D8809A30BB66E3A98CD68E06",
+            "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.pdb"
+          },
+          {
+            "bytes": 6496768,
+            "sha256": "887C16205E0FDB8E8EDE1BBAA8174344A66E81453BCC25B034DE574EBEEAC5AC",
+            "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll"
+          },
+          {
+            "bytes": 930312,
+            "sha256": "5F65A5C602D42EBCD7580A310B85874B7A02080CC39B087138DB8B2E3757E216",
+            "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb"
+          },
+          {
+            "bytes": 21822976,
+            "sha256": "655FAB41599EC205518BDBEE166B01AE63679BD9C80511AD6DAB8523CA311417",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll"
+          },
+          {
+            "bytes": 3230912,
+            "sha256": "F58FB3C31A671478FBD9DEE68C0EB5C9D87E1E2EDFD56BA303A1560CC9E2C53D",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb"
+          },
+          {
+            "bytes": 2555392,
+            "sha256": "BB2F0255EA71DB5241EAD2C1F235A9B37C2E8E328F1A3F77BB1AA4C147CAA0AF",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll"
+          },
+          {
+            "bytes": 972288,
+            "sha256": "FCAEC9B6C233F09726459A1CCFFF0136DC21C2EDE62DD08CE8F1B5F6A282E9E0",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll"
+          },
+          {
+            "bytes": 3451904,
+            "sha256": "E94806C96C9226E0BD6737D15629FEA4A1823906FDF8FDACB3C1491F804DFDAC",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll"
+          },
+          {
+            "bytes": 6496768,
+            "sha256": "887C16205E0FDB8E8EDE1BBAA8174344A66E81453BCC25B034DE574EBEEAC5AC",
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Web.dll"
+          }
+        ],
+        "localLibraries": true,
+        "baseCommit": "4a35d5311aa23c5294b6fabadc5f4930ebd863d1"
+      },
+      "resourceReconciliation": {
+        "previousHttpBlockedCleanup": {
+          "state": "BlockedByAutomaticApprovalReview",
+          "database": "cditall_primary_40a332c695a94161a74b78718c28b907",
+          "reason": "Observed API-test host finalizer crash; exact original run metadata binds this fixture directory to its new primary database. All observed processes exited.",
+          "activeConnections": 0,
+          "recordedUtc": "2026-10-21T13:19:09.6396158-04:00",
+          "sourceEvidence": [
+            {
+              "sha256": "3D27E32BCE667F2802FF368DE5BE67ED72016BD091F6C7CF21223E5F46FA8EF0",
+              "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/6f716289a47642e590153bef907eadc2/run.json"
+            },
+            {
+              "sha256": "8113A3D3E76338D0E0E3F3C70AA78A4C5FD5C5FF6673BC60A866096AA30C9FE4",
+              "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/a46b7f22c3468762959f3308ae040e76/run.json"
+            }
+          ],
+          "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+          "root": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-api-tests\\069475322dcc45a2816c596f2d8beb24",
+          "rejection": "The combined exact DROP DATABASE and Remove-Item command was rejected before execution: blocked by policy. Neither action executed; no alternative route will be attempted."
+        },
+        "historicalCleanupDenials": "Earlier denials remain. Automatic approval review additionally rejected c4-process-owner-outcome-verified and c4-process-owner-outcome-final cleanup with blocked by policy. Both remain; no denied resource was retried.",
+        "temporaryDeltasPreservedWithoutOwnership": [],
+        "remainingObservedProcesses": [],
+        "inheritedBlockedCleanup": {
+          "requiredAction": "Manual cleanup or an explicit approval-system change is required for these exact resources. They remain excluded from subsequent cleanup attempts.",
+          "journalSha256": "8A8165E2B2250EED621740669396B6870172ABF8D4E10CEB7859BBAB7CCCFD6F",
+          "reason": "Automatic approval review rejected the combined exact test database and temporary-directory removal with blocked by policy before execution. No deletion was attempted through another route.",
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewCompletionTests.cs:159",
+          "recordedUtc": "2026-10-21T08:05:31.9832225-04:00",
+          "evidence": "The sole new isolated database has the declared reviewed-completion profile prefix and is named inside this exact pending-run journal. The test command and its observed child processes have exited. The latest database observation has zero active connections.",
+          "state": "CleanupRejected",
+          "test": "ProjectTaskPlanReviewCompletionTests.Lost_commit_acknowledgement_replays_after_full_host_restart_without_another_outcome_read",
+          "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+          "path": "C:/Users/lucys/AppData/Local/Temp/process-reviewed-completion/6ea9ebeae3b74434ab0dfcda9483bd27",
+          "database": "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1"
+        },
+        "recordedUtc": "2026-10-22T15:26:11.8664513+00:00",
+        "databaseNameDelta": [],
+        "postgres": [
+          "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+          "cditall_primary_40a332c695a94161a74b78718c28b907|0",
+          "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+          "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+          "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+          "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+          "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1|0",
+          "postgres|1"
+        ],
+        "ownedValidationDirectory": "Retained for producer integration: small reviewed logs, source/runtime manifests and shared validation helpers; no new compiled outputs or host."
+      },
+      "observationCoverage": {
+        "observerEndedUtc": "2026-10-22T11:25:29.6384308-04:00",
+        "allCovered": true,
+        "observerStartedUtc": "2026-10-22T11:19:55.8074142-04:00",
+        "commands": [
+          {
+            "endedUtc": "2026-10-22T11:25:28.8230530-04:00",
+            "startedUtc": "2026-10-22T11:21:50.3693946-04:00",
+            "command": "execute-Integration-FileSandboxWorkspaceProcessIndexCostTests",
+            "covered": true
+          },
+          {
+            "endedUtc": "2026-10-22T11:20:38.3721278-04:00",
+            "startedUtc": "2026-10-22T11:20:09.1838142-04:00",
+            "command": "execute-Integration-FileSandboxWorkspaceProcessIndexIntegrationTests",
+            "covered": true
+          },
+          {
+            "endedUtc": "2026-10-22T11:21:10.6972132-04:00",
+            "startedUtc": "2026-10-22T11:20:38.4406027-04:00",
+            "command": "execute-Integration-FileSandboxWorkspaceProcessPageIntegrationTests",
+            "covered": true
+          },
+          {
+            "endedUtc": "2026-10-22T11:21:29.6988297-04:00",
+            "startedUtc": "2026-10-22T11:21:10.7226940-04:00",
+            "command": "execute-Integration-FileSandboxWorkspaceProcessQueryIntegrationTests",
+            "covered": true
+          },
+          {
+            "endedUtc": "2026-10-22T11:21:50.3505129-04:00",
+            "startedUtc": "2026-10-22T11:21:29.7141263-04:00",
+            "command": "execute-Integration-FileSandboxWorkspacePublicationRecoveryTests",
+            "covered": true
+          }
+        ]
+      }
+    }
+  ],
+  "baselineProduction": {
+    "qualifiedCommit": "4a35d5311",
+    "qualification": "codex/bundles/concurrent-mutations/proof/2026-10-22-process-execution-pages.json",
+    "originalCandidate": {
+      "configuration": "Release",
+      "sourcePins": [
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/ProcessExecutionRunPage.cs",
+          "bytes": 1337,
+          "sha256": "544C54447BFA95BAF2FDED605A06576887F66C56DA02E1039A5C9B9A2BA73AD3"
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionRunPageReader.cs",
+          "bytes": 5032,
+          "sha256": "8040812045D16D06CA2B64E44007DCB15F6D892DA69CF1C3F5BDA51FA64D6977"
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "bytes": 121782,
+          "sha256": "3B62D0C63187AB6A3765C8AEAED15C4D4DF6BB8BD7401F9E4FF75E18CB2F99F3"
+        },
+        {
+          "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+          "bytes": 38179,
+          "sha256": "05D242BD942F6491E0D4CFD79EE110ED9E1FEC489DF330C00849502D50A89E1C"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+          "bytes": 12508,
+          "sha256": "81DB10A4BA3DBE6F6407ECEFF25E7317D000B0129381E2BD365F2DB918448248"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessPageIntegrationTests.cs",
+          "bytes": 18370,
+          "sha256": "82EF8F05903A4C66A083360EC7F29A0EE691132BBB45360BE59E5AEA12B4F90F"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessQueryIntegrationTests.cs",
+          "bytes": 7921,
+          "sha256": "B801742D2A0651C6C3DC5D855E0AF38C9B016EC794360DB4812EEBD2338BBEE6"
+        }
+      ],
+      "localLibraries": true,
+      "outputs": [
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+          "bytes": 2554880,
+          "sha256": "1227F6F4EF9D39A9D9177518D2809AC447BF910C8DE3E6E048E49C4DCD03D57D"
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.pdb",
+          "bytes": 493344,
+          "sha256": "5A78B93015C62842DC4844377D750BB10602E75B47ED227BBCD8EB1A64D14DBD"
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+          "bytes": 958976,
+          "sha256": "E17C3C9034FD43F17AFB3CF77D7438E3693EAFD33986E8259B388C7115EF22F1"
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.pdb",
+          "bytes": 177668,
+          "sha256": "90E0D122D2FDF4D8F10AB3D85D4F81029E65A6C2283A4A0A40D62011E8F5F9F2"
+        },
+        {
+          "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+          "bytes": 3451904,
+          "sha256": "7504C72D40A1F806789E71197A6EBA96DF36BB4B9F656B62206CE96520F3A622"
+        },
+        {
+          "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.pdb",
+          "bytes": 720456,
+          "sha256": "47AE987F3D64A3B2B19C430A9744F3A10AEBFCC0324CB04EAD6D4623D20EDE3D"
+        },
+        {
+          "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "bytes": 6496768,
+          "sha256": "31E68DEC50A96DDFF0AB501F90957FB29FC0147DD12A46A07A933C2ACE7391E4"
+        },
+        {
+          "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb",
+          "bytes": 930316,
+          "sha256": "DC8C703B609332721CCEE4580A14F50EA330AB017891674A42C77710E3F9C274"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+          "bytes": 21768704,
+          "sha256": "AD8ED20CC45C4C8AF40090AE03DE2C11FE6CC624E0445D49DCCE5BEA00D7F1BF"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+          "bytes": 3223796,
+          "sha256": "6EAEE53CCC64137E86BC5C602357D5774BD2325F932EDEED250D631BB0A6773D"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+          "bytes": 2554880,
+          "sha256": "1227F6F4EF9D39A9D9177518D2809AC447BF910C8DE3E6E048E49C4DCD03D57D"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+          "bytes": 958976,
+          "sha256": "E17C3C9034FD43F17AFB3CF77D7438E3693EAFD33986E8259B388C7115EF22F1"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+          "bytes": 3451904,
+          "sha256": "7504C72D40A1F806789E71197A6EBA96DF36BB4B9F656B62206CE96520F3A622"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "bytes": 6496768,
+          "sha256": "31E68DEC50A96DDFF0AB501F90957FB29FC0147DD12A46A07A933C2ACE7391E4"
+        }
+      ],
+      "baseCommit": "8cd7ebab84861dad3f31e245acf8549569ab4021"
+    },
+    "verifiedProduction": [
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+        "bytes": 2554880,
+        "sha256": "1227F6F4EF9D39A9D9177518D2809AC447BF910C8DE3E6E048E49C4DCD03D57D"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.pdb",
+        "bytes": 493344,
+        "sha256": "5A78B93015C62842DC4844377D750BB10602E75B47ED227BBCD8EB1A64D14DBD"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+        "bytes": 958976,
+        "sha256": "E17C3C9034FD43F17AFB3CF77D7438E3693EAFD33986E8259B388C7115EF22F1"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.pdb",
+        "bytes": 177668,
+        "sha256": "90E0D122D2FDF4D8F10AB3D85D4F81029E65A6C2283A4A0A40D62011E8F5F9F2"
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+        "bytes": 3451904,
+        "sha256": "7504C72D40A1F806789E71197A6EBA96DF36BB4B9F656B62206CE96520F3A622"
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.pdb",
+        "bytes": 720456,
+        "sha256": "47AE987F3D64A3B2B19C430A9744F3A10AEBFCC0324CB04EAD6D4623D20EDE3D"
+      },
+      {
+        "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll",
+        "bytes": 6496768,
+        "sha256": "31E68DEC50A96DDFF0AB501F90957FB29FC0147DD12A46A07A933C2ACE7391E4"
+      },
+      {
+        "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb",
+        "bytes": 930316,
+        "sha256": "DC8C703B609332721CCEE4580A14F50EA330AB017891674A42C77710E3F9C274"
+      }
+    ],
+    "scope": "Intentional prior-production baseline: test-only build with no dependency builds. Current compact-index source is not compiled or claimed qualified."
+  },
+  "identicalCostSource": {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexCostTests.cs",
+    "bytes": 5760,
+    "sha256": "9EC16B254C8FEAED6DC6658A187EA23C5CAE2F82E5E25452C25F63C3E1726F42"
+  },
+  "costComparisons": [
+    {
+      "historyCount": 0,
+      "writers": 1,
+      "baseline": {
+        "historyCount": 0,
+        "writers": 1,
+        "warmupWrites": 20,
+        "attemptedWrites": 100,
+        "acceptedWrites": 100,
+        "conflictingWrites": 0,
+        "pageReads": 100,
+        "elapsedMilliseconds": 9644.9958,
+        "acceptedWritesPerSecond": 10.36807087049224,
+        "allocatedBytes": 191244696,
+        "physicalReadBytes": 643746,
+        "journalReads": 100,
+        "writeMilliseconds": {
+          "p50": 90.5729,
+          "p95": 125.9307,
+          "p99": 187.7267
+        },
+        "readMilliseconds": {
+          "p50": 5.8724,
+          "p95": 99.1933,
+          "p99": 719.3815
+        },
+        "conflictMilliseconds": {
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "scope": "Actual file-owner records and single-attempt concurrent writes/reads; one diagnostic sample; filesystem cache uncontrolled; no queue-wait or disk-flush attribution."
+      },
+      "candidate": {
+        "historyCount": 0,
+        "writers": 1,
+        "warmupWrites": 20,
+        "attemptedWrites": 100,
+        "acceptedWrites": 100,
+        "conflictingWrites": 0,
+        "pageReads": 100,
+        "elapsedMilliseconds": 11185.3069,
+        "acceptedWritesPerSecond": 8.940300064542708,
+        "allocatedBytes": 209862664,
+        "physicalReadBytes": 334689,
+        "journalReads": 100,
+        "writeMilliseconds": {
+          "p50": 105.0282,
+          "p95": 163.4247,
+          "p99": 208.523
+        },
+        "readMilliseconds": {
+          "p50": 5.8206,
+          "p95": 318.3456,
+          "p99": 608.2587
+        },
+        "conflictMilliseconds": {
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "scope": "Actual file-owner records and single-attempt concurrent writes/reads; one diagnostic sample; filesystem cache uncontrolled; no queue-wait or disk-flush attribution."
+      },
+      "writeP95ChangePercent": 29.773518292203562,
+      "throughputChangePercent": -13.770843426745849
+    },
+    {
+      "historyCount": 2000,
+      "writers": 1,
+      "baseline": {
+        "historyCount": 2000,
+        "writers": 1,
+        "warmupWrites": 20,
+        "attemptedWrites": 100,
+        "acceptedWrites": 100,
+        "conflictingWrites": 0,
+        "pageReads": 100,
+        "elapsedMilliseconds": 14751.6466,
+        "acceptedWritesPerSecond": 6.778904261440211,
+        "allocatedBytes": 4038819960,
+        "physicalReadBytes": 214045224,
+        "journalReads": 100,
+        "writeMilliseconds": {
+          "p50": 136.4205,
+          "p95": 228.1927,
+          "p99": 309.7764
+        },
+        "readMilliseconds": {
+          "p50": 10.6056,
+          "p95": 542.0561,
+          "p99": 1099.0248
+        },
+        "conflictMilliseconds": {
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "scope": "Actual file-owner records and single-attempt concurrent writes/reads; one diagnostic sample; filesystem cache uncontrolled; no queue-wait or disk-flush attribution."
+      },
+      "candidate": {
+        "historyCount": 2000,
+        "writers": 1,
+        "warmupWrites": 20,
+        "attemptedWrites": 100,
+        "acceptedWrites": 100,
+        "conflictingWrites": 0,
+        "pageReads": 100,
+        "elapsedMilliseconds": 15682.8368,
+        "acceptedWritesPerSecond": 6.3763974129986485,
+        "allocatedBytes": 4124427520,
+        "physicalReadBytes": 22735600,
+        "journalReads": 100,
+        "writeMilliseconds": {
+          "p50": 149.2429,
+          "p95": 184.648,
+          "p99": 266.7303
+        },
+        "readMilliseconds": {
+          "p50": 6.3409,
+          "p95": 451.3495,
+          "p99": 1207.9554
+        },
+        "conflictMilliseconds": {
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "scope": "Actual file-owner records and single-attempt concurrent writes/reads; one diagnostic sample; filesystem cache uncontrolled; no queue-wait or disk-flush attribution."
+      },
+      "writeP95ChangePercent": -19.08242463496861,
+      "throughputChangePercent": -5.937638782289689
+    },
+    {
+      "historyCount": 2000,
+      "writers": 8,
+      "baseline": {
+        "historyCount": 2000,
+        "writers": 8,
+        "warmupWrites": 20,
+        "attemptedWrites": 100,
+        "acceptedWrites": 100,
+        "conflictingWrites": 0,
+        "pageReads": 100,
+        "elapsedMilliseconds": 15709.8017,
+        "acceptedWritesPerSecond": 6.365452722423607,
+        "allocatedBytes": 4160751392,
+        "physicalReadBytes": 214797814,
+        "journalReads": 100,
+        "writeMilliseconds": {
+          "p50": 305.7795,
+          "p95": 4769.2917,
+          "p99": 7439.0818
+        },
+        "readMilliseconds": {
+          "p50": 10.7307,
+          "p95": 790.2871,
+          "p99": 3130.6673
+        },
+        "conflictMilliseconds": {
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "scope": "Actual file-owner records and single-attempt concurrent writes/reads; one diagnostic sample; filesystem cache uncontrolled; no queue-wait or disk-flush attribution."
+      },
+      "candidate": {
+        "historyCount": 2000,
+        "writers": 8,
+        "warmupWrites": 20,
+        "attemptedWrites": 100,
+        "acceptedWrites": 100,
+        "conflictingWrites": 0,
+        "pageReads": 100,
+        "elapsedMilliseconds": 16135.3479,
+        "acceptedWritesPerSecond": 6.197573217494741,
+        "allocatedBytes": 4238905016,
+        "physicalReadBytes": 22814146,
+        "journalReads": 100,
+        "writeMilliseconds": {
+          "p50": 169.9372,
+          "p95": 5395.0514,
+          "p99": 6026.2865
+        },
+        "readMilliseconds": {
+          "p50": 6.2134,
+          "p95": 8.1359,
+          "p99": 6237.5592
+        },
+        "conflictMilliseconds": {
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "scope": "Actual file-owner records and single-attempt concurrent writes/reads; one diagnostic sample; filesystem cache uncontrolled; no queue-wait or disk-flush attribution."
+      },
+      "writeP95ChangePercent": 13.120600276976147,
+      "throughputChangePercent": -2.6373537319266616
+    },
+    {
+      "historyCount": 2000,
+      "writers": 32,
+      "baseline": {
+        "historyCount": 2000,
+        "writers": 32,
+        "warmupWrites": 20,
+        "attemptedWrites": 100,
+        "acceptedWrites": 100,
+        "conflictingWrites": 0,
+        "pageReads": 100,
+        "elapsedMilliseconds": 18453.9389,
+        "acceptedWritesPerSecond": 5.418897317363503,
+        "allocatedBytes": 4620266960,
+        "physicalReadBytes": 217377461,
+        "journalReads": 100,
+        "writeMilliseconds": {
+          "p50": 3593.4643,
+          "p95": 15410.4696,
+          "p99": 16877.2524
+        },
+        "readMilliseconds": {
+          "p50": 10.8502,
+          "p95": 40.8469,
+          "p99": 4338.8362
+        },
+        "conflictMilliseconds": {
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "scope": "Actual file-owner records and single-attempt concurrent writes/reads; one diagnostic sample; filesystem cache uncontrolled; no queue-wait or disk-flush attribution."
+      },
+      "candidate": {
+        "historyCount": 2000,
+        "writers": 32,
+        "warmupWrites": 20,
+        "attemptedWrites": 100,
+        "acceptedWrites": 100,
+        "conflictingWrites": 0,
+        "pageReads": 100,
+        "elapsedMilliseconds": 19169.4797,
+        "acceptedWritesPerSecond": 5.2166256760740355,
+        "allocatedBytes": 4695552552,
+        "physicalReadBytes": 23082700,
+        "journalReads": 100,
+        "writeMilliseconds": {
+          "p50": 3879.0168,
+          "p95": 15838.6868,
+          "p99": 17564.0026
+        },
+        "readMilliseconds": {
+          "p50": 6.6444,
+          "p95": 17.8424,
+          "p99": 1195.1513
+        },
+        "conflictMilliseconds": {
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "scope": "Actual file-owner records and single-attempt concurrent writes/reads; one diagnostic sample; filesystem cache uncontrolled; no queue-wait or disk-flush attribution."
+      },
+      "writeP95ChangePercent": 2.7787420572829236,
+      "throughputChangePercent": -3.7327085095585466
+    }
+  ],
+  "pageDiagnostics": [
+    {
+      "historyCount": 100000,
+      "attempt": 0,
+      "elapsedMilliseconds": 132.982,
+      "allocatedBytes": 30240920,
+      "metadataBytes": 11200478,
+      "sourceMetadataBytes": 82104264,
+      "preparationMilliseconds": 627.0458,
+      "physicalReadBytes": 11206251,
+      "journalReads": 2,
+      "scope": "Synthetic metadata population; actual selected run owner; filesystem cache uncontrolled; not sustained producer throughput."
+    },
+    {
+      "historyCount": 100000,
+      "attempt": 1,
+      "elapsedMilliseconds": 103.5494,
+      "allocatedBytes": 30159992,
+      "metadataBytes": 11200478,
+      "sourceMetadataBytes": 82104264,
+      "preparationMilliseconds": 627.0458,
+      "physicalReadBytes": 11206251,
+      "journalReads": 2,
+      "scope": "Synthetic metadata population; actual selected run owner; filesystem cache uncontrolled; not sustained producer throughput."
+    },
+    {
+      "historyCount": 20000,
+      "attempt": 0,
+      "elapsedMilliseconds": 32.8575,
+      "allocatedBytes": 6863096,
+      "metadataBytes": 2240477,
+      "sourceMetadataBytes": 16424264,
+      "preparationMilliseconds": 139.6444,
+      "physicalReadBytes": 2246249,
+      "journalReads": 2,
+      "scope": "Synthetic metadata population; actual selected run owner; filesystem cache uncontrolled; not sustained producer throughput."
+    },
+    {
+      "historyCount": 20000,
+      "attempt": 1,
+      "elapsedMilliseconds": 27.0232,
+      "allocatedBytes": 6862208,
+      "metadataBytes": 2240477,
+      "sourceMetadataBytes": 16424264,
+      "preparationMilliseconds": 139.6444,
+      "physicalReadBytes": 2246249,
+      "journalReads": 2,
+      "scope": "Synthetic metadata population; actual selected run owner; filesystem cache uncontrolled; not sustained producer throughput."
+    }
+  ],
+  "architecture": {
+    "before": {
+      "snapshotId": "snap-20261022142721-198deb42",
+      "types": 145,
+      "members": 1504,
+      "findings": 53
+    },
+    "after": {
+      "snapshotId": "snap-20261022151727-8e97ad3a",
+      "types": 148,
+      "members": 1529,
+      "findings": 55
+    },
+    "diagnostics": [
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\CanDoItAll.Infrastructure.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Pkcs\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 st\u0159edn\u00ed ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-2fmv-rv2c-59x7"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\CanDoItAll.Infrastructure.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Pkcs\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 vysok\u00e9 ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-846f-f764-76mx"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\CanDoItAll.Infrastructure.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Xml\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 vysok\u00e9 ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-7hqp-7c5m-4vq6"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\CanDoItAll.Infrastructure.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Xml\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 vysok\u00e9 ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-c399-9853-6jmj"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Infrastructure\\CanDoItAll.Infrastructure.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Xml\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 vysok\u00e9 ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-r955-8q5j-3h83"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Persistence\\CanDoItAll.AgentFramework.Persistence.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Pkcs\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 st\u0159edn\u00ed ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-2fmv-rv2c-59x7"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Persistence\\CanDoItAll.AgentFramework.Persistence.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Pkcs\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 vysok\u00e9 ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-846f-f764-76mx"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Persistence\\CanDoItAll.AgentFramework.Persistence.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Xml\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 vysok\u00e9 ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-7hqp-7c5m-4vq6"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Persistence\\CanDoItAll.AgentFramework.Persistence.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Xml\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 vysok\u00e9 ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-c399-9853-6jmj"
+      },
+      {
+        "code": "WS0002",
+        "severity": "Error",
+        "message": "P\u0159i zpracov\u00e1v\u00e1n\u00ed souboru C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Persistence\\CanDoItAll.AgentFramework.Persistence.csproj do\u0161lo k chyb\u011b MSBuildu s touto zpr\u00e1vou: Bal\u00ed\u010dek \u201eSystem.Security.Cryptography.Xml\u201c 10.0.10 m\u00e1 zn\u00e1m\u00e9 vysok\u00e9 ohro\u017een\u00ed zabezpe\u010den\u00ed z\u00e1va\u017enosti, https://github.com/advisories/GHSA-r955-8q5j-3h83"
+      }
+    ],
+    "cycles": [
+      {
+        "level": "Type",
+        "nodeIds": [
+          "type-proj-candoitall-agentframework-persistence-candoita-8151ee395c7b",
+          "type-proj-candoitall-agentframework-persistence-candoita-ab270b8b396a"
+        ]
+      }
+    ],
+    "selectedFindings": [
+      {
+        "findingId": "finding-type-size-type-proj-candoitall-agentframework-persi-fb25a3c7a9a0",
+        "ruleId": "COMPLEXITY-002",
+        "severity": "Info",
+        "category": "Complexity",
+        "title": "Type with many members",
+        "description": "CanDoItAll.AgentFramework.Persistence.FileProcessExecutionIndex exposes 9 source members.",
+        "rationale": "Large types often become aggregation points for unrelated behavior.",
+        "confidence": 0.71,
+        "relatedIds": [
+          "type-proj-candoitall-agentframework-persistence-candoita-f34abdd919de"
+        ],
+        "source": {
+          "path": "Storage/FileProcessExecutionIndex.cs",
+          "line": 7,
+          "column": 1,
+          "endLine": 99,
+          "endColumn": 2
+        }
+      },
+      {
+        "findingId": "finding-type-size-type-proj-candoitall-agentframework-persi-66c5498274c7",
+        "ruleId": "COMPLEXITY-002",
+        "severity": "Info",
+        "category": "Complexity",
+        "title": "Type with many members",
+        "description": "CanDoItAll.AgentFramework.Persistence.ProcessExecutionSelectionIndex exposes 9 source members.",
+        "rationale": "Large types often become aggregation points for unrelated behavior.",
+        "confidence": 0.71,
+        "relatedIds": [
+          "type-proj-candoitall-agentframework-persistence-candoita-1770c55b4921"
+        ],
+        "source": {
+          "path": "Storage/FileProcessExecutionIndex.cs",
+          "line": 101,
+          "column": 1,
+          "endLine": 105,
+          "endColumn": 83
+        }
+      }
+    ],
+    "scope": "AgentFramework.Persistence only. Same ten advisory diagnostics and existing HistoricalReadPass containment/back-reference cycle; not a clean whole-graph certificate.",
+    "review": "Selection/projection metadata lives in one internal Persistence owner; Core exposes read and explicit preparation ports only. Store owns publication exclusion and delegates; publishers derive from their exact existing journal targets. No new partial, project reference, provider/UI dependency or service locator. Two informational nine-member counts describe the 93-line owner and its completeness record, not unrelated responsibilities."
+  },
+  "outcome": "Compact projection correctness passes; read cost reduced. Tiny-history cost exceeds investigation thresholds; performance, actual stage integration and fairness remain open before activation.",
+  "reviewedRenderingInput": "Separate explicit preparation port resolves the existing scoped workspace store; no renderer/assets/editor lifetime change.",
+  "portability": "RESULT: PASS (15670 reviewed executable-source findings unchanged)\n",
+  "reviewedBaselineDelta": "One portable Path.Combine for process-index.json beneath the existing storage root; no machine-specific path. 15669 to 15670 allowances. Initial enforcement failure and final no-write pass retained.",
+  "sourceReview": "All chat-index publication paths derive the compact index from the exact target before existing journal clearance. No project references, new partial class, implicit repair or worker activation.",
+  "progression": "Exact ordinary stop owner, durable stage integration, fairness, HTTP/status and remaining snapshot/Workflow/writer/capacity closure.",
+  "limitations": "One uncontrolled-cache actual writer sample per population and concurrency; two synthetic page samples per history size. O(history) index work and existing workspace serialization remain. Existing architecture advisories/cycle and historical cleanup denials remain explicit."
+}

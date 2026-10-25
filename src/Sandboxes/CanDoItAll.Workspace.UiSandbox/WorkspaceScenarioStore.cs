@@ -1,12 +1,13 @@
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Workspace.UiSandbox;
 
 public enum WorkspaceScenario { Populated, Empty, MissingProvider, MissingSecret, PartialReferences, RebindRequired, DeniedHistory, OversizePreview }
 public enum WorkspaceOperation { DefaultsRead, ProvidersRead, DefaultsSave, SecretList, SecretGet, SecretSave, SecretDelete, FileList, FileSave, FileDelete, PolicyLoad, PolicyPreview, PolicyUpdate }
-public enum WorkspaceFault { None, Refused, ReadFailure, CommittedWarning, Unknown }
+public enum WorkspaceFault { None, Refused, ReadFailure, CommittedWarning, Unknown, HeadChanged }
 
 public sealed class WorkspaceScenarioGate {
     private readonly TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -30,6 +31,9 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
     private readonly Dictionary<WorkspaceOperation, int> calls = [];
     private readonly WorkspaceScenario scenario;
     private WorkspaceSettingsModel defaults = new() { WorkspaceName = "Scenario workspace", DefaultProviderProfileId = ProviderId };
+    private WorkspaceSettingsExpectation defaultsExpected = new(new DatasetNamespaceId(Guid.Parse("bb040000-0000-0000-0000-000000000003")),
+        WorkspaceSettingsHeadState.Existing, new(Guid.Parse("bb040000-0000-0000-0000-000000000004"), Guid.NewGuid()));
+    private DecisionDataPolicy? decisionPolicy;
     private HistoryPolicySnapshot policy = new(new(), 1);
     public bool IsCurrent { get; set; } = true;
     public IReadOnlyDictionary<WorkspaceOperation, int> Calls => calls;
@@ -45,6 +49,7 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
         }
         if (scenario == WorkspaceScenario.Empty) {
             defaults.DefaultProviderProfileId = null;
+            defaultsExpected = new(defaultsExpected.Namespace, WorkspaceSettingsHeadState.Empty, null);
         }
     }
 
@@ -68,9 +73,14 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
         return fault;
     }
 
-    public async Task<WorkspaceSettingsModel> ReadAsync(CancellationToken cancellationToken) {
+    public async Task<WorkspaceSettingsSnapshot> ReadAsync(CancellationToken cancellationToken) {
         await EnterAsync(WorkspaceOperation.DefaultsRead);
-        return defaults.Copy();
+        return new(defaultsExpected, WorkspaceSettingsValues.Capture(defaults));
+    }
+
+    public async Task<WorkspaceSettingsSnapshotV2> ReadV2Async(CancellationToken cancellationToken) {
+        await EnterAsync(WorkspaceOperation.DefaultsRead);
+        return new(defaultsExpected, WorkspaceSettingsValues.Capture(defaults), decisionPolicy);
     }
 
     public async Task<IReadOnlyList<WorkspaceProviderOption>> ProvidersAsync(CancellationToken cancellationToken) {
@@ -81,17 +91,57 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
         return scenario is WorkspaceScenario.MissingProvider or WorkspaceScenario.Empty ? [] : [new(ProviderId, "Synthetic provider", true)];
     }
 
-    public async Task<SettingsWriteResult<WorkspaceSettingsModel>> SaveAsync(WorkspaceSettingsModel command, CancellationToken cancellationToken) {
-        var captured = command.Copy();
+    public async Task<WorkspaceSettingsSaveOutcome> SaveAsync(ReplaceWorkspaceSettingsCommand command, CancellationToken cancellationToken) {
+        var captured = command.Values.ToEditorModel();
+        if (!IsCurrent) {
+            return new WorkspaceSettingsSaveOutcome.Rejected(WorkspaceSettingsRejectionReason.OwnerRetired);
+        }
         var fault = await EnterAsync(WorkspaceOperation.DefaultsSave);
         if (fault == WorkspaceFault.Refused) {
-            return new(SettingsWriteState.Refused, captured, SettingsDiagnostic.Validation);
+            return new WorkspaceSettingsSaveOutcome.Rejected(WorkspaceSettingsRejectionReason.InvalidValues);
+        }
+        if (fault == WorkspaceFault.HeadChanged || defaultsExpected != command.Expected) {
+            return new WorkspaceSettingsSaveOutcome.Rejected(WorkspaceSettingsRejectionReason.HeadChanged);
         }
         captured.WorkspaceName = captured.WorkspaceName.Trim();
         captured.Notes = captured.Notes.Trim();
         captured.CurrencyCode = captured.CurrencyCode.ToUpperInvariant();
         defaults = captured;
-        return Finish(fault, captured.Copy());
+        defaultsExpected = new(defaultsExpected.Namespace, WorkspaceSettingsHeadState.Existing,
+            new(defaultsExpected.Head?.Id ?? Guid.NewGuid(), Guid.NewGuid()));
+        DurableWrites++;
+        var accepted = new WorkspaceSettingsSnapshot(defaultsExpected, WorkspaceSettingsValues.Capture(defaults));
+        WriteCompleted?.Invoke();
+        return fault == WorkspaceFault.Unknown ? new WorkspaceSettingsSaveOutcome.Unconfirmed()
+            : new WorkspaceSettingsSaveOutcome.Accepted(accepted,
+                fault == WorkspaceFault.CommittedWarning ? WorkspaceSettingsSecondaryDiagnostic.CleanupPending : null);
+    }
+
+    public async Task<WorkspaceSettingsSaveOutcomeV2> SaveV2Async(ReplaceWorkspaceSettingsV2Command command, CancellationToken cancellationToken) {
+        var captured = command.Values.ToEditorModel();
+        if (!IsCurrent) {
+            return new WorkspaceSettingsSaveOutcomeV2.Rejected(WorkspaceSettingsRejectionReason.OwnerRetired);
+        }
+        var fault = await EnterAsync(WorkspaceOperation.DefaultsSave);
+        if (fault == WorkspaceFault.Refused) {
+            return new WorkspaceSettingsSaveOutcomeV2.Rejected(WorkspaceSettingsRejectionReason.InvalidValues);
+        }
+        if (fault == WorkspaceFault.HeadChanged || defaultsExpected != command.Expected) {
+            return new WorkspaceSettingsSaveOutcomeV2.Rejected(WorkspaceSettingsRejectionReason.HeadChanged);
+        }
+        captured.WorkspaceName = captured.WorkspaceName.Trim();
+        captured.Notes = captured.Notes.Trim();
+        captured.CurrencyCode = captured.CurrencyCode.ToUpperInvariant();
+        defaults = captured;
+        decisionPolicy = command.DecisionDataPolicy;
+        defaultsExpected = new(defaultsExpected.Namespace, WorkspaceSettingsHeadState.Existing,
+            new(defaultsExpected.Head?.Id ?? Guid.NewGuid(), Guid.NewGuid()));
+        DurableWrites++;
+        var accepted = new WorkspaceSettingsSnapshotV2(defaultsExpected, WorkspaceSettingsValues.Capture(defaults), decisionPolicy);
+        WriteCompleted?.Invoke();
+        return fault == WorkspaceFault.Unknown ? new WorkspaceSettingsSaveOutcomeV2.Unconfirmed()
+            : new WorkspaceSettingsSaveOutcomeV2.Accepted(accepted,
+                fault == WorkspaceFault.CommittedWarning ? WorkspaceSettingsSecondaryDiagnostic.CleanupPending : null);
     }
 
     async Task<IReadOnlyList<SecretListItem>> IWorkspaceSecretsOwner.ListAsync(CancellationToken cancellationToken) {

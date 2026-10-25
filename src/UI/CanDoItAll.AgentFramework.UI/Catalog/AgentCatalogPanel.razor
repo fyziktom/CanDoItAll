@@ -20,6 +20,13 @@
                         ButtonStyle="ButtonStyle.Light"
                         Click="OpenNewAgentDialogAsync"
                         data-testid="agents-catalog-new" />
+                <Button Text="Data policy" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(selectedAgentId is null || isLoading)" data-testid="agents-catalog-policy"
+                        Click="@(() => selectedAgentId is { } id ? Intent.InvokeAsync(new AgentCatalogIntent.OpenDataPolicy(id)) : Task.CompletedTask)" />
+                @if (CanRecoverPolicy) {
+                    <Button Text="Retained policy saves" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => Intent.InvokeAsync(new AgentCatalogIntent.OpenPolicyRecovery()))" data-testid="agents-policy-recovery" />
+                }
                 <div class="agent-catalog-panel__search" role="search">
                     <input @bind="agentSearch"
                            @bind:event="oninput"

@@ -14,6 +14,25 @@ public static class ProjectErrorCodes
     public const string ExternalIdentityConflict = "projects.external-identity-conflict";
     public const string ExternalIdentityImmutable = "projects.external-identity-immutable";
     public const string ExternalIdentityLifetimeRequired = "projects.external-identity-lifetime-required";
+    public const string DefinitionExpectationRequired = "projects.definition-expectation-required";
+    public const string DefinitionExpectationInvalid = "projects.definition-expectation-invalid";
+    public const string DefinitionConflict = "projects.definition-conflict";
+    public const string DefinitionTransactionConflict = "projects.definition-transaction-conflict";
+    public const string DefinitionChildInvalid = "projects.definition-child-invalid";
+    public const string DefinitionSourceInvalid = "projects.definition-source-invalid";
+    public const string DefinitionLimitExceeded = "projects.definition-limit-exceeded";
+    public const string DefinitionOperationRequired = "projects.definition-operation-required";
+    public const string DefinitionOperationMismatch = "projects.definition-operation-mismatch";
+    public const string DefinitionOperationExpired = "projects.definition-operation-expired";
+    public const string DefinitionOperationClosed = "projects.definition-operation-closed";
+    public const string DefinitionOperationUnknown = "projects.definition-operation-unknown";
+    public const string DefinitionDatasetChanged = "projects.definition-dataset-changed";
+    public const string DefinitionCallerChanged = "projects.definition-caller-changed";
+    public const string DefinitionWriteDenied = "projects.definition-write-denied";
+    public const string DefinitionAuthorityChanged = "projects.definition-authority-changed";
+    public const string DefinitionAuthorityUnavailable = "projects.definition-authority-unavailable";
+    public const string DefinitionVersionUnsupported = "projects.definition-version-unsupported";
+    public const string DefinitionReceiptUnavailable = "projects.definition-receipt-unavailable";
 }
 
 /// <summary>
@@ -126,7 +145,10 @@ public sealed record ProjectHierarchyLinkSummary(
 public sealed record ProjectHierarchySnapshot(
     Guid ProjectId,
     IReadOnlyList<ProjectSummary> ParentProjects,
-    IReadOnlyList<ProjectSummary> ChildProjects);
+    IReadOnlyList<ProjectSummary> ChildProjects) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+    public IReadOnlyList<ProjectHierarchyEdgeExpectation> ObservedEdges { get; init; } = [];
+}
 
 /// <summary>
 /// A phase of a project in the project read and save. Phases are stored in array order.
@@ -206,20 +228,18 @@ public sealed class ProjectEditorModel
     [JsonIgnore]
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; set; }
 
+    public ProjectDefinitionExpectation? ExpectedDefinition { get; set; }
+
     /// <summary>
     /// Identifier of the project; null for a new project, including the blank template that the read returns for an
     /// unknown identifier. A save with an identifier that does not exist is rejected (<c>projects.not-found</c>).
     /// </summary>
     public Guid? Id { get; set; }
 
-    /// <summary>
-    /// Identifier of the project lifetime that the read returned. Send it back unchanged: a save is rejected
-    /// (<c>projects.lifetime-changed</c>) when the project was deleted and recreated with the same identifier since the
-    /// read. Null skips the check; ignored when creating a project.
-    /// </summary>
+    [Description("Optional legacy lifetime mirror. When supplied it must agree with expectedDefinition.project.lifetimeId. Existing updates require the complete original expectedDefinition.")]
     public Guid? ExpectedLifetimeId { get; set; }
 
-    [Description("Stable external namespace, trimmed and lowercased. Supply with externalKey; each accepts 1-100 ASCII letters/digits/dots/underscores/hyphens with alphanumeric ends. Omit both to preserve an existing identity. An assigned pair is immutable. Updating with a pair requires expectedLifetimeId.")]
+    [Description("Stable external namespace, trimmed and lowercased. Supply with externalKey; each accepts 1-100 ASCII letters/digits/dots/underscores/hyphens with alphanumeric ends. Omit both to preserve an existing identity. An assigned pair is immutable. Updating requires the original expectedDefinition.")]
     public string? ExternalNamespace { get; set; }
 
     [Description("Stable key within externalNamespace, independent of the project display name. Null with a null namespace preserves the current pair; empty strings cannot clear it. Duplicate pairs return HTTP 409.")]

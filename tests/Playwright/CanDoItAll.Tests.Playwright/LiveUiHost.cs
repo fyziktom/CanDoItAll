@@ -43,6 +43,7 @@ internal sealed class LiveUiHost : IAsyncDisposable {
     }
 
     internal string BaseUrl => fixture.BaseUrl;
+    internal Task<PlaywrightAppFixture.OwnedHostRestart> RestartOwnedApplicationAsync() => fixture.RestartOwnedApplicationAsync();
     internal string OwnedWorkspaceRoot => fixture.StorageWorkspaceRoot ?? throw new InvalidOperationException("The host must own its workspace.");
 
     internal bool SpendBoundExceeded { get; private set; }

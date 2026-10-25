@@ -20,6 +20,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
     [Theory]
     [InlineData(ProjectStructureToolPolicy.ProjectStructureRead)]
     [InlineData(ProjectStructureToolPolicy.ProjectStructureProjectsList)]
+    [InlineData(ProjectStructureToolPolicy.ProjectStructureProjectDefinitionGet)]
     [InlineData(ProjectStructureToolPolicy.ProjectStructureHierarchyGet)]
     [InlineData(ProjectStructureToolPolicy.ProjectStructureNodeWorkflowAddOptions)]
     public async Task Actual_MAF_attachment_preserves_parent_only_projection_access_and_rechecks_revocation_before_cached_output(string toolName) {

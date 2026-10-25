@@ -44,6 +44,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     IDatabaseSwitchNotificationService databaseSwitchNotificationService,
     ILogger<CanDoItAllAgentWorkspaceFactory> logger,
     IOptions<ProcessMockAgentOptions> processMockAgentOptions,
+    TimeProvider timeProvider,
     IEnumerable<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null) :
     ICanDoItAllAgentWorkspaceFactory,
     IDisposable
@@ -127,7 +128,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId));
         var toolAdmission = serviceProvider.GetService<IAgentToolAdmissionVerifier>() is null ? null :
             new AgentToolAdmissionJournal(store, new(workspaceIdentity.DatabaseProfileId, profileFingerprint,
-                workspaceIdentity.DatabaseProfileGeneration), backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
+                workspaceIdentity.DatabaseProfileGeneration), timeProvider, backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
                 contextAttachmentCodecs: contextAttachmentCodecs);
         var lifecycleFactExtractors = serviceProvider
             .GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()
@@ -229,7 +230,10 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             toolAdmissionJournal: toolAdmission,
             executionAuthorityResolver: serviceProvider.GetService<IAgentExecutionAuthorityResolver>(),
             receiptReconciliationProviders: serviceProvider.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray(),
-            toolPolicies: serviceProvider.GetRequiredService<AgentToolPolicyCatalog>());
+            toolPolicies: serviceProvider.GetRequiredService<AgentToolPolicyCatalog>(),
+            planningRuntime: serviceProvider.GetRequiredService<IAgentPlanningStepRuntime>(),
+            planningParticipants: serviceProvider.GetServices<IAgentPlanningParticipant>(),
+            inheritedPlanningParticipants: serviceProvider.GetServices<IAgentInheritedPlanningParticipant>());
         return workspaceService;
     }
 

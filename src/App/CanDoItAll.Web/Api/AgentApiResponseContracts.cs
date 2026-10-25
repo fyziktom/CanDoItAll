@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Text.Json.Serialization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
@@ -626,64 +628,41 @@ internal sealed record AgentExecutionRunDetailApiResponse(
     IReadOnlyList<AgentExecutionArtifactApiResponse> Artifacts,
     IReadOnlyList<AgentExecutionCheckpointApiResponse> Checkpoints,
     IReadOnlyList<AgentExecutionToolReceiptApiResponse> ToolReceipts,
-    AgentProviderUsageTotalsApiResponse UsageTotals);
+    AgentProviderUsageTotalsApiResponse UsageTotals) {
+    [Description("Current-read authorized bounded saved-effect summary, without owner receipts or provider output.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentEffectContinuation? EffectContinuation { get; init; }
 
-/// <summary>
-/// Result of a chat message sent with <c>POST /api/agents/{agentId}/chat</c>. The streaming variant sends the same
-/// object as <c>result</c> of its <c>agent.command.completed</c> event, with enum values written as camel-case strings
-/// (for example <c>waitingOnTool</c>) instead of integers.
-/// </summary>
-/// <param name="ChatSessionId">Identifier of the chat session, including a session created for this message.</param>
-/// <param name="AssistantMessage">
-/// The agent's reply message. While the run waits for approvals it holds only the text produced before the approval
-/// request, which can be empty.
-/// </param>
-/// <param name="Metric">Usage and duration of this run segment.</param>
-/// <param name="ExecutionRunId">Identifier of the execution run started by the message.</param>
-/// <param name="State">
-/// State of the run when the request returned, as a JSON integer: 5 Completed, 3 WaitingOnTool (decide the pending
-/// approvals with <c>POST /api/agents/execution-runs/{executionRunId}/pending-approvals</c>) or 6 Failed (a changing
-/// tool call failed without a later successful attempt).
-/// </param>
+    [Description("Current-read authorized original planning review. Available actions remain subject to exact revision and current authority checks.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentPlanningReview? PlanningReview { get; init; }
+}
+
+[Description("Result of a chat command. Typed effect continuation has no assistant message or new provider usage and does not complete the task.")]
 internal sealed record AgentChatRunApiResponse(
-    Guid ChatSessionId,
-    AgentChatMessageApiResponse AssistantMessage,
-    AgentRunMetricApiResponse Metric,
-    Guid ExecutionRunId,
-    ExecutionState State);
+    [property: Description("Original chat session identity.")] Guid ChatSessionId,
+    [property: Description("Actual assistant output; null for typed receipt-only continuation.")] AgentChatMessageApiResponse? AssistantMessage,
+    [property: Description("Actual provider usage for this segment; null for typed receipt-only continuation.")] AgentRunMetricApiResponse? Metric,
+    [property: Description("Original execution identity retained through recovery.")] Guid ExecutionRunId,
+    [property: Description("Execution state: 0 Idle, 1 Preparing, 2 Running, 3 WaitingOnTool, 4 Persisting, 5 Completed, 6 Failed. WaitingOnTool with effectContinuation requires explicit continuation; it does not imply pending approval.")] ExecutionState State) {
+    [Description("Confirmed saved-effect waiting checkpoint; no new assistant message or provider usage is produced.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentEffectContinuation? EffectContinuation { get; init; }
+}
 
-/// <summary>
-/// Result of starting, continuing or recovering an agent execution run. The request returns when the run completes,
-/// ends in a failure recorded on the run, or stops to wait for tool approvals. The streaming variants send the same
-/// object as <c>result</c> of their <c>agent.command.completed</c> event, with enum values written as camel-case
-/// strings (for example <c>waitingOnTool</c> or <c>schemaValidationFailed</c>) instead of the forms described here.
-/// </summary>
-/// <param name="ExecutionRunId">Identifier of the execution run.</param>
-/// <param name="ChatSessionId">Identifier of the run's chat session, or null for a run without one.</param>
-/// <param name="ResponseText">
-/// Final text produced by the model in this segment; may be empty, for example while the run waits for approvals.
-/// </param>
-/// <param name="AssistantMessage">
-/// The reply added to the chat transcript of a chat-backed run; null for a run without a chat session.
-/// </param>
-/// <param name="Metric">Usage and duration of this run segment.</param>
-/// <param name="State">
-/// State of the run when the request returned, as a JSON integer: 5 Completed, 3 WaitingOnTool (decide the pending
-/// approvals with <c>POST /api/agents/execution-runs/{executionRunId}/pending-approvals</c>) or 6 Failed (the answer
-/// did not satisfy the requested JSON Schema, or a changing tool call failed without a later successful attempt).
-/// </param>
-/// <param name="StructuredOutput">
-/// Validation result of the requested JSON Schema output, or null when the run requested none or is waiting for
-/// approvals.
-/// </param>
+[Description("Execution command result. Receipt-only recovery returns a confirmed waiting checkpoint, without provider output or permission to retry effects.")]
 internal sealed record AgentExecutionRunResultApiResponse(
-    Guid ExecutionRunId,
-    Guid? ChatSessionId,
-    string ResponseText,
-    AgentChatMessageApiResponse? AssistantMessage,
-    AgentRunMetricApiResponse Metric,
-    ExecutionState State,
-    AgentStructuredOutputApiResponse? StructuredOutput);
+    [property: Description("Original execution identity retained through recovery.")] Guid ExecutionRunId,
+    [property: Description("Original chat session identity, or null for a background run.")] Guid? ChatSessionId,
+    [property: Description("Actual provider output; empty for typed receipt-only continuation.")] string ResponseText,
+    [property: Description("Actual assistant output; null for typed receipt-only continuation.")] AgentChatMessageApiResponse? AssistantMessage,
+    [property: Description("Actual provider usage for this segment; null for typed receipt-only continuation.")] AgentRunMetricApiResponse? Metric,
+    [property: Description("Execution state: 0 Idle, 1 Preparing, 2 Running, 3 WaitingOnTool, 4 Persisting, 5 Completed, 6 Failed. Typed effect continuation is WaitingOnTool without implying approval or completion.")] ExecutionState State,
+    [property: Description("Actual structured provider output; null for typed receipt-only continuation.")] AgentStructuredOutputApiResponse? StructuredOutput) {
+    [Description("Confirmed saved-effect waiting checkpoint; this does not complete the agent task or authorize effect retry.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentEffectContinuation? EffectContinuation { get; init; }
+}
 
 /// <summary>
 /// One reason why the model's answer did not satisfy the requested JSON Schema.
@@ -843,7 +822,10 @@ internal static class AgentApiResponseMapper
             source.Artifacts.Select(ToArtifact).ToArray(),
             source.Checkpoints.Select(ToCheckpoint).ToArray(),
             ToToolReceipts(source.ToolReceipts),
-            ToProviderUsageTotals(source.UsageObservations));
+            ToProviderUsageTotals(source.UsageObservations)) {
+                EffectContinuation = source.EffectContinuation,
+                PlanningReview = source.PlanningReview
+            };
     }
 
     public static AgentChatRunApiResponse ToChatRunResult(AgentChatRunResult source)
@@ -852,10 +834,10 @@ internal static class AgentApiResponseMapper
 
         return new AgentChatRunApiResponse(
             source.ChatSessionId,
-            ToChatMessage(source.AssistantMessage),
-            ToMetric(source.Metric),
+            source.AssistantMessage is null ? null : ToChatMessage(source.AssistantMessage),
+            source.Metric is null ? null : ToMetric(source.Metric),
             source.ExecutionRunId,
-            source.State);
+            source.State) { EffectContinuation = source.EffectContinuation };
     }
 
     public static AgentExecutionRunResultApiResponse ToExecutionRunResult(ExecutionRunResult source)
@@ -869,11 +851,11 @@ internal static class AgentApiResponseMapper
             source.AssistantMessage is null
                 ? null
                 : ToChatMessage(source.AssistantMessage),
-            ToMetric(source.Metric),
+            source.Metric is null ? null : ToMetric(source.Metric),
             source.State,
             source.StructuredOutput is null
                 ? null
-                : ToStructuredOutput(source.StructuredOutput));
+                : ToStructuredOutput(source.StructuredOutput)) { EffectContinuation = source.EffectContinuation };
     }
 
     public static IReadOnlyList<AgentExecutionApprovalApiResponse> ToExecutionApprovals(

@@ -10,6 +10,22 @@ internal static class AgentApiRequestValidation
 
     private const string ProcessStepSourceKind = "process-step";
 
+    internal static void RequireUniqueMembers(JsonElement value) {
+        if (value.ValueKind == JsonValueKind.Object) {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in value.EnumerateObject()) {
+                if (!names.Add(property.Name)) {
+                    throw new JsonException("Request members must be unique.");
+                }
+                RequireUniqueMembers(property.Value);
+            }
+        } else if (value.ValueKind == JsonValueKind.Array) {
+            foreach (var item in value.EnumerateArray()) {
+                RequireUniqueMembers(item);
+            }
+        }
+    }
+
     public static IResult? ValidateCommand(
         HttpContext context,
         Guid agentId,

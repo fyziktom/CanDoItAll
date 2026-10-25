@@ -33,7 +33,8 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
-  CANDOITALL_FILETOOLS_COMMIT: 498b36825bd5a5222429972af120b04becf4b3f6
+  CANDOITALL_COMPONENTS_COMMIT: 755655fa47d2275ba5feb401197533687320e23c
+  CANDOITALL_FILETOOLS_COMMIT: 7885f6098e1bc0e202f8e2cc8ee26a9e89945af7
 
 jobs:
   dependencies:
@@ -44,11 +45,11 @@ jobs:
       components-commit: ${{ steps.components.outputs.commit }}
       platform-scope: ${{ steps.scope.outputs.scope }}
     steps:
-      - name: Check out matching Components branch
+      - name: Check out reviewed Components revision
         uses: actions/checkout@v4
         with:
           repository: fyziktom/CanDoItAll.Components
-          ref: ${{ github.base_ref || github.ref_name }}
+          ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}
           path: CanDoItAll.Components
 
       - name: Record Components commit for every build job

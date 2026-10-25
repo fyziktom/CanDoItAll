@@ -1,0 +1,422 @@
+[
+  {
+    "id": "D01",
+    "title": "Preserve fact-owner application boundaries",
+    "status": "proposed",
+    "recommendation": "Strengthen existing owner operations and typed adapters; do not create a global mutation engine.",
+    "alternatives_not_selected": "Mandatory HTTP loopback; central reflective writer; unrelated microservice split.",
+    "decision_gate": "P00",
+    "invariants": [
+      "INV-01",
+      "INV-19"
+    ],
+    "sources": [
+      "SRC-11",
+      "SRC-16"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D02",
+    "title": "Projects aggregate edit scope",
+    "status": "proposed",
+    "recommendation": "Initially protect project scalars plus phases/options with one content stamp; no chat/runtime progress fan-in.",
+    "alternatives_not_selected": "One revision for the entire project graph; per-field versions from day one.",
+    "decision_gate": "P01",
+    "invariants": [
+      "INV-02",
+      "INV-03"
+    ],
+    "sources": [
+      "SRC-03",
+      "SRC-07"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D03",
+    "title": "Physical token convention",
+    "status": "proposed",
+    "recommendation": "Reuse application-managed GUID for Projects after context/writer proof; preserve other owners' existing conventions.",
+    "alternatives_not_selected": "Universal numeric counter, timestamp or database row metadata on every aggregate.",
+    "decision_gate": "P01",
+    "invariants": [
+      "INV-02",
+      "INV-03",
+      "INV-24"
+    ],
+    "sources": [
+      "SRC-07",
+      "EXT-01"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D04",
+    "title": "Coherent edit read",
+    "status": "proposed",
+    "recommendation": "Use a bounded coherent read/snapshot for the editable aggregate and return its original stamp.",
+    "alternatives_not_selected": "Separate unrelated reads with token from only one statement; long-lived editor transaction.",
+    "decision_gate": "P01",
+    "invariants": [
+      "INV-04",
+      "INV-15"
+    ],
+    "sources": [
+      "SRC-03",
+      "EXT-04"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D05",
+    "title": "Transaction policy by intention",
+    "status": "proposed",
+    "recommendation": "Retain current guarded paths for pilot, add original-state predicate; choose cheaper modes only with separate proof.",
+    "alternatives_not_selected": "Add Serializable+stripes everywhere; remove existing locks while adding tokens.",
+    "decision_gate": "P01",
+    "invariants": [
+      "INV-05",
+      "INV-15",
+      "INV-16"
+    ],
+    "sources": [
+      "SRC-04",
+      "SRC-06"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D06",
+    "title": "Scope and authority order",
+    "status": "proposed",
+    "recommendation": "Preserve source-before-owner transaction and establish lock-class ordering with full bounded keys.",
+    "alternatives_not_selected": "One alphabetic rule across all lock types; nested non-reentrant scopes.",
+    "decision_gate": "P01",
+    "invariants": [
+      "INV-07",
+      "INV-16",
+      "INV-17"
+    ],
+    "sources": [
+      "SRC-06",
+      "SRC-05"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D07",
+    "title": "Projects safe retry result",
+    "status": "proposed",
+    "recommendation": "Reuse an adequate durable owner record or add a minimal owner-local receipt in the effect transaction; link existing journals.",
+    "alternatives_not_selected": "Treat runtime creation receipt as durable; use a separate global committed flag.",
+    "decision_gate": "P01",
+    "invariants": [
+      "INV-11",
+      "INV-12",
+      "INV-22"
+    ],
+    "sources": [
+      "SRC-15",
+      "EXT-06",
+      "EXT-10"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D08",
+    "title": "Projects search consistency",
+    "status": "proposed",
+    "recommendation": "Prefer small same-DB projection in source transaction if bounded cost; otherwise complete durable ordered rebuild within pilot scope.",
+    "alternatives_not_selected": "Keep only best-effort old-snapshot callbacks; deploy a broker by default.",
+    "decision_gate": "P01",
+    "invariants": [
+      "INV-14",
+      "INV-15"
+    ],
+    "sources": [
+      "SRC-03",
+      "SRC-15"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D09",
+    "title": "UI snapshot lifecycle",
+    "status": "proposed",
+    "recommendation": "Apply existing host/submission/live reconciliation semantics and add draft-preserving conflicts.",
+    "alternatives_not_selected": "Reload and discard draft; silently refresh token; circuit-shared editor service.",
+    "decision_gate": "P02",
+    "invariants": [
+      "INV-13",
+      "INV-19",
+      "INV-23"
+    ],
+    "sources": [
+      "SRC-02",
+      "SRC-13"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D10",
+    "title": "Public contract cutover",
+    "status": "proposed",
+    "recommendation": "Reject missing/stale original conditions on protected updates; convert or disable all enabled callers.",
+    "alternatives_not_selected": "Null-as-bypass; fresh token compatibility wrapper; silent last-write-wins fallback.",
+    "decision_gate": "P02",
+    "invariants": [
+      "INV-18",
+      "INV-25"
+    ],
+    "sources": [
+      "SRC-03",
+      "SRC-15",
+      "EXT-08",
+      "EXT-09"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D11",
+    "title": "Selective merge and intentions",
+    "status": "proposed",
+    "recommendation": "Introduce actual domain commands, stable row identity and opt-in independent scalar merge.",
+    "alternatives_not_selected": "Generic arbitrary JSON patch; automatic LLM merge; whole-list replacement for every tool.",
+    "decision_gate": "P03",
+    "invariants": [
+      "INV-02",
+      "INV-03",
+      "INV-13",
+      "INV-24"
+    ],
+    "sources": [
+      "SRC-03",
+      "SRC-09"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D12",
+    "title": "Required decision-basis ownership",
+    "status": "proposed",
+    "recommendation": "Trusted operation/runtime defines required facts and membership witnesses; model can add but not omit dependencies.",
+    "alternatives_not_selected": "Record all session reads; trust a model-generated version vector as authorization.",
+    "decision_gate": "P04",
+    "invariants": [
+      "INV-08",
+      "INV-09"
+    ],
+    "sources": [
+      "SRC-06",
+      "SRC-08"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D13",
+    "title": "Source publication guarantee",
+    "status": "proposed",
+    "recommendation": "Use protected current-at-publication for material pilot objective/mandate facts; explicitly label pinned/remote weaker contracts.",
+    "alternatives_not_selected": "Call any same-transaction read strict freshness; hold locks during inference.",
+    "decision_gate": "P04",
+    "invariants": [
+      "INV-05",
+      "INV-08",
+      "INV-15",
+      "INV-16"
+    ],
+    "sources": [
+      "EXT-03",
+      "EXT-04"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D14",
+    "title": "Approval binding",
+    "status": "proposed",
+    "recommendation": "Bind exact proposal effect, material basis and authority scope with versioned semantic identity; reapprove material changes.",
+    "alternatives_not_selected": "Approval ID alone; refreshing preconditions under old approval.",
+    "decision_gate": "P04",
+    "invariants": [
+      "INV-09",
+      "INV-10"
+    ],
+    "sources": [
+      "SRC-11",
+      "SRC-14"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D15",
+    "title": "Manual override and takeover",
+    "status": "proposed",
+    "recommendation": "Explicit domain policy distinguishes edit-with-automation, pin/override, pause and takeover; owner fences retired attempt.",
+    "alternatives_not_selected": "Human-always-wins globally; automation always overwrites manual edits; cancellation token alone.",
+    "decision_gate": "P04",
+    "invariants": [
+      "INV-07",
+      "INV-09",
+      "INV-10"
+    ],
+    "sources": [
+      "SRC-06",
+      "SRC-08"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D16",
+    "title": "Existing owner-specific protection",
+    "status": "proposed",
+    "recommendation": "Preserve task expected-state/assignment checks and each owner's append/versioned-definition semantics.",
+    "alternatives_not_selected": "Mechanical migration to generic save and universal Version column.",
+    "decision_gate": "P05",
+    "invariants": [
+      "INV-01",
+      "INV-03",
+      "INV-19"
+    ],
+    "sources": [
+      "SRC-09",
+      "SRC-11"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D17",
+    "title": "External effect semantics",
+    "status": "proposed",
+    "recommendation": "Use specific driver/provider conditional/idempotent protocol; uncertainty and compensation remain explicit.",
+    "alternatives_not_selected": "Treat metadata CAS as byte CAS; claim universal exactly once; remote IO inside SQL retry.",
+    "decision_gate": "P06",
+    "invariants": [
+      "INV-15",
+      "INV-20"
+    ],
+    "sources": [
+      "SRC-11",
+      "SRC-14"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D18",
+    "title": "Dataset lifecycle and operation retention",
+    "status": "proposed",
+    "recommendation": "Reuse proven profile/activation epoch or add maintenance-owned restore fence; distinguish restart from destructive restore; preserve safe replay horizon.",
+    "alternatives_not_selected": "Rotate all durable identities per process restart; import live authority; erase receipts while checkpoints can replay.",
+    "decision_gate": "P01",
+    "invariants": [
+      "INV-06",
+      "INV-12",
+      "INV-22",
+      "INV-25"
+    ],
+    "sources": [
+      "SRC-05",
+      "SRC-15"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D19",
+    "title": "Shared abstractions threshold",
+    "status": "proposed",
+    "recommendation": "Extract only demonstrated feature-neutral mechanics/vocabulary, never feature semantics into generic UI or infrastructure.",
+    "alternatives_not_selected": "Mandatory interface/wrapper quota; CRM implementation as dependency of every editor.",
+    "decision_gate": "P03",
+    "invariants": [
+      "INV-19"
+    ],
+    "sources": [
+      "SRC-02",
+      "SRC-16"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D20",
+    "title": "Performance decision gates",
+    "status": "proposed",
+    "recommendation": "Measure SQL fan-out, locks, allocations and replans against matched baselines; candidate budgets require ratification.",
+    "alternatives_not_selected": "Declare token checks expensive without measurement; weaken checks to hit latency targets.",
+    "decision_gate": "P00",
+    "invariants": [
+      "INV-15",
+      "INV-16",
+      "INV-21"
+    ],
+    "sources": [
+      "SRC-03",
+      "SRC-04",
+      "SRC-12"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D21",
+    "title": "Saved process compatibility",
+    "status": "proposed",
+    "recommendation": "Keep immutable execution definitions distinct from live target publication and current claims; explicit legacy-basis policy.",
+    "alternatives_not_selected": "Invent basis for old checkpoints; revive denied effect or reuse stale approval automatically.",
+    "decision_gate": "P07",
+    "invariants": [
+      "INV-06",
+      "INV-07",
+      "INV-09",
+      "INV-10",
+      "INV-20"
+    ],
+    "sources": [
+      "SRC-11",
+      "SRC-14",
+      "SRC-15"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  },
+  {
+    "id": "D22",
+    "title": "Validation and moving-branch evidence",
+    "status": "proposed",
+    "recommendation": "Refresh logical owners/callers and current tests at each phase; canonical broad lanes only at required triggers.",
+    "alternatives_not_selected": "Fixed reviewed checkout; past green counts as current proof; full suite after every trivial change.",
+    "decision_gate": "P00",
+    "invariants": [
+      "INV-19",
+      "INV-21",
+      "INV-25"
+    ],
+    "sources": [
+      "SRC-01",
+      "SRC-12",
+      "SRC-16",
+      "SRC-17"
+    ],
+    "accepted_by": null,
+    "accepted_on": null
+  }
+]

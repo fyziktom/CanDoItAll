@@ -1,0 +1,353 @@
+using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Tests.Support;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Npgsql;
+
+namespace CanDoItAll.Tests.Integration;
+
+public sealed class ProjectTaskPlanMigrationTests {
+    private const string PreviousMigration = "20261016233100_ExtractFiniteOperationEpochMetadata";
+    private const string MigrationName = "AddWorkbenchTaskPlanReceipts";
+    private static readonly DateTimeOffset SavedAt = new(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task Fresh_and_active_upgrades_preserve_Projects_evidence_and_resume_the_exact_prepared_pool_set() {
+        foreach (var active in new[] { false, true }) {
+            await using var fixture = await Fixture.CreateAsync();
+            await using var context = fixture.Canonical();
+            DatasetActivationBinding? original = null;
+            if (active) {
+                original = await fixture.Coordinator(projectsOnly: true).EnsureReadyAsync(fixture.Profile);
+                await SeedProjectsEvidenceAsync(context, fixture.Profile.Profile.Id, original);
+            }
+            var before = await ReadRetainedAsync(context, projectsOnly: true);
+            var originalFile = await fixture.ReadFileAsync();
+            await UpgradeAsync(context);
+            Assert.Equal(before, await ReadRetainedAsync(context, projectsOnly: true));
+            Assert.Equal(originalFile, await fixture.ReadFileAsync());
+            Assert.Empty(await context.Set<ProjectTaskPlanReceiptRecord>().ToArrayAsync());
+            if (original is null) {
+                Assert.Empty(await context.Set<DatasetLifecycleRecord>().ToArrayAsync());
+                Assert.Empty(await context.Set<FiniteOperationStateRecord>().ToArrayAsync());
+                Assert.Empty(await context.Set<FiniteOperationEpochRecord>().ToArrayAsync());
+                await context.Database.ExecuteSqlRawAsync("""
+                    CREATE FUNCTION task_plan_activation_reject_epoch() RETURNS trigger LANGUAGE plpgsql AS $$
+                    BEGIN RAISE EXCEPTION 'Synthetic task-plan bootstrap interruption'; END $$;
+                    CREATE TRIGGER task_plan_activation_reject_epoch BEFORE INSERT ON "Infrastructure_FiniteOperationEpochs"
+                    FOR EACH ROW EXECUTE FUNCTION task_plan_activation_reject_epoch();
+                    """);
+                await Assert.ThrowsAsync<DbUpdateException>(() => fixture.Coordinator().EnsureReadyAsync(fixture.Profile));
+                var prepared = Assert.IsType<DatasetActivationFileRecord>(await fixture.ReadFileAsync());
+                Assert.Equal(DatasetActivationFileState.Prepared, prepared.State);
+                Assert.Empty(await context.Set<DatasetLifecycleRecord>().ToArrayAsync());
+                Assert.Empty(await context.Set<FiniteOperationStateRecord>().ToArrayAsync());
+                Assert.Empty(await context.Set<FiniteOperationEpochRecord>().ToArrayAsync());
+                await context.Database.ExecuteSqlRawAsync("DROP TRIGGER task_plan_activation_reject_epoch ON \"Infrastructure_FiniteOperationEpochs\"");
+                original = await fixture.Coordinator().ResumeAsync(fixture.Profile);
+                Assert.Equal(prepared.Plan.Binding, original);
+                Assert.Equal(prepared.Plan, (await fixture.ReadFileAsync())!.Plan);
+            }
+            await AssertInstalledAsync(context, original.Namespace.Value);
+            var installed = await ReadRetainedAsync(context, projectsOnly: false);
+            for (var restart = 0; restart < 2; restart++) {
+                await using var reopened = fixture.Canonical();
+                await UpgradeAsync(reopened);
+                Assert.Equal(original, await fixture.Coordinator().EnsureReadyAsync(fixture.Profile));
+                Assert.Equal(installed, await ReadRetainedAsync(reopened, projectsOnly: false));
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Unsupported_predecessors_roll_back_and_older_or_incomplete_pool_sets_cannot_autoheal() {
+        foreach (var corruption in Enum.GetValues<Corruption>()) {
+            await using var fixture = await Fixture.CreateAsync();
+            var binding = await fixture.Coordinator(projectsOnly: true).EnsureReadyAsync(fixture.Profile);
+            await using var context = fixture.Canonical();
+            await SeedProjectsEvidenceAsync(context, fixture.Profile.Profile.Id, binding);
+            await CorruptAsync(context, binding, corruption);
+            var before = await ReadRetainedAsync(context, projectsOnly: false);
+            var schema = await ReadPredecessorSchemaAsync(context);
+            var file = await fixture.ReadFileAsync();
+
+            var failure = await Assert.ThrowsAsync<PostgresException>(() => UpgradeAsync(context));
+
+            Assert.Equal(PostgresErrorCodes.RaiseException, failure.SqlState);
+            Assert.False(failure.IsTransient);
+            Assert.Contains("task-plan", failure.MessageText, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(PreviousMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+            Assert.Equal(before, await ReadRetainedAsync(context, projectsOnly: false));
+            Assert.Equal(schema, await ReadPredecessorSchemaAsync(context));
+            Assert.Equal(file, await fixture.ReadFileAsync());
+            Assert.False(await context.Database.SqlQueryRaw<bool>(
+                "SELECT to_regclass('\"Workbench_TaskPlanReceipts\"') IS NOT NULL AS \"Value\"").SingleAsync());
+        }
+
+        await using var valid = await Fixture.CreateAsync();
+        var original = await valid.Coordinator(projectsOnly: true).EnsureReadyAsync(valid.Profile);
+        await using var upgraded = valid.Canonical();
+        await UpgradeAsync(upgraded);
+        var intact = await ReadRetainedAsync(upgraded, projectsOnly: false);
+        await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => valid.Coordinator(projectsOnly: true).EnsureReadyAsync(valid.Profile));
+        Assert.Equal(intact, await ReadRetainedAsync(upgraded, projectsOnly: false));
+        Assert.Equal(original, await valid.Coordinator().EnsureReadyAsync(valid.Profile));
+        await upgraded.Set<FiniteOperationEpochRecord>().Where(row => row.PoolId == WorkbenchTaskPlanFiniteOperations.Pool.Value).ExecuteDeleteAsync();
+        await upgraded.Set<FiniteOperationStateRecord>().Where(row => row.PoolId == WorkbenchTaskPlanFiniteOperations.Pool.Value).ExecuteDeleteAsync();
+        var incomplete = await ReadRetainedAsync(upgraded, projectsOnly: false);
+        var activeFile = await valid.ReadFileAsync();
+        await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => valid.Coordinator().EnsureReadyAsync(valid.Profile));
+        await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => valid.Coordinator().ResumeAsync(valid.Profile));
+        Assert.Equal(incomplete, await ReadRetainedAsync(upgraded, projectsOnly: false));
+        Assert.Equal(activeFile, await valid.ReadFileAsync());
+    }
+
+    [Fact]
+    public async Task Canonical_and_owner_receipt_schema_match_and_down_refuses_before_removing_evidence() {
+        await using var fixture = await Fixture.CreateAsync();
+        await using var context = fixture.Canonical();
+        var migration = await UpgradeAsync(context);
+        Assert.False(context.Database.HasPendingModelChanges());
+        Assert.Equal(169, context.Model.GetEntityTypes().Count());
+        await using var owner = fixture.Owner();
+        Assert.Equal(16, owner.Model.GetEntityTypes().Count());
+        var canonical = context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(ProjectTaskPlanReceiptRecord))!;
+        var scoped = owner.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(ProjectTaskPlanReceiptRecord))!;
+        Assert.Equal(canonical.ToDebugString(MetadataDebugStringOptions.LongDefault), scoped.ToDebugString(MetadataDebugStringOptions.LongDefault));
+        Assert.Empty(canonical.GetForeignKeys());
+        Assert.Empty(scoped.GetForeignKeys());
+        var keys = await context.Database.SqlQueryRaw<string>("""
+            SELECT pg_get_constraintdef(oid) AS "Value" FROM pg_constraint
+            WHERE conrelid = '"Workbench_TaskPlanReceipts"'::regclass AND contype = 'p'
+            """).ToArrayAsync();
+        Assert.Equal(["PRIMARY KEY (\"NamespaceId\", \"Epoch\", \"CallerKind\", \"CallerKey\", \"OperationId\")"], keys);
+        var checks = await context.Database.SqlQueryRaw<string>("""
+            SELECT conname::text AS "Value" FROM pg_constraint
+            WHERE conrelid = '"Workbench_TaskPlanReceipts"'::regclass AND contype = 'c' AND convalidated AND conenforced
+            ORDER BY conname
+            """).ToArrayAsync();
+        Assert.Equal([
+            "CK_Workbench_TaskPlanReceipt_Address", "CK_Workbench_TaskPlanReceipt_Caller", "CK_Workbench_TaskPlanReceipt_Decision",
+            "CK_Workbench_TaskPlanReceipt_Digest", "CK_Workbench_TaskPlanReceipt_Interpretation", "CK_Workbench_TaskPlanReceipt_Payload",
+            "CK_Workbench_TaskPlanReceipt_Target"
+        ], checks);
+        Assert.Equal(0, await context.Database.SqlQueryRaw<int>("""
+            SELECT ((SELECT count(*) FROM pg_constraint WHERE contype = 'f' AND
+                (conrelid = '"Workbench_TaskPlanReceipts"'::regclass OR confrelid = '"Workbench_TaskPlanReceipts"'::regclass)) +
+                (SELECT count(*) FROM pg_trigger WHERE tgrelid = '"Workbench_TaskPlanReceipts"'::regclass AND NOT tgisinternal) +
+                (SELECT count(*) FROM pg_attribute WHERE attrelid = '"Workbench_TaskPlanReceipts"'::regclass AND atthasdef) +
+                (SELECT count(*) FROM pg_index WHERE indrelid = '"Workbench_TaskPlanReceipts"'::regclass AND NOT indisprimary))::integer AS "Value"
+            """).SingleAsync());
+        var binding = await fixture.Coordinator().EnsureReadyAsync(fixture.Profile);
+        await SeedProjectsEvidenceAsync(context, fixture.Profile.Profile.Id, binding);
+        await InsertReceiptAsync(context, binding.Namespace.Value);
+        foreach (var invalid in Enum.GetValues<InvalidReceipt>()) {
+            var failure = await Assert.ThrowsAsync<PostgresException>(() => InsertReceiptAsync(context, binding.Namespace.Value, invalid));
+            Assert.Equal(PostgresErrorCodes.CheckViolation, failure.SqlState);
+            Assert.Single(await context.Set<ProjectTaskPlanReceiptRecord>().ToArrayAsync());
+        }
+        var before = await ReadRetainedAsync(context, projectsOnly: false);
+        var receipt = await context.Database.SqlQueryRaw<string>("SELECT to_jsonb(r)::text AS \"Value\" FROM \"Workbench_TaskPlanReceipts\" r").SingleAsync();
+        var down = await Assert.ThrowsAsync<PostgresException>(() => context.GetService<IMigrator>().MigrateAsync(PreviousMigration));
+        Assert.Equal(PostgresErrorCodes.RaiseException, down.SqlState);
+        Assert.False(down.IsTransient);
+        Assert.Contains("task-plan", down.MessageText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("downgrade is unsupported", down.MessageText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(migration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(before, await ReadRetainedAsync(context, projectsOnly: false));
+        Assert.Equal(receipt, await context.Database.SqlQueryRaw<string>("SELECT to_jsonb(r)::text AS \"Value\" FROM \"Workbench_TaskPlanReceipts\" r").SingleAsync());
+    }
+
+    private static async Task<string> UpgradeAsync(AppDbContext context) {
+        var migration = Assert.Single(context.Database.GetMigrations(), id => id.EndsWith("_" + MigrationName, StringComparison.Ordinal));
+        await context.GetService<IMigrator>().MigrateAsync(migration);
+        return migration;
+    }
+
+    private static async Task AssertInstalledAsync(AppDbContext context, Guid currentNamespace) {
+        Guid[] expected = [ProjectFiniteOperationPool.Pool.Value, WorkbenchTaskPlanFiniteOperations.Pool.Value];
+        var states = await context.Set<FiniteOperationStateRecord>().AsNoTracking().Where(row => row.NamespaceId == currentNamespace).ToArrayAsync();
+        Assert.Equal(expected.Order(), states.Select(row => row.PoolId).Order());
+        var workbench = Assert.Single(states, row => row.PoolId == WorkbenchTaskPlanFiniteOperations.Pool.Value);
+        Assert.Equal(1, workbench.CurrentEpoch);
+        Assert.Equal(0, workbench.RetiredThroughEpoch);
+        Assert.Equal(1, workbench.RetentionProtocolVersion);
+        var epoch = Assert.Single(await context.Set<FiniteOperationEpochRecord>().AsNoTracking()
+            .Where(row => row.PoolId == WorkbenchTaskPlanFiniteOperations.Pool.Value).ToArrayAsync());
+        Assert.Equal(currentNamespace, epoch.NamespaceId);
+        Assert.Equal(1, epoch.Epoch);
+        Assert.Equal(FiniteOperationEpochState.Open, epoch.State);
+        Assert.Null(epoch.ClosedAtUtc);
+        Assert.Equal(TimeSpan.FromDays(1), epoch.AdmissionClosesAtUtc - epoch.OpenedAtUtc);
+        Assert.Equal(30000, epoch.MutationDeadlineMilliseconds);
+        Assert.Equal(604800, epoch.ReplayRetentionSeconds);
+        Assert.Single(await context.Set<FiniteOperationStateRecord>().Where(row => row.PoolId == workbench.PoolId).ToArrayAsync());
+    }
+
+    private static Task<string[]> ReadRetainedAsync(AppDbContext context, bool projectsOnly) {
+        var stateFilter = projectsOnly ? $"WHERE s.\"PoolId\" = '{ProjectFiniteOperationPool.Pool.Value:D}'::uuid" : "";
+        var epochFilter = projectsOnly ? $"WHERE e.\"PoolId\" = '{ProjectFiniteOperationPool.Pool.Value:D}'::uuid" : "";
+        return context.Database.SqlQueryRaw<string>($"""
+            SELECT "Value" FROM (
+                SELECT 'state:' || to_jsonb(s)::text AS "Value" FROM "Infrastructure_FiniteOperationState" s {stateFilter}
+                UNION ALL SELECT 'epoch:' || to_jsonb(e)::text FROM "Infrastructure_FiniteOperationEpochs" e {epochFilter}
+                UNION ALL SELECT 'receipt:' || to_jsonb(r)::text FROM "Projects_DefinitionReceipts" r
+                UNION ALL SELECT 'project:' || to_jsonb(p)::text FROM "Projects_Projects" p
+                UNION ALL SELECT 'lifecycle:' || to_jsonb(d)::text FROM "Infrastructure_DatasetLifecycle" d
+            ) retained ORDER BY "Value"
+            """).ToArrayAsync();
+    }
+
+    private static Task<string[]> ReadPredecessorSchemaAsync(AppDbContext context)
+        => context.Database.SqlQueryRaw<string>("""
+            SELECT "Value" FROM (
+                SELECT 'constraint:' || conname || ':' || pg_get_constraintdef(oid) AS "Value" FROM pg_constraint
+                WHERE conrelid IN ('"Infrastructure_FiniteOperationState"'::regclass, '"Infrastructure_FiniteOperationEpochs"'::regclass)
+                UNION ALL SELECT 'index:' || indexname || ':' || indexdef FROM pg_indexes
+                    WHERE schemaname = 'public' AND tablename IN ('Infrastructure_FiniteOperationState', 'Infrastructure_FiniteOperationEpochs')
+                UNION ALL SELECT 'history:' || to_jsonb(h)::text FROM "__EFMigrationsHistory" h
+            ) schema ORDER BY "Value"
+            """).ToArrayAsync();
+
+    private static async Task SeedProjectsEvidenceAsync(AppDbContext context, Guid profileId, DatasetActivationBinding binding) {
+        var project = new Project { Name = "Retained before task-plan installation", Slug = Guid.NewGuid().ToString("N") };
+        context.Add(project);
+        await context.SaveChangesAsync();
+        var epoch = await context.Set<FiniteOperationEpochRecord>().AsNoTracking()
+            .SingleAsync(row => row.NamespaceId == binding.Namespace.Value && row.PoolId == ProjectFiniteOperationPool.Pool.Value && row.State == FiniteOperationEpochState.Open);
+        var caller = ProjectMutationCallerScope.LocalWorkspace;
+        var operation = new ProjectDefinitionOperation(binding.Namespace, new(epoch.Epoch), Guid.NewGuid(), caller.Bind(binding.Namespace));
+        var acknowledgement = new ProjectEditorAcknowledgement(new(new(profileId, project.Id, project.LifetimeId), project.ConcurrencyToken),
+            project.Name, project.Description, project.Objective, project.Status, project.CurrentPhase, null, [], [], null);
+        var accepted = new ProjectDefinitionAccepted<ProjectEditorAcknowledgement>(operation, ProjectDefinitionResultVersion.VersionOne,
+            ProjectDefinitionCommandKind.Replace, epoch.OpenedAtUtc,
+            epoch.AdmissionClosesAtUtc.AddMilliseconds(epoch.MutationDeadlineMilliseconds).AddSeconds(epoch.ReplayRetentionSeconds), acknowledgement);
+        context.Add(new ProjectDefinitionReceiptRecord {
+            NamespaceId = binding.Namespace.Value, Epoch = operation.Epoch.Value, CallerKind = caller.Kind, CallerKey = caller.Key.ToArray(),
+            OperationId = operation.Id, SchemaVersion = 1, NormalizationVersion = 1, ResultVersion = 1,
+            CommandKind = ProjectDefinitionCommandKind.Replace, SemanticDigest = new byte[32], ProjectId = project.Id,
+            LifetimeId = project.LifetimeId, AcceptedRevision = project.ConcurrencyToken, AcceptedAtUtc = accepted.AcceptedAtUtc,
+            AcceptedPayload = ProjectDefinitionOperationCodec.EncodeAccepted(accepted, ProjectDefinitionLimits.VersionOneMaximum).ToArray()
+        });
+        var historical = Guid.NewGuid();
+        context.Add(new FiniteOperationStateRecord {
+            NamespaceId = historical, PoolId = ProjectFiniteOperationPool.Pool.Value, RetentionProtocolVersion = 1, CurrentEpoch = 3, RetiredThroughEpoch = 1
+        });
+        context.Add(new FiniteOperationEpochRecord {
+            NamespaceId = historical, PoolId = ProjectFiniteOperationPool.Pool.Value, Epoch = 2, State = FiniteOperationEpochState.Closed,
+            OpenedAtUtc = SavedAt, AdmissionClosesAtUtc = SavedAt.AddDays(1), ClosedAtUtc = SavedAt.AddDays(2),
+            MutationDeadlineMilliseconds = 17000, ReplayRetentionSeconds = 900000
+        });
+        await context.SaveChangesAsync();
+    }
+
+    private static Task CorruptAsync(AppDbContext context, DatasetActivationBinding binding, Corruption corruption) {
+        var active = binding.Namespace.Value;
+        var projects = ProjectFiniteOperationPool.Pool.Value;
+        return corruption switch {
+            Corruption.MissingCurrent => context.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM \"Infrastructure_FiniteOperationEpochs\" WHERE \"NamespaceId\" = {active}"),
+            Corruption.OrphanEpoch => context.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM \"Infrastructure_FiniteOperationState\" WHERE \"NamespaceId\" = {active}"),
+            Corruption.UnknownPool or Corruption.ExistingWorkbench => context.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "Infrastructure_FiniteOperationState" ("NamespaceId", "PoolId", "RetentionProtocolVersion", "CurrentEpoch", "RetiredThroughEpoch")
+                VALUES ({active}, {(corruption == Corruption.UnknownPool ? Guid.NewGuid() : WorkbenchTaskPlanFiniteOperations.Pool.Value)}, 1, 1, 0)
+                """),
+            Corruption.WrongProtocol => context.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Infrastructure_FiniteOperationState\" SET \"RetentionProtocolVersion\" = 2 WHERE \"PoolId\" = {projects}"),
+            Corruption.InactiveLifecycle => context.Database.ExecuteSqlRawAsync("UPDATE \"Infrastructure_DatasetLifecycle\" SET \"State\" = 2"),
+            Corruption.WeakenedCheck => context.Database.ExecuteSqlRawAsync("""
+                ALTER TABLE "Infrastructure_FiniteOperationEpochs" DROP CONSTRAINT "CK_Infrastructure_FiniteOperationEpoch_Number",
+                ADD CONSTRAINT "CK_Infrastructure_FiniteOperationEpoch_Number" CHECK ("Epoch" >= 0)
+                """),
+            Corruption.MissingOpenIndex => context.Database.ExecuteSqlRawAsync("DROP INDEX \"IX_Infrastructure_FiniteOperationEpochs_NamespaceId_PoolId\""),
+            _ => throw new ArgumentOutOfRangeException(nameof(corruption))
+        };
+    }
+
+    private static Task InsertReceiptAsync(AppDbContext context, Guid namespaceId, InvalidReceipt? invalid = null)
+        => context.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Workbench_TaskPlanReceipts" ("NamespaceId", "Epoch", "CallerKind", "CallerKey", "OperationId",
+                "SchemaVersion", "NormalizationVersion", "ResultVersion", "SemanticDigest", "ProjectId", "LifetimeId",
+                "OriginalDefinitionRevision", "DecisionId", "DecisionGeneration", "SourceKind", "SourceVersion", "SourceFingerprint", "AcceptedAtUtc", "AcceptedPayload")
+            VALUES ({(invalid == InvalidReceipt.Address ? Guid.Empty : namespaceId)}, 1,
+                {(invalid == InvalidReceipt.Caller ? 2 : 1)}, {new byte[32]}, {Guid.NewGuid()},
+                1, 1, 1, {new byte[invalid == InvalidReceipt.Digest ? 31 : 32]},
+                {(invalid == InvalidReceipt.Target ? Guid.Empty : Guid.NewGuid())}, {Guid.NewGuid()}, {Guid.NewGuid()},
+                {Guid.NewGuid()}, {(invalid == InvalidReceipt.Decision ? 0L : 1L)}, {(invalid == InvalidReceipt.Interpretation ? 2 : 1)},
+                1, {new byte[32]}, {SavedAt}, {(invalid == InvalidReceipt.Payload ? Array.Empty<byte>() : new byte[] { 1 })})
+            """);
+
+    private enum Corruption { MissingCurrent, OrphanEpoch, UnknownPool, ExistingWorkbench, WrongProtocol, InactiveLifecycle, WeakenedCheck, MissingOpenIndex }
+    private enum InvalidReceipt { Address, Caller, Digest, Interpretation, Target, Decision, Payload }
+
+    private sealed class Fixture(PostgresTestDatabaseLease lease, CanDoItAllTestEnvironment environment) : IAsyncDisposable {
+        internal ResolvedDatabaseProfile Profile { get; } = new(new DatabaseProfileRecord {
+            Id = Guid.NewGuid(), ProviderKind = DatabaseProviderKind.PostgreSql
+        }, DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString);
+        internal AppDbContext Canonical() => new(lease.CreateAppDbContextOptions());
+        internal WorkbenchDbContext Owner() => new(new DbContextOptionsBuilder<WorkbenchDbContext>().UseNpgsql(lease.ConnectionString).Options);
+
+        internal DatasetActivationCoordinator Coordinator(bool projectsOnly = false) {
+            var registrations = new ServiceCollection();
+            registrations.AddOptions<ProjectDefinitionOperationOptions>();
+            registrations.AddOptions<ProjectTaskPlanOperationOptions>();
+            registrations.AddFiniteOperationPools();
+            using var services = registrations.BuildServiceProvider();
+            var pools = services.GetServices<FiniteOperationPoolRegistration>().ToArray();
+            Assert.Equal(new[] { ProjectFiniteOperationPool.Pool.Value, WorkbenchTaskPlanFiniteOperations.Pool.Value }.Order(),
+                pools.Select(pool => pool.Pool.Value).Order());
+            return new(Files(), projectsOnly ? pools.Where(pool => pool.Pool == ProjectFiniteOperationPool.Pool).ToArray() : pools);
+        }
+
+        internal async Task<DatasetActivationFileRecord?> ReadFileAsync() {
+            using var file = Files().Acquire(Profile.Profile.Id);
+            return await file.ReadAsync();
+        }
+
+        private DatasetActivationService Files() {
+            var policies = new PhysicalFileSystemPathPolicyFactory();
+            var writer = new DurableFileWriter(policies);
+            var paths = new ControlPlanePathResolver(Options.Create(new ControlPlaneOptions { RootPath = environment.ControlPlaneRootPath }),
+                environment.CreateHostEnvironment(nameof(ProjectTaskPlanMigrationTests)), writer);
+            return new(paths, writer, policies);
+        }
+
+        internal static async Task<Fixture> CreateAsync() {
+            AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+            var lease = PostgresTestDatabaseLease.Create("task-plan-migration");
+            CanDoItAllTestEnvironment? environment = null;
+            try {
+                environment = CanDoItAllTestEnvironment.Create("task-plan-migration");
+                var fixture = new Fixture(lease, environment);
+                await using var context = fixture.Canonical();
+                await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
+                return fixture;
+            } catch {
+                try {
+                    await lease.DisposeAsync();
+                } finally {
+                    if (environment is not null) {
+                        await environment.DisposeAsync();
+                    }
+                }
+                throw;
+            }
+        }
+
+        public async ValueTask DisposeAsync() {
+            try {
+                await lease.DisposeAsync();
+            } finally {
+                await environment.DisposeAsync();
+            }
+        }
+    }
+}

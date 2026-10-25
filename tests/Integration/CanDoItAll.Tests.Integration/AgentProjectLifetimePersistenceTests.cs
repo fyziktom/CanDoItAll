@@ -200,7 +200,7 @@ public sealed class AgentProjectLifetimePersistenceTests {
             .AddInterceptors(probe).Options;
         var coordinator = services.GetRequiredService<CoordinatedDatabaseTransaction>();
         var admission = new ProjectWriteAdmissionService(services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>(),
-            projectOptions, coordinator, services.GetRequiredService<ICanonicalRuntimeDatabase>());
+            projectOptions, coordinator, services.GetRequiredService<ICanonicalRuntimeDatabase>(), services.GetRequiredService<DatasetActivationService>());
         var participant = ActivatorUtilities.CreateInstance<AgentProjectStructureAccessDeletionParticipant>(services, admission, accessOptions);
         await using var owner = new ProjectsDbContext(projectOptions);
         Guid recoveryId;

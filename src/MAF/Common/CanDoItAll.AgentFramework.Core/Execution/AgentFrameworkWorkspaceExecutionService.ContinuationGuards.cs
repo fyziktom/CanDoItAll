@@ -134,7 +134,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             }
             EnsureContinuationProviderLeaseMatches(currentRun, provider);
 
-            var decidedAtUtc = DateTimeOffset.UtcNow;
+            var decidedAtUtc = executionClock.GetUtcNow();
             var effectiveAutoApprove = allApproved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
             var approvalDecision = ExecutionRunStateTransitions.ApplyApprovalDecision(
                 executionState.ExecutionApprovals.Where(item => item.ExecutionRunId == currentRun.Id).ToList(),
@@ -249,7 +249,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     currentRun,
                     provider);
 
-                var decidedAtUtc = DateTimeOffset.UtcNow;
+                var decidedAtUtc = executionClock.GetUtcNow();
                 var effectiveAutoApprove = allApproved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
                 var approvalDecision = ExecutionRunStateTransitions.ApplyApprovalDecision(
                     currentDetail.Approvals,
@@ -342,7 +342,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             }
 
             var transitioned = run with { State = ExecutionState.Running, Outcome = null, CompletedAtUtc = null,
-                ResultSummary = "Recovering the original admitted invocation.", UpdatedAtUtc = DateTimeOffset.UtcNow,
+                ResultSummary = "Recovering the original admitted invocation.", UpdatedAtUtc = executionClock.GetUtcNow(),
                 Revision = checked(run.Revision + 1) };
             result = new(ExecutionRunContinuationDisposition.Started, new(preparation.Blueprint, snapshot, run,
                 transitioned, session, agent, provider, detail.Approvals, []));

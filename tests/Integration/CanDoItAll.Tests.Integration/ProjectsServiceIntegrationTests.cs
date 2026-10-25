@@ -130,8 +130,7 @@ public sealed class ProjectsServiceIntegrationTests
     }
 
     [Fact]
-    public async Task CreateAsync_returns_the_committed_project_when_search_projection_fails()
-    {
+    public async Task CreateAsync_rolls_back_project_when_required_search_projection_fails() {
         await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
         {
             ConfigureServices = services =>
@@ -144,20 +143,18 @@ public sealed class ProjectsServiceIntegrationTests
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var reservedProjectId = Guid.NewGuid();
 
-        var result = await projectsService.CreateAsync(
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => projectsService.CreateAsync(
             reservedProjectId,
             new ProjectEditorModel
             {
-                Name = "Committed despite projection failure",
-                Objective = "Keep authoritative project persistence independent from projections.",
+                Name = "Rolled back with projection failure",
+                Objective = "Commit the definition and required search projection together.",
                 CurrentPhase = "Discovery"
-            });
+            }));
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal(reservedProjectId, result.Value);
-        Assert.Equal(
-            "Committed despite projection failure",
-            (await projectsService.GetAsync(reservedProjectId)).Name);
+        Assert.Equal("Expected search projection failure.", failure.Message);
+        var current = await projectsService.GetDefinitionAsync(reservedProjectId);
+        Assert.Contains(current.Errors, error => error.Code == ProjectErrorCodes.NotFound);
     }
 
     [Fact]
@@ -263,6 +260,9 @@ public sealed class ProjectsServiceIntegrationTests
 
     private sealed class ThrowingSearchIndexService : ISearchIndexService
     {
+        public Task DeleteForMutationAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("This Project fixture does not delete Resource metadata.");
+
         public Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) =>
             UpsertAsync(input, cancellationToken);
 

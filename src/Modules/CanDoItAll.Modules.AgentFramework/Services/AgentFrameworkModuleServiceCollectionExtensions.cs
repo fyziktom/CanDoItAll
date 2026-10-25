@@ -1,3 +1,6 @@
+using CanDoItAll.Infrastructure.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using CanDoItAll.Agents.Storage;
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
@@ -108,6 +111,14 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
             return new FileSandboxWorkspaceStore(workspaceRoot, scope, serviceProvider.GetRequiredService<IAgentCatalogMutationPolicy>());
+        });
+        services.TryAddScoped<ISandboxWorkspaceHistoricalReadStore>(serviceProvider => {
+            var state = serviceProvider.GetRequiredService<IDatabaseRuntimeState>();
+            return new CanonicalAgentHistoricalReadStore(
+                serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile,
+                AgentHistoricalReceiptReviewService.RequireInitialized(state), state,
+                serviceProvider.GetRequiredService<IOptions<StorageOptions>>(),
+                serviceProvider.GetRequiredService<IHostEnvironment>());
         });
         services.TryAddScoped<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddScoped<IWorkspaceFileService>(serviceProvider =>
@@ -221,6 +232,33 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<ISandboxWorkspaceProcessRunPageStore>(serviceProvider =>
+            (ISandboxWorkspaceProcessRunPageStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<ISandboxWorkspaceProcessRunIndexPreparation>(serviceProvider =>
+            (ISandboxWorkspaceProcessRunIndexPreparation)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<AgentInheritedPlanningStopper>(serviceProvider => {
+            var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+            return new((ISandboxWorkspaceExecutionRunStore)store, (ISandboxWorkspaceExecutionRunMutationStore)store,
+                (ISandboxWorkspaceExecutionRunLeaseStore)store, serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
+                serviceProvider.GetRequiredService<TimeProvider>());
+        });
+        services.TryAddScoped<AgentBackgroundExecutionStopper>(serviceProvider => {
+            var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+            return new((ISandboxWorkspaceExecutionRunStore)store, (ISandboxWorkspaceExecutionRunMutationStore)store,
+                (ISandboxWorkspaceExecutionRunLeaseStore)store, serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
+                serviceProvider.GetRequiredService<TimeProvider>());
+        });
+        services.TryAddScoped<AgentInheritedPlanningRunReader>(serviceProvider => {
+            var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+            var profile = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile;
+            var journal = new AgentToolAdmissionJournal(store, new(profile.Id, profile.Runtime.Fingerprint,
+                serviceProvider.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration()),
+                serviceProvider.GetRequiredService<TimeProvider>(),
+                serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
+                serviceProvider.GetServices<IAgentChatContextAttachmentCodec>());
+            return new((ISandboxWorkspaceExecutionRunStore)store, journal,
+                serviceProvider.GetServices<IAgentInheritedPlanningParticipant>());
+        });
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentProviderUsageEvidenceStore>(serviceProvider =>
@@ -289,6 +327,15 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             IAgentExecutionSourceAuthorityProvider,
             WorkflowsExecutionAuthorityProvider>());
         services.AddScoped<IAgentExecutionAuthorityResolver, CanonicalAgentExecutionAuthorityResolver>();
+        services.AddScoped<IAgentHistoricalReceiptReviewService>(provider => {
+            var state = provider.GetRequiredService<IDatabaseRuntimeState>();
+            AgentHistoricalReceiptReviewService.RequireInitialized(state);
+            var canonical = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new AgentHistoricalReceiptReviewService(canonical.Profile, state,
+                provider.GetRequiredService<IOptions<StorageOptions>>(), provider.GetRequiredService<IHostEnvironment>(),
+                provider.GetServices<IAgentHistoricalReceiptSourceAuthorityProvider>(),
+                provider.GetRequiredService<Func<AgentHistoricalCatalogBasis, AgentHistoricalReceiptReadParticipants>>());
+        });
         services.AddScoped<IAgentConversationContextService, AgentConversationContextService>();
         services.AddScoped<IAgentTurnContextCaptureService, AgentTurnContextCaptureService>();
         services.AddScoped<IAgentChatExecutionOrchestrator, AgentChatExecutionOrchestrator>();
@@ -324,6 +371,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentExecutionReportReader>(serviceProvider =>
             serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
         services.AddScoped<IAgentFrameworkWorkspaceActivityExecutionService>(serviceProvider =>
+            serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
+        services.AddScoped<IAgentInheritedPlanningWorkspaceService>(serviceProvider =>
             serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
         services.AddScoped<IAgentChatAttachmentStagingService, AgentChatAttachmentStagingService>();
         services.AddScoped<WorkflowDocumentStagingService>();
@@ -414,6 +463,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IWorkflowStructureOutputStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowStructureOutputStore>());
         services.TryAddScoped<IWorkflowProcessAssignmentRunQuery, PersistentWorkflowProcessAssignmentRunQuery>();
+        services.TryAddScoped<IWorkflowProcessCancellationRecovery, PersistentWorkflowProcessCancellationRecovery>();
         services.TryAddScoped<PersistentWorkflowRunStore>();
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());

@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
@@ -214,11 +217,8 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
         Assert.Equal(session.Id, createdSession.Id);
         Assert.Contains(createdSummaries, summary => summary.Id == session.Id && summary.Title == "Projection test");
 
-        var renamedSession = await chatSessionStore.UpdateChatSessionAsync(createdSession with
-        {
-            Title = "Projection test renamed",
-            UpdatedAtUtc = now.AddMinutes(1)
-        });
+        var renamedSession = await chatSessionStore.RenameChatSessionAsync(new(agent.Id, createdSession.Id,
+            createdSession.Title, "Projection test renamed", now.AddMinutes(1)));
         var loadedSession = await chatQueryStore.GetChatSessionAsync(session.Id);
         var renamedSummaries = await chatQueryStore.ListChatSessionSummariesAsync(agent.Id);
 
@@ -297,50 +297,112 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
         Assert.Equal(targetRunId, savedDetail!.Run.Id);
     }
 
-    [Fact]
-    public async Task UpdateExecutionRunDetailAsync_serializes_competing_mutations_against_the_latest_run()
-    {
-        await using var application = await TestApplication.CreateAsync();
-        await using var scope = application.Services.CreateAsyncScope();
-        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var workspaceScope = workspaceFactory.GetOrganizationScope();
-        var firstStore = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
-        var secondStore = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
-        var firstMutationStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunMutationStore>(firstStore);
-        var secondMutationStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunMutationStore>(secondStore);
-        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false)).First();
-        var runId = Guid.NewGuid();
-        await firstStore.SaveExecutionRunDetailAsync(CreateRunDetail(runId, agent.Id, "Atomic run mutation"));
-        var appliedCount = 0;
-
-        Task MutateAsync(ISandboxWorkspaceExecutionRunMutationStore mutationStore) => mutationStore.UpdateExecutionRunDetailAsync(
-            runId,
-            (_, detail) =>
-            {
-                if (!string.Equals(detail.Run.ResultSummary, "Completed", StringComparison.Ordinal))
-                {
-                    return detail;
+    [Theory]
+    [InlineData(RunMutationForm.RunOnly)]
+    [InlineData(RunMutationForm.CatalogAndRun)]
+    public async Task UpdateExecutionRunDetailAsync_prepares_competing_mutations_once_and_refuses_the_changed_original(RunMutationForm form) {
+        await using var environment = CanDoItAllTestEnvironment.Create("workspace-prepared-contention");
+        var profile = environment.CreateInMemoryProfile("primary");
+        var workspaceScope = WorkspaceScopeDescriptor.Sandbox;
+        var firstStore = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, workspaceScope);
+        var secondStore = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, workspaceScope);
+        var agent = (await firstStore.LoadCatalogAsync()).Agents.First();
+        var original = await firstStore.SaveExecutionRunDetailAsync(CreateRunDetail(Guid.NewGuid(), agent.Id, "Atomic run mutation"));
+        var layout = new FileSandboxWorkspaceStorageLayout(profile.WorkspaceRootPath, workspaceScope);
+        var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        var runKey = Assert.Single(FileSandboxWorkspaceWriteSet.Run(original.Run, original.Run, readsAgent: false).LockPaths(layout));
+        IAsyncDisposable? held = await writer.AcquireCoordinationAsync(layout.RootPath, runKey, TimeSpan.FromSeconds(5),
+            requirePrivateUnixMode: false, CancellationToken.None);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var prepared = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var callbackCount = 0;
+        var accepted = new ExecutionRunDetail?[2];
+        Task<Exception?>[] attempts = [];
+        Exception? primary = null;
+        var outcomesObserved = false;
+        try {
+            attempts = [AttemptAsync(firstStore, 0), AttemptAsync(secondStore, 1)];
+            await prepared.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(2, callbackCount);
+            Assert.All(accepted, Assert.Null);
+            var release = held;
+            held = null;
+            await release.DisposeAsync();
+            var outcomes = await Task.WhenAll(attempts).WaitAsync(TimeSpan.FromSeconds(5));
+            outcomesObserved = true;
+            Assert.Single(outcomes, outcome => outcome is null);
+            var failure = Assert.Single(outcomes, outcome => outcome is not null);
+            if (form == RunMutationForm.CatalogAndRun) {
+                var conflict = Assert.IsType<SandboxWorkspaceConcurrencyException>(failure);
+                Assert.Equal(conflict.ExpectedRevision + 1, conflict.ActualRevision);
+            } else {
+                Assert.Equal(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged,
+                    Assert.IsType<SandboxWorkspacePublicationConflictException>(failure).Kind);
+            }
+            var committed = Assert.Single(accepted.OfType<ExecutionRunDetail>());
+            var saved = Assert.IsType<ExecutionRunDetail>(await firstStore.GetExecutionRunDetailAsync(original.Run.Id));
+            Assert.Equal(original.Run.Revision + 1, saved.Run.Revision);
+            Assert.Equal(committed.Run.ResultSummary, saved.Run.ResultSummary);
+            Assert.Equal(2, callbackCount);
+            await using var reacquired = await writer.AcquireCoordinationAsync(layout.RootPath, runKey, TimeSpan.FromSeconds(5),
+                requirePrivateUnixMode: false, cancellation.Token);
+        } catch (Exception failure) {
+            primary = failure;
+        } finally {
+            var failures = new List<Exception>();
+            if (primary is not null) {
+                failures.Add(primary);
+            }
+            try {
+                cancellation.Cancel();
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+            try {
+                if (held is not null) {
+                    var release = held;
+                    held = null;
+                    await release.DisposeAsync();
                 }
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+            try {
+                var outcomes = await Task.WhenAll(attempts);
+                if (!outcomesObserved) {
+                    failures.AddRange(outcomes.OfType<Exception>().Where(failure =>
+                        !(failure is OperationCanceledException && cancellation.IsCancellationRequested) &&
+                        !ReferenceEquals(failure, primary)));
+                }
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+            if (failures.Count == 1) {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failures[0]).Throw();
+            }
+            if (failures.Count > 1) {
+                throw new AggregateException("Competing mutation proof and owned cleanup failed.", failures);
+            }
+        }
 
-                Interlocked.Increment(ref appliedCount);
-                return detail with
-                {
-                    Run = detail.Run with
-                    {
-                        ResultSummary = "Approved",
-                        Revision = detail.Run.Revision + 1
-                    }
-                };
-            });
+        Task<Exception?> AttemptAsync(ISandboxWorkspaceExecutionRunMutationStore store, int index) => Record.ExceptionAsync(async () => {
+            accepted[index] = form == RunMutationForm.CatalogAndRun
+                ? await store.UpdateExecutionRunDetailAsync(original.Run.Id, (_, detail) => Prepare(detail), cancellation.Token)
+                : await store.UpdateExecutionRunDetailAsync(original.Run.Id, Prepare, cancellation.Token);
 
-        await Task.WhenAll(MutateAsync(firstMutationStore), MutateAsync(secondMutationStore));
-        var savedDetail = await firstStore.GetExecutionRunDetailAsync(runId);
+            ExecutionRunDetail Prepare(ExecutionRunDetail detail) {
+                Assert.Equal(original.Run.Revision, detail.Run.Revision);
+                if (Interlocked.Increment(ref callbackCount) == 2) {
+                    prepared.TrySetResult();
+                }
+                return detail with { Run = detail.Run with { ResultSummary = $"Accepted {index}", Revision = detail.Run.Revision + 1 } };
+            }
+        });
+    }
 
-        Assert.Equal(1, appliedCount);
-        Assert.NotNull(savedDetail);
-        Assert.Equal("Approved", savedDetail!.Run.ResultSummary);
-        Assert.Equal(2, savedDetail.Run.Revision);
+    public enum RunMutationForm {
+        RunOnly,
+        CatalogAndRun
     }
 
     [Fact]
@@ -505,105 +567,126 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
     }
 
     [Fact]
-    public async Task Competing_catalog_changes_publish_coherent_monotonic_snapshots()
-    {
-        await using var environment = CanDoItAllTestEnvironment.Create(
-            "agent-catalog-revision-concurrency");
+    public async Task Competing_catalog_changes_publish_coherent_monotonic_snapshots() {
+        await using var environment = CanDoItAllTestEnvironment.Create("agent-catalog-revision-concurrency");
         var profile = environment.CreateInMemoryProfile("primary");
         var scope = WorkspaceScopeDescriptor.Sandbox;
-        var firstStore = new FileSandboxWorkspaceStore(
-            profile.WorkspaceRootPath,
-            scope);
-        var secondStore = new FileSandboxWorkspaceStore(
-            profile.WorkspaceRootPath,
-            scope);
+        var firstStore = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, scope);
+        var secondStore = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, scope);
         var initial = await firstStore.LoadCatalogSnapshotAsync();
+        var layout = new FileSandboxWorkspaceStorageLayout(profile.WorkspaceRootPath, scope);
+        var key = FileSandboxWorkspaceWriteSet.Catalog(initial.Catalog,
+            WithFirstProviderNotes(initial.Catalog, "first change")).LockPaths(layout)[0];
+        var calls = new int[2];
+        var accepted = new SandboxWorkspaceCatalog?[2];
+        var notes = new[] { "first change", "second change" };
+        var outcomes = await PreparedPublicationCompetition.RunAsync(layout, key,
+            token => ChangeAsync(firstStore, 0, token), token => ChangeAsync(secondStore, 1, token));
 
-        var results = await Task.WhenAll(
-            firstStore.UpdateCatalogAsync(
-                catalog => WithFirstProviderNotes(catalog, "first change")),
-            secondStore.UpdateCatalogAsync(
-                catalog => WithFirstProviderNotes(catalog, "second change")));
+        Assert.All(calls, count => Assert.Equal(1, count));
+        var winner = Array.FindIndex(outcomes, outcome => outcome is null);
+        Assert.Single(outcomes, outcome => outcome is null);
+        var loser = 1 - winner;
+        var conflict = Assert.IsType<SandboxWorkspacePublicationConflictException>(outcomes[loser]);
+        Assert.Equal(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged, conflict.Kind);
+        Assert.Null(accepted[loser]);
+        var committed = Assert.IsType<SandboxWorkspaceCatalog>(accepted[winner]);
+        var observed = await new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, scope).LoadCatalogSnapshotAsync();
+        Assert.Equal(initial.Revision.Next(), observed.Revision);
+        Assert.Equal(committed.CatalogDataRevision, observed.Revision);
+        Assert.Equal(notes[winner], observed.Catalog.Providers[0].Notes);
+        Assert.DoesNotContain(observed.Catalog.Providers, provider => provider.Notes == notes[loser]);
+
+        var laterCalls = 0;
+        var later = await secondStore.UpdateCatalogAsync(catalog => {
+            laterCalls++;
+            Assert.Equal(observed.Revision, catalog.CatalogDataRevision);
+            Assert.Equal(notes[winner], catalog.Providers[0].Notes);
+            return WithFirstProviderNotes(catalog, notes[loser]);
+        });
         var saved = await firstStore.LoadCatalogSnapshotAsync();
-        var revisions = results
-            .Select(catalog => catalog.CatalogDataRevision.Value)
-            .Order()
-            .ToArray();
+        Assert.Equal(1, laterCalls);
+        Assert.All(calls, count => Assert.Equal(1, count));
+        Assert.Equal(observed.Revision.Next(), later.CatalogDataRevision);
+        Assert.Equal(later.CatalogDataRevision, saved.Revision);
+        Assert.Equal(notes[loser], saved.Catalog.Providers[0].Notes);
 
-        Assert.Equal(
-            [initial.Revision.Value + 1, initial.Revision.Value + 2],
-            revisions);
-        Assert.Equal(initial.Revision.Value + 2, saved.Revision.Value);
-        Assert.Equal(saved.Revision, saved.Catalog.CatalogDataRevision);
+        async Task ChangeAsync(FileSandboxWorkspaceStore store, int index, CancellationToken token) {
+            accepted[index] = await store.UpdateCatalogAsync(catalog => {
+                Interlocked.Increment(ref calls[index]);
+                Assert.Equal(initial.Revision, catalog.CatalogDataRevision);
+                return WithFirstProviderNotes(catalog, notes[index]);
+            }, token);
+        }
     }
 
     [Fact]
-    public async Task Atomic_chat_run_starts_preserve_every_concurrent_user_message()
-    {
-        await using var environment = CanDoItAllTestEnvironment.Create(
-            "agent-chat-run-start-concurrency");
+    public async Task Atomic_chat_run_starts_preserve_every_concurrent_user_message() {
+        await using var environment = CanDoItAllTestEnvironment.Create("agent-chat-run-start-concurrency");
         var profile = environment.CreateInMemoryProfile("primary");
         var scope = WorkspaceScopeDescriptor.Sandbox;
-        var firstStore = new FileSandboxWorkspaceStore(
-            profile.WorkspaceRootPath,
-            scope);
-        var secondStore = new FileSandboxWorkspaceStore(
-            profile.WorkspaceRootPath,
-            scope);
+        var firstStore = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, scope);
+        var secondStore = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, scope);
         var catalog = await firstStore.LoadCatalogSnapshotAsync();
         var agent = catalog.Catalog.Agents.First(item => item.ProviderProfileId.HasValue);
-        var initialMessage = new ChatMessageRecord(
-            Guid.NewGuid(),
-            ChatMessageRole.Assistant,
-            "Existing history",
-            DateTimeOffset.UtcNow,
-            2);
-        var session = await ((ISandboxWorkspaceChatSessionStore)firstStore)
-            .CreateChatSessionAsync(
-                new ChatSessionRecord(
-                    Guid.NewGuid(),
-                    agent.Id,
-                    "Atomic chat start",
-                    DateTimeOffset.UtcNow,
-                    DateTimeOffset.UtcNow,
-                    [initialMessage]));
-        var request = new ChatBackedRunStartRequest(
-            agent.Id,
-            agent.ProviderProfileId!.Value,
-            catalog.Revision,
-            session.Id);
+        var initialMessage = new ChatMessageRecord(Guid.NewGuid(), ChatMessageRole.Assistant,
+            "Existing history", DateTimeOffset.UtcNow, 2);
+        var session = await firstStore.CreateChatSessionAsync(new ChatSessionRecord(Guid.NewGuid(), agent.Id,
+            "Atomic chat start", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, [initialMessage]));
+        var request = new ChatBackedRunStartRequest(agent.Id, agent.ProviderProfileId!.Value, catalog.Revision, session.Id);
+        var layout = new FileSandboxWorkspaceStorageLayout(profile.WorkspaceRootPath, scope);
+        var key = FileSandboxWorkspaceWriteSet.Session(session.Id, session.AgentId).LockPaths(layout)[0];
+        var calls = new int[2];
+        var prepared = new ChatBackedRunStartMutation?[2];
+        var accepted = new ChatBackedRunStartResult?[2];
+        var prompts = new[] { "first concurrent prompt", "second concurrent prompt" };
+        var outcomes = await PreparedPublicationCompetition.RunAsync(layout, key,
+            token => StartAsync(firstStore, 0, token), token => StartAsync(secondStore, 1, token));
 
-        var starts = await Task.WhenAll(
-            ((ISandboxWorkspaceChatRunStartStore)firstStore).BeginChatBackedRunAsync(
-                request,
-                context => CreateChatRunStartMutation(context, "first concurrent prompt")),
-            ((ISandboxWorkspaceChatRunStartStore)secondStore).BeginChatBackedRunAsync(
-                request,
-                context => CreateChatRunStartMutation(context, "second concurrent prompt")));
-        var savedSession = await ((ISandboxWorkspaceChatQueryStore)firstStore)
-            .GetChatSessionAsync(session.Id);
+        Assert.All(calls, count => Assert.Equal(1, count));
+        Assert.Single(outcomes, outcome => outcome is null);
+        var winner = Array.FindIndex(outcomes, outcome => outcome is null);
+        var loser = 1 - winner;
+        var conflict = Assert.IsType<SandboxWorkspaceConcurrencyException>(outcomes[loser]);
+        Assert.Equal(conflict.ExpectedRevision + 1, conflict.ActualRevision);
+        Assert.Null(accepted[loser]);
+        var committed = Assert.IsType<ChatBackedRunStarted>(accepted[winner]);
+        var refused = Assert.IsType<ChatBackedRunStartMutation>(prepared[loser]);
+        Assert.False(Directory.Exists(layout.RunRoot(refused.Detail.Run.Id)));
+        var freshStore = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, scope);
+        var observedSession = Assert.IsType<ChatSessionRecord>(await freshStore.GetChatSessionAsync(session.Id));
+        Assert.Equal(new[] { initialMessage, committed.UserMessage }, observedSession.Messages);
+        Assert.DoesNotContain(observedSession.Messages, message => message.Id == refused.UserMessage.Id);
+        Assert.Equal(committed.Detail.Run.Id, observedSession.LatestExecutionRunId);
+        var observedCatalog = await freshStore.LoadCatalogSnapshotAsync();
+        Assert.Equal(catalog.Revision, observedCatalog.Revision);
 
-        Assert.NotNull(savedSession);
-        Assert.Equal(initialMessage, savedSession.Messages[0]);
-        Assert.Equal(3, savedSession.Messages.Count);
-        Assert.Equal(
-            ["first concurrent prompt", "second concurrent prompt"],
-            savedSession.Messages
-                .Skip(1)
-                .Select(message => message.Content)
-                .Order(StringComparer.Ordinal)
-                .ToArray());
-        Assert.All(starts, result => Assert.IsType<ChatBackedRunStarted>(result));
-        Assert.Equal(
-            2,
-            starts
-                .OfType<ChatBackedRunStarted>()
-                .Select(result => result.Detail.Run.Id)
-                .Distinct()
-                .Count());
-        Assert.Equal(
-            catalog.Revision,
-            (await firstStore.LoadCatalogSnapshotAsync()).Revision);
+        var laterCalls = 0;
+        var later = Assert.IsType<ChatBackedRunStarted>(await freshStore.BeginChatBackedRunAsync(
+            new(agent.Id, agent.ProviderProfileId.Value, observedCatalog.Revision, observedSession.Id), context => {
+                laterCalls++;
+                Assert.Equal(observedSession.Messages, context.Session!.Messages);
+                return CreateChatRunStartMutation(context, prompts[loser]);
+            }));
+        var savedSession = Assert.IsType<ChatSessionRecord>(await firstStore.GetChatSessionAsync(session.Id));
+        Assert.Equal(1, laterCalls);
+        Assert.All(calls, count => Assert.Equal(1, count));
+        Assert.NotEqual(refused.Detail.Run.Id, later.Detail.Run.Id);
+        Assert.NotEqual(refused.UserMessage.Id, later.UserMessage.Id);
+        Assert.False(Directory.Exists(layout.RunRoot(refused.Detail.Run.Id)));
+        Assert.Equal(new[] { initialMessage, committed.UserMessage, later.UserMessage }, savedSession.Messages);
+        Assert.Equal(prompts.Order(StringComparer.Ordinal), savedSession.Messages.Skip(1).Select(message => message.Content).Order(StringComparer.Ordinal));
+        Assert.Equal(catalog.Revision, (await firstStore.LoadCatalogSnapshotAsync()).Revision);
+
+        async Task StartAsync(FileSandboxWorkspaceStore store, int index, CancellationToken token) {
+            accepted[index] = await store.BeginChatBackedRunAsync(request, context => {
+                Interlocked.Increment(ref calls[index]);
+                Assert.Equal(new[] { initialMessage }, context.Session!.Messages);
+                var mutation = CreateChatRunStartMutation(context, prompts[index]);
+                prepared[index] = mutation;
+                return mutation;
+            }, token);
+        }
     }
 
     [Fact]
@@ -943,4 +1026,79 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
 
     private static string JsonName(string propertyName)
         => JsonNamingPolicy.CamelCase.ConvertName(propertyName);
+}
+
+internal static class PreparedPublicationCompetition {
+    internal static async Task<Exception?[]> RunAsync(FileSandboxWorkspaceStorageLayout layout, string key,
+        Func<CancellationToken, Task> first, Func<CancellationToken, Task> second) {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using var trace = new Activity("prepared-publication-competition").SetIdFormat(ActivityIdFormat.W3C).Start();
+        var prepared = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var waitCount = 0;
+        using var listener = new ActivityListener {
+            ShouldListenTo = source => source.Name == AgentFrameworkTelemetry.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStarted = activity => {
+                if (activity.TraceId == trace.TraceId && activity.OperationName == "workspace.publication.keys.wait" &&
+                        Interlocked.Increment(ref waitCount) == 2) {
+                    prepared.TrySetResult();
+                }
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+        var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        IAsyncDisposable? held = await writer.AcquireCoordinationAsync(layout.RootPath, key,
+            TimeSpan.FromSeconds(5), false, cancellation.Token);
+        Task<Exception?>[] attempts = [];
+        Exception? primary = null;
+        var observed = false;
+        try {
+            attempts = [Record.ExceptionAsync(() => first(cancellation.Token)), Record.ExceptionAsync(() => second(cancellation.Token))];
+            await prepared.Task.WaitAsync(cancellation.Token);
+            Assert.All(attempts, task => Assert.False(task.IsCompleted));
+            var release = held;
+            held = null;
+            await release.DisposeAsync();
+            var outcomes = await Task.WhenAll(attempts).WaitAsync(cancellation.Token);
+            observed = true;
+            await using var reacquired = await writer.AcquireCoordinationAsync(layout.RootPath, key,
+                TimeSpan.FromSeconds(5), false, cancellation.Token);
+            return outcomes;
+        } catch (Exception failure) {
+            primary = failure;
+            throw;
+        } finally {
+            var failures = new List<Exception>();
+            try {
+                cancellation.Cancel();
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+            if (held is not null) {
+                var release = held;
+                held = null;
+                try {
+                    await release.DisposeAsync();
+                } catch (Exception failure) {
+                    failures.Add(failure);
+                }
+            }
+            try {
+                var outcomes = await Task.WhenAll(attempts);
+                if (!observed) {
+                    failures.AddRange(outcomes.OfType<Exception>().Where(failure =>
+                        !(failure is OperationCanceledException && cancellation.IsCancellationRequested) &&
+                        !ReferenceEquals(failure, primary)));
+                }
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+            if (failures.Count > 0) {
+                if (primary is not null) {
+                    failures.Insert(0, primary);
+                }
+                throw new AggregateException("Prepared publication competition cleanup failed.", failures);
+            }
+        }
+    }
 }

@@ -1,4 +1,5 @@
 using CanDoItAll.Configuration.UI;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Resources.UI;
 using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.AspNetCore.Components.Forms;
@@ -57,12 +58,16 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     public IReadOnlyList<ResourceMutationReceipt> Receipts => receipts;
     public ResourceViewAccess EditorAccess { get; private set; } = ResourceViewAccess.Loading;
     public ResourceViewAccess Access => EditorAccess == ResourceViewAccess.Ready ? catalogAccess : EditorAccess;
-    public bool CanMutate => !disposed && owner.IsCurrent && EditorAccess == ResourceViewAccess.Ready;
+    public bool CanMutate => !disposed && owner.IsCurrent && EditorAccess == ResourceViewAccess.Ready && Draft.Expected is not null &&
+        Draft.ReadOnlyReason is null && !Draft.EditorUnavailable;
+    public bool CanSave => CanMutate && !Draft.ProjectionFailed && !IsGoverned && !IsBusy;
+    public bool CanDelete => !disposed && owner.IsCurrent && EditorAccess == ResourceViewAccess.Ready &&
+        Draft.Expected is ResourceMetadataExpectation.Existing && !IsBusy;
     public string? Error { get => editorError ?? catalogError ?? actionError; private set => actionError = value; }
     public IReadOnlyList<string> ReferenceErrors { get; private set; } = [];
     public bool IsLoading { get; private set; }
     public bool IsBusy => Blocked(Draft);
-    public bool IsGoverned => Draft.Editor.ConnectorPluginKey == ResourceConnectorPluginKeys.StorageObject;
+    public bool IsGoverned => (Draft.AcceptedSnapshot?.Values.ConnectorPluginKey ?? Draft.Editor.ConnectorPluginKey) == ResourceConnectorPluginKeys.StorageObject;
     public string Search { get => search; set => SetFilter(ref search, value ?? string.Empty); }
     public Guid? ProjectFilter { get => projectFilter; set => SetFilter(ref projectFilter, value); }
     public string? ConnectorFilter { get => connectorFilter; set => SetFilter(ref connectorFilter, string.IsNullOrWhiteSpace(value) ? null : value); }
@@ -102,9 +107,7 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         if (resourceId is { } id) {
             await LoadEditorAsync(id, version);
         } else {
-            ReplaceDraft(NewEditor(projectId));
-            EditorAccess = ResourceViewAccess.Ready;
-            await LoadPartiesAsync();
+            await LoadNewDraftAsync(version);
         }
         Notify();
     }
@@ -187,19 +190,47 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         }
     }
 
+    public async Task ReloadAsync() {
+        if (disposed || !owner.IsCurrent || IsBusy || Draft.Expected is not ResourceMetadataExpectation.Existing expected) {
+            return;
+        }
+        ReplaceDraft(new() { Id = expected.ResourceId });
+        await LoadEditorAsync(expected.ResourceId, ++editorVersion);
+    }
+
     public async Task NewAsync() {
         if (disposed || !owner.IsCurrent) {
             return;
         }
-        editorVersion++;
+        var version = ++editorVersion;
         if (routeResource is not null) {
             PublishRoute(null, null, ResourceRegistryRouteChangeKind.Cleared);
         }
-        ReplaceDraft(NewEditor(routeProject));
-        EditorAccess = routeProject is null || Projects.Any(p => p.Id == routeProject) ? ResourceViewAccess.Ready : ResourceViewAccess.Failed;
-        editorError = EditorAccess == ResourceViewAccess.Ready ? null : "The requested project is unavailable.";
+        ReplaceDraft(new());
+        await LoadNewDraftAsync(version);
+    }
+
+    private async Task LoadNewDraftAsync(long version) {
+        var draft = Draft;
+        EditorAccess = ResourceViewAccess.Loading;
+        editorError = null;
         Notify();
-        await LoadPartiesAsync();
+        try {
+            var context = await owner.ReadContextAsync(lifetime.Token);
+            if (!Current(draft) || version != editorVersion) {
+                return;
+            }
+            ReplaceDraft(NewEditor(routeProject), new ResourceMetadataExpectation.Absent(context, Guid.NewGuid()));
+            EditorAccess = routeProject is null || Projects.Any(p => p.Id == routeProject) ? ResourceViewAccess.Ready : ResourceViewAccess.Failed;
+            editorError = EditorAccess == ResourceViewAccess.Ready ? null : "The requested project is unavailable.";
+            await LoadPartiesAsync();
+        } catch (Exception) {
+            if (!disposed && version == editorVersion) {
+                EditorAccess = ResourceViewAccess.Failed;
+                editorError = "The Resource owner context could not be acquired. Explicitly open a new draft to retry.";
+            }
+        }
+        Notify();
     }
 
     public async Task ChangeProjectAsync(Guid? projectId) {
@@ -210,7 +241,7 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         if (Draft.Editor.ProjectId == projectId && Draft.Editor.ExpectedProjectAdmission == admission) {
             return;
         }
-        Draft.ChangeTarget();
+        Draft.Edited(ResourceEditorField.Project);
         Draft.Editor.ProjectId = projectId;
         Draft.Editor.ExpectedProjectAdmission = admission;
         editorVersion++;
@@ -231,12 +262,7 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
             Notify();
             return Task.CompletedTask;
         }
-        var editor = Draft.Editor.Capture();
-        editor.ConnectorPluginKey = manifest.PluginKey;
-        editor.ConfigSchemaVersion = manifest.ConfigurationSchema.Version;
-        editor.Configuration.KeepOnly(manifest.ConfigurationSchema.Fields.Select(f => f.Key));
-        editor.ConfigJson = "{}";
-        ReplaceDraft(editor);
+        Draft.ChangeConnector(manifest);
         editorVersion++;
         Notify();
         return Task.CompletedTask;
@@ -248,18 +274,33 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         editorError = null;
         Notify();
         try {
-            var editor = await owner.GetAsync(id, lifetime.Token);
+            var result = await owner.ReadAsync(id, lifetime.Token);
             if (!Current(draft) || version != editorVersion) {
                 return;
             }
-            if (editor.Id != id) {
+            if (result is ResourceMetadataReadResult.Missing missing && missing.ResourceId == id) {
                 EditorAccess = ResourceViewAccess.Failed;
                 editorError = "The selected resource no longer exists. This is not a new-resource draft.";
-            } else {
-                ReplaceDraft(editor);
+            } else if (result is ResourceMetadataReadResult.Found found && found.Snapshot.Expected.ResourceId == id) {
+                var snapshot = found.Snapshot;
+                ReplaceDraft(ReadOnlyEditor(snapshot), snapshot.Expected, snapshot, found.ReadOnlyReason);
                 EditorAccess = ResourceViewAccess.Ready;
-                editorError = null;
+                if (found.ReadOnlyReason is null) {
+                    try {
+                        ReplaceDraft(owner.CreateEditor(snapshot), snapshot.Expected, snapshot);
+                    } catch (Exception) {
+                        Draft.ProjectionFailed = true;
+                        Draft.EditorUnavailable = true;
+                        editorError = "Stored metadata was read, but its editor could not be prepared. The exact identity remains available for deletion.";
+                    }
+                }
                 await LoadPartiesAsync();
+            } else if (result is ResourceMetadataReadResult.MetadataOnly metadata && metadata.Expected.ResourceId == id) {
+                ReplaceDraft(new() { Id = id }, metadata.Expected, readOnlyReason: metadata.Reason);
+                EditorAccess = ResourceViewAccess.Ready;
+                Parties = [];
+            } else {
+                throw new InvalidOperationException("The Resource read did not match the selected identity.");
             }
         } catch (Exception) {
             if (Current(draft) && version == editorVersion) {
@@ -292,17 +333,29 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     public Task DeleteAsync() => MutateAsync(ResourceMutationKind.Delete);
 
     private async Task MutateAsync(ResourceMutationKind kind) {
-        if (!CanMutate || Blocked(Draft)) {
+        if (kind == ResourceMutationKind.Save ? !CanSave : !CanDelete) {
             return;
         }
         var draft = Draft;
-        var origin = draft.Origin;
-        var command = draft.Editor.Capture();
-        if (kind == ResourceMutationKind.Delete && command.Id is null) {
-            return;
-        }
-        if (kind == ResourceMutationKind.Save && !Validate(command)) {
-            return;
+        var expected = draft.Expected!;
+        ReplaceResourceMetadataCommand? command = null;
+        ResourceEditorModel? submitted = null;
+        if (kind == ResourceMutationKind.Save) {
+            try {
+                var values = ResourceMetadataValues.Capture(draft.Editor);
+                submitted = values.ToEditorModel();
+                submitted.Id = draft.Editor.Id;
+                submitted.ProjectId = draft.Editor.ProjectId;
+                submitted.ExpectedProjectAdmission = draft.Editor.ExpectedProjectAdmission;
+                if (!Validate(submitted)) {
+                    return;
+                }
+                command = new(expected, submitted.ExpectedProjectAdmission!, values);
+            } catch (ArgumentException) {
+                Error = "The Resource fields exceed the supported bounds or contain invalid values. Your draft is retained.";
+                Notify();
+                return;
+            }
         }
         if (receipts.Count >= 32) {
             var completed = receipts.FirstOrDefault(r => !r.BlocksDispatch && !r.IsReviewing);
@@ -315,40 +368,59 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         }
         var versions = draft.CaptureVersions();
         var configurationVersions = draft.Configuration.CaptureVersions();
+        var configurationGeneration = draft.ConfigurationGeneration;
         var mutationVersion = draft.AdmitMutation();
-        var receipt = new ResourceMutationReceipt(origin, kind, command);
+        var receipt = new ResourceMutationReceipt(draft.Origin, kind, expected, draft.Editor.Name, command);
         receipts.Add(receipt);
         Error = null;
         Notify();
         try {
             if (kind == ResourceMutationKind.Save) {
-                var result = await owner.SaveAsync(command.Capture());
-                if (!result.IsSuccess) {
-                    receipt.State = ResourceEffectState.Refused;
-                    receipt.Message = string.Join(" ", result.Errors.Select(e => e.Message));
+                var result = await owner.SaveAsync(command!);
+                if (result is ResourceMetadataSaveOutcome.Rejected rejected) {
+                    Refuse(rejected.Reason, rejected.Message);
                     return;
                 }
-                receipt.ResourceId = result.Value;
+                if (result is not ResourceMetadataSaveOutcome.Accepted accepted) {
+                    Unknown();
+                    return;
+                }
+                receipt.AcceptedSnapshot = accepted.Snapshot;
+                RecordAccepted(accepted.Diagnostic);
+                if (Current(draft)) {
+                    draft.Accept(accepted.Snapshot);
+                    if (expected is ResourceMetadataExpectation.Absent) {
+                        PublishRoute(receipt.ResourceId, command!.TargetProject.ProjectId, ResourceRegistryRouteChangeKind.Created);
+                    }
+                    var stored = owner.CreateEditor(accepted.Snapshot);
+                    if (Current(draft) && draft.MutationVersion == mutationVersion) {
+                        draft.Reconcile(submitted!, stored, versions, configurationVersions, configurationGeneration);
+                    }
+                }
             } else {
-                await owner.DeleteAsync(command.Id!.Value, command.ExpectedProjectAdmission);
-            }
-            receipt.State = ResourceEffectState.Committed;
-            receipt.Message = kind == ResourceMutationKind.Save ? "Resource saved." : "Resource deleted.";
-            var followUp = Current(draft, origin);
-            RetainCommit();
-            if (!followUp) {
-                return;
-            }
-            if (kind == ResourceMutationKind.Save) {
-                var stored = await owner.GetAsync(receipt.ResourceId!.Value, lifetime.Token);
-                if (stored.Id != receipt.ResourceId) {
-                    throw new InvalidOperationException("The committed resource is missing during read-back.");
+                var result = await owner.DeleteAsync(new((ResourceMetadataExpectation.Existing)expected));
+                if (result is ResourceMetadataDeleteOutcome.Rejected rejected) {
+                    Refuse(rejected.Reason, rejected.Message);
+                    return;
                 }
-                if (Current(draft, origin) && draft.MutationVersion == mutationVersion) {
-                    draft.Reconcile(command, stored, versions, configurationVersions);
+                if (result is not ResourceMetadataDeleteOutcome.Accepted accepted) {
+                    Unknown();
+                    return;
+                }
+                receipt.Deleted = accepted.Deleted;
+                RecordAccepted(accepted.Diagnostic);
+                if (Current(draft)) {
+                    Resources = Resources.Where(resource => resource.Id != receipt.ResourceId).ToArray();
+                    PublishRoute(null, null, ResourceRegistryRouteChangeKind.Deleted);
+                    await NewAsync();
+                    await RefreshAsync();
+                    if (Access != ResourceViewAccess.Ready || ReferenceErrors.Count != 0) {
+                        receipt.State = ResourceEffectState.CommittedWarning;
+                        receipt.Message = "The resource was deleted; follow-up reads are incomplete. The accepted deletion is retained.";
+                    }
                 }
             }
-            if (kind == ResourceMutationKind.Save && (!Current(draft, origin) || draft.MutationVersion != mutationVersion)) {
+            if (!Current(draft) || draft.MutationVersion != mutationVersion) {
                 return;
             }
             await RefreshAsync();
@@ -356,20 +428,18 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
                 receipt.State = ResourceEffectState.CommittedWarning;
                 receipt.Message = "The resource mutation committed; follow-up reads are incomplete. Refresh reads only.";
             }
-        } catch (ResourceCommittedMutationException exception) {
-            receipt.ResourceId = exception.ResourceId;
-            receipt.State = ResourceEffectState.CommittedWarning;
-            receipt.Message = exception.Message;
-            RetainCommit();
-        } catch (ResourceActionRefusedException exception) {
+        } catch (ResourceActionRefusedException exception) when (receipt.AcceptedSnapshot is null && receipt.Deleted is null) {
             receipt.State = ResourceEffectState.Refused;
             receipt.Message = exception.Message;
         } catch (Exception) {
-            var committed = receipt.State is ResourceEffectState.Committed or ResourceEffectState.CommittedWarning;
+            var committed = receipt.AcceptedSnapshot is not null || receipt.Deleted is not null;
+            if (committed && Current(draft) && receipt.AcceptedSnapshot is not null) {
+                draft.ProjectionFailed = true;
+            }
             receipt.State = committed ? ResourceEffectState.CommittedWarning : ResourceEffectState.Unknown;
             receipt.Message = committed
-                ? "The resource mutation committed; a follow-up read failed. The confirmed identity is retained."
-                : "No final owner acknowledgement was received. Review exact stored identity before another dispatch; no action was replayed.";
+                ? "The resource mutation committed; presentation or reference refresh failed. The exact accepted metadata is retained."
+                : "No final owner acknowledgement was received. Current reads cannot resolve this outcome; the original target remains blocked.";
         } finally {
             try {
                 Completed?.Invoke(receipt);
@@ -382,43 +452,45 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
             Notify();
         }
 
-        void RetainCommit() {
-            if (!Current(draft, origin)) {
-                return;
+        void RecordAccepted(ResourceMetadataSecondaryDiagnostic? diagnostic) {
+            receipt.State = diagnostic is null ? ResourceEffectState.Committed : ResourceEffectState.CommittedWarning;
+            receipt.Message = kind == ResourceMutationKind.Save ? "Resource saved." : "Resource deleted.";
+            if (diagnostic is not null) {
+                receipt.Message += " The owner reported incomplete follow-up work; the accepted result is retained.";
             }
-            if (kind == ResourceMutationKind.Save) {
-                draft.Editor.Id = receipt.ResourceId;
-                if (command.Id is null) {
-                    PublishRoute(receipt.ResourceId, command.ProjectId, ResourceRegistryRouteChangeKind.Created);
-                }
-            } else {
-                Resources = Resources.Where(r => r.Id != receipt.ResourceId).ToArray();
-                ReplaceDraft(NewEditor(routeProject));
-                Parties = [];
-                PublishRoute(null, null, ResourceRegistryRouteChangeKind.Deleted);
-            }
+        }
+        void Refuse(ResourceMetadataRejectionReason reason, string? message) {
+            receipt.State = ResourceEffectState.Refused;
+            receipt.Message = message ?? $"The Resource owner refused this request ({reason}). Reload explicitly to review current metadata.";
+        }
+        void Unknown() {
+            receipt.State = ResourceEffectState.Unknown;
+            receipt.Message = "No final owner acknowledgement was received. Current reads cannot resolve this outcome; the original target remains blocked.";
         }
     }
 
-    public Task ReviewAsync(ResourceMutationReceipt receipt) => receipt.ResourceId is { } id ? ReviewIdentityAsync(receipt, id) : Task.CompletedTask;
+    public Task ReviewAsync(ResourceMutationReceipt receipt) => ReviewIdentityAsync(receipt, receipt.ResourceId);
 
     public async Task ReviewIdentityAsync(ResourceMutationReceipt receipt, Guid id) {
-        if (disposed || !owner.IsCurrent || !receipts.Contains(receipt) || receipt.State != ResourceEffectState.Unknown || receipt.IsReviewing || id == Guid.Empty || receipt.ResourceId is { } known && known != id) {
+        if (disposed || !owner.IsCurrent || !receipts.Contains(receipt) || receipt.State != ResourceEffectState.Unknown || receipt.IsReviewing || receipt.ResourceId != id) {
             return;
         }
         receipt.IsReviewing = true;
         Notify();
         try {
-            var stored = await owner.GetAsync(id, lifetime.Token);
+            var stored = await owner.ReadAsync(id, lifetime.Token);
             if (disposed || !owner.IsCurrent || receipt.State != ResourceEffectState.Unknown) {
                 return;
             }
-            var observed = receipt.Kind == ResourceMutationKind.Delete ? stored.Id is null : stored.Id == id && stored.ExpectedProjectAdmission == receipt.Command.ExpectedProjectAdmission;
-            receipt.ReviewedResource = observed && stored.Id is not null ? stored.Capture() : null;
-            receipt.State = observed && receipt.ResourceId is not null ? ResourceEffectState.Reviewed : ResourceEffectState.Unknown;
+            var observed = stored switch {
+                ResourceMetadataReadResult.Found found => found.Snapshot.Expected.ResourceId == id && found.Snapshot.Expected.Context == receipt.Expected.Context,
+                ResourceMetadataReadResult.MetadataOnly metadata => metadata.Expected.ResourceId == id && metadata.Expected.Context == receipt.Expected.Context,
+                ResourceMetadataReadResult.Missing missing => missing.ResourceId == id && missing.Context == receipt.Expected.Context,
+                _ => false
+            };
+            receipt.Observation = observed ? stored : null;
             receipt.Message = observed
-                ? receipt.ResourceId is null ? "The exact candidate exists. This does not establish the original create outcome. Open the observed resource to inspect and edit it; this unacknowledged create stays blocked."
-                    : "Exact stored identity was observed. This read is not proof of the earlier command's outcome; inspect current values before resubmitting."
+                ? "Current metadata was observed. This does not prove the earlier request's outcome; its target remains blocked."
                 : "The exact target could not be verified. The outcome remains unresolved.";
         } catch (Exception) {
             receipt.Message = "Exact-identity review failed. No command was replayed.";
@@ -472,14 +544,42 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         return new() { ProjectId = projectId, ExpectedProjectAdmission = Projects.FirstOrDefault(p => p.Id == projectId)?.Admission,
             ConnectorPluginKey = manifest?.PluginKey ?? ResourceConnectorPluginKeys.Repository, ConfigSchemaVersion = manifest?.ConfigurationSchema.Version ?? string.Empty };
     }
-    private void ReplaceDraft(ResourceEditorModel editor) {
-        Draft = new(editor);
+    private static ResourceEditorModel ReadOnlyEditor(ResourceMetadataSnapshot snapshot) {
+        var values = snapshot.Values;
+        var projectId = snapshot.Expected.Project switch {
+            ResourceProjectBinding.Bound bound => (Guid?)bound.ProjectId,
+            ResourceProjectBinding.RetainedProject retained => retained.ProjectId,
+            ResourceProjectBinding.RetainedUnbound => null,
+            _ => throw new InvalidOperationException("The stored Resource project binding is unsupported.")
+        };
+        return new() {
+            Id = snapshot.Expected.ResourceId,
+            ProjectId = projectId,
+            ExpectedProjectAdmission = snapshot.Expected.Project is ResourceProjectBinding.Bound project
+                ? new ProjectWriteAdmission(snapshot.Expected.Context.DatabaseProfileId, project.ProjectId, project.LifetimeId) : null,
+            Name = values.Name,
+            Description = values.Description,
+            ConnectorPluginKey = values.ConnectorPluginKey,
+            ConfigSchemaVersion = values.ConfigSchemaVersion,
+            ConfigJson = values.ConfigJson,
+            LocationOrIdentifier = values.LocationOrIdentifier,
+            OwnerPartyId = values.OwnerPartyId,
+            MaintainerPartyId = values.MaintainerPartyId,
+            ValidationStatus = values.ValidationStatus,
+            Sensitivity = values.Sensitivity,
+            SupportsPreview = values.SupportsPreview,
+            SupportsIndexing = values.SupportsIndexing
+        };
+    }
+    private void ReplaceDraft(ResourceEditorModel editor, ResourceMetadataExpectation? expected = null,
+        ResourceMetadataSnapshot? snapshot = null, ResourceMetadataReadOnlyReason? readOnlyReason = null) {
+        Draft = new(editor, expected, snapshot, readOnlyReason);
         validation = null;
         actionError = null;
         partyVersion++;
     }
-    private bool Blocked(ResourceRegistryDraft draft) => receipts.Any(r => r.BlocksDispatch &&
-        (r.ResourceId is { } id ? draft.Editor.Id == id : r.Origin == draft.Origin));
+    private bool Blocked(ResourceRegistryDraft draft) => receipts.Any(receipt => receipt.BlocksDispatch &&
+        draft.Expected is { } expected && receipt.ResourceId == expected.ResourceId && receipt.Expected.Context == expected.Context);
     private bool Current(ResourceRegistryDraft draft, Guid? origin = null) => !disposed && owner.IsCurrent && ReferenceEquals(Draft, draft) && (origin is null || draft.Origin == origin);
     private static async Task<(bool Success, T? Value)> ReadAsync<T>(Func<Task<T>> read) {
         try {

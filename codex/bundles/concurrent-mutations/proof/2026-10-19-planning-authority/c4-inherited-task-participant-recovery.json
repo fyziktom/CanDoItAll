@@ -1,0 +1,972 @@
+{
+  "candidate": "c4-inherited-task-participant-recovery",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-recovery",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T16:03:59.8132994+00:00",
+      "State": "Completed",
+      "RunnerPid": 46988,
+      "ChildPid": 28004,
+      "ChildStartedUtc": "2026-10-20T16:03:59.8306919Z",
+      "ExitCode": 0,
+      "Seconds": 62.3092925,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 180717,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-unit-recovery",
+      "Arguments": [
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T16:03:03.8505887+00:00",
+      "State": "Completed",
+      "RunnerPid": 46988,
+      "ChildPid": 55776,
+      "ChildStartedUtc": "2026-10-20T16:03:03.8823464Z",
+      "ExitCode": 0,
+      "Seconds": 55.8867306,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 150858,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-workbench-recovery",
+      "Arguments": [
+        "build",
+        "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T16:02:11.0392236+00:00",
+      "State": "Completed",
+      "RunnerPid": 53920,
+      "ChildPid": 46004,
+      "ChildStartedUtc": "2026-10-20T16:02:11.0748743Z",
+      "ExitCode": 0,
+      "Seconds": 30.5713651,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53016,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T16:05:05.0057109+00:00",
+      "State": "Completed",
+      "RunnerPid": 54320,
+      "ChildPid": 53648,
+      "ChildStartedUtc": "2026-10-20T16:05:05.0118981Z",
+      "ExitCode": 0,
+      "Seconds": 0.0712054,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 1548,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-codecs",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanAgentCodecTests|FullyQualifiedName~ProjectTaskPlanProcessCodecTests"
+      ],
+      "StartedUtc": "2026-10-20T16:05:21.5134201+00:00",
+      "State": "Completed",
+      "RunnerPid": 53652,
+      "ChildPid": 56060,
+      "ChildStartedUtc": "2026-10-20T16:05:21.5208559Z",
+      "ExitCode": 0,
+      "Seconds": 2.6558699,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 11043,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-interactive-regression",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanAgentIntegrationTests"
+      ],
+      "StartedUtc": "2026-10-20T16:05:26.4132421+00:00",
+      "State": "Completed",
+      "RunnerPid": 53652,
+      "ChildPid": 44068,
+      "ChildStartedUtc": "2026-10-20T16:05:26.4182251Z",
+      "ExitCode": 0,
+      "Seconds": 2.3123204,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2120,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-interrupted-recovery",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~AgentInheritedEffectReconciliationTests|FullyQualifiedName~AgentToolEffectJournalIntegrationTests.Owner_confirmation_preserves_original_result_disclosure_and_dispatch_claim|FullyQualifiedName~AgentToolEffectJournalIntegrationTests.Interrupted_reconciliation_requires_exact_nonterminal_effect_session|FullyQualifiedName~AgentToolEffectJournalIntegrationTests.Independent_journals_serialize_reconciliation_and_preserve_original_intent|FullyQualifiedName~AgentToolEffectJournalIntegrationTests.Current_read_revocation_before_or_during_lookup_denies_historical_disclosure"
+      ],
+      "StartedUtc": "2026-10-20T16:05:16.1454000+00:00",
+      "State": "Completed",
+      "RunnerPid": 53652,
+      "ChildPid": 55732,
+      "ChildStartedUtc": "2026-10-20T16:05:16.1874852Z",
+      "ExitCode": 0,
+      "Seconds": 2.3423071,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2979,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-participant-unit",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanProcessParticipantTests"
+      ],
+      "StartedUtc": "2026-10-20T16:05:18.5868963+00:00",
+      "State": "Completed",
+      "RunnerPid": 53652,
+      "ChildPid": 29984,
+      "ChildStartedUtc": "2026-10-20T16:05:18.6056471Z",
+      "ExitCode": 0,
+      "Seconds": 2.9039142,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1797,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-registered-runtime",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanProcessRuntimeTests"
+      ],
+      "StartedUtc": "2026-10-20T16:05:24.1871624+00:00",
+      "State": "Completed",
+      "RunnerPid": 53652,
+      "ChildPid": 11324,
+      "ChildStartedUtc": "2026-10-20T16:05:24.1933605Z",
+      "ExitCode": 0,
+      "Seconds": 2.2062082,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2195,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T16:04:57.2463736+00:00",
+      "State": "Completed",
+      "RunnerPid": 54320,
+      "ChildPid": 55624,
+      "ChildStartedUtc": "2026-10-20T16:04:57.2698285Z",
+      "ExitCode": 0,
+      "Seconds": 7.738165,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-interrupted-recovery",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~AgentInheritedEffectReconciliationTests|FullyQualifiedName~AgentToolEffectJournalIntegrationTests.Owner_confirmation_preserves_original_result_disclosure_and_dispatch_claim|FullyQualifiedName~AgentToolEffectJournalIntegrationTests.Interrupted_reconciliation_requires_exact_nonterminal_effect_session|FullyQualifiedName~AgentToolEffectJournalIntegrationTests.Independent_journals_serialize_reconciliation_and_preserve_original_intent|FullyQualifiedName~AgentToolEffectJournalIntegrationTests.Current_read_revocation_before_or_during_lookup_denies_historical_disclosure",
+        "--logger",
+        "trx;LogFileName=interrupted-recovery.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-task-participant-recovery"
+      ],
+      "StartedUtc": "2026-10-20T16:07:32.6279693+00:00",
+      "State": "Completed",
+      "RunnerPid": 49428,
+      "ChildPid": 12460,
+      "ChildStartedUtc": "2026-10-20T16:07:32.6576709Z",
+      "ExitCode": 1,
+      "Seconds": 99.9570996,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 6215,
+      "StderrRetainedBytes": 229,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-inherited-task-participant-recovery/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T16:07:21.2817861+00:00",
+      "State": "Completed",
+      "RunnerPid": 59496,
+      "ChildPid": 59036,
+      "ChildStartedUtc": "2026-10-20T16:07:21.3069712Z",
+      "ExitCode": 0,
+      "Seconds": 111.9172534,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T16:02:31.2336551+00:00",
+      "State": "Completed",
+      "RunnerPid": 54320,
+      "ChildPid": 18440,
+      "ChildStartedUtc": "2026-10-20T16:02:31.2677497Z",
+      "ExitCode": 0,
+      "Seconds": 0.1556668,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-task-participant-recovery/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T16:04:56.6519804+00:00",
+      "State": "Completed",
+      "RunnerPid": 54320,
+      "ChildPid": 9836,
+      "ChildStartedUtc": "2026-10-20T16:04:56.6563485Z",
+      "ExitCode": 0,
+      "Seconds": 0.5146321,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-task-participant-recovery/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T16:02:34.7010974+00:00",
+      "State": "Completed",
+      "RunnerPid": 54320,
+      "ChildPid": 39984,
+      "ChildStartedUtc": "2026-10-20T16:02:34.7167854Z",
+      "ExitCode": 0,
+      "Seconds": 141.9200635,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 466,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T16:02:31.4460351+00:00",
+      "State": "Completed",
+      "RunnerPid": 54320,
+      "ChildPid": 40860,
+      "ChildStartedUtc": "2026-10-20T16:02:31.4483417Z",
+      "ExitCode": 0,
+      "Seconds": 0.4322203,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T16:02:32.0271454+00:00",
+      "State": "Completed",
+      "RunnerPid": 54320,
+      "ChildPid": 37612,
+      "ChildStartedUtc": "2026-10-20T16:02:32.0302812Z",
+      "ExitCode": 0,
+      "Seconds": 2.6494544,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T16:02:31.8926239+00:00",
+      "State": "Completed",
+      "RunnerPid": 54320,
+      "ChildPid": 50572,
+      "ChildStartedUtc": "2026-10-20T16:02:31.8956977Z",
+      "ExitCode": 0,
+      "Seconds": 0.1201011,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "3a788f9a-4c04-4e1a-a964-0a9a32751ca9",
+      "testId": "eb9fe112-bb8f-0f09-e4d0-6d58300f5230",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Read_revocation_before_or_during_receipt_lookup_cannot_persist_or_disclose_confirmation(denial: SourceIdentity, duringLookup: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.4587366",
+      "startTime": "2026-10-20T12:08:32.1471769-04:00",
+      "endTime": "2026-10-20T12:08:36.6057628-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3a788f9a-4c04-4e1a-a964-0a9a32751ca9",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "de72eb3e-33c2-47ff-96ee-9c8d4e981413",
+      "testId": "84b2f45a-ebba-8f3f-e259-bd61993b517c",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Read_revocation_before_or_during_receipt_lookup_cannot_persist_or_disclose_confirmation(denial: Caller, duringLookup: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.7291484",
+      "startTime": "2026-10-20T12:08:27.4177035-04:00",
+      "endTime": "2026-10-20T12:08:32.1466061-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "de72eb3e-33c2-47ff-96ee-9c8d4e981413",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "b6cf18f5-f723-484c-829f-65405ee074a3",
+      "testId": "9a3e6cb6-0970-be5f-f802-38a45d565463",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Independent_recovery_cannot_steal_the_original_held_run_lease",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.8900952",
+      "startTime": "2026-10-20T12:08:54.8736171-04:00",
+      "endTime": "2026-10-20T12:08:59.7634649-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b6cf18f5-f723-484c-829f-65405ee074a3",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "6f490826-ae7e-4e6a-94cb-31083125de7f",
+      "testId": "d50c5ad2-deae-3903-06c6-76bebc10f696",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Read_revocation_before_or_during_receipt_lookup_cannot_persist_or_disclose_confirmation(denial: SourceIdentity, duringLookup: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.8043989",
+      "startTime": "2026-10-20T12:08:36.6063386-04:00",
+      "endTime": "2026-10-20T12:08:41.4107914-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6f490826-ae7e-4e6a-94cb-31083125de7f",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "5a2f86bf-4031-4138-835f-c932f3d489ba",
+      "testId": "3348b0a1-c0df-74a9-00be-3436e73b6363",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Owner_confirmation_preserves_original_result_disclosure_and_dispatch_claim(hasOriginalResult: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.2288205",
+      "startTime": "2026-10-20T12:07:34.8973122-04:00",
+      "endTime": "2026-10-20T12:07:39.1352218-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5a2f86bf-4031-4138-835f-c932f3d489ba",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "85e6adbf-554b-4784-b238-234e5343a85a",
+      "testId": "611acdff-c611-ece9-69e1-0f5ec768e82f",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Read_revocation_before_or_during_receipt_lookup_cannot_persist_or_disclose_confirmation(denial: Caller, duringLookup: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.3995494",
+      "startTime": "2026-10-20T12:08:45.9848516-04:00",
+      "endTime": "2026-10-20T12:08:50.3842388-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "85e6adbf-554b-4784-b238-234e5343a85a",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "abdbaa3b-43bc-4a11-a2e7-0dcd8bb20780",
+      "testId": "5a1c7a87-b207-f761-a2ea-e5865da8a61a",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Read_revocation_before_or_during_receipt_lookup_cannot_persist_or_disclose_confirmation(denial: Source, duringLookup: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.5728322",
+      "startTime": "2026-10-20T12:08:41.4116010-04:00",
+      "endTime": "2026-10-20T12:08:45.9841797-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "abdbaa3b-43bc-4a11-a2e7-0dcd8bb20780",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "822cff64-1cfb-48ba-bc9c-0de6816ac499",
+      "testId": "79b06ef7-7101-bb95-3145-8c2d0dcbcedd",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Interrupted_reconciliation_requires_exact_nonterminal_effect_session",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:23.3783936",
+      "startTime": "2026-10-20T12:08:04.0335473-04:00",
+      "endTime": "2026-10-20T12:08:27.4117014-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "822cff64-1cfb-48ba-bc9c-0de6816ac499",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "71456320-a059-4513-90f3-8d20fda84788",
+      "testId": "ea4ac470-7f00-430a-670c-8fe991b7212e",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.A_different_profile_or_original_source_cannot_acquire_the_inherited_recovery_lease(profileChanged: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.2185674",
+      "startTime": "2026-10-20T12:09:04.1528595-04:00",
+      "endTime": "2026-10-20T12:09:08.3711104-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "71456320-a059-4513-90f3-8d20fda84788",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "abaefab7-4a54-479b-bfd3-5cba6f87bd9c",
+      "testId": "2f174410-8e01-9621-cc69-d06a53cc027e",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Current_read_revocation_before_or_during_lookup_denies_historical_disclosure",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:17.8527502",
+      "startTime": "2026-10-20T12:07:46.1807297-04:00",
+      "endTime": "2026-10-20T12:08:04.0328214-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "abaefab7-4a54-479b-bfd3-5cba6f87bd9c",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "125d995c-ca7b-49e8-8728-790fb6967146",
+      "testId": "c4434353-cae6-4308-0621-8046124bcbb8",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Independent_journals_serialize_reconciliation_and_preserve_original_intent",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.5339808",
+      "startTime": "2026-10-20T12:07:42.6467638-04:00",
+      "endTime": "2026-10-20T12:07:46.1794709-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "125d995c-ca7b-49e8-8728-790fb6967146",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "265c8a9b-c167-4aab-b79d-b190a1a44f22",
+      "testId": "2000cb29-8714-5381-5d2b-a75fc1825563",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Owner_confirmation_preserves_original_result_disclosure_and_dispatch_claim(hasOriginalResult: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.5052861",
+      "startTime": "2026-10-20T12:07:39.1536661-04:00",
+      "endTime": "2026-10-20T12:07:42.6437153-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "265c8a9b-c167-4aab-b79d-b190a1a44f22",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "4b911ec4-9275-4d60-99be-1d112715f099",
+      "testId": "adeab993-e778-0a26-dd07-f2a5f593f8db",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Receipt_recovery_preserves_original_work_and_binding_without_dispatch_authority",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.0225165",
+      "startTime": "2026-10-20T12:09:08.3716521-04:00",
+      "endTime": "2026-10-20T12:09:12.3996729-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4b911ec4-9275-4d60-99be-1d112715f099",
+      "trx": "interrupted-recovery.trx",
+      "error": "\n          \nAssert.Equal() Failure: Values differ\r\nExpected: Running\r\nActual:   WaitingOnTool\n\n          \n   at CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Receipt_recovery_preserves_original_work_and_binding_without_dispatch_authority() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentInheritedEffectReconciliationTests.cs:line 38\r\n   at CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Receipt_recovery_preserves_original_work_and_binding_without_dispatch_authority() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentInheritedEffectReconciliationTests.cs:line 39\r\n   at CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Receipt_recovery_preserves_original_work_and_binding_without_dispatch_authority() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentInheritedEffectReconciliationTests.cs:line 39\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "13dcc13d-bc70-41fa-a90e-e54421982c30",
+      "testId": "e8e6568e-ccad-dd1f-bbbf-f8077e510a19",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.A_different_profile_or_original_source_cannot_acquire_the_inherited_recovery_lease(profileChanged: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.3881004",
+      "startTime": "2026-10-20T12:08:59.7639688-04:00",
+      "endTime": "2026-10-20T12:09:04.1521383-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "13dcc13d-bc70-41fa-a90e-e54421982c30",
+      "trx": "interrupted-recovery.trx"
+    },
+    {
+      "executionId": "93cd61de-e1c4-4d95-9377-7f26177a5ea3",
+      "testId": "a4b3beba-1b42-1c0b-6d80-aaee56765100",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedEffectReconciliationTests.Read_revocation_before_or_during_receipt_lookup_cannot_persist_or_disclose_confirmation(denial: Source, duringLookup: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.4881330",
+      "startTime": "2026-10-20T12:08:50.3855449-04:00",
+      "endTime": "2026-10-20T12:08:54.8729699-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "93cd61de-e1c4-4d95-9377-7f26177a5ea3",
+      "trx": "interrupted-recovery.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "beforeSnapshot": "snap-20261020145253-49194cb4",
+      "afterSnapshot": "snap-20261020151313-49194cb4",
+      "before": {
+        "types": 1149,
+        "members": 10033,
+        "registrations": 106
+      },
+      "after": {
+        "types": 1157,
+        "members": 10062,
+        "registrations": 110
+      },
+      "diagnosticsBefore": 207,
+      "diagnosticsAfter": 207,
+      "addedFindings": [
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-modules-workbench-ca-4e026fad2f6d",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "category": "Complexity",
+          "title": "Type with many members",
+          "description": "CanDoItAll.Modules.Workbench.ProjectTaskPlanProcessParticipant exposes 9 source members.",
+          "rationale": "Large types often become aggregation points for unrelated behavior.",
+          "confidence": 0.71,
+          "relatedIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-eea7066fa544"
+          ],
+          "source": {
+            "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectTaskPlanProcessParticipant.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 44,
+            "endColumn": 2
+          }
+        }
+      ],
+      "cycles": [
+        {
+          "level": "Module",
+          "nodeIds": [
+            "mod-proj-candoitall-modules-workbench-candoitall-module-0f477a149fbd",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-719c9c04c259",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-8728e66eb823",
+            "mod-proj-candoitall-modules-workbench-candoitall-modules-workbench"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-02c9ba5465b1",
+            "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-0f41c602b1fe",
+            "type-proj-candoitall-modules-workbench-candoitall-module-4b7d2fcd61a3"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-52c32b619f41",
+            "type-proj-candoitall-modules-workbench-candoitall-module-8069c738a25d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-60d3a4551568",
+            "type-proj-candoitall-modules-workbench-candoitall-module-b68d6311eb55",
+            "type-proj-candoitall-modules-workbench-candoitall-module-c69b5db5dd23"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-683329e17440",
+            "type-proj-candoitall-modules-workbench-candoitall-module-96caa8516513"
+          ]
+        }
+      ],
+      "review": "Workbench-only snapshot omits external reference edges; direct csproj unchanged and prior five-project graph used for boundary orientation. Existing package advisory/MSBuild diagnostics remain; not a clean analyzer claim. Shared provider removes concrete catalog, source, Project and participant dependencies, using two explicit origin adapters through one selector. Shared pure content preserves original prompt bytes. Source reads use existing Application ports; no runtime partial, project reference, service location or second provider. Original read remains separate from live publication and manager activation stays gated.",
+      "ownerLineCounts": {
+        "ProjectTaskPlanAgentParticipant": {
+          "before": 127,
+          "after": 107
+        },
+        "ProjectTaskPlanAgentToolProvider": {
+          "before": 111,
+          "after": 100
+        }
+      },
+      "promptInitializerUnchanged": true,
+      "promptInitializerSha256": "2C24FD6C1F3DF598510814BA49579ED2C10D506814CEEEE60600F7145D0551AC",
+      "addedFindingReview": "One type-member-count finding on inherited participant; its interface-required methods delegate shared content/result behavior, while original material reading is cohesive and independently tested. 45 source lines, no large runtime or partial growth. No new cycles; existing diagnostics remain.",
+      "coreRecoveryCorrection": "Existing AcquireInterruptedReconciliationAsync schema whitelist admits inherited version7. No new dependency, member, interface, runtime partial or product behavior in Core. Exact identity/current read/lease-mode/CAS unchanged. Ten focused tests verify inherited invariants; five legacy receipt cases and interactive runtime cover compatibility."
+    },
+    "discovery-review.json": {
+      "lanes": [
+        {
+          "lane": "interrupted-recovery",
+          "expected": 15,
+          "actual": 15
+        },
+        {
+          "lane": "participant-unit",
+          "expected": 11,
+          "actual": 11
+        },
+        {
+          "lane": "codecs",
+          "expected": 73,
+          "actual": 73
+        },
+        {
+          "lane": "registered-runtime",
+          "expected": 12,
+          "actual": 12
+        },
+        {
+          "lane": "interactive-regression",
+          "expected": 13,
+          "actual": 13
+        }
+      ],
+      "total": 124
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9696,
+      "runtimeFiles": 2850,
+      "sourceSha256": "5CF4F04B5AD14ECF13740BCDA96864DC6B1DA10D31F74D97BC8BB2570D283BB0",
+      "runtimeSha256": "7C2E5B285A0DE196760B025BF0D543FEC127ABB2B71D8AB849DB69772A8FA95E"
+    },
+    "final-resource-reconciliation.json": {
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_12460_20261020_120732_839.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ov1crtyf.0z5",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\mat-debug-48540.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\pgggdlej.mjf",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "outcome": "Fourteen of15 interrupted recovery cases pass. One assertion expected Running after confirmed recovery; existing recovery intentionally parks WaitingOnTool. Unchanged planning work/origin and forbidden dispatch assertions pass. Remaining109 pending. Historical cleanup blockers preserved.",
+      "postgres": [
+        "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "remainingObservedProcesses": [],
+      "recordedUtc": "2026-10-20T16:10:12.0904640+00:00",
+      "databaseNameDelta": []
+    },
+    "production-bridge.json": {
+      "previousCandidate": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-inherited-task-participant-regression-verified",
+      "sourceChanges": [
+        "codex/bundles/concurrent-mutations/plan/execution-plan.md",
+        "codex/bundles/concurrent-mutations/plan/p07-inherited-task-participant.md",
+        "codex/bundles/concurrent-mutations/readme.md",
+        "codex/bundles/concurrent-mutations/validation/2026-10-20-inherited-task-participant.md",
+        "src/maf/common/candoitall.agentframework.core/toolpolicy/agenttooladmissionjournal.effects.cs",
+        "tests/integration/candoitall.tests.integration/agentinheritedeffectreconciliationtests.cs",
+        "tests/integration/candoitall.tests.integration/projecttaskplanprocessruntimetests.cs"
+      ],
+      "runtimeChanges": [
+        "src/modules/candoitall.modules.workbench/bin/release/net10.0/candoitall.agentframework.core.dll",
+        "src/modules/candoitall.modules.workbench/bin/release/net10.0/candoitall.agentframework.core.pdb",
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.agentframework.core.dll",
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.agentframework.core.pdb",
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.dll",
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.pdb",
+        "tests/unit/candoitall.tests.unit/bin/release/net10.0/candoitall.agentframework.core.dll",
+        "tests/unit/candoitall.tests.unit/bin/release/net10.0/candoitall.agentframework.core.pdb"
+      ],
+      "review": "The single Core change admits inherited schema7 at AcquireInterruptedReconciliationAsync. Existing48 authority/history tests never call that entry; their Workbench owners and fixtures are unchanged. Reuse those48 with this explicit invalidation boundary. All124 selected current cases repeat on fresh binaries, including10 inherited recovery cases and5 legacy receipt cases. This is a production correction, not a production-unchanged bridge."
+    },
+    "observer-startup-failure.json": {
+      "recordedUtc": "2026-10-20T16:07:17.167757+00:00",
+      "started": false,
+      "testsExecuted": false,
+      "cause": "Two start attempts stopped before observer due copied inventory retaining old Core Effects/test source hashes. First repair assertion also stopped before writes. Exact changes reviewed, both pins and companion hash refreshed, new test pinned. No source/runtime input changed.",
+      "correction": [
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.Effects.cs",
+          "before": "592FE899074538C3B39DE1D978CF75B06B19FC159DC081320E64450427653CA4",
+          "after": "9B82C9458329093467318E81FA2032A706B8516412111701504EC1D02D5EA4F9",
+          "reason": "Only inherited schema7 added to existing receipt lease whitelist; no resource allocation changes."
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanProcessRuntimeTests.cs",
+          "before": "471307ADA74F236E12B35C6BEDF9711C36CEE87602FE424233376017C57D2C7C",
+          "after": "0F8D6D1B91AE0A8B68E3A1F50AC467829586B856B91F25782BABF66CDC4A6E8E",
+          "reason": "Expiry assertion reads retained result after exact refusal; existing fixture unchanged."
+        }
+      ]
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T16:07:21.2817861+00:00",
+      "observerSeconds": 111.9172534,
+      "commands": [
+        {
+          "command": "execute-interrupted-recovery",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T16:07:32.6279693+00:00",
+          "seconds": 99.9570996
+        }
+      ]
+    },
+    "observer-start-confirmation.json": {
+      "identityConfirmed": true,
+      "observerStartedUtc": "2026-10-20T16:07:21.3069712Z",
+      "observerPid": 59036,
+      "confirmedUtc": "2026-10-20T16:07:32.3126876+00:00"
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

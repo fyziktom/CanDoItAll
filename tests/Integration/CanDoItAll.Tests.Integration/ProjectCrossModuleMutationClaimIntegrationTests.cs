@@ -259,7 +259,8 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
             clock,
             ProcessingOptions,
             TimeProvider.System,
-            logger);
+            logger,
+            services.GetRequiredService<IProjectDeletionCompletionQuery>());
     }
 
     private static ProjectWorkbenchCrossModuleMutationService CreateMutationService(
@@ -292,7 +293,8 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
             services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>(),
             services.GetRequiredService<DbContextOptions<WorkbenchDbContext>>(),
             services.GetRequiredService<CoordinatedDatabaseTransaction>(),
-            services.GetRequiredService<ProjectWriteAdmissionService>());
+            services.GetRequiredService<ProjectWriteAdmissionService>(),
+            services.GetRequiredService<IProjectCreationCompensationGuard>());
     }
 
     private static async Task<bool> ClaimWhenReleasedAsync(

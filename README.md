@@ -230,6 +230,7 @@ Start with:
 
 - [Architecture overview](docs/architecture/overview.md)
 - [UI component seams](docs/architecture/ui-component-seams.md)
+- [Concurrent mutations architecture and implementation gates](docs/architecture/concurrent-mutations/README.md)
 - [Workbench operators WB5](docs/architecture/workbench-operators-wb5.md)
 - [Storage, paths, and host portability](docs/architecture/storage-and-path-portability.md)
 - [Runtime execution and shell portability](docs/architecture/runtime-execution-portability.md)

@@ -15,7 +15,7 @@ public enum AgentPackageImportFailureKind
 public sealed class AgentPackageImportException(
     AgentPackageImportFailureKind kind,
     string code,
-    string message) : InvalidOperationException(message)
+    string message, Exception? innerException = null) : InvalidOperationException(message, innerException)
 {
     public AgentPackageImportFailureKind Kind { get; } = kind;
     public string Code { get; } = code;
@@ -63,41 +63,47 @@ internal sealed class AgentPackageImportService(
         var requestFingerprint = CreateRequestFingerprint(command, imported.PackageSha256);
         AgentPackageImportReceipt? result = null;
 
-        await store.UpdateWorkspaceAsync(document =>
-        {
-            var previousOperation = document.AgentPackageImportOperations.FirstOrDefault(operation =>
-                string.Equals(operation.IdempotencyKey, command.IdempotencyKey, StringComparison.Ordinal));
-            if (previousOperation is not null)
+        try {
+            await store.UpdateWorkspaceAsync(document =>
             {
-                if (!string.Equals(previousOperation.RequestFingerprint, requestFingerprint, StringComparison.Ordinal))
+                var previousOperation = document.AgentPackageImportOperations.FirstOrDefault(operation =>
+                    string.Equals(operation.IdempotencyKey, command.IdempotencyKey, StringComparison.Ordinal));
+                if (previousOperation is not null)
                 {
-                    throw new AgentPackageImportException(
-                        AgentPackageImportFailureKind.Conflict,
-                        "agent-package.idempotency-conflict",
-                        "The idempotency key was already used with different package import parameters.");
+                    if (!string.Equals(previousOperation.RequestFingerprint, requestFingerprint, StringComparison.Ordinal))
+                    {
+                        throw new AgentPackageImportException(
+                            AgentPackageImportFailureKind.Conflict,
+                            "agent-package.idempotency-conflict",
+                            "The idempotency key was already used with different package import parameters.");
+                    }
+
+                    result = previousOperation.Receipt with { Replayed = true };
+                    return document;
                 }
 
-                result = previousOperation.Receipt with { Replayed = true };
-                return document;
-            }
+                var mutation = CreateMutation(document, imported, command);
+                var operation = new AgentPackageImportOperationRecord(
+                    command.IdempotencyKey,
+                    requestFingerprint,
+                    mutation.Receipt,
+                    DateTimeOffset.UtcNow);
+                result = mutation.Receipt;
 
-            var mutation = CreateMutation(document, imported, command);
-            var operation = new AgentPackageImportOperationRecord(
-                command.IdempotencyKey,
-                requestFingerprint,
-                mutation.Receipt,
-                DateTimeOffset.UtcNow);
-            result = mutation.Receipt;
-
-            return mutation.Document with
-            {
-                AgentPackageImportOperations = mutation.Document.AgentPackageImportOperations
-                    .Append(operation)
-                    .OrderByDescending(item => item.CompletedAtUtc)
-                    .Take(MaximumRetainedOperations)
-                    .ToList()
-            };
-        }, cancellationToken);
+                return mutation.Document with
+                {
+                    AgentPackageImportOperations = mutation.Document.AgentPackageImportOperations
+                        .Append(operation)
+                        .OrderByDescending(item => item.CompletedAtUtc)
+                        .Take(MaximumRetainedOperations)
+                        .ToList()
+                };
+            }, cancellationToken);
+        } catch (Exception conflict) when (conflict is SandboxWorkspacePublicationConflictException or SandboxWorkspaceConcurrencyException) {
+            throw new AgentPackageImportException(AgentPackageImportFailureKind.Conflict,
+                "agent-package.publication-conflict",
+                "Agent package publication conflicted with a concurrent workspace change. Read current state before submitting another explicit import.", conflict);
+        }
 
         return result ?? throw new InvalidOperationException("Agent package import completed without a receipt.");
     }
@@ -162,6 +168,8 @@ internal sealed class AgentPackageImportService(
             };
         }
 
+        resolvedAgent = AgentDecisionDataPolicyMetadata.Preserve(
+            document.Agents.SingleOrDefault(agent => agent.Id == resolvedAgent.Id), resolvedAgent);
         EnsureTemplateIdentityAvailable(document, resolvedAgent, command.Mode);
 
         var baseDocument = command.Mode == AgentPackageImportMode.ReplaceExactVersion

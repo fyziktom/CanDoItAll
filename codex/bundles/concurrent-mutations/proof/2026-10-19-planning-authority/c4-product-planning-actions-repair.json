@@ -1,0 +1,992 @@
+{
+  "candidate": "c4-product-planning-actions-repair",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-release-final",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T10:29:53.1572760+00:00",
+      "State": "Completed",
+      "RunnerPid": 46488,
+      "ChildPid": 59872,
+      "ChildStartedUtc": "2026-10-19T10:29:53.1640925Z",
+      "ExitCode": 0,
+      "Seconds": 33.1387632,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 175409,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-module-agent-framework-release-final",
+      "Arguments": [
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-19T10:28:21.8038121+00:00",
+      "State": "Completed",
+      "RunnerPid": 46488,
+      "ChildPid": 59180,
+      "ChildStartedUtc": "2026-10-19T10:28:21.8303760Z",
+      "ExitCode": 0,
+      "Seconds": 43.3319872,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 102394,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-unit-release-final",
+      "Arguments": [
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T10:29:05.1892397+00:00",
+      "State": "Completed",
+      "RunnerPid": 46488,
+      "ChildPid": 53148,
+      "ChildStartedUtc": "2026-10-19T10:29:05.1938420Z",
+      "ExitCode": 0,
+      "Seconds": 47.9497084,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 155582,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-19T10:29:15.9502696+00:00",
+      "State": "Completed",
+      "RunnerPid": 48192,
+      "ChildPid": 49296,
+      "ChildStartedUtc": "2026-10-19T10:29:15.9543934Z",
+      "ExitCode": 0,
+      "Seconds": 0.2908239,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 11961,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-product-planning-integration",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanExecutionActionTests|FullyQualifiedName~ProjectTaskPlanExecutionEntryTests",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T10:30:29.1760174+00:00",
+      "State": "Completed",
+      "RunnerPid": 46488,
+      "ChildPid": 53576,
+      "ChildStartedUtc": "2026-10-19T10:30:29.1792229Z",
+      "ExitCode": 0,
+      "Seconds": 2.0805234,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3439,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-product-planning-unit",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~RuntimePortDecoratorFallthroughTests",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T10:30:26.3186476+00:00",
+      "State": "Completed",
+      "RunnerPid": 46488,
+      "ChildPid": 36088,
+      "ChildStartedUtc": "2026-10-19T10:30:26.3216483Z",
+      "ExitCode": 0,
+      "Seconds": 2.8470539,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1494,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-19T10:29:09.7594136+00:00",
+      "State": "Completed",
+      "RunnerPid": 48192,
+      "ChildPid": 52268,
+      "ChildStartedUtc": "2026-10-19T10:29:09.7623624Z",
+      "ExitCode": 0,
+      "Seconds": 6.1751247,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-product-planning-integration",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanExecutionActionTests|FullyQualifiedName~ProjectTaskPlanExecutionEntryTests",
+        "--logger",
+        "trx;LogFileName=product-planning-integration.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-product-planning-actions-repair"
+      ],
+      "StartedUtc": "2026-10-19T10:31:05.8888674+00:00",
+      "State": "Completed",
+      "RunnerPid": 32792,
+      "ChildPid": 24860,
+      "ChildStartedUtc": "2026-10-19T10:31:05.8938521Z",
+      "ExitCode": 1,
+      "Seconds": 198.6599607,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 39359,
+      "StderrRetainedBytes": 791,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-product-planning-unit",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~RuntimePortDecoratorFallthroughTests",
+        "--logger",
+        "trx;LogFileName=product-planning-unit.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-product-planning-actions-repair"
+      ],
+      "StartedUtc": "2026-10-19T10:31:02.6934908+00:00",
+      "State": "Completed",
+      "RunnerPid": 32792,
+      "ChildPid": 32452,
+      "ChildStartedUtc": "2026-10-19T10:31:02.7307846Z",
+      "ExitCode": 0,
+      "Seconds": 3.1292191,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2264,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-product-planning-actions-repair/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-19T10:30:49.1508210+00:00",
+      "State": "Completed",
+      "RunnerPid": 12540,
+      "ChildPid": 29164,
+      "ChildStartedUtc": "2026-10-19T10:30:49.1694944Z",
+      "ExitCode": 0,
+      "Seconds": 215.8142496,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 55,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-product-planning-actions-repair/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-19T10:29:57.2205126+00:00",
+      "State": "Completed",
+      "RunnerPid": 60308,
+      "ChildPid": 848,
+      "ChildStartedUtc": "2026-10-19T10:29:57.2247444Z",
+      "ExitCode": 0,
+      "Seconds": 0.584881,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-final",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-product-planning-actions-repair/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-19T10:28:32.3666812+00:00",
+      "State": "Completed",
+      "RunnerPid": 60308,
+      "ChildPid": 49160,
+      "ChildStartedUtc": "2026-10-19T10:28:32.4000966Z",
+      "ExitCode": 0,
+      "Seconds": 84.7917098,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 454,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-final",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-19T10:29:06.9388528+00:00",
+      "State": "Completed",
+      "RunnerPid": 48192,
+      "ChildPid": 57052,
+      "ChildStartedUtc": "2026-10-19T10:29:06.9745920Z",
+      "ExitCode": 0,
+      "Seconds": 2.7523408,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "26d8e4dd-e89e-426b-b29f-cb8f7c6c0b8d",
+      "testId": "39b46839-bdfa-66de-616f-cbfc4a68e0cd",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Confirmed_basis_change_obeys_original_policy_and_bounded_replan(behavior: Fail)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:11.0092679",
+      "startTime": "2026-10-19T06:32:04.5928953-04:00",
+      "endTime": "2026-10-19T06:32:15.6011522-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "26d8e4dd-e89e-426b-b29f-cb8f7c6c0b8d",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "fe9465c1-b8e1-458a-ac66-5412d7cb79a5",
+      "testId": "55d8ae1c-1a2c-5489-e87f-c689f9ff4836",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Refused_provider_output_is_not_overwritten_as_success_and_preserves_usage(responseText: \"{\\\"unexpected\\\":true}\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:07.3458787",
+      "startTime": "2026-10-19T06:34:17.0454672-04:00",
+      "endTime": "2026-10-19T06:34:24.3912656-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fe9465c1-b8e1-458a-ac66-5412d7cb79a5",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "22590c53-82f9-4488-8d6d-20baa0fc07b2",
+      "testId": "d863fe6c-39ba-2afa-6044-04e2945d9cd2",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Planning_uses_its_original_scope_and_own_material_basis(mismatched: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.6604654",
+      "startTime": "2026-10-19T06:33:39.6233184-04:00",
+      "endTime": "2026-10-19T06:33:45.2836526-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "22590c53-82f9-4488-8d6d-20baa0fc07b2",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "41fd0285-46bf-4ebc-bdcf-85cd96de577c",
+      "testId": "2807b8bb-ec34-4004-8ac8-bf677b0d5271",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Confirmed_basis_change_obeys_original_policy_and_bounded_replan(behavior: PauseForReview)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.1040116",
+      "startTime": "2026-10-19T06:31:54.4886319-04:00",
+      "endTime": "2026-10-19T06:32:04.5914651-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "41fd0285-46bf-4ebc-bdcf-85cd96de577c",
+      "trx": "product-planning-integration.trx",
+      "error": "\n          \nCanDoItAll.AgentFramework.Core.AgentExecutionActivityPublicationException : Publishing agent execution activity phase 'AwaitingApproval' failed.\r\n---- System.InvalidOperationException : Agent execution activity at phase 'UsingTool' cannot end as 'Suspended'.\n\n          \n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.TerminalizePersistedActivity(IAgentExecutionActivityOperationLease activityOperation, ExecutionState completionState, AgentToolCompletionAssessment completionAssessment, Nullable`1 runOutcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2279\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.<>c__DisplayClass89_0.<<ApplyPlanningActionWithinOperationAsync>b__0>d.MoveNext() in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 295\r\n--- End of stack trace from previous location ---\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.ExecuteWithinActivityBoundaryAsync[TResult](IAgentExecutionActivityOperationLease activityOperation, Func`1 executeAsync) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2169\r\n   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.AwaitOwnedActivityOperationAsync[TResult](IAgentExecutionActivityOperationLease operation, Task`1 completion) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Workspace\\CurrentProfileAgentFrameworkWorkspaceService.cs:line 919\r\n   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.AwaitOwnedActivityOperationAsync[TResult](IAgentExecutionActivityOperationLease operation, Task`1 completion) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Workspace\\CurrentProfileAgentFrameworkWorkspaceService.cs:line 935\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Confirmed_basis_change_obeys_original_policy_and_bounded_replan(OnBasisChange behavior) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanExecutionActionTests.cs:line 104\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Confirmed_basis_change_obeys_original_policy_and_bounded_replan(OnBasisChange behavior) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanExecutionActionTests.cs:line 129\r\n--- End of stack trace from previous location ---\r\n----- Inner Stack Trace -----\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityTransitionRules.EnsureTerminalTransition(AgentExecutionActivityPhase current, AgentExecutionActivityTerminalOutcome outcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityTransitionRules.cs:line 37\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.TryTerminalize(AgentExecutionActivityTerminalOutcome outcome, String message, String errorCode) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 583\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.Terminalize(AgentExecutionActivityTerminalOutcome outcome, String message, String errorCode) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 563\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.Suspend(String message) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 516\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.TerminalizePersistedActivity(IAgentExecutionActivityOperationLease activityOperation, ExecutionState completionState, AgentToolCompletionAssessment completionAssessment, Nullable`1 runOutcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2272\n\n        "
+    },
+    {
+      "executionId": "bdf7ee9b-7736-4462-b627-533a87fd5d30",
+      "testId": "50d4a8e0-8ce4-cbb9-215a-c957c4df4161",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Refused_provider_output_is_not_overwritten_as_success_and_preserves_usage(responseText: \"\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:07.7529374",
+      "startTime": "2026-10-19T06:34:09.2922871-04:00",
+      "endTime": "2026-10-19T06:34:17.0450606-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bdf7ee9b-7736-4462-b627-533a87fd5d30",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "1dd8c444-686b-429b-aae9-4afa7f61ed79",
+      "testId": "e86b43af-7078-dfe1-3941-2d55e566617f",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Registered_execution_admits_persisted_policy_and_waits_for_original_review(automaticAgent: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:08.4638413",
+      "startTime": "2026-10-19T06:33:52.4093429-04:00",
+      "endTime": "2026-10-19T06:34:00.8729690-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1dd8c444-686b-429b-aae9-4afa7f61ed79",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "681a1f1a-3b19-4ac9-8e50-828ae8131273",
+      "testId": "70250a19-d874-4911-654c-0516e672469a",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Approval_publishes_original_plan_once_without_provider_dependency(disableProvider: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:13.6573609",
+      "startTime": "2026-10-19T06:31:29.6269845-04:00",
+      "endTime": "2026-10-19T06:31:43.2790158-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "681a1f1a-3b19-4ac9-8e50-828ae8131273",
+      "trx": "product-planning-integration.trx",
+      "error": "\n          \nCanDoItAll.AgentFramework.Core.AgentExecutionActivityPublicationException : Publishing agent execution activity phase 'Completed' failed.\r\n---- System.InvalidOperationException : Agent execution activity at phase 'UsingTool' cannot end as 'Succeeded'.\n\n          \n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.TerminalizePersistedActivity(IAgentExecutionActivityOperationLease activityOperation, ExecutionState completionState, AgentToolCompletionAssessment completionAssessment, Nullable`1 runOutcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2279\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.<>c__DisplayClass89_0.<<ApplyPlanningActionWithinOperationAsync>b__0>d.MoveNext() in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 295\r\n--- End of stack trace from previous location ---\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.ExecuteWithinActivityBoundaryAsync[TResult](IAgentExecutionActivityOperationLease activityOperation, Func`1 executeAsync) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2169\r\n   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.AwaitOwnedActivityOperationAsync[TResult](IAgentExecutionActivityOperationLease operation, Task`1 completion) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Workspace\\CurrentProfileAgentFrameworkWorkspaceService.cs:line 919\r\n   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.AwaitOwnedActivityOperationAsync[TResult](IAgentExecutionActivityOperationLease operation, Task`1 completion) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Workspace\\CurrentProfileAgentFrameworkWorkspaceService.cs:line 935\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Approval_publishes_original_plan_once_without_provider_dependency(Boolean disableProvider) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanExecutionActionTests.cs:line 25\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Approval_publishes_original_plan_once_without_provider_dependency(Boolean disableProvider) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanExecutionActionTests.cs:line 36\r\n--- End of stack trace from previous location ---\r\n----- Inner Stack Trace -----\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityTransitionRules.EnsureTerminalTransition(AgentExecutionActivityPhase current, AgentExecutionActivityTerminalOutcome outcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityTransitionRules.cs:line 37\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.TryTerminalize(AgentExecutionActivityTerminalOutcome outcome, String message, String errorCode) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 583\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.Terminalize(AgentExecutionActivityTerminalOutcome outcome, String message, String errorCode) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 563\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.Complete(String message) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 494\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.TerminalizePersistedActivity(IAgentExecutionActivityOperationLease activityOperation, ExecutionState completionState, AgentToolCompletionAssessment completionAssessment, Nullable`1 runOutcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2254\n\n        "
+    },
+    {
+      "executionId": "f7ea4ae0-2500-40d8-9e0b-9fe9840c9baa",
+      "testId": "0675249b-26f9-2288-37d1-2b4214c0f193",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Unsupported_planning_requests_refuse_before_run_admission(unsupported: AutomaticApproval)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.3902604",
+      "startTime": "2026-10-19T06:33:19.6506106-04:00",
+      "endTime": "2026-10-19T06:33:25.0406954-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f7ea4ae0-2500-40d8-9e0b-9fe9840c9baa",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "597b1a1b-2e3b-48ad-a992-c8a5ec9c7d35",
+      "testId": "bc5c1161-a6d4-e713-7eb9-654e34d76c40",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Changed_provider_contract_refuses_refresh_before_retiring_approval",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:09.2688815",
+      "startTime": "2026-10-19T06:32:58.2475948-04:00",
+      "endTime": "2026-10-19T06:33:07.5163179-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "597b1a1b-2e3b-48ad-a992-c8a5ec9c7d35",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "e6b7710a-f831-4bab-9c9c-cf35ef460494",
+      "testId": "806a7c25-0d99-94b1-3702-50dee8e9c392",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Refresh_renews_review_and_rejects_every_stale_action(staleAction: Refresh)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.6333830",
+      "startTime": "2026-10-19T06:32:36.9942634-04:00",
+      "endTime": "2026-10-19T06:32:47.6271500-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e6b7710a-f831-4bab-9c9c-cf35ef460494",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "5fc4f5fd-7235-4eb1-b148-4635875e9a72",
+      "testId": "17acb916-b118-82ab-746c-3e6b41d00fc8",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Registered_execution_admits_persisted_policy_and_waits_for_original_review(automaticAgent: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:08.4184811",
+      "startTime": "2026-10-19T06:34:00.8733655-04:00",
+      "endTime": "2026-10-19T06:34:09.2918300-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5fc4f5fd-7235-4eb1-b148-4635875e9a72",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "fb2f3c0e-80cd-4f41-8942-377e9436722c",
+      "testId": "a63714fd-08db-11a1-5e45-4f6e0aa89236",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Unsupported_planning_requests_refuse_before_run_admission(unsupported: UnknownOwner)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.8259084",
+      "startTime": "2026-10-19T06:33:07.5204016-04:00",
+      "endTime": "2026-10-19T06:33:13.3458532-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fb2f3c0e-80cd-4f41-8942-377e9436722c",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "7652f85f-f843-41e3-99bf-b5544be08903",
+      "testId": "54df87f5-29e7-b66f-751a-c4de2d91d847",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Planning_uses_its_original_scope_and_own_material_basis(mismatched: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:08.4329949",
+      "startTime": "2026-10-19T06:33:31.1899318-04:00",
+      "endTime": "2026-10-19T06:33:39.6228576-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7652f85f-f843-41e3-99bf-b5544be08903",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "9092ae30-c4a4-47de-83d1-c5dc3257cfc5",
+      "testId": "5251d024-b6fd-6a3c-e8cf-57cc8ce015f0",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Cancellation_during_transport_remains_cancelled_after_response_finalization",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:07.1247866",
+      "startTime": "2026-10-19T06:33:45.2841059-04:00",
+      "endTime": "2026-10-19T06:33:52.4087952-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9092ae30-c4a4-47de-83d1-c5dc3257cfc5",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "864dea95-f1ad-4e38-813c-6de42d104a67",
+      "testId": "f6d61d62-ff0e-fce2-c2d2-9c533a2a3372",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Confirmed_basis_change_obeys_original_policy_and_bounded_replan(behavior: Replan)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.0696760",
+      "startTime": "2026-10-19T06:32:15.6017883-04:00",
+      "endTime": "2026-10-19T06:32:25.6716577-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "864dea95-f1ad-4e38-813c-6de42d104a67",
+      "trx": "product-planning-integration.trx",
+      "error": "\n          \nSystem.InvalidOperationException : Agent execution activity cannot transition from 'UsingTool' to 'ResolvingPreparation'.\n\n          \n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityTransitionRules.EnsureProgressTransition(AgentExecutionActivityPhase current, AgentExecutionActivityPhase next) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityTransitionRules.cs:line 13\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.Report(AgentExecutionActivityPhase phase, String message) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 482\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.AcquireExecutionPreparationAsync(IAgentExecutionActivityOperationLease activityOperation, Guid agentId, Boolean atomicConsumer, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2970\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.RefreshPlanningAsync(IAgentExecutionActivityOperationLease operation, ExecutionRunRecord original, AgentPlanningActionRequest request, Boolean automatic, CancellationToken cancellationToken) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 302\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.<>c__DisplayClass89_0.<<ApplyPlanningActionWithinOperationAsync>b__0>d.MoveNext() in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 287\r\n--- End of stack trace from previous location ---\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.ExecuteWithinActivityBoundaryAsync[TResult](IAgentExecutionActivityOperationLease activityOperation, Func`1 executeAsync) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2169\r\n   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.AwaitOwnedActivityOperationAsync[TResult](IAgentExecutionActivityOperationLease operation, Task`1 completion) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Workspace\\CurrentProfileAgentFrameworkWorkspaceService.cs:line 919\r\n   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.AwaitOwnedActivityOperationAsync[TResult](IAgentExecutionActivityOperationLease operation, Task`1 completion) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Workspace\\CurrentProfileAgentFrameworkWorkspaceService.cs:line 935\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Confirmed_basis_change_obeys_original_policy_and_bounded_replan(OnBasisChange behavior) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanExecutionActionTests.cs:line 104\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Confirmed_basis_change_obeys_original_policy_and_bounded_replan(OnBasisChange behavior) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanExecutionActionTests.cs:line 129\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "6c73a3a0-ae1f-43bf-a81f-d0e07f7db907",
+      "testId": "fe6eab6f-1b80-efdb-e524-f2a6be07b5a9",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Unsupported_planning_requests_refuse_before_run_admission(unsupported: Attachments)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.1483551",
+      "startTime": "2026-10-19T06:33:25.0411664-04:00",
+      "endTime": "2026-10-19T06:33:31.1894556-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6c73a3a0-ae1f-43bf-a81f-d0e07f7db907",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "0450975e-54fe-4552-b15c-ca9b05c74cf6",
+      "testId": "c4e4e5bd-0bc6-47db-bb96-7c4528ad437e",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Refresh_renews_review_and_rejects_every_stale_action(staleAction: Cancel)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.6196173",
+      "startTime": "2026-10-19T06:32:47.6276689-04:00",
+      "endTime": "2026-10-19T06:32:58.2470923-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0450975e-54fe-4552-b15c-ca9b05c74cf6",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "d5166be2-8a41-4faf-aeb7-552913e96ebb",
+      "testId": "3acef196-ec99-70ab-d737-79a3accf32f1",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionEntryTests.Unsupported_planning_requests_refuse_before_run_admission(unsupported: Background)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.3039183",
+      "startTime": "2026-10-19T06:33:13.3463625-04:00",
+      "endTime": "2026-10-19T06:33:19.6501146-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d5166be2-8a41-4faf-aeb7-552913e96ebb",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "1a849d49-f3d7-42c1-ae7f-71aefd858e28",
+      "testId": "2d73609d-f2d6-8741-5585-64e4eba7820f",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Approval_publishes_original_plan_once_without_provider_dependency(disableProvider: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:11.2070773",
+      "startTime": "2026-10-19T06:31:43.2846898-04:00",
+      "endTime": "2026-10-19T06:31:54.4866913-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1a849d49-f3d7-42c1-ae7f-71aefd858e28",
+      "trx": "product-planning-integration.trx",
+      "error": "\n          \nCanDoItAll.AgentFramework.Core.AgentExecutionActivityPublicationException : Publishing agent execution activity phase 'Completed' failed.\r\n---- System.InvalidOperationException : Agent execution activity at phase 'UsingTool' cannot end as 'Succeeded'.\n\n          \n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.TerminalizePersistedActivity(IAgentExecutionActivityOperationLease activityOperation, ExecutionState completionState, AgentToolCompletionAssessment completionAssessment, Nullable`1 runOutcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2279\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.<>c__DisplayClass89_0.<<ApplyPlanningActionWithinOperationAsync>b__0>d.MoveNext() in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 295\r\n--- End of stack trace from previous location ---\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.ExecuteWithinActivityBoundaryAsync[TResult](IAgentExecutionActivityOperationLease activityOperation, Func`1 executeAsync) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2169\r\n   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.AwaitOwnedActivityOperationAsync[TResult](IAgentExecutionActivityOperationLease operation, Task`1 completion) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Workspace\\CurrentProfileAgentFrameworkWorkspaceService.cs:line 919\r\n   at CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService.AwaitOwnedActivityOperationAsync[TResult](IAgentExecutionActivityOperationLease operation, Task`1 completion) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Workspace\\CurrentProfileAgentFrameworkWorkspaceService.cs:line 935\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Approval_publishes_original_plan_once_without_provider_dependency(Boolean disableProvider) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanExecutionActionTests.cs:line 25\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Approval_publishes_original_plan_once_without_provider_dependency(Boolean disableProvider) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanExecutionActionTests.cs:line 36\r\n--- End of stack trace from previous location ---\r\n----- Inner Stack Trace -----\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityTransitionRules.EnsureTerminalTransition(AgentExecutionActivityPhase current, AgentExecutionActivityTerminalOutcome outcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityTransitionRules.cs:line 37\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.TryTerminalize(AgentExecutionActivityTerminalOutcome outcome, String message, String errorCode) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 583\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.Terminalize(AgentExecutionActivityTerminalOutcome outcome, String message, String errorCode) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 563\r\n   at CanDoItAll.AgentFramework.Core.AgentExecutionActivityOperation.Complete(String message) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentExecutionActivityCoordinator.cs:line 494\r\n   at CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService.TerminalizePersistedActivity(IAgentExecutionActivityOperationLease activityOperation, ExecutionState completionState, AgentToolCompletionAssessment completionAssessment, Nullable`1 runOutcome) in C:\\repositories\\CanDoItAll\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\Execution\\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:line 2254\n\n        "
+    },
+    {
+      "executionId": "10abbdfc-b504-438c-9e5d-50c4d124dd3b",
+      "testId": "57df2310-6b58-7b9a-9a45-9c3a4a4ca681",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Refresh_renews_review_and_rejects_every_stale_action(staleAction: Approve)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:11.3214081",
+      "startTime": "2026-10-19T06:32:25.6730784-04:00",
+      "endTime": "2026-10-19T06:32:36.9935060-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "10abbdfc-b504-438c-9e5d-50c4d124dd3b",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "111ba03e-024f-4ad2-8b03-2a63db65229d",
+      "testId": "9f3ef265-2366-53d1-a6b7-aa545b51d67d",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanExecutionActionTests.Unconfirmed_commit_preserves_original_work_and_cannot_refresh_or_cancel_it",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:21.3804603",
+      "startTime": "2026-10-19T06:31:08.2254504-04:00",
+      "endTime": "2026-10-19T06:31:29.6131948-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "111ba03e-024f-4ad2-8b03-2a63db65229d",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "6076c772-1c61-4dbb-a65b-bf346840f95f",
+      "testId": "727f9c24-6c40-3733-8819-d8f296f65003",
+      "testName": "CanDoItAll.Tests.Unit.AgentFramework.RuntimePortDecoratorFallthroughTests.Production_decorator_chain_preserves_saved_dispatch_capability_identity_and_cancellation(support: OriginalPreparedOwnerEffect, cancelled: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0108567",
+      "startTime": "2026-10-19T06:31:05.6839810-04:00",
+      "endTime": "2026-10-19T06:31:05.6840334-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6076c772-1c61-4dbb-a65b-bf346840f95f",
+      "trx": "product-planning-unit.trx"
+    },
+    {
+      "executionId": "5ff3c218-462a-4ce4-b27c-87387ef9b5b6",
+      "testId": "fdfa4564-281a-1fe5-16b6-d304b89ae329",
+      "testName": "CanDoItAll.Tests.Unit.AgentFramework.RuntimePortDecoratorFallthroughTests.ScenarioHarness_diagnostics_decorator_delegates_to_inner_for_every_other_provider",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0004602",
+      "startTime": "2026-10-19T06:31:05.6872669-04:00",
+      "endTime": "2026-10-19T06:31:05.6876807-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5ff3c218-462a-4ce4-b27c-87387ef9b5b6",
+      "trx": "product-planning-unit.trx"
+    },
+    {
+      "executionId": "471da139-8921-4fc5-b16e-c3f252f23ece",
+      "testId": "71aaaf9b-7989-b26a-d2fe-4ea5cc4af46c",
+      "testName": "CanDoItAll.Tests.Unit.AgentFramework.RuntimePortDecoratorFallthroughTests.ProcessMock_diagnostics_decorator_delegates_to_inner_for_every_other_provider",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0012780",
+      "startTime": "2026-10-19T06:31:05.6859040-04:00",
+      "endTime": "2026-10-19T06:31:05.6871556-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "471da139-8921-4fc5-b16e-c3f252f23ece",
+      "trx": "product-planning-unit.trx"
+    },
+    {
+      "executionId": "137fb53e-bb6a-4196-92bc-b8f952e0a755",
+      "testId": "99bccc52-8475-6334-e654-e9f83097206e",
+      "testName": "CanDoItAll.Tests.Unit.AgentFramework.RuntimePortDecoratorFallthroughTests.Production_decorator_chain_preserves_saved_dispatch_capability_identity_and_cancellation(support: OriginalPreparedOwnerEffect, cancelled: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0002516",
+      "startTime": "2026-10-19T06:31:05.6856067-04:00",
+      "endTime": "2026-10-19T06:31:05.6857885-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "137fb53e-bb6a-4196-92bc-b8f952e0a755",
+      "trx": "product-planning-unit.trx"
+    },
+    {
+      "executionId": "ea28f6d6-d1f1-40ee-9c38-26109cbd698c",
+      "testId": "c95b8e61-4bb8-ba9a-8cbf-b0ed647e3701",
+      "testName": "CanDoItAll.Tests.Unit.AgentFramework.RuntimePortDecoratorFallthroughTests.Production_decorator_chain_preserves_saved_dispatch_capability_identity_and_cancellation(support: Unsupported, cancelled: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0016105",
+      "startTime": "2026-10-19T06:31:05.6841273-04:00",
+      "endTime": "2026-10-19T06:31:05.6855188-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ea28f6d6-d1f1-40ee-9c38-26109cbd698c",
+      "trx": "product-planning-unit.trx"
+    },
+    {
+      "executionId": "bf6fad3b-ceeb-4da5-8a16-fc3aa110e6a6",
+      "testId": "bfa16116-d664-9694-11d4-2c6c7f9e2cbe",
+      "testName": "CanDoItAll.Tests.Unit.AgentFramework.RuntimePortDecoratorFallthroughTests.ProcessMock_diagnostics_decorator_never_reaches_inner_for_the_process_mock_provider",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0253989",
+      "startTime": "2026-10-19T06:31:05.6832640-04:00",
+      "endTime": "2026-10-19T06:31:05.6833338-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bf6fad3b-ceeb-4da5-8a16-fc3aa110e6a6",
+      "trx": "product-planning-unit.trx"
+    },
+    {
+      "executionId": "a98ca08c-aa40-434b-b93f-88ae2fe33fa0",
+      "testId": "5a5d763c-0eb8-ce16-2693-fea867f02255",
+      "testName": "CanDoItAll.Tests.Unit.AgentFramework.RuntimePortDecoratorFallthroughTests.ScenarioHarness_diagnostics_decorator_never_reaches_inner_for_the_scenario_provider",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0248088",
+      "startTime": "2026-10-19T06:31:05.6716425-04:00",
+      "endTime": "2026-10-19T06:31:05.6736154-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a98ca08c-aa40-434b-b93f-88ae2fe33fa0",
+      "trx": "product-planning-unit.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "snapshotId": "snap-20261019102045-507dae55",
+      "scope": [
+        {
+          "name": "CanDoItAll.AgentFramework.Core",
+          "documents": 239
+        },
+        {
+          "name": "CanDoItAll.Modules.AgentFramework",
+          "documents": 249
+        },
+        {
+          "name": "CanDoItAll.Modules.Workbench",
+          "documents": 386
+        }
+      ],
+      "hasBlockingErrors": true,
+      "diagnostics": {
+        "DEP0002": 2,
+        "DI0001": 36,
+        "DI0002": 5,
+        "WS0002": 189
+      },
+      "cycles": [
+        {
+          "level": "Module",
+          "nodes": [
+            "CanDoItAll.Modules.AgentFramework.Hosting",
+            "CanDoItAll.Modules.AgentFramework"
+          ]
+        },
+        {
+          "level": "Module",
+          "nodes": [
+            "CanDoItAll.Modules.Workbench.CanvasAdapters",
+            "CanDoItAll.Modules.Workbench.Pages",
+            "CanDoItAll.Modules.Workbench.ProjectStructure",
+            "CanDoItAll.Modules.Workbench"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.AgentFramework.Core.AgentPlanningDecisionOwner",
+            "CanDoItAll.AgentFramework.Core.AgentToolAdmissionJournal",
+            "CanDoItAll.AgentFramework.Core.AgentPlanningLiveWork",
+            "CanDoItAll.AgentFramework.Core.AgentToolInvocationClaim",
+            "CanDoItAll.AgentFramework.Core.AgentToolReceiptReconciliationClaim",
+            "CanDoItAll.AgentFramework.Core.IAgentToolReceiptReconciliationProvider",
+            "CanDoItAll.AgentFramework.Core.AgentToolInvocationPublicationLease",
+            "CanDoItAll.AgentFramework.Core.AgentToolRunLease"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.AgentFramework.Core.IAgentToolHistoricalReceiptReadProvider",
+            "CanDoItAll.AgentFramework.Core.AgentToolHistoricalReceiptReadClaim"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.AgentFramework.Core.AgentReferenceDataCache.AgentReferenceDataCacheEntry",
+            "CanDoItAll.AgentFramework.Core.AgentReferenceDataCache"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+            "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.Modules.Workbench.ProjectProcessLaunchAuthorityService.ProjectProcessProjectAuthorityLease",
+            "CanDoItAll.Modules.Workbench.ProjectProcessLaunchAuthorityService"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.Modules.Workbench.ProjectAgentSourceMutationAuthority",
+            "CanDoItAll.Modules.Workbench.ProjectAgentSourceMutationLease"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.Modules.Workbench.ProjectPackageService",
+            "CanDoItAll.Modules.Workbench.ProjectPackageStorageImporter"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService.WorkflowReadSourceLease",
+            "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService.MappedProcessSourceLease"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.Modules.Workbench.ProjectAgentNativeMutationScope",
+            "CanDoItAll.Modules.Workbench.ProjectAgentNativeMutationService"
+          ]
+        }
+      ],
+      "projectReferenceEdges": 3,
+      "review": {
+        "status": "PassWithFollowUp",
+        "afterSnapshotChanges": "Only ScenarioHarnessExecutionDecorator and ProcessMockExecutionDecorator gained direct forwarding of the existing saved-effect capability/method. Existing runtime-port references, construction, ordinary provider branches and all other production files are unchanged; production-bridge.json records exact identities.",
+        "proofLimit": "Saved publication remains pending the repaired actual registered path. Existing graph cycles/package diagnostics are retained."
+      }
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9234,
+      "runtimeFiles": 6436,
+      "sourceSha256": "A2033A59B3E36A66A1A21D46C943BE80BE612963B23AE6637AF1D6C1E19E9215",
+      "runtimeSha256": "4EF6F8C52438602246867AE0520A3D5B6E9C4F56CD981D71F5AB09DDD8F74447"
+    },
+    "final-resource-reconciliation.json": {
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\18c7df19-96b0-4dae-98f5-de1f3291552e.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_32452_20261019_063102_997.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\selhez43.rgd",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\lbr0bqwt.cxz",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\xyziaqnz.3zh",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_24860_20261019_063106_117.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\rlnzbiue.dum",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "recordedUtc": "2026-10-19T10:37:37.5873232+00:00",
+      "remainingObservedProcesses": [],
+      "outcome": "Four activity reporting transitions failed after acknowledged planning actions; immutable failed evidence retained",
+      "databaseNameDelta": []
+    },
+    "production-bridge.json": {
+      "previousCandidate": "c4-product-planning-actions-validation",
+      "unchangedProductionFiles": 5227,
+      "changes": [
+        {
+          "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockRuntimePortDecorators.cs",
+          "before": "EB6C71ABE6E44A5FFB8F2A4C9BB46DA38F6B1E6077D025FA5D7284DBD2332D97",
+          "after": "DFB23A065A1AB7BA20456FDF1311C44C75DDC52ADDAFCD4D6D9BE6792116CD00"
+        },
+        {
+          "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Hosting/ScenarioHarnessRuntimePortDecorators.cs",
+          "before": "3C0AB59228EDDFC71E0C1717674C06A9C8C5BFBF8B5A826F3B7A5099653E9071",
+          "after": "912C1B1E1BA1A0E919338BEB7B7C5FAC2CBB396822280E7FEECBF675DE101CE0"
+        }
+      ]
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-19T10:30:49.1508210+00:00",
+      "observerSeconds": 215.8142496,
+      "commands": [
+        {
+          "command": "execute-product-planning-integration",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-19T10:31:05.8888674+00:00",
+          "seconds": 198.6599607
+        },
+        {
+          "command": "execute-product-planning-unit",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-19T10:31:02.6934908+00:00",
+          "seconds": 3.1292191
+        }
+      ]
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

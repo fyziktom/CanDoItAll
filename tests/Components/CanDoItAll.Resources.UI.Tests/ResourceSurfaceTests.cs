@@ -107,9 +107,9 @@ public sealed class ResourceSurfaceTests {
         var interaction = cut.FindComponent<FileInteraction>();
         Assert.False(interaction.Instance.AllowModeSwitch);
         Assert.Equal(16 * 1024 * 1024, interaction.Instance.MaximumContentBytes);
-        Assert.Equal(receipt.Observation!.ResourceId, browse.Preview!.ResourceId);
+        Assert.Equal(receipt.Snapshot!.Expected.ResourceId, browse.Preview!.ResourceId);
         cut.WaitForAssertion(() => Assert.Contains("Owned synthetic Resources content", cut.Markup, StringComparison.Ordinal));
-        await cut.InvokeAsync(() => registry.SelectAsync(receipt.Observation.ResourceId));
+        await cut.InvokeAsync(() => registry.SelectAsync(receipt.Snapshot.Expected.ResourceId));
         cut.Find("[data-testid='resources-tab-registry']").Click();
         Assert.NotNull(cut.Find("[data-testid='resource-governed-storage-object']"));
         Assert.Empty(cut.FindComponents<EditForm>());

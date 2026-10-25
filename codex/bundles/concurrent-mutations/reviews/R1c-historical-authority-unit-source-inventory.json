@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceOnlyUnbuiltUnexecuted",
+  "newUnitFacts": 2,
+  "fullPartialClassProspectiveRows": 39,
+  "inputs": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CanonicalAgentExecutionAuthorityResolverTests.HistoricalRead.cs",
+      "mainBaseSha256": null,
+      "sha256": "4F58D6441C67DBE1C96C3BB1C41FCAED82B1AE9C2010FB18BCF9C64ED135B4CC",
+      "bytes": 17400
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-authority-unit-source.md",
+      "mainBaseSha256": null,
+      "sha256": "C71D9E5F6AEDB8DCE02160B08A83F79817390CC3B9BB5A39447423ACB746C5BE",
+      "bytes": 3203
+    }
+  ]
+}

@@ -84,3 +84,18 @@ provider is registered.
 - Agent execution activity and runtime snapshots: `docs/architecture/internal-communication.md`
 - Process/MAF/provider implementation map: `docs/architecture/internal-communication.md`
 - Runtime execution and shell portability: `docs/architecture/runtime-execution-portability.md`
+
+## Cancellation registration lifetime
+
+`AgentExecutionCancellationRegistry` requires a logger. Exact and upstream signals mark
+the token immediately and dispatch consumer callbacks through one owned asynchronous
+notification. Repeated signals reuse it. `Dispose` closes the registration without
+waiting; `DisposeAsync` also waits for notification and release. An in-flight notification
+retains its exact execution identity, preventing a replacement from overlapping cleanup.
+Callback failures are reported with execution identity/count/type without callback data.
+
+Owners must finish token use before disposing. A callback may call synchronous Dispose;
+it must not synchronously await its own DisposeAsync completion. Late callback registration
+on an already cancelled token follows normal .NET synchronous registration semantics.
+Cancellation notification alone does not prove terminal execution or settled work; those
+remain the durable journal and Process accounting owners' responsibility.

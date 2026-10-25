@@ -41,7 +41,10 @@ public sealed class AiProvidersDatabaseTransferHandler(ISecretDatabaseTransferPa
     }
 
     public Task<DatabaseTransferItemResult> TransferAsync(DatabaseTransferOperation context, CancellationToken cancellationToken = default)
-        => operations.RunTransferAsync(context, (transfer, token) => TransferCoreAsync(transfer, token),
+        => operations.RunTransferAsync(context, new([
+            typeof(ProviderProfile), typeof(ProviderSharePublication), typeof(SharedProviderSource), typeof(SharedProviderImport),
+            typeof(SharedProviderInvocationRecord), typeof(SharedProviderServiceIdentity), .. secretTransfer.TargetEntityTypes
+        ]), (transfer, token) => TransferCoreAsync(transfer, token),
             allowInMemoryTest: true, cancellationToken: cancellationToken);
 
     private async Task<DatabaseTransferItemResult> TransferCoreAsync(DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken) {

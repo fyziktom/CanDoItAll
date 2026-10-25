@@ -1,5 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Infrastructure.ControlPlane;
 
@@ -7,7 +8,8 @@ public sealed class DatabaseTransferService(
     IDatabaseProfileService profileService,
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IProfileAppDbContextFactory dbContextFactory,
-    IEnumerable<IDatabaseTransferHandler> handlers) : IDatabaseTransferService {
+    IEnumerable<IDatabaseTransferHandler> handlers,
+    ILogger<DatabaseTransferService> logger) : IDatabaseTransferService {
     private readonly IReadOnlyList<IDatabaseTransferHandler> _handlers = handlers
         .OrderBy(handler => handler.Descriptor.SortOrder)
         .ThenBy(handler => handler.Descriptor.Label, StringComparer.OrdinalIgnoreCase)
@@ -114,15 +116,13 @@ public sealed class DatabaseTransferService(
         var sourceProfile = profileAccessor.ResolveProfile(request.SourceProfileId);
         var targetProfile = profileAccessor.ResolveProfile(request.TargetProfileId);
 
-        await using var sourceDbContext = await dbContextFactory.CreateDbContextForProfileAsync(sourceProfile, cancellationToken);
-        await using var targetDbContext = await dbContextFactory.CreateDbContextForProfileAsync(targetProfile, cancellationToken);
-        await EnsureCanOpenAsync(sourceDbContext, cancellationToken);
-        await EnsureCanOpenAsync(targetDbContext, cancellationToken);
+        await using (var sourceDbContext = await dbContextFactory.CreateDbContextForProfileAsync(sourceProfile, cancellationToken)) {
+            await using var targetDbContext = await dbContextFactory.CreateDbContextForProfileAsync(targetProfile, cancellationToken);
+            await EnsureCanOpenAsync(sourceDbContext, cancellationToken);
+            await EnsureCanOpenAsync(targetDbContext, cancellationToken);
+        }
 
-        var context = new DatabaseTransferOperation(
-            sourceProfile,
-            targetProfile,
-            request.ReplaceExisting);
+        var context = new DatabaseTransferOperation(sourceProfile, targetProfile, request.ReplaceExisting);
 
         foreach (var handler in selectedHandlers) {
             results.Add(await TransferHandlerAsync(handler, context, cancellationToken));
@@ -148,12 +148,22 @@ public sealed class DatabaseTransferService(
         }
     }
 
-    private static async Task<DatabaseTransferItemResult> TransferHandlerAsync(
+    private async Task<DatabaseTransferItemResult> TransferHandlerAsync(
         IDatabaseTransferHandler handler,
         DatabaseTransferOperation context,
         CancellationToken cancellationToken) {
         try {
             return await handler.TransferAsync(context, cancellationToken);
+        } catch (DatabaseTransferCommittedException exception) when (
+            exception.SourceProfileId == context.SourceProfile.Profile.Id && exception.TargetProfileId == context.TargetProfile.Profile.Id &&
+            exception.CommittedResult.Key == handler.Descriptor.Key) {
+            logger.LogWarning("Database transfer {TransferKey} from profile {SourceProfileId} to profile {TargetProfileId} committed {RecordsCopied} records; cleanup requires operator review. FailureType={FailureType}.",
+                handler.Descriptor.Key, exception.SourceProfileId, exception.TargetProfileId, exception.CommittedResult.RecordsCopied,
+                exception.InnerException?.GetType().Name);
+            return exception.CommittedResult with {
+                Warning = DatabaseTransferWarning.PostCommitCleanupIncomplete,
+                Message = "The target data committed, but connection or transaction cleanup did not finish. Inspect the target and connection health; do not repeat this transfer."
+            };
         } catch (Exception ex) {
             return new DatabaseTransferItemResult(
                 handler.Descriptor.Key,

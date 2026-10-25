@@ -28,6 +28,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
@@ -75,6 +76,9 @@ public static class RuntimeHostServiceCollectionExtensions
             IProviderHttpClientSelector,
             SharedProviderRuntimeHttpClientSelector>();
         services.AddProjectsModule();
+        services.AddFiniteOperationPools();
+        services.AddHostedService<FiniteOperationMaintenance>();
+        services.Configure<ProjectDefinitionOperationOptions>(configuration.GetSection(ProjectDefinitionOperationOptions.SectionName));
         services.AddCanDoItAllMemory(configuration);
         services.AddWorkbenchModule(configuration);
         services.AddResourcesModule();
@@ -105,6 +109,36 @@ public static class RuntimeHostServiceCollectionExtensions
         services.TryAddSingleton<ProjectStructureProcessProposalCodec>();
         services.TryAddScoped<ProjectStructureProcessToolAdmission>();
         services.AddScoped<IAgentToolReceiptReconciliationProvider>(provider => provider.GetRequiredService<ProjectStructureProcessToolAdmission>());
+        services.TryAddScoped<ProjectDefinitionToolAdmission>();
+        services.TryAddScoped<ProjectDefinitionToolReceiptRecovery>();
+        services.AddScoped<IAgentToolReceiptReconciliationProvider, ProjectDefinitionToolReceiptRecovery>();
+        services.TryAddScoped<ProjectLifecycleToolAdmission>();
+        services.TryAddScoped<ProjectCreatedTargetProvenance>();
+        services.TryAddScoped<ProjectLifecycleToolReceiptRecovery>();
+        services.AddScoped<IAgentToolReceiptReconciliationProvider, ProjectLifecycleToolReceiptRecovery>();
+        services.TryAddScoped<Func<AgentHistoricalCatalogBasis, AgentHistoricalReceiptReadParticipants>>(provider => {
+            var original = provider.GetRequiredService<IProcessOriginalReceiptAuthorityReader>();
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            var generations = provider.GetRequiredService<IAgentExecutionProfileGenerationSource>();
+            var admissions = provider.GetRequiredService<ProjectWriteAdmissionService>();
+            var options = provider.GetRequiredService<IOptionsMonitor<ApiAccessOptions>>();
+            var clock = provider.GetRequiredService<TimeProvider>();
+            var receipts = provider.GetRequiredService<ProjectDefinitionReceiptReader>();
+            var lifecycleReceipts = provider.GetRequiredService<ProjectLifecycleReceiptReader>();
+            var planningReceipts = provider.GetRequiredService<ProjectTaskPlanReceiptReader>();
+            var selectedProcessContracts = provider.GetServices<ProcessDecisionExecutionRegistration>().ToArray();
+            var lifecycleCodec = provider.GetRequiredService<IProjectLifecycleRecoveryCodec>();
+            var createdTargets = provider.GetRequiredService<ProjectCreatedTargetProvenance>();
+            return basis => {
+                var processRead = new ProjectProcessHistoricalReadAuthority(original, database, generations, basis, admissions, options, clock);
+                var definitions = new ProjectDefinitionHistoricalReceiptRecovery(basis, processRead, admissions, receipts, createdTargets);
+                return new AgentHistoricalReceiptReadParticipants(
+                    [new ProcessHistoricalReceiptSourcePolicy(original, database, generations, processRead, selectedProcessContracts)],
+                    [definitions, new ProjectLifecycleHistoricalReceiptRecovery(definitions, createdTargets, lifecycleReceipts, lifecycleCodec),
+                        new ProjectTaskPlanHistoricalReceiptRecovery(definitions, planningReceipts, processRead)]);
+            };
+        });
+        services.TryAddScoped<Func<IAgentHistoricalReceiptReviewService>>(provider => () => provider.GetRequiredService<IAgentHistoricalReceiptReviewService>());
         services.TryAddScoped<IWorkflowScheduledSourceAuthorityPolicy, ProjectScheduledWorkflowSourceAuthorityPolicy>();
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
@@ -207,18 +241,21 @@ public static class RuntimeHostServiceCollectionExtensions
     public static IServiceCollection AddCanDoItAllRuntimeDatabaseSwitching(this IServiceCollection services)
     {
         services.AddSingleton<IAppDatabaseBootstrapper, AppDatabaseBootstrapper>();
+        services.AddSingleton<DatasetActivationCoordinator>();
         services.AddSingleton<IDatabaseSwitchCoordinator, DatabaseSwitchCoordinator>();
         return services;
     }
 }
 
 public sealed class AppDatabaseBootstrapper(
+    FiniteOperationReceiptMaintenance receiptMaintenance,
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IDatabaseDriverRegistry driverRegistry,
     IProfileAppDbContextFactory dbContextFactory,
     EnvironmentSecretBootstrapService secretBootstrap,
     ProviderDefaultsBootstrapService providerBootstrap,
     WorkspaceDefaultsBootstrapService workspaceBootstrap,
+    DatasetActivationCoordinator datasetActivation,
     IEnumerable<IProviderRuntimeProfileSnapshotInitializer>
         providerRuntimeProfileSnapshotInitializers,
     ILogger<AppDatabaseBootstrapper> logger,
@@ -262,6 +299,7 @@ public sealed class AppDatabaseBootstrapper(
 
     public async Task EnsureProfileReadyAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(receiptMaintenance);
         logger.LogInformation(
             "Ensuring runtime database profile {ProfileId} ({DisplayName}) is ready. Provider={ProviderKind}, Source={SourceKind}.",
             profile.Profile.Id,
@@ -295,6 +333,7 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.Id);
         await ReconcilePostgreSqlMigrationBaselineIfNeededAsync(profile, dbContext, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
+        await datasetActivation.EnsureReadyAsync(profile, cancellationToken);
         logger.LogInformation(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
             profile.Profile.Id);
@@ -778,13 +817,28 @@ public sealed class AppDatabaseBootstrapper(
 
         var timestamp = DateTimeOffset.UtcNow;
         var secretId = await secretBootstrap.EnsureOpenAiEnvironmentSecretAsync(profile, cancellationToken);
-        await using var providers = await providerBootstrap.PrepareAsync(profile, secretId, cancellationToken);
-        using var participation = providers.EnterTransaction();
-        var workspaceChanged = await workspaceBootstrap.EnsureAsync(profile, providers.Transactions,
-            providers.NewWorkspaceDefaultProviderId, providers.MatchedProviderId,
-            providers.ProviderExistsAsync, timestamp, cancellationToken);
-        if (await providers.CommitAsync(workspaceChanged, cancellationToken)) {
-            logger.LogInformation("Seeded OpenAI provider bootstrap for profile {ProfileId}.", profile.Profile.Id);
+        var providers = await providerBootstrap.PrepareAsync(profile, secretId, cancellationToken);
+        Exception? primary = null;
+        try {
+            using var participation = providers.EnterTransaction();
+            var workspaceChanged = await workspaceBootstrap.EnsureAsync(profile, providers.Transactions,
+                providers.NewWorkspaceDefaultProviderId, providers.MatchedProviderId,
+                providers.ProviderExistsAsync, timestamp, cancellationToken);
+            if (await providers.CommitAsync(workspaceChanged, cancellationToken)) {
+                logger.LogInformation("Seeded OpenAI provider bootstrap for profile {ProfileId}.", profile.Profile.Id);
+            }
+        } catch (Exception exception) {
+            primary = exception;
+            if (providers.IsCommitted) {
+                throw new ProviderDefaultsBootstrapCleanupException(committed: true, exception);
+            }
+            throw;
+        } finally {
+            try {
+                await providers.DisposeAsync();
+            } catch (Exception cleanup) when (primary is not null) {
+                throw new ProviderDefaultsBootstrapCleanupException(providers.IsCommitted, new AggregateException(primary, cleanup));
+            }
         }
     }
 

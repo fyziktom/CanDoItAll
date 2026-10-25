@@ -1,0 +1,2496 @@
+{
+  "schemaVersion": 1,
+  "qualifiedCases": 24,
+  "current": {
+    "identity": {
+      "sourcePins": [
+        {
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+          "bytes": 459851,
+          "sha256": "BC47787309DFD26044313162C89AA385C1366AB48C99BD0FAE145A94EC07CF98"
+        },
+        {
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.cs",
+          "bytes": 3648,
+          "sha256": "373C994FFDC39AFDE4587AAA048F1E315AA8CFF7FE03578AD0F60552255EE48F"
+        },
+        {
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
+          "bytes": 459736,
+          "sha256": "F7285173DFCF00C3D34579786BB8766D441EA94F12DC811B10CD629D7FEFB781"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationDecisionReader.cs",
+          "bytes": 839,
+          "sha256": "4996849F0CABDA2CDC5C70EF4DDC9B567C780FEAF550286AC4D822908BF0BE12"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationDecisionRecoveryStep.cs",
+          "bytes": 14210,
+          "sha256": "A4331D2583FC78D4D4E2EABE72B0B018C987232E3481938B17704EBDCBC3D562"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationQuiescenceReader.cs",
+          "bytes": 262,
+          "sha256": "0013D30683A04B729BFA896C3E2A2361C121E36CC4A6FB999993DBF448A137D4"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationQuiescenceRecoveryStep.cs",
+          "bytes": 5451,
+          "sha256": "8DC0372319311062E14FE238D550C8988B64955B38BC401F149934928ED3B20C"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRecoveryDispatcher.cs",
+          "bytes": 1041,
+          "sha256": "986BEA4B64A89F38F01385C4E9B7981B26FC7EBEC05610BF3E096116E1023ABD"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRuntimeReceipt.cs",
+          "bytes": 1942,
+          "sha256": "6D5BDE7B0380EAD794735928DFFD513A6E4E92BD06549A45AC7AA59DB5D49215"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRuntimeRecoveryStep.cs",
+          "bytes": 7254,
+          "sha256": "E47AB86DB0BE4141881DA1AE13AACC8E1043579F8D986205D13FC1DF0ED7717C"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationScopeRecoveryStep.cs",
+          "bytes": 8499,
+          "sha256": "E5CF8D80EB7810D8302F8BC592252A7032415E2425B6502C9428393C08E437C8"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionEntities.cs",
+          "bytes": 5960,
+          "sha256": "203650DC13768ADC0A06C4C2DA5AAD8DC2BD638A1D187989B8EBB5E1F71B33ED"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessPersistenceConfigurations.cs",
+          "bytes": 20060,
+          "sha256": "04C047A2FDC95C5D1018F01A5B891621145DE7E7E30C672582516F5D17A8377D"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+          "bytes": 12508,
+          "sha256": "81DB10A4BA3DBE6F6407ECEFF25E7317D000B0129381E2BD365F2DB918448248"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ApiTestHost.cs",
+          "bytes": 12651,
+          "sha256": "87C1D90B054B61DAC93A2E40A205CCA7471091E0AF1EAC70DEE2EE309CE154B8"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationCompletionIntegrationTests.cs",
+          "bytes": 6792,
+          "sha256": "D5B700A40F3155EE23FFB2C295108B44AEECC0DA3F120F3BA4581708779674E7"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationDecisionRecoveryTests.cs",
+          "bytes": 6859,
+          "sha256": "616F5A59D21B57A81CAA8209DABAC2E87D83286122140A3279AECA39585820D3"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationQuiescenceRecoveryTests.cs",
+          "bytes": 6671,
+          "sha256": "2202E5F578E04C9A84C17FAB9B6B92CECF6F67DDDE8BA2607BEAC43F0C066F7D"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRecoveryFixture.cs",
+          "bytes": 4149,
+          "sha256": "25A94F181501CCC5D5FE841BD4C6B57720358E26F8CC0A8E92DFA5BFC8F8687C"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRecoveryMigrationTests.cs",
+          "bytes": 14018,
+          "sha256": "7924D7F2BBD20A2F8503BEFC76B0C66B606B5E9813A169F7E7E336318EF53A64"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRuntimeRecoveryTests.cs",
+          "bytes": 8302,
+          "sha256": "2CAF1BBAF7BD1E236C255772F2F4933A1DB8C0132B5F85D768007BE001058790"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationScopeRecoveryTests.cs",
+          "bytes": 3759,
+          "sha256": "DBA063F3272814414B752FC1FD322657F6109A5C45E33CFA85A439595479535C"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessPlanningReviewApiTests.cs",
+          "bytes": 20787,
+          "sha256": "A315BBA894AEB9E3523E8C3FB2F87F1C1F5CFB15DA2D7C1A76C3CC8F52C6281C"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessRecoverySelectionIndexFixture.cs",
+          "bytes": 6575,
+          "sha256": "48DCA2ED5A9854A2E1CE600F5A2FE1F4DCF4E965B3BAE8B45C90EA640202EF0E"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessRecoverySelectionIndexMigrationTests.cs",
+          "bytes": 13638,
+          "sha256": "3B9121D51EEF9A346787964BB1B90B5EA3B5DE29286DD9D1A068702389042239"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanAgentFixture.cs",
+          "bytes": 12418,
+          "sha256": "47316F73C9945B976AF25D0C92B2655D3F24599B736AD2E5D46D203C564C66A4"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanExecutionEntryTests.cs",
+          "bytes": 14221,
+          "sha256": "B0EFBABACADD0B85D1F1CDC447BB9BA80BB210DA19F8D38B512EDFCB4F1009EF"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationFixture.cs",
+          "bytes": 15040,
+          "sha256": "9BF9899264D33BE8535A2478A788EDED4BA4398FE03C9409EB9D5FF1132ECD28"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewFixture.cs",
+          "bytes": 15248,
+          "sha256": "C9C1054798C2A6ECB90D0244C1B20CD8E36097B06171AAEF640B57358FA4BCCD"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/TestApplication.cs",
+          "bytes": 2321,
+          "sha256": "817AA75DEDD2564AD55158B6EAE35EDEDE454DC0B7D7AAB7D845DC63737536D3"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationBarrierTests.cs",
+          "bytes": 4085,
+          "sha256": "E6F2E085649BECABF57F9C996567DD61BB41F767B37BDF0B294DF974923CAFF7"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationDecisionRecoveryStepTests.cs",
+          "bytes": 15451,
+          "sha256": "F125CAA711D9EF7618FF0670BEA6E9C309235F4C8CDECD507D43FDB5F932C214"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationQuiescenceRecoveryStepTests.cs",
+          "bytes": 11296,
+          "sha256": "E1A11950315A377FE17D4E2F00469CC732F12BA9914BFD084DE475AF0AA7BABF"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRecoveryContractTests.cs",
+          "bytes": 14563,
+          "sha256": "0BE6CD788BB8072C9A1D433EE2AA069EEEA2866B0D3336D0AD31496F1187C3A3"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRecoveryCoordinatorTests.cs",
+          "bytes": 19642,
+          "sha256": "4AA0444DFF3CA0D9F6C98DF3C935137BB157E044C823753E77E653901111A783"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRuntimeRecoveryStepTests.cs",
+          "bytes": 15006,
+          "sha256": "896A4475B015C85717716F19A169773BA1A2399D35BFE5D9F9F6D5DA822728A8"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationScopeRecoveryStepTests.cs",
+          "bytes": 11754,
+          "sha256": "E4DBCF252401941CBDB9A3F24850E4E8BFB3792880172A7BC61F48FCBE5FAACB"
+        }
+      ],
+      "localLibraries": true,
+      "configuration": "Release",
+      "outputs": [
+        {
+          "sha256": "2C40EFD69BA0EB41A73DC452F8B37403FFB72394D1CE094BB33CEB408BCD5000",
+          "path": "src/Processes/CanDoItAll.Processes.Persistence/bin/Release/net10.0/CanDoItAll.Processes.Persistence.dll",
+          "bytes": 1278976
+        },
+        {
+          "sha256": "49AEE9FE9D7C02A4A1ECFE9FA84A0A4939CFB9D54487F2E3675784C100AF361A",
+          "path": "src/Processes/CanDoItAll.Processes.Persistence/bin/Release/net10.0/CanDoItAll.Processes.Persistence.pdb",
+          "bytes": 175416
+        },
+        {
+          "sha256": "8900B89F0C0F2C2F5460F7FD921B2BED47315DAB0FCCA337B27B74903804B1C7",
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/bin/Release/net10.0/CanDoItAll.Migrations.PostgreSql.dll",
+          "bytes": 7132672
+        },
+        {
+          "sha256": "35D6E9B53D2780536B2593B23D1E648675EF373258B70D255E48C33E6BE1B095",
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/bin/Release/net10.0/CanDoItAll.Migrations.PostgreSql.pdb",
+          "bytes": 908524
+        },
+        {
+          "sha256": "74D176F1A4AFAD87B5E198F8F8F5785FD6AE3D398458D71AD08694E413A6CB76",
+          "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "bytes": 6496768
+        },
+        {
+          "sha256": "999E89C0E120F394A2BD24826B539C60A06AB33AC22F080885FB0076D2805B47",
+          "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb",
+          "bytes": 930312
+        },
+        {
+          "sha256": "981B7F62C36C9528483361DC60C384A37AE8C7BE6F673081402B8964F00AE8C2",
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+          "bytes": 21984768
+        },
+        {
+          "sha256": "710AF4F89B17DA9C70419DB1E75C2049EBD05F4690B2C231F448496825E6EA08",
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+          "bytes": 3255068
+        },
+        {
+          "sha256": "2C40EFD69BA0EB41A73DC452F8B37403FFB72394D1CE094BB33CEB408BCD5000",
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Processes.Persistence.dll",
+          "bytes": 1278976
+        },
+        {
+          "sha256": "8900B89F0C0F2C2F5460F7FD921B2BED47315DAB0FCCA337B27B74903804B1C7",
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Migrations.PostgreSql.dll",
+          "bytes": 7132672
+        },
+        {
+          "sha256": "74D176F1A4AFAD87B5E198F8F8F5785FD6AE3D398458D71AD08694E413A6CB76",
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "bytes": 6496768
+        }
+      ],
+      "baseCommit": "4da50cc949d21075aa76c569f9f3eef701b00c00"
+    },
+    "verified": {
+      "sourcePinsUnchanged": true,
+      "verifiedUtc": "2026-10-22T18:54:53.2001752+00:00",
+      "outputCount": 11,
+      "outputsUnchanged": true
+    },
+    "discovery": {
+      "lanes": [
+        {
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "sourceMethods": [
+            "Upgrade_restart_and_downgrade_preserve_original_rows_and_one_root_index_per_table",
+            "Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes",
+            "Conflicting_and_invalid_named_indexes_require_explicit_repair_and_are_never_dropped",
+            "Concurrent_construction_waits_for_original_writer_without_blocking_other_writes",
+            "Actual_recovery_queries_use_bounded_composite_plans_with_retained_size_and_write_cost"
+          ],
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Upgrade_restart_and_downgrade_preserve_original_rows_and_one_root_index_per_table",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: False, after: 1)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: False, after: 2)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: False, after: 3)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: False, after: 4)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: True, after: 1)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: True, after: 2)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: True, after: 3)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: True, after: 4)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Conflicting_and_invalid_named_indexes_require_explicit_repair_and_are_never_dropped(decision: False)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Conflicting_and_invalid_named_indexes_require_explicit_repair_and_are_never_dropped(decision: True)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Concurrent_construction_waits_for_original_writer_without_blocking_other_writes",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Actual_recovery_queries_use_bounded_composite_plans_with_retained_size_and_write_cost"
+          ],
+          "actualDiscovery": 13,
+          "sourceMethodsMatched": true,
+          "expectedDiscovery": 13,
+          "id": "Integration-ProcessRecoverySelectionIndexMigrationTests",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests."
+        },
+        {
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "sourceMethods": [
+            "Upgrade_restart_and_empty_downgrade_preserve_legacy_roots_without_startup_backfill",
+            "Constraints_and_guarded_downgrade_preserve_original_recovery_and_seed_evidence",
+            "Interrupted_schema_reuses_only_a_valid_exact_owned_index_and_rejects_invalid_or_conflicting_indexes",
+            "Historical_selection_uses_bounded_indexes_and_records_construction_and_write_cost"
+          ],
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.Upgrade_restart_and_empty_downgrade_preserve_legacy_roots_without_startup_backfill",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.Constraints_and_guarded_downgrade_preserve_original_recovery_and_seed_evidence",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.Interrupted_schema_reuses_only_a_valid_exact_owned_index_and_rejects_invalid_or_conflicting_indexes",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.Historical_selection_uses_bounded_indexes_and_records_construction_and_write_cost"
+          ],
+          "actualDiscovery": 4,
+          "sourceMethodsMatched": true,
+          "expectedDiscovery": 4,
+          "id": "Integration-ProcessCancellationRecoveryMigrationTests",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests."
+        },
+        {
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "sourceMethods": [
+            "Native_keyset_includes_root_and_terminal_descendants_without_loading_runtime_payloads",
+            "Lost_native_cancel_acknowledgement_replays_original_intent_after_new_lease_and_context"
+          ],
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests.Native_keyset_includes_root_and_terminal_descendants_without_loading_runtime_payloads",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests.Lost_native_cancel_acknowledgement_replays_original_intent_after_new_lease_and_context"
+          ],
+          "actualDiscovery": 2,
+          "sourceMethodsMatched": true,
+          "expectedDiscovery": 2,
+          "id": "Integration-ProcessCancellationRuntimeRecoveryTests",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests."
+        },
+        {
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "sourceMethods": [
+            "Native_decision_and_child_keysets_are_root_bound_metadata_queries",
+            "Historical_unclosed_child_is_preserved_as_pending_under_the_current_generation",
+            "Empty_terminal_decision_finishes_through_registered_stage_without_business_effects"
+          ],
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.Native_decision_and_child_keysets_are_root_bound_metadata_queries",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.Historical_unclosed_child_is_preserved_as_pending_under_the_current_generation",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.Empty_terminal_decision_finishes_through_registered_stage_without_business_effects"
+          ],
+          "actualDiscovery": 3,
+          "sourceMethodsMatched": true,
+          "expectedDiscovery": 3,
+          "id": "Integration-ProcessCancellationDecisionRecoveryTests",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests."
+        },
+        {
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "sourceMethods": [
+            "Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement"
+          ],
+          "testNames": [
+            "CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement(mode: StepSnapshot)",
+            "CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement(mode: RunSnapshot)"
+          ],
+          "actualDiscovery": 2,
+          "sourceMethodsMatched": true,
+          "expectedDiscovery": 2,
+          "id": "Integration-ProcessCancellationCompletionIntegrationTests",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests."
+        }
+      ],
+      "expectedTotal": 24.0,
+      "actualTotal": 24.0
+    },
+    "results": [
+      {
+        "file": {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/Integration-ProcessCancellationCompletionIntegrationTests.trx",
+          "bytes": 5082,
+          "sha256": "B2D5B2A5D202D019040E9092B507648BD1F2411AF2783624E499B499542D8D3C"
+        },
+        "counters": {
+          "total": 2,
+          "executed": 2,
+          "passed": 2,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      },
+      {
+        "file": {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/Integration-ProcessCancellationDecisionRecoveryTests.trx",
+          "bytes": 6492,
+          "sha256": "714E9E9F882376BA9511E0EF7CCC62F87DDB6676923514C67CA02C823346652A"
+        },
+        "counters": {
+          "total": 3,
+          "executed": 3,
+          "passed": 3,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      },
+      {
+        "file": {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/Integration-ProcessCancellationRecoveryMigrationTests.trx",
+          "bytes": 19412,
+          "sha256": "08C3D87B880DB9C7385644A9938505488D909C948C9CCC0E0538815B5C2B354D"
+        },
+        "counters": {
+          "total": 4,
+          "executed": 4,
+          "passed": 4,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      },
+      {
+        "file": {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/Integration-ProcessCancellationRuntimeRecoveryTests.trx",
+          "bytes": 4941,
+          "sha256": "E2CC479EEFA5DD8FB135D57053B831101B3C335EBCB72A27E6A6F0E0472E5463"
+        },
+        "counters": {
+          "total": 2,
+          "executed": 2,
+          "passed": 2,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      },
+      {
+        "file": {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/Integration-ProcessRecoverySelectionIndexMigrationTests.trx",
+          "bytes": 64934,
+          "sha256": "16996B03734D0FAB032F0F72F3DB9DB715FFC38870CF0A635F880D5DFA82A470"
+        },
+        "counters": {
+          "total": 13,
+          "executed": 13,
+          "passed": 13,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      }
+    ],
+    "commands": [
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "build-test-repair",
+        "Arguments": [
+          "build",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-restore",
+          "--no-dependencies",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1"
+        ],
+        "StartedUtc": "2026-10-22T18:43:52.2226982+00:00",
+        "State": "Completed",
+        "RunnerPid": 19712,
+        "ChildPid": 6120,
+        "ChildStartedUtc": "2026-10-22T18:43:52.2795080Z",
+        "ExitCode": 0,
+        "Seconds": 33.0923585,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 158784,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "diff-final",
+        "Arguments": [
+          "diff",
+          "--check"
+        ],
+        "StartedUtc": "2026-10-22T18:48:04.2698398+00:00",
+        "State": "Completed",
+        "RunnerPid": 46448,
+        "ChildPid": 30268,
+        "ChildStartedUtc": "2026-10-22T18:48:04.3049388Z",
+        "ExitCode": 0,
+        "Seconds": 0.1894178,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 180,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-2-Integration-ProcessCancellationCompletionIntegrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:46:51.3802141+00:00",
+        "State": "Completed",
+        "RunnerPid": 12260,
+        "ChildPid": 12544,
+        "ChildStartedUtc": "2026-10-22T18:46:51.3883198Z",
+        "ExitCode": 0,
+        "Seconds": 3.6193856,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 617,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-2-Integration-ProcessCancellationDecisionRecoveryTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:46:47.4252119+00:00",
+        "State": "Completed",
+        "RunnerPid": 12260,
+        "ChildPid": 22104,
+        "ChildStartedUtc": "2026-10-22T18:46:47.4343775Z",
+        "ExitCode": 0,
+        "Seconds": 3.9288806,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 699,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-2-Integration-ProcessCancellationRecoveryMigrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:46:39.2001104+00:00",
+        "State": "Completed",
+        "RunnerPid": 12260,
+        "ChildPid": 34728,
+        "ChildStartedUtc": "2026-10-22T18:46:39.2121534Z",
+        "ExitCode": 0,
+        "Seconds": 3.9651222,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 904,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-2-Integration-ProcessCancellationRuntimeRecoveryTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:46:43.2140526+00:00",
+        "State": "Completed",
+        "RunnerPid": 12260,
+        "ChildPid": 50596,
+        "ChildStartedUtc": "2026-10-22T18:46:43.2244371Z",
+        "ExitCode": 0,
+        "Seconds": 4.18329,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 557,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-2-Integration-ProcessRecoverySelectionIndexMigrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:46:34.3739197+00:00",
+        "State": "Completed",
+        "RunnerPid": 12260,
+        "ChildPid": 46272,
+        "ChildStartedUtc": "2026-10-22T18:46:34.4237362Z",
+        "ExitCode": 0,
+        "Seconds": 4.6807951,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 2637,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "documentation-final",
+        "Arguments": [
+          "-NoProfile",
+          "-File",
+          "tools/Validation/Test-Documentation.ps1"
+        ],
+        "StartedUtc": "2026-10-22T18:47:55.8558824+00:00",
+        "State": "Completed",
+        "RunnerPid": 46448,
+        "ChildPid": 47556,
+        "ChildStartedUtc": "2026-10-22T18:47:55.8628008Z",
+        "ExitCode": 0,
+        "Seconds": 8.3983065,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 68,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProcessCancellationCompletionIntegrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProcessCancellationCompletionIntegrationTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes"
+        ],
+        "StartedUtc": "2026-10-22T18:52:21.7371240+00:00",
+        "State": "Completed",
+        "RunnerPid": 18096,
+        "ChildPid": 55892,
+        "ChildStartedUtc": "2026-10-22T18:52:21.7462287Z",
+        "ExitCode": 0,
+        "Seconds": 75.1059857,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 1353,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProcessCancellationDecisionRecoveryTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProcessCancellationDecisionRecoveryTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes"
+        ],
+        "StartedUtc": "2026-10-22T18:51:41.5908435+00:00",
+        "State": "Completed",
+        "RunnerPid": 18096,
+        "ChildPid": 4544,
+        "ChildStartedUtc": "2026-10-22T18:51:41.6031020Z",
+        "ExitCode": 0,
+        "Seconds": 40.1136609,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 1447,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProcessCancellationRecoveryMigrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProcessCancellationRecoveryMigrationTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes"
+        ],
+        "StartedUtc": "2026-10-22T18:50:27.1162513+00:00",
+        "State": "Completed",
+        "RunnerPid": 18096,
+        "ChildPid": 14152,
+        "ChildStartedUtc": "2026-10-22T18:50:27.1267498Z",
+        "ExitCode": 0,
+        "Seconds": 36.1140953,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 1669,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProcessCancellationRuntimeRecoveryTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProcessCancellationRuntimeRecoveryTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes"
+        ],
+        "StartedUtc": "2026-10-22T18:51:03.2690259+00:00",
+        "State": "Completed",
+        "RunnerPid": 18096,
+        "ChildPid": 58048,
+        "ChildStartedUtc": "2026-10-22T18:51:03.2797799Z",
+        "ExitCode": 0,
+        "Seconds": 38.281434,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 1288,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProcessRecoverySelectionIndexMigrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProcessRecoverySelectionIndexMigrationTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes"
+        ],
+        "StartedUtc": "2026-10-22T18:48:37.5614378+00:00",
+        "State": "Completed",
+        "RunnerPid": 18096,
+        "ChildPid": 43516,
+        "ChildStartedUtc": "2026-10-22T18:48:37.6244911Z",
+        "ExitCode": 0,
+        "Seconds": 109.4383738,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 3549,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 3660,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "observer-product-planning-v2-2",
+        "Arguments": [
+          "-NoProfile",
+          "-File",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes\\Observe-BrowserV2.ps1",
+          "-DeadlineSeconds",
+          "3600"
+        ],
+        "StartedUtc": "2026-10-22T18:48:27.6061414+00:00",
+        "State": "Completed",
+        "RunnerPid": 60760,
+        "ChildPid": 52436,
+        "ChildStartedUtc": "2026-10-22T18:48:27.6301223Z",
+        "ExitCode": 0,
+        "Seconds": 309.8932607,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 55,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "portability-enforce-2",
+        "Arguments": [
+          "tools/Validation/Portability/enforce_portability_baseline.py",
+          "--scan",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes\\portability-scan-2.json",
+          "--baseline",
+          "tools/Validation/Portability/portability-risk-baseline.json"
+        ],
+        "StartedUtc": "2026-10-22T18:47:03.2421715+00:00",
+        "State": "Completed",
+        "RunnerPid": 59756,
+        "ChildPid": 6332,
+        "ChildStartedUtc": "2026-10-22T18:47:03.2584504Z",
+        "ExitCode": 1,
+        "Seconds": 0.7519324,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 845,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "portability-final-enforce",
+        "Arguments": [
+          "tools/Validation/Portability/enforce_portability_baseline.py",
+          "--scan",
+          ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/portability-scan-2.json",
+          "--baseline",
+          "tools/Validation/Portability/portability-risk-baseline.json"
+        ],
+        "StartedUtc": "2026-10-22T18:47:55.0323294+00:00",
+        "State": "Completed",
+        "RunnerPid": 46448,
+        "ChildPid": 62008,
+        "ChildStartedUtc": "2026-10-22T18:47:55.0378017Z",
+        "ExitCode": 0,
+        "Seconds": 0.7969024,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 68,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "portability-reviewed-refresh",
+        "Arguments": [
+          "tools/Validation/Portability/enforce_portability_baseline.py",
+          "--scan",
+          ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/portability-scan-2.json",
+          "--baseline",
+          "tools/Validation/Portability/portability-risk-baseline.json",
+          "--write-baseline"
+        ],
+        "StartedUtc": "2026-10-22T18:47:54.0641521+00:00",
+        "State": "Completed",
+        "RunnerPid": 46448,
+        "ChildPid": 28972,
+        "ChildStartedUtc": "2026-10-22T18:47:54.1128631Z",
+        "ExitCode": 0,
+        "Seconds": 0.7381455,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 120,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "portability-scan-2",
+        "Arguments": [
+          "tools/Validation/Portability/scan_portability.py",
+          "--repo-root",
+          ".",
+          "--output",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes\\portability-scan-2.json"
+        ],
+        "StartedUtc": "2026-10-22T18:44:38.6096071+00:00",
+        "State": "Completed",
+        "RunnerPid": 59756,
+        "ChildPid": 23352,
+        "ChildStartedUtc": "2026-10-22T18:44:38.6163997Z",
+        "ExitCode": 0,
+        "Seconds": 144.5975794,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 445,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "portability-tool-tests-2",
+        "Arguments": [
+          "tools/Validation/Portability/test_enforce_portability_baseline.py"
+        ],
+        "StartedUtc": "2026-10-22T18:44:34.7456696+00:00",
+        "State": "Completed",
+        "RunnerPid": 59756,
+        "ChildPid": 5944,
+        "ChildStartedUtc": "2026-10-22T18:44:34.7839391Z",
+        "ExitCode": 0,
+        "Seconds": 0.1792612,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 109,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "rendering-register-2",
+        "Arguments": [
+          "tools/Validation/Rendering/check_rendering_register.py",
+          "--repo",
+          "."
+        ],
+        "StartedUtc": "2026-10-22T18:44:35.8681066+00:00",
+        "State": "Completed",
+        "RunnerPid": 59756,
+        "ChildPid": 54088,
+        "ChildStartedUtc": "2026-10-22T18:44:35.8746666Z",
+        "ExitCode": 0,
+        "Seconds": 2.7129778,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 115,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "rendering-tool-tests-2",
+        "Arguments": [
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tools/Validation/Rendering",
+          "-p",
+          "test_*.py"
+        ],
+        "StartedUtc": "2026-10-22T18:44:35.6729637+00:00",
+        "State": "Completed",
+        "RunnerPid": 59756,
+        "ChildPid": 23828,
+        "ChildStartedUtc": "2026-10-22T18:44:35.6766617Z",
+        "ExitCode": 0,
+        "Seconds": 0.1787771,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 110,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "secret-tool-tests-2",
+        "Arguments": [
+          "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+        ],
+        "StartedUtc": "2026-10-22T18:44:34.9991624+00:00",
+        "State": "Completed",
+        "RunnerPid": 59756,
+        "ChildPid": 30368,
+        "ChildStartedUtc": "2026-10-22T18:44:35.0050599Z",
+        "ExitCode": 0,
+        "Seconds": 0.6587902,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 107,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      }
+    ],
+    "resources": {
+      "historicalCleanupDenials": "Earlier denials remain. Automatic approval review additionally rejected c4-process-owner-outcome-verified and c4-process-owner-outcome-final cleanup with blocked by policy. Both remain; no denied resource was retried.",
+      "recordedUtc": "2026-10-22T18:54:54.2058258+00:00",
+      "inheritedBlockedCleanup": {
+        "requiredAction": "Manual cleanup or an explicit approval-system change is required for these exact resources. They remain excluded from subsequent cleanup attempts.",
+        "journalSha256": "8A8165E2B2250EED621740669396B6870172ABF8D4E10CEB7859BBAB7CCCFD6F",
+        "reason": "Automatic approval review rejected the combined exact test database and temporary-directory removal with blocked by policy before execution. No deletion was attempted through another route.",
+        "source": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewCompletionTests.cs:159",
+        "recordedUtc": "2026-10-21T08:05:31.9832225-04:00",
+        "evidence": "The sole new isolated database has the declared reviewed-completion profile prefix and is named inside this exact pending-run journal. The test command and its observed child processes have exited. The latest database observation has zero active connections.",
+        "state": "CleanupRejected",
+        "test": "ProjectTaskPlanReviewCompletionTests.Lost_commit_acknowledgement_replays_after_full_host_restart_without_another_outcome_read",
+        "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+        "path": "C:/Users/lucys/AppData/Local/Temp/process-reviewed-completion/6ea9ebeae3b74434ab0dfcda9483bd27",
+        "database": "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1"
+      },
+      "ownedValidationDirectory": "Retained for producer integration: small reviewed logs, source/runtime manifests and shared validation helpers; no new compiled outputs or host.",
+      "temporaryDeltasPreservedWithoutOwnership": [],
+      "remainingObservedProcesses": [],
+      "databaseNameDelta": [],
+      "postgres": [
+        "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+        "cditall_primary_40a332c695a94161a74b78718c28b907|0",
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1|0",
+        "postgres|1"
+      ],
+      "previousHttpBlockedCleanup": {
+        "state": "BlockedByAutomaticApprovalReview",
+        "database": "cditall_primary_40a332c695a94161a74b78718c28b907",
+        "reason": "Observed API-test host finalizer crash; exact original run metadata binds this fixture directory to its new primary database. All observed processes exited.",
+        "activeConnections": 0,
+        "recordedUtc": "2026-10-21T13:19:09.6396158-04:00",
+        "sourceEvidence": [
+          {
+            "sha256": "3D27E32BCE667F2802FF368DE5BE67ED72016BD091F6C7CF21223E5F46FA8EF0",
+            "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/6f716289a47642e590153bef907eadc2/run.json"
+          },
+          {
+            "sha256": "8113A3D3E76338D0E0E3F3C70AA78A4C5FD5C5FF6673BC60A866096AA30C9FE4",
+            "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/a46b7f22c3468762959f3308ae040e76/run.json"
+          }
+        ],
+        "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+        "root": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-api-tests\\069475322dcc45a2816c596f2d8beb24",
+        "rejection": "The combined exact DROP DATABASE and Remove-Item command was rejected before execution: blocked by policy. Neither action executed; no alternative route will be attempted."
+      }
+    },
+    "coverage": {
+      "observerStartedUtc": "2026-10-22T14:48:28.5603086-04:00",
+      "observerEndedUtc": "2026-10-22T14:53:37.4580482-04:00",
+      "commands": [
+        {
+          "startedUtc": "2026-10-22T14:52:21.7371240-04:00",
+          "command": "execute-Integration-ProcessCancellationCompletionIntegrationTests",
+          "covered": true,
+          "endedUtc": "2026-10-22T14:53:36.8431097-04:00"
+        },
+        {
+          "startedUtc": "2026-10-22T14:51:41.5908435-04:00",
+          "command": "execute-Integration-ProcessCancellationDecisionRecoveryTests",
+          "covered": true,
+          "endedUtc": "2026-10-22T14:52:21.7045043-04:00"
+        },
+        {
+          "startedUtc": "2026-10-22T14:50:27.1162513-04:00",
+          "command": "execute-Integration-ProcessCancellationRecoveryMigrationTests",
+          "covered": true,
+          "endedUtc": "2026-10-22T14:51:03.2303466-04:00"
+        },
+        {
+          "startedUtc": "2026-10-22T14:51:03.2690259-04:00",
+          "command": "execute-Integration-ProcessCancellationRuntimeRecoveryTests",
+          "covered": true,
+          "endedUtc": "2026-10-22T14:51:41.5504598-04:00"
+        },
+        {
+          "startedUtc": "2026-10-22T14:48:37.5614378-04:00",
+          "command": "execute-Integration-ProcessRecoverySelectionIndexMigrationTests",
+          "covered": true,
+          "endedUtc": "2026-10-22T14:50:26.9998115-04:00"
+        }
+      ],
+      "allCovered": true
+    }
+  },
+  "earlier": {
+    "identity": {
+      "outputs": [
+        {
+          "bytes": 1278976,
+          "path": "src/Processes/CanDoItAll.Processes.Persistence/bin/Release/net10.0/CanDoItAll.Processes.Persistence.dll",
+          "sha256": "2C40EFD69BA0EB41A73DC452F8B37403FFB72394D1CE094BB33CEB408BCD5000"
+        },
+        {
+          "bytes": 175416,
+          "path": "src/Processes/CanDoItAll.Processes.Persistence/bin/Release/net10.0/CanDoItAll.Processes.Persistence.pdb",
+          "sha256": "49AEE9FE9D7C02A4A1ECFE9FA84A0A4939CFB9D54487F2E3675784C100AF361A"
+        },
+        {
+          "bytes": 7132672,
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/bin/Release/net10.0/CanDoItAll.Migrations.PostgreSql.dll",
+          "sha256": "8900B89F0C0F2C2F5460F7FD921B2BED47315DAB0FCCA337B27B74903804B1C7"
+        },
+        {
+          "bytes": 908524,
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/bin/Release/net10.0/CanDoItAll.Migrations.PostgreSql.pdb",
+          "sha256": "35D6E9B53D2780536B2593B23D1E648675EF373258B70D255E48C33E6BE1B095"
+        },
+        {
+          "bytes": 6496768,
+          "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "sha256": "74D176F1A4AFAD87B5E198F8F8F5785FD6AE3D398458D71AD08694E413A6CB76"
+        },
+        {
+          "bytes": 930312,
+          "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb",
+          "sha256": "999E89C0E120F394A2BD24826B539C60A06AB33AC22F080885FB0076D2805B47"
+        },
+        {
+          "bytes": 21984768,
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+          "sha256": "732770450DEE19A479C4CFAA88A721CD8316817CAA9F99EB1AD0D45D87B0058E"
+        },
+        {
+          "bytes": 3255012,
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+          "sha256": "D735B766166B09D2E43C20E99F8C18AFA039A976E3B9A632C9BA42AFEE873863"
+        },
+        {
+          "bytes": 1278976,
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Processes.Persistence.dll",
+          "sha256": "2C40EFD69BA0EB41A73DC452F8B37403FFB72394D1CE094BB33CEB408BCD5000"
+        },
+        {
+          "bytes": 7132672,
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Migrations.PostgreSql.dll",
+          "sha256": "8900B89F0C0F2C2F5460F7FD921B2BED47315DAB0FCCA337B27B74903804B1C7"
+        },
+        {
+          "bytes": 6496768,
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "sha256": "74D176F1A4AFAD87B5E198F8F8F5785FD6AE3D398458D71AD08694E413A6CB76"
+        }
+      ],
+      "sourcePins": [
+        {
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+          "bytes": 459851,
+          "sha256": "BC47787309DFD26044313162C89AA385C1366AB48C99BD0FAE145A94EC07CF98"
+        },
+        {
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.cs",
+          "bytes": 3648,
+          "sha256": "373C994FFDC39AFDE4587AAA048F1E315AA8CFF7FE03578AD0F60552255EE48F"
+        },
+        {
+          "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
+          "bytes": 459736,
+          "sha256": "F7285173DFCF00C3D34579786BB8766D441EA94F12DC811B10CD629D7FEFB781"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationDecisionReader.cs",
+          "bytes": 839,
+          "sha256": "4996849F0CABDA2CDC5C70EF4DDC9B567C780FEAF550286AC4D822908BF0BE12"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationDecisionRecoveryStep.cs",
+          "bytes": 14210,
+          "sha256": "A4331D2583FC78D4D4E2EABE72B0B018C987232E3481938B17704EBDCBC3D562"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationQuiescenceReader.cs",
+          "bytes": 262,
+          "sha256": "0013D30683A04B729BFA896C3E2A2361C121E36CC4A6FB999993DBF448A137D4"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationQuiescenceRecoveryStep.cs",
+          "bytes": 5451,
+          "sha256": "8DC0372319311062E14FE238D550C8988B64955B38BC401F149934928ED3B20C"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRecoveryDispatcher.cs",
+          "bytes": 1041,
+          "sha256": "986BEA4B64A89F38F01385C4E9B7981B26FC7EBEC05610BF3E096116E1023ABD"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRuntimeReceipt.cs",
+          "bytes": 1942,
+          "sha256": "6D5BDE7B0380EAD794735928DFFD513A6E4E92BD06549A45AC7AA59DB5D49215"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRuntimeRecoveryStep.cs",
+          "bytes": 7254,
+          "sha256": "E47AB86DB0BE4141881DA1AE13AACC8E1043579F8D986205D13FC1DF0ED7717C"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationScopeRecoveryStep.cs",
+          "bytes": 8499,
+          "sha256": "E5CF8D80EB7810D8302F8BC592252A7032415E2425B6502C9428393C08E437C8"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionEntities.cs",
+          "bytes": 5960,
+          "sha256": "203650DC13768ADC0A06C4C2DA5AAD8DC2BD638A1D187989B8EBB5E1F71B33ED"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessPersistenceConfigurations.cs",
+          "bytes": 20060,
+          "sha256": "04C047A2FDC95C5D1018F01A5B891621145DE7E7E30C672582516F5D17A8377D"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+          "bytes": 12508,
+          "sha256": "81DB10A4BA3DBE6F6407ECEFF25E7317D000B0129381E2BD365F2DB918448248"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ApiTestHost.cs",
+          "bytes": 12651,
+          "sha256": "87C1D90B054B61DAC93A2E40A205CCA7471091E0AF1EAC70DEE2EE309CE154B8"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationCompletionIntegrationTests.cs",
+          "bytes": 6792,
+          "sha256": "D5B700A40F3155EE23FFB2C295108B44AEECC0DA3F120F3BA4581708779674E7"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationDecisionRecoveryTests.cs",
+          "bytes": 6859,
+          "sha256": "616F5A59D21B57A81CAA8209DABAC2E87D83286122140A3279AECA39585820D3"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationQuiescenceRecoveryTests.cs",
+          "bytes": 6671,
+          "sha256": "2202E5F578E04C9A84C17FAB9B6B92CECF6F67DDDE8BA2607BEAC43F0C066F7D"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRecoveryFixture.cs",
+          "bytes": 4149,
+          "sha256": "25A94F181501CCC5D5FE841BD4C6B57720358E26F8CC0A8E92DFA5BFC8F8687C"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRecoveryMigrationTests.cs",
+          "bytes": 14018,
+          "sha256": "7924D7F2BBD20A2F8503BEFC76B0C66B606B5E9813A169F7E7E336318EF53A64"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRuntimeRecoveryTests.cs",
+          "bytes": 8302,
+          "sha256": "2CAF1BBAF7BD1E236C255772F2F4933A1DB8C0132B5F85D768007BE001058790"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationScopeRecoveryTests.cs",
+          "bytes": 3759,
+          "sha256": "DBA063F3272814414B752FC1FD322657F6109A5C45E33CFA85A439595479535C"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessPlanningReviewApiTests.cs",
+          "bytes": 20787,
+          "sha256": "A315BBA894AEB9E3523E8C3FB2F87F1C1F5CFB15DA2D7C1A76C3CC8F52C6281C"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessRecoverySelectionIndexFixture.cs",
+          "bytes": 6575,
+          "sha256": "48DCA2ED5A9854A2E1CE600F5A2FE1F4DCF4E965B3BAE8B45C90EA640202EF0E"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessRecoverySelectionIndexMigrationTests.cs",
+          "bytes": 13560,
+          "sha256": "6532C92B52095810D3C4A1703920F384F32AB1B5D9B94E394A925019717D4FAB"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanAgentFixture.cs",
+          "bytes": 12418,
+          "sha256": "47316F73C9945B976AF25D0C92B2655D3F24599B736AD2E5D46D203C564C66A4"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanExecutionEntryTests.cs",
+          "bytes": 14221,
+          "sha256": "B0EFBABACADD0B85D1F1CDC447BB9BA80BB210DA19F8D38B512EDFCB4F1009EF"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationFixture.cs",
+          "bytes": 15040,
+          "sha256": "9BF9899264D33BE8535A2478A788EDED4BA4398FE03C9409EB9D5FF1132ECD28"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewFixture.cs",
+          "bytes": 15248,
+          "sha256": "C9C1054798C2A6ECB90D0244C1B20CD8E36097B06171AAEF640B57358FA4BCCD"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/TestApplication.cs",
+          "bytes": 2321,
+          "sha256": "817AA75DEDD2564AD55158B6EAE35EDEDE454DC0B7D7AAB7D845DC63737536D3"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationBarrierTests.cs",
+          "bytes": 4085,
+          "sha256": "E6F2E085649BECABF57F9C996567DD61BB41F767B37BDF0B294DF974923CAFF7"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationDecisionRecoveryStepTests.cs",
+          "bytes": 15451,
+          "sha256": "F125CAA711D9EF7618FF0670BEA6E9C309235F4C8CDECD507D43FDB5F932C214"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationQuiescenceRecoveryStepTests.cs",
+          "bytes": 11296,
+          "sha256": "E1A11950315A377FE17D4E2F00469CC732F12BA9914BFD084DE475AF0AA7BABF"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRecoveryContractTests.cs",
+          "bytes": 14563,
+          "sha256": "0BE6CD788BB8072C9A1D433EE2AA069EEEA2866B0D3336D0AD31496F1187C3A3"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRecoveryCoordinatorTests.cs",
+          "bytes": 19642,
+          "sha256": "4AA0444DFF3CA0D9F6C98DF3C935137BB157E044C823753E77E653901111A783"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRuntimeRecoveryStepTests.cs",
+          "bytes": 15006,
+          "sha256": "896A4475B015C85717716F19A169773BA1A2399D35BFE5D9F9F6D5DA822728A8"
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationScopeRecoveryStepTests.cs",
+          "bytes": 11754,
+          "sha256": "E4DBCF252401941CBDB9A3F24850E4E8BFB3792880172A7BC61F48FCBE5FAACB"
+        }
+      ],
+      "localLibraries": true,
+      "baseCommit": "4da50cc949d21075aa76c569f9f3eef701b00c00",
+      "configuration": "Release"
+    },
+    "verified": {
+      "outputsUnchanged": true,
+      "outputCount": 11,
+      "sourcePinsUnchanged": true,
+      "verifiedUtc": "2026-10-22T18:42:44.9579500+00:00"
+    },
+    "discovery": {
+      "actualTotal": 24.0,
+      "lanes": [
+        {
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Upgrade_restart_and_downgrade_preserve_original_rows_and_one_root_index_per_table",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: False, after: 1)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: False, after: 2)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: False, after: 3)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: False, after: 4)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: True, after: 1)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: True, after: 2)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: True, after: 3)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes(down: True, after: 4)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Conflicting_and_invalid_named_indexes_require_explicit_repair_and_are_never_dropped(decision: False)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Conflicting_and_invalid_named_indexes_require_explicit_repair_and_are_never_dropped(decision: True)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Concurrent_construction_waits_for_original_writer_without_blocking_other_writes",
+            "CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.Actual_recovery_queries_use_bounded_composite_plans_with_retained_size_and_write_cost"
+          ],
+          "actualDiscovery": 13,
+          "id": "Integration-ProcessRecoverySelectionIndexMigrationTests",
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.",
+          "expectedDiscovery": 13,
+          "sourceMethods": [
+            "Upgrade_restart_and_downgrade_preserve_original_rows_and_one_root_index_per_table",
+            "Interrupted_concurrent_commands_reenter_without_a_query_index_gap_or_row_changes",
+            "Conflicting_and_invalid_named_indexes_require_explicit_repair_and_are_never_dropped",
+            "Concurrent_construction_waits_for_original_writer_without_blocking_other_writes",
+            "Actual_recovery_queries_use_bounded_composite_plans_with_retained_size_and_write_cost"
+          ],
+          "sourceMethodsMatched": true
+        },
+        {
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.Upgrade_restart_and_empty_downgrade_preserve_legacy_roots_without_startup_backfill",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.Constraints_and_guarded_downgrade_preserve_original_recovery_and_seed_evidence",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.Interrupted_schema_reuses_only_a_valid_exact_owned_index_and_rejects_invalid_or_conflicting_indexes",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.Historical_selection_uses_bounded_indexes_and_records_construction_and_write_cost"
+          ],
+          "actualDiscovery": 4,
+          "id": "Integration-ProcessCancellationRecoveryMigrationTests",
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.",
+          "expectedDiscovery": 4,
+          "sourceMethods": [
+            "Upgrade_restart_and_empty_downgrade_preserve_legacy_roots_without_startup_backfill",
+            "Constraints_and_guarded_downgrade_preserve_original_recovery_and_seed_evidence",
+            "Interrupted_schema_reuses_only_a_valid_exact_owned_index_and_rejects_invalid_or_conflicting_indexes",
+            "Historical_selection_uses_bounded_indexes_and_records_construction_and_write_cost"
+          ],
+          "sourceMethodsMatched": true
+        },
+        {
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests.Native_keyset_includes_root_and_terminal_descendants_without_loading_runtime_payloads",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests.Lost_native_cancel_acknowledgement_replays_original_intent_after_new_lease_and_context"
+          ],
+          "actualDiscovery": 2,
+          "id": "Integration-ProcessCancellationRuntimeRecoveryTests",
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests.",
+          "expectedDiscovery": 2,
+          "sourceMethods": [
+            "Native_keyset_includes_root_and_terminal_descendants_without_loading_runtime_payloads",
+            "Lost_native_cancel_acknowledgement_replays_original_intent_after_new_lease_and_context"
+          ],
+          "sourceMethodsMatched": true
+        },
+        {
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.Native_decision_and_child_keysets_are_root_bound_metadata_queries",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.Historical_unclosed_child_is_preserved_as_pending_under_the_current_generation",
+            "CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.Empty_terminal_decision_finishes_through_registered_stage_without_business_effects"
+          ],
+          "actualDiscovery": 3,
+          "id": "Integration-ProcessCancellationDecisionRecoveryTests",
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.",
+          "expectedDiscovery": 3,
+          "sourceMethods": [
+            "Native_decision_and_child_keysets_are_root_bound_metadata_queries",
+            "Historical_unclosed_child_is_preserved_as_pending_under_the_current_generation",
+            "Empty_terminal_decision_finishes_through_registered_stage_without_business_effects"
+          ],
+          "sourceMethodsMatched": true
+        },
+        {
+          "testNames": [
+            "CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement(mode: StepSnapshot)",
+            "CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement(mode: RunSnapshot)"
+          ],
+          "actualDiscovery": 2,
+          "id": "Integration-ProcessCancellationCompletionIntegrationTests",
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.",
+          "expectedDiscovery": 2,
+          "sourceMethods": [
+            "Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement"
+          ],
+          "sourceMethodsMatched": true
+        }
+      ],
+      "expectedTotal": 24.0
+    },
+    "results": [
+      {
+        "file": {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/first-candidate/Integration-ProcessRecoverySelectionIndexMigrationTests.trx",
+          "bytes": 30770,
+          "sha256": "92169D1B91BD82DA1142D65931B986E2496AA6FC1FD61CE838049329B39BF4E6"
+        },
+        "counters": {
+          "total": 13,
+          "executed": 13,
+          "passed": 12,
+          "failed": 1,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        }
+      }
+    ],
+    "commands": [
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "build-final-integration",
+        "Arguments": [
+          "build",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-restore",
+          "--no-dependencies",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1"
+        ],
+        "StartedUtc": "2026-10-22T18:39:02.5703397+00:00",
+        "State": "Completed",
+        "RunnerPid": 14820,
+        "ChildPid": 22396,
+        "ChildStartedUtc": "2026-10-22T18:39:02.5786789Z",
+        "ExitCode": 0,
+        "Seconds": 36.4816563,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 158784,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "build-final-migrations",
+        "Arguments": [
+          "build",
+          "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+          "--configuration",
+          "Release",
+          "--no-restore",
+          "--no-dependencies",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1"
+        ],
+        "StartedUtc": "2026-10-22T18:38:07.3538594+00:00",
+        "State": "Completed",
+        "RunnerPid": 14820,
+        "ChildPid": 34504,
+        "ChildStartedUtc": "2026-10-22T18:38:07.3922285Z",
+        "ExitCode": 0,
+        "Seconds": 29.4735623,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 107787,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "build-final-web",
+        "Arguments": [
+          "build",
+          "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+          "--configuration",
+          "Release",
+          "--no-restore",
+          "--no-dependencies",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1"
+        ],
+        "StartedUtc": "2026-10-22T18:38:36.9452695+00:00",
+        "State": "Completed",
+        "RunnerPid": 14820,
+        "ChildPid": 9112,
+        "ChildStartedUtc": "2026-10-22T18:38:36.9730239Z",
+        "ExitCode": 0,
+        "Seconds": 25.5763168,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 109264,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "build-ready-migrations-scaffold",
+        "Arguments": [
+          "build",
+          "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+          "--configuration",
+          "Release",
+          "--no-restore",
+          "--no-dependencies",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1"
+        ],
+        "StartedUtc": "2026-10-22T18:31:59.6594275+00:00",
+        "State": "Completed",
+        "RunnerPid": 39096,
+        "ChildPid": 31740,
+        "ChildStartedUtc": "2026-10-22T18:31:59.6706003Z",
+        "ExitCode": 0,
+        "Seconds": 46.949304,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 107787,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "build-ready-persistence",
+        "Arguments": [
+          "build",
+          "src/Processes/CanDoItAll.Processes.Persistence/CanDoItAll.Processes.Persistence.csproj",
+          "--configuration",
+          "Release",
+          "--no-restore",
+          "--no-dependencies",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1"
+        ],
+        "StartedUtc": "2026-10-22T18:31:55.0289879+00:00",
+        "State": "Completed",
+        "RunnerPid": 39096,
+        "ChildPid": 29108,
+        "ChildStartedUtc": "2026-10-22T18:31:55.0663413Z",
+        "ExitCode": 0,
+        "Seconds": 4.535261,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 6165,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-1-Integration-ProcessCancellationCompletionIntegrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:40:13.8830685+00:00",
+        "State": "Completed",
+        "RunnerPid": 55576,
+        "ChildPid": 48464,
+        "ChildStartedUtc": "2026-10-22T18:40:13.8942789Z",
+        "ExitCode": 0,
+        "Seconds": 3.766804,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 617,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-1-Integration-ProcessCancellationDecisionRecoveryTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationDecisionRecoveryTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:40:09.9454980+00:00",
+        "State": "Completed",
+        "RunnerPid": 55576,
+        "ChildPid": 24224,
+        "ChildStartedUtc": "2026-10-22T18:40:09.9556501Z",
+        "ExitCode": 0,
+        "Seconds": 3.9037722,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 699,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-1-Integration-ProcessCancellationRecoveryMigrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRecoveryMigrationTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:40:03.0367328+00:00",
+        "State": "Completed",
+        "RunnerPid": 55576,
+        "ChildPid": 56360,
+        "ChildStartedUtc": "2026-10-22T18:40:03.0474830Z",
+        "ExitCode": 0,
+        "Seconds": 3.2604346,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 904,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-1-Integration-ProcessCancellationRuntimeRecoveryTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCancellationRuntimeRecoveryTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:40:06.3288015+00:00",
+        "State": "Completed",
+        "RunnerPid": 55576,
+        "ChildPid": 52524,
+        "ChildStartedUtc": "2026-10-22T18:40:06.3402741Z",
+        "ExitCode": 0,
+        "Seconds": 3.5839026,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 557,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-1-Integration-ProcessRecoverySelectionIndexMigrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T18:39:59.0609181+00:00",
+        "State": "Completed",
+        "RunnerPid": 55576,
+        "ChildPid": 34984,
+        "ChildStartedUtc": "2026-10-22T18:39:59.1029849Z",
+        "ExitCode": 0,
+        "Seconds": 3.8842726,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 2637,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProcessRecoverySelectionIndexMigrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessRecoverySelectionIndexMigrationTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProcessRecoverySelectionIndexMigrationTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes"
+        ],
+        "StartedUtc": "2026-10-22T18:40:40.1549573+00:00",
+        "State": "Completed",
+        "RunnerPid": 28932,
+        "ChildPid": 33220,
+        "ChildStartedUtc": "2026-10-22T18:40:40.2014715Z",
+        "ExitCode": 1,
+        "Seconds": 81.9907822,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 10310,
+        "StderrRetainedBytes": 241,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "migration-scaffold",
+        "Arguments": [
+          "ef",
+          "migrations",
+          "add",
+          "IndexProcessCancellationSelections",
+          "--project",
+          "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+          "--startup-project",
+          "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--context",
+          "AppDbContext"
+        ],
+        "StartedUtc": "2026-10-22T18:32:46.6460605+00:00",
+        "State": "Completed",
+        "RunnerPid": 39096,
+        "ChildPid": 22880,
+        "ChildStartedUtc": "2026-10-22T18:32:46.6561468Z",
+        "ExitCode": 0,
+        "Seconds": 16.3018713,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 249,
+        "StderrRetainedBytes": 3008,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 3660,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "observer-product-planning-v2-1",
+        "Arguments": [
+          "-NoProfile",
+          "-File",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes\\Observe-BrowserV2.ps1",
+          "-DeadlineSeconds",
+          "3600"
+        ],
+        "StartedUtc": "2026-10-22T18:40:23.6162591+00:00",
+        "State": "Completed",
+        "RunnerPid": 58804,
+        "ChildPid": 53284,
+        "ChildStartedUtc": "2026-10-22T18:40:23.6380349Z",
+        "ExitCode": 0,
+        "Seconds": 98.851675,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 53,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "portability-enforce-1",
+        "Arguments": [
+          "tools/Validation/Portability/enforce_portability_baseline.py",
+          "--scan",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes\\portability-scan-1.json",
+          "--baseline",
+          "tools/Validation/Portability/portability-risk-baseline.json"
+        ],
+        "StartedUtc": "2026-10-22T18:42:43.2666894+00:00",
+        "State": "Completed",
+        "RunnerPid": 32236,
+        "ChildPid": 34984,
+        "ChildStartedUtc": "2026-10-22T18:42:43.2729605Z",
+        "ExitCode": 1,
+        "Seconds": 0.7603749,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 845,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "portability-scan-1",
+        "Arguments": [
+          "tools/Validation/Portability/scan_portability.py",
+          "--repo-root",
+          ".",
+          "--output",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-selection-indexes\\portability-scan-1.json"
+        ],
+        "StartedUtc": "2026-10-22T18:40:13.0147202+00:00",
+        "State": "Completed",
+        "RunnerPid": 32236,
+        "ChildPid": 47072,
+        "ChildStartedUtc": "2026-10-22T18:40:13.0216292Z",
+        "ExitCode": 0,
+        "Seconds": 150.2192242,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 445,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "portability-tool-tests-1",
+        "Arguments": [
+          "tools/Validation/Portability/test_enforce_portability_baseline.py"
+        ],
+        "StartedUtc": "2026-10-22T18:40:08.3769794+00:00",
+        "State": "Completed",
+        "RunnerPid": 32236,
+        "ChildPid": 1832,
+        "ChildStartedUtc": "2026-10-22T18:40:08.4161341Z",
+        "ExitCode": 0,
+        "Seconds": 0.2022131,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 109,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "rendering-register-1",
+        "Arguments": [
+          "tools/Validation/Rendering/check_rendering_register.py",
+          "--repo",
+          "."
+        ],
+        "StartedUtc": "2026-10-22T18:40:09.8343867+00:00",
+        "State": "Completed",
+        "RunnerPid": 32236,
+        "ChildPid": 58140,
+        "ChildStartedUtc": "2026-10-22T18:40:09.8421788Z",
+        "ExitCode": 0,
+        "Seconds": 3.1533378,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 115,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "rendering-tool-tests-1",
+        "Arguments": [
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tools/Validation/Rendering",
+          "-p",
+          "test_*.py"
+        ],
+        "StartedUtc": "2026-10-22T18:40:09.5898039+00:00",
+        "State": "Completed",
+        "RunnerPid": 32236,
+        "ChildPid": 57776,
+        "ChildStartedUtc": "2026-10-22T18:40:09.5991450Z",
+        "ExitCode": 0,
+        "Seconds": 0.2075348,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 110,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "secret-tool-tests-1",
+        "Arguments": [
+          "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+        ],
+        "StartedUtc": "2026-10-22T18:40:08.6547266+00:00",
+        "State": "Completed",
+        "RunnerPid": 32236,
+        "ChildPid": 49352,
+        "ChildStartedUtc": "2026-10-22T18:40:08.6642683Z",
+        "ExitCode": 0,
+        "Seconds": 0.91523,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 0,
+        "StderrRetainedBytes": 107,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      }
+    ],
+    "resources": {
+      "postgres": [
+        "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+        "cditall_primary_40a332c695a94161a74b78718c28b907|0",
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1|0",
+        "postgres|1"
+      ],
+      "historicalCleanupDenials": "Earlier denials remain. Automatic approval review additionally rejected c4-process-owner-outcome-verified and c4-process-owner-outcome-final cleanup with blocked by policy. Both remain; no denied resource was retried.",
+      "ownedValidationDirectory": "Retained for producer integration: small reviewed logs, source/runtime manifests and shared validation helpers; no new compiled outputs or host.",
+      "temporaryDeltasPreservedWithoutOwnership": [],
+      "inheritedBlockedCleanup": {
+        "requiredAction": "Manual cleanup or an explicit approval-system change is required for these exact resources. They remain excluded from subsequent cleanup attempts.",
+        "journalSha256": "8A8165E2B2250EED621740669396B6870172ABF8D4E10CEB7859BBAB7CCCFD6F",
+        "reason": "Automatic approval review rejected the combined exact test database and temporary-directory removal with blocked by policy before execution. No deletion was attempted through another route.",
+        "source": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewCompletionTests.cs:159",
+        "recordedUtc": "2026-10-21T08:05:31.9832225-04:00",
+        "evidence": "The sole new isolated database has the declared reviewed-completion profile prefix and is named inside this exact pending-run journal. The test command and its observed child processes have exited. The latest database observation has zero active connections.",
+        "state": "CleanupRejected",
+        "test": "ProjectTaskPlanReviewCompletionTests.Lost_commit_acknowledgement_replays_after_full_host_restart_without_another_outcome_read",
+        "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+        "path": "C:/Users/lucys/AppData/Local/Temp/process-reviewed-completion/6ea9ebeae3b74434ab0dfcda9483bd27",
+        "database": "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1"
+      },
+      "remainingObservedProcesses": [],
+      "previousHttpBlockedCleanup": {
+        "state": "BlockedByAutomaticApprovalReview",
+        "database": "cditall_primary_40a332c695a94161a74b78718c28b907",
+        "reason": "Observed API-test host finalizer crash; exact original run metadata binds this fixture directory to its new primary database. All observed processes exited.",
+        "activeConnections": 0,
+        "recordedUtc": "2026-10-21T13:19:09.6396158-04:00",
+        "sourceEvidence": [
+          {
+            "sha256": "3D27E32BCE667F2802FF368DE5BE67ED72016BD091F6C7CF21223E5F46FA8EF0",
+            "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/6f716289a47642e590153bef907eadc2/run.json"
+          },
+          {
+            "sha256": "8113A3D3E76338D0E0E3F3C70AA78A4C5FD5C5FF6673BC60A866096AA30C9FE4",
+            "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/a46b7f22c3468762959f3308ae040e76/run.json"
+          }
+        ],
+        "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+        "root": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-api-tests\\069475322dcc45a2816c596f2d8beb24",
+        "rejection": "The combined exact DROP DATABASE and Remove-Item command was rejected before execution: blocked by policy. Neither action executed; no alternative route will be attempted."
+      },
+      "recordedUtc": "2026-10-22T18:42:45.7520718+00:00",
+      "databaseNameDelta": []
+    },
+    "coverage": {
+      "observerEndedUtc": "2026-10-22T14:42:02.4159603-04:00",
+      "observerStartedUtc": "2026-10-22T14:40:25.5358059-04:00",
+      "allCovered": true,
+      "commands": [
+        {
+          "endedUtc": "2026-10-22T14:42:02.1457394-04:00",
+          "command": "execute-Integration-ProcessRecoverySelectionIndexMigrationTests",
+          "covered": true,
+          "startedUtc": "2026-10-22T14:40:40.1549573-04:00"
+        }
+      ]
+    }
+  },
+  "costs": {
+    "history": 50000,
+    "hotRoot": 20000,
+    "sparseRoot": 1000,
+    "seedMs": 34295.7336,
+    "constructionMs": 139.8042,
+    "before": {
+      "measurements": [
+        {
+          "root": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          "Sql": "SELECT p.\"RunId\"\r\nFROM process_runtime_states AS p\r\nWHERE p.\"RootRunId\" = @rootRunId_Value AND p.\"RunId\" > @cursor_Value\r\nORDER BY p.\"RunId\"\r\nLIMIT 1",
+          "Timeout": 5,
+          "plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 9.18,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 16,\n      \"Actual Startup Time\": 0.028,\n      \"Actual Total Time\": 0.029,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Shared Hit Blocks\": 6,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Index Scan\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Scan Direction\": \"Forward\",\n          \"Index Name\": \"PK_process_runtime_states\",\n          \"Relation Name\": \"process_runtime_states\",\n          \"Alias\": \"p\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 889.28,\n          \"Plan Rows\": 100,\n          \"Plan Width\": 16,\n          \"Actual Startup Time\": 0.027,\n          \"Actual Total Time\": 0.027,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Index Cond\": \"(\\\"RunId\\\" > 'ffd52f3c-7e12-435a-724a-8f30fddadd9c'::uuid)\",\n          \"Rows Removed by Index Recheck\": 0,\n          \"Filter\": \"(\\\"RootRunId\\\" = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)\",\n          \"Rows Removed by Filter\": 3,\n          \"Index Searches\": 1,\n          \"Shared Hit Blocks\": 6,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 189,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.746,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.049\n  }\n]"
+        },
+        {
+          "root": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          "Sql": "SELECT p.\"DecisionId\", p.\"CurrentGeneration\"\r\nFROM process_decision_heads AS p\r\nWHERE p.\"RootRunId\" = @rootRunId_Value AND p.\"DecisionId\" > @cursor_Value\r\nORDER BY p.\"DecisionId\"\r\nLIMIT 1",
+          "Timeout": 5,
+          "plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 9.06,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 20,\n      \"Actual Startup Time\": 0.023,\n      \"Actual Total Time\": 0.023,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Shared Hit Blocks\": 6,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Index Scan\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Scan Direction\": \"Forward\",\n          \"Index Name\": \"PK_process_decision_heads\",\n          \"Relation Name\": \"process_decision_heads\",\n          \"Alias\": \"p\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 877.29,\n          \"Plan Rows\": 100,\n          \"Plan Width\": 20,\n          \"Actual Startup Time\": 0.022,\n          \"Actual Total Time\": 0.023,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Index Cond\": \"(\\\"DecisionId\\\" > 'ffd52f3c-7e12-435a-724a-8f30fddadd9c'::uuid)\",\n          \"Rows Removed by Index Recheck\": 0,\n          \"Filter\": \"(\\\"RootRunId\\\" = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)\",\n          \"Rows Removed by Filter\": 3,\n          \"Index Searches\": 1,\n          \"Shared Hit Blocks\": 6,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 86,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.351,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.032\n  }\n]"
+        },
+        {
+          "root": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "Sql": "SELECT p.\"RunId\"\r\nFROM process_runtime_states AS p\r\nWHERE p.\"RootRunId\" = @rootRunId_Value AND p.\"RunId\" > @cursor_Value\r\nORDER BY p.\"RunId\"\r\nLIMIT 1",
+          "Timeout": 5,
+          "plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 41.14,\n      \"Total Cost\": 41.15,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 16,\n      \"Actual Startup Time\": 0.089,\n      \"Actual Total Time\": 0.089,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Shared Hit Blocks\": 15,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Sort\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Startup Cost\": 41.14,\n          \"Total Cost\": 41.16,\n          \"Plan Rows\": 5,\n          \"Plan Width\": 16,\n          \"Actual Startup Time\": 0.088,\n          \"Actual Total Time\": 0.089,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Sort Key\": [\"\\\"RunId\\\"\"],\n          \"Sort Method\": \"top-N heapsort\",\n          \"Sort Space Used\": 24,\n          \"Sort Space Type\": \"Memory\",\n          \"Shared Hit Blocks\": 15,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Bitmap Heap Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Relation Name\": \"process_runtime_states\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 22.18,\n              \"Total Cost\": 41.12,\n              \"Plan Rows\": 5,\n              \"Plan Width\": 16,\n              \"Actual Startup Time\": 0.063,\n              \"Actual Total Time\": 0.068,\n              \"Actual Rows\": 8.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Recheck Cond\": \"((\\\"RunId\\\" > 'fe3940fb-a1a1-6986-24b9-905f1bc4de6c'::uuid) AND (\\\"RootRunId\\\" = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Exact Heap Blocks\": 6,\n              \"Lossy Heap Blocks\": 0,\n              \"Shared Hit Blocks\": 12,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0,\n              \"Plans\": [\n                {\n                  \"Node Type\": \"BitmapAnd\",\n                  \"Parent Relationship\": \"Outer\",\n                  \"Parallel Aware\": false,\n                  \"Async Capable\": false,\n                  \"Startup Cost\": 22.18,\n                  \"Total Cost\": 22.18,\n                  \"Plan Rows\": 5,\n                  \"Plan Width\": 0,\n                  \"Actual Startup Time\": 0.058,\n                  \"Actual Total Time\": 0.059,\n                  \"Actual Rows\": 0.00,\n                  \"Actual Loops\": 1,\n                  \"Disabled\": false,\n                  \"Shared Hit Blocks\": 6,\n                  \"Shared Read Blocks\": 0,\n                  \"Shared Dirtied Blocks\": 0,\n                  \"Shared Written Blocks\": 0,\n                  \"Local Hit Blocks\": 0,\n                  \"Local Read Blocks\": 0,\n                  \"Local Dirtied Blocks\": 0,\n                  \"Local Written Blocks\": 0,\n                  \"Temp Read Blocks\": 0,\n                  \"Temp Written Blocks\": 0,\n                  \"Plans\": [\n                    {\n                      \"Node Type\": \"Bitmap Index Scan\",\n                      \"Parent Relationship\": \"Member\",\n                      \"Parallel Aware\": false,\n                      \"Async Capable\": false,\n                      \"Index Name\": \"PK_process_runtime_states\",\n                      \"Startup Cost\": 0.00,\n                      \"Total Cost\": 10.16,\n                      \"Plan Rows\": 250,\n                      \"Plan Width\": 0,\n                      \"Actual Startup Time\": 0.035,\n                      \"Actual Total Time\": 0.035,\n                      \"Actual Rows\": 347.00,\n                      \"Actual Loops\": 1,\n                      \"Disabled\": false,\n                      \"Index Cond\": \"(\\\"RunId\\\" > 'fe3940fb-a1a1-6986-24b9-905f1bc4de6c'::uuid)\",\n                      \"Index Searches\": 1,\n                      \"Shared Hit Blocks\": 4,\n                      \"Shared Read Blocks\": 0,\n                      \"Shared Dirtied Blocks\": 0,\n                      \"Shared Written Blocks\": 0,\n                      \"Local Hit Blocks\": 0,\n                      \"Local Read Blocks\": 0,\n                      \"Local Dirtied Blocks\": 0,\n                      \"Local Written Blocks\": 0,\n                      \"Temp Read Blocks\": 0,\n                      \"Temp Written Blocks\": 0\n                    },\n                    {\n                      \"Node Type\": \"Bitmap Index Scan\",\n                      \"Parent Relationship\": \"Member\",\n                      \"Parallel Aware\": false,\n                      \"Async Capable\": false,\n                      \"Index Name\": \"IX_process_runtime_states_RootRunId\",\n                      \"Startup Cost\": 0.00,\n                      \"Total Cost\": 11.77,\n                      \"Plan Rows\": 997,\n                      \"Plan Width\": 0,\n                      \"Actual Startup Time\": 0.017,\n                      \"Actual Total Time\": 0.017,\n                      \"Actual Rows\": 1000.00,\n                      \"Actual Loops\": 1,\n                      \"Disabled\": false,\n                      \"Index Cond\": \"(\\\"RootRunId\\\" = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid)\",\n                      \"Index Searches\": 1,\n                      \"Shared Hit Blocks\": 2,\n                      \"Shared Read Blocks\": 0,\n                      \"Shared Dirtied Blocks\": 0,\n                      \"Shared Written Blocks\": 0,\n                      \"Local Hit Blocks\": 0,\n                      \"Local Read Blocks\": 0,\n                      \"Local Dirtied Blocks\": 0,\n                      \"Local Written Blocks\": 0,\n                      \"Temp Read Blocks\": 0,\n                      \"Temp Written Blocks\": 0\n                    }\n                  ]\n                }\n              ]\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.095,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.123\n  }\n]"
+        },
+        {
+          "root": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "Sql": "SELECT p.\"DecisionId\", p.\"CurrentGeneration\"\r\nFROM process_decision_heads AS p\r\nWHERE p.\"RootRunId\" = @rootRunId_Value AND p.\"DecisionId\" > @cursor_Value\r\nORDER BY p.\"DecisionId\"\r\nLIMIT 1",
+          "Timeout": 5,
+          "plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 41.04,\n      \"Total Cost\": 41.04,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 20,\n      \"Actual Startup Time\": 0.090,\n      \"Actual Total Time\": 0.090,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Shared Hit Blocks\": 12,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Sort\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Startup Cost\": 41.04,\n          \"Total Cost\": 41.05,\n          \"Plan Rows\": 5,\n          \"Plan Width\": 20,\n          \"Actual Startup Time\": 0.089,\n          \"Actual Total Time\": 0.090,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Sort Key\": [\"\\\"DecisionId\\\"\"],\n          \"Sort Method\": \"top-N heapsort\",\n          \"Sort Space Used\": 25,\n          \"Sort Space Type\": \"Memory\",\n          \"Shared Hit Blocks\": 12,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Bitmap Heap Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Relation Name\": \"process_decision_heads\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 22.15,\n              \"Total Cost\": 41.01,\n              \"Plan Rows\": 5,\n              \"Plan Width\": 20,\n              \"Actual Startup Time\": 0.071,\n              \"Actual Total Time\": 0.081,\n              \"Actual Rows\": 8.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Recheck Cond\": \"((\\\"DecisionId\\\" > 'fe3940fb-a1a1-6986-24b9-905f1bc4de6c'::uuid) AND (\\\"RootRunId\\\" = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Exact Heap Blocks\": 6,\n              \"Lossy Heap Blocks\": 0,\n              \"Shared Hit Blocks\": 12,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0,\n              \"Plans\": [\n                {\n                  \"Node Type\": \"BitmapAnd\",\n                  \"Parent Relationship\": \"Outer\",\n                  \"Parallel Aware\": false,\n                  \"Async Capable\": false,\n                  \"Startup Cost\": 22.15,\n                  \"Total Cost\": 22.15,\n                  \"Plan Rows\": 5,\n                  \"Plan Width\": 0,\n                  \"Actual Startup Time\": 0.065,\n                  \"Actual Total Time\": 0.065,\n                  \"Actual Rows\": 0.00,\n                  \"Actual Loops\": 1,\n                  \"Disabled\": false,\n                  \"Shared Hit Blocks\": 6,\n                  \"Shared Read Blocks\": 0,\n                  \"Shared Dirtied Blocks\": 0,\n                  \"Shared Written Blocks\": 0,\n                  \"Local Hit Blocks\": 0,\n                  \"Local Read Blocks\": 0,\n                  \"Local Dirtied Blocks\": 0,\n                  \"Local Written Blocks\": 0,\n                  \"Temp Read Blocks\": 0,\n                  \"Temp Written Blocks\": 0,\n                  \"Plans\": [\n                    {\n                      \"Node Type\": \"Bitmap Index Scan\",\n                      \"Parent Relationship\": \"Member\",\n                      \"Parallel Aware\": false,\n                      \"Async Capable\": false,\n                      \"Index Name\": \"PK_process_decision_heads\",\n                      \"Startup Cost\": 0.00,\n                      \"Total Cost\": 10.16,\n                      \"Plan Rows\": 250,\n                      \"Plan Width\": 0,\n                      \"Actual Startup Time\": 0.036,\n                      \"Actual Total Time\": 0.036,\n                      \"Actual Rows\": 347.00,\n                      \"Actual Loops\": 1,\n                      \"Disabled\": false,\n                      \"Index Cond\": \"(\\\"DecisionId\\\" > 'fe3940fb-a1a1-6986-24b9-905f1bc4de6c'::uuid)\",\n                      \"Index Searches\": 1,\n                      \"Shared Hit Blocks\": 4,\n                      \"Shared Read Blocks\": 0,\n                      \"Shared Dirtied Blocks\": 0,\n                      \"Shared Written Blocks\": 0,\n                      \"Local Hit Blocks\": 0,\n                      \"Local Read Blocks\": 0,\n                      \"Local Dirtied Blocks\": 0,\n                      \"Local Written Blocks\": 0,\n                      \"Temp Read Blocks\": 0,\n                      \"Temp Written Blocks\": 0\n                    },\n                    {\n                      \"Node Type\": \"Bitmap Index Scan\",\n                      \"Parent Relationship\": \"Member\",\n                      \"Parallel Aware\": false,\n                      \"Async Capable\": false,\n                      \"Index Name\": \"IX_process_decision_heads_RootRunId\",\n                      \"Startup Cost\": 0.00,\n                      \"Total Cost\": 11.73,\n                      \"Plan Rows\": 992,\n                      \"Plan Width\": 0,\n                      \"Actual Startup Time\": 0.021,\n                      \"Actual Total Time\": 0.021,\n                      \"Actual Rows\": 1000.00,\n                      \"Actual Loops\": 1,\n                      \"Disabled\": false,\n                      \"Index Cond\": \"(\\\"RootRunId\\\" = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid)\",\n                      \"Index Searches\": 1,\n                      \"Shared Hit Blocks\": 2,\n                      \"Shared Read Blocks\": 0,\n                      \"Shared Dirtied Blocks\": 0,\n                      \"Shared Written Blocks\": 0,\n                      \"Local Hit Blocks\": 0,\n                      \"Local Read Blocks\": 0,\n                      \"Local Dirtied Blocks\": 0,\n                      \"Local Written Blocks\": 0,\n                      \"Temp Read Blocks\": 0,\n                      \"Temp Written Blocks\": 0\n                    }\n                  ]\n                }\n              ]\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 3,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.064,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.123\n  }\n]"
+        }
+      ],
+      "writeMs": [
+        177.5018,
+        177.9066,
+        179.3038,
+        201.5036,
+        172.6826,
+        179.7007,
+        178.4896
+      ],
+      "medianBatchMs": 178.4896,
+      "indexBytes": [
+        450560,
+        450560
+      ]
+    },
+    "after": {
+      "measurements": [
+        {
+          "root": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          "Sql": "SELECT p.\"RunId\"\r\nFROM process_runtime_states AS p\r\nWHERE p.\"RootRunId\" = @rootRunId_Value AND p.\"RunId\" > @cursor_Value\r\nORDER BY p.\"RunId\"\r\nLIMIT 1",
+          "Timeout": 5,
+          "plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.41,\n      \"Total Cost\": 4.21,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 16,\n      \"Actual Startup Time\": 0.012,\n      \"Actual Total Time\": 0.012,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Index Only Scan\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Scan Direction\": \"Forward\",\n          \"Index Name\": \"IX_process_runtime_states_RootRunId_RunId\",\n          \"Relation Name\": \"process_runtime_states\",\n          \"Alias\": \"p\",\n          \"Startup Cost\": 0.41,\n          \"Total Cost\": 379.53,\n          \"Plan Rows\": 100,\n          \"Plan Width\": 16,\n          \"Actual Startup Time\": 0.012,\n          \"Actual Total Time\": 0.012,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Index Cond\": \"((\\\"RootRunId\\\" = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid) AND (\\\"RunId\\\" > 'ffd52f3c-7e12-435a-724a-8f30fddadd9c'::uuid))\",\n          \"Rows Removed by Index Recheck\": 0,\n          \"Heap Fetches\": 1,\n          \"Index Searches\": 1,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 7,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.105,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.024\n  }\n]"
+        },
+        {
+          "root": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          "Sql": "SELECT p.\"DecisionId\", p.\"CurrentGeneration\"\r\nFROM process_decision_heads AS p\r\nWHERE p.\"RootRunId\" = @rootRunId_Value AND p.\"DecisionId\" > @cursor_Value\r\nORDER BY p.\"DecisionId\"\r\nLIMIT 1",
+          "Timeout": 5,
+          "plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.41,\n      \"Total Cost\": 4.21,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 20,\n      \"Actual Startup Time\": 0.010,\n      \"Actual Total Time\": 0.010,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Index Scan\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Scan Direction\": \"Forward\",\n          \"Index Name\": \"IX_process_decision_heads_RootRunId_DecisionId\",\n          \"Relation Name\": \"process_decision_heads\",\n          \"Alias\": \"p\",\n          \"Startup Cost\": 0.41,\n          \"Total Cost\": 379.71,\n          \"Plan Rows\": 100,\n          \"Plan Width\": 20,\n          \"Actual Startup Time\": 0.010,\n          \"Actual Total Time\": 0.010,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Index Cond\": \"((\\\"RootRunId\\\" = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid) AND (\\\"DecisionId\\\" > 'ffd52f3c-7e12-435a-724a-8f30fddadd9c'::uuid))\",\n          \"Rows Removed by Index Recheck\": 0,\n          \"Index Searches\": 1,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 43,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.234,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.021\n  }\n]"
+        },
+        {
+          "root": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "Sql": "SELECT p.\"RunId\"\r\nFROM process_runtime_states AS p\r\nWHERE p.\"RootRunId\" = @rootRunId_Value AND p.\"RunId\" > @cursor_Value\r\nORDER BY p.\"RunId\"\r\nLIMIT 1",
+          "Timeout": 5,
+          "plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.41,\n      \"Total Cost\": 5.18,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 16,\n      \"Actual Startup Time\": 0.015,\n      \"Actual Total Time\": 0.015,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Index Only Scan\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Scan Direction\": \"Forward\",\n          \"Index Name\": \"IX_process_runtime_states_RootRunId_RunId\",\n          \"Relation Name\": \"process_runtime_states\",\n          \"Alias\": \"p\",\n          \"Startup Cost\": 0.41,\n          \"Total Cost\": 24.22,\n          \"Plan Rows\": 5,\n          \"Plan Width\": 16,\n          \"Actual Startup Time\": 0.014,\n          \"Actual Total Time\": 0.014,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Index Cond\": \"((\\\"RootRunId\\\" = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid) AND (\\\"RunId\\\" > 'fe3940fb-a1a1-6986-24b9-905f1bc4de6c'::uuid))\",\n          \"Rows Removed by Index Recheck\": 0,\n          \"Heap Fetches\": 1,\n          \"Index Searches\": 1,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.084,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.076\n  }\n]"
+        },
+        {
+          "root": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "Sql": "SELECT p.\"DecisionId\", p.\"CurrentGeneration\"\r\nFROM process_decision_heads AS p\r\nWHERE p.\"RootRunId\" = @rootRunId_Value AND p.\"DecisionId\" > @cursor_Value\r\nORDER BY p.\"DecisionId\"\r\nLIMIT 1",
+          "Timeout": 5,
+          "plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.41,\n      \"Total Cost\": 5.18,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 20,\n      \"Actual Startup Time\": 0.013,\n      \"Actual Total Time\": 0.014,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Index Scan\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Scan Direction\": \"Forward\",\n          \"Index Name\": \"IX_process_decision_heads_RootRunId_DecisionId\",\n          \"Relation Name\": \"process_decision_heads\",\n          \"Alias\": \"p\",\n          \"Startup Cost\": 0.41,\n          \"Total Cost\": 24.23,\n          \"Plan Rows\": 5,\n          \"Plan Width\": 20,\n          \"Actual Startup Time\": 0.013,\n          \"Actual Total Time\": 0.013,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Index Cond\": \"((\\\"RootRunId\\\" = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid) AND (\\\"DecisionId\\\" > 'fe3940fb-a1a1-6986-24b9-905f1bc4de6c'::uuid))\",\n          \"Rows Removed by Index Recheck\": 0,\n          \"Index Searches\": 1,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 3,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.073,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.027\n  }\n]"
+        }
+      ],
+      "writeMs": [
+        173.739,
+        182.4375,
+        192.3554,
+        203.7705,
+        173.0879,
+        176.1681,
+        177.2177
+      ],
+      "medianBatchMs": 177.2177,
+      "indexBytes": [
+        2596864,
+        2596864
+      ]
+    },
+    "limitations": "Single isolated server, warm metadata, seven insertion batches per schema; not sustained 1/8/32 capacity or a production migration SLA."
+  },
+  "architecture": {
+    "before": {
+      "snapshotId": "snap-20261022180930-9658b808",
+      "types": 200,
+      "members": 1499,
+      "findings": 67,
+      "diagnostics": 10
+    },
+    "after": {
+      "snapshotId": "snap-20261022185153-4d5e01f9",
+      "types": 200,
+      "members": 1499,
+      "findings": 67,
+      "diagnostics": 10
+    },
+    "cycles": [],
+    "addedFindings": [],
+    "rationale": "Only two EF index key definitions changed in Persistence. No project references or runtime owners added. Generated migration partial/designer follows the existing EF schema pattern. Real migrations and exact reader plans qualify behavior; snapshots are dependency review, not build proof."
+  },
+  "portability": {
+    "reviewedGeneratedProperties": [
+      {
+        "id": "SCAN-013479",
+        "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+        "line": 1505,
+        "category": "absolute-path-field",
+        "severity": "high",
+        "owner_domain": "Unassigned",
+        "pattern": "ExecutablePath|WorkspaceRoot|RootPath|WorkingDirectory|LocalPath|RepositoryPath|AllowedExternalRoot",
+        "source_fingerprint": "50e11f7a1e625723e9a03b74543cb6455db41a601aa772ce5566f439f640b7c9",
+        "evidence_excerpt": "b.Property<int>(\"RootPathState\")",
+        "review_status": "Unreviewed",
+        "disposition": "",
+        "requirement_id": ""
+      },
+      {
+        "id": "SCAN-013480",
+        "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+        "line": 1508,
+        "category": "absolute-path-field",
+        "severity": "high",
+        "owner_domain": "Unassigned",
+        "pattern": "ExecutablePath|WorkspaceRoot|RootPath|WorkingDirectory|LocalPath|RepositoryPath|AllowedExternalRoot",
+        "source_fingerprint": "e82f9b480ce2f7ebe43616523461eb2bc6f8dd6fd0ddac1550c08ffec20b9cef",
+        "evidence_excerpt": "b.Property<int>(\"RootPathSyntax\")",
+        "review_status": "Unreviewed",
+        "disposition": "",
+        "requirement_id": ""
+      },
+      {
+        "id": "SCAN-013481",
+        "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+        "line": 3735,
+        "category": "process-domain",
+        "severity": "medium",
+        "owner_domain": "Unassigned",
+        "pattern": "ProcessDriverLayer|ProcessDriverDescriptor|ProcessRecovery|Escalation",
+        "source_fingerprint": "e702f8f46dd66e8fb49a802fbf81801e6925c44c878e49e92e77fb3111d2ad33",
+        "evidence_excerpt": "b.Property<bool>(\"RaisesEscalation\")",
+        "review_status": "Unreviewed",
+        "disposition": "",
+        "requirement_id": ""
+      },
+      {
+        "id": "SCAN-013482",
+        "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261022183302_IndexProcessCancellationSelections.Designer.cs",
+        "line": 9670,
+        "category": "process-domain",
+        "severity": "medium",
+        "owner_domain": "Unassigned",
+        "pattern": "ProcessDriverLayer|ProcessDriverDescriptor|ProcessRecovery|Escalation",
+        "source_fingerprint": "ff8beeaf33e963c13135e4135c3145acd1b7171f170d4e1240b04f615302fc0a",
+        "evidence_excerpt": "b.Property<int>(\"EscalationCount\")",
+        "review_status": "Unreviewed",
+        "disposition": "",
+        "requirement_id": ""
+      }
+    ],
+    "baseline": {
+      "path": "tools/Validation/Portability/portability-risk-baseline.json",
+      "bytes": 3702757,
+      "sha256": "3DE4533C794E82ACACA772AA032C7D2221F7E28CE5D25D34C58BDCD833F1192B"
+    },
+    "enforcement": "RESULT: PASS (15674 reviewed executable-source findings unchanged)\n",
+    "scanFiles": [
+      {
+        "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/portability-scan-2.csv",
+        "bytes": 17467502,
+        "sha256": "46B71583B2B1D713427E18FBA6C2D137EE24706D529575BA0EB7341D1D7F0C96"
+      },
+      {
+        "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/portability-scan-2.json",
+        "bytes": 30529503,
+        "sha256": "0A2AB25917FF971338A2F1F5EE71F4644A2B21F13BF3622D3F8205B681A1A6A6"
+      },
+      {
+        "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/first-candidate/portability-scan-1.csv",
+        "bytes": 17466751,
+        "sha256": "A417F501ABB94E51890816A99EDEC5E562278DE51522AE0D32049F2D8F60AB9E"
+      },
+      {
+        "path": ".artifacts/concurrent-mutations/validation/c4-recovery-selection-indexes/first-candidate/portability-scan-1.json",
+        "bytes": 30528192,
+        "sha256": "AB883DB06B67C17CEFB240CE19F8A41507E7D6012582277EED0A65B1B509226E"
+      }
+    ]
+  },
+  "invariants": [
+    "Two composite root/key indexes replace redundant prefix indexes; normal and downgrade paths build before dropping.",
+    "All eight interruption points retain a usable root index, preserve original rows and reenter through the real migration chain.",
+    "Exact definition/catalog guards reject reversed/descending/partial/included/unique/invalid replacements and conflicting old names without dropping them.",
+    "A held original transaction delays concurrent construction while an independent writer still succeeds.",
+    "Both actual five-second metadata readers use the new indexes with four buffers and no sort on measured hot/sparse histories.",
+    "Existing recovery migration/readers and both real Agent full-stage flows pass on current outputs.",
+    "No dependency changes or new runtime architecture owners; generated EF partial/designer follows the schema convention."
+  ],
+  "corrections": [
+    "First candidate: 12 safety passes, one fixture-seeding timeout before any cost measurement; the rest of the lanes were not executed. Only cost setup changed to 1000-row batches; the final complete 24-case selection passed. Existing command and reader timeouts were not raised.",
+    "Static scanning overlapped the first failed run. Final measurements started after the scanner completed. Four generated property declarations were reviewed and baseline enforcement passed without the write flag.",
+    "Initial local helper-copy/wrapper setup errors launched no compiler/test. Human-readable ownership preceded directory creation; the machine-readable adapter records its actual later creation."
+  ],
+  "limitations": [
+    "Synthetic 50000-row metadata history, one isolated PostgreSQL server and seven insertion batches per schema. This is not a production migration SLA or sustained 1/8/32 capacity proof.",
+    "Composite indexes are larger: 2596864 bytes each versus 450560 bytes each in this fixture; no extra root index remains after migration.",
+    "Automatic worker/HTTP activation, held publication/registration races, process restart, bounded I/O, live/legacy fairness and the separate whole-journal cost regression remain open.",
+    "Earlier denied cleanup remains untouched. SPA main is unchanged."
+  ]
+}

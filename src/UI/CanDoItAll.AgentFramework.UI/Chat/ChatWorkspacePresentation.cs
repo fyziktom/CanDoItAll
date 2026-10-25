@@ -33,6 +33,7 @@ public sealed record ChatWorkspacePresentation {
     public string DraftPrompt { get; init; } = "";
     public int ComposerKey { get; init; }
     public bool IsBusy { get; init; }
+    public bool IsSendBlocked { get; init; }
     public bool AutoApproval { get; init; }
     public string ComposerGuidance { get; init; } = "";
     public ImmutableArray<string> Attachments { get; init; } = [];

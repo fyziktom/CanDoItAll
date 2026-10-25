@@ -49,7 +49,7 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
                 continue;
             }
 
-            if (detail.Run.ToolAdmission is { Support: AgentToolAdmissionSupport.Recoverable, Segments.Length: > 0 }) {
+            if (HasDurableToolRecovery(detail.Run)) {
                 if (await PreserveAdmittedRecoveryAsync(executionRunId, startupCutoffUtc, cancellationToken)) {
                     repairedCount++;
                 }
@@ -105,6 +105,15 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
         return repairedCount;
     }
 
+    private static bool HasDurableToolRecovery(ExecutionRunRecord run) {
+        if (run.ToolAdmission is not { } journal) {
+            return false;
+        }
+        journal.Validate();
+        return journal.Support == AgentToolAdmissionSupport.EffectJournalOnly ||
+            journal.Support == AgentToolAdmissionSupport.Recoverable && journal.Segments.Length > 0;
+    }
+
     private async Task<bool> PreserveAdmittedRecoveryAsync(Guid executionRunId, DateTimeOffset startupCutoffUtc,
         CancellationToken cancellationToken) {
         var leases = executionRunStore as ISandboxWorkspaceExecutionRunLeaseStore
@@ -126,7 +135,7 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
         const string message = "Execution was interrupted. Its admitted input, approvals and effect identities are retained for explicit recovery or reconciliation.";
         var repairedAtUtc = DateTimeOffset.UtcNow;
         var detail = await writer.UpdateExecutionRunDetailAsync(executionRunId, current => {
-            if (!IsInterruptedRun(current.Run, startupCutoffUtc) || HasResumableApprovals(current)) {
+            if (!IsInterruptedRun(current.Run, startupCutoffUtc) || HasResumableApprovals(current) || !HasDurableToolRecovery(current.Run)) {
                 return current;
             }
 

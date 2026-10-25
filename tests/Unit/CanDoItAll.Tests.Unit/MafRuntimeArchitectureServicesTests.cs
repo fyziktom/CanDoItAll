@@ -25,6 +25,22 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class MafRuntimeArchitectureServicesTests
 {
     [Fact]
+    public void Planning_port_constructs_without_full_runtime_or_module_tool_graph() {
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddLogging();
+        services.AddScoped<MafAgentRuntime>(_ => throw new InvalidOperationException("Planning constructed the full runtime."));
+        services.AddScoped<IAgentRuntimeToolProvider>(_ => throw new InvalidOperationException("Planning constructed module tools."));
+        services.AddScoped<IAgentPlanningParticipant>(_ => throw new InvalidOperationException("Planning constructed module participants."));
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        using var first = provider.CreateScope();
+        using var second = provider.CreateScope();
+        var runtime = first.ServiceProvider.GetRequiredService<IAgentPlanningStepRuntime>();
+        Assert.IsType<MafPlanningStepRuntime>(runtime);
+        Assert.Same(runtime, first.ServiceProvider.GetRequiredService<IAgentPlanningStepRuntime>());
+        Assert.NotSame(runtime, second.ServiceProvider.GetRequiredService<IAgentPlanningStepRuntime>());
+    }
+
+    [Fact]
     public void MafRuntimeArchitectureServices_registers_runtime_collaborators()
     {
         var services = new ServiceCollection();

@@ -22,12 +22,15 @@ public sealed class AgentAdjunctOwnershipTests {
         var firstKey = AgentConversationKey.ForHandle(first.HandleId);
         var initial = bindings.GetOrCreateBinding(firstKey);
         var cut = context.Render<AgentFloatingConversationContent>(p => p.Add(c => c.Chat, first));
-        var queued = cut.FindComponent<AgentConversationContextSurface>().FindComponent<Button>().Instance.Click;
+        await cut.Find("[data-testid='floating-agent-chat-context-details']").ClickAsync();
+        var queued = cut.FindComponents<Button>().Single(c => c.Markup.Contains("floating-agent-chat-affinity-toggle", StringComparison.Ordinal)).Instance.Click;
         cut.Render(p => p.Add(c => c.Chat, second));
         cut.Render(p => p.Add(c => c.Chat, first));
         await cut.InvokeAsync(() => queued.InvokeAsync());
         Assert.Equal(initial, bindings.TryGetBinding(firstKey));
-        var staleRevision = cut.FindComponent<AgentConversationContextSurface>().FindComponent<Button>().Instance.Click;
+        Assert.Empty(cut.FindAll("[data-testid='floating-agent-chat-context-dialog']"));
+        await cut.Find("[data-testid='floating-agent-chat-context-details']").ClickAsync();
+        var staleRevision = cut.FindComponents<Button>().Single(c => c.Markup.Contains("floating-agent-chat-affinity-toggle", StringComparison.Ordinal)).Instance.Click;
         await cut.InvokeAsync(() => bindings.Detach(firstKey));
         var detached = bindings.TryGetBinding(firstKey);
         await cut.InvokeAsync(() => staleRevision.InvokeAsync());

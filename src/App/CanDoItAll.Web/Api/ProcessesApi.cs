@@ -17,12 +17,19 @@ internal static class ProcessesApi
             .WithTags("Processes")
             .DisableAntiforgery();
         processes.MapProcessRunRecordsApi();
+        processes.MapProcessPlanningReviewApi();
+        processes.MapProcessCancellationApi();
 
         processes.MapGet("/contract", GetContract)
             .WithName("GetProcessesApiContract")
             .Produces<ProcessApiContractResponse>();
 
         processes.MapProcessDefinitionsApi();
+
+        processes.MapGet("/launch/decision-contracts", (ProcessDecisionLaunchAdmissionCoordinator admissions) => TypedResults.Ok(admissions.Contracts))
+            .WithName("ListProcessDecisionContracts")
+            .WithSummary("List registered Process planning contracts and supported policy ceilings.")
+            .WithDescription("Read-only discovery, not launch eligibility, Workspace defaults or authorization. Prepare a launch to review its effective policy and current eligibility.");
 
         processes.MapPost("/launch/check", CheckLaunchAsync)
             .WithName("CheckProcessLaunch").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
@@ -42,6 +49,14 @@ internal static class ProcessesApi
             .Produces(StatusCodes.Status403Forbidden)
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
+        processes.MapGet("/launch/intents/{callerIntentId:guid}", GetLaunchIntentStatusAsync)
+            .WithName("GetProcessLaunchIntentStatus")
+            .WithSummary("Observe the original Process launch by its caller intent.")
+            .WithDescription("Caller, database profile and operator surface must match the original preparation. Reads only; never prepares, resumes or dispatches. A 404 does not prove an earlier in-flight request cannot complete. Retain the intent and use a found admission to restore the saved review before acceptance.")
+            .Produces<ProcessLaunchObservationApiView>()
+            .Produces(StatusCodes.Status403Forbidden)
+            .ProducesApiErrors(StatusCodes.Status404NotFound);
+
         processes.MapPost("/runs/{runId:guid}/dispatch", DispatchRunAsync)
             .WithName("DispatchProcessRun").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .Produces<ProcessDispatchApiResponse>()
@@ -49,8 +64,10 @@ internal static class ProcessesApi
 
         processes.MapPost("/runs/{runId:guid}/cancel", CancelRunAsync)
             .WithName("CancelProcessRun").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
+            .WithSummary("Cancel only the selected child Process run.")
+            .WithDescription("Legacy child-only contract. A root is refused with 409 process.root_cancellation_requires_admission before writing; use the Location resource for explicit finite root admission and progress. No automatic redirect or retry occurs. Send an object, including {} for defaults. A 200 child result does not certify root cleanup.")
             .Produces<ProcessRuntimeCancelApiResponse>()
-            .ProducesApiErrors(StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         processes.MapPost("/runs/{runId:guid}/steps/{stepInstanceId:guid}/rework", RequestStepReworkAsync)
             .WithName("RequestProcessStepRework").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
@@ -94,11 +111,15 @@ internal static class ProcessesApi
                 "GET /api/processes/definitions/{definitionKey}",
                 "GET /api/processes/definitions/{definitionKey}/roles",
                 "GET /api/processes/definitions/{definitionKey}/steps",
+                "GET /api/processes/launch/decision-contracts",
                 "POST /api/processes/launch/check",
                 "POST /api/processes/launch",
                 "GET /api/processes/launch/{admissionId}",
+                "GET /api/processes/launch/intents/{callerIntentId}",
                 "POST /api/processes/runs/{runId}/dispatch",
                 "POST /api/processes/runs/{runId}/cancel",
+                "GET /api/processes/runs/{runId}/cancellation",
+                "POST /api/processes/runs/{runId}/cancellation",
                 "POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework",
                 "GET /api/processes/live",
                 "GET /api/processes/runs",
@@ -309,12 +330,24 @@ internal static class ProcessesApi
         CancellationToken cancellationToken)
     {
         var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
-        if (await preparations.GetAsync(new(admissionId), cancellationToken) is null) {
+        return await ObserveLaunchAsync(await preparations.GetAsync(new(admissionId), cancellationToken), caller, launchService, cancellationToken);
+    }
+
+    private static async Task<IResult> GetLaunchIntentStatusAsync(Guid callerIntentId, HttpContext context,
+        IProcessLaunchOperatorAuthoritySource authoritySource, IProcessPreparedLaunchStore preparations,
+        ProcessLaunchApplicationService launchService, CancellationToken cancellationToken) {
+        var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
+        return await ObserveLaunchAsync(await preparations.FindByIntentAsync(new(callerIntentId), cancellationToken), caller, launchService, cancellationToken);
+    }
+
+    private static async Task<IResult> ObserveLaunchAsync(ProcessPreparedLaunchSnapshot? snapshot, ProcessLaunchAuthority caller,
+        ProcessLaunchApplicationService launchService, CancellationToken cancellationToken) {
+        if (snapshot is null) {
             return ApiEndpointResults.NotFound("The process launch admission was not found.", "process.launch_not_found");
         }
         try {
             return Results.Ok(MapLaunchObservation(
-                await launchService.GetLaunchStatusAsync(new(admissionId), caller, cancellationToken)));
+                await launchService.GetLaunchStatusAsync(snapshot.Preparation.AdmissionId, caller, cancellationToken)));
         } catch (InvalidOperationException) {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -396,51 +429,17 @@ internal static class ProcessesApi
         }
     }
 
-    /// <summary>
-    /// Cancel a process run, including its child runs.
-    /// </summary>
-    /// <remarks>
-    /// Cancels within this request rather than queuing a request. For a top-level run: the run becomes
-    /// CancelRequested, every step that has not finished is cancelled together with its open claims, agent executions
-    /// of the run that are active in this server are told to stop, the child runs (subprocesses) are cancelled, and
-    /// the run finally becomes Cancelled. A child run is cancelled on its own, without its parent or siblings.
-    /// Cancellation does not roll back what agents, workflows or tools have already done.
-    ///
-    /// Once the run exists, the outcome is reported in the body with HTTP 200:
-    ///
-    /// - <c>Applied</c>: the run is now Cancelled.
-    /// - <c>Rejected</c>: nothing more was done. The run had already ended (Completed, Failed or Cancelled),
-    /// concurrent changes kept the cancellation from being saved, or a child run could not be cancelled yet; in the
-    /// last case the top-level run stays CancelRequested, <c>diagnostics</c> name the child runs, and you can call
-    /// again.
-    ///
-    /// The <c>reason</c> is not stored with the run. Before responding, the server projects one bounded batch of
-    /// pending runtime events into the read models; confirm the result with <c>GET /api/processes/runs/{runId}</c>
-    /// and, when the run record exists, <c>GET /api/processes/runs/{runId}/summary</c>.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
-    /// is open.
-    /// </remarks>
-    /// <param name="runId">
-    /// Identifier of the process run to cancel, for example <c>runId</c> returned by
-    /// <c>POST /api/processes/launch</c>. For a child run, only that run is cancelled.
-    /// </param>
-    /// <param name="request">
-    /// Optional caller label and reason. The JSON object is required: send <c>{}</c> to use the defaults.
-    /// </param>
-    /// <response code="200">
-    /// The request was processed. Check <c>outcome</c>: only <c>Applied</c> means that the run was cancelled.
-    /// </response>
-    /// <response code="404">No process run has this identifier (<c>process.run_not_found</c>).</response>
     internal static async Task<IResult> CancelRunAsync(
         Guid runId,
         ProcessRuntimeCancelApiRequest request,
         ProcessRuntimeOperatorApplicationService operatorService,
-        ProcessRuntimeProjectionCatchupService projectionCatchupService,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
+        HttpContext context,
+        CancellationToken cancellationToken) {
+        context.Response.Headers.CacheControl = "no-store";
+        if (runId == Guid.Empty) {
+            return ApiEndpointResults.BadRequest("A non-empty process run identity is required.", "process.run_invalid");
+        }
+        try {
             var result = await operatorService
                 .RequestCancellationAsync(
                     new ProcessRuntimeRunCancellationCommand(
@@ -449,7 +448,6 @@ internal static class ProcessesApi
                         request.Reason),
                     cancellationToken)
                 .ConfigureAwait(false);
-            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
 
             return Results.Ok(new ProcessRuntimeCancelApiResponse(
                 result.RunId.Value,
@@ -457,9 +455,11 @@ internal static class ProcessesApi
                 result.Outcome.ToString(),
                 result.Status.ToString(),
                 result.Diagnostics));
-        }
-        catch (ProcessRuntimeOperatorRunNotFoundException)
-        {
+        } catch (ProcessRootCancellationAdmissionRequiredException refusal) {
+            context.Response.Headers.Location = $"/api/processes/runs/{refusal.RunId.Value:D}/cancellation";
+            return ApiEndpointResults.Conflict("Root cancellation requires explicit admission through the cancellation resource in Location.",
+                "process.root_cancellation_requires_admission");
+        } catch (ProcessRuntimeOperatorRunNotFoundException) {
             return ApiEndpointResults.NotFound(
                 $"Process run '{runId:D}' was not found.",
                 "process.run_not_found");
@@ -722,6 +722,9 @@ internal static class ProcessesApi
 
             return Results.Ok(MapLaunchResult(result));
         }
+        catch (ProcessLaunchDecisionRejectedException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, "process.launch_decision_rejected");
+        }
         catch (ProcessLaunchIntentConflictException) {
             return Results.Conflict(new ApiErrorResponse([
                 new("process.launch_intent_conflict", "The process launch intent no longer matches its original input.", CanDoItAll.SharedKernel.ErrorSeverity.Error)
@@ -788,7 +791,8 @@ internal static class ProcessesApi
             string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
             variables, request.RunReadiness, request.Execute) {
             CallerIntentId = request.CallerIntentId is { } intent ? new(intent) : null,
-            PreparedAdmissionId = request.PreparedAdmissionId is { } admission ? new(admission) : null
+            PreparedAdmissionId = request.PreparedAdmissionId is { } admission ? new(admission) : null,
+            Decision = request.Decision
         };
         var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
         var replay = await ProcessLaunchProducerRequests.FindReplayAsync(input, caller, preparations, cancellationToken);
@@ -860,7 +864,7 @@ internal static class ProcessesApi
                 result.LaunchPlan.LiveRunProfileKey,
                 result.LaunchPlan.PlanHash,
                 result.LaunchPlan.Steps.Select(MapLaunchStep).ToArray(),
-                result.LaunchPlan.ReadinessFindings.Select(MapReadinessFinding).ToArray()),
+                result.LaunchPlan.ReadinessFindings.Select(MapReadinessFinding).ToArray()) { Decision = result.LaunchPlan.Decision },
             result.Warnings) { Observation = result.Observation is { } observation ? MapLaunchObservation(observation) : null };
     }
 
@@ -1174,7 +1178,8 @@ internal sealed record ProcessLaunchApiRequest(
     bool RunReadiness = true,
     bool Execute = false,
     Guid? CallerIntentId = null,
-    Guid? PreparedAdmissionId = null);
+    Guid? PreparedAdmissionId = null,
+    ProcessLaunchDecisionOptions? Decision = null);
 
 /// <summary>
 /// Body of <c>POST /api/processes/runs/{runId}/dispatch</c>. Every member is optional, but the JSON object itself is
@@ -1339,7 +1344,10 @@ internal sealed record ProcessLaunchPlanApiView(
     string? LiveRunProfileKey,
     string PlanHash,
     IReadOnlyList<ProcessLaunchStepApiView> Steps,
-    IReadOnlyList<ProcessLaunchReadinessFindingApiView> ReadinessFindings);
+    IReadOnlyList<ProcessLaunchReadinessFindingApiView> ReadinessFindings) {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessLaunchDecisionReview? Decision { get; init; }
+}
 
 /// <summary>
 /// One step of a launch plan with the executor assigned to it.
@@ -1489,26 +1497,6 @@ internal sealed record ProcessRuntimeReworkApiResponse(
     string Status,
     IReadOnlyList<string> Diagnostics);
 
-/// <summary>
-/// Result of <c>POST /api/processes/runs/{runId}/cancel</c>. <c>outcome</c> says whether the run was cancelled; the
-/// HTTP status is 200 in every case once the run exists.
-/// </summary>
-/// <param name="RunId">Identifier of the process run (the route value).</param>
-/// <param name="Kind">The operator action that was processed: always <c>CancelRun</c> for this operation.</param>
-/// <param name="Outcome">
-/// <c>Applied</c> (the run is now Cancelled) or <c>Rejected</c> (the run had already ended, concurrent changes kept
-/// the cancellation from being saved, or child runs could not be cancelled yet; see <c>diagnostics</c>).
-/// </param>
-/// <param name="Status">
-/// Runtime status of the run after the request, as text, with the values described for the dispatch response:
-/// <c>Cancelled</c> after success, <c>CancelRequested</c> while child runs still block the cancellation, or the
-/// unchanged status after other rejections.
-/// </param>
-/// <param name="Diagnostics">
-/// Human-readable explanations, for example how many active agent executions were told to stop or which child runs
-/// are still pending. Not stable codes; text that looks like credentials, URL query strings and local file paths is
-/// removed; at most 32 entries.
-/// </param>
 internal sealed record ProcessRuntimeCancelApiResponse(
     Guid RunId,
     string Kind,

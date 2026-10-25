@@ -1,0 +1,1232 @@
+{
+  "candidate": "c4-planning-admission-reviewed",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-core-release-final",
+      "Arguments": [
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-19T07:46:11.5606561+00:00",
+      "State": "Completed",
+      "RunnerPid": 53388,
+      "ChildPid": 53860,
+      "ChildStartedUtc": "2026-10-19T07:46:11.5864084Z",
+      "ExitCode": 0,
+      "Seconds": 2.4923435,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3446,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-release-final",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T07:46:59.1462788+00:00",
+      "State": "Completed",
+      "RunnerPid": 53388,
+      "ChildPid": 54792,
+      "ChildStartedUtc": "2026-10-19T07:46:59.1495279Z",
+      "ExitCode": 0,
+      "Seconds": 36.315384,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 175409,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-maf-release-final",
+      "Arguments": [
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-19T07:46:14.1030768+00:00",
+      "State": "Completed",
+      "RunnerPid": 53388,
+      "ChildPid": 53940,
+      "ChildStartedUtc": "2026-10-19T07:46:14.1065815Z",
+      "ExitCode": 0,
+      "Seconds": 4.0607935,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 12707,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-unit-release-final",
+      "Arguments": [
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T07:46:31.7118582+00:00",
+      "State": "Completed",
+      "RunnerPid": 53388,
+      "ChildPid": 57380,
+      "ChildStartedUtc": "2026-10-19T07:46:31.7147742Z",
+      "ExitCode": 0,
+      "Seconds": 27.420479,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 150352,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-workbench-release-final",
+      "Arguments": [
+        "build",
+        "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-19T07:46:18.1779909+00:00",
+      "State": "Completed",
+      "RunnerPid": 53388,
+      "ChildPid": 46672,
+      "ChildStartedUtc": "2026-10-19T07:46:18.1816104Z",
+      "ExitCode": 0,
+      "Seconds": 13.5224576,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 52338,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-19T07:47:03.2690955+00:00",
+      "State": "Completed",
+      "RunnerPid": 28196,
+      "ChildPid": 53296,
+      "ChildStartedUtc": "2026-10-19T07:47:03.2736169Z",
+      "ExitCode": 0,
+      "Seconds": 0.2710247,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 11241,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-planning-admission-integration",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanAdmissionTests|FullyQualifiedName~ProjectTaskPlanAgentIntegrationTests|FullyQualifiedName~ProjectTaskPlanHistoricalReceiptTests",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T07:47:38.4559876+00:00",
+      "State": "Completed",
+      "RunnerPid": 53388,
+      "ChildPid": 25404,
+      "ChildStartedUtc": "2026-10-19T07:47:38.4611263Z",
+      "ExitCode": 0,
+      "Seconds": 2.3716649,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 5069,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-planning-admission-unit",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanAgentCodecTests|FullyQualifiedName~ProjectTaskPlanOperationContractTests",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T07:47:35.4942208+00:00",
+      "State": "Completed",
+      "RunnerPid": 53388,
+      "ChildPid": 52672,
+      "ChildStartedUtc": "2026-10-19T07:47:35.4985978Z",
+      "ExitCode": 0,
+      "Seconds": 2.9452154,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4101,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-19T07:46:57.3386887+00:00",
+      "State": "Completed",
+      "RunnerPid": 28196,
+      "ChildPid": 58908,
+      "ChildStartedUtc": "2026-10-19T07:46:57.3425926Z",
+      "ExitCode": 0,
+      "Seconds": 5.9094074,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-planning-admission-integration",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanAdmissionTests|FullyQualifiedName~ProjectTaskPlanAgentIntegrationTests|FullyQualifiedName~ProjectTaskPlanHistoricalReceiptTests",
+        "--logger",
+        "trx;LogFileName=planning-admission-integration.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-planning-admission-reviewed"
+      ],
+      "StartedUtc": "2026-10-19T07:49:32.7979384+00:00",
+      "State": "Completed",
+      "RunnerPid": 60012,
+      "ChildPid": 27252,
+      "ChildStartedUtc": "2026-10-19T07:49:32.8015002Z",
+      "ExitCode": -1,
+      "Seconds": 378.724774,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 552,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-planning-admission-unit",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanAgentCodecTests|FullyQualifiedName~ProjectTaskPlanOperationContractTests",
+        "--logger",
+        "trx;LogFileName=planning-admission-unit.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-planning-admission-reviewed"
+      ],
+      "StartedUtc": "2026-10-19T07:49:29.0194089+00:00",
+      "State": "Completed",
+      "RunnerPid": 60012,
+      "ChildPid": 12444,
+      "ChildStartedUtc": "2026-10-19T07:49:29.0651894Z",
+      "ExitCode": 0,
+      "Seconds": 3.7120867,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 5197,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-chat-browser-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-planning-admission-reviewed/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-19T07:49:20.9943528+00:00",
+      "State": "Completed",
+      "RunnerPid": 45816,
+      "ChildPid": 42404,
+      "ChildStartedUtc": "2026-10-19T07:49:21.0183562Z",
+      "ExitCode": 0,
+      "Seconds": 390.7057656,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 55,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-planning-admission-reviewed/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-19T07:48:13.6636593+00:00",
+      "State": "Completed",
+      "RunnerPid": 45668,
+      "ChildPid": 27652,
+      "ChildStartedUtc": "2026-10-19T07:48:13.6661999Z",
+      "ExitCode": 0,
+      "Seconds": 0.4481101,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-final",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-planning-admission-reviewed/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-19T07:46:53.9582167+00:00",
+      "State": "Completed",
+      "RunnerPid": 45668,
+      "ChildPid": 46312,
+      "ChildStartedUtc": "2026-10-19T07:46:53.9994969Z",
+      "ExitCode": 0,
+      "Seconds": 79.6438893,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 442,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-final",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-19T07:46:53.9567390+00:00",
+      "State": "Completed",
+      "RunnerPid": 28196,
+      "ChildPid": 20244,
+      "ChildStartedUtc": "2026-10-19T07:46:53.9994549Z",
+      "ExitCode": 0,
+      "Seconds": 3.3007447,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "6c3a62a0-3d55-4bd0-97c5-47a933cd8342",
+      "testId": "56289851-3200-3d7b-8ea2-62a7daa34154",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Semantic_digest_includes_original_operation_basis_policy_source_and_proposal_order",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0028644",
+      "startTime": "2026-10-19T03:49:32.5379430-04:00",
+      "endTime": "2026-10-19T03:49:32.5406633-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6c3a62a0-3d55-4bd0-97c5-47a933cd8342",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "d46b46b3-823c-4abc-b82d-9a4691ab7691",
+      "testId": "91d3c56f-4f1b-4ed8-3038-993609790857",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Outcome_knowledge_cannot_label_commit_uncertainty_as_a_definite_rejection",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0323032",
+      "startTime": "2026-10-19T03:49:32.5763781-04:00",
+      "endTime": "2026-10-19T03:49:32.6086032-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d46b46b3-823c-4abc-b82d-9a4691ab7691",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "4957b4be-21c9-450c-8799-0d7f1d920573",
+      "testId": "9e8194fa-6959-3c41-34c1-959c8f557106",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Fixed_pool_registration_snapshots_timing_and_never_aliases_projects_or_accepts_unbounded_deadlines",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0040197",
+      "startTime": "2026-10-19T03:49:32.6087538-04:00",
+      "endTime": "2026-10-19T03:49:32.6126713-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4957b4be-21c9-450c-8799-0d7f1d920573",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "6a78257c-0160-4f56-820a-13b3236c2b3a",
+      "testId": "0c136ff0-b051-b2b2-8c41-b071474dea6f",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Caller_proposal_and_acknowledgement_capture_original_values_without_list_or_byte_aliases",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0012275",
+      "startTime": "2026-10-19T03:49:32.6328228-04:00",
+      "endTime": "2026-10-19T03:49:32.6340624-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6a78257c-0160-4f56-820a-13b3236c2b3a",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "fdff9dff-4606-4b1f-af89-70f05741199d",
+      "testId": "798b447a-bffd-fdd8-b8c7-485933a39e73",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Stored_result_requires_exact_indexed_identity_source_digest_and_issued_horizon",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0053432",
+      "startTime": "2026-10-19T03:49:32.6238427-04:00",
+      "endTime": "2026-10-19T03:49:32.6292468-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fdff9dff-4606-4b1f-af89-70f05741199d",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "f088a357-8981-498f-9a3f-3e2c309eb2ad",
+      "testId": "e2075e6a-e404-7ba7-0900-760eb390f40b",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":[{\\\"title\\\":\\\"a\\\",\\\"descr\"···)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0001878",
+      "startTime": "2026-10-19T03:49:31.8589463-04:00",
+      "endTime": "2026-10-19T03:49:31.8589845-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f088a357-8981-498f-9a3f-3e2c309eb2ad",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "4022243d-c646-437d-aab9-d643bd5ba4ca",
+      "testId": "5a0a831c-36eb-822c-cbb3-71c0dd9f612b",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":2,\\\"tasks\\\":[{\\\"title\\\":\\\"a\\\",\\\"descr\"···)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0000455",
+      "startTime": "2026-10-19T03:49:31.8644174-04:00",
+      "endTime": "2026-10-19T03:49:31.8644715-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4022243d-c646-437d-aab9-d643bd5ba4ca",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "a81fe9ba-eca1-4335-a5b8-58e421396396",
+      "testId": "568f42a7-a375-18e7-c927-df30a301dcb9",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":[{\\\"title\\\":null,\\\"descri\"···)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0000576",
+      "startTime": "2026-10-19T03:49:31.8588668-04:00",
+      "endTime": "2026-10-19T03:49:31.8588957-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a81fe9ba-eca1-4335-a5b8-58e421396396",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "2a041acc-2c11-4133-9a3c-5c423fbbdd2e",
+      "testId": "12a286d7-7d07-1915-42aa-bbfaa44e914d",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":[{\\\"title\\\":\\\"  \\\",\\\"desc\"···)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0000627",
+      "startTime": "2026-10-19T03:49:31.8575550-04:00",
+      "endTime": "2026-10-19T03:49:31.8575879-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "2a041acc-2c11-4133-9a3c-5c423fbbdd2e",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "7aaf2aaf-c652-41bf-a3ea-9bb2204a8a44",
+      "testId": "0b58aa71-24ba-e4b9-ebb1-a44d55db8f87",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":[{\\\"title\\\":\\\"a\\\",\\\"descr\"···)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0255630",
+      "startTime": "2026-10-19T03:49:31.8474268-04:00",
+      "endTime": "2026-10-19T03:49:31.8566970-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7aaf2aaf-c652-41bf-a3ea-9bb2204a8a44",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "fb4ee6af-ee28-4214-afb2-d96b068c77e9",
+      "testId": "2fa060ca-fa88-43b5-f39f-34b1e50bc533",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Duplicate_unknown_missing_non_utc_and_inconsistent_retained_fields_never_become_acceptance",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0031229",
+      "startTime": "2026-10-19T03:49:32.6127732-04:00",
+      "endTime": "2026-10-19T03:49:32.6157420-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fb4ee6af-ee28-4214-afb2-d96b068c77e9",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "2efe5479-eb14-411c-8e03-19d39b6ed2f4",
+      "testId": "7b1607ec-fdbf-9db4-dabf-1ea39efbd18e",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Actual_receipt_payload_and_metadata_are_bounded_before_they_can_be_replayed",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.7144755",
+      "startTime": "2026-10-19T03:49:31.8373500-04:00",
+      "endTime": "2026-10-19T03:49:32.5378042-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "2efe5479-eb14-411c-8e03-19d39b6ed2f4",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "2d0587c2-f6dd-4ef2-8597-15fd4f71fd2f",
+      "testId": "127d4957-7a8d-0afd-87c4-c4b15e694d9f",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Original_capture_time_is_intent_identity_but_not_material_change_history",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0004708",
+      "startTime": "2026-10-19T03:49:32.6341670-04:00",
+      "endTime": "2026-10-19T03:49:32.6344777-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "2d0587c2-f6dd-4ef2-8597-15fd4f71fd2f",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "ab55d40b-b289-4ade-8051-37c98f08d17e",
+      "testId": "552ce490-9c68-bc4a-e2b1-427edfb3e519",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Empty_identity_unknown_kind_version_and_noncanonical_digest_are_refused",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0006388",
+      "startTime": "2026-10-19T03:49:32.6158507-04:00",
+      "endTime": "2026-10-19T03:49:32.6165076-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ab55d40b-b289-4ade-8051-37c98f08d17e",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "aafcbcb6-6176-415a-85b7-d5d8d900c475",
+      "testId": "e2a72aad-bfee-d4ca-0e60-2e2d10504c96",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":[],\\\"tasks\\\":[{\\\"title\\\":\"···)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0058618",
+      "startTime": "2026-10-19T03:49:31.8388964-04:00",
+      "endTime": "2026-10-19T03:49:31.8397294-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "aafcbcb6-6176-415a-85b7-d5d8d900c475",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "df0b4a8b-366c-4f39-bfd2-07d2a55d2a1d",
+      "testId": "57a5b3d6-8afd-f5eb-b77c-dfcc2f1fb1a7",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Mixed_result_and_source_versions_cannot_reinterpret_retained_acceptance",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0029753",
+      "startTime": "2026-10-19T03:49:32.6293556-04:00",
+      "endTime": "2026-10-19T03:49:32.6322854-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "df0b4a8b-366c-4f39-bfd2-07d2a55d2a1d",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "9ecc2f9e-c014-419d-8fed-a9e7c670257e",
+      "testId": "7fe62842-5dca-73ca-b35a-92da8a46879e",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":[{\\\"title\\\":\\\"a\\\",\\\"descr\"···)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0001586",
+      "startTime": "2026-10-19T03:49:31.8587468-04:00",
+      "endTime": "2026-10-19T03:49:31.8588014-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9ecc2f9e-c014-419d-8fed-a9e7c670257e",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "b88d893f-49b1-4bfa-906d-1e26c94f0368",
+      "testId": "fbaaab79-7f1a-cad0-4abd-d15979bd804b",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Each_supported_interpretation_preserves_exact_receipt_fields_and_encoded_payload(version: 2)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0020756",
+      "startTime": "2026-10-19T03:49:32.6218342-04:00",
+      "endTime": "2026-10-19T03:49:32.6237217-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b88d893f-49b1-4bfa-906d-1e26c94f0368",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "4c49622f-7bd0-4a4c-95a2-98f6a4a430d8",
+      "testId": "3ffe5d36-3c67-c45c-8247-a77f5989d599",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Accepted_codec_retains_exact_ordered_ids_defaults_and_bytes_independent_of_later_rows",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0353964",
+      "startTime": "2026-10-19T03:49:32.5407738-04:00",
+      "endTime": "2026-10-19T03:49:32.5762183-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4c49622f-7bd0-4a4c-95a2-98f6a4a430d8",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "fe2e32df-f418-45b0-a1de-d57b837fa6b6",
+      "testId": "4f9578bd-7a91-3d7d-0b72-47af92047cd4",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Draft_normalizes_strings_without_accepting_additional_commands",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0046537",
+      "startTime": "2026-10-19T03:49:31.8653413-04:00",
+      "endTime": "2026-10-19T03:49:31.8653848-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fe2e32df-f418-45b0-a1de-d57b837fa6b6",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "fff966d5-4804-4c61-a082-01c8ba6aaf2e",
+      "testId": "7ff144e6-061e-fe66-f3b6-febcb4e0518a",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":null}\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0005488",
+      "startTime": "2026-10-19T03:49:31.8586381-04:00",
+      "endTime": "2026-10-19T03:49:31.8586804-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fff966d5-4804-4c61-a082-01c8ba6aaf2e",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "54667f72-3dae-4aa9-9f7c-b554cf1c6525",
+      "testId": "a476c879-0786-760d-f0fb-102750f06001",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Each_supported_interpretation_preserves_exact_receipt_fields_and_encoded_payload(version: 1)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0050599",
+      "startTime": "2026-10-19T03:49:32.6179287-04:00",
+      "endTime": "2026-10-19T03:49:32.6217113-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "54667f72-3dae-4aa9-9f7c-b554cf1c6525",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "335f6f44-fb50-47c6-8f33-c921a7ab2fc1",
+      "testId": "69f3f59e-113e-7c2a-3467-796cf3220d83",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":[{\\\"title\\\":\\\"a\\\",\\\"title\"···)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0000201",
+      "startTime": "2026-10-19T03:49:31.8576482-04:00",
+      "endTime": "2026-10-19T03:49:31.8585325-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "335f6f44-fb50-47c6-8f33-c921a7ab2fc1",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "67977105-b90f-4473-a22d-7a29536273c8",
+      "testId": "7dc49181-942a-c931-5770-23be6a7366ba",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanAgentCodecTests.Unsupported_or_ambiguous_provider_draft_is_refused(input: \"{\\\"version\\\":1,\\\"tasks\\\":[]}\")",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0000688",
+      "startTime": "2026-10-19T03:49:31.8574011-04:00",
+      "endTime": "2026-10-19T03:49:31.8574516-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "67977105-b90f-4473-a22d-7a29536273c8",
+      "trx": "planning-admission-unit.trx"
+    },
+    {
+      "executionId": "c17c7029-e370-48b8-802a-fbf8f51398a3",
+      "testId": "3d2c0d45-ca89-d4fd-725e-eb77240685ad",
+      "testName": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Changed_work_interpretation_changes_semantics_without_creating_another_operation_address",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0004661",
+      "startTime": "2026-10-19T03:49:32.6324560-04:00",
+      "endTime": "2026-10-19T03:49:32.6327312-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c17c7029-e370-48b8-802a-fbf8f51398a3",
+      "trx": "planning-admission-unit.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "snapshotId": "snap-20261019074511-9cc7ff0f",
+      "projects": [
+        {
+          "name": "CanDoItAll.AgentFramework.Core",
+          "projectId": "proj-candoitall-agentframework-core",
+          "documentCount": 237
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.Maf",
+          "projectId": "proj-candoitall-agentframework-maf",
+          "documentCount": 134
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.Models",
+          "projectId": "proj-candoitall-agentframework-models",
+          "documentCount": 136
+        },
+        {
+          "name": "CanDoItAll.Modules.Projects",
+          "projectId": "proj-candoitall-modules-projects",
+          "documentCount": 128
+        },
+        {
+          "name": "CanDoItAll.Modules.Workbench",
+          "projectId": "proj-candoitall-modules-workbench",
+          "documentCount": 386
+        },
+        {
+          "name": "CanDoItAll.Modules.Workspace",
+          "projectId": "proj-candoitall-modules-workspace",
+          "documentCount": 52
+        },
+        {
+          "name": "CanDoItAll.Modules.Workspace.Contracts",
+          "projectId": "proj-candoitall-modules-workspace-contracts",
+          "documentCount": 10
+        }
+      ],
+      "documents": 1083,
+      "types": 3576,
+      "projectEdges": [
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-agentframework-cor-ed13e6dd1e47",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-agentframework-core",
+          "toId": "proj-candoitall-agentframework-models",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-agentframework-maf-8e4afd8be896",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-agentframework-maf",
+          "toId": "proj-candoitall-agentframework-core",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-agentframework-maf-7220a45aa6d4",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-agentframework-maf",
+          "toId": "proj-candoitall-agentframework-models",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-modules-projects-p-ea62d11bec33",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-modules-projects",
+          "toId": "proj-candoitall-agentframework-core",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-modules-projects-p-2f02592412d1",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-modules-projects",
+          "toId": "proj-candoitall-agentframework-models",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-modules-workbench-47cc7fa5a784",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-modules-workbench",
+          "toId": "proj-candoitall-agentframework-core",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-modules-workbench-ba46581dbc69",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-modules-workbench",
+          "toId": "proj-candoitall-agentframework-models",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-modules-workbench-1da235874167",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-modules-workbench",
+          "toId": "proj-candoitall-modules-projects",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-modules-workbench-249df0ac1f59",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-modules-workbench",
+          "toId": "proj-candoitall-modules-workspace",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-modules-workspace-74b0170e7c42",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-modules-workspace",
+          "toId": "proj-candoitall-agentframework-models",
+          "weight": 1,
+          "source": null
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-modules-workspace-dc4ea069f3e7",
+          "kind": "projectReference",
+          "fromId": "proj-candoitall-modules-workspace",
+          "toId": "proj-candoitall-modules-projects",
+          "weight": 1,
+          "source": null
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "DEP0002",
+          "severity": "warning",
+          "count": 2
+        },
+        {
+          "code": "DI0001",
+          "severity": "info",
+          "count": 15
+        },
+        {
+          "code": "DI0002",
+          "severity": "warning",
+          "count": 3
+        },
+        {
+          "code": "WS0002",
+          "severity": "error",
+          "count": 189
+        }
+      ],
+      "cycles": [
+        {
+          "level": "Module",
+          "nodeIds": [
+            "mod-proj-candoitall-modules-workbench-candoitall-module-0f477a149fbd",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-719c9c04c259",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-8728e66eb823",
+            "mod-proj-candoitall-modules-workbench-candoitall-modules-workbench"
+          ],
+          "displayNames": [
+            "mod-proj-candoitall-modules-workbench-candoitall-module-0f477a149fbd",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-719c9c04c259",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-8728e66eb823",
+            "mod-proj-candoitall-modules-workbench-candoitall-modules-workbench"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-152cf43aa7bb",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-1a990fe814d7",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-244216b46507",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-6783a14556a8",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9ad3f723b960",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9c7b9e7ebdc1",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-ddf87e625d14",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-fb60e0ed084c"
+          ],
+          "displayNames": [
+            "CanDoItAll.AgentFramework.Core.AgentPlanningDecisionOwner",
+            "CanDoItAll.AgentFramework.Core.AgentToolAdmissionJournal",
+            "CanDoItAll.AgentFramework.Core.AgentPlanningLiveWork",
+            "CanDoItAll.AgentFramework.Core.AgentToolInvocationClaim",
+            "CanDoItAll.AgentFramework.Core.AgentToolReceiptReconciliationClaim",
+            "CanDoItAll.AgentFramework.Core.IAgentToolReceiptReconciliationProvider",
+            "CanDoItAll.AgentFramework.Core.AgentToolInvocationPublicationLease",
+            "CanDoItAll.AgentFramework.Core.AgentToolRunLease"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-5b51f78cf7ac",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-dde9fb0d855d"
+          ],
+          "displayNames": [
+            "CanDoItAll.AgentFramework.Core.IAgentToolHistoricalReceiptReadProvider",
+            "CanDoItAll.AgentFramework.Core.AgentToolHistoricalReceiptReadClaim"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+          ],
+          "displayNames": [
+            "CanDoItAll.AgentFramework.Core.AgentReferenceDataCache.AgentReferenceDataCacheEntry",
+            "CanDoItAll.AgentFramework.Core.AgentReferenceDataCache"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-maf-candoitall-agent-b621f40b165c",
+            "type-proj-candoitall-agentframework-maf-candoitall-agent-db62890836a2"
+          ],
+          "displayNames": [
+            "CanDoItAll.AgentFramework.Maf.MafSkillSourcePreparation",
+            "CanDoItAll.AgentFramework.Maf.MafSkillSourcePreparation.Observation"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-projects-candoitall-modules-5426ea5324b7",
+            "type-proj-candoitall-modules-projects-candoitall-modules-9ab4f49abc23"
+          ],
+          "displayNames": [
+            "CanDoItAll.Modules.Projects.ProjectDeletionCompletionOwner.Attempt",
+            "CanDoItAll.Modules.Projects.ProjectDeletionCompletionOwner"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-02c9ba5465b1",
+            "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+          ],
+          "displayNames": [
+            "CanDoItAll.Modules.Workbench.ProjectProcessLaunchAuthorityService.ProjectProcessProjectAuthorityLease",
+            "CanDoItAll.Modules.Workbench.ProjectProcessLaunchAuthorityService"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-0f41c602b1fe",
+            "type-proj-candoitall-modules-workbench-candoitall-module-4b7d2fcd61a3"
+          ],
+          "displayNames": [
+            "CanDoItAll.Modules.Workbench.ProjectAgentSourceMutationAuthority",
+            "CanDoItAll.Modules.Workbench.ProjectAgentSourceMutationLease"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-52c32b619f41",
+            "type-proj-candoitall-modules-workbench-candoitall-module-8069c738a25d"
+          ],
+          "displayNames": [
+            "CanDoItAll.Modules.Workbench.ProjectPackageService",
+            "CanDoItAll.Modules.Workbench.ProjectPackageStorageImporter"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-60d3a4551568",
+            "type-proj-candoitall-modules-workbench-candoitall-module-b68d6311eb55",
+            "type-proj-candoitall-modules-workbench-candoitall-module-c69b5db5dd23"
+          ],
+          "displayNames": [
+            "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService",
+            "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService.WorkflowReadSourceLease",
+            "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService.MappedProcessSourceLease"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-683329e17440",
+            "type-proj-candoitall-modules-workbench-candoitall-module-96caa8516513"
+          ],
+          "displayNames": [
+            "CanDoItAll.Modules.Workbench.ProjectAgentNativeMutationScope",
+            "CanDoItAll.Modules.Workbench.ProjectAgentNativeMutationService"
+          ]
+        }
+      ],
+      "newAdmissionTypes": [
+        "CanDoItAll.AgentFramework.Core.AgentPlanningRunAdmission",
+        "CanDoItAll.AgentFramework.Core.AgentPlanningRunPreparation",
+        "CanDoItAll.Modules.Workbench.ProjectTaskPlanAgentAdmission"
+      ],
+      "review": [
+        "No new project reference; selected project graph is acyclic. Core/MAF do not reference product modules.",
+        "The existing Workbench module and ten type cycles do not contain the new admission types.",
+        "Three DI0002 entries are the existing publisher factory, ActivatorUtilities factory and capability singleton; actual registered resolution is covered by integration tests.",
+        "189 WS0002 package-advisory diagnostics and two generated duplicate-type warnings remain outside this slice. This is not a clean whole-solution health claim.",
+        "Full build response exceeded the IPC frame limit after writing its snapshot; recovered through recent snapshots, dependency API and local facts."
+      ],
+      "newAdmissionTypesInCycles": [],
+      "runtimeReview": "Rejected: static project graph missed the factory-composed dependency loop through WorkspaceDefaultsOwner, IWorkspaceProviderCatalog, ProviderAdministration and MafAgentRuntime. Actual DI hung. Replace UI owner with existing WorkspaceSettingsWriter."
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9223,
+      "runtimeFiles": 6436,
+      "sourceSha256": "ECFEA8B8FA0F5F776EF3C96330EEA252C38F49C8AE13F0A80E5B1C569B0866E2",
+      "runtimeSha256": "83E5B9E2BA4597EF11F1B5C4D5ABCCE9A39A064341C10F6190E5740074F73B87"
+    },
+    "final-resource-reconciliation.json": {
+      "remainingObservedProcesses": [],
+      "recordedUtc": "2026-10-19T07:56:12.5880875+00:00",
+      "outcome": "Integration stopped on diagnosed service construction deadlock; preserve owned fixture evidence for exact cleanup",
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "postgres|1"
+      ],
+      "databaseNameDelta": [
+        {
+          "InputObject": "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76",
+          "SideIndicator": "=>"
+        }
+      ],
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ci0ynm0b.mee",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-tests\\e62070c71e0544a0ad77f2db0f64bbfc",
+          "family": "candoitall-tests"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\MSBuildTempfokbnodi.l2j",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\313l3n4y.sdk",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_12444_20261019_034929_258.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_27252_20261019_034932_990.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\tool-admission\\760b53a19e4f4592968c5df00bca127d",
+          "family": "tool-admission"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\svjdzkut.gce",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\uqhhovqs.xnj",
+          "family": "shared-temp-directory-entries"
+        }
+      ]
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-19T07:49:20.9943528+00:00",
+      "observerSeconds": 390.7057656,
+      "commands": [
+        {
+          "command": "execute-planning-admission-integration",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-19T07:49:32.7979384+00:00",
+          "seconds": 378.724774
+        },
+        {
+          "command": "execute-planning-admission-unit",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-19T07:49:29.0194089+00:00",
+          "seconds": 3.7120867
+        }
+      ]
+    },
+    "deadlock-stop.json": {
+      "startedUtc": "2026-10-19T07:49:32.8015002Z",
+      "pid": 27252,
+      "reason": "Managed stacks show WorkspaceDefaultsOwner/ProviderAdministration/MAF runtime registration recursion; PostgreSQL idle.",
+      "recordedUtc": "2026-10-19T07:55:51.4324419+00:00",
+      "state": "StoppingOwnedDeadlockedTestTree"
+    },
+    "owned-abandoned-fixture.json": {
+      "recordedUtc": "2026-10-19T07:57:23.6139318+00:00",
+      "roots": [
+        "C:/Users/lucys/AppData/Local/Temp/candoitall-tests/e62070c71e0544a0ad77f2db0f64bbfc",
+        "C:/Users/lucys/AppData/Local/Temp/tool-admission/760b53a19e4f4592968c5df00bca127d"
+      ],
+      "fixtureAgentId": "7a03deb2-7ef1-48c6-8e80-d6139a1262ca",
+      "basis": "Observer reports roots created during this run; exact same unique fixture Agent links seed and SQL fixture; SQL namespace equals owned activation file; original process tree stopped.",
+      "state": "OwnershipReconciledAfterProcessStop",
+      "database": "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76",
+      "datasetNamespace": "fbbdc9ee-b07b-45ca-866f-585f617717ec"
+    },
+    "abandoned-fixture-cleanup.json": {
+      "recordedUtc": "2026-10-19T07:58:47.9605717+00:00",
+      "state": "BlockedByAutomaticApprovalReview",
+      "commandExecuted": false,
+      "reason": "blocked by policy",
+      "roots": [
+        "C:/Users/lucys/AppData/Local/Temp/candoitall-tests/e62070c71e0544a0ad77f2db0f64bbfc",
+        "C:/Users/lucys/AppData/Local/Temp/tool-admission/760b53a19e4f4592968c5df00bca127d"
+      ],
+      "action": "Remove exact abandoned test database and two verified fixture directories",
+      "database": "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76",
+      "ownership": "owned-abandoned-fixture.json"
+    },
+    "freeze-release.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "integration": "Deadlocked during service construction; no completed test results",
+      "recordedUtc": "2026-10-19T07:58:48.0206804+00:00",
+      "unit": "25 passed",
+      "resources": "Zero observed processes; one exact abandoned database and two fixture roots blocked by automatic approval review, recorded separately",
+      "state": "ReleasedForNarrowDependencyRepair"
+    },
+    "managedStack": "Thread (0xE3D8):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.Monitor.Wait(class System.Object,int32)\n  System.Private.CoreLib.il!System.Threading.ManualResetEventSlim.Wait(int32,value class System.Threading.CancellationToken)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.SpinThenBlockingWait(int32,value class System.Threading.CancellationToken)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.InternalWaitCore(int32,value class System.Threading.CancellationToken)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.InternalWait(int32,value class System.Threading.CancellationToken)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.Wait(int32,value class System.Threading.CancellationToken)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.Wait()\n  testhost!Microsoft.VisualStudio.TestPlatform.TestHost.DefaultEngineInvoker.Invoke(class System.Collections.Generic.IDictionary`2<class System.String,class System.String>)\n  testhost!Microsoft.VisualStudio.TestPlatform.TestHost.Program.Run(class System.String[],class Microsoft.VisualStudio.TestPlatform.Execution.UiLanguageOverride)\n  testhost!Microsoft.VisualStudio.TestPlatform.TestHost.Program.Run(class System.String[])\n  testhost!Microsoft.VisualStudio.TestPlatform.TestHost.Program.Main(class System.String[])\n\nThread (0xCDDC):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class WaitHandleWaitSourceMap)\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOne()\n  xunit.runner.visualstudio.testadapter!Xunit.Runner.VisualStudio.VsTestRunner+<>c__DisplayClass32_0.<RunTests>b__5(class Xunit.Runner.VisualStudio.AssemblyRunInfo)\n  System.Private.CoreLib.il!System.Collections.Generic.List`1[System.__Canon].ForEach(class System.Action`1<!0>)\n  xunit.runner.visualstudio.testadapter!Xunit.Runner.VisualStudio.VsTestRunner+<RunTests>d__32.MoveNext()\n  System.Private.CoreLib.il!System.Runtime.CompilerServices.AsyncMethodBuilderCore.Start(!!0&)\n  System.Private.CoreLib.il!System.Runtime.CompilerServices.AsyncTaskMethodBuilder.Start(!!0&)\n  xunit.runner.visualstudio.testadapter!Xunit.Runner.VisualStudio.VsTestRunner.RunTests(class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IRunContext,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IFrameworkHandle,class Xunit.Runner.VisualStudio.LoggerHelper,value class Xunit.Runner.VisualStudio.TestPlatformContext,class Xunit.Runner.VisualStudio.RunSettings,class System.Func`1<class System.Collections.Generic.List`1<class Xunit.Runner.VisualStudio.AssemblyRunInfo>>)\n  xunit.runner.visualstudio.testadapter!Xunit.Runner.VisualStudio.VsTestRunner.RunTests(class System.Collections.Generic.IEnumerable`1<class System.String>,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IRunContext,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IFrameworkHandle)\n  Microsoft.VisualStudio.TestPlatform.Common!Microsoft.VisualStudio.TestPlatform.Common.ExtensionDecorators.SerialTestRunDecorator.RunTests(class System.Collections.Generic.IEnumerable`1<class System.String>,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IRunContext,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IFrameworkHandle)\n  Microsoft.TestPlatform.CrossPlatEngine!Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Execution.RunTestsWithSources.InvokeExecutor(class Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework.Utilities.LazyExtension`2<class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.ITestExecutor,class Microsoft.VisualStudio.TestPlatform.Common.Interfaces.ITestExecutorCapabilities>,class System.Tuple`2<class System.Uri,class System.String>,class Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Adapter.RunContext,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IFrameworkHandle)\n  Microsoft.TestPlatform.CrossPlatEngine!Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Execution.BaseRunTests.RunTestInternalWithExecutors(class System.Collections.Generic.IEnumerable`1<class System.Tuple`2<class System.Uri,class System.String>>,int64)\n  Microsoft.TestPlatform.CrossPlatEngine!Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Execution.BaseRunTests.RunTestsInternal()\n  Microsoft.TestPlatform.CrossPlatEngine!Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Execution.BaseRunTests.RunTests()\n  Microsoft.TestPlatform.CrossPlatEngine!Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Execution.ExecutionManager.StartTestRun(class System.Collections.Generic.Dictionary`2<class System.String,class System.Collections.Generic.IEnumerable`1<class System.String>>,class System.String,class System.String,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine.ClientProtocol.TestExecutionContext,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine.ITestCaseEventsHandler,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Client.IInternalTestRunEventsHandler)\n  Microsoft.TestPlatform.CrossPlatEngine!Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.TestRequestHandler+<>c__DisplayClass45_4.<OnMessageReceived>b__3()\n  Microsoft.TestPlatform.CrossPlatEngine!Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.TestRequestHandler+<>c.<.ctor>b__31_2(class System.Action)\n  Microsoft.TestPlatform.CoreUtilities!Microsoft.VisualStudio.TestPlatform.Utilities.JobQueue`1[System.__Canon].SafeProcessJob(!0)\n  Microsoft.TestPlatform.CoreUtilities!Microsoft.VisualStudio.TestPlatform.Utilities.JobQueue`1[System.__Canon].BackgroundJobProcessor(class System.String)\n  Microsoft.TestPlatform.CoreUtilities!Microsoft.VisualStudio.TestPlatform.Utilities.JobQueue`1[System.__Canon].<.ctor>b__16_0()\n  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0xCFE4):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitAnyMultiple(value class System.ReadOnlySpan`1<class Microsoft.Win32.SafeHandles.SafeWaitHandle>,int32)\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WaitThread.WaitThreadStart()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0x15AC):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+IOCompletionPoller.Poll()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0x99E4):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+IOCompletionPoller.Poll()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0xDF00):\n  [Native Frames]\n  System.Net.Sockets.il!System.Net.Sockets.SocketPal.Poll(class System.Net.Sockets.SafeSocketHandle,int32,value class System.Net.Sockets.SelectMode,bool&)\n  System.Net.Sockets.il!System.Net.Sockets.Socket.Poll(int32,value class System.Net.Sockets.SelectMode)\n  Microsoft.TestPlatform.CommunicationUtilities!Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.TcpClientExtensions.MessageLoopAsync(class System.Net.Sockets.TcpClient,class Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces.ICommunicationChannel,class System.Action`1<class System.Exception>,value class System.Threading.CancellationToken)\n  Microsoft.TestPlatform.CommunicationUtilities!Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.SocketClient.<OnServerConnected>b__16_0()\n  System.Private.CoreLib.il!System.Threading.Tasks.Task`1[System.__Canon].InnerInvoke()\n  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(class System.Threading.Thread,class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)\n  System.Private.CoreLib.il!System.Threading.ThreadPoolWorkQueue.Dispatch()\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0xE508):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class WaitHandleWaitSourceMap)\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+GateThread.GateThreadStart()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0xE7E8):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class WaitHandleWaitSourceMap)\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOne()\n  xunit.runner.visualstudio.testadapter!Xunit.Runner.VisualStudio.VsTestRunner+<RunTestsInAssembly>d__33.MoveNext()\n  System.Private.CoreLib.il!System.Runtime.CompilerServices.AsyncMethodBuilderCore.Start(!!0&)\n  System.Private.CoreLib.il!System.Runtime.CompilerServices.AsyncTaskMethodBuilder.Start(!!0&)\n  xunit.runner.visualstudio.testadapter!Xunit.Runner.VisualStudio.VsTestRunner.RunTestsInAssembly(class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IRunContext,class Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter.IFrameworkHandle,class Xunit.Runner.VisualStudio.LoggerHelper,value class Xunit.Runner.VisualStudio.TestPlatformContext,class Xunit.Runner.VisualStudio.RunSettings,class Xunit.Sdk.IMessageSink,class Xunit.Runner.VisualStudio.AssemblyRunInfo)\n  xunit.runner.visualstudio.testadapter!Xunit.Runner.VisualStudio.VsTestRunner+<>c__DisplayClass34_0+<<RunTestsInAssemblyAsync>b__0>d.MoveNext()\n  System.Private.CoreLib.il!System.Runtime.CompilerServices.AsyncMethodBuilderCore.Start(!!0&)\n  System.Private.CoreLib.il!System.Runtime.CompilerServices.AsyncVoidMethodBuilder.Start(!!0&)\n  xunit.runner.visualstudio.testadapter!Xunit.Runner.VisualStudio.VsTestRunner+<>c__DisplayClass34_0.<RunTestsInAssemblyAsync>b__0(class System.Object)\n  System.Private.CoreLib.il!System.Threading.ThreadPoolWorkQueue.Dispatch()\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0x7BD8):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class WaitHandleWaitSourceMap)\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOne()\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.StackGuard.RunOnEmptyStackCore(class System.Func`2<class System.Object,!!0>,class System.Object)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.StackGuard.RunOnEmptyStack(class System.Func`3<!!0,!!1,!!2>,!!0,!!1)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitIEnumerable(class Microsoft.Extensions.DependencyInjection.ServiceLookup.IEnumerableCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.Resolve(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine+<>c__DisplayClass2_0.<RealizeService>b__0(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(value class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceIdentifier,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider,class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider)\n  CanDoItAll.AgentFramework.Maf!CanDoItAll.AgentFramework.Maf.MafRuntimeCapabilityDependencies.FromServices(class System.IServiceProvider)\n  CanDoItAll.AgentFramework.Maf!CanDoItAll.AgentFramework.Maf.MafAgentRuntimeDependencies.FromServices(class System.IServiceProvider)\n  CanDoItAll.AgentFramework.Maf!CanDoItAll.AgentFramework.Maf.MafAgentRuntime.CreateDependencies(class System.IServiceProvider,class CanDoItAll.AgentFramework.Core.IWorkspaceRuntimeServicesFactory,class CanDoItAll.AgentFramework.Core.AgentToolAdmissionJournal)\n  CanDoItAll.AgentFramework.Maf!CanDoItAll.AgentFramework.Maf.MafAgentRuntime..ctor(class System.String,class System.IServiceProvider,class CanDoItAll.AgentFramework.Models.WorkspaceScopeDescriptor,class CanDoItAll.AgentFramework.Core.IWorkspaceRuntimeServicesFactory,class CanDoItAll.AgentFramework.Core.AgentToolAdmissionJournal)\n  CanDoItAll.Modules.AgentFramework!CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions+<>c.<AddAgentFrameworkModule>b__0_15(class System.IServiceProvider)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.Resolve(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine+<>c__DisplayClass2_0.<RealizeService>b__0(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(value class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceIdentifier,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider,class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider)\n  CanDoItAll.Modules.AgentFramework!CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions+<>c.<AddAgentFrameworkModule>b__0_18(class System.IServiceProvider)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.Resolve(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine+<>c__DisplayClass2_0.<RealizeService>b__0(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(value class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceIdentifier,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider,class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider)\n  CanDoItAll.Modules.AgentFramework!CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions+<>c.<AddAgentFrameworkModule>b__0_20(class System.IServiceProvider)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.Resolve(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine+<>c__DisplayClass2_0.<RealizeService>b__0(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(value class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceIdentifier,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider,class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider)\n  CanDoItAll.Modules.AgentFramework!CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions+<>c.<AddAgentFrameworkModule>b__0_44(class System.IServiceProvider)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.Resolve(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine+<>c__DisplayClass2_0.<RealizeService>b__0(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(value class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceIdentifier,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider,class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider)\n  CanDoItAll.Modules.AgentFramework.ProviderManagement!CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderManagementServiceCollectionExtensions+<>c.<AddAgentFrameworkProviderManagement>b__0_3(class System.IServiceProvider)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n\nThread (0xCC10):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.Monitor.Wait(class System.Object,int32)\n  System.Private.CoreLib.il!System.Threading.ManualResetEventSlim.Wait(int32,value class System.Threading.CancellationToken)\n  System.Private.CoreLib.il!System.Threading.ManualResetEventSlim.Wait()\n  Microsoft.TestPlatform.CrossPlatEngine!Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.TestRequestHandler.ProcessRequests(class Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine.TesthostProtocol.ITestHostManagerFactory)\n  testhost!Microsoft.VisualStudio.TestPlatform.TestHost.DefaultEngineInvoker+<>c__DisplayClass22_0.<StartProcessingAsync>b__0()\n  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0xD4B0):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class WaitHandleWaitSourceMap)\n  System.Private.CoreLib.il!System.Threading.TimerQueue.TimerThread()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0x2308):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class WaitHandleWaitSourceMap)\n  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOne()\n  xunit.execution.dotnet!Xunit.Sdk.MessageBus.ReporterWorker()\n  xunit.execution.dotnet!Xunit.Sdk.XunitWorkerThread+<>c.<QueueUserWorkItem>b__5_0(class System.Object)\n  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0x896C):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.LowLevelLifoSemaphore.WaitForSignal(int32)\n  System.Private.CoreLib.il!System.Threading.LowLevelLifoSemaphore.Wait(int32,bool)\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0xE9A0):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.Monitor.Enter_Slowpath(class System.Object)\n  System.Private.CoreLib.il!System.Threading.Monitor.Enter(class System.Object,bool&)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.Resolve(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine+<>c__DisplayClass2_0.<RealizeService>b__0(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(value class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceIdentifier,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider,class System.Type)\n  Microsoft.Extensions.DependencyInjection.Abstractions.il!Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(class System.IServiceProvider)\n  CanDoItAll.Modules.AgentFramework.ProviderManagement!CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderManagementServiceCollectionExtensions+<>c.<AddAgentFrameworkProviderManagement>b__0_3(class System.IServiceProvider)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitConstructor(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstructorCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverLock)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteRuntimeResolver.VisitScopeCache(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,value class Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2[Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].VisitCallSite(class Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite,!0)\n  Microsoft.Extensions.DependencyInjection.il!Microsoft.Extensions.DependencyInjection.ServiceLookup.StackGuard+<>c__3`3[System.__Canon,Microsoft.Extensions.DependencyInjection.ServiceLookup.RuntimeResolverContext,System.__Canon].<RunOnEmptyStack>b__3_0(class System.Object)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task`1[System.__Canon].InnerInvoke()\n  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(class System.Threading.Thread,class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)\n  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)\n  System.Private.CoreLib.il!System.Threading.ThreadPoolWorkQueue.Dispatch()\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0xB4A8):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.LowLevelLifoSemaphore.WaitForSignal(int32)\n  System.Private.CoreLib.il!System.Threading.LowLevelLifoSemaphore.Wait(int32,bool)\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\nThread (0x8CBC):\n  [Native Frames]\n  System.Private.CoreLib.il!System.Threading.LowLevelLifoSemaphore.WaitForSignal(int32)\n  System.Private.CoreLib.il!System.Threading.LowLevelLifoSemaphore.Wait(int32,bool)\n  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()\n  System.Private.CoreLib.il!System.Threading.Thread.StartCallback()\n\n",
+    "queryPlans": [],
+    "measurements": []
+  }
+}

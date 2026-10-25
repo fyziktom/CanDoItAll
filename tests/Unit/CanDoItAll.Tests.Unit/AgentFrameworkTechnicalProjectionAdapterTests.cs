@@ -8,6 +8,22 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
     [Fact]
+    public async Task Committed_refresh_rejects_a_different_profile_scope_or_generation_before_projection_writes() {
+        var fixture = new Fixture();
+        AgentExecutionActivityWorkspaceIdentity[] others = [
+            new(Guid.NewGuid(), fixture.Identity.WorkspaceScope, fixture.Identity.DatabaseProfileGeneration),
+            new(fixture.Identity.DatabaseProfileId, WorkspaceScopeDescriptor.Organization("other"), fixture.Identity.DatabaseProfileGeneration),
+            new(fixture.Identity.DatabaseProfileId, fixture.Identity.WorkspaceScope, new(1))
+        ];
+        foreach (var other in others) {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Bridge.SynchronizeDirectoryProjectionAsync(other));
+        }
+        Assert.Empty(fixture.Projection.Writes);
+        await fixture.Bridge.SynchronizeDirectoryProjectionAsync(fixture.Identity);
+        Assert.Single(fixture.Projection.Writes);
+    }
+
+    [Fact]
     public async Task Synchronization_uses_one_owner_snapshot_with_its_profile_scope_and_revision() {
         var fixture = new Fixture();
 

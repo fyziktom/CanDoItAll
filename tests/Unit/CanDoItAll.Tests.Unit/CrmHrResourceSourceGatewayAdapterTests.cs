@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Memory.SourceGateway;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -360,7 +361,7 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
         var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>().UseInMemoryDatabase(databaseName, databaseRoot).Options;
         var projectFactory = new PooledDbContextFactory<ProjectsDbContext>(projectOptions);
         services.AddScoped(_ => new ProjectWriteAdmissionService(projectFactory, projectOptions,
-            CoordinatedDatabaseTransaction.ForProfile(profile), new CanonicalDatabase(profile)));
+            CoordinatedDatabaseTransaction.ForProfile(profile), new CanonicalDatabase(profile), DatabaseTransferTestSupport.UnconfiguredActivation()));
         services.AddCrmHrModule();
         services.AddSingleton<IDbContextFactory<CrmHrDbContext>>(new PooledDbContextFactory<CrmHrDbContext>(
             new DbContextOptionsBuilder<CrmHrDbContext>()

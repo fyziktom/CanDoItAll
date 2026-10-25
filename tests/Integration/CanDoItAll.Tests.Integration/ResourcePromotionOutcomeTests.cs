@@ -27,7 +27,7 @@ public sealed class ResourcePromotionOutcomeTests {
         var boundary = new PreviewFaultBoundary(fixture.Services.GetRequiredService<IFileToolsKnownFileSessionReleaser>());
         var owner = new ResourceStorageObjectInteractionService(fixture.Services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>(),
             fixture.Services.GetRequiredService<IResourceFileSourceCatalog>(), fixture.Services.GetRequiredService<IFileToolsKnownFileActivator>(), boundary, boundary);
-        var failure = await Assert.ThrowsAsync<IOException>(async () => await owner.OpenAsync(stored.ResourceId));
+        var failure = await Assert.ThrowsAsync<IOException>(async () => await owner.OpenAsync(Assert.IsType<StorageObjectResourceWriteResult.Accepted>(stored.Outcome).Snapshot.Expected.ResourceId));
         Assert.Same(boundary.Primary, failure);
         Assert.True(failure.Data.Contains(nameof(IFileToolsKnownFileSessionReleaser.ReleaseAsync)));
         Assert.Equal(1, boundary.Releases);
@@ -58,7 +58,7 @@ public sealed class ResourcePromotionOutcomeTests {
         await Assert.ThrowsAsync<ResourceActionRefusedException>(async () => await owner.AuthorizeDownloadAsync(selection));
         await Assert.ThrowsAsync<ResourceActionRefusedException>(async () => await owner.LaunchAsync(selection, FileToolsLocalFileAction.OpenContainingFolder));
         await Assert.ThrowsAsync<ResourceActionRefusedException>(async () => await owner.PromoteAsync(new(selection,
-            fixture.Command.ExpectedProjectAdmission!, "Refused target", ResourceSensitivity.Normal)));
+            fixture.Command.ExpectedProjectAdmission!, "Refused target", ResourceSensitivity.Normal, fixture.Command.Context, Guid.NewGuid())));
         await using var database = await fixture.Services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>().CreateDbContextAsync();
         Assert.Empty(await database.Set<ProjectResource>().ToArrayAsync());
     }
@@ -82,11 +82,11 @@ public sealed class ResourcePromotionOutcomeTests {
         Assert.True(commit.Fired);
         var receipt = Assert.Single(controller.Receipts);
         Assert.Equal(ResourceEffectState.Unknown, receipt.State);
-        Assert.Null(receipt.ResourceId);
+        Assert.NotEqual(Guid.Empty, receipt.ResourceId);
         await using var database = await services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>().CreateDbContextAsync();
         var stored = Assert.Single(await database.Set<ProjectResource>().AsNoTracking().ToListAsync());
         await controller.ReviewIdentityAsync(receipt, stored.Id);
-        Assert.Equal(stored.Id, receipt.ReviewedResource!.Id);
+        Assert.Equal(stored.Id, Assert.IsType<ResourceMetadataReadResult.Found>(receipt.Observation).Snapshot.Expected.ResourceId);
         Assert.Equal(ResourceEffectState.Unknown, receipt.State);
         await controller.SaveAsync();
         Assert.Equal(1, await database.Set<ProjectResource>().CountAsync());
@@ -95,7 +95,8 @@ public sealed class ResourcePromotionOutcomeTests {
         await controller.SaveAsync();
         Assert.Equal(stored.Id, controller.Draft.Editor.Id);
         Assert.Equal(1, await database.Set<ProjectResource>().CountAsync());
-        Assert.Equal("Explicit edit after exact review", (await database.Set<ProjectResource>().AsNoTracking().SingleAsync()).Name);
+        Assert.Equal("Exact lost acknowledgement", (await database.Set<ProjectResource>().AsNoTracking().SingleAsync()).Name);
+        Assert.Equal(ResourceEffectState.Unknown, receipt.State);
     }
 
     [Theory]
@@ -111,13 +112,14 @@ public sealed class ResourcePromotionOutcomeTests {
         }
         var faultBoundary = new FaultBoundary(fixture.Services, fault);
         var service = faultBoundary.CreateService();
-        var failure = await Assert.ThrowsAsync<ResourcePromotionCommittedException>(async () => await service.PromoteAsync(fixture.Command));
+        var result = await service.PromoteAsync(fixture.Command);
+        var accepted = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(result.Outcome);
         await using var database = await fixture.Services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>().CreateDbContextAsync();
         var stored = Assert.Single(await database.Set<ProjectResource>().AsNoTracking().ToListAsync());
-        Assert.Equal(stored.Id, failure.ResourceId);
-        Assert.Equal(fault != PromotionFault.Read, failure.Created);
-        Assert.Same(faultBoundary.Primary, failure.InnerException);
-        Assert.Equal(fault is PromotionFault.Publish or PromotionFault.Read or PromotionFault.PublishCleanupAndLog, failure.Revision is null);
+        Assert.Equal(stored.Id, accepted.Snapshot.Expected.ResourceId);
+        Assert.Equal(fault != PromotionFault.Read, accepted.Created);
+        Assert.NotNull(accepted.Diagnostic);
+        Assert.Equal(fault is PromotionFault.Publish or PromotionFault.Read or PromotionFault.PublishCleanupAndLog, result.Revision is null);
         Assert.Equal(1, faultBoundary.Revocations);
         Assert.NotNull(faultBoundary.Handle);
         var context = await fixture.Services.GetRequiredService<IFileAccessContextProvider>().GetCurrentAsync();
@@ -127,11 +129,10 @@ public sealed class ResourcePromotionOutcomeTests {
         Assert.Equal(fixture.Item.Name, config.Locator);
         Assert.DoesNotContain(faultBoundary.Handle.Value.Value, stored.ConfigJson, StringComparison.Ordinal);
         Assert.DoesNotContain(fixture.FullPath, stored.ConfigJson, StringComparison.Ordinal);
-        if (fault == PromotionFault.PublishCleanupAndLog) {
-            Assert.True(faultBoundary.Primary.Data.Contains(nameof(IStorageFileAccessAuthorizationCoordinator.RevokeAsync)));
-            Assert.True(faultBoundary.Primary.Data.Contains(nameof(ResourceMutationDiagnostics)));
+        if (fault is PromotionFault.Cleanup or PromotionFault.PublishCleanupAndLog) {
+            Assert.Equal(ResourceMetadataSecondaryDiagnostic.CleanupPending, accepted.Diagnostic);
         }
-        await using var preview = await fixture.Services.GetRequiredService<ResourceStorageObjectInteractionService>().OpenAsync(failure.ResourceId);
+        await using var preview = await fixture.Services.GetRequiredService<ResourceStorageObjectInteractionService>().OpenAsync(accepted.Snapshot.Expected.ResourceId);
         await using var content = await preview.Session.ContentSource.OpenReadAsync(new(preview.Session.File));
         using var reader = new StreamReader(content.Stream);
         Assert.Equal(Fixture.Content, await reader.ReadToEndAsync());
@@ -155,32 +156,34 @@ public sealed class ResourcePromotionOutcomeTests {
     [InlineData(ResourceMutationKind.Delete)]
     public async Task Resource_postcommit_primary_failure_survives_throwing_diagnostics(ResourceMutationKind kind) {
         var probe = new OwnerPostcommitTestProbe();
-        var diagnostics = new ThrowingLogger<ResourcesService>();
+        var diagnostics = new ThrowingLogger<ResourceMetadataWriter>();
         await using var application = await TestApplication.CreateAsync(new() { ConfigureServices = services => {
             probe.ConfigureServices(services);
-            services.AddSingleton<ILogger<ResourcesService>>(diagnostics);
+            services.AddSingleton<ILogger<ResourceMetadataWriter>>(diagnostics);
         } });
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var admission = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Resources diagnostic outcome");
         var owner = services.GetRequiredService<ResourcesService>();
-        var editor = OwnerPostcommitTestProbe.Resource(services, admission);
-        Guid? id = null;
+        var command = await ResourceMetadataTestCommands.NewAsync(owner, OwnerPostcommitTestProbe.Resource(services, admission));
+        ResourceMetadataSnapshot? previous = null;
         if (kind == ResourceMutationKind.Delete) {
-            id = (await owner.SaveAsync(editor)).Value;
+            previous = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await owner.SaveAsync(command)).Snapshot;
         }
-        var primary = new IOException("Owned postcommit search failure.");
-        probe.ArmFault(PostcommitOwner.Resource, PostcommitFault.Search, primary);
+        probe.ArmFault(PostcommitOwner.Resource, PostcommitFault.Activity, new IOException("Owned postcommit activity failure."));
         diagnostics.Armed = true;
-        var observed = await Assert.ThrowsAsync<ResourceCommittedMutationException>(() => kind == ResourceMutationKind.Save
-            ? owner.SaveAsync(editor) : owner.DeleteAsync(id!.Value, admission));
-        Assert.Same(primary, observed.InnerException);
-        Assert.Equal(kind, observed.MutationKind);
-        Assert.True(primary.Data.Contains(nameof(ResourceMutationDiagnostics)));
+        if (kind == ResourceMutationKind.Save) {
+            var accepted = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await owner.SaveAsync(command));
+            Assert.Equal(ResourceMetadataSecondaryDiagnostic.LoggingPending, accepted.Diagnostic);
+            Assert.Equal(command.Expected.ResourceId, accepted.Snapshot.Expected.ResourceId);
+        } else {
+            var accepted = Assert.IsType<ResourceMetadataDeleteOutcome.Accepted>(await owner.DeleteAsync(new(previous!.Expected)));
+            Assert.Equal(ResourceMetadataSecondaryDiagnostic.LoggingPending, accepted.Diagnostic);
+            Assert.Equal(previous.Expected, accepted.Deleted);
+        }
         await using var database = await services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>().CreateDbContextAsync();
-        Assert.Equal(kind == ResourceMutationKind.Save, await database.Set<ProjectResource>().AnyAsync(r => r.Id == observed.ResourceId));
+        Assert.Equal(kind == ResourceMutationKind.Save, await database.Set<ProjectResource>().AnyAsync(row => row.Id == command.Expected.ResourceId));
     }
-
     private sealed class PreviewFaultBoundary(IFileToolsKnownFileSessionReleaser releaser) : IFileToolsKnownFileSessionFactory, IFileToolsKnownFileSessionReleaser {
         public IOException Primary { get; } = new("Owned preview creation failure.");
         public FileReference? File { get; private set; }
@@ -218,7 +221,8 @@ public sealed class ResourcePromotionOutcomeTests {
                 await using var browse = await services.GetRequiredService<ResourceFileBrowseCoordinator>().OpenAsync(key);
                 await browse.Browser.InitializeAsync();
                 var item = Assert.Single(browse.Browser.Snapshot.Items, candidate => candidate.Name == name);
-                return new(application, scope, path, item, new(key, item.Key, admission.ProjectId, "Owned promoted resource", admission));
+                return new(application, scope, path, item, new(key, item.Key, admission.ProjectId, "Owned promoted resource", admission,
+                    await services.GetRequiredService<ResourcesService>().ReadContextAsync(), Guid.NewGuid()));
             } catch {
                 if (path is not null) {
                     File.Delete(path);
@@ -276,7 +280,7 @@ public sealed class ResourcePromotionOutcomeTests {
             ? throw Primary : services.GetRequiredService<IFileCatalogRevisionReader>().Get(scope, storageId);
         public async Task<StorageObjectResourceWriteResult> SaveAsync(StorageObjectResourceWriteRequest request, CancellationToken cancellationToken = default) {
             var result = await services.GetRequiredService<IStorageObjectResourceWriter>().SaveAsync(request, cancellationToken);
-            StoredId = result.ResourceId;
+            StoredId = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(result).Snapshot.Expected.ResourceId;
             if (fault == PromotionFault.LostAcknowledgement) {
                 throw Primary;
             }

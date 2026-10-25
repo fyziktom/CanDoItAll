@@ -1,5 +1,6 @@
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using Microsoft.Extensions.Logging;
 
@@ -7,6 +8,8 @@ namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage {
     private long actionNavigationRevision;
+    private ProjectLifecyclePendingScope? displayedLifecycleScope;
+    private long displayedRuntimeGeneration;
     private ProjectStructureAuthoringOpening? previewOpening;
     private readonly Queue<ProjectStructureAuthoringOutcome> authoringOutcomes = new();
     private readonly HashSet<Task> authoringOperations = [];
@@ -39,6 +42,11 @@ public partial class ProjectStructurePage {
         } finally {
             authoringOperations.Remove(operation);
         }
+    }
+
+    private async Task<T> TrackAuthoringOperationAsync<T>(Task<T> operation) {
+        await TrackAuthoringOperationAsync((Task)operation);
+        return await operation;
     }
 
     private static bool IsKnownGraphRejection(Exception failure)
@@ -131,21 +139,25 @@ public partial class ProjectStructurePage {
             CloseSubprojectTransferDialog();
         }
         if (projectCreateOpening is { } creation && (!IsCurrentAction(creation.Context) || !ReferenceEquals(projectCreateParentOpening, hierarchyOpening))) {
+            RetireProjectCreateSession();
             projectCreateOpening = null;
             projectHierarchyDialogBeforeCreate = null;
             showProjectCreateModal = false;
         }
     }
 
-    private async Task RefreshAuthoringSurfaceAsync(ProjectStructureAuthoringOpening opening,
+    private async Task<bool> RefreshAuthoringSurfaceAsync(ProjectStructureAuthoringOpening opening,
         ProjectStructureAuthoringOutcome outcome, string selection, Func<bool> canPublish) {
+        var published = false;
         try {
-            await ReloadSurfaceAsync(selection, () => IsCurrentAction(opening.Context) && canPublish());
+            await ReloadSurfaceAsync(selection, () => IsCurrentAction(opening.Context) && canPublish(), () => published = true);
+            return published && IsCurrentAction(opening.Context) && canPublish();
         } catch (Exception exception) {
             RecordAuthoringOutcome(opening, outcome with {
                 Message = $"{outcome.Message} The accepted change could not be refreshed. Reload the original project; do not repeat the write.",
                 Failure = exception
             }, IsCurrentAction(opening.Context) && canPublish());
+            return false;
         }
     }
 
@@ -155,13 +167,18 @@ public partial class ProjectStructurePage {
         long NavigationRevision,
         Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? Actor) {
         public long RuntimeGeneration { get; init; }
+        public required ProjectLifecyclePendingScope LifecycleScope { get; init; }
     }
 
     private ProjectStructureActionContext CaptureActionContext() {
         var displayed = surface ?? throw new InvalidOperationException("The project surface is no longer available. Reload it before continuing.");
         var admission = displayed.ExpectedProjectAdmission
             ?? throw new InvalidOperationException("The original project lifetime is unavailable. Reload the project before continuing.");
-        return new(displayed, admission, actionNavigationRevision, InsightsAuthentication) { RuntimeGeneration = ContentDatabase.Generation };
+        return new(displayed, admission, actionNavigationRevision, InsightsAuthentication) {
+            RuntimeGeneration = displayedRuntimeGeneration,
+            LifecycleScope = displayedLifecycleScope
+                ?? throw new InvalidOperationException("The original dataset is unavailable. Reload the project before continuing.")
+        };
     }
 
     private ProjectStructureActionContext? CaptureActionContext(string actionId, ProjectStructureNode? node) {
@@ -173,8 +190,15 @@ public partial class ProjectStructurePage {
     }
 
     private bool IsCurrentAction(ProjectStructureActionContext context)
+        => IsDisplayedAction(context) &&
+           context.RuntimeGeneration == ContentDatabase.Generation &&
+           context.LifecycleScope.DatabaseProfileId == ContentDatabase.Profile.Profile.Id;
+
+    private bool IsDisplayedAction(ProjectStructureActionContext context)
         => !deferredCompletionCts.IsCancellationRequested &&
            context.NavigationRevision == actionNavigationRevision &&
+           context.RuntimeGeneration == displayedRuntimeGeneration &&
+           context.LifecycleScope == displayedLifecycleScope &&
            ReferenceEquals(context.Actor, InsightsAuthentication) &&
            ProjectId == context.Surface.ProjectId &&
            surface?.ExpectedProjectAdmission == context.Admission;

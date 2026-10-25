@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Projects;
@@ -8,6 +9,10 @@ public static class ProjectMutationScopeKeys
 
     public static string ForProject(Guid projectId)
         => $"project:{projectId:D}";
+
+    internal static string ForLifecycleOperation(ProjectLifecycleOperation operation, ProjectMutationCallerKind kind, ProjectCallerKey key)
+        => FormattableString.Invariant(
+            $"projects:lifecycle-operation:{operation.Namespace.Value:D}:{operation.Epoch.Value}:{(int)kind}:{key.Hex}:{operation.Id:D}");
 }
 
 public sealed record ProjectDeletionParticipantPreparation(
@@ -32,11 +37,25 @@ public interface IProjectDeletionParticipant
 {
     ProjectDeletionParticipantId Id { get; }
 
+    int RecoveryProtocolVersion { get; }
+
     IReadOnlyCollection<ProjectDeletionPreparationScopeKey> PreparationScopeKeys { get; }
+
+    Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectReservationCancellationPreparationContext original,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This participant cannot stage exact never-created reservation cancellation.");
+
+    Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectDeletionPreparationContext original,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This deletion participant cannot persist the original durable completion binding.");
 
     Task<ProjectDeletionParticipantPreparation?> PrepareAsync(
         Guid projectId,
         CancellationToken cancellationToken = default);
+
+    Task<ProjectDeletionParticipantObservation> ObserveCompletionAsync(ProjectDeletionPreparationContext original,
+        Guid recoveryId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Exact deletion completion observation is not supported.");
 
     Task<ProjectDeletionParticipantCompletion> CompleteAsync(
         ProjectDeletionParticipantPreparation preparation,
@@ -254,7 +273,10 @@ public sealed record ProjectDeletionRecoveryFailure(
 public sealed record ProjectDeletionRecovery(
     Guid ProjectId,
     IReadOnlyList<ProjectDeletionRecoveryFailure> Failures,
-    string RetryGuidance);
+    string RetryGuidance,
+    bool OwnerCompletionUnconfirmed = false) {
+    public IReadOnlyList<ProjectDeletionRecoveryFailure> Failures { get; init; } = Failures.ToImmutableArray();
+}
 
 public sealed class ProjectDeletionPartialCommitException : Exception
 {

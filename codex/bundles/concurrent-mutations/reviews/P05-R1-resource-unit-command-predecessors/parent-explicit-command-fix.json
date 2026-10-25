@@ -1,0 +1,8 @@
+{
+  "path": "tests/Unit/CanDoItAll.Tests.Unit/StorageObjectResourceConnectorTests.cs",
+  "beforeSha256": "3b122ce9af7d7c1eb4c71e9ce351b1deec3a6b1fedc8059a0efc750909b688ad",
+  "afterSha256": "44ab450de9762ac0ba5c13f5ca68a3eef182c5791d1689c15e3f459ff23418f5",
+  "beforeBytes": 17118,
+  "afterBytes": 17149,
+  "change": "One explicit ReplaceResourceMetadataCommand resolves compile-time overload ambiguity; test behavior/assertions unchanged."
+}

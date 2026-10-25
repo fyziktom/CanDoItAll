@@ -54,6 +54,9 @@ public sealed record SandboxWorkspaceDocument(
     public IReadOnlyList<AgentExternalBindingRecord> AgentExternalBindings { get; init; } = [];
     public IReadOnlyList<AgentExternalProvisioningOperationRecord> AgentExternalProvisioningOperations { get; init; } = [];
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentDecisionDataPolicyReceiptLog? AgentDecisionDataPolicyReceipts { get; init; }
+
     public static SandboxWorkspaceDocument Empty { get; } = new(
         Version: "1.0",
         Agents: [],
@@ -77,7 +80,8 @@ public sealed record SandboxWorkspaceDocument(
             AgentTeams = AgentTeams,
             AgentPackageImportOperations = AgentPackageImportOperations,
             AgentExternalBindings = AgentExternalBindings,
-            AgentExternalProvisioningOperations = AgentExternalProvisioningOperations
+            AgentExternalProvisioningOperations = AgentExternalProvisioningOperations,
+            AgentDecisionDataPolicyReceipts = AgentDecisionDataPolicyReceipts
         };
     }
 
@@ -121,6 +125,7 @@ public sealed record SandboxWorkspaceDocument(
             AgentPackageImportOperations = catalog.AgentPackageImportOperations,
             AgentExternalBindings = catalog.AgentExternalBindings,
             AgentExternalProvisioningOperations = catalog.AgentExternalProvisioningOperations,
+            AgentDecisionDataPolicyReceipts = catalog.AgentDecisionDataPolicyReceipts,
             ExecutionRuns = executionState.ExecutionRuns,
             ExecutionApprovals = executionState.ExecutionApprovals,
             ExecutionArtifacts = executionState.ExecutionArtifacts,
@@ -143,6 +148,9 @@ public sealed record SandboxWorkspaceCatalog(
     public IReadOnlyList<AgentPackageImportOperationRecord> AgentPackageImportOperations { get; init; } = [];
     public IReadOnlyList<AgentExternalBindingRecord> AgentExternalBindings { get; init; } = [];
     public IReadOnlyList<AgentExternalProvisioningOperationRecord> AgentExternalProvisioningOperations { get; init; } = [];
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentDecisionDataPolicyReceiptLog? AgentDecisionDataPolicyReceipts { get; init; }
 
     public static SandboxWorkspaceCatalog Empty { get; } = new(
         Version: "1.0",

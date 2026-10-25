@@ -26,7 +26,8 @@ public enum DatabaseProfileResolutionSource
     ExplicitOverride,
     PersistedActiveProfile,
     PersistedCatalogFallback,
-    AutoProvisionedPostgreSql
+    AutoProvisionedPostgreSql,
+    ExplicitPersistedProfile
 }
 
 public sealed class DatabaseProfileRecord

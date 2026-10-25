@@ -9,6 +9,12 @@ public interface IAgentRuntimeToolProvider
 
     AgentRuntimeToolProviderDescriptor? Descriptor => null;
 
+    bool SupportsSavedEffect(AgentToolPreparedPayload original) => false;
+
+    ValueTask<AgentRuntimeSavedEffectTool> RestoreSavedEffectAsync(AgentRuntimeSavedEffectContext context,
+        AgentToolPreparedPayload original, CancellationToken cancellationToken)
+        => throw new NotSupportedException("This tool provider does not support restoration of an original saved effect.");
+
     AgentRuntimeConfiguredWorkspacePolicy GetConfiguredWorkspacePolicy(
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         AgentRuntimeContextIntent contextIntent)

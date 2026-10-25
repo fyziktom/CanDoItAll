@@ -92,7 +92,8 @@ public sealed class ProjectEditorSurfaceTests {
         option.OptionName = "C# ";
         var cut = Render(context, draft);
         var submitted = draft.Capture();
-        var result = await new ProjectsScenarioStore(ProjectsScenario.Empty).SaveAsync(submitted.Model);
+        var store = new ProjectsScenarioStore(ProjectsScenario.Empty);
+        var result = await store.SaveAsync(submitted.Model);
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "Later name" }));
         draft.Model.Phases.Remove(first);
         var replacement = new ProjectPhaseEditorModel { Name = "replacement" };
@@ -111,11 +112,14 @@ public sealed class ProjectEditorSurfaceTests {
         Assert.Equal(result.Value.Options[0].Id, option.Id);
         Assert.Equal("second", second.Name);
         Assert.Equal("C#", option.OptionName);
+        Assert.Equal(result.Value.Definition, draft.Model.ExpectedDefinition);
         Assert.Same(draft.EditContext, cut.FindComponent<EditForm>().Instance.EditContext);
         var repeated = draft.Capture();
-        var secondResult = await new ProjectsScenarioStore(ProjectsScenario.Empty).SaveAsync(repeated.Model);
+        Assert.Equal(result.Value.Definition, repeated.Model.ExpectedDefinition);
+        var secondResult = await store.SaveAsync(repeated.Model);
         Assert.Equal(second.Id, secondResult.Value!.Phases[1].Id);
         Assert.Equal(option.Id, secondResult.Value.Options[0].Id);
+        Assert.NotEqual(result.Value.Definition.Revision, secondResult.Value.Definition.Revision);
     }
 
     [Fact]
@@ -123,14 +127,20 @@ public sealed class ProjectEditorSurfaceTests {
         using var context = Context();
         var draft = NewDraft();
         draft.Model.Name = "  Original  ";
+        draft.Model.ExternalNamespace = " Origin ";
+        draft.Model.ExternalKey = " Key ";
         var cut = Render(context, draft);
         var submission = draft.Capture();
         var acknowledgement = await new ProjectsScenarioStore(ProjectsScenario.Empty).SaveAsync(submission.Model);
         foreach (string name in new[] { "Changed", "  Original  " }) {
             await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = name }));
         }
+        draft.Model.ExternalNamespace = "Later namespace";
+        draft.EditContext.NotifyFieldChanged(new(draft.Model, nameof(draft.Model.ExternalNamespace)));
         draft.Acknowledge(submission, acknowledgement.Value!);
         Assert.Equal("  Original  ", draft.Model.Name);
+        Assert.Equal("Later namespace", draft.Model.ExternalNamespace);
+        Assert.Equal(" Key ", draft.Model.ExternalKey);
     }
 
     [Fact]
@@ -154,10 +164,143 @@ public sealed class ProjectEditorSurfaceTests {
         var draft = store.Acquire(ProjectsScenarioStore.RootId);
         var submission = draft.Capture();
         var acknowledgement = (await store.SaveAsync(submission.Model)).Value!;
-        var wrong = acknowledgement with { Project = new(ProjectsScenarioStore.ProfileId, ProjectsScenarioStore.RootId, Guid.NewGuid()) };
+        var wrong = acknowledgement with {
+            Definition = new(new(ProjectsScenarioStore.ProfileId, ProjectsScenarioStore.RootId, Guid.NewGuid()), acknowledgement.Definition.Revision)
+        };
         Assert.Throws<InvalidOperationException>(() => draft.Acknowledge(submission, wrong));
         Assert.Null(draft.Acknowledgement);
         Assert.Equal(ProjectsScenarioStore.RootId, draft.Model.ExpectedLifetimeId);
+    }
+
+    [Fact]
+    public async Task Foreign_profile_ack_is_rejected_before_the_original_expectation_changes() {
+        var store = new ProjectsScenarioStore(ProjectsScenario.Portfolio);
+        var draft = store.Acquire(ProjectsScenarioStore.RootId);
+        var submission = draft.Capture();
+        var acknowledgement = (await store.SaveAsync(submission.Model)).Value!;
+        var wrong = acknowledgement with {
+            Definition = new(new(Guid.NewGuid(), acknowledgement.Project.ProjectId, acknowledgement.Project.LifetimeId), acknowledgement.Definition.Revision)
+        };
+
+        Assert.Throws<InvalidOperationException>(() => draft.Acknowledge(submission, wrong));
+
+        Assert.Null(draft.Acknowledgement);
+        Assert.Equal(submission.Model.ExpectedDefinition, draft.Model.ExpectedDefinition);
+        Assert.Equal(submission.Model.ExpectedProjectAdmission, draft.Model.ExpectedProjectAdmission);
+    }
+
+    [Fact]
+    public async Task Conflict_surface_shows_current_values_without_replacing_input_and_routes_explicit_recovery_actions() {
+        using var context = Context();
+        var draft = new ProjectsScenarioStore(ProjectsScenario.Portfolio).Acquire(ProjectsScenarioStore.RootId);
+        draft.Model.Name = "My local draft";
+        draft.StarterObjects.Add(new() { Title = "Preserved plan", Subtitle = "Unsubmitted planning detail" });
+        draft.RecordConflict(draft.Capture());
+        var cut = Render(context, draft);
+        var date = cut.FindComponents<InputDate<DateTime?>>().First().Instance;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = "not-a-date" }));
+        ProjectEditorDraft? read = null;
+        ProjectEditorDraft? discard = null;
+        ProjectEditorDraft? reconcile = null;
+        cut.Render(p => p.Add(x => x.ReadCurrentDefinition, value => read = value)
+            .Add(x => x.DiscardAndReloadDefinition, value => discard = value)
+            .Add(x => x.BeginDefinitionReconciliation, value => reconcile = value));
+        Assert.True(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled"));
+        Assert.True(cut.Find("[data-testid='project-conflict-reload']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
+        Assert.Same(draft, read);
+
+        draft.CompleteConflictRead(ProjectEditorDraftTests.CurrentDefinition(draft));
+        cut.Render();
+        Assert.Same(date, cut.FindComponents<InputDate<DateTime?>>().First().Instance);
+        Assert.Equal("not-a-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
+        Assert.Equal("My local draft", cut.Find("[data-testid='project-name-input']").GetAttribute("value"));
+        string comparison = cut.Find("[data-testid='project-definition-comparison']").TextContent;
+        foreach (string value in new[] { "Saved name", "Saved description", "Saved objective", "Saved phase", "Saved goal", "Saved language", "Saved notes", "saved-namespace/saved-key" }) {
+            Assert.Contains(value, comparison);
+        }
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-reload']").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-reconcile']").ClickAsync(new()));
+        Assert.Same(draft, discard);
+        Assert.Null(reconcile);
+        Assert.Equal("not-a-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
+        Assert.Contains("Complete or clear invalid dates", draft.Message);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = string.Empty }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-reconcile']").ClickAsync(new()));
+        Assert.Same(draft, reconcile);
+        var replacement = Render(context, draft.StartFromCurrent(true));
+        Assert.Equal("Saved name", replacement.Find("[data-testid='project-name-input']").GetAttribute("value"));
+        Assert.Contains("My local draft", replacement.Find("[data-testid='project-definition-comparison']").TextContent);
+        Assert.Contains("Preserved plan", replacement.Find("[data-testid='project-definition-comparison']").TextContent);
+        Assert.Contains("Unsubmitted planning detail", replacement.Find("[data-testid='project-definition-comparison']").TextContent);
+        Assert.Empty(replacement.Instance.Draft.StarterObjects);
+        var retry = replacement.Instance.Draft;
+        retry.Model.Name = "Intermediate reconciliation";
+        retry.RecordConflict(retry.Capture());
+        retry.CompleteConflictRead(ProjectEditorDraftTests.CurrentDefinition(retry));
+        var repeated = Render(context, retry.StartFromCurrent(true));
+        Assert.Single(repeated.FindComponents<ProjectDefinitionComparison>());
+        Assert.Contains("Intermediate reconciliation", repeated.Markup);
+        await repeated.InvokeAsync(() => repeated.Find("[data-testid='project-previous-draft-older']").ClickAsync(new()));
+        Assert.Single(repeated.FindComponents<ProjectDefinitionComparison>());
+        Assert.Contains("My local draft", repeated.Markup);
+        Assert.Contains("Preserved plan", repeated.Markup);
+        await repeated.InvokeAsync(() => repeated.Find("[data-testid='project-previous-draft-newer']").ClickAsync(new()));
+        Assert.Contains("Intermediate reconciliation", repeated.Find("[data-testid='project-definition-comparison']").TextContent);
+    }
+
+    [Fact]
+    public async Task Synthetic_conflict_scenario_uses_the_real_recovery_renderer_and_only_an_explicit_save_mutates() {
+        using var context = Context();
+        var cut = context.Render<CanDoItAll.Projects.UiSandbox.Components.Projects>();
+        await cut.InvokeAsync(() => cut.Find("select[aria-label='Scenario']").ChangeAsync(new() { Value = nameof(ProjectsScenario.DefinitionConflict) }));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent == "Reset scenario").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(ProjectsScenarioStore.RootId));
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.SwitchToEditor.InvokeAsync());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "Local scenario edit" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
+        Assert.Equal(ProjectEditorMutationState.Conflict, cut.FindComponent<ProjectModalHost>().Instance.Draft.Mutation);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
+        Assert.Contains("Concurrent phase goal", cut.Find("[data-testid='project-definition-comparison']").TextContent);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-reconcile']").ClickAsync(new()));
+        Assert.Equal("Changed by another synthetic editor", cut.Find("[data-testid='project-name-input']").GetAttribute("value"));
+        Assert.Contains("Local scenario edit", cut.Find("[data-testid='project-definition-comparison']").TextContent);
+        Assert.Contains("Simulated writes: 0", cut.Find("[data-testid='scenario-effects']").TextContent);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
+        Assert.Contains("Simulated writes: 1", cut.Find("[data-testid='scenario-effects']").TextContent);
+        Assert.Empty(cut.FindAll("[data-testid='project-definition-comparison']"));
+    }
+
+    [Fact]
+    public async Task Host_capture_validation_runs_before_snapshot_and_can_block_submission() {
+        await using var context = Context();
+        var draft = NewDraft();
+        var cut = Render(context, draft);
+        ProjectEditorSubmission? captured = null;
+        var validations = 0;
+        cut.Render(parameters => parameters.Add(component => component.SubmissionReady, false)
+            .Add(component => component.ValidateCapture, _ => {
+                validations++;
+                return false;
+            })
+            .Add(component => component.Save, submission => captured = submission));
+        Assert.True(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled"));
+        Assert.True(cut.Find("[data-testid='project-save-open-button']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        Assert.Null(captured);
+        Assert.Equal(0, validations);
+        cut.Render(parameters => parameters.Add(component => component.SubmissionReady, true));
+        Assert.False(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled"));
+        Assert.False(cut.Find("[data-testid='project-save-open-button']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        Assert.Null(captured);
+        Assert.Equal(1, validations);
+        cut.Render(parameters => parameters.Add(component => component.ValidateCapture, value => {
+            value.Model.Name = "Validated before snapshot";
+            return true;
+        }));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        Assert.Equal("Validated before snapshot", captured!.Model.Name);
     }
 
     private static BunitContext Context() {

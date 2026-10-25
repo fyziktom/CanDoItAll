@@ -28,6 +28,8 @@ public sealed record ProjectStructureProjectHierarchyDialogState(
     public bool IsBusy { get; init; }
     public bool RequiresObservation { get; init; }
     internal IReadOnlyDictionary<Guid, ProjectWriteAdmission> Admissions { get; init; } = new Dictionary<Guid, ProjectWriteAdmission>();
+    internal ProjectLifecycleWriteContext? LifecycleContext { get; init; }
+    internal ProjectHierarchyEdgeExpectation? OriginalEdge { get; init; }
 
     public string Title => Mode switch
     {

@@ -5,9 +5,12 @@ using CanDoItAll.Modules.Workbench.ProjectStructure;
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureExecutionAuthorityProvider(ProjectWriteAdmissionService admissions)
-    : IAgentExecutionSourceAuthorityProvider
+    : IAgentExecutionSourceAuthorityProvider, IAgentHistoricalReceiptSourceAuthorityProvider
 {
     public string SourceKind => ProjectStructureAgentChatContextBuilder.SourceKind;
+    public ValueTask<AgentExecutionSourceAuthorityDecision> ResolveHistoricalReadAsync(
+        AgentExecutionSourceAuthorityRequest request, CancellationToken cancellationToken = default)
+        => ResolveAsync(request, cancellationToken);
 
     public ValueTask<AgentExecutionSourceAuthorityDecision> ResolveAsync(
         AgentExecutionSourceAuthorityRequest request,

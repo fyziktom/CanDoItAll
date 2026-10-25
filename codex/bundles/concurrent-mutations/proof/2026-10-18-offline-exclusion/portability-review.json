@@ -1,0 +1,8 @@
+{
+  "stale": 2,
+  "expectedFindings": 15561,
+  "reviewedUtc": "2026-10-18T21:41:58.8051449+00:00",
+  "previousFindings": 15552,
+  "disposition": "Reviewed exact 11 added and two replaced findings: original runtime-qualified workspace/control-plane paths use validated native normalization and strict ordinal containment without a probing write; existing directory/private mode checks refuse missing or unsafe state. The FileStream declaration moved to separate open retry from terminal post-open cleanup. No platform-specific production path literal, silent directory replacement or new filesystem guarantee.",
+  "added": 11
+}

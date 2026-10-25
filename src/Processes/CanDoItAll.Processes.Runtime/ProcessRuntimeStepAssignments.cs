@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Contracts;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Processes.Runtime;
 
@@ -28,6 +29,9 @@ public sealed record ProcessRuntimeStepAssignment(
     public ProcessWorkflowExecutorBinding? WorkflowBinding { get; init; }
 
     public ProcessCapabilityScope CapabilityScope { get; init; } = ProcessCapabilityScope.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionDataPolicyAdmission? DecisionDataPolicy { get; init; }
 }
 
 public sealed record ProcessRuntimeBranchGate(

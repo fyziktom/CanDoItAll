@@ -5,7 +5,8 @@ public sealed record ProjectPackageTargetOption(Guid Id, string DisplayName, str
 public sealed record ProjectCleanupTarget(Guid ProjectId, ProjectDeletionParticipantId ParticipantId, Guid RecoveryId);
 
 public sealed record ProjectCleanupStatus(
-    ProjectCleanupTarget Target, string Status, bool CanRetryNow, DateTimeOffset? RetryAvailableAtUtc, string RetryGuidance);
+    ProjectCleanupTarget Target, string Status, bool CanRetryNow, DateTimeOffset? RetryAvailableAtUtc, string RetryGuidance,
+    bool RetryBlocked = false);
 
 public sealed record ProjectCleanupNotice(ProjectCleanupTarget Target, string Operation, IReadOnlyList<string> Warnings);
 

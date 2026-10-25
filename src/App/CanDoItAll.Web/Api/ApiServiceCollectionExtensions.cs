@@ -54,6 +54,10 @@ public static class ApiServiceCollectionExtensions
         services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<MemoryProviderApiService>();
         services.TryAddScoped<WebCurrentPrincipalResolver>();
+        services.TryAddScoped<ProjectDefinitionHttpAccess>();
+        services.TryAddScoped<ProcessPlanningReviewHttpAccess>();
+        services.TryAddScoped<ProcessCancellationHttpAccess>();
+        services.TryAddScoped<CanDoItAll.Modules.Processes.IProcessCancellationClient, WebProcessCancellationClient>();
         services.TryAddScoped<IStoragePlacementRecoveryAccess, WebStoragePlacementRecoveryAccess>();
         services.TryAddScoped<StoragePlacementRecoveryService>();
         services.TryAddScoped<IStoragePlacementRecovery>(provider => provider.GetRequiredService<StoragePlacementRecoveryService>());
@@ -64,14 +68,22 @@ public static class ApiServiceCollectionExtensions
             typeof(ProfileBoundedReplayEventStream<>));
         services.ConfigureAgentApiJson();
         services.ConfigureLlmChatApiJson();
+        services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new ProjectOperationEpochHttpJsonConverter()));
         services.AddOpenApi(options =>
         {
+            options.CreateSchemaReferenceId = WorkspaceSettingsOpenApiContract.CreateSchemaReferenceId;
             options.AddOperationTransformer(ApiAccessOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(ApiEndpointDocumentation.TransformAsync);
             options.AddSchemaTransformer(ApiAccessOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(new OpenApiNullableTypeDescriptions());
             options.AddSchemaTransformer(OpenApiAttributeDescriptions.TransformAsync);
             options.AddSchemaTransformer(SharedProviderOpenApiSchemas.TransformSchemaAsync);
+            options.AddSchemaTransformer(ProjectOperationEpochHttpContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(AgentHistoricalReceiptOpenApiContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(AgentDecisionPolicyOpenApiContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(ProjectDefinitionOperationOpenApiSchemas.TransformSchemaAsync);
+            options.AddSchemaTransformer(WorkspaceSettingsOpenApiContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(ProcessLaunchDecisionOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
@@ -82,9 +94,13 @@ public static class ApiServiceCollectionExtensions
             options.AddOperationTransformer(
                 SharedProviderInferenceOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(OpenApiFormParameterDescriptions.TransformOperationAsync);
+            options.AddOperationTransformer(ProjectOperationEpochHttpContract.TransformOperationAsync);
+            options.AddOperationTransformer(ProjectDefinitionOpenApiOperations.TransformAsync);
+            options.AddOperationTransformer(WorkspaceSettingsOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(OpenApiDuplicateParameters.TransformOperationAsync);
             options.AddDocumentTransformer(OpenApiDiscriminatorDescriptions.TransformDocumentAsync);
             options.AddDocumentTransformer(OpenApiAttributeDescriptions.TransformDocumentAsync);
+            options.AddDocumentTransformer(ProjectDefinitionOpenApiDescriptions.TransformDocumentAsync);
             options.AddDocumentTransformer(OpenApiDescriptionText.TransformDocumentAsync);
         });
         services.AddAuthorization(options =>

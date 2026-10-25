@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/agent_process_architecture",
+  "status": "Source-only cancellation assertion repair; parent build/static/execution pending",
+  "sourceOnly": true,
+  "previousOverlay": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P04-C4-small-coarse-probe-capture-source-overlay.json",
+    "sha256": "A94D815C9383772D0897E582B46B256232F3FF909C7194A4608963E2BC43446B"
+  },
+  "files": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentPlanningPublicationCostFixture.cs",
+      "predecessorSha256": "8620CB46F726A4B2816D52B07C9657C05397509F11D85493903F9BB3D090C227",
+      "predecessorBytes": 31503,
+      "preservedSource": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-small-probe-cancellation-repair-source\\AgentPlanningPublicationCostFixture.before-cancellation-repair.cs.txt",
+      "sha256": "2CAAEFEFDA239FE131F6E129D5AFA66AB090A78839ACCEF9D8A7F9413E17756E",
+      "bytes": 32121,
+      "change": "Assert exact Cancelled/Rejected/NotCommitted/NotDispatched/NeverDispatched owner result for the single prepared proposal, null claim/result/receipt and exact run/journal revision increments."
+    }
+  ],
+  "ownership": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-small-probe-cancellation-repair-source.ownership.json",
+    "sha256": "B9185E75D4E0DEFE75BADE4100B8850115EE3BCAFE91A9D6B84E2D63CE3540D7"
+  },
+  "expectedFacts": 1,
+  "longRunningRows": 1,
+  "workloadChanged": false,
+  "responsivenessThresholdChanged": false,
+  "productionChanged": false,
+  "buildsPerformed": false,
+  "testsPerformed": false,
+  "staticPerformed": false,
+  "mainMaintainedEdits": false,
+  "previousActualResult": "V3 one case failed at incorrect Rejected proposal-state assertion; retains timing/cleanup evidence but did not reach final effect and guard validation."
+}

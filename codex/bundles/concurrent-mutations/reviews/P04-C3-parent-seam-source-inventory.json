@@ -1,0 +1,147 @@
+{
+  "kind": "C3 parent integration seams source-only",
+  "ordinaryRows": 187,
+  "unitRows": 60,
+  "integrationRows": 127,
+  "liveProcessRows": 2,
+  "longRunningRows": 1,
+  "newMigrationFacts": 3,
+  "executed": false,
+  "mainEdited": false,
+  "canonicalMigrationGenerated": false,
+  "baseC3InventorySha256": "8B3FF71B2F5558784E64F3CA3FC12F58B94074D26833CA6AFC95BB1B0E69E232",
+  "source": [
+    {
+      "path": "src/App/CanDoItAll.Composition/FiniteOperationComposition.cs",
+      "sha256": "B1A019E479911BF6A8A614BF89E3A48E306E654234E2929800B61C3A02FF57B9",
+      "bytes": 8235,
+      "parentBaseSha256": "6BD3AB6F90AEE98217EEB1186283BE6879634ADAFC64D117EC580EF4A7CC6D8F",
+      "managedPredecessorSha256": "6BD3AB6F90AEE98217EEB1186283BE6879634ADAFC64D117EC580EF4A7CC6D8F"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Infrastructure/DatasetActivationCommand.cs",
+      "sha256": "1309989A874398956320036D341BF527C82E231F47ECC603494E0E474BF9A3CC",
+      "bytes": 8186,
+      "parentBaseSha256": "3CDB8D39D117D32A3C78AD957662F462FE5F54A01F2B8C2C48CEF370BFBC99AB",
+      "managedPredecessorSha256": "3CDB8D39D117D32A3C78AD957662F462FE5F54A01F2B8C2C48CEF370BFBC99AB"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCommandProcessTests.cs",
+      "sha256": "D1DD712AEA79D7C64AD27416865809659B637B7CD86B66C78082141A8F5AA226",
+      "bytes": 19396,
+      "parentBaseSha256": "FF5BF901C4DD2C0C03806D8D73EC766A5E596B39CF3621A9C136BEB230FDE59A",
+      "managedPredecessorSha256": "FF5BF901C4DD2C0C03806D8D73EC766A5E596B39CF3621A9C136BEB230FDE59A"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FiniteOperationMigrationTests.cs",
+      "sha256": "8C45DD222DF2412BB56E9501302E3C832198A657FBEFAF631D52E142409ECC49",
+      "bytes": 25905,
+      "parentBaseSha256": "6FC394FEF86CAC6172DB10EB2165B412C2E97F14BD3672CB9B24362E0ED725C4",
+      "managedPredecessorSha256": "6FC394FEF86CAC6172DB10EB2165B412C2E97F14BD3672CB9B24362E0ED725C4"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanMigrationTests.cs",
+      "sha256": "D0E5C8F4D01477A97624F4BA5B914814700E5C1E09D49A65AA9BAF43C6D40BF5",
+      "bytes": 27252,
+      "parentBaseSha256": null,
+      "managedPredecessorSha256": null
+    }
+  ],
+  "unchangedC3Seams": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTransferTargetStateArchitectureTests.cs",
+      "parentBaseSha256": "6940A6FEEE908A20733B8E3FB20F0EDF77D88B0BAB4159937E6A58C9E6D0761D",
+      "sha256": "C9507945024E82EECD0A9168741DF44AF436DF26030E28AA678FAC9848252814",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkbenchOwnerPersistenceTests.cs",
+      "parentBaseSha256": "7E57FD61AF24BF8AE68F5DA6751421D3400DC71FACBAE586C144F010FF207B6D",
+      "sha256": "5B01AC873D61CB7D49C8E8A3260CC63394CB63FDD92AFF5B4D328F98DEF7CDE7",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTransferOwnerInspectionTests.cs",
+      "parentBaseSha256": "B29F964B1D941DBB091836638CBEEDAB06166D5518911A06E09E5F66A69DBCB7",
+      "sha256": "8A8EF1B38D9F57707E2B52E966B302E11F621527E66A9DA76509B7B58A3B674B",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPremergeUpgradeTests.cs",
+      "parentBaseSha256": "084D5EB670C4E3C5951307F446ED1887E84010D2005657546AF6F47D9C80883B",
+      "sha256": "F5F5212326398718AFE86D1224D53501EBEE76AC3A6C990E4AB7397B6D8FBE85",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalProjectMigrationAssertions.cs",
+      "parentBaseSha256": "84E04E102ABCB477B10B802D365EE0E93816A1F6BA05F7FB7C25D8171F95F1AA",
+      "sha256": "1004F8CB322530197E17D041BD5F1B65F14B3BE4E22A702BF00935ABA3AF7356",
+      "state": "changed-existing"
+    }
+  ],
+  "support": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-counts.json",
+      "sha256": "010363CF48712D0E1A7DD506659434E82FF784108A52912DA49A47A8F5C0B8F5",
+      "bytes": 18652
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P04-C3-parent-seams-source.md",
+      "sha256": "A5D1DA61CC1B8481F3FF9A3DDEFF4857C273FEC26387736E9C6A85F5B73AB54F",
+      "bytes": 8011
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/inventory.json",
+      "sha256": "6D749631835736D20FD5382DD036A867056C80F8AAD70DC3BC9F86039EB7AFE3",
+      "bytes": 1604
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/FiniteOperationComposition.cs.txt",
+      "sha256": "6BD3AB6F90AEE98217EEB1186283BE6879634ADAFC64D117EC580EF4A7CC6D8F",
+      "bytes": 8034
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/DatasetActivationCommand.cs.txt",
+      "sha256": "3CDB8D39D117D32A3C78AD957662F462FE5F54A01F2B8C2C48CEF370BFBC99AB",
+      "bytes": 7752
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/DatasetActivationCommandProcessTests.cs.txt",
+      "sha256": "FF5BF901C4DD2C0C03806D8D73EC766A5E596B39CF3621A9C136BEB230FDE59A",
+      "bytes": 16900
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/FiniteOperationMigrationTests.cs.txt",
+      "sha256": "6FC394FEF86CAC6172DB10EB2165B412C2E97F14BD3672CB9B24362E0ED725C4",
+      "bytes": 22872
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-inventory.before-peer.json",
+      "sha256": "674A30A17A4940221B5D3D401F8EFE6F55091A9D653DE35535867153AAD5E584",
+      "bytes": 5774
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-counts.before-peer.json",
+      "sha256": "E3F7A1B48142EEB8E927D51EC612832D80382F4839F53B621B6B7C849C11366B",
+      "bytes": 18652
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/P04-C3-parent-seams-source.before-peer.md",
+      "sha256": "CF464FCF5A5CA3EB2739F842F60A92D207458D23755870700F511304A16EB025",
+      "bytes": 6226
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/ProjectTaskPlanMigrationTests.before-peer.cs.txt",
+      "sha256": "FAC6F304681502D1AE15B3B260D2DF81957C2334158B890C1B3AFBF5657BDC7F",
+      "bytes": 25288
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/ProjectTaskPlanMigrationTests.before-corruption-expansion.cs.txt",
+      "sha256": "E803FC2E9DD0242F9DD8640AFA6979ADA9090F44F30EE3922884F5BFA7E66AB2",
+      "bytes": 25277
+    }
+  ],
+  "peerReview": "Persistence: four composition/offline/C2 files plus final migration3; runtime: final migration3. No source blocker. Final migration hash D0E5C8F4D01477A97624F4BA5B914814700E5C1E09D49A65AA9BAF43C6D40BF5. No execution, generation or closure inferred.",
+  "predecessorInventorySha256": "674A30A17A4940221B5D3D401F8EFE6F55091A9D653DE35535867153AAD5E584",
+  "corruptionArrangements": 12
+}

@@ -23,7 +23,8 @@ public enum ProviderEmptyCompletionOutcome
     Recovered,
     Exhausted,
     SuppressedBackground,
-    SuppressedUnsafeTools
+    SuppressedUnsafeTools,
+    SuppressedPlanning
 }
 
 public static class AgentFrameworkTelemetry
@@ -183,6 +184,7 @@ public static class AgentFrameworkTelemetry
             ProviderEmptyCompletionOutcome.Exhausted => "exhausted",
             ProviderEmptyCompletionOutcome.SuppressedBackground => "suppressed_background",
             ProviderEmptyCompletionOutcome.SuppressedUnsafeTools => "suppressed_unsafe_tools",
+            ProviderEmptyCompletionOutcome.SuppressedPlanning => "suppressed_planning",
             _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown provider empty-completion outcome.")
         };
         var tags = CreateScopeTags();

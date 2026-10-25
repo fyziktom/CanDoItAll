@@ -9,8 +9,12 @@
         }
     </select>
     <output aria-live="polite" data-testid="sandbox-intent">@fixture.IntentLog</output>
+    <output aria-label="Simulated Send callbacks" data-testid="sandbox-send-count">@fixture.SendIntentCount</output>
 </header>
-<main class="catalog-sandbox__frame" data-testid="sandbox-agent-chat-specimen" data-scenario="@fixture.Scenario">
+<main class="catalog-sandbox__frame" data-testid="sandbox-agent-chat-specimen" data-scenario="@fixture.Scenario"
+      data-busy="@(fixture.Presentation.IsBusy ? "true" : "false")"
+      data-send-blocked="@(fixture.Presentation.IsSendBlocked ? "true" : "false")"
+      data-approval-count="@fixture.Presentation.Approvals.Length">
     <AgentChatSurface Presentation="fixture.Presentation" Navigation="fixture.Navigation" Intent="fixture.Apply" NavigationIntent="fixture.Navigate" />
 </main>
 @code {

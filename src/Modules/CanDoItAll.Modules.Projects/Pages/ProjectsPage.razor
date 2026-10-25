@@ -38,13 +38,23 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     </Header>
 
     <ChildContent>
+        <Button Text="Manage retained save references" ButtonStyle="ButtonStyle.Light" Click="OpenReferencesAsync" data-testid="project-reference-manage" />
+        <ProjectPendingListSurface Items="VisiblePendingSaves" Loading="pendingLoading" Error="@pendingError"
+                                   HasMore="@(pendingVisible < pendingSaves.Count)" Refresh="RefreshPendingSavesAsync"
+                                   ShowMore="ShowMorePendingSaves" Open="OpenPendingSaveAsync" />
+        <ProjectLifecyclePendingSurface Items="VisibleLifecycleRows" Loading="lifecycleLoading" Error="@(lifecycleError ?? lifecycleReadError)"
+                                        HasMore="@(lifecycleVisible < lifecycleRows.Count)" View="LifecycleView"
+                                        Refresh="RefreshLifecycleAsync" ShowMore="ShowMoreLifecycle" Open="OpenLifecycleAsync" Action="HandleLifecycleActionAsync" />
         <ProjectDeletionStatusSurface Message="@projectDeletionNotice" IsError="projectDeletionNoticeIsError"
                                       Pending="CleanupStatuses" Completed="CleanupNotices" BusyTargets="busyCleanupTargets"
                                       Retry="RetryProjectDeletionCleanupAsync" Review="cleanupReview"
                                       ReviewChanged="value => cleanupReview = value" />
-        @if (portfolioError is not null || editorError is not null) {
+        @if (portfolioError is not null || editorError is not null || packageTargetsError is not null) {
             <Alert AlertStyle="AlertStyle.Warning" data-testid="projects-read-error">
                 <TextBlock Value="@(editorError ?? portfolioError)" />
+                @if (packageTargetsError is not null) {
+                    <TextBlock Value="@packageTargetsError" />
+                }
                 <Button Text="Retry project reads" Click="RetryReadsAsync" />
             </Alert>
         }
@@ -127,7 +137,14 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                   PreviousStep="PreviousStep"
                   NextStep="NextStep"
                   Save="SaveAsync"
+                  ValidateCapture="ValidateDraftCapture"
+                  SubmissionReady="@(pendingReady && lifecycleReady && pendingContext is not null)"
                   SaveAndOpenStructure="SaveAndOpenStructureAsync"
+                  ReadCurrentDefinition="ReadCurrentDefinitionAsync"
+                  DiscardAndReloadDefinition="DiscardAndReloadDefinition"
+                  BeginDefinitionReconciliation="BeginDefinitionReconciliation"
+                  PendingRecovery="PendingEditorView"
+                  PendingAction="HandlePendingActionAsync"
                   Delete="DeleteAsync"
                   OpenProjectDashboard="OpenProjectDashboardAsync"
                   OpenProcesses="OpenProcessesAsync"
@@ -144,6 +161,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                     ProjectId="@(projectFilesDialogProject?.Id ?? Guid.Empty)"
                     ProjectName="@(projectFilesDialogProject?.Name ?? string.Empty)"
                     Closed="CloseProjectFilesAsync" />
+
+<ProjectPendingReferenceSurface IsOpen="referencesOpen" Busy="referencesBusy" Message="@referenceMessage"
+                                Items="@(referencePage?.Items ?? [])" StoredCount="@(referencePage?.StoredCount ?? 0)"
+                                StoredBytes="@(referencePage?.StoredBytes ?? 0)" HasMore="@(referencePage?.Next is not null)"
+                                CurrentScope="@(pendingReady && pendingContext is not null ? ProjectNativeDefinitionOperations.Scope(pendingContext) : null)"
+                                Selected="selectedReference" Select="SelectReference" Discard="DiscardReferenceAsync"
+                                CancelSelection="() => selectedReference = null" Refresh="RefreshReferencesAsync" Next="NextReferencesAsync" Close="CloseReferences" />
 
 @code {
     private static readonly string[] wizardSteps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
@@ -237,9 +261,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private Guid? failedEditorId;
     private string? portfolioError;
     private string? editorError;
+    private string? packageTargetsError;
     private string? projectDeletionNotice;
     private bool projectDeletionNoticeIsError;
-    private readonly List<ProjectDeletionPendingCleanup> pendingProjectDeletionCleanups = [];
+    private readonly ProjectDeletionCleanupState deletionCleanups = new();
     private readonly List<ProjectDeletionCompletionNotice> projectDeletionCompletionNotices = [];
     private int wizardStep;
     private bool showProjectModal;
@@ -432,7 +457,6 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             if (!disposed) {
                 portfolioLoads.TryCommit(stamp, RouteProjectId, () => {
                     ApplyPortfolioState(state);
-                    unconfirmedCleanupTargets.Clear();
                     portfolioError = null;
                     portfolioAccessState = AgentChatContextAccessState.Ready;
                 });
@@ -454,15 +478,17 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         try {
             var profiles = await LoadProjectPackageTargetProfilesAsync();
             if (!disposed) {
-                packageLoads.TryCommit(stamp, RouteProjectId, () => ApplyProjectPackageTargetProfiles(profiles));
+                packageLoads.TryCommit(stamp, RouteProjectId, () => {
+                    ApplyProjectPackageTargetProfiles(profiles);
+                    packageTargetsError = null;
+                });
             }
         } catch (OperationCanceledException) when (readLifetime.IsCancellationRequested) {
         } catch (Exception exception) {
             Logger.LogError(exception, "Project package target read failed.");
             packageLoads.TryCommit(stamp, RouteProjectId, () => {
                 projectPackageTargetProfiles = [];
-                projectPackageMessage = "Unable to read package targets. Retry project reads to refresh the available targets.";
-                projectPackageMessageIsError = true;
+                packageTargetsError = "Unable to read package targets. Retry project reads to refresh the available targets.";
             });
         }
     }
@@ -589,8 +615,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     {
         projectSummaries = state.ProjectSummaries;
         hierarchyLinks = state.HierarchyLinks;
-        pendingProjectDeletionCleanups.Clear();
-        pendingProjectDeletionCleanups.AddRange(state.PendingDeletionCleanups);
+        deletionCleanups.Refresh(state.PendingDeletionCleanups);
         projectDeletionCompletionNotices.Clear();
         projectDeletionCompletionNotices.AddRange(
             state.DeletionCompletionNotices.Where(notice => notice.Warnings.Count > 0));
@@ -655,6 +680,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         if (id.HasValue && showProjectModal && editor.Id == id && failedEditorId is null) {
             return;
         }
+        RetireLifecycleEditor(draft);
+        if (editorOperations.TryGetValue(draft, out var previousOperation)) {
+            previousOperation.Dispose();
+        }
         long intent = ++editorIntent;
         editorRead?.Cancel();
         using var read = CancellationTokenSource.CreateLinkedTokenSource(readLifetime.Token);
@@ -663,7 +692,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         showProjectModal = false;
         editorError = null;
         try {
-            var loaded = await ProjectsService.GetAsync(id, read.Token);
+            var acquired = await NativeDefinitions.AcquireEditorAsync(id, read.Token);
+            var loaded = acquired.Model;
             if (id.HasValue && loaded.Id != id) {
                 throw new InvalidOperationException($"Project '{id:D}' is unavailable.");
             }
@@ -671,7 +701,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                 return;
             }
             TryCompleteProjectLoad(stamp, () => {
-                draft = new(loaded);
+                draft = new(loaded, acquired.Scope);
                 wizardStep = 0;
                 modalMode = id.HasValue ? ProjectsModalMode.Overview : ProjectsModalMode.Editor;
                 if (fromRoute) {
@@ -696,6 +726,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     }
 
     private void RetireEditor() {
+        RetireLifecycleEditor(draft);
+        if (editorOperations.TryGetValue(draft, out var operation)) {
+            operation.Dispose();
+        }
         editorIntent++;
         editorRead?.Cancel();
         InvalidateProjectLoad();
@@ -803,9 +837,16 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                 ? string.Join(" ", result.Errors.Select(error => error.Message))
                 : $"Imported {result.Value!.RecordsImported} project record(s) from {result.Value.Manifest.PackageId:N} into {request.TargetProfileId:D}.";
             projectPackageMessageIsError = result.IsFailure;
-            if (result.IsSuccess) {
-                await RefreshPortfolioAsync();
+            if (result.IsFailure) {
+                projectPackageOutcomeUnknown = result.Errors.Any(error => error.Code == ProjectPackageErrorCodes.ImportOutcomeUnconfirmed);
+                return;
             }
+            if (result.Value!.Warning == ProjectPackageImportWarning.CleanupIncomplete) {
+                projectPackageOutcomeUnknown = true;
+                projectPackageMessageIsError = true;
+                projectPackageMessage += " The import committed, but cleanup needs operator review. Do not repeat this import; further package operations are held.";
+            }
+            await RefreshPortfolioAsync();
         } catch (Exception exception) {
             Logger.LogError(exception, "Project package import outcome is unconfirmed for target {TargetProfileId}.", request.TargetProfileId);
             projectPackageOutcomeUnknown = true;
@@ -937,60 +978,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         await SaveCoreAsync(submitted);
     }
 
-    private async Task<Guid?> SaveCoreAsync(ProjectEditorSubmission submitted) {
-        var target = draft;
-        if (!showProjectModal || !target.Validate() || !TryAdmitMutation(target, ProjectEditorMutationState.Saving)) {
-            return null;
-        }
-        long intent = ++editorIntent;
-        bool projectCommitted = false;
-        try {
-            var result = await ProjectsService.SaveEditorAsync(submitted.Model);
-            if (result.IsFailure) {
-                target.Message = string.Join(" ", result.Errors.Select(error => error.Message));
-                target.IsError = true;
-                ReleaseMutation(target);
-                return null;
-            }
-            target.Acknowledge(submitted, result.Value!);
-            projectCommitted = true;
-            mutationTargets[result.Value!.Project.ProjectId] = target;
-            if (submitted.Model.Id is null && IsActiveEditor(target, intent)) {
-                PublishCreatedProject(result.Value.Project.ProjectId);
-            }
-            target.Message = "Project saved.";
-            target.IsError = false;
-            if (submitted.Seeds.Count > 0) {
-                target.Mutation = ProjectEditorMutationState.Seeding;
-                try {
-                    await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(result.Value.Project, submitted.Seeds.Select(seed => seed.Value).ToArray());
-                } catch (ProjectWriteAdmissionRejectedException exception) when (exception.Admission == result.Value.Project) {
-                    RefuseMutation(target, exception, "Project saved. Starter-object creation was refused because the acquired project lifetime no longer exists. Close and reopen the current project before another write.");
-                    return null;
-                }
-                target.AcknowledgeSeeds(submitted);
-                target.Message = "Project saved and starter objects seeded to the structure workbench.";
-            }
-            ReleaseMutation(target);
-            await RefreshPortfolioAsync();
-            if (target.EditRevision != submitted.EditRevision) {
-                target.Message += " Newer edits remain unsaved.";
-                return null;
-            }
-            return IsActiveEditor(target, intent) ? result.Value.Project.ProjectId : null;
-        } catch (Exception exception) {
-            Logger.LogError(exception, "Project editor operation failed for {ProjectId}; current stage {Stage}.", target.Model.Id, target.Mutation);
-            target.Mutation = projectCommitted ? ProjectEditorMutationState.SeedOutcomeUnknown : ProjectEditorMutationState.SaveOutcomeUnknown;
-            target.Message = projectCommitted
-                ? "Project saved. Starter-object completion is unconfirmed. Inspect Structure before creating any of these objects again."
-                : "Save completion is unconfirmed. Inspect the project inventory before attempting another write.";
-            target.IsError = true;
-            return null;
-        }
-    }
-
     private bool TryAdmitMutation(ProjectEditorDraft target, ProjectEditorMutationState operation) {
         if (!target.CanMutate) {
+            return false;
+        }
+        if (!pendingReady || !lifecycleReady || PendingBlocks(target.Model.Id) || LifecycleBlocks(target.Model.Id)) {
+            target.Message = "A previous operation or unavailable pending index blocks this write. Review pending saves before submitting another operation.";
+            target.IsError = true;
             return false;
         }
         if (target.Model.Id is { } id && mutationTargets.ContainsKey(id)) {
@@ -1007,7 +1001,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private void ReleaseMutation(ProjectEditorDraft target, ProjectEditorMutationState state = ProjectEditorMutationState.Ready) {
         target.Mutation = state;
-        if (target.Model.Id is { } id && mutationTargets.TryGetValue(id, out var owner) && ReferenceEquals(owner, target)) {
+        foreach (var id in mutationTargets.Where(pair => ReferenceEquals(pair.Value, target)).Select(pair => pair.Key).ToArray()) {
             mutationTargets.Remove(id);
         }
     }
@@ -1021,6 +1015,62 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private bool IsActiveEditor(ProjectEditorDraft target, long intent)
         => !disposed && showProjectModal && ReferenceEquals(draft, target) && editorIntent == intent;
+
+    private async Task ReadCurrentDefinitionAsync(ProjectEditorDraft target) {
+        if (!showProjectModal || !ReferenceEquals(draft, target) || target.Model.Id is not { } projectId ||
+            target.Conflict is null or { ReadState: ProjectEditorConflictReadState.Loading }) {
+            return;
+        }
+        long intent = ++editorIntent;
+        editorRead?.Cancel();
+        using var read = CancellationTokenSource.CreateLinkedTokenSource(readLifetime.Token);
+        editorRead = read;
+        target.BeginConflictRead();
+        try {
+            var result = await NativeDefinitions.ReadCurrentAsync(projectId,
+                target.Scope ?? throw new InvalidOperationException("The editor has no original dataset binding."), read.Token);
+            if (!IsActiveEditor(target, intent) || read.IsCancellationRequested) {
+                return;
+            }
+            if (result.IsFailure) {
+                target.FailConflictRead(string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
+            target.CompleteConflictRead(result.Value!);
+        } catch (OperationCanceledException) when (read.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogError(exception, "Current project definition comparison failed for {ProjectId}.", projectId);
+            if (IsActiveEditor(target, intent)) {
+                target.FailConflictRead("Unable to read the current definition. Your draft is preserved; retry the comparison read.");
+            }
+        } finally {
+            if (ReferenceEquals(editorRead, read)) {
+                editorRead = null;
+            }
+        }
+    }
+
+    private void DiscardAndReloadDefinition(ProjectEditorDraft target) => StartCurrentDefinitionDraft(target, preservePrevious: false);
+
+    private void BeginDefinitionReconciliation(ProjectEditorDraft target) => StartCurrentDefinitionDraft(target, preservePrevious: true);
+
+    private void StartCurrentDefinitionDraft(ProjectEditorDraft target, bool preservePrevious) {
+        if (!showProjectModal || !ReferenceEquals(draft, target) ||
+            !target.HasCurrentDefinition || editorOperations.ContainsKey(target)) {
+            return;
+        }
+        if (preservePrevious && !target.EditContext.Validate()) {
+            target.Message = "Complete or clear invalid dates before preserving this draft for reconciliation. Discard and reload remains available.";
+            target.IsError = true;
+            return;
+        }
+        editorIntent++;
+        editorRead?.Cancel();
+        draft = target.StartFromCurrent(preservePrevious);
+        wizardStep = 0;
+        modalMode = ProjectsModalMode.Editor;
+        PublishModalSection();
+    }
 
     // The first save gives the draft its identity; the editor becomes addressable without a new history entry.
     private void PublishCreatedProject(Guid projectId) {
@@ -1040,45 +1090,6 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         {
             Navigation.NavigateTo($"/projects/{savedProjectId.Value}/structure");
         }
-    }
-
-    private async Task DeleteAsync() {
-        var target = draft;
-        if (!showProjectModal || target.Model.Id is not { } id || !TryAdmitMutation(target, ProjectEditorMutationState.Deleting)) {
-            return;
-        }
-        long intent = ++editorIntent;
-        var admission = target.Model.ExpectedProjectAdmission;
-        try {
-            if (admission is null) {
-                throw new InvalidOperationException("The acquired editor has no owner-issued deletion admission.");
-            }
-            var deletion = await ProjectsService.DeleteAsync(id, expectedProjectAdmission: admission);
-            RecordDeletion(target, intent);
-            projectDeletionNotice = deletion.Warnings.Count == 0 ? "Project deleted."
-                : "Project deleted. Retained media is recorded in cleanup history.";
-            projectDeletionNoticeIsError = false;
-        } catch (ProjectWriteAdmissionRejectedException exception) when (admission is not null && exception.Admission == admission) {
-            RefuseMutation(target, exception, "Deletion was refused because the acquired project lifetime no longer exists. Close and reopen the current project before another write.");
-            return;
-        } catch (ProjectDeletionPartialCommitException exception) {
-            RecordDeletion(target, intent);
-            foreach (var failure in exception.Recovery.Failures.Where(item => item.RecoveryId.HasValue)) {
-                if (!pendingProjectDeletionCleanups.Any(item => item.ProjectId == id && item.ParticipantId == failure.ParticipantId && item.RecoveryId == failure.RecoveryId)) {
-                    pendingProjectDeletionCleanups.Add(new(id, failure.ParticipantId, failure.RecoveryId!.Value,
-                        ProjectDeletionRecoveryStatus.Failed, true, null, exception.Recovery.RetryGuidance));
-                }
-            }
-            projectDeletionNotice = "The project was deleted, but cleanup remains pending. Retry the exact durable operation listed below.";
-            projectDeletionNoticeIsError = true;
-        } catch (Exception exception) {
-            Logger.LogError(exception, "Project deletion outcome is unconfirmed for {ProjectId}.", id);
-            target.Mutation = ProjectEditorMutationState.DeleteOutcomeUnknown;
-            target.Message = "Deletion completion is unconfirmed. Refresh the inventory and inspect cleanup before another write.";
-            target.IsError = true;
-            return;
-        }
-        await RefreshPortfolioAsync();
     }
 
     private void RecordDeletion(ProjectEditorDraft target, long intent) {
@@ -1103,24 +1114,29 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     }
 
     private async Task RetryProjectDeletionCleanupAsync(ProjectCleanupTarget target) {
-        if (!pendingProjectDeletionCleanups.Any(cleanup => cleanup.ProjectId == target.ProjectId && cleanup.ParticipantId == target.ParticipantId && cleanup.RecoveryId == target.RecoveryId) ||
-            unconfirmedCleanupTargets.Contains(target) || !busyCleanupTargets.Add(target)) {
+        if (!deletionCleanups.CanRetry(target) || !busyCleanupTargets.Add(target)) {
             return;
         }
         try {
             var result = await ProjectsService.RetryDeletionCleanupAsync(target.ProjectId, target.ParticipantId, target.RecoveryId);
             portfolioLoads.Invalidate();
-            pendingProjectDeletionCleanups.RemoveAll(cleanup => cleanup.ProjectId == target.ProjectId && cleanup.ParticipantId == target.ParticipantId && cleanup.RecoveryId == target.RecoveryId);
-            projectDeletionNotice = result.Warnings.Count == 0 ? "Project cleanup completed."
-                : "Project cleanup completed. Retained media is recorded in cleanup history.";
+            deletionCleanups.Complete(target);
+            projectDeletionNotice = result.Warnings.Count == 0 ? "Selected cleanup completed."
+                : "Selected cleanup completed. Retained media is recorded in cleanup history.";
             projectDeletionNoticeIsError = false;
-        } catch (ProjectDeletionPartialCommitException) {
-            projectDeletionNotice = "Project cleanup is still pending. The exact durable operation remains available for another retry.";
+        } catch (ProjectDeletionPartialCommitException exception) {
+            deletionCleanups.Observe(exception.Recovery);
+            if (exception.Recovery.OwnerCompletionUnconfirmed) {
+                deletionCleanups.MarkUnconfirmed(target, ownerCompletionUnconfirmed: true);
+            }
+            projectDeletionNotice = exception.Recovery.OwnerCompletionUnconfirmed
+                ? ProjectDeletionCleanupState.OwnerCompletionGuidance
+                : "Project cleanup is still pending. The exact durable operation remains available for another retry.";
             projectDeletionNoticeIsError = true;
         } catch (Exception exception) {
             Logger.LogError(exception, "Project cleanup observation failed for {ProjectId}, {ParticipantId}, {RecoveryId}.", target.ProjectId, target.ParticipantId, target.RecoveryId);
-            unconfirmedCleanupTargets.Add(target);
-            projectDeletionNotice = "Cleanup completion is unconfirmed. Refresh the inventory before another explicit retry.";
+            deletionCleanups.MarkUnconfirmed(target);
+            projectDeletionNotice = ProjectDeletionCleanupState.UnconfirmedGuidance;
             projectDeletionNoticeIsError = true;
         } finally {
             busyCleanupTargets.Remove(target);
@@ -1128,12 +1144,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         await RefreshPortfolioAsync();
     }
 
-    private IReadOnlyList<ProjectCleanupStatus> CleanupStatuses => pendingProjectDeletionCleanups.Select(item => new ProjectCleanupStatus(
-        new(item.ProjectId, item.ParticipantId, item.RecoveryId), item.Status.ToString(),
-        item.CanRetryNow && !unconfirmedCleanupTargets.Contains(new(item.ProjectId, item.ParticipantId, item.RecoveryId)),
-        item.RetryAvailableAtUtc, item.RetryGuidance)).ToArray();
-
-    private readonly HashSet<ProjectCleanupTarget> unconfirmedCleanupTargets = [];
+    private IReadOnlyList<ProjectCleanupStatus> CleanupStatuses => deletionCleanups.Statuses;
 
     private IReadOnlyList<ProjectCleanupNotice> CleanupNotices => projectDeletionCompletionNotices.Select(item => new ProjectCleanupNotice(
         new(item.ProjectId, item.ParticipantId, item.RecoveryId), FormatCompletionOperation(item.Operation),
@@ -1304,15 +1315,27 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         _ => AgentChatContextAccessState.Ready
     };
 
-    protected override void OnAfterRender(bool firstRender) {
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (firstRender) {
             interactive = true;
+            await RefreshPendingSavesAsync();
+            await RefreshLifecycleAsync();
+            if (disposed) {
+                return;
+            }
             StateHasChanged();
         }
     }
 
     public void Dispose() {
         disposed = true;
+        lifecycleSelection++;
+        foreach (var operation in lifecycleOperations.Values) {
+            operation.Dispose();
+        }
+        foreach (var operation in editorOperations.Values) {
+            operation.Dispose();
+        }
         CancelSearchCommit();
         editorIntent++;
         projectLoads.Invalidate();

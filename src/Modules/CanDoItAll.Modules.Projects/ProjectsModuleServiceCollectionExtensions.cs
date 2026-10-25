@@ -20,6 +20,33 @@ public static class ProjectsModuleServiceCollectionExtensions
             IAgentExecutionSourceAuthorityProvider,
             ProjectsExecutionAuthorityProvider>());
         services.AddScoped<ProjectsService>();
+        services.AddScoped<ProjectDefinitionWriter>();
+        services.AddScoped<ProjectDefinitionReader>();
+        services.AddScoped<ProjectDefinitionReceiptReader>();
+        services.AddScoped<ProjectDefinitionOperationProtocol>();
+        services.AddScoped<ProjectLifecycleWriter>();
+        services.AddScoped<ProjectLifecycleOperationProtocol>();
+        services.AddScoped<ProjectLifecycleReceiptReader>();
+        services.AddScoped<ProjectLifecycleCurrentWriteAuthority>();
+        services.AddScoped<ProjectDeletionCompletionOwner>();
+        services.AddScoped<ProjectDeletionCompletionReader>();
+        services.AddScoped<IProjectDeletionCompletionQuery>(provider => provider.GetRequiredService<ProjectDeletionCompletionReader>());
+        services.AddScoped<ProjectDeletionCompletionDispatcher>();
+        services.AddScoped<ProjectDeletionCompletionProjection>();
+        services.AddScoped<ProjectCreationCompensationOwner>();
+        services.AddScoped<ProjectCreationCompensationReader>();
+        services.AddScoped<ProjectReservationCancellationOwner>();
+        services.AddScoped<ProjectReservationCancellationReader>();
+        services.AddScoped<ProjectCreationCleanupAuthority>();
+        services.AddSingleton<IProjectDefinitionRecoveryCodec, ProjectDefinitionRecoveryCodec>();
+        services.AddScoped<Pages.ProjectNativeDefinitionOperations>();
+        services.AddSingleton<IProjectLifecycleRecoveryCodec, ProjectLifecycleRecoveryCodec>();
+        services.AddScoped<ProjectLifecycleHierarchyReader>();
+        services.AddScoped<Pages.ProjectNativeLifecycleOperations>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectDefinitionReceiptRetention>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectLifecycleReceiptRetention>());
+        services.AddOptions<ProjectDefinitionOperationOptions>().Validate(options => options.IsValid(),
+            "Projects definition operation limits and deadlines must remain within supported bounds.").ValidateOnStart();
         services.AddScoped<IProjectSummaryQueryService>(provider => provider.GetRequiredService<ProjectsService>());
         services.AddScoped<ProjectWriteAdmissionService>();
         services.AddScoped<ProjectWriteSelectionQuery>();

@@ -54,7 +54,8 @@ public sealed class WorkspaceCoreOwnerOutcomeTests {
         var services = originalScope.ServiceProvider;
         var canonical = new MutableCanonical(services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         var activity = new ActivityBoundary { Hold = true };
-        var workspace = ActivatorUtilities.CreateInstance<WorkspaceService>(services, activity);
+        var writer = ActivatorUtilities.CreateInstance<WorkspaceSettingsWriter>(services, activity);
+        var workspace = ActivatorUtilities.CreateInstance<WorkspaceService>(services, writer);
         var owner = new WorkspaceDefaultsOwner(workspace, services.GetRequiredService<IWorkspaceProviderCatalog>(), canonical);
         using var state = new WorkspaceDefaultsController(owner);
         await state.RefreshAsync();
@@ -73,8 +74,8 @@ public sealed class WorkspaceCoreOwnerOutcomeTests {
         Assert.Equal("Original profile defaults", (await workspace.GetSettingsAsync()).WorkspaceName);
         Assert.Equal(successorName, next.Draft.Model.WorkspaceName);
         Assert.NotEqual("Original profile defaults", successorName);
-        var refused = await owner.SaveAsync(new(), CancellationToken.None);
-        Assert.Equal(SettingsDiagnostic.Retired, refused.Diagnostic);
+        var refused = Assert.IsType<WorkspaceSettingsSaveOutcome.Rejected>(await owner.SaveAsync(state.Draft.Capture(), CancellationToken.None));
+        Assert.Equal(WorkspaceSettingsRejectionReason.OwnerRetired, refused.Reason);
     }
 
     private sealed class MutableCanonical(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
@@ -146,14 +147,16 @@ public sealed class WorkspaceCoreOwnerOutcomeTests {
     public async Task Defaults_secondary_failure_exposes_normalized_saved_snapshot() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
-        var owner = ActivatorUtilities.CreateInstance<WorkspaceService>(scope.ServiceProvider, new ActivityBoundary { Fail = true });
-        var warning = await Assert.ThrowsAsync<WorkspaceSettingsCommittedException>(() => owner.SaveSettingsAsync(new() {
+        var writer = ActivatorUtilities.CreateInstance<WorkspaceSettingsWriter>(scope.ServiceProvider, new ActivityBoundary { Fail = true });
+        var owner = ActivatorUtilities.CreateInstance<WorkspaceService>(scope.ServiceProvider, writer);
+        var original = await owner.ReadSettingsSnapshotAsync();
+        var warning = Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await owner.SaveSettingsAsync(new(original.Expectation, WorkspaceSettingsValues.Capture(new() {
             WorkspaceName = " Normalized ", CurrencyCode = "eur", CurrencyCultureName = "de-DE", Notes = " notes "
-        }));
-        Assert.Equal("Normalized", warning.Saved.WorkspaceName);
-        Assert.Equal("EUR", warning.Saved.CurrencyCode);
-        Assert.Equal("notes", warning.Saved.Notes);
-        Assert.Equal(SettingsDiagnostic.ActivityPending, warning.Diagnostic);
+        }))));
+        Assert.Equal("Normalized", warning.Snapshot.Values.WorkspaceName);
+        Assert.Equal("EUR", warning.Snapshot.Values.CurrencyCode);
+        Assert.Equal("notes", warning.Snapshot.Values.Notes);
+        Assert.Equal(WorkspaceSettingsSecondaryDiagnostic.ActivityPending, warning.Diagnostic);
         Assert.Equal("Normalized", (await owner.GetSettingsAsync()).WorkspaceName);
     }
     [Fact]
@@ -162,11 +165,14 @@ public sealed class WorkspaceCoreOwnerOutcomeTests {
         await using var application = await TestApplication.CreateAsync(new() { ConfigureServices = fault.Configure });
         await using var scope = application.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
-        await service.SaveSettingsAsync(new());
+        var originalSnapshot = await service.ReadSettingsSnapshotAsync();
+        var saved = Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await service.SaveSettingsAsync(
+            new(originalSnapshot.Expectation, WorkspaceSettingsValues.Capture(new()))));
         var state = scope.ServiceProvider.GetRequiredService<CurrencyDisplayState>();
         var original = state.Current;
         fault.RefuseDefaults = true;
-        await Assert.ThrowsAsync<IOException>(() => service.SaveSettingsAsync(new() { CurrencyCode = "EUR", CurrencyCultureName = "de-DE" }));
+        await Assert.ThrowsAsync<IOException>(() => service.SaveSettingsAsync(new(saved.Snapshot.Expectation,
+            WorkspaceSettingsValues.Capture(new() { CurrencyCode = "EUR", CurrencyCultureName = "de-DE" }))));
         Assert.Equal(original, state.Current);
         Assert.Equal("USD", (await service.GetSettingsAsync()).CurrencyCode);
     }

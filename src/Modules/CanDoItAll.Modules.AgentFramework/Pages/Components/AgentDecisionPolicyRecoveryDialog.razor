@@ -1,0 +1,57 @@
+@using CanDoItAll.AgentFramework.UI.Catalog
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IAgentFrameworkWorkspaceService Workspace
+@inject IAgentDecisionPolicyPendingStore Pending
+@inject ILogger<AgentDecisionPolicyRecoverySession> Logger
+
+<AgentDecisionPolicyRecoverySurface Rows="session.Rows" Busy="session.Busy" Error="@session.Error"
+                                    Reload="ReadAsync" Selected="SelectAsync" Closed="Closed" />
+
+@code {
+    [Parameter] public CancellationToken OwnerLifetime { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback<AgentDecisionPolicyRecoverySelection> Selected { get; set; }
+    private readonly CancellationTokenSource reads = new();
+    private AgentDecisionPolicyRecoverySession session = default!;
+    private bool disposed;
+
+    protected override void OnInitialized() => session = new(Workspace, Pending, Logger);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            await ReadAsync();
+        }
+    }
+
+    private async Task ReadAsync() {
+        if (disposed) {
+            return;
+        }
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(reads.Token, OwnerLifetime);
+        var read = session.ReadAsync(cancellation.Token);
+        StateHasChanged();
+        await read;
+        if (!disposed) {
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectAsync(AgentDecisionPolicyPendingSummary row) {
+        if (disposed) {
+            return;
+        }
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(reads.Token, OwnerLifetime);
+        var selection = await session.SelectAsync(row, cancellation.Token);
+        if (!disposed && !cancellation.IsCancellationRequested && selection is not null) {
+            await Selected.InvokeAsync(selection);
+        }
+    }
+
+    public void Dispose() {
+        disposed = true;
+        session.Retire();
+        reads.Cancel();
+        reads.Dispose();
+    }
+}

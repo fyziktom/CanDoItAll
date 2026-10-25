@@ -1132,10 +1132,10 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         var factory = scope.ServiceProvider
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
-        var settings = await dbContext.Set<WorkspaceSettings>().FirstOrDefaultAsync();
+        var settings = await dbContext.Set<WorkspaceSettings>().SingleOrDefaultAsync(item => item.IsCurrent);
         if (settings is null)
         {
-            settings = new WorkspaceSettings();
+            settings = new WorkspaceSettings { IsCurrent = true };
             dbContext.Add(settings);
         }
 
@@ -1151,9 +1151,9 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
         return await dbContext.Set<WorkspaceSettings>()
-            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Where(item => item.IsCurrent)
             .Select(item => item.DefaultProviderProfileId)
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync();
     }
 
     private static async Task MarkSourceUnavailableAsync(

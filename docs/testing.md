@@ -221,6 +221,13 @@ the editor is still loading. Await the selection's `ClickAsync()` task, then ver
 editor readiness; a heading-only assertion does not establish that readiness. The
 provider profile seam tests exercise both initial loading and a delayed selection.
 
+In browser tests, an already-selected row's `aria-pressed=true` is not an acknowledgement
+of another click. Skip redundant selection or wait for the actual resulting transition;
+otherwise its delayed handler can replace an input immediately after Playwright fills it.
+When releasing a controlled response while the user types, acknowledge the edit in the
+native owner before releasing it. The chat submission browser host observes that state
+on the renderer without changing it.
+
 ### Processes UI slice
 
 Build Processes.UI, the native Processes module and Web directly, followed by the
@@ -894,15 +901,15 @@ dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Relea
 
 `/m:1` avoids `bin` and `obj` contention when local MCP or watch processes are active. A developer with an isolated workspace may increase parallelism, but the result must still come from the same configuration and filter.
 
-Those commands use sibling source projects. CI resolves the Components branch matching the
-application branch (`development` or `main`); pull requests use their target branch, while
-pushes and manual runs use the selected branch. A missing matching branch fails checkout.
-The dependency job resolves that branch once to a commit, and every platform and container
-job checks out that exact commit. FileTools retains its explicit workflow commit pin.
+Those commands use sibling source projects. CI checks out the reviewed Components and
+FileTools commits declared in the workflow. The dependency job verifies the Components
+checkout once, and every platform and container job uses that exact commit. Publish the
+required sibling feature-branch commits before running remote CI; do not rely on a local
+checkout or a moving branch to supply an API absent from the recorded revision.
 Docker receives the same repositories as named build contexts. Keep source roots and
 commits identical for the whole gate; do not substitute an unpublished package graph for
-any command. A PR from `development` to `main` therefore validates against Components
-`main`; required Components changes must reach that branch before the application merges.
+any command. Update the pins together with reviewed sibling changes and retain their
+independent branch/merge ownership.
 
 The gate is long. Measure it when you run it and compare the number with the `timeout-minutes` of
 the stable job in the CI workflow before assuming the two agree: this workstation has recorded runs

@@ -153,6 +153,11 @@ Never paste credentials into logs, screenshots, documentation, or rework reasons
 
 ## Rework And Cancellation
 
+For an accepted governed task-planning child, use the
+[Process planning review API](process-planning-review-api.md) to inspect or recover
+the original manager choice. Keep its exact request after an uncertain response;
+ordinary rework cannot substitute for that accepted action's accounting.
+
 Rework must name the specific correction and cite current evidence. Do not use it to conceal provider/configuration failures or restart unrelated steps.
 
 Cancellation must include a concrete reason. Read live, detail, summary, and history after the request to confirm terminal state and projection freshness.

@@ -560,8 +560,7 @@ internal static class ProcessPersistenceMappers
                 diagnostic.RelatedChildRunId?.Value,
                 SerializeExecutionSafetyAttestation(diagnostic.ExecutionSafetyAttestation),
                 executionRunId?.Value)).ToArray();
-        if (hostCapabilityEvidence is null)
-        {
+        if (hostCapabilityEvidence is null && (executionRunId is null || persistedDiagnostics.Length > 0)) {
             return JsonSerializer.Serialize(persistedDiagnostics, ReceiptJsonOptions);
         }
 
@@ -570,7 +569,7 @@ internal static class ProcessPersistenceMappers
                 SchemaVersion: 1,
                 persistedDiagnostics,
                 executionRunId?.Value,
-                SerializeHostCapabilityEvidence(hostCapabilityEvidence)),
+                hostCapabilityEvidence is null ? null : SerializeHostCapabilityEvidence(hostCapabilityEvidence)),
             ReceiptJsonOptions);
     }
 

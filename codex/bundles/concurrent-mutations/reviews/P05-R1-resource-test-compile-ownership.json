@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "createdUtc": "2026-10-17T08:27:45.1899154Z",
+  "root": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\codex\\bundles\\concurrent-mutations\\reviews\\P05-R1-resource-test-compile-predecessors",
+  "purpose": "Preserve parent-authored Resource test compile corrections and complete stage2 layering",
+  "source": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+  "predecessorSha256": "ACA18813C05CA1E9A50A08396302F682783A698AA9CF05CBA81DC3139796C895",
+  "mainSuccessorSha256": "EEFB00E0521BCBC75EAE8E6CEE2838D3AD87D3FF3B3B01B74BC3C7653E6EA7ED",
+  "unitCompileOverlay": "P05-R1-resource-unit-command-source-overlay.json",
+  "unitOverlaySha256": "05E45FA7EA6CA3266D328F9DC6D0850F0BE2FC7E1F3828E438F4B1FF38E840F1",
+  "mainWritesAllowed": false,
+  "executionAllowed": false
+}

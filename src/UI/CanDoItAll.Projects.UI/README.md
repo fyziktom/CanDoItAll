@@ -34,6 +34,12 @@ removed rows and replacement rows survive. Starter rows belong to this draft; ac
 seeds are retired and unknown outcomes require inspection. The sandbox explicitly simulates
 these effects and does not claim database or file-authority proof.
 
+A rejected stale definition retains the original context and frozen submission. Explicit
+comparison reads belong to the native host and leave the original expectation untouched.
+Reload and manual reconciliation both create a new current-based draft; manual reconciliation
+keeps the previous definition and linked-object plans visible for selective copying until
+the reconciled save is accepted. The renderer cannot fetch or adopt a new token itself.
+
 ## Validation
 
 ```powershell

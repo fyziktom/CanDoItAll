@@ -1,17 +1,43 @@
 @{ var rendered = State; }
 
-@if (rendered.StartRejection is not null) {
+@if (rendered.StartRejection is not null || rendered.EffectRecovery is not null || rendered.EffectLeaseReleaseUnconfirmed || rendered.EffectActivityFinalizationFailed) {
     <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-chat-start-rejected">
-        @rendered.StartRejection
+        @if (rendered.EffectRecovery is { } recovery) {
+            <Stack GapScale="LayoutGap.Small" data-testid="agents-chat-effect-continuation">
+                <TextBlock Value="@($"Original run: {recovery.Latest.ExecutionRunId:D}")" />
+                <TextBlock Value="@recovery.Status" />
+                <TextBlock Value="@($"At least {recovery.KnownCommittedAtLeast} effects are known committed. Receipt candidates: {recovery.Latest.Counts.EligibleOwnerEffects}; prepared effects: {recovery.Latest.Counts.PreparedEffects}; uncertain provider dispatches: {recovery.Latest.Counts.UncertainProviderDispatches}.")" />
+                <TextBlock Value="@($"This observation examined {recovery.Latest.ExaminedThisSlice} receipts; {recovery.Latest.UnexaminedEligibleInSnapshot} candidates were not examined. Pending approvals: {recovery.Latest.Counts.PendingApprovals}; other unresolved proposals: {recovery.Latest.Counts.OtherUnresolvedProposals}.")" />
+                @if (recovery.Latest.Requirement == AgentToolContinuationRequirement.ProviderInputRequired) {
+                    <TextBlock Value="Provider continuation is still required. Receipt recovery does not send a new provider request." />
+                }
+                @if (!rendered.CanRecover && recovery.Latest.Counts.EligibleOwnerEffects > 0) {
+                    <TextBlock Value="Recovery that updates the original run is unavailable in this reopened view because its original execution context is not retained. Reviewing saved receipts does not authorize a new recovery attempt." />
+                }
+            </Stack>
+        } else {
+            @rendered.StartRejection
+        }
+        @if (rendered.EffectLeaseReleaseUnconfirmed || rendered.EffectRecovery?.LeaseReleaseUnconfirmed == true) {
+            <TextBlock Value="@AgentChatEffectRecovery.ReleaseUnconfirmedMessage" data-testid="agents-chat-lease-release-unconfirmed" />
+        }
+        @if (rendered.EffectActivityFinalizationFailed || rendered.EffectRecovery?.ActivityFinalizationFailed == true) {
+            <TextBlock Value="@AgentChatEffectRecovery.ActivityFinalizationFailedMessage" data-testid="agents-chat-activity-finalization-failed" />
+        }
         @if (rendered.CanRecover) {
-            <Button Text="Recover original run" Icon="restore" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+            <Button Text="@(rendered.EffectRecovery is null ? "Recover original run" : "Check next receipt slice")" Icon="restore" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
                     Disabled="@rendered.RecoveryBlocked" Click="@(() => Intent.InvokeAsync(new(rendered.Origin, AgentChatAction.RecoverOriginalRun)))"
                     data-testid="agents-chat-recover-original-run" />
         }
     </Alert>
 }
 
+@if (ShowHistoricalReceipts && rendered.HistoricalReceipts is { } historical) {
+    <AgentChatHistoricalReceiptSurface State="historical" Origin="rendered.Origin" Intent="Intent" />
+}
+
 @code {
+    [Parameter] public bool ShowHistoricalReceipts { get; set; } = true;
     [Parameter, EditorRequired] public AgentChatActionState State { get; set; } = default!;
     [Parameter] public EventCallback<AgentChatActionIntent> Intent { get; set; }
 }

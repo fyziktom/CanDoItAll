@@ -24,6 +24,8 @@ Blazor QA exercises declared controls through native click/key actions and recor
 
 The scaffold command owner rejects a solution template with a target framework before resolving or creating directories or launching a process. MAF's existing retry correlation requires the exact scaffold parent, name and template. A later committed correction resolves only a proven no-effect rejection for that identity; unknown effects and other targets remain unresolved. Completion and authority gates are unchanged.
 
+Solution scaffolds write their solution file into the declared parent. Other templates explicitly write into the named child directory, matching their receipt and overwrite checks. A solution file in the parent permits child projects; an existing project in the parent or target still prohibits scaffolding. The directory references `.` and `..` are prohibited before any effect, with guidance to inspect and repair existing files or choose a named child.
+
 ## Process asset approval
 
 Process-native asset tools explicitly declare `GovernedProcessAuthority` approval policy. The runtime honors that policy only when approval suppression was requested for an admitted, recoverable background Process session without interactive governance. Both prepared admission and current owner authorization callbacks are required. Interactive/default tools retain their approval wrappers. Toolset fingerprints include the effective wrapper, so the change cannot silently reinterpret a retained approval checkpoint.
@@ -77,3 +79,53 @@ The relevant suites cover digest reuse, external writers, prepared commit recove
 Follow [Testing](../testing.md) for serialized standard builds, test discovery, isolation, portability enforcement and cleanup. The full repository test suite is not part of this focused proof.
 
 `BlazorDeliveryLiveTests` uses the same opt-in environment variables and the shipped nine-step `blazor-app-delivery` template, seeded role agents and real model calls. In an isolated project and database it builds a standalone Blazor app with automated tests, hands published output to browser QA, verifies cleanup and requires accepted-result writeback to project structure. It records native execution evidence, screenshots and diagnostic activity timings. The counter case launches from a WorkItem; the falling-block PWA case launches from a delivery ProjectBlock without a WorkItem and includes offline/reload, persistent best score and gameplay requirements. Both use production project-scoped launch preparation. These are full process regressions, not controlled timing-equivalent replays of an arbitrary user application.
+
+## Planning publication snapshots
+
+The file store's selected planning snapshot holds the original run and selected Agent keys while releasing the workspace-wide gate for its lifetime. Interactive snapshots retain their exact chat and authority checks. An explicit inherited expectation supports a schema-7 background run with no chat and at most one additional distinct launching Agent; both Agent keys enter the same ordered set, and the executor remains primary. The snapshot freezes current permissions and selected capabilities, checks original revisions and canonical inherited metadata, and releases partial acquisitions on failure or cancellation.
+
+This capability is a prerequisite, not authorization to dispatch an inherited effect. The Core saved-effect publication guard remains closed for inherited runs until the parent-owned continuation and enlisted Process fence are implemented. Ordinary catalog read leases still hold the workspace gate. A bounded SQL-wait comparison demonstrates that the selected snapshot permits unrelated writers while the coarse lease does not; it does not qualify sustained capacity. The [checkpoint](../../codex/bundles/concurrent-mutations/validation/2026-10-20-inherited-publication-snapshot.md) records 238 passing corrected cases and the retained negative comparison.
+
+## Initial Process Project/root lock order
+
+A relational initial Process commit collects its original runtime, executable and prepared source Project admissions, then acquires all Project mutation gates before its local root sequence leases and PostgreSQL root locks. Projects owns the sorted advisory keys through IProcessProjectAdmissionPolicy; Process persistence owns the bounded neutral input collection. Conflicting lifetimes and unbound targets are refused. Global definitions and existing runtime commands do not introduce Project gates.
+
+Gate acquisition is deliberately separate from current lifetime/authority validation. An already accepted initial command returns its original receipt before those current checks, including after Project retirement. Initial scoped replay requires the configured coordinator and Project policy; application composition provides them. InMemory keeps its prior path. Native link delivery already uses Project-before-prepared-receipt order.
+
+The future inherited task publisher must acquire its exact Process source/generation fence inside its existing ReadCommitted transaction after Project gates and before business staging. The ordering repair alone grants no inherited mutation authority. The existing per-root semaphore registry still requires bounded-retention/fairness review before capacity closure. Design, real root/subprocess races, test-only repair bridge and retained evidence are recorded in the [lock-order checkpoint](../../codex/bundles/concurrent-mutations/validation/2026-10-20-process-project-lock-order.md).
+
+## Selected Process publication source
+
+`IProcessDecisionDispatchAuthorityQuery` exposes the existing exact child/material query at
+the Process Application boundary. Its result describes saved Process identity and observed
+liveness; current Agent/operator permissions and business write authority remain with the
+effect owner.
+
+`IProcessDecisionPublicationFence.RequireSelectedAsync` requires the effect owner's existing
+PostgreSQL ReadCommitted transaction, after all original Project gates. It takes the root
+lock and share-locks the source runtime/assignment rows before comparing the complete saved
+dispatch source, ignoring only observation time and observed-current flag. Assignment repair
+does not take the root lock, so its row must remain protected until the effect transaction
+ends. Canonical child/material/registered contract checks and a final claim-time check occur
+after asynchronous waits. A copied fingerprint cannot authorize substituted source fields.
+
+Dispatch requires the original live claim. Manager review requires an open retained child
+in the waiting-for-review generation and no active or live claim; it does not revive dispatch
+or settle the child. Selected publication requires actual saved launch authority. The bare
+child fence and legacy source guard keep their existing contracts. This foundation does not
+activate inherited task publication, saved-effect dispatch or Process/Workflow producers.
+
+The task publisher separates its pretransaction current-authority check from the required
+`RequireEnlistedAsync` checks immediately before staging and after flush. Those checks run
+after the Project gates, inside the existing effect transaction. An inherited source adapter
+must include its current permission checks and selected Process fence at both points.
+The ordinary Agent adapter retains its held current-authority check. A refusal before
+commit rolls back tasks and receipt together; a completed receipt remains on the original
+read/recovery path without acquiring new mutation authority.
+
+The file workspace store uses explicit ordinal comparison for its internally generated
+paths. This avoids filesystem case-probe writes during coordinated publication. Policies
+remain fresh and recheck containment, ancestors, links and mutation targets around waits
+and commit. The general Infrastructure factory retains filesystem detection by default;
+an explicitly configured comparison is a caller's path contract, not cached filesystem
+evidence. Durable flushes, journals, OS locks and recovery stages are unchanged.

@@ -29,7 +29,13 @@ internal sealed class FileSandboxWorkspaceSnapshotCache(int maximumEntries = 16,
     }
 
     internal static bool Supports<T>(long length) => length <= MaximumPayloadBytes &&
-        (typeof(T) == typeof(ExecutionRunRecord) || typeof(T) == typeof(ChatSessionRecord));
+        (typeof(T) == typeof(ExecutionRunRecord) || typeof(T) == typeof(ChatSessionRecord) || typeof(T) == typeof(SandboxWorkspaceCatalog));
+
+    internal bool IsRetained(object value, long maximumWeight) {
+        lock (sync) {
+            return entries.Values.Any(entry => ReferenceEquals(entry.Value, value) && entry.EstimatedBytes <= maximumWeight);
+        }
+    }
 
     internal bool TryRead<T>(string path, ReadOnlySpan<byte> payload, out T? value) {
         var digest = Convert.ToHexString(SHA256.HashData(payload));
@@ -78,6 +84,7 @@ internal sealed class FileSandboxWorkspaceSnapshotCache(int maximumEntries = 16,
     }
 
     private static T Freeze<T>(T value) => (T)(object)(value switch {
+        SandboxWorkspaceCatalog catalog => FileSandboxWorkspacePreparedValues.Freeze(catalog),
         ExecutionRunRecord run => run with { PendingApprovals = run.PendingApprovals.ToImmutableArray() },
         ChatSessionRecord chat => chat with {
             Messages = chat.Messages.ToImmutableArray(),
@@ -85,7 +92,7 @@ internal sealed class FileSandboxWorkspaceSnapshotCache(int maximumEntries = 16,
                 ? compatibility with { PendingApprovals = compatibility.PendingApprovals.ToImmutableArray() }
                 : null
         },
-        _ => throw new InvalidOperationException("Only immutable execution run and chat snapshots can be retained.")
+        _ => throw new InvalidOperationException("Only immutable catalog, execution run and chat snapshots can be retained.")
     });
 }
 

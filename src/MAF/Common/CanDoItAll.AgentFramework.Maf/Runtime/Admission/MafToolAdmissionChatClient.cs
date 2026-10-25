@@ -9,6 +9,11 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal sealed class MafToolAdmissionChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient) {
     public override async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages,
         ChatOptions? options = null, CancellationToken cancellationToken = default) {
+        if (MafPlanningStepContext.Current is { } planning) {
+            var planningInput = messages.ToArray();
+            return await planning.InvokeAsync(planningInput, options,
+                token => base.GetResponseAsync(planningInput, options, token), cancellationToken);
+        }
         var admission = MafToolRunContext.Current;
         if (admission is null) {
             return await base.GetResponseAsync(messages, options, cancellationToken);
@@ -35,6 +40,9 @@ internal sealed class MafToolAdmissionChatClient(IChatClient innerClient) : Dele
 
     public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
         ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        if (MafPlanningStepContext.Current is not null) {
+            throw MafPlanningStepContext.Failure("This planning step requires its bounded non-streaming provider contract.");
+        }
         var admission = MafToolRunContext.Current;
         if (admission is null) {
             await foreach (var update in base.GetStreamingResponseAsync(messages, options, cancellationToken)) {

@@ -1,0 +1,74 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Frozen source-only; independent UI delta review PASS; unbuilt/unexecuted",
+  "baseInventory": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-source-inventory.json",
+    "sha256": "117DC7FCF0A8F76F210DC064C8CA48503185A1DF43A92D430D5A91D5AE9F3813",
+    "bytes": 4386
+  },
+  "baseCleanupOverlay": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-cleanup-source-overlay.json",
+    "sha256": "479661E47D0D68FBBBF5C5115865655BE5C2AEBCE949CF3C4DDAA038E7F449E6",
+    "bytes": 2147
+  },
+  "sourceOverlay": {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataMigrationTests.cs",
+    "sha256": "39C8748DF4121DC82298C49C355439858BD840AD97BEAC2350C97A97C5797473",
+    "bytes": 22920
+  },
+  "predecessorSha256": "F91A42B47EFEE72B0E193C26D8B6D29DD93062A9EB7D15DD06F7AF9D6FEA3075",
+  "mainPredecessorSha256": "F91A42B47EFEE72B0E193C26D8B6D29DD93062A9EB7D15DD06F7AF9D6FEA3075",
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-migration-catalog-cast-successor.md",
+    "sha256": "7DA0CB8163395BA079DDA2E34C2AC791A4D879506E61BA6E8B049A3DBB7ADFCE",
+    "bytes": 2546
+  },
+  "preservedInputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-catalog-cast-ownership.json",
+      "sha256": "C69AC254A2C672CD5A0CCC977096E571F57269CC22395F5281A262EF94CA4C88",
+      "bytes": 733
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-catalog-cast-predecessors/ResourceMetadataMigrationTests.cs.txt",
+      "sha256": "F91A42B47EFEE72B0E193C26D8B6D29DD93062A9EB7D15DD06F7AF9D6FEA3075",
+      "bytes": 22914
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-catalog-cast-predecessors/P05-R1-resource-migration-cleanup-source-overlay.json",
+      "sha256": "479661E47D0D68FBBBF5C5115865655BE5C2AEBCE949CF3C4DDAA038E7F449E6",
+      "bytes": 2147
+    }
+  ],
+  "delta": "One SQL cast only: relkind to relkind::text in SchemaAsync; all observation fields, assertions, cleanup and counts retained",
+  "runtimeFailure": {
+    "root": ".artifacts/concurrent-mutations/validation/resource-deletion-validation",
+    "trxSha256": "E347C4367CF7EF8AA8F65FA3D603852B7D7E8B82F24BE3C06B34C4F83FC78AC5",
+    "resultSha256": "401C0D1C21ABF72EF226C1AFA8EF73A33594EAED1CF50AC002951CCFD8002F8F",
+    "laneActual": 173,
+    "passed": 172,
+    "failed": 1,
+    "sqlState": "42725",
+    "position": 1015,
+    "failedBeforeMigration": true
+  },
+  "counts": {
+    "facts": 3,
+    "newFacts": 0,
+    "combinedOrdinary": 346,
+    "separateBrowser": 4
+  },
+  "validation": {
+    "oneTokenReverseProducesExactPredecessor": true,
+    "mainUnchanged": true,
+    "uiPeerSourceReview": "PASS",
+    "buildsExecuted": false,
+    "testsExecuted": false,
+    "databaseExecuted": false,
+    "portabilityStatic": "Parent closure required"
+  },
+  "productionChanged": false,
+  "schemaChanged": false,
+  "originalInventoriesUnchanged": true
+}

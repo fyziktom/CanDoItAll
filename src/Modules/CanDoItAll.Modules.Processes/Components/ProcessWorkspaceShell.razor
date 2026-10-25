@@ -1375,8 +1375,8 @@
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
             ResolveManagerChatRunState();
             managerChatErrorMessage = null;
-            if (managerChatVoiceModeEnabled && !string.IsNullOrWhiteSpace(result.AssistantMessage.Content)) {
-                await SpeakManagerChatTextAsync(result.AssistantMessage.Content);
+            if (managerChatVoiceModeEnabled && result.AssistantMessage is { Content: var spokenContent } && !string.IsNullOrWhiteSpace(spokenContent)) {
+                await SpeakManagerChatTextAsync(spokenContent);
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
             if (!IsCurrentManagerChatContext(operationContext)) {
@@ -1463,14 +1463,15 @@
 
     private async Task RenameManagerChatSessionAsync(string title) {
         var workspaceService = ResolveManagerChatWorkspaceService();
-        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null || managerChatIsBusy || !ManagerChatReady) {
+        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null || managerChatIsBusy || !ManagerChatReady ||
+                managerChatWorkspace?.SelectedSession is not { } originalSession || originalSession.Id != managerChatSessionId) {
             return;
         }
 
         var operationContext = CaptureManagerChatContext();
         managerChatIsBusy = true;
         try {
-            var session = await workspaceService.RenameChatSessionAsync(operationContext.AgentId!.Value, operationContext.SessionId!.Value, title);
+            var session = await workspaceService.RenameChatSessionAsync(operationContext.AgentId!.Value, operationContext.SessionId!.Value, title, originalSession.Title);
             if (!IsCurrentManagerChatContext(operationContext)) {
                 return;
             }
@@ -1574,18 +1575,12 @@
             return existingSession.Id;
         }
 
-        var createdSession = await workspaceService.GetOrCreateChatSessionAsync(agentId);
+        var createdSession = await workspaceService.GetOrCreateChatSessionAsync(agentId, initialTitle: title);
         if (!isCurrent()) {
             return null;
         }
-        var renamedSession = string.Equals(createdSession.Title, title, StringComparison.Ordinal)
-            ? createdSession
-            : await workspaceService.RenameChatSessionAsync(agentId, createdSession.Id, title);
-        if (!isCurrent()) {
-            return null;
-        }
-        managerChatSessionIdsByRun[mapKey] = renamedSession.Id;
-        return renamedSession.Id;
+        managerChatSessionIdsByRun[mapKey] = createdSession.Id;
+        return createdSession.Id;
     }
 
     private void TrackManagerChatSessionForRun(Guid agentId, Guid? selectedRunId, Guid? chatSessionId) {

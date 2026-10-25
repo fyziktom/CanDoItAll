@@ -58,6 +58,7 @@ public sealed class ProjectTransferRetirement {
 public sealed class ProjectTransferReservation {
     public Guid Id { get; set; }
     public Guid DatabaseProfileId { get; set; }
+    public Guid? NamespaceId { get; set; }
     public Guid ProjectId { get; set; }
     public Guid LifetimeId { get; set; }
     public Guid RequesterId { get; set; }

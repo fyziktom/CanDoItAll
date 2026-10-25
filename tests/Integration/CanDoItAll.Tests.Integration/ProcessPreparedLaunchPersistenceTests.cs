@@ -26,7 +26,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         => AssertTerminalTargetInspectionAsync(mismatchedPointer: true);
 
     [Fact]
-    public Task Target_inspection_allows_coherent_terminal_non_project_history_after_restart()
+    public Task Target_inspection_rejects_cancelled_history_with_unfinished_recovery_after_restart()
         => AssertTerminalTargetInspectionAsync(mismatchedPointer: false);
 
     [Fact]
@@ -69,12 +69,15 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(saved.Preparation.Review.PlanId, retained.Preparation.Review.PlanId);
     }
 
-    [Fact]
-    public async Task Failure_after_actual_initial_flush_rolls_back_acceptance_and_all_initial_runtime_records() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Failure_after_actual_initial_flush_rolls_back_acceptance_and_all_initial_runtime_records(bool decisionInput) {
         await using var app = await TestApplication.CreateAsync(Harness());
         var services = app.Services;
         var coordinator = Coordinator(services);
-        var saved = await Store(services).PrepareAsync(ProcessPreparedLaunchFixture.Create());
+        var saved = await Store(services).PrepareAsync(decisionInput
+            ? ProcessPreparedLaunchScalingFixture.Create(1, 256) : ProcessPreparedLaunchFixture.Create());
         var request = ProcessPreparedLaunchFixture.Commit(saved);
         var failure = new ArgumentException("Injected failure after initial Process flush.");
         var fault = new AfterFlushFault(failure);
@@ -92,18 +95,23 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(saved.Preparation.AdmissionId, (await new EfProcessRuntimeUnitOfWork(retryContext).LoadAsync(request.Mutation.State.RunId))!.LaunchAdmissionId);
     }
 
-    [Fact]
-    public async Task Application_preserves_exact_commit_ack_exception_and_accepted_identity_through_full_host_restart() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Application_preserves_exact_commit_ack_exception_and_accepted_identity_through_full_host_restart(bool decisionInput) {
         await using var environment = CanDoItAllTestEnvironment.Create("process-prepared-ack");
         var profile = environment.CreatePostgreSqlProfile("prepared-ack");
         var harness = Harness(environment, profile);
         ProcessPreparedLaunchSnapshot saved;
+        string[] acceptedSource;
         var failure = new ArgumentException("Injected accepted Process acknowledgement loss.");
         await using (var app = await TestApplication.CreateAsync(harness)) {
             var services = app.Services;
             var authority = ProcessPreparedLaunchFixture.Local(Profile(services).Profile.Id);
             var store = Store(services);
-            saved = await store.PrepareAsync(ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid())));
+            saved = await store.PrepareAsync(decisionInput
+                ? ProcessPreparedLaunchScalingFixture.Create(1, 256, authority)
+                : ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid())));
             await using var context = new ProcessPersistenceDbContext(ProcessOptions(services, new AfterCommitFault(failure)));
             var policy = new AuthorityPolicy();
             var unitOfWork = new EfProcessRuntimeUnitOfWork(context, coordinatedTransaction: Coordinator(services), launchAuthorityPolicy: policy);
@@ -112,6 +120,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
             Assert.Equal(ProcessLaunchContinuationState.Accepted, result.Observation!.ContinuationState);
             Assert.Same(failure, result.Observation.ObservationException);
             Assert.False(policy.Held);
+            acceptedSource = await AcceptedSourceRowsAsync(context, saved.Preparation.AdmissionId.Value);
         }
         await using var restarted = await TestApplication.CreateAsync(harness);
         var retained = Assert.IsType<ProcessPreparedLaunchSnapshot>(await Store(restarted.Services).GetAsync(saved.Preparation.AdmissionId));
@@ -123,6 +132,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(saved.Preparation.InitialCommit.Mutation.Outcome, replay.Outcome);
         Assert.Equal(saved.Preparation.InitialCommit.Mutation.State.RunId, replay.State.RunId);
         await AssertInitialRowsAsync(current, saved.Preparation.InitialCommit, 1);
+        Assert.Equal(acceptedSource, await AcceptedSourceRowsAsync(current, saved.Preparation.AdmissionId.Value));
         Assert.True((await ordinary.CommitAsync(ProcessProjectAdmissionFixture.Cancel(replay.State))).Succeeded);
         Assert.Equal(saved.Preparation.AdmissionId, (await ordinary.LoadAsync(replay.State.RunId))!.LaunchAdmissionId);
     }
@@ -305,7 +315,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         var target = saved.Preparation.LinkTarget!;
         var targetNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(saved.Preparation.InitialCommit.Mutation.State.RunId.Value);
         if (deleteProject) {
-            await current.GetRequiredService<ProjectsService>().DeleteAsync(target.ProjectId);
+            await new ProjectLifecycleTestDriver(current).DeleteAsync(target.ProjectId);
         } else {
             Assert.True(await current.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(
                 target.ProjectId, target.SourceNodeKey, targetNodeKey, ProjectObjectLinkKind.Uses,
@@ -333,7 +343,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         await using var scope = app.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var saved = await CreateAcceptedProjectLaunchAsync(services);
-        await services.GetRequiredService<ProjectsService>().DeleteAsync(saved.Preparation.LinkTarget!.ProjectId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(saved.Preparation.LinkTarget!.ProjectId);
         var delivery = Delivery(services, Coordinator(services));
         var result = await delivery.DeliverAsync(saved.Preparation.AdmissionId);
         Assert.Equal(ProcessLaunchLinkDeliveryState.Conflict, result.State);
@@ -452,10 +462,10 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         var locked = await operations.RunExclusiveImportAsync(Profile(services),
             [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], participant.EntityTypesToLock, InspectAsync);
         foreach (var residues in new[] { independent, locked }) {
+            Assert.Equal(mismatchedPointer ? 2 : 1, residues.Count);
+            Assert.Contains(residues, item => item.Description == "unfinished Process cancellation recovery" && item.BlocksSourceTransfer);
             if (mismatchedPointer) {
-                Assert.Equal("process runtime state with missing or mismatched launch admission evidence", Assert.Single(residues).Description);
-            } else {
-                Assert.Empty(residues);
+                Assert.Contains(residues, item => item.Description == "process runtime state with missing or mismatched launch admission evidence" && !item.BlocksSourceTransfer);
             }
         }
     }
@@ -515,7 +525,8 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
     private static EfProcessPreparedLaunchStore Store(IServiceProvider services)
         => new(new ProcessFactory(ProcessOptions(services)), ProcessOptions(services));
     private static ProjectWriteAdmissionService Admissions(IServiceProvider services, CoordinatedDatabaseTransaction coordinator)
-        => new(new ProjectFactory(ProjectOptions(services)), ProjectOptions(services), coordinator, services.GetRequiredService<ICanonicalRuntimeDatabase>());
+        => new(new ProjectFactory(ProjectOptions(services)), ProjectOptions(services), coordinator,
+            services.GetRequiredService<ICanonicalRuntimeDatabase>(), services.GetRequiredService<DatasetActivationService>());
     private static ProjectProcessAdmissionPolicy ProjectPolicy(IServiceProvider services, CoordinatedDatabaseTransaction coordinator)
         => new(Admissions(services, coordinator));
     private static ProjectProcessLaunchTargetQuery Targets(IServiceProvider services, CoordinatedDatabaseTransaction coordinator)
@@ -561,7 +572,37 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(expected, await context.OutboxMessages.CountAsync(item => item.EventId == eventId));
         Assert.Equal(expected, await context.ArtifactLedgerEvents.CountAsync(item => item.EventId == eventId));
         Assert.Equal(expected, await context.IdempotencyKeys.CountAsync(item => item.RunId == runId));
+        var launch = await context.PreparedLaunches.AsNoTracking().SingleAsync(item => item.RunId == runId);
+        Assert.Equal(expected, await context.AcceptedAssignmentSources.CountAsync(item => item.AdmissionId == launch.Id));
+        Assert.Equal(expected == 0 ? ProcessAcceptedSourceVersion.LegacyPreparedLaunch : ProcessAcceptedSourceVersion.OriginalProjection,
+            launch.AcceptedSourceVersion);
+        if (expected == 0) {
+            Assert.Null(launch.AcceptedSourceHeaderJson);
+            Assert.Null(launch.AcceptedSourceHeaderFingerprint);
+        } else {
+            Assert.NotNull(launch.AcceptedSourceHeaderJson);
+            Assert.NotNull(launch.AcceptedSourceHeaderFingerprint);
+            var source = await context.AcceptedAssignmentSources.AsNoTracking().SingleAsync(item => item.AdmissionId == launch.Id);
+            var original = request.InitialAssignments!.Single();
+            if (original.DecisionDataPolicy?.ExecutionContract is not null) {
+                var input = ProcessAcceptedExecutionInputCodec.Read(source.InputVersion, new(source.InputJson!, source.InputFingerprint!),
+                    launch.AcceptedSourceHeaderFingerprint, new(source.PayloadJson, source.Fingerprint));
+                Assert.Equal(JsonSerializer.Serialize(original), JsonSerializer.Serialize(input.Assignment));
+                Assert.NotNull(input.Requirements);
+            } else {
+                Assert.Equal(ProcessAcceptedExecutionInputVersion.NotCaptured, source.InputVersion);
+                Assert.Null(source.InputJson);
+                Assert.Null(source.InputFingerprint);
+            }
+        }
     }
+    private static Task<string[]> AcceptedSourceRowsAsync(ProcessPersistenceDbContext context, Guid admissionId)
+        => context.Database.SqlQuery<string>($"""
+            SELECT "AcceptedSourceVersion"::text || ':' || "AcceptedSourceHeaderJson" || ':' || "AcceptedSourceHeaderFingerprint" AS "Value"
+            FROM process_prepared_launches WHERE "Id" = {admissionId}
+            UNION ALL SELECT to_jsonb(s)::text FROM process_accepted_assignment_sources s WHERE s."AdmissionId" = {admissionId}
+            ORDER BY "Value"
+            """).ToArrayAsync();
     private sealed class ProcessFactory(DbContextOptions<ProcessPersistenceDbContext> options) : IDbContextFactory<ProcessPersistenceDbContext> {
         public ProcessPersistenceDbContext CreateDbContext() => new(options);
     }

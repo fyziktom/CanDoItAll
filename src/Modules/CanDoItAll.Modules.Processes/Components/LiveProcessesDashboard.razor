@@ -43,7 +43,7 @@
         @if (RunDetailSnapshot is { } cancellationRun && !IsMockProjection) {
             <ProcessRunCancellationAction @key="(cancellationRun.RunId, shell?.ProjectBinding)"
                                                   RunId="@cancellationRun.RunId" Status="@cancellationRun.Status"
-                                                  CancellationCommitted="RefreshCancelledRunAsync" />
+                                                  CancellationCommitted="RefreshCancelledRunAsync" StatusRefreshed="RefreshCancelledRunAsync" />
         }
     </CancellationContent>
 </LiveProcessesSurface>

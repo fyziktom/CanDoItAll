@@ -36,7 +36,7 @@ internal static class MafToolProtocolCodec {
     internal static AgentToolProtocolEnvelope Encode<T>(T value) {
         try {
             var payload = JsonSerializer.SerializeToElement(value, Options);
-            var json = JsonSerializer.Serialize(new SavedProtocol(PackageFingerprint, typeof(T).FullName!, payload));
+            var json = JsonSerializer.Serialize(new SavedProtocol(PackageFingerprint, Shape<T>(), payload));
             ArgumentOutOfRangeException.ThrowIfGreaterThan(Encoding.UTF8.GetByteCount(json), AgentToolProtocolEnvelope.MaximumUtf8Bytes);
             var envelope = value is ChatResponse or ChatResponseUpdate or ChatResponseUpdate[]
                 ? AgentToolProtocolEnvelope.Create(Format, CompressedResponseVersion, CompressResponse(json))
@@ -63,12 +63,17 @@ internal static class MafToolProtocolCodec {
         var json = envelope.Version == CompressedResponseVersion ? DecompressResponse(envelope.PayloadJson) : envelope.PayloadJson;
         var saved = JsonSerializer.Deserialize<SavedProtocol>(json)
             ?? throw Unsupported("The saved protocol envelope is empty.");
-        if (saved.Packages != PackageFingerprint || saved.Shape != typeof(T).FullName) {
+        if (saved.Packages != PackageFingerprint || saved.Shape != Shape<T>()) {
             throw Unsupported("The saved protocol requires a different installed SDK or shape; it cannot be replayed implicitly. Reconcile saved approvals and effects using the original runtime or a verified migration before starting replacement work. Keep the history, journal and artifacts together.");
         }
 
         return saved.Value.Deserialize<T>(Options) ?? throw Unsupported("The saved protocol value is empty.");
     }
+
+    private static string Shape<T>()
+        => typeof(T) == typeof(MafToolResultCheckpoint)
+            ? "CanDoItAll.AgentFramework.Maf.MafToolRunContext+ResultCheckpoint"
+            : typeof(T).FullName!;
 
     private static string CompressResponse(string json) {
         using var output = new MemoryStream();

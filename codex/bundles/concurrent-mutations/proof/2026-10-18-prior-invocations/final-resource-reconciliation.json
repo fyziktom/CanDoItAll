@@ -1,0 +1,48 @@
+{
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\bzw3kk3n.ifg",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\mat-debug-52964.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\pbkx3dth.agf",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\sjk0zyin.cke",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\1d01f127-7762-4444-b2a8-139ce0edbb64.tmp",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_31480_20261018_150633_068.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_30052_20261018_150643_986.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\uf33s340.2yt",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\58b063c7-cd88-4932-aba5-5c60a889229e.tmp",
+      "family": "anonymous-and-package-temp-files"
+    }
+  ],
+  "outcome": "96 of 96 verified prior invocation and journal regression cases passed; exact source and runtime unchanged",
+  "recordedUtc": "2026-10-18T19:11:51.2092376+00:00",
+  "databaseNameDelta": [],
+  "remainingObservedProcesses": []
+}

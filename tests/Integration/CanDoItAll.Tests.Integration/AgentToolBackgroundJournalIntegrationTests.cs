@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -13,6 +14,62 @@ namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
 public sealed partial class AgentToolBackgroundJournalIntegrationTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Remote_parent_stop_after_provider_return_cannot_be_replaced_by_stale_completion(bool lateFailure) {
+        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true);
+        var policy = new SourcePolicy(source);
+        var store = source.NewStore();
+        var journal = Journal(source, store, policy);
+        ExecutionRunDetail? stopped = null;
+        var runtime = new Runtime(journal, recordProviderResponse: true) { BeforeReturn = async runId => {
+            var remote = source.NewStore();
+            var original = (await remote.GetExecutionRunAsync(runId))!;
+            var owner = new AgentBackgroundExecutionStopper(remote, remote, remote,
+                new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance), TimeProvider.System);
+            Assert.Equal(AgentParentStopOutcome.Stopped, await owner.StopAsync(runId,
+                new(original.ToolAdmission!.Session, (_, token) => {
+                    token.ThrowIfCancellationRequested();
+                    return Task.CompletedTask;
+                })));
+            stopped = await remote.GetExecutionRunDetailAsync(runId);
+            if (lateFailure) {
+                throw new IOException("The completed response lost caller acknowledgement after its parent stopped.");
+            }
+        } };
+        using var cache = new AgentExecutionPreparationCache(AgentExecutionPreparationCachePolicy.Default);
+        using var service = Service(source, store, journal, runtime, cache);
+        var cancelled = await Assert.ThrowsAsync<AgentExecutionCancelledException>(() =>
+            service.ExecuteRunAsync(BackgroundRequest(source, policy, "Retain the original parent cancellation.")));
+        Assert.NotNull(stopped);
+        Assert.Equal(stopped.Run.Id, cancelled.ExecutionRunId);
+        Assert.Equal(RunOutcome.Cancelled, stopped.Run.Outcome);
+        Assert.Equal(JsonSerializer.Serialize(stopped), JsonSerializer.Serialize(await source.NewStore().GetExecutionRunDetailAsync(stopped.Run.Id)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Foreign_saved_cancellation_or_unverified_error_code_cannot_cancel_the_current_execution(bool foreignSession) {
+        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true);
+        var policy = new SourcePolicy(source);
+        var store = source.NewStore();
+        var journal = Journal(source, store, policy);
+        var failure = foreignSession ? AgentToolAdmissionException.Cancelled(source.Detail.Run.ToolAdmission!.Session)
+            : new AgentToolAdmissionException(AgentToolAdmissionException.CancelledExecutionCode, "An error code alone is not saved cancellation evidence.");
+        var runtime = new Runtime(journal, executionFailure: failure);
+        using var cache = new AgentExecutionPreparationCache(AgentExecutionPreparationCachePolicy.Default);
+        using var service = Service(source, store, journal, runtime, cache);
+        var rejected = await Assert.ThrowsAsync<AgentRunFailedException>(() =>
+            service.ExecuteRunAsync(BackgroundRequest(source, policy, "Preserve the current execution's own outcome.")));
+        Assert.Same(failure, rejected.InnerException);
+        var saved = (await source.NewStore().GetExecutionRunAsync(rejected.ExecutionRunId))!;
+        Assert.Equal(RunOutcome.Failed, saved.Outcome);
+        Assert.NotEqual(source.Detail.Run.ToolAdmission!.Session, saved.ToolAdmission!.Session);
+        Assert.Equal(1, runtime.Calls);
+    }
+
     [Fact]
     public async Task Actual_non_chat_entry_and_restart_recovery_keep_original_input_source_and_execution() {
         await using var source = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true);
@@ -266,7 +323,7 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
     private static AgentToolAdmissionJournal Journal(AgentToolAdmissionJournalFixture fixture, FileSandboxWorkspaceStore store, SourcePolicy policy)
         => new(store, fixture.Profile, backgroundSources: [policy]);
 
-    private sealed class Fixture(AgentToolAdmissionJournalFixture source, SourcePolicy policy, AgentToolSessionReference reference) : IAsyncDisposable {
+    internal sealed class Fixture(AgentToolAdmissionJournalFixture source, SourcePolicy policy, AgentToolSessionReference reference) : IAsyncDisposable {
         public AgentToolAdmissionJournalFixture Source { get; } = source;
         public SourcePolicy Policy { get; } = policy;
         public AgentToolSessionReference Reference { get; } = reference;
@@ -289,8 +346,20 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
         public ValueTask DisposeAsync() => Source.DisposeAsync();
     }
 
-    private sealed class SourcePolicy(AgentToolAdmissionJournalFixture fixture) : IAgentToolBackgroundReservationPolicy {
+    internal sealed class SourcePolicy(AgentToolAdmissionJournalFixture fixture) : IAgentToolBackgroundReservationPolicy {
         public HashSet<Guid> AcknowledgedExecutionRunIds { get; } = [];
+        public int ActivePublications { get; private set; }
+        public Exception? PublicationReleaseFailure { get; set; }
+        public Task<IAsyncDisposable> AcquirePublicationAsync(ExecutionRunRecord candidate, AgentToolProfileBinding profile,
+            AgentToolSemanticDigest ownerFingerprint, CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            Assert.Equal(fixture.Profile, profile);
+            if (ownerFingerprint != OwnerFingerprint || !ReadAllowed || !DispatchAllowed) {
+                throw new AgentToolAdmissionException("fixture.source-changed", "The original publication source changed.");
+            }
+            ActivePublications++;
+            return Task.FromResult<IAsyncDisposable>(new Publication(this));
+        }
         public ValueTask<AgentToolBackgroundReservationObservation> ObserveReservationAsync(ExecutionRunRecord candidate,
             AgentToolProfileBinding profile, CancellationToken cancellationToken = default)
             => ValueTask.FromResult(new AgentToolBackgroundReservationObservation(OwnerFingerprint, AcknowledgedExecutionRunIds));
@@ -310,6 +379,16 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
             Assert.Equal(StepKey, execution.SourceId);
             return ValueTask.FromResult(new AgentToolBackgroundSourceObservation(OwnerFingerprint, ReadAllowed, DispatchAllowed));
         }
+
+        private sealed class Publication(SourcePolicy owner) : IAsyncDisposable {
+            public ValueTask DisposeAsync() {
+                owner.ActivePublications--;
+                if (owner.PublicationReleaseFailure is { } failure) {
+                    throw failure;
+                }
+                return ValueTask.CompletedTask;
+            }
+        }
     }
 
     private static AgentFrameworkWorkspaceService Service(AgentToolAdmissionJournalFixture fixture, FileSandboxWorkspaceStore store,
@@ -323,22 +402,42 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
             new ExternalTargetPathRegistryFactory(), toolAdmissionJournal: journal);
     }
 
-    private sealed class Runtime(AgentToolAdmissionJournal journal, bool failAfterCheckpoint = false)
+    private sealed class Runtime(AgentToolAdmissionJournal journal, bool failAfterCheckpoint = false, Exception? executionFailure = null,
+        bool recordProviderResponse = false)
         : IAgentExecutionRuntime, IAgentContinuationRuntime, IProviderDiagnosticsRuntime, IProviderModelAdministrationRuntime {
         public int Calls { get; private set; }
         public AgentRuntimeExecutionRequest? LastRequest { get; private set; }
+        internal Func<Guid, Task>? BeforeReturn { get; init; }
         public async Task<AgentRuntimeResponse> ExecuteAsync(AgentRuntimeExecutionRequest request, CancellationToken cancellationToken = default) {
             Calls++;
             LastRequest = request;
+            var result = await ExecuteAdmittedAsync(request, cancellationToken);
+            if (BeforeReturn is not null) {
+                await BeforeReturn(request.ExecutionOptions!.AdmittedToolSession!.ExecutionRunId);
+            }
+            return result;
+        }
+
+        private async Task<AgentRuntimeResponse> ExecuteAdmittedAsync(AgentRuntimeExecutionRequest request, CancellationToken cancellationToken) {
             var reference = Assert.IsType<AgentToolSessionReference>(request.ExecutionOptions!.AdmittedToolSession);
             Assert.NotNull(reference.BackgroundSource);
             Assert.Null(request.ExecutionOptions.Governance);
             await using var acquired = AgentToolRunLease.Current is null ? await journal.AcquireRunAsync(reference, cancellationToken) : null;
             using var current = acquired?.Bind();
             await journal.RequireSessionAsync(reference, cancellationToken);
+            if (executionFailure is not null) {
+                throw executionFailure;
+            }
             if (failAfterCheckpoint) {
                 await journal.BeginSegmentAsync(AgentToolRunLease.Current!, AgentToolAdmissionJournalFixture.Envelope(), null, cancellationToken);
                 throw new IOException("Interrupted after retained background SDK checkpoint.");
+            }
+            if (recordProviderResponse) {
+                var envelope = AgentToolAdmissionJournalFixture.Envelope();
+                var lease = AgentToolRunLease.Current!;
+                var segment = Assert.Single((await journal.BeginSegmentAsync(lease, envelope, null, cancellationToken)).Segments);
+                var dispatch = await journal.BeginProviderDispatchAsync(lease, segment.Id, envelope.Digest, envelope.Digest, [], cancellationToken);
+                await journal.CompleteProviderDispatchAsync(lease, dispatch.Id, envelope.Digest, envelope, [], cancellationToken);
             }
             await request.ProgressCallback(ExecutionState.Running, "Recovery", "Recovered the original background invocation.");
             return new("Recovered background result.", 8, 5, 0, string.Empty, null, []);

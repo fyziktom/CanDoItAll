@@ -58,9 +58,11 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
         ProfileA = saved.Value;
         await TestApplicationBootstrap.InitializeSchemaAsync(Services, TestSchemaBootstrapModules.Full);
         await using (var scope = Services.CreateAsyncScope()) {
-            await scope.ServiceProvider.GetRequiredService<WorkspaceService>().SaveSettingsAsync(new() {
+            var workspace = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
+            var defaults = await workspace.ReadSettingsSnapshotAsync();
+            Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await workspace.SaveSettingsAsync(new(defaults.Expectation, WorkspaceSettingsValues.Capture(new() {
                 WorkspaceName = "Marker A", DefaultProviderProfileId = DefaultProviderId, Notes = "Original A marker"
-            });
+            }))));
             var project = await scope.ServiceProvider.GetRequiredService<ProjectsService>().SaveAsync(new() { Name = "Owned source project A" });
             Assert.True(project.IsSuccess);
             ProjectA = project.Value;
@@ -73,9 +75,10 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
                 ConnectorPluginKey = ResourceConnectorPluginKeys.WebLink, LocationOrIdentifier = "https://example.invalid/workspace-a"
             };
             resourceModel.Configuration.SetText(ResourceConnectorFieldKeys.WebUrl, resourceModel.LocationOrIdentifier);
-            var resource = await scope.ServiceProvider.GetRequiredService<ResourcesService>().SaveAsync(resourceModel);
-            Assert.True(resource.IsSuccess);
-            ResourceA = resource.Value;
+            var resources = scope.ServiceProvider.GetRequiredService<ResourcesService>();
+            var resource = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await resources.SaveAsync(
+                await ResourceMetadataTestCommands.NewAsync(resources, resourceModel)));
+            ResourceA = resource.Snapshot.Expected.ResourceId;
             var clock = DateTimeOffset.UtcNow;
             await scope.ServiceProvider.GetRequiredService<IApiUserStore>().SaveAsync(new(AccountId, "owned-instance-user", "OWNED-INSTANCE-USER", "Owned instance marker", true,
                 scope.ServiceProvider.GetRequiredService<ApiPasswordService>().Hash("Synthetic account password 42!"), [], 1, 1, clock, clock), null);
@@ -123,6 +126,7 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
     public ServiceProvider BuildTargetServices() => BuildServices(B, new Dictionary<string, string?>(configuration) {
         ["Database:Provider"] = "Postgres", ["Database:ConnectionString"] = B.ConnectionString
     });
+    public ServiceProvider BuildSelectedServices() => BuildServices(B, configuration);
     public async Task<Guid> TargetProfileIdAsync() => Assert.Single(await Services.GetRequiredService<IDatabaseProfileService>().ListAsync(), item => item.DisplayName == "Owned workspace B").Id;
 
     public async Task<DataSourcesRuntimeProof> ReadRuntimeAsync() {

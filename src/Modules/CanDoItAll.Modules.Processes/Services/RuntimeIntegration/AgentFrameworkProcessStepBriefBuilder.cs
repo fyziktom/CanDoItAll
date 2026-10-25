@@ -66,6 +66,10 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         var projectStructureContextGuidance = BuildProjectStructureContextGuidance(request);
         var productMutationGuidance = BuildProductMutationGuidance(request);
         var scopedInstructionGuidance = BuildScopedInstructionGuidance(request.Step.CapabilityScope);
+        var browserLifecycleGuidance = request.Step.AllowedOperations.Contains(
+            ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase)
+            ? BrowserRuntimeLifecycleReceiptFacts.ExecutionGuidance
+            : string.Empty;
 
         return $"""
         {genericBrief}
@@ -95,6 +99,8 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
 
         AgentFramework process-scoped instructions:
         {scopedInstructionGuidance}
+
+        {browserLifecycleGuidance}
 
         AgentFramework evidence write rule:
         Write process step summaries, proof, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths from this brief in evidenceRefs; if a workspace tool echoes a longer scoped storage path for the same artifact, ignore that scoped echo in artifact prose and evidenceRefs. Do not write evidence under an external target unless this step is explicitly allowed to mutate that target.

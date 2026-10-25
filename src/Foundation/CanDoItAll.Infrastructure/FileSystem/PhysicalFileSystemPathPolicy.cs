@@ -4,8 +4,28 @@ namespace CanDoItAll.Infrastructure;
 
 public sealed class PhysicalFileSystemPathPolicyFactory : IPhysicalFileSystemPathPolicyFactory
 {
+    private readonly PhysicalFileSystemCaseSensitivity? caseSensitivity;
+
+    public PhysicalFileSystemPathPolicyFactory() { }
+
+    public PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity caseSensitivity) {
+        RequireKnown(caseSensitivity);
+        this.caseSensitivity = caseSensitivity;
+    }
+
     public IPhysicalFileSystemPathPolicy Create(string managedRoot)
-        => new PhysicalFileSystemPathPolicy(managedRoot);
+        => new PhysicalFileSystemPathPolicy(managedRoot, caseSensitivity);
+
+    public IPhysicalFileSystemPathPolicy Create(string managedRoot, PhysicalFileSystemCaseSensitivity caseSensitivity) {
+        RequireKnown(caseSensitivity);
+        return new PhysicalFileSystemPathPolicy(managedRoot, caseSensitivity);
+    }
+
+    private static void RequireKnown(PhysicalFileSystemCaseSensitivity caseSensitivity) {
+        if (!Enum.IsDefined(caseSensitivity) || caseSensitivity == PhysicalFileSystemCaseSensitivity.Unknown) {
+            throw new ArgumentOutOfRangeException(nameof(caseSensitivity));
+        }
+    }
 }
 
 internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPolicy
@@ -204,10 +224,9 @@ internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPoli
                        FileAccess.Write,
                        FileShare.Read | FileShare.Delete,
                        bufferSize: 1,
-                       FileOptions.WriteThrough))
+                       FileOptions.None))
             {
                 probeCreated = true;
-                stream.Flush(flushToDisk: true);
                 return File.Exists(alternateCasePath)
                     ? PhysicalFileSystemCaseSensitivity.Insensitive
                     : PhysicalFileSystemCaseSensitivity.Sensitive;

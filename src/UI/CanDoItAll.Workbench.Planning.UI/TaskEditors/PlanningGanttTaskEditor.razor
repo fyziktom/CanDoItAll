@@ -112,7 +112,9 @@
                    min="-1"
                    max="100"
                    step="1"
-                   value="@progressText"
+                   value="@VisibleProgressText"
+                   disabled="@IsProgressExecutionControlled"
+                   title="@(IsProgressExecutionControlled ? "Execution state determines the displayed progress." : null)"
                    aria-label="Actual task progress percent"
                    data-testid="project-structure-gantt-task-progress"
                    @onchange="HandleProgressChanged" />
@@ -299,6 +301,13 @@
         CanChangeDirectAssignee ? AllResourceKinds : DefinitionResourceKinds;
 
     private decimal DurationHours => (endUtc - startUtc).Ticks / (decimal)TimeSpan.TicksPerHour;
+
+    private bool IsProgressExecutionControlled => execution.State is
+        ProjectTaskExecutionState.NotStarted or ProjectTaskExecutionState.Completed or ProjectTaskExecutionState.Cancelled;
+
+    private string VisibleProgressText => IsProgressExecutionControlled
+        ? ProjectTaskExecutionStatePolicy.ResolveExecutionBackedProgress(execution.State, progressPercent).ToString(CultureInfo.InvariantCulture)
+        : progressText;
 
     protected override void OnParametersSet()
     {

@@ -3,7 +3,10 @@ using Bunit;
 using System.Data.Common;
 using System.Security.Claims;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages;
+using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
@@ -19,6 +22,74 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureHierarchyLifetimeTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Dataset_or_generation_change_during_surface_read_prevents_publication(bool changeNamespace) {
+        var read = new OwnerReadGate();
+        MutableRuntime? runtime = null;
+        await using var harness = await CreateHarnessAsync(read: read, configure: services => {
+            services.AddSingleton<CanonicalRuntimeDatabase>();
+            services.AddSingleton<ICanonicalRuntimeDatabase>(provider => runtime = new(provider.GetRequiredService<CanonicalRuntimeDatabase>()));
+        });
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var project = await CreateProjectAsync(projects, "Original surface read");
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/projects/{project:D}/structure");
+        read.ArmProjects();
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, project));
+        try {
+            await read.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            if (changeNamespace) {
+                var activation = harness.Context.Services.GetRequiredService<DatasetActivationService>();
+                using var file = activation.Acquire(runtime!.Profile.Profile.Id);
+                var original = (await file.ReadAsync())!.Plan.Binding;
+                var changed = new DatasetActivationBinding(new(Guid.NewGuid()), Guid.NewGuid(), original.SchemaVersion, original.GuardProtocol);
+                var plan = new DatasetActivationPlan(Guid.NewGuid(), DatasetActivationKind.Reactivate, changed, original);
+                await file.WritePreparedAsync(plan);
+                await file.MarkActiveAsync(plan);
+            } else {
+                runtime!.Generation++;
+            }
+        } finally {
+            read.Release.TrySetResult();
+        }
+        page.WaitForAssertion(() => Assert.Contains("The project structure could not be loaded", page.Markup, StringComparison.Ordinal));
+        Assert.Empty(page.FindAll("[data-testid='project-structure-canvas-loaded']"));
+        Assert.Empty(page.FindComponents<StructureStructuralDialogs>());
+        Assert.Empty(page.Instance.AuthoringOutcomes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Displayed_canvas_cannot_adopt_a_new_runtime_generation(bool changeAfterOpening) {
+        MutableRuntime? runtime = null;
+        await using var harness = await CreateHarnessAsync(configure: services => {
+            services.AddSingleton<CanonicalRuntimeDatabase>();
+            services.AddSingleton<ICanonicalRuntimeDatabase>(provider => runtime = new(provider.GetRequiredService<CanonicalRuntimeDatabase>()));
+        });
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Original runtime canvas");
+        var child = await CreateProjectAsync(projects, "Original runtime child");
+        var page = Render(harness, parent);
+        EventCallback originalSubmit = default;
+        if (changeAfterOpening) {
+            await OpenHierarchyAsync(page, parent, child);
+            originalSubmit = page.FindComponent<StructureStructuralDialogs>().Instance.ExecuteProjectHierarchyCommand;
+        }
+        runtime!.Generation++;
+        if (changeAfterOpening) {
+            await page.InvokeAsync(() => page.Render(parameters => parameters.Add(component => component.ProjectId, parent)));
+            await page.InvokeAsync(() => originalSubmit.InvokeAsync());
+        } else {
+            await ContextActionAsync(page, $"project:{parent:D}", "project:add-subproject");
+            Assert.Contains("Reload the project", page.Markup, StringComparison.Ordinal);
+        }
+        Assert.All(page.FindComponents<StructureStructuralDialogs>(), component => Assert.Null(component.Instance.ProjectHierarchyDialog));
+        Assert.Empty(await projects.ListHierarchyLinksAsync());
+        Assert.Empty(page.Instance.AuthoringOutcomes);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -182,13 +253,16 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         await OpenHierarchyAsync(page, parent, child);
         var retired = recreateChild ? child : parent;
         var admission = (await projects.GetAsync(retired)).ExpectedProjectAdmission!;
-        await projects.DeleteAsync(retired, expectedProjectAdmission: admission);
+        await SubmitSetupAsync(harness, new ProjectLifecycleCommand.Delete((await projects.GetAsync(retired)).ExpectedDefinition!));
         Assert.True((await projects.CreateAsync(retired, new() { Name = "Unrelated replacement" })).IsSuccess);
         await SubmitHierarchyAsync(page);
         Assert.DoesNotContain(await projects.ListHierarchyLinksAsync(), link => link.ParentProjectId == parent && link.ChildProjectId == child);
         var outcome = Assert.Single(page.Instance.AuthoringOutcomes);
-        Assert.Equal(ProjectStructureAuthoringResultKind.Rejected, outcome.Kind);
-        Assert.Equal(admission, Assert.IsType<ProjectWriteAdmissionRejectedException>(outcome.Failure).Admission);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Unconfirmed, outcome.Kind);
+        var retained = Assert.Single(PendingStore(harness).Records);
+        var command = Assert.IsType<ProjectLifecycleCommand.EnsureLink>(retained.Frozen.Submission.Command);
+        Assert.Equal(admission, recreateChild ? command.Child : command.Parent);
+        Assert.Equal(ProjectPendingStage.Unconfirmed, retained.Stage);
     }
 
     [Fact]
@@ -201,7 +275,8 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         var neighbor = await CreateProjectAsync(projects, "Next draft");
         var page = Render(harness, parent);
         await OpenHierarchyAsync(page, parent, child);
-        Assert.True((await projects.AddSubprojectAsync(child, parent)).IsSuccess);
+        await SubmitSetupAsync(harness, new ProjectLifecycleCommand.EnsureLink(
+            (await projects.GetAsync(child)).ExpectedProjectAdmission!, (await projects.GetAsync(parent)).ExpectedProjectAdmission!));
         read.ArmHierarchy();
         var pending = SubmitHierarchyAsync(page);
         Guid nextId;
@@ -219,12 +294,13 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         Assert.Equal(neighbor, dialog.SelectedProjectId);
         Assert.Empty(dialog.Error);
         Assert.False(dialog.IsBusy);
-        Assert.Equal(ProjectStructureAuthoringResultKind.Rejected, Assert.Single(page.Instance.AuthoringOutcomes).Kind);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Unconfirmed, Assert.Single(page.Instance.AuthoringOutcomes).Kind);
+        Assert.Equal(ProjectPendingStage.Unconfirmed, Assert.Single(PendingStore(harness).Records).Stage);
         Assert.DoesNotContain(await projects.ListHierarchyLinksAsync(), link => link.ParentProjectId == parent && link.ChildProjectId == child);
     }
 
     [Fact]
-    public async Task Lost_native_hierarchy_acknowledgement_retains_original_targets_and_leaves_successor_open() {
+    public async Task Lost_native_hierarchy_acknowledgement_recovers_original_receipt_and_leaves_successor_open() {
         var gate = new OwnerWriteGate { LoseCommitReply = true };
         await using var harness = await CreateHarnessAsync(gate);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -245,16 +321,21 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         }
         await pending.WaitAsync(TimeSpan.FromSeconds(20));
         var outcome = Assert.Single(page.Instance.AuthoringOutcomes);
-        Assert.Equal(ProjectStructureAuthoringResultKind.Unconfirmed, outcome.Kind);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
         Assert.Equal(child, outcome.TargetProjectId);
-        Assert.Same(gate.LostReply, outcome.Failure);
+        var retained = Assert.Single(PendingStore(harness).Records);
+        Assert.NotNull(retained.Accepted);
+        Assert.Equal(new[] { parent, child }.Order(), ProjectLifecyclePendingTargets.Capture(retained.Frozen.Submission.Command).Order());
+        var found = Assert.IsType<ProjectLifecycleLookup.Found>(await harness.Context.Services
+            .GetRequiredService<ProjectNativeLifecycleOperations>().LookupAsync(retained.Operation));
+        Assert.Equal(found.Accepted.Original, retained.Frozen.Submission);
         var successor = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!;
         Assert.Equal(neighbor, successor.SelectedProjectId);
         Assert.Empty(successor.Error);
         Assert.False(successor.RequiresObservation);
     }
 
-    public enum ReadRetirement { Close, Replace, Route, RecreatedLifetime, Actor }
+    public enum ReadRetirement { Close, Replace, Route, RecreatedLifetime, Actor, RuntimeGeneration }
 
     [Theory]
     [InlineData(ReadRetirement.Close)]
@@ -262,9 +343,14 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
     [InlineData(ReadRetirement.Route)]
     [InlineData(ReadRetirement.RecreatedLifetime)]
     [InlineData(ReadRetirement.Actor)]
+    [InlineData(ReadRetirement.RuntimeGeneration)]
     public async Task Delayed_choices_cannot_reopen_a_retired_opening(ReadRetirement retirement) {
         var read = new OwnerReadGate();
-        await using var harness = await CreateHarnessAsync(read: read);
+        MutableRuntime? runtime = null;
+        await using var harness = await CreateHarnessAsync(read: read, configure: services => {
+            services.AddSingleton<CanonicalRuntimeDatabase>();
+            services.AddSingleton<ICanonicalRuntimeDatabase>(provider => runtime = new(provider.GetRequiredService<CanonicalRuntimeDatabase>()));
+        });
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         var parent = await CreateProjectAsync(projects, "Read owner");
         var other = await CreateProjectAsync(projects, "Other owner");
@@ -286,12 +372,14 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
                 await OpenHierarchyAsync(page, parent, other);
                 replacementOpening = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
             } else if (retirement == ReadRetirement.RecreatedLifetime) {
-                var original = (await projects.GetAsync(parent)).ExpectedProjectAdmission;
-                await projects.DeleteAsync(parent, expectedProjectAdmission: original);
+                await SubmitSetupAsync(harness, new ProjectLifecycleCommand.Delete((await projects.GetAsync(parent)).ExpectedDefinition!));
                 Assert.True((await projects.CreateAsync(parent, new() { Name = "Recreated read owner" })).IsSuccess);
                 host.Render(parameters => parameters.Add(component => component.Value, actor)
                     .AddChildContent<ProjectStructurePage>(child => child.Add(component => component.ProjectId, parent)));
-            } else if (retirement == ReadRetirement.Route || retirement == ReadRetirement.Actor) {
+            } else if (retirement is ReadRetirement.Route or ReadRetirement.Actor or ReadRetirement.RuntimeGeneration) {
+                if (retirement == ReadRetirement.RuntimeGeneration) {
+                    runtime!.Generation++;
+                }
                 var nextActor = retirement == ReadRetirement.Actor
                     ? Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "Second")], "Fixture")))) : actor;
                 host.Render(parameters => parameters.Add(component => component.Value, nextActor)
@@ -344,7 +432,137 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         Assert.Contains(links, link => link.ParentProjectId == second && link.ChildProjectId == secondChild);
     }
 
-    internal static Task<ComponentTestHarness> CreateHarnessAsync(OwnerWriteGate? gate = null, OwnerReadGate? read = null)
+    [Fact]
+    public async Task Unretained_hierarchy_acceptance_blocks_a_second_opening_before_dispatch() {
+        await using var harness = await CreateHarnessAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Retained parent");
+        var child = await CreateProjectAsync(projects, "First child");
+        var other = await CreateProjectAsync(projects, "Second choice");
+        var page = Render(harness, parent);
+        await OpenHierarchyAsync(page, parent, child);
+        PendingStore(harness).AcceptFailure = new IOException("Synthetic evidence retention failure");
+        await SubmitHierarchyAsync(page);
+        var store = PendingStore(harness);
+        var original = Assert.Single(store.Records);
+        Assert.Null(original.Accepted);
+        await OpenHierarchyAsync(page, parent, other);
+        await SubmitHierarchyAsync(page);
+        Assert.Equal(original, Assert.Single(store.Records));
+        Assert.Equal(1, store.DispatchClaims);
+        Assert.DoesNotContain(await projects.ListHierarchyLinksAsync(), link => link.ChildProjectId == other);
+        Assert.Contains(original.Operation.Id.ToString("D"), page.Instance.AuthoringOutcomes.Last().Message);
+    }
+
+    [Fact]
+    public async Task Observed_hierarchy_add_allows_a_subsequent_reconnect_without_recovery() {
+        await using var harness = await CreateHarnessAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Original parent");
+        var child = await CreateProjectAsync(projects, "Child");
+        var destination = await CreateProjectAsync(projects, "Destination parent");
+        var page = Render(harness, parent);
+        await OpenHierarchyAsync(page, parent, child);
+        await SubmitHierarchyAsync(page);
+        Assert.Empty(PendingStore(harness).Records);
+        Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes, node => node.Id == $"project-child:{child:D}");
+
+        await ContextActionAsync(page, $"project-child:{child:D}", "project:reconnect-subproject");
+        await page.InvokeAsync(() => page.Find("[data-testid='project-structure-hierarchy-project-select']").Change(destination.ToString("D")));
+        await SubmitHierarchyAsync(page);
+
+        var link = Assert.Single(await projects.ListHierarchyLinksAsync());
+        Assert.Equal((destination, child), (link.ParentProjectId, link.ChildProjectId));
+        Assert.Equal(2, PendingStore(harness).DispatchClaims);
+        Assert.Empty(PendingStore(harness).Records);
+        Assert.All(page.Instance.AuthoringOutcomes, outcome => Assert.Equal(ProjectStructureAuthoringResultKind.Committed, outcome.Kind));
+    }
+
+    [Fact]
+    public async Task Retired_refresh_keeps_the_accepted_hierarchy_record_for_recovery() {
+        var read = new OwnerReadGate();
+        await using var harness = await CreateHarnessAsync(read: read);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Refresh owner");
+        var child = await CreateProjectAsync(projects, "Accepted child");
+        var replacement = await CreateProjectAsync(projects, "Replacement surface");
+        var page = Render(harness, parent);
+        await OpenHierarchyAsync(page, parent, child);
+        PendingStore(harness).BeforeAccept = () => {
+            read.ArmHierarchy();
+            return Task.CompletedTask;
+        };
+        var pending = SubmitHierarchyAsync(page);
+        try {
+            await read.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await page.InvokeAsync(() => page.Render(parameters => parameters.Add(component => component.ProjectId, replacement)));
+            page.WaitForAssertion(() => Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes,
+                node => node.Id == $"project:{replacement:D}"));
+        } finally {
+            read.Release.TrySetResult();
+        }
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.NotNull(Assert.Single(PendingStore(harness).Records).Accepted);
+        Assert.Equal(child, Assert.Single(await projects.ListHierarchyLinksAsync()).ChildProjectId);
+        Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes, node => node.Id == $"project:{replacement:D}");
+    }
+
+    [Fact]
+    public async Task Failed_acknowledgement_cleanup_keeps_acceptance_and_blocks_another_dispatch() {
+        await using var harness = await CreateHarnessAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Cleanup parent");
+        var child = await CreateProjectAsync(projects, "Accepted child");
+        var other = await CreateProjectAsync(projects, "Unchanged child");
+        var page = Render(harness, parent);
+        var store = PendingStore(harness);
+        store.ClearFailure = new IOException("Synthetic cleanup failure");
+        await OpenHierarchyAsync(page, parent, child);
+        await SubmitHierarchyAsync(page);
+        var retained = Assert.Single(store.Records);
+        Assert.NotNull(retained.Accepted);
+        var outcome = page.Instance.AuthoringOutcomes.Last();
+        Assert.Equal(ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
+        Assert.Same(store.ClearFailure, outcome.Failure);
+        Assert.Contains("recovery record could not be cleared", outcome.Message, StringComparison.Ordinal);
+        await OpenHierarchyAsync(page, parent, other);
+        await SubmitHierarchyAsync(page);
+        Assert.Equal(retained, Assert.Single(store.Records));
+        Assert.Equal(1, store.DispatchClaims);
+        Assert.Equal(child, Assert.Single(await projects.ListHierarchyLinksAsync()).ChildProjectId);
+    }
+
+    [Fact]
+    public async Task Reconnect_keeps_the_opening_edge_identity_when_matching_endpoints_are_recreated() {
+        await using var harness = await CreateHarnessAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parent = await CreateProjectAsync(projects, "Original edge parent");
+        var child = await CreateProjectAsync(projects, "Original edge child");
+        var destination = await CreateProjectAsync(projects, "New parent");
+        var parentAdmission = (await projects.GetAsync(parent)).ExpectedProjectAdmission!;
+        var childAdmission = (await projects.GetAsync(child)).ExpectedProjectAdmission!;
+        var first = await SubmitSetupAsync(harness, new ProjectLifecycleCommand.EnsureLink(parentAdmission, childAdmission));
+        var firstEdge = Assert.IsType<ProjectLifecycleAcknowledgement.LinkEnsured>(first.Acknowledgement).EdgeId;
+        var page = Render(harness, parent);
+        await ContextActionAsync(page, $"project-child:{child}", "project:reconnect-subproject");
+        await page.InvokeAsync(() => page.Find("[data-testid='project-structure-hierarchy-project-select']").Change(destination.ToString("D")));
+        await SubmitSetupAsync(harness, new ProjectLifecycleCommand.RemoveLink(new(firstEdge, parentAdmission, childAdmission)));
+        var replacement = await SubmitSetupAsync(harness, new ProjectLifecycleCommand.EnsureLink(parentAdmission, childAdmission));
+        var replacementEdge = Assert.IsType<ProjectLifecycleAcknowledgement.LinkEnsured>(replacement.Acknowledgement).EdgeId;
+        Assert.NotEqual(firstEdge, replacementEdge);
+        await SubmitHierarchyAsync(page);
+        var retained = Assert.Single(PendingStore(harness).Records);
+        var command = Assert.IsType<ProjectLifecycleCommand.ReconnectLink>(retained.Frozen.Submission.Command);
+        Assert.Equal(firstEdge, command.Expected.EdgeId);
+        Assert.Equal(ProjectPendingStage.Unconfirmed, retained.Stage);
+        var links = await projects.ListHierarchyLinksAsync();
+        Assert.Contains(links, link => link.ParentProjectId == parent && link.ChildProjectId == child);
+        Assert.DoesNotContain(links, link => link.ParentProjectId == destination && link.ChildProjectId == child);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Unconfirmed, Assert.Single(page.Instance.AuthoringOutcomes).Kind);
+    }
+
+    internal static Task<ComponentTestHarness> CreateHarnessAsync(OwnerWriteGate? gate = null, OwnerReadGate? read = null,
+        Action<IServiceCollection>? configure = null)
         => ComponentTestHarness.CreateAsync(services => {
             var interceptors = new IInterceptor?[] { gate, read }.OfType<IInterceptor>().ToArray();
             services.AddSingleton<IDbContextFactory<ProjectsDbContext>>(provider => new PooledDbContextFactory<ProjectsDbContext>(
@@ -353,7 +571,23 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
             services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider => new PooledDbContextFactory<WorkbenchDbContext>(
                 new DbContextOptionsBuilder<WorkbenchDbContext>(provider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>())
                     .AddInterceptors(interceptors).Options));
+            configure?.Invoke(services);
         });
+
+    private sealed class MutableRuntime(ICanonicalRuntimeDatabase inner) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile => inner.Profile;
+        public long Generation { get; set; } = inner.Generation;
+    }
+
+    private static ProjectLifecyclePendingTestStore PendingStore(ComponentTestHarness harness)
+        => Assert.IsType<ProjectLifecyclePendingTestStore>(harness.Context.Services.GetRequiredService<IProjectLifecyclePendingStore>());
+
+    private static async Task<ProjectLifecycleAccepted> SubmitSetupAsync(ComponentTestHarness harness, ProjectLifecycleCommand command) {
+        var native = harness.Context.Services.GetRequiredService<ProjectNativeLifecycleOperations>();
+        var context = await native.GetContextAsync();
+        var original = native.Freeze(command, ProjectNativeLifecycleOperations.Scope(context), context, Guid.NewGuid());
+        return Assert.IsType<ProjectLifecycleOutcome.Accepted>(await native.DispatchAsync(original.Submission)).Result;
+    }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projects, string name) {
         var result = await projects.SaveAsync(new() { Name = name });

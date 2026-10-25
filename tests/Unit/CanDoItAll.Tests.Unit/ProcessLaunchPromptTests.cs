@@ -13,6 +13,19 @@ namespace CanDoItAll.Tests.Unit.Processes;
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessLaunchPromptTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Browser_lifecycle_guidance_is_scoped_to_runtime_proof_steps(bool capturesRuntime) {
+        var step = CreatePromptStep("Validate the declared product.");
+        step.AllowedOperations = capturesRuntime ? [ProcessOperationContractNames.CaptureRuntimeProof] : [];
+        var runId = ProcessRunId.New();
+        var prompt = BuildStepPrompt(new AgentFrameworkProcessStepBriefBuilder(), runId, step);
+        Assert.Equal(capturesRuntime, prompt.Contains("After each successful host start or restart", StringComparison.Ordinal));
+        Assert.DoesNotContain("After each successful host start or restart",
+            BuildStepPrompt(new GenericProcessStepBriefBuilder(), runId, step), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Generic_step_brief_includes_runtime_context_without_agent_or_project_guidance()
     {

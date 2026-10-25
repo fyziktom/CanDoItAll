@@ -287,6 +287,14 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     var creatingOpening = projectCreateOpening;
     var creatingDraft = projectCreateDraft;
 }
+@if (projectCreateRecoveryNotice is not null || ProjectCreateBlocked(projectCreatePending)) {
+    <Alert AlertStyle="AlertStyle.Info" data-testid="project-structure-create-recovery">
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock Value="@(projectCreateRecoveryNotice ?? "A retained project creation requires review before another create. Close the editor to open Projects recovery.")" />
+            <Button Text="Open Projects recovery" Click="OpenProjectCreateRecovery" data-testid="project-structure-create-recovery-open" />
+        </Stack>
+    </Alert>
+}
 <ProjectModalHost @key="projectCreateDraft" IsOpen="@showProjectCreateModal"
                   IsEditorMode="true"
                   Draft="@projectCreateDraft"
@@ -297,6 +305,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                   WizardTabs="@ProjectCreateWizardTabs"
                   Message="@projectCreateMessage"
                   IsErrorMessage="@IsProjectCreateErrorMessage"
+                  SubmissionReady="@ProjectCreateSubmissionReady"
+                  ValidateCapture="ValidateProjectCreateCapture"
+                  PendingRecovery="@ProjectCreatePendingView"
+                  PendingAction="@((ProjectPendingEditorIntent action) => DispatchAuthoringDialogAsync(creatingOpening, projectCreateOpening, () => HandleProjectCreatePendingAsync(creatingOpening, action)))"
                   Close="@(() => CloseProjectCreateDialogAsync(creatingOpening))"
                   SwitchToOverview="IgnoreProjectCreateModeChangeAsync"
                   SwitchToEditor="IgnoreProjectCreateModeChangeAsync"
@@ -312,7 +324,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                   Delete="DeleteProjectCreateAsync"
                   OpenProjectDashboard="OpenProjectCreateDashboardAsync"
                   OpenStructure="OpenStructure"
-                  OpenCalendar="OpenCalendar" />
+                  OpenCalendar="OpenCalendar">
+    <AdditionalEditorActions>
+        <Button Text="Open Projects recovery" Click="OpenProjectCreateRecovery" data-testid="project-create-recovery-open" />
+    </AdditionalEditorActions>
+</ProjectModalHost>
 
 @code {
     private static class CanvasAuthoringMode
@@ -508,6 +524,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             CloseBlockMutationDialog();
             CloseSubprojectTransferDialog();
             projectHierarchyDialogBeforeCreate = null;
+            RetireProjectCreateSession();
             projectCreateOpening = null;
             showProjectCreateModal = false;
             await CloseAttachmentPreviewAsync();
@@ -532,7 +549,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
     }
 
-    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null)
+    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null, Action? onPublished = null)
     {
         IReadOnlyList<string>? liveSelectionSnapshot = surface?.ProjectId == ProjectId
             ? selectedNodeIds.ToArray()
@@ -548,6 +565,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         {
             CancelPendingCanvasViewStatePersistence();
             pendingWorkbenchSelectionId = null;
+            var originalGeneration = ContentDatabase.Generation;
+            var originalScope = await NativeHierarchy.GetScopeAsync(deferredCompletionCts.Token);
             var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(request.ProjectId);
             var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
             var loadDeletionRecoveriesTask =
@@ -608,6 +627,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 storageCatalog = nextStorageCatalog;
                 unavailableState = loadResult.UnavailableState;
                 surface = null;
+                displayedLifecycleScope = null;
                 RetireInactiveAuthoring();
                 canvasSurface = null;
                 clipboardState = null;
@@ -683,6 +703,12 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             uiState.SelectedNodeIds = [.. nextSelectedNodeIds];
             graphAdapter.ExpandSelectionAncestors(reloadedSurface.Nodes, uiState, nextSelectedNodeIds);
             var nextSurface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
+            if (originalGeneration != ContentDatabase.Generation ||
+                    originalScope != await NativeHierarchy.GetScopeAsync(deferredCompletionCts.Token) ||
+                    originalGeneration != ContentDatabase.Generation ||
+                    nextSurface.ExpectedProjectAdmission?.DatabaseProfileId != originalScope.DatabaseProfileId) {
+                throw new InvalidOperationException("The workspace changed while the project surface was loading. Reload the project.");
+            }
             if (!IsCurrentSurfaceReload(request))
             {
                 return;
@@ -705,6 +731,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             selectedNodeIds = nextSelectedNodeIds;
             pendingWorkbenchSelectionId = nextPendingWorkbenchSelectionId;
             surface = nextSurface;
+            displayedLifecycleScope = originalScope;
+            displayedRuntimeGeneration = originalGeneration;
             RetireInactiveAuthoring();
             currentViewStateJson = nextSurface.ViewStateJson;
             RefreshCanvasSurface();
@@ -713,6 +741,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             if (IsCurrentSurfaceReload(request))
             {
                 agentChatContextAccessState = AgentChatContextAccessState.Ready;
+                onPublished?.Invoke();
             }
         }
         catch (Exception exception)
@@ -1092,14 +1121,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
         pendingClientSelectionId = null;
         selectedNodeIds = uiState.SelectedNodeIds.ToList();
-        currentViewStateJson = normalizedStateJson;
-        var previousSurface = surface;
-        surface = surface with { ViewStateJson = currentViewStateJson };
-        if (insightsContext is { } currentInsights &&
-            ReferenceEquals(currentInsights.Native.Surface, previousSurface) && IsCurrentInsights(currentInsights)) {
-            // A client viewport update preserves the original node snapshot and its admitted actions.
-            insightsContext = currentInsights with { Native = currentInsights.Native with { Surface = surface } };
-        }
+        ApplyCanvasViewState(normalizedStateJson);
         if (canvasSurface is not null)
         {
             canvasSurface.UiState = uiState;
@@ -1738,8 +1760,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         uiState.SelectedNodeIds = [.. selectedNodeIds];
         EnsureSelectionScopedToolboxWindowState(uiState);
         graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
-        currentViewStateJson = uiState.ToJson();
-        surface = surface with { ViewStateJson = currentViewStateJson };
+        ApplyCanvasViewState(uiState.ToJson());
         RefreshCanvasSurface();
         await PersistCurrentViewStateAsync();
     }
@@ -1937,8 +1958,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         uiState = NormalizePersistedCanvasUiState(uiState);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
         graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
-        currentViewStateJson = uiState.ToJson();
-        surface = surface with { ViewStateJson = currentViewStateJson };
+        ApplyCanvasViewState(uiState.ToJson());
         RefreshCanvasSurface();
         await InvokeAsync(StateHasChanged);
         await PersistCurrentViewStateAsync();
@@ -2028,7 +2048,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
     }
 
-    private async Task<bool> PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default) {
+    private Task<bool> PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default)
+        => IsCurrentAction(context) ? TrackAuthoringOperationAsync(PersistCapturedViewStateCoreAsync(context, stateJson, cancellationToken)) : Task.FromResult(false);
+
+    private async Task<bool> PersistCapturedViewStateCoreAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken) {
         await canvasViewStateCommitGate.WaitAsync(cancellationToken);
         try {
             if (!IsCurrentAction(context)) {
@@ -2310,6 +2333,9 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     private void DisposeSynchronousState()
     {
+        foreach (var session in projectCreateSessions.Values) {
+            session.Dispose();
+        }
         Interlocked.Increment(ref surfaceReloadGeneration);
         CancelPendingCanvasViewStatePersistence();
         CancelRuntimePreviewWait();

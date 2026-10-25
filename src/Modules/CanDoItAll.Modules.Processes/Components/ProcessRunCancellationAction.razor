@@ -1,58 +1,158 @@
 @namespace CanDoItAll.Modules.Processes
 @using CanDoItAll.Processes.Abstractions
+@using CanDoItAll.Processes.Application
 @using CanDoItAll.Processes.Runtime
 @implements IDisposable
-@inject IProcessWorkspaceProjectionClient Client
+@inject IProcessCancellationClient Client
 @inject ILogger<ProcessRunCancellationAction> Logger
 
-<ProcessRunCancellationSurface Status="Status" Message="@message" Tone="tone" Busy="busy"
-                               CommandFinished="commandFinished" CancelAsync="CancelAsync" />
+<ProcessRunCancellationSurface Status="Status" Message="@DisplayMessage" Tone="@(readWarning is null ? tone : AlertStyle.Warning)"
+                               Busy="busy" CommandFinished="commandFinished" CanRequest="CanRequest" ShowCancel="IsActive"
+                               ShowRefresh="@(RunId.Value != Guid.Empty)" Refreshing="refreshing"
+                               CancelAsync="CancelAsync" RefreshAsync="RefreshStatusAsync" />
 
 @code {
     [Parameter, EditorRequired] public ProcessRunId RunId { get; set; }
     [Parameter] public ProcessProjectedRunStatus Status { get; set; }
     [Parameter] public EventCallback<ProcessRunId> CancellationCommitted { get; set; }
+    [Parameter] public EventCallback<ProcessRunId> StatusRefreshed { get; set; }
 
     private ProcessRunId selection;
     private long generation;
+    private ProcessCancellationClientView? view;
+    private CancellationTokenSource? currentRead;
     private bool busy;
-    private bool commandFinished;
+    private bool refreshing;
+    private RequestState lastRequest;
+    private bool commandFinished => lastRequest != RequestState.None;
     private bool disposed;
     private string? message;
+    private string? readWarning;
     private AlertStyle tone = AlertStyle.Info;
+    private string? DisplayMessage => readWarning is null ? message : $"{message} {readWarning}".Trim();
+    private bool IsActive => view?.Progress is { } progress &&
+        progress.Tracking is ProcessCancellationTracking.NotRequested or ProcessCancellationTracking.ChildRun &&
+        progress.RuntimeStatus != ProcessRuntimeStatus.CancelRequested && !ProcessRuntimeTerminalStates.IsRunTerminal(progress.RuntimeStatus);
+    private bool CanRequest => view is { CanRequest: true, Progress: { } progress } &&
+        (progress.RootRunId != progress.RunId || view.RootRecoveryAvailable);
 
-    protected override void OnParametersSet() {
+    protected override Task OnParametersSetAsync() {
         if (selection == RunId) {
-            return;
+            return Task.CompletedTask;
         }
+        currentRead?.Cancel();
         selection = RunId;
         generation++;
+        view = null;
         busy = false;
-        commandFinished = false;
+        refreshing = false;
+        lastRequest = RequestState.None;
         message = null;
+        readWarning = null;
+        return RefreshAsync();
+    }
+
+    private Task RefreshStatusAsync() => RefreshAsync(notifyProjection: true);
+
+    private async Task RefreshAsync(bool notifyProjection = false) {
+        if (disposed || busy || refreshing || RunId.Value == Guid.Empty) {
+            return;
+        }
+        var owner = generation;
+        var runId = RunId;
+        using var cancellation = new CancellationTokenSource();
+        currentRead = cancellation;
+        refreshing = true;
+        try {
+            var selected = await Client.ReadAsync(runId, cancellation.Token);
+            if (selected.Progress is { } progress && progress.RunId != runId) {
+                throw new InvalidOperationException("The cancellation progress names a different process run.");
+            }
+            if (Owns(owner)) {
+                view = selected;
+                readWarning = null;
+                ApplyProgress();
+                if (notifyProjection && selected.Progress is not null) {
+                    await NotifyProjectionAsync(StatusRefreshed, runId, owner);
+                }
+            }
+        } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
+        } catch (ProcessCancellationAccessDeniedException) {
+            if (Owns(owner)) {
+                view = null;
+                readWarning = "Current Process read access is required to refresh cancellation status.";
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning("Process cancellation status unavailable for run {RunId}; error type {ErrorType}.", runId, exception.GetType().Name);
+            if (Owns(owner)) {
+                readWarning = view?.Progress is null ? "Status could not be loaded. Try Refresh status again."
+                    : "Status refresh failed. The last confirmed state is retained; try Refresh status again.";
+            }
+        } finally {
+            if (ReferenceEquals(currentRead, cancellation)) {
+                currentRead = null;
+            }
+            if (Owns(owner)) {
+                refreshing = false;
+            }
+        }
+    }
+
+    private void ApplyProgress() {
+        var progress = view!.Progress;
+        if ((progress is null || progress.Tracking == ProcessCancellationTracking.NotRequested) && commandFinished) {
+            (message, tone) = lastRequest switch {
+                RequestState.Accepted => ("Cancellation was accepted, but the current cleanup status needs reconciliation.", AlertStyle.Warning),
+                RequestState.Unconfirmed => ("No cancellation is visible yet. The original request outcome remains unconfirmed.", AlertStyle.Warning),
+                _ => ("Cancellation was not accepted. Reopen this run before trying again.", AlertStyle.Warning)
+            };
+            return;
+        }
+        if (progress is null) {
+            (message, tone) = ("This process run is no longer available.", AlertStyle.Warning);
+            return;
+        }
+        (message, tone) = progress.Tracking switch {
+            ProcessCancellationTracking.Pending => ("Cancellation requested. Cleanup is still pending.", AlertStyle.Info),
+            ProcessCancellationTracking.Completed => ("Run cancelled. Cleanup is complete.", AlertStyle.Success),
+            ProcessCancellationTracking.LegacyUntracked => ("Cleanup has not been verified. Reconciliation is required.", AlertStyle.Warning),
+            ProcessCancellationTracking.ReconciliationRequired => ("Cancellation requires reconciliation before cleanup can be confirmed.", AlertStyle.Warning),
+            ProcessCancellationTracking.ChildRun when progress.RuntimeStatus == ProcessRuntimeStatus.Cancelled =>
+                ("Selected child stopped. Root cleanup is tracked separately.", AlertStyle.Info),
+            _ when ProcessRuntimeTerminalStates.IsRunTerminal(progress.RuntimeStatus) => ("This run has already finished.", AlertStyle.Info),
+            _ when !view.CanRequest => ("You do not have permission to cancel this run.", AlertStyle.Warning),
+            _ when progress.RootRunId == progress.RunId && !view.RootRecoveryAvailable =>
+                ("Cancellation recovery is disabled for this host.", AlertStyle.Warning),
+            _ => ((string?)null, AlertStyle.Info)
+        };
     }
 
     private async Task CancelAsync() {
-        if (disposed || busy || commandFinished || RunId.Value == Guid.Empty ||
-            Status is not (ProcessProjectedRunStatus.Active or ProcessProjectedRunStatus.NeedsAttention)) {
+        if (disposed || busy || refreshing || commandFinished || !IsActive || !CanRequest) {
             return;
         }
         var runId = RunId;
         var owner = generation;
         busy = true;
-        ProcessRuntimeRunCancellationResult result;
+        ProcessCancellationClientResult result;
         try {
-            result = await Client.RequestRunCancellationAsync(new(runId, "process-live-ui", "Operator requested cancellation from process details."));
+            result = await Client.RequestAsync(runId);
             if (result.RunId != runId) {
                 throw new InvalidOperationException("The cancellation receipt names a different process run.");
             }
+        } catch (ProcessCancellationAccessDeniedException) {
+            if (Owns(owner)) {
+                busy = false;
+                view = view! with { CanRequest = false };
+                (message, tone) = ("Current Process read and execute permissions are required to cancel this run.", AlertStyle.Warning);
+            }
+            return;
         } catch (Exception exception) {
             Logger.LogWarning("Process cancellation outcome unavailable for run {RunId}; error type {ErrorType}.", runId, exception.GetType().Name);
             if (Owns(owner)) {
                 busy = false;
-                commandFinished = true;
-                tone = AlertStyle.Warning;
-                message = "Cancellation outcome could not be confirmed. Refresh the process before taking another action.";
+                lastRequest = RequestState.Unconfirmed;
+                (message, tone) = ("Cancellation outcome could not be confirmed. Use Refresh status before taking another action.", AlertStyle.Warning);
             }
             return;
         }
@@ -60,26 +160,54 @@
             return;
         }
         busy = false;
-        commandFinished = true;
-        tone = result.Succeeded ? AlertStyle.Success : AlertStyle.Warning;
-        message = result.Succeeded
-            ? result.Status == ProcessRuntimeStatus.Cancelled ? "Run cancelled." : "Cancellation requested."
-            : "Cancellation was rejected. " + string.Join(" ", result.Diagnostics);
-        if (!result.Succeeded) {
+        readWarning = null;
+        var accepted = ApplyReceipt(result);
+        lastRequest = result is ProcessCancellationClientResult.Root { Admission.Status: ProcessRootCancellationAdmissionStatus.Unconfirmed }
+            ? RequestState.Unconfirmed : accepted ? RequestState.Accepted : RequestState.Rejected;
+        if (!accepted) {
             return;
         }
+        await NotifyProjectionAsync(CancellationCommitted, runId, owner);
+    }
+
+    private async Task NotifyProjectionAsync(EventCallback<ProcessRunId> callback, ProcessRunId runId, long owner) {
         try {
-            await CancellationCommitted.InvokeAsync(runId);
+            await callback.InvokeAsync(runId);
         } catch (Exception exception) {
-            Logger.LogWarning("Process cancellation committed for run {RunId}, but projection refresh failed; error type {ErrorType}.", runId, exception.GetType().Name);
+            Logger.LogWarning("Process cancellation accepted for run {RunId}, but projection refresh failed; error type {ErrorType}.", runId, exception.GetType().Name);
             if (Owns(owner)) {
-                tone = AlertStyle.Warning;
-                message += " Refresh failed; reopen process details to read the current state.";
+                readWarning = "Projection refresh failed. Use Refresh status to observe cancellation without repeating it.";
             }
         }
     }
 
+    private bool ApplyReceipt(ProcessCancellationClientResult result) {
+        if (result is ProcessCancellationClientResult.Child child) {
+            (message, tone) = child.Commit.Succeeded
+                ? ("Selected child stopped. Root cleanup is tracked separately.", AlertStyle.Info)
+                : ("Cancellation of the selected child was rejected. Refresh its status before another action.", AlertStyle.Warning);
+            return child.Commit.Succeeded;
+        }
+        var admission = ((ProcessCancellationClientResult.Root)result).Admission;
+        (message, tone) = admission.Status switch {
+            ProcessRootCancellationAdmissionStatus.Accepted => ("Cancellation requested. Cleanup is still pending.", AlertStyle.Info),
+            ProcessRootCancellationAdmissionStatus.Completed => ("Run cancelled. Cleanup is complete.", AlertStyle.Success),
+            ProcessRootCancellationAdmissionStatus.Unavailable => ("Cancellation recovery is disabled for this host.", AlertStyle.Warning),
+            ProcessRootCancellationAdmissionStatus.Unconfirmed => ("Cancellation outcome could not be confirmed. Use Refresh status before another action.", AlertStyle.Warning),
+            ProcessRootCancellationAdmissionStatus.ReconciliationRequired => ("Cancellation requires reconciliation before cleanup can be confirmed.", AlertStyle.Warning),
+            ProcessRootCancellationAdmissionStatus.Terminal => ("This run has already finished.", AlertStyle.Info),
+            ProcessRootCancellationAdmissionStatus.NotFound => ("This process run is no longer available.", AlertStyle.Warning),
+            _ => ("Cancellation was not accepted. Refresh its status and reopen the run before trying again.", AlertStyle.Warning)
+        };
+        return admission.Status is ProcessRootCancellationAdmissionStatus.Accepted or ProcessRootCancellationAdmissionStatus.Completed;
+    }
+
     private bool Owns(long owner) => !disposed && generation == owner;
 
-    public void Dispose() => disposed = true;
+    private enum RequestState { None, Rejected, Accepted, Unconfirmed }
+
+    public void Dispose() {
+        disposed = true;
+        currentRead?.Cancel();
+    }
 }

@@ -965,6 +965,8 @@ public sealed record AgentChatRunOptions(
     bool RuntimeToolProvidersEnabled = true,
     bool WorkspaceToolsEnabled = true)
 {
+    public AgentPlanningOwner? PlanningOwner { get; init; }
+
     public ExecutionInvocationContext? Context { get; init; }
 
     public bool ToolCapabilitiesEnabled { get; init; } = true;
@@ -984,6 +986,8 @@ public sealed record ExecutionRunRequest(
     IReadOnlyList<string>? InputAttachmentPaths = null,
     AgentJsonSchemaOutputContract? JsonSchemaOutput = null)
 {
+    public AgentPlanningOwner? PlanningOwner { get; init; }
+
     [JsonIgnore]
     public AgentRuntimeTransientContext? TransientContext { get; init; }
 }
@@ -1030,23 +1034,89 @@ public sealed record ExecutionRunDetail(
     public IReadOnlyList<ExecutionWorkflowCheckpointRecord> Checkpoints { get; init; } = [];
     public IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts { get; init; } = [];
     public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
-}
-
-public sealed record ExecutionRunResult(
-    Guid ExecutionRunId,
-    Guid? ChatSessionId,
-    string ResponseText,
-    ChatMessageRecord? AssistantMessage,
-    AgentRunMetric Metric)
-{
-    public ExecutionState State { get; init; }
-
-    public AgentJsonSchemaOutputResult? StructuredOutput { get; init; }
 
     [JsonIgnore]
-    public AgentChatExecutionCompleted? ContextCompletionNotification { get; init; }
+    public AgentEffectContinuation? EffectContinuation { get; init; }
+
+    [JsonIgnore]
+    public AgentPlanningReview? PlanningReview { get; init; }
 }
 
+public sealed record ExecutionRunResult {
+    private ExecutionState state;
+    private AgentJsonSchemaOutputResult? structuredOutput;
+    private AgentChatExecutionCompleted? contextCompletionNotification;
+
+    public ExecutionRunResult(Guid ExecutionRunId, Guid? ChatSessionId, string ResponseText,
+        ChatMessageRecord? AssistantMessage, AgentRunMetric Metric)
+        : this(ExecutionRunId, ChatSessionId, ResponseText, AssistantMessage, Metric, null) {
+    }
+
+    [JsonConstructor]
+    public ExecutionRunResult(Guid ExecutionRunId, Guid? ChatSessionId, string ResponseText,
+        ChatMessageRecord? AssistantMessage, AgentRunMetric? Metric, AgentEffectContinuation? EffectContinuation) {
+        ArgumentNullException.ThrowIfNull(ResponseText);
+        if (EffectContinuation is null) {
+            ArgumentNullException.ThrowIfNull(Metric);
+        } else if (EffectContinuation.Persistence != AgentEffectCheckpointPersistence.Confirmed || EffectContinuation.Stop == AgentEffectReconciliationStop.SnapshotRead ||
+            EffectContinuation.ExecutionRunId != ExecutionRunId || EffectContinuation.ChatSessionId != ChatSessionId ||
+            Metric is not null || AssistantMessage is not null || ResponseText.Length != 0) {
+            throw new ArgumentException("Effect continuation requires confirmed waiting state without provider output.", nameof(EffectContinuation));
+        }
+        this.ExecutionRunId = ExecutionRunId;
+        this.ChatSessionId = ChatSessionId;
+        this.ResponseText = ResponseText;
+        this.AssistantMessage = AssistantMessage;
+        this.Metric = Metric;
+        this.EffectContinuation = EffectContinuation;
+        state = EffectContinuation is null ? default : ExecutionState.WaitingOnTool;
+    }
+
+    public Guid ExecutionRunId { get; }
+    public Guid? ChatSessionId { get; }
+    public string ResponseText { get; }
+    public ChatMessageRecord? AssistantMessage { get; }
+    public AgentRunMetric? Metric { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentEffectContinuation? EffectContinuation { get; }
+
+    public ExecutionState State {
+        get => state;
+        init {
+            if (EffectContinuation is not null && value != ExecutionState.WaitingOnTool) {
+                throw new ArgumentException("An effect continuation cannot be represented as a completed provider run.", nameof(value));
+            }
+            state = value;
+        }
+    }
+
+    public AgentJsonSchemaOutputResult? StructuredOutput {
+        get => structuredOutput;
+        init {
+            if (EffectContinuation is not null && value is not null) {
+                throw new ArgumentException("Receipt reconciliation does not produce structured provider output.", nameof(value));
+            }
+            structuredOutput = value;
+        }
+    }
+
+    [JsonIgnore]
+    public AgentChatExecutionCompleted? ContextCompletionNotification {
+        get => contextCompletionNotification;
+        init {
+            if (EffectContinuation is not null && value is not null) {
+                throw new ArgumentException("Receipt reconciliation cannot publish task completion.", nameof(value));
+            }
+            contextCompletionNotification = value;
+        }
+    }
+
+    public static ExecutionRunResult ForEffectContinuation(AgentEffectContinuation continuation) {
+        ArgumentNullException.ThrowIfNull(continuation);
+        return new(continuation.ExecutionRunId, continuation.ChatSessionId, string.Empty, null, null, continuation);
+    }
+}
 public sealed record ExecutionEvent(
     Guid EventId,
     Guid ExecutionRunId,

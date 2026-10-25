@@ -31,11 +31,14 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     internal const string RolePurpose = "Review the retained workflow result.";
     internal const string RoleStaffing = "One explicitly assigned workflow reviewer.";
     internal const string RoleSnapshot = "PC4 original resource snapshot.";
+    private const string CancellationRecoveryEnabled = "Processes:CancellationRecovery:Enabled";
+    private const string CancellationRecoveryIdleDelay = "Processes:CancellationRecovery:IdleDelay";
     private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("process-native-browser");
     private NativeApplication? app;
     private HttpClient? client;
     private readonly AcceptedRunReadFault readFault = new();
     private ProcessAuthoringBrowserControl? authoring;
+    private bool cancellationRecovery;
     private TestDatabaseProfile profile = null!;
     private string pack = string.Empty;
     internal Task ReadFailure => readFault.Observed.Task;
@@ -47,8 +50,8 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     internal IReadOnlyDictionary<string, WorkflowDefinition> Workflows { get; private set; } = new Dictionary<string, WorkflowDefinition>();
 
     internal static async Task<ProcessNativeBrowserHost> StartAsync(string upstream, bool allowVoice = false, bool failFirstRunRead = false,
-        ProcessAuthoringBrowserControl? authoring = null) {
-        var host = new ProcessNativeBrowserHost { authoring = authoring };
+        ProcessAuthoringBrowserControl? authoring = null, bool cancellationRecovery = false) {
+        var host = new ProcessNativeBrowserHost { authoring = authoring, cancellationRecovery = cancellationRecovery };
         try {
             await host.StartCoreAsync(upstream, allowVoice);
             host.readFault.Armed = failFirstRunRead;
@@ -96,7 +99,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
         StartApplication();
     }
     private void StartApplication() {
-        app = new(profile, pack, readFault, authoring);
+        app = new(profile, pack, readFault, authoring, cancellationRecovery);
         app.UseKestrel(0);
         client = app.CreateClient(new() { AllowAutoRedirect = false });
     }
@@ -197,14 +200,16 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
         await environment.DisposeAsync();
     }
     private sealed class NativeApplication(TestDatabaseProfile profile, string pack, AcceptedRunReadFault readFault,
-        ProcessAuthoringBrowserControl? authoring) : WebApplicationFactory<CanDoItAll.Web.Components.App> {
+        ProcessAuthoringBrowserControl? authoring, bool cancellationRecovery) : WebApplicationFactory<CanDoItAll.Web.Components.App> {
         protected override void ConfigureWebHost(IWebHostBuilder builder) {
             builder.UseEnvironment("Development");
             builder.UseContentRoot(Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "App", "CanDoItAll.Web"));
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(profile.CreateConfigurationValues(new Dictionary<string, string?> {
                 ["DevelopmentManager:TuningModeEnabled"] = "false",
                 ["Workbench:RuntimePresentation:EnableWindowsTerminal"] = "false",
-                [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
+                [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = cancellationRecovery ? "Application" : LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind,
+                [CancellationRecoveryEnabled] = cancellationRecovery.ToString(),
+                [CancellationRecoveryIdleDelay] = "00:00:00.025"
             })));
             builder.ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Warning));
             builder.ConfigureServices(services => {

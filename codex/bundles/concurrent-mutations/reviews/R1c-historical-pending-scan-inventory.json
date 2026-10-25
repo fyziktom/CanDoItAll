@@ -1,0 +1,81 @@
+{
+  "status": "Authored and independently source-reviewed; no blocking source finding. No build/test/capacity proof.",
+  "scope": "Successor of the reviewed historical cold graph. Preserve predecessor inventory; this is not independently transferable before that graph.",
+  "capturedUtc": "2026-10-17T02:48:39.148311Z",
+  "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+  "expectedDiscovery": 11,
+  "expectedRuntime": 11,
+  "newFacts": 5,
+  "existingFacts": 6,
+  "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Flat_sessions_beyond_the_former_entry_limit_remain_readable_without_writes|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Only_exact_selected_publication_names_refuse_a_large_session_directory|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Final_scan_detects_publication_of_an_absent_semantic_journal_after_payload_read|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Caller_cancellation_during_nonmatching_enumeration_propagates_and_the_next_read_is_usable|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.One_elapsed_budget_covers_all_read_phases_and_refuses_a_page_without_a_successor|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_pages_preserve_original_generation_and_reach_later_intents_without_workspace_coordination_or_writes|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_cursor_and_current_read_failures_disclose_no_snapshot_or_successor|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_final_witness_refuses_owner_changes_including_same_revision_byte_replacement|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_cancellation_drains_owner_reads_and_distinguishes_owner_outage_from_read_policy_failure|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_storage_refuses_pending_incomplete_and_oversized_files_without_recovery_or_initialization|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_chat_projection_scans_long_history_without_materializing_messages_and_refuses_oversized_tokens",
+  "selectedMethods": [
+    "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Flat_sessions_beyond_the_former_entry_limit_remain_readable_without_writes",
+    "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Only_exact_selected_publication_names_refuse_a_large_session_directory",
+    "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Final_scan_detects_publication_of_an_absent_semantic_journal_after_payload_read",
+    "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Caller_cancellation_during_nonmatching_enumeration_propagates_and_the_next_read_is_usable",
+    "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.One_elapsed_budget_covers_all_read_phases_and_refuses_a_page_without_a_successor",
+    "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_pages_preserve_original_generation_and_reach_later_intents_without_workspace_coordination_or_writes",
+    "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_cursor_and_current_read_failures_disclose_no_snapshot_or_successor",
+    "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_final_witness_refuses_owner_changes_including_same_revision_byte_replacement",
+    "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_cancellation_drains_owner_reads_and_distinguishes_owner_outage_from_read_policy_failure",
+    "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_storage_refuses_pending_incomplete_and_oversized_files_without_recovery_or_initialization",
+    "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_chat_projection_scans_long_history_without_materializing_messages_and_refuses_oversized_tokens"
+  ],
+  "inputs": [
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+      "managedPredecessorSha256": "30E930DF57502BAE324E8E57F12CF0DAA25050932D64AE1C24AB5A42E50184EB",
+      "mainObservedSha256": "2D356C8111D07813B5219A8F53B607117067EDFCDDF8535E9B96B5F3B03BBF0A",
+      "sha256": "47B8B4EC4CB76D08F7852E0CC1F88E22C505E4D648B07D3FF4C2BD431EFFC651"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "managedPredecessorSha256": "0F2C832D5862D684913ABA38D07ECF00597FE0930B6A1FC7027CD029B0BCEF6F",
+      "mainObservedSha256": null,
+      "sha256": "29108E60B68E4A12F2DF23C3B8BF57EDEC15E0C85E4EAA16620435E957A66694"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/AgentHistoricalWorkspaceRead.cs",
+      "managedPredecessorSha256": "B5DF29E2F469BD774428B272AE357BD22DFC4A570B6E1BE0CC48EEE39D03238F",
+      "mainObservedSha256": null,
+      "sha256": "41AAD4BC30C2A2F88615B6F278D549547E9E6BBCE775E5B95F3A6708890CC665"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.HistoricalRead.cs",
+      "managedPredecessorSha256": "2AE37A139875162F81E3707231D7A71EF56579F3E1AC9FD76B50DB5E3203FDEF",
+      "mainObservedSha256": null,
+      "sha256": "4A119BC35B07FAFAFFF7D2ECC7A09DDBCB4B023C4F7114DC90AA8BDE30CCA79C"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs",
+      "managedPredecessorSha256": "35D91EE0A67849566B90C007075CD10F640C17583FEFB3DD9327751AD049DC7C",
+      "mainObservedSha256": null,
+      "sha256": "3CD0723A1E0F263C8465F9FCCA2C2868F294601413BD73D616D6F609F375A49F"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalPendingPublicationScanTests.cs",
+      "managedPredecessorSha256": null,
+      "mainObservedSha256": null,
+      "sha256": "D3AB07DE0CB6ADBC846D770D1BA37B1838AFC8E91A823046F5F3BFE220514B55"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/R1c-historical-pending-scan.md",
+      "managedPredecessorSha256": null,
+      "mainObservedSha256": null,
+      "sha256": "1577F6C8E92ADDB5430C623ED3BF4364BF07810AD804D1B7E0D5B601008505A5"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-pending-scan-source.md",
+      "managedPredecessorSha256": null,
+      "mainObservedSha256": null,
+      "sha256": "3BCDDE26364F7B8F3058C49643EF2A13973ADE3BDBBFAF39D2C0EECC964E3F65"
+    }
+  ],
+  "sourceReview": {
+    "reviewer": "/root/agent_process_architecture",
+    "result": "No blocking source finding",
+    "initialScannerInventorySha256": "51B851172035F5D04998B24E18D69E7FCAB098EFDE61F975F5C802C63F5A6816",
+    "sharedJournalNamesAmendmentInventorySha256": "E39661C02883A04B298702A2ACB990BB5031CD2CD77C89629E65289CFDB8509C",
+    "execution": "Not run"
+  }
+}

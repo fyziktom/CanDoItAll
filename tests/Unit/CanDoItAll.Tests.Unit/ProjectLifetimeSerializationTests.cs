@@ -16,6 +16,9 @@ public sealed class ProjectLifetimeSerializationTests {
         Assert.NotEqual(Guid.Empty, first.LifetimeId);
         Assert.NotEqual(Guid.Empty, restored.LifetimeId);
         Assert.NotEqual(first.LifetimeId, restored.LifetimeId);
+        Assert.NotEqual(Guid.Empty, first.ConcurrencyToken);
+        Assert.NotEqual(Guid.Empty, restored.ConcurrencyToken);
+        Assert.NotEqual(first.ConcurrencyToken, restored.ConcurrencyToken);
         Assert.False(first.LegacyAgentAccessBindingEligible);
         Assert.False(restored.LegacyAgentAccessBindingEligible);
         Assert.Null(first.ExternalNamespace);
@@ -25,6 +28,7 @@ public sealed class ProjectLifetimeSerializationTests {
         Assert.Equal(serialized, JsonSerializer.Serialize(restored));
         using var expected = JsonDocument.Parse(legacy);
         using var actual = JsonDocument.Parse(serialized);
+        Assert.False(actual.RootElement.TryGetProperty(nameof(Project.ConcurrencyToken), out _));
         Assert.Equal(expected.RootElement.EnumerateObject().Select(property => property.Name)
                 .Concat([nameof(Project.ExternalNamespace), nameof(Project.ExternalKey)]).Order(),
             actual.RootElement.EnumerateObject().Select(property => property.Name).Order());

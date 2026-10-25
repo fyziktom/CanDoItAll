@@ -963,6 +963,12 @@ internal static class AgentEventsApi
                     context.RequestAborted);
                 return Results.Empty;
             }
+            catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+                await ServerSentEventResponseWriter.WriteEventAsync(context.Response, AgentServerEventNames.CommandFailed,
+                    CreateCommandFailed(operationId, AgentEffectRecoveryApiResults.CreateResponse(context, exception, knownExecutionRunId)),
+                    context.RequestAborted);
+                return Results.Empty;
+            }
             catch (Exception exception)
             {
                 logger.LogError(
@@ -992,19 +998,18 @@ internal static class AgentEventsApi
             }
 
             var runId = executionRunId(result);
-            var detail = await workspaceService.GetExecutionRunDetailAsync(
-                runId,
-                context.RequestAborted);
-            var pendingApprovals =
-                AgentActivityServerSentEventWriter.CreatePendingApprovals(
-                    detail.Approvals);
-            if (pendingApprovals.Count > 0)
-            {
-                await ServerSentEventResponseWriter.WriteEventAsync(
-                    context.Response,
-                    AgentServerEventNames.ApprovalRequired,
-                    new AgentApprovalRequired(operationId, runId, pendingApprovals),
-                    context.RequestAborted);
+            var effectContinuation = result switch {
+                ExecutionRunResult runResult => runResult.EffectContinuation,
+                AgentChatRunResult chatResult => chatResult.EffectContinuation,
+                _ => null
+            };
+            if (effectContinuation is null) {
+                var detail = await workspaceService.GetExecutionRunDetailAsync(runId, context.RequestAborted);
+                var pendingApprovals = AgentActivityServerSentEventWriter.CreatePendingApprovals(detail.Approvals);
+                if (pendingApprovals.Count > 0) {
+                    await ServerSentEventResponseWriter.WriteEventAsync(context.Response, AgentServerEventNames.ApprovalRequired,
+                        new AgentApprovalRequired(operationId, runId, pendingApprovals), context.RequestAborted);
+                }
             }
 
             await ServerSentEventResponseWriter.WriteEventAsync(
@@ -1042,6 +1047,10 @@ internal static class AgentEventsApi
             response.AgentId,
             response.ExecutionRunId,
             response.ChatSessionId,
-            response.ProviderFailureCategory);
+            response.ProviderFailureCategory) {
+                EffectContinuation = response.EffectContinuation,
+                EffectLeaseReleaseUnconfirmed = response.EffectLeaseReleaseUnconfirmed,
+                EffectActivityFinalizationFailed = response.EffectActivityFinalizationFailed
+            };
     }
 }

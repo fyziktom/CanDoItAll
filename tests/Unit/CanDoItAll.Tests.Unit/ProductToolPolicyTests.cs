@@ -33,7 +33,7 @@ public sealed class ProductToolPolicyTests {
     public void Every_moved_policy_has_exactly_one_owner_and_a_legacy_contract_row() {
         var names = MovedProductPolicies.Select(policy => policy.Name).Order(StringComparer.Ordinal).ToArray();
         var expected = LegacyPolicyRows.Select(row => ((string)row[0]).Split('|')[0]).Order(StringComparer.Ordinal).ToArray();
-        Assert.Equal(106, names.Length);
+        Assert.Equal(107, names.Length);
         Assert.Equal(names.Length, names.Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(expected, names);
     }
@@ -44,7 +44,7 @@ public sealed class ProductToolPolicyTests {
         using var second = new ServiceCollection().AddProductToolPolicies().BuildServiceProvider();
         var firstPolicies = first.GetRequiredService<AgentToolPolicyCatalog>();
         var secondPolicies = second.GetRequiredService<AgentToolPolicyCatalog>();
-        Assert.Equal(141, first.GetServices<ToolCapabilityMetadata>().Count());
+        Assert.Equal(142, first.GetServices<ToolCapabilityMetadata>().Count());
         Assert.Equal(firstPolicies.Capabilities.OrderBy(policy => policy.Name).Select(Describe),
             secondPolicies.Capabilities.OrderBy(policy => policy.Name).Select(Describe));
     }
@@ -211,6 +211,7 @@ project_structure_nodes_status_update|Mutation|true|true|ProjectStructureMutatio
 project_structure_nodes_to_new_subproject|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_structure_process_subprocess_launch|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_structure_project_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
+project_structure_project_definition_get|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false
 project_structure_project_lease_acquire|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_structure_project_update|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_structure_projects_list|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false

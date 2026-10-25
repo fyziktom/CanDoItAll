@@ -122,6 +122,34 @@ databases. Generate pending-model evidence and idempotent SQL into ignored
 `artifacts/providers-shared-premerge/schema`; do not apply it to a live profile as part
 of review. See [request history](../../../docs/provider-request-history.md).
 
+## Finite-operation metadata and Workspace current head
+
+`20261016233100_ExtractFiniteOperationEpochMetadata` renames the two Projects epoch/state
+tables into neutral Infrastructure metadata, preserving their rows and issued promises.
+The fixed Projects pool becomes part of each key. Projects retains its receipt table,
+payload codec and authorization; the migration does not rewrite receipt payloads.
+Preflight and postflight validate the actual PostgreSQL schema and retained history.
+Unexpected foreign keys, user triggers, incomplete active history or schema drift refuse
+the transaction. Empty databases still require the explicit activation bootstrap.
+
+The same migration adds Workspace settings revisions and a unique current-head marker.
+It retains every existing row and chooses the prior latest row by `UpdatedAtUtc DESC,
+Id ASC`. An empty Workspace table remains empty. Ordinary saves, business bootstrap and
+preference transfer all participate in the new head exclusion and revision contract.
+
+Apply this migration only at a stopped-host maintenance boundary with a compatible
+backup. The five-second lock acquisition limit bounds contention during the cutover;
+it is not a bound on total migration duration. Older binaries cannot use the renamed
+metadata or safely write Workspace settings. `Down` refuses before any DDL; rollback
+requires restoring a matching backup and binary, followed by the documented activation
+procedure. Do not create a compatibility view or restart an older writer against the
+new schema.
+
+Source review and validation are recorded in the
+[concurrent-mutations candidate](../../../codex/bundles/concurrent-mutations/validation/P04-C2-W1b-R1b-candidate.md).
+The focused migration tests cover retained-data and catalog invariants; they do not
+establish production-volume migration time or sustained maintenance capacity.
+
 ## Migration Validation
 
 The focused integration tests require the repository's PostgreSQL test service:

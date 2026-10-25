@@ -7,6 +7,25 @@ using Xunit.Abstractions;
 namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class DurableFileWriterTests(ITestOutputHelper output) {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Existing_private_replacement_never_creates_a_missing_directory_or_target(bool missingDirectory) {
+        using var directory = new TemporaryDirectory();
+        var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        writer.EnsureDirectory(directory.Path, directory.Path, requirePrivateUnixMode: true);
+        string parent = missingDirectory ? Path.Combine(directory.Path, "missing") : directory.Path;
+        string target = Path.Combine(parent, "activation.json");
+        var before = Directory.GetFileSystemEntries(directory.Path);
+        var failure = await Record.ExceptionAsync(() => writer.WriteTextAsync(directory.Path, target, "replacement", new() {
+            RequirePrivateUnixMode = true, RequireExistingPrivateTarget = true, CommitMode = DurableFileCommitMode.ReplaceExisting
+        }));
+        Assert.NotNull(failure);
+        Assert.False(File.Exists(target));
+        Assert.Equal(!missingDirectory, Directory.Exists(parent));
+        Assert.Equal(before, Directory.GetFileSystemEntries(directory.Path));
+    }
+
     [Fact]
     public async Task Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file()
     {
@@ -85,6 +104,53 @@ public sealed class DurableFileWriterTests(ITestOutputHelper output) {
 
         await writer.WriteTextAsync(directory.Path, targetPath, "recovered", options);
         Assert.Equal("recovered", await File.ReadAllTextAsync(targetPath));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Existing_coordination_never_recreates_a_missing_root_or_parent(bool missingRoot) {
+        using var directory = new TemporaryDirectory();
+        var root = missingRoot ? Path.Combine(directory.Path, "missing-root") : directory.Path;
+        var parent = Path.Combine(root, "missing-parent");
+        var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        await Assert.ThrowsAsync<PhysicalPathValidationException>(() => writer.AcquireExistingCoordinationAsync(
+            root, Path.Combine(parent, "workspace.lock"), TimeSpan.FromMilliseconds(100), false).AsTask());
+        Assert.False(Directory.Exists(parent));
+        Assert.Equal(!missingRoot, Directory.Exists(root));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(directory.Path));
+    }
+
+    [Fact]
+    public async Task Existing_coordination_excludes_a_normal_writer_and_cancellation_leaves_no_extra_files() {
+        using var directory = new TemporaryDirectory();
+        var target = Path.Combine(directory.Path, "catalog.json");
+        var lockPath = target + ".candoitall.lock";
+        var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        await writer.WriteTextAsync(directory.Path, target, "original");
+        await using var held = await writer.AcquireExistingCoordinationAsync(directory.Path, lockPath, TimeSpan.FromSeconds(1), false);
+        await Assert.ThrowsAsync<TimeoutException>(() => writer.WriteTextAsync(directory.Path, target, "blocked",
+            DurableFileWriteOptions.Default with { LockTimeout = TimeSpan.FromMilliseconds(100) }));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => writer.AcquireExistingCoordinationAsync(
+            directory.Path, lockPath, TimeSpan.FromSeconds(5), false, cancellation.Token).AsTask());
+        Assert.Equal("original", await File.ReadAllTextAsync(target));
+        await held.DisposeAsync();
+        await writer.WriteTextAsync(directory.Path, target, "after release");
+        Assert.Equal("after release", await File.ReadAllTextAsync(target));
+        Assert.Equal(new[] { target, lockPath }.Order(StringComparer.Ordinal),
+            Directory.EnumerateFiles(directory.Path).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task Existing_coordination_cancellation_before_admission_creates_no_lock() {
+        using var directory = new TemporaryDirectory();
+        var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => writer.AcquireExistingCoordinationAsync(
+            directory.Path, Path.Combine(directory.Path, "workspace.lock"), TimeSpan.FromSeconds(1), false, cancellation.Token).AsTask());
+        Assert.Empty(Directory.EnumerateFileSystemEntries(directory.Path));
     }
 
     [Fact]

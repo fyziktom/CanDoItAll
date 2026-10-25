@@ -29,7 +29,7 @@ public sealed class ApiAdministrationDurabilityTests {
                 throw new IOException("Injected acknowledgement fault.");
             }
         });
-        var registry = new FileApiTokenRegistry(Paths(environment, writer), writer);
+        var registry = new FileApiTokenRegistry(Paths(environment, writer), writer, new PhysicalFileSystemPathPolicyFactory());
         var options = Options.Create(new ApiAccessOptions { Authorization = new() {
             Enabled = true, SigningKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
         } });
@@ -67,7 +67,7 @@ public sealed class ApiAdministrationDurabilityTests {
                 throw new IOException("Injected acknowledgement fault.");
             }
         });
-        var store = new FileApiUserStore(Paths(environment, writer), writer);
+        var store = new FileApiUserStore(Paths(environment, writer), writer, new PhysicalFileSystemPathPolicyFactory());
         var service = new ApiUserAdministrationService(store, new(), new AllowedAccess(), Options.Create(new ApiAccessOptions()), new SystemClock(), NullLogger<ApiUserAdministrationService>.Instance);
         var password = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
         ApiUserDetails? before = action == ApiWriteAction.CreateAccount ? null : await service.CreateAsync(new("durable-user", "Before", password, true, []));
@@ -95,7 +95,7 @@ public sealed class ApiAdministrationDurabilityTests {
     public async Task Presentation_preserves_committed_warning_from_the_real_account_owner(ApiWriteAction action) {
         await using var environment = CanDoItAllTestEnvironment.Create("api-account-warning");
         var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
-        var store = new FileApiUserStore(Paths(environment, writer), writer);
+        var store = new FileApiUserStore(Paths(environment, writer), writer, new PhysicalFileSystemPathPolicyFactory());
         var logger = new FaultLogger();
         var service = new ApiUserAdministrationService(store, new(), new AllowedAccess(), Options.Create(new ApiAccessOptions()), new SystemClock(), logger);
         var password = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));

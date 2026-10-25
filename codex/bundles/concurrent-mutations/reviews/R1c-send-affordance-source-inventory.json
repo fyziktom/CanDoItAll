@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceOnlyUnbuiltUnexecuted",
+  "changedProductionFiles": 4,
+  "changedTestRows": 0,
+  "existingNativeRows": 57,
+  "historicalNativeIncluded": false,
+  "inputs": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+      "mainBaseSha256": "AFBA42160672FAE46C13A71CA987820F28E9984E52D2C6FCC6053D3ADB058F86",
+      "sha256": "F7D4BBEB738D365597696AA43FC855379FE2A596794A072E3AD26B2BD0A843A7",
+      "bytes": 3165
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
+      "mainBaseSha256": "CD417D1638A8370C86EE55A81685446BD4A7ACC438A6D39A41B0F80939D1FD4A",
+      "sha256": "B969F2411219543B6416959762755C6E1BD789499C57550EC2D7BB08E894C32C",
+      "bytes": 21557
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
+      "mainBaseSha256": "A0AF269E38F7D155904F60BB569F0F61BAFEA9A06D54E74611E6FCEC9895D800",
+      "sha256": "4993FFC1458FF37B955A88A5120D71F05016ED1035B840F4A2C8360B0A11892C",
+      "bytes": 20251
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspacePresentation.cs",
+      "mainBaseSha256": "9EBBBE42C1BA87850B5D1B1A1046A609C54F3C7FA306077D1013D47491307D0A",
+      "sha256": "672BD23281EC158DE4BCC1BD31C5A7809D7C0223F5EE5A5CD78C15F8CAC12F41",
+      "bytes": 3393
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-send-affordance-repair.md",
+      "mainBaseSha256": null,
+      "sha256": "B9AA733F1C5E94044F6199A1D9EB00BF9ABB7D3B02DAC2142A6494E6032CAEF2",
+      "bytes": 2260
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-send-affordance-rendering-entries.json",
+      "mainBaseSha256": null,
+      "sha256": "99F03E1D4DFBC3A70A82633A6F86F6F5A10378D2C8A0C67DCA1504B9CC85C3B8",
+      "bytes": 5753
+    }
+  ]
+}

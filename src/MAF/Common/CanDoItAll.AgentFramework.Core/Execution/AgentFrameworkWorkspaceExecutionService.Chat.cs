@@ -37,8 +37,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     public async Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
         Guid agentId,
         Guid? chatSessionId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? initialTitle = null)
     {
+        if (chatSessionId is not null && initialTitle is not null) {
+            throw new ArgumentException("An initial title applies only to a new chat session.", nameof(initialTitle));
+        }
+        var title = initialTitle is null ? "New exploration thread" : ChatSessionTitleChange.Normalize(initialTitle);
         if (chatSessionId.HasValue)
         {
             if (store is ISandboxWorkspaceChatQueryStore chatQueryStore)
@@ -60,12 +65,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var catalog = await store.LoadCatalogAsync(cancellationToken);
             EnsureAgentExists(catalog, agentId);
-            var now = DateTimeOffset.UtcNow;
+            var now = executionClock.GetUtcNow();
             return await chatSessionStore.CreateChatSessionAsync(
                 new ChatSessionRecord(
                     Id: Guid.NewGuid(),
                     AgentId: agentId,
-                    Title: "New exploration thread",
+                    Title: title,
                     CreatedAtUtc: now,
                     UpdatedAtUtc: now,
                     RuntimeSessionKey: string.Empty,
@@ -85,9 +90,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             createdSession = new ChatSessionRecord(
                 Id: Guid.NewGuid(),
                 AgentId: agentId,
-                Title: "New exploration thread",
-                CreatedAtUtc: DateTimeOffset.UtcNow,
-                UpdatedAtUtc: DateTimeOffset.UtcNow,
+                Title: title,
+                CreatedAtUtc: executionClock.GetUtcNow(),
+                UpdatedAtUtc: executionClock.GetUtcNow(),
                 RuntimeSessionKey: string.Empty,
                 SerializedSessionStateJson: null,
                 Messages: [],
@@ -108,26 +113,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid agentId,
         Guid chatSessionId,
         string title,
+        string expectedTitle,
         CancellationToken cancellationToken = default)
     {
-        var normalizedTitle = NormalizeChatSessionTitle(title);
-        if (store is ISandboxWorkspaceChatQueryStore chatQueryStore &&
-            store is ISandboxWorkspaceChatSessionStore chatSessionStore)
-        {
-            var catalog = await store.LoadCatalogAsync(cancellationToken);
-            EnsureAgentExists(catalog, agentId);
-            var session = EnsureAgentOwnsSession(
-                await chatQueryStore.GetChatSessionAsync(chatSessionId, cancellationToken),
-                agentId,
-                chatSessionId);
-
-            return await chatSessionStore.UpdateChatSessionAsync(
-                session with
-                {
-                    Title = normalizedTitle,
-                    UpdatedAtUtc = DateTimeOffset.UtcNow
-                },
-                cancellationToken);
+        ArgumentNullException.ThrowIfNull(expectedTitle);
+        var change = new ChatSessionTitleChange(agentId, chatSessionId, expectedTitle,
+            ChatSessionTitleChange.Normalize(title), executionClock.GetUtcNow());
+        if (store is ISandboxWorkspaceChatSessionStore chatSessionStore) {
+            return await chatSessionStore.RenameChatSessionAsync(change, cancellationToken);
         }
 
         ChatSessionRecord? renamedSession = null;
@@ -138,11 +131,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             EnsureAgentExists(catalog, agentId);
 
             var session = EnsureAgentOwnsSession(executionState, agentId, chatSessionId);
-            renamedSession = session with
-            {
-                Title = normalizedTitle,
-                UpdatedAtUtc = DateTimeOffset.UtcNow
-            };
+            renamedSession = change.Apply(session);
 
             return SandboxWorkspaceDocument.Combine(
                 catalog,
@@ -222,7 +211,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             AutoApprovePendingToolCalls: false,
             InputAttachmentPaths: attachmentPaths)
         {
-            TransientContext = options.TransientContext
+            TransientContext = options.TransientContext,
+            PlanningOwner = options.PlanningOwner
         };
         var result = await ExecuteRunEntryAsync(
             activityOperation,
@@ -233,7 +223,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return new AgentChatRunResult(
             ChatSessionId: result.ChatSessionId ?? throw new InvalidOperationException("Chat-backed execution runs must return a chat session id."),
             AssistantMessage: result.AssistantMessage ?? throw new InvalidOperationException("Chat-backed execution runs must produce an assistant message."),
-            Metric: result.Metric)
+            Metric: result.Metric ?? throw new InvalidOperationException("Provider-backed chat requires its actual run metric."))
         {
             ExecutionRunId = result.ExecutionRunId,
             State = result.State,
@@ -309,12 +299,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return ToAgentChatRunResult(result, chatSessionId);
     }
 
-    private static AgentChatRunResult ToAgentChatRunResult(ExecutionRunResult result, Guid chatSessionId)
-    {
+    internal static AgentChatRunResult ToAgentChatRunResult(ExecutionRunResult result, Guid chatSessionId) {
+        if (result.EffectContinuation is { } continuation) {
+            if (continuation.ChatSessionId != chatSessionId) {
+                throw new InvalidOperationException("Receipt continuation cannot change the original chat.");
+            }
+            return AgentChatRunResult.ForEffectContinuation(continuation);
+        }
         return new AgentChatRunResult(
             ChatSessionId: result.ChatSessionId ?? chatSessionId,
             AssistantMessage: result.AssistantMessage ?? throw new InvalidOperationException("Chat-backed approval continuations must produce an assistant message."),
-            Metric: result.Metric)
+            Metric: result.Metric ?? throw new InvalidOperationException("Provider-backed chat requires its actual run metric."))
         {
             ExecutionRunId = result.ExecutionRunId,
             State = result.State,
@@ -397,7 +392,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
             currentSession = currentSession with
             {
-                UpdatedAtUtc = DateTimeOffset.UtcNow,
+                UpdatedAtUtc = executionClock.GetUtcNow(),
                 Compatibility = ChatSessionRuntimeCompatibilityAdapter.CreateCompatibility(
                     currentResponse.RuntimeSessionKey,
                     currentResponse.SerializedSessionStateJson,
@@ -475,7 +470,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var decisions = expected.Select(approval => new PendingToolApprovalDecision(approval.ApprovalId, true) {
                 ToolAdmission = approval.ToolAdmission
             }).ToArray();
-            var now = DateTimeOffset.UtcNow;
+            var now = executionClock.GetUtcNow();
             var audit = ExecutionRunStateTransitions.ApplyApprovalDecision(current.Approvals, current.Run,
                 decisions, now, "auto-approval", runId.ToString("N"), toolPolicies);
             var run = ExecutionRunStateTransitions.CreateContinuationStartRun(current.Run, true, true, now) with {

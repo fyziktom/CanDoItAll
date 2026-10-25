@@ -2,6 +2,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -47,16 +48,28 @@ public partial class ProjectStructurePage
         projectCreateParentOpening = parent;
         projectHierarchyDialogBeforeCreate = dialog;
         projectHierarchyDialog = null;
-        var draft = new ProjectEditorDraft(await ProjectsService.GetAsync(null));
-        var summaries = await ProjectsService.ListAsync();
-        if (!IsCurrentAuthoring(opening, projectCreateOpening) || !ReferenceEquals(parent, hierarchyOpening)) {
-            return;
+        try {
+            var acquired = await ProjectCreateDefinitions.AcquireEditorAsync(null, deferredCompletionCts.Token);
+            var (context, pending) = await ReadProjectCreatePendingAsync(acquired.Scope);
+            var summaries = await ProjectsService.ListAsync();
+            if (!IsCurrentAuthoring(opening, projectCreateOpening) || !ReferenceEquals(parent, hierarchyOpening)) {
+                return;
+            }
+            projectCreateDraft = new(acquired.Model, acquired.Scope);
+            projectCreateContext = context;
+            projectCreatePending = pending;
+            projectCreateProjectSummaries = summaries;
+            projectCreateWizardStep = 0;
+            projectCreateMessage = null;
+            showProjectCreateModal = true;
+        } catch (Exception exception) {
+            if (IsCurrentAuthoring(opening, projectCreateOpening)) {
+                projectCreateRecoveryNotice = "Project creation is unavailable because its original context or retained saves could not be read. Open Projects recovery before trying again.";
+                Logger.LogWarning(exception, "Workbench root-create editor could not acquire its original dataset context.");
+                projectCreateOpening = null;
+                await RestoreProjectHierarchyAsync(opening, parent, dialog);
+            }
         }
-        projectCreateDraft = draft;
-        projectCreateProjectSummaries = summaries;
-        projectCreateWizardStep = 0;
-        projectCreateMessage = null;
-        showProjectCreateModal = true;
         await RenderAuthoringOutcomeAsync();
     }
 
@@ -64,6 +77,7 @@ public partial class ProjectStructurePage
         if (opening is null || !ReferenceEquals(opening, projectCreateOpening)) {
             return;
         }
+        RetireProjectCreateSession();
         projectCreateOpening = null;
         showProjectCreateModal = false;
         projectCreateMessage = null;
@@ -120,74 +134,6 @@ public partial class ProjectStructurePage
 
     private void NextProjectCreateStep()
         => projectCreateWizardStep = Math.Min(ProjectCreateWizardSteps.Length - 1, projectCreateWizardStep + 1);
-
-    private async Task SaveProjectCreateAsync(ProjectStructureAuthoringOpening? opening, ProjectEditorDraft target,
-        ProjectEditorSubmission submitted, bool openStructure = false) {
-        if (opening is null || !showProjectCreateModal || !ReferenceEquals(target, projectCreateDraft) ||
-            !target.CanMutate || !target.Validate() || !TryBeginAuthoring(opening, projectCreateOpening)) {
-            return;
-        }
-        var parent = projectCreateParentOpening;
-        var parentDialog = projectHierarchyDialogBeforeCreate;
-        var targetId = Guid.NewGuid();
-        var submissionId = Guid.NewGuid();
-        target.Mutation = ProjectEditorMutationState.Saving;
-        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, submissionId, opening.Context.Admission,
-            ProjectStructureAuthoringOperation.CreateProject, ProjectStructureAuthoringResultKind.Unconfirmed,
-            $"Creation of project {targetId:D} was not confirmed. Inspect the project inventory before another create.") { TargetProjectId = targetId };
-        try {
-            var reservation = await InsightsAdmissions.ReserveCreationAsync(targetId, opening.Id, submissionId);
-            var result = await ProjectsService.CreateEditorAsync(reservation, submitted.Model);
-            if (result.IsFailure) {
-                target.Mutation = ProjectEditorMutationState.Ready;
-                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected,
-                    Message = string.Join(" ", result.Errors.Select(error => error.Message)) };
-            } else {
-                target.Acknowledge(submitted, result.Value!);
-                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.PartialCommit, Editor = result.Value,
-                    Message = $"Project {targetId:D} was saved. Starter-object completion is unconfirmed; inspect Structure before another write." };
-                if (submitted.Seeds.Count > 0) {
-                    target.Mutation = ProjectEditorMutationState.Seeding;
-                    if (ProjectWorkbenchSeedService is not IAdmittedProjectWorkbenchSeedService seeds) {
-                        throw new InvalidOperationException("The original project lifetime requires the admitted starter-object owner.");
-                    }
-                    await seeds.SeedProjectObjectsAsync(result.Value!.Project, submitted.Seeds.Select(seed => seed.Value).ToArray());
-                    target.AcknowledgeSeeds(submitted);
-                }
-                target.Mutation = ProjectEditorMutationState.Ready;
-                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
-                    Message = $"{result.Value!.Name} was created. Select it below to connect it." };
-            }
-        } catch (Exception exception) {
-            target.Mutation = outcome.Editor is null ? ProjectEditorMutationState.SaveOutcomeUnknown : ProjectEditorMutationState.SeedOutcomeUnknown;
-            opening.RequiresObservation = true;
-            outcome = outcome with { Failure = exception };
-        } finally {
-            opening.IsBusy = false;
-        }
-        target.Message = outcome.Message;
-        target.IsError = outcome.Kind != ProjectStructureAuthoringResultKind.Committed;
-        RecordAuthoringOutcome(opening, outcome);
-        if (IsCurrentAuthoring(opening, projectCreateOpening) && ReferenceEquals(target, projectCreateDraft)) {
-            projectCreateMessage = outcome.Message;
-            if (outcome.Kind == ProjectStructureAuthoringResultKind.Committed && target.EditRevision == submitted.EditRevision) {
-                showProjectCreateModal = false;
-                if (openStructure) {
-                    projectCreateOpening = null;
-                    projectHierarchyDialogBeforeCreate = null;
-                    CloseProjectHierarchyDialog();
-                    OpenStructure(targetId);
-                } else {
-                    await RestoreProjectHierarchyAsync(opening, parent, parentDialog, targetId);
-                    if (ReferenceEquals(projectCreateOpening, opening)) {
-                        projectCreateOpening = null;
-                        projectCreateMessage = null;
-                    }
-                }
-            }
-        }
-        await RenderAuthoringOutcomeAsync();
-    }
 
     private Task DeleteProjectCreateAsync()
         => Task.CompletedTask;

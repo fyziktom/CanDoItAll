@@ -11,6 +11,70 @@ public sealed class ProjectStructureGanttTaskDialogTests
     private static readonly Guid ProjectId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly DateTimeOffset StartUtc = new(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
 
+    [Theory]
+    [InlineData(ProjectTaskExecutionState.NotStarted, 28, "0", true)]
+    [InlineData(ProjectTaskExecutionState.Completed, 28, "100", true)]
+    [InlineData(ProjectTaskExecutionState.Cancelled, 62, "-1", true)]
+    [InlineData(ProjectTaskExecutionState.Started, 40, "40", false)]
+    [InlineData(ProjectTaskExecutionState.Unknown, -1, "-1", false)]
+    public void Actual_progress_reflects_execution_state_instead_of_the_canvas_hint(
+        ProjectTaskExecutionState state, int hint, string displayed, bool disabled) {
+        using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var model = new ProjectStructureGanttTaskEditModel(
+            new("custom:execution-progress"), "Execution progress", StartUtc, StartUtc.AddHours(8),
+            hint, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, null), null,
+            Execution: new ProjectTaskExecutionSnapshot(state, null, null));
+
+        _ = OpenEditDialog(context, model, []);
+
+        var progress = host.WaitForElement("[data-testid='project-structure-gantt-task-progress']");
+        Assert.Equal(displayed, progress.GetAttribute("value"));
+        Assert.Equal(disabled, progress.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Execution_state_changes_update_visible_progress_and_preserve_the_editable_draft() {
+        using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var model = new ProjectStructureGanttTaskEditModel(
+            new("custom:execution-progress"), "Execution progress", StartUtc, StartUtc.AddHours(8),
+            40, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, null), null,
+            Execution: new ProjectTaskExecutionSnapshot(ProjectTaskExecutionState.Started, StartUtc, null));
+        _ = OpenEditDialog(context, model, []);
+
+        host.WaitForElement("[data-testid='project-structure-gantt-task-progress']").Change("65");
+        host.Find("[data-testid='project-structure-gantt-task-execution-state']").Change("Completed");
+
+        var progress = host.Find("[data-testid='project-structure-gantt-task-progress']");
+        Assert.Equal("100", progress.GetAttribute("value"));
+        Assert.True(progress.HasAttribute("disabled"));
+
+        host.Find("[data-testid='project-structure-gantt-task-execution-state']").Change("Started");
+
+        progress = host.Find("[data-testid='project-structure-gantt-task-progress']");
+        Assert.Equal("65", progress.GetAttribute("value"));
+        Assert.False(progress.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Viewing_execution_backed_progress_does_not_rewrite_the_stored_hint() {
+        using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var model = new ProjectStructureGanttTaskEditModel(
+            new("custom:execution-progress"), "Execution progress", StartUtc, StartUtc.AddHours(8),
+            28, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, null), null,
+            Execution: ProjectTaskExecutionSnapshot.NotStarted);
+        var resultTask = OpenEditDialog(context, model, []);
+
+        Assert.Equal("0", host.WaitForElement("[data-testid='project-structure-gantt-task-progress']").GetAttribute("value"));
+        host.Find("[data-testid='project-structure-gantt-task-submit']").Click();
+
+        var result = Assert.IsType<ProjectStructureTaskEditDialogResult>(await resultTask.WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.Equal(28, result.ProgressPercent);
+        Assert.Equal(ProjectTaskExecutionSnapshot.NotStarted, result.Execution);
+    }
+
     [Fact]
     public async Task Duration_and_end_fields_keep_one_consistent_schedule()
     {

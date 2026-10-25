@@ -1,0 +1,211 @@
+{
+  "checkout": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "status": "Source frozen; no W1b execution",
+  "files": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceSettingsMutationContracts.cs",
+      "bytes": 8015,
+      "sha256": "4462EF8B4309DF00796DE02DDD71BF838E140591D98DDC8677F9CFAB9086BA67"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceOwnerContracts.cs",
+      "bytes": 2189,
+      "sha256": "969B50A54727D49DBD399D46388707C660BCC3A6BF7EF91DC934C520E76930A2"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Persistence/WorkspaceSettingsHeadStore.cs",
+      "bytes": 4080,
+      "sha256": "6B161EFA6900397059907B0D35F238276D41EE6C8928A640F7A8CA6BE9A04FC7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceSettingsWriter.cs",
+      "bytes": 9563,
+      "sha256": "D1F1545DCC38990A3F43EE596233295360F0BDEB65BEAB9C709D1FE8D9D72FF6"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
+      "bytes": 4330,
+      "sha256": "BC9AC18180E64D06D4BBC0D797D65A62ECC1E56E2197A7F7B4A112B5AB520E6E"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs",
+      "bytes": 3610,
+      "sha256": "DEEAF1EB4CB5B28A14CA147457034FE35997B1E24586588AA539185E5ECA697C"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceDefaultsBootstrapService.cs",
+      "bytes": 2262,
+      "sha256": "7DF8A4FE7E885652D15007B282CE46DB743CACFCD6C823F7E7490C3D248B2A7E"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/DatabaseTransfer/WorkspaceDefaultProviderDatabaseTransferHandler.cs",
+      "bytes": 4240,
+      "sha256": "AFB2843E67D33598AB70B2EDA4B3CF27191BEA6AA564DFB9E8117B38F4B76F7B"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceDefaultsOwner.cs",
+      "bytes": 1261,
+      "sha256": "4F916CCB2FC3B9D0C522235DA18397EBDD4F1A186F13B56A031F65DEA45DAB1F"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceDefaultsController.cs",
+      "bytes": 11424,
+      "sha256": "7738ED8307C6ECF01451A9398398A565A1CCAB661E39C027A88EE530A30F7D13"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderDefaultsBootstrapService.cs",
+      "bytes": 30598,
+      "sha256": "72469DC363C2A8ECF708A2D292FE4628D642B9A6C8C5EC1D7448EF3E0864D5F1"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderDefaultsBootstrapStage.cs",
+      "bytes": 3561,
+      "sha256": "7EDFF7AA8CB18F7F59510CA06132AC30F568459B4E9F6084BD5E6CC7C5C744A2"
+    },
+    {
+      "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+      "bytes": 40039,
+      "sha256": "3FBF7996388665A2A998B3EE84C3267CFCBD0DDF7D35577024C92258A47F3274"
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsState.cs",
+      "bytes": 4033,
+      "sha256": "00B34E264863C356F0E1B96F759449A878959DEA7E831F8594FC967F0D38AAB8"
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsSurface.razor",
+      "bytes": 6845,
+      "sha256": "9906A89CE66AD5E361BD7972452B78DB405EC7DF9A743D7D4FD54FC6A7F51B58"
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsComparison.razor",
+      "bytes": 804,
+      "sha256": "BE04F2B428CAFF6DD91CBE24AB5D76623ACDD910DB2A07AD1FE14358230F808F"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/WorkspaceScenarioStore.cs",
+      "bytes": 12204,
+      "sha256": "64B1BA337ACA7E7546C8579AEE2A343B585DCD8F89FBB4E7D719A36493DFDB03"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/WorkspaceSettingsApi.cs",
+      "bytes": 5668,
+      "sha256": "C2F4245660D84CF0AEF401C7B09A2B1F83F9E4B3C0945CDB7DC4D71EC0A0D72C"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/WorkspaceSettingsOpenApiContract.cs",
+      "bytes": 11885,
+      "sha256": "CA216CC24B8096EC989DCEE51845CFE5334C782A272B9BD7A9B5D497628F0C88"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs",
+      "bytes": 17731,
+      "sha256": "493C4F5CDD7CBE534452EC713DD075A61BAC12A63976AEEE3A4205278909B23F"
+    },
+    {
+      "path": "docs/architecture/components-decoupling-register.json",
+      "bytes": 2027616,
+      "sha256": "B7265141E3A9DFBD7D3CF48DB03A9DEC2126C4A8C238261CA9C82814D11E061C"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Workspace.UI.Tests/WorkspaceDefaultsConcurrencyTests.cs",
+      "bytes": 7325,
+      "sha256": "E17844199202894F45860D47E19B5627458DA1F658E443FC1D5012F7B52A639D"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Workspace.UI.Tests/WorkspaceDraftTests.cs",
+      "bytes": 16012,
+      "sha256": "6750779C63F09C35CEE1BBF6923929C78F7AE15C9BC383C7F158B16D6112F006"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkspaceSettingsConcurrencyTests.cs",
+      "bytes": 18311,
+      "sha256": "155BEDDEC616A4D4F063AF79F1E3ECEC103C2042FD811213728E21A2E2702373"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkspaceSettingsHttpOutcomeTests.cs",
+      "bytes": 14596,
+      "sha256": "C2F9BFD34BD733534E8DB2810DE7D80C08A5664AA407046F5AF68DEF445864AA"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkspaceCoreOwnerOutcomeTests.cs",
+      "bytes": 15541,
+      "sha256": "1F6B034ED02DE54BC6D3CC7B864449A045BC392E14AC546AA6FA0B93238914E4"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkspaceSettingsOwnerPersistenceTests.cs",
+      "bytes": 5510,
+      "sha256": "4BF253B2C9ECB417DADEAB5AEB5C453AA07C48CE3FF3C5D2ACF13E80256D9A9C"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DataSourcesOwnerTests.cs",
+      "bytes": 15241,
+      "sha256": "C4CABEE88095DC9C3EB3194B3A4C174632602508F0125C812FD0D96E45A91BA6"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ApiUserSessionIntegrationTests.cs",
+      "bytes": 14634,
+      "sha256": "C23191258DDD11B0D936E9BAFDF4EFB50CEEFB34EB5612E6D7788167DAA0C583"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ApiSectionPermissionsTests.cs",
+      "bytes": 9703,
+      "sha256": "D252C61746F1B8A4F2C2772863A500232BCFD291E14DFBFACD2EF7EF858C79D6"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/BusinessBootstrapOwnerIntegrationTests.cs",
+      "bytes": 20084,
+      "sha256": "AEC055B0DCC444464FB652782AF7D6E00E0CB99FF4B09C0C29B5960E29E0C121"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProviderHistorySourceProjectionIntegrationTests.cs",
+      "bytes": 27369,
+      "sha256": "47CF63F8716DD73A73164202D3823DF8FEEF8D0A459500F418B300797EDFFF0D"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProviderSecretTransferOwnerTests.cs",
+      "bytes": 19853,
+      "sha256": "1CA628A7090C50F101C8F61E6252EE41FB4CBBE7E46B14BACE0A5618186B2805"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderBackendCheckpointIntegrationTests.cs",
+      "bytes": 67616,
+      "sha256": "02AEFE10F382F78CE1646C9270B8BE4153A4F51D4B1F326B9FA1D0E1575C6E98"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderHybridSelectionTests.cs",
+      "bytes": 34285,
+      "sha256": "4CD037E5686C778EF82F035ACC4813F50FD318672B340C0DB7838AF4A4A243F9"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkspacePreferenceTransferOwnerTests.cs",
+      "bytes": 17777,
+      "sha256": "15417368A2F8F373A55015A0EC09DA60D3ABC69DAE8B71A9014D70E16EA81041"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProviderDatabaseTransferTests.cs",
+      "bytes": 10875,
+      "sha256": "64EF6B96D25A51F97A643EC8869D7760525BFCB9EF51B46064B39AF2A1785303"
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserHost.cs",
+      "bytes": 13085,
+      "sha256": "F4EC9EABB6263D5E96260A7328D7E8E876DE1947C94D71BDA1E9673B58F85D53"
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/WorkspaceSettingsBrowserTests.cs",
+      "bytes": 22022,
+      "sha256": "A0458B44507083150738563DFBBF5E43A32160F590C098AC7FE385246FA5A0DA"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P05-W1b-current-head-cutover.md",
+      "bytes": 16115,
+      "sha256": "531C5D7BCC1580B59265E45EE5C2EAEC5CB5AA5975AC4511D7E7CCD7289F4FCE"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-W1b-current-head-source.md",
+      "bytes": 6624,
+      "sha256": "32E9010991DE17B5ECCD494A8A96F32E25890EB8533254F2DE976E93FE5E3A99"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Application;
 
@@ -33,14 +34,36 @@ public sealed partial class ProjectProcessExecutionMutationService {
 
     private sealed class ProcessProjectSourceLease(ProcessExecutionDispatchAuthority dispatch,
         ProjectProcessLaunchAuthorityService.ProjectProcessProjectAuthorityLease source,
-        IProcessExecutionMutationGuard guard) : IProjectMutationSourceLease {
+        IProcessExecutionMutationGuard guard) : IProjectMutationSourceLease, IProjectGovernedInvocationLease {
         private int disposed;
         public IReadOnlyCollection<ProjectWriteAdmission> SourceProjects => source.SourceProjects;
+        public ValueTask<AgentToolInvocationPublicationLease> AcquireInvocationAsync(AgentToolInvocationClaim claim, CancellationToken cancellationToken) {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            return source.AcquireInvocationAsync(claim, cancellationToken);
+        }
+
+        public ProjectDeletionSourceRecovery CaptureDeletionRecoverySource() {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            return source.CaptureDeletionRecoverySource();
+        }
 
         public async Task RequireForMutationAsync(CancellationToken cancellationToken = default) {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
             await guard.RequireForMutationAsync(dispatch, cancellationToken);
             await source.RequireForMutationAsync(cancellationToken);
+        }
+
+        public async Task RequireForDeletionCommitAsync(ProjectDeletionCommitTarget deletion, CancellationToken cancellationToken = default) {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            await guard.RequireForMutationAsync(dispatch, cancellationToken);
+            await source.RequireForDeletionCommitAsync(deletion, cancellationToken);
+        }
+
+        public async Task RequireForReservedCancellationCommitAsync(ProjectReservationCancellationTarget cancellation,
+            CancellationToken cancellationToken = default) {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            await guard.RequireForMutationAsync(dispatch, cancellationToken);
+            await source.RequireForReservedCancellationCommitAsync(cancellation, cancellationToken);
         }
 
         public async ValueTask DisposeAsync() {

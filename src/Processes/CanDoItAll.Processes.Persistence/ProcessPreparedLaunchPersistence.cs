@@ -19,6 +19,9 @@ public sealed class ProcessPreparedLaunchEntity {
     public string PayloadJson { get; set; } = string.Empty;
     public DateTimeOffset PreparedAtUtc { get; set; }
     public DateTimeOffset? AcceptedAtUtc { get; set; }
+    public ProcessAcceptedSourceVersion AcceptedSourceVersion { get; set; }
+    public string? AcceptedSourceHeaderJson { get; set; }
+    public string? AcceptedSourceHeaderFingerprint { get; set; }
     public bool? Execute { get; set; }
     public ProcessLaunchContinuationState State { get; set; }
     public Guid? ContinuationOwner { get; set; }
@@ -47,12 +50,19 @@ public sealed class ProcessPreparedLaunchEntity {
 
 internal sealed class ProcessPreparedLaunchEntityConfiguration : IEntityTypeConfiguration<ProcessPreparedLaunchEntity> {
     public void Configure(EntityTypeBuilder<ProcessPreparedLaunchEntity> builder) {
-        builder.ToTable("process_prepared_launches");
+        builder.ToTable("process_prepared_launches", table => table.HasCheckConstraint("CK_process_prepared_launch_source", $$"""
+            ("AcceptedSourceVersion" = 0 AND "AcceptedSourceHeaderJson" IS NULL AND "AcceptedSourceHeaderFingerprint" IS NULL)
+            OR ("AcceptedSourceVersion" = 1 AND "AcceptedAtUtc" IS NOT NULL
+                AND "AcceptedSourceHeaderJson" IS NOT NULL AND octet_length("AcceptedSourceHeaderJson") BETWEEN 2 AND {{ProcessAcceptedSourceCodec.MaximumPayloadUtf8Bytes}}
+                AND "AcceptedSourceHeaderFingerprint" IS NOT NULL AND "AcceptedSourceHeaderFingerprint" ~ '^sha256:[0-9a-f]{64}$')
+            """));
         builder.HasKey(item => item.Id);
         builder.Property(item => item.AdmissionSequence).ValueGeneratedOnAdd();
         builder.Property(item => item.RequestFingerprint).HasMaxLength(71).IsRequired();
         builder.Property(item => item.PreparationFingerprint).HasMaxLength(71).IsRequired();
         builder.Property(item => item.PayloadJson).IsRequired();
+        builder.Property(item => item.AcceptedSourceVersion).HasConversion<int>().HasDefaultValue(ProcessAcceptedSourceVersion.LegacyPreparedLaunch);
+        builder.Property(item => item.AcceptedSourceHeaderFingerprint).HasMaxLength(71);
         builder.Property(item => item.State).HasConversion<string>().HasMaxLength(32);
         builder.Property(item => item.LinkDeliveryState).HasConversion<string>().HasMaxLength(32);
         builder.Property(item => item.LinkConflictReason).HasConversion<string>().HasMaxLength(32);
@@ -66,9 +76,14 @@ internal sealed class ProcessPreparedLaunchEntityConfiguration : IEntityTypeConf
 }
 
 internal static class ProcessPreparedLaunchCodec {
+    internal const int MaximumGovernedPayloadUtf8Bytes = 33_554_432;
     private const string ToolSourceHashDomain = "process-tool-source-v1\n";
     private const string ProjectMutationHashDomain = "process-project-mutations-v1\n";
     private const string SourceLifetimeHashDomain = "process-agent-source-lifetime-v2\n";
+    private const string DecisionPolicyHashDomain = "process-decision-policy-v1\n";
+    private const string RootDecisionPolicyHashDomain = "process-root-decision-policy-v1\n";
+    private const string SharedRunScopeHashDomain = "process-shared-run-scope-v1\n";
+    private const string DecisionSelectionHashDomain = "process-launch-decision-selection/v1\n";
     private static readonly JsonSerializerOptions Options = ProcessInstancePlanPersistenceMapper.CreateSerializerOptions();
 
     public static ProcessPreparedLaunchEntity ToEntity(ProcessPreparedLaunch preparation) {
@@ -77,7 +92,8 @@ internal static class ProcessPreparedLaunchCodec {
         preparation.ToolSource?.RequirePreparation(preparation);
         preparation = preparation with { PreparedAtUtc = NormalizeTimestamp(preparation.PreparedAtUtc) };
         if (preparation.AdmissionId.Value == Guid.Empty || preparation.CallerIntentId is { } intent && intent.Value == Guid.Empty ||
-                preparation.InitialCommit.InitialPlan is null ||
+                preparation.InitialCommit.InitialPlan is null || preparation.InitialCommit.DecisionBudget is not null ||
+                preparation.InitialCommit.Decision is not null || preparation.InitialCommit.DecisionMaterial is not null || preparation.InitialCommit.DecisionRunScope is not null ||
                 preparation.InitialCommit.InitialAssignments is null || preparation.InitialCommit.InitialLaunchAdmission is not null ||
                 preparation.InitialCommit.Mutation.State.LaunchAdmissionId != preparation.AdmissionId ||
                 preparation.InitialCommit.OriginalState.LaunchAdmissionId != preparation.AdmissionId ||
@@ -93,7 +109,10 @@ internal static class ProcessPreparedLaunchCodec {
                     .SequenceEqual(preparation.Review.Steps.Select(step => step.StepInstanceId).OrderBy(id => id.Value))) {
             throw new InvalidOperationException("The process launch review does not describe the immutable prepared plan.");
         }
-        var payload = JsonSerializer.Serialize(preparation, Options);
+        RequireDecisionPolicyBindings(preparation);
+        var payload = preparation.InitialCommit.InitialAssignments.Any(item => item.DecisionDataPolicy is not null)
+            ? ProcessBoundedJson.Serialize(preparation, Options, MaximumGovernedPayloadUtf8Bytes)
+            : JsonSerializer.Serialize(preparation, Options);
         return new() {
             Id = preparation.AdmissionId.Value,
             CallerIntentId = preparation.CallerIntentId?.Value,
@@ -116,6 +135,7 @@ internal static class ProcessPreparedLaunchCodec {
         }
         preparation.Authority?.Validate();
         preparation.ToolSource?.RequirePreparation(preparation);
+        RequireDecisionPolicyBindings(preparation);
         if (preparation.AdmissionId.Value != entity.Id || preparation.InitialCommit.Mutation.State.RunId.Value != entity.RunId ||
                 preparation.InitialCommit.InitialPlan?.Header.PlanId.Value != entity.PlanId ||
                 preparation.RequestFingerprint != entity.RequestFingerprint || preparation.CallerIntentId?.Value != entity.CallerIntentId ||
@@ -151,7 +171,34 @@ internal static class ProcessPreparedLaunchCodec {
             preparation.ToolSource?.Execution.SourceAuthority?.ProjectMutations is not null ? ProjectMutationHashDomain : string.Empty;
         var lifetimeDomain = HasSourceLifetimeSchema(preparation.Authority) || HasSourceLifetimeSchema(preparation.ToolSource?.Execution.SourceAuthority)
             ? SourceLifetimeHashDomain : string.Empty;
-        return Hash(lifetimeDomain + projectDomain + sourceDomain + payload);
+        var decisionDomain = preparation.InitialCommit.InitialAssignments?.Any(assignment => assignment.DecisionDataPolicy is not null) == true
+            ? DecisionPolicyHashDomain : string.Empty;
+        var rootDecisionDomain = preparation.InitialCommit.InitialRunDecisionAdmission is null ? string.Empty : RootDecisionPolicyHashDomain;
+        var scopeDomain = preparation.InitialCommit.InitialRunDecisionAdmission?.MaterialScope is null ? string.Empty : SharedRunScopeHashDomain;
+        var selectionDomain = preparation.Request.Decision is null ? string.Empty : DecisionSelectionHashDomain;
+        return Hash(selectionDomain + scopeDomain + rootDecisionDomain + decisionDomain + lifetimeDomain + projectDomain + sourceDomain + payload);
+    }
+
+    private static void RequireDecisionPolicyBindings(ProcessPreparedLaunch preparation) {
+        if (preparation.InitialCommit.InitialPlan is not { } plan || preparation.InitialCommit.InitialAssignments is not { } assignments) {
+            throw new InvalidDataException("The prepared Process launch requires its original plan and assignments.");
+        }
+        foreach (var assignment in assignments) {
+            assignment.DecisionDataPolicy?.RequireBinding(plan.Definition.VersionId, assignment.StepInstanceId);
+            preparation.InitialCommit.InitialRunDecisionAdmission?.RequireChild(assignment.DecisionDataPolicy
+                ?? throw new InvalidDataException("A governed root requires the original funded policy of every assignment."));
+        }
+        preparation.InitialCommit.InitialRunDecisionAdmission?.RequireRoot(preparation.InitialCommit.Mutation.State, plan.Definition.VersionId);
+        if (preparation.Request.Decision is { } selection) {
+            ProcessDecisionLaunchAdmissionCoordinator.RequireRequest(preparation.Request with {
+                Authority = preparation.Authority,
+                ProjectAdmission = preparation.InitialCommit.Mutation.State.ProjectAdmission,
+                ToolSource = preparation.ToolSource
+            });
+            ProcessDecisionLaunchAdmissionCoordinator.RequireBindings(selection, preparation.InitialCommit, preparation.Review.Decision);
+        } else if (preparation.Review.Decision is not null) {
+            throw new InvalidDataException("A selected Process policy review requires its original launch selection.");
+        }
     }
 
     private static bool HasSourceLifetimeSchema(ProcessLaunchAuthority? authority)

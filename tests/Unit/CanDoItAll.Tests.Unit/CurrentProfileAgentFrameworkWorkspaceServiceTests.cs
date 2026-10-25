@@ -14,6 +14,7 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
 {
+    private static readonly Guid TestProfileId = Guid.NewGuid();
     [Theory]
     [InlineData(DirectoryProjectionMutation.SaveAgent)]
     [InlineData(DirectoryProjectionMutation.DeleteAgent)]
@@ -127,6 +128,8 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
             Assert.Same(writer.ImportReceipt, failure.ImportReceipt);
         } else {
             Assert.Same(writer.ProvisioningReceipt, failure.ProvisioningReceipt);
+            Assert.Equal(new AgentExecutionActivityWorkspaceIdentity(TestProfileId,
+                WorkspaceScopeDescriptor.Organization(TestProfileId.ToString("N")), new(0)), projection.ExpectedWorkspace);
         }
 
         Assert.Equal(1, calls.Count(call => call == ProjectionRefreshCall.WorkspaceMutation));
@@ -217,14 +220,8 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
         IAiTechnicalAgentBridge technicalAgentBridge,
         IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator,
-        IServiceProvider serviceProvider)
-    {
-        var implementationType = typeof(AgentFrameworkModuleServiceCollectionExtensions).Assembly.GetType(
-            "CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService",
-            throwOnError: true)!;
-        var loggerType = typeof(ILogger<>).MakeGenericType(implementationType);
-        var logger = serviceProvider.GetRequiredService(loggerType);
-        var constructor = Assert.Single(implementationType.GetConstructors());
+        IServiceProvider serviceProvider) {
+        var logger = serviceProvider.GetRequiredService<ILogger<CurrentProfileAgentFrameworkWorkspaceService>>();
         var timeProvider = TimeProvider.System;
         var coordinator = new AgentExecutionActivityCoordinator(
             new PartitionedSequencedStream<
@@ -234,18 +231,16 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
                 timeProvider),
             timeProvider);
 
-        return Assert.IsAssignableFrom<IAgentFrameworkWorkspaceService>(constructor.Invoke(
-            [
-                workspaceFactory,
-                technicalAgentBridge,
-                referenceDataCacheInvalidator,
-                new StubDatabaseProfileRuntimeAccessor(),
-                new DatabaseSwitchNotificationService(),
-                coordinator,
-                new FixedAgentExecutionProfileGenerationSource(
-                    new DatabaseProfileGeneration(0)),
-                logger
-            ]));
+        return new CurrentProfileAgentFrameworkWorkspaceService(
+            workspaceFactory,
+            technicalAgentBridge,
+            referenceDataCacheInvalidator,
+            new StubDatabaseProfileRuntimeAccessor(),
+            new DatabaseSwitchNotificationService(),
+            coordinator,
+            new FixedAgentExecutionProfileGenerationSource(
+                new DatabaseProfileGeneration(0)),
+            logger);
     }
 
     private static async Task ExecuteDirectoryProjectionMutationAsync(
@@ -327,7 +322,7 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
     private sealed class StubWorkspaceFactory(IAgentFrameworkWorkspaceService service)
         : ICanDoItAllAgentWorkspaceFactory
     {
-        private readonly WorkspaceScopeDescriptor scope = WorkspaceScopeDescriptor.Organization("test");
+        private readonly WorkspaceScopeDescriptor scope = WorkspaceScopeDescriptor.Organization(TestProfileId.ToString("N"));
 
         public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService() => service;
 
@@ -420,6 +415,7 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
     private class RecordingTechnicalAgentBridgeProxy : DispatchProxy
     {
         public Exception? Failure { get; set; }
+        public AgentExecutionActivityWorkspaceIdentity? ExpectedWorkspace { get; private set; }
         public List<ProjectionRefreshCall> Calls { get; set; } = null!;
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
@@ -428,6 +424,7 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
 
             if (targetMethod.Name == nameof(IAiTechnicalAgentBridge.SynchronizeDirectoryProjectionAsync))
             {
+                ExpectedWorkspace = args?.FirstOrDefault() as AgentExecutionActivityWorkspaceIdentity;
                 Calls.Add(ProjectionRefreshCall.DirectoryProjectionSynchronization);
                 return Failure is null ? Task.CompletedTask : Task.FromException(Failure);
             }
@@ -499,7 +496,7 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
         private readonly ResolvedDatabaseProfile profile = new(
             new DatabaseProfileRecord
             {
-                Id = Guid.NewGuid(),
+                Id = TestProfileId,
                 DisplayName = "Test",
                 ProviderKind = DatabaseProviderKind.InMemory,
                 SourceKind = DatabaseProfileSourceKind.InMemory

@@ -73,4 +73,19 @@ public sealed class FileSandboxWorkspaceSnapshotCacheTests {
 
     private static ChatSessionRecord CreateChat(string title) =>
         new(Guid.NewGuid(), Guid.NewGuid(), title, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, []);
+
+    [Fact]
+    public void CatalogSnapshot_TracksExactRetainedIdentityAndWeight() {
+        var catalog = SandboxWorkspaceCatalog.Empty;
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(catalog);
+        var cache = new FileSandboxWorkspaceSnapshotCache();
+        var frozen = cache.Remember("catalog", bytes, catalog);
+        Assert.True(cache.IsRetained(frozen, bytes.Length * 4L + 4096));
+        Assert.False(cache.IsRetained(catalog, long.MaxValue));
+        Assert.False(cache.IsRetained(frozen, 1));
+        Assert.True(cache.TryRead<SandboxWorkspaceCatalog>("catalog", bytes, out var same));
+        Assert.Same(frozen, same);
+        cache.Remove<SandboxWorkspaceCatalog>("catalog");
+        Assert.False(cache.IsRetained(frozen, long.MaxValue));
+    }
 }

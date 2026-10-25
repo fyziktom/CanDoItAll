@@ -51,6 +51,89 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
     ];
 
     [Fact]
+    public async Task Runtime_definition_read_and_scalar_update_preserve_children_and_reject_stale_expectation() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var created = await projects.SaveAsync(new() {
+            Name = "Tool definition test",
+            Phases = [new() { Name = "Original phase", Goal = "Keep phase" }],
+            Options = [new() { Category = ProjectOptionCategory.Language, OptionName = "C#", Notes = "Keep option" }]
+        });
+        Assert.True(created.IsSuccess);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, created.Value);
+        var read = FindTool(tools, ProjectStructureToolPolicy.ProjectStructureProjectDefinitionGet);
+        var update = Assert.IsAssignableFrom<AIFunction>(FindTool(tools, ProjectStructureToolPolicy.ProjectStructureProjectUpdate));
+        Assert.True(update.JsonSchema.GetProperty("properties").GetProperty("request").GetProperty("properties")
+            .TryGetProperty("expectedDefinition", out _));
+        var original = await InvokeAsync<ProjectDefinitionSnapshot>(read, new AIFunctionArguments { ["projectId"] = created.Value });
+        ProjectStructureProjectSaveRequest request = new("  Accepted tool name  ", "", "", "") {
+            ExpectedDefinition = original.Expectation
+        };
+        var arguments = new AIFunctionArguments {
+            ["projectId"] = created.Value,
+            ["request"] = JsonSerializer.SerializeToElement(request, FunctionResultJsonOptions)
+        };
+        var accepted = await InvokeAsync<ProjectDefinitionScalarsAcknowledgement>(update, arguments);
+        Assert.Equal("Accepted tool name", accepted.Scalars.Name);
+        Assert.NotEqual(original.Expectation.Revision, accepted.Definition.Revision);
+        var stale = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => InvokeAsync<ProjectDefinitionScalarsAcknowledgement>(update, arguments));
+        Assert.Equal(ProjectErrorCodes.DefinitionConflict, stale.ErrorCode);
+        Assert.Equal(409, stale.StatusCode);
+        var current = await InvokeAsync<ProjectDefinitionSnapshot>(read, new AIFunctionArguments { ["projectId"] = created.Value });
+        Assert.Equal(accepted.Definition, current.Expectation);
+        Assert.Equal(original.Phases.ToArray(), current.Phases.ToArray());
+        Assert.Equal(original.Options.ToArray(), current.Options.ToArray());
+    }
+
+    [Fact]
+    public async Task Runtime_scalar_update_rejects_original_definition_after_same_id_recreation_in_a_new_admitted_invocation() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects);
+        var originalTools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var original = await InvokeAsync<ProjectDefinitionSnapshot>(
+            FindTool(originalTools, ProjectStructureToolPolicy.ProjectStructureProjectDefinitionGet),
+            new AIFunctionArguments { ["projectId"] = projectId });
+        await projects.DeleteAsync(projectId);
+        Assert.True((await projects.CreateAsync(projectId, new() { Name = "Recreated project" })).IsSuccess);
+        var currentTools = await CreateToolsAsync(scope.ServiceProvider, projectId,
+            agentName: "Recreated Project Integration Agent");
+        var before = (await projects.GetDefinitionAsync(projectId)).Value!;
+        var request = new ProjectStructureProjectSaveRequest("Old lifetime overwrite", "", "", "") {
+            ExpectedDefinition = original.Expectation
+        };
+        var denied = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => InvokeAsync<ProjectDefinitionScalarsAcknowledgement>(
+            FindTool(currentTools, ProjectStructureToolPolicy.ProjectStructureProjectUpdate),
+            new AIFunctionArguments {
+                ["projectId"] = projectId,
+                ["request"] = JsonSerializer.SerializeToElement(request, FunctionResultJsonOptions)
+            }));
+        Assert.Equal(409, denied.StatusCode);
+        Assert.Equal(ProjectErrorCodes.LifetimeChanged, denied.ErrorCode);
+        Assert.Equal(AgentToolEffectState.NotCommitted, denied.EffectState);
+        var current = (await projects.GetDefinitionAsync(projectId)).Value!;
+        Assert.NotEqual(original.Expectation.Project.LifetimeId, current.Expectation.Project.LifetimeId);
+        Assert.Equal(before.Expectation, current.Expectation);
+        Assert.Equal("Recreated project", current.Scalars.Name);
+    }
+
+    [Fact]
+    public async Task Runtime_definition_read_denies_a_project_outside_the_admitted_scope() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var allowed = await CreateProjectAsync(projects);
+        var other = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, allowed);
+        var denied = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => InvokeAsync<ProjectDefinitionSnapshot>(
+            FindTool(tools, ProjectStructureToolPolicy.ProjectStructureProjectDefinitionGet),
+            new AIFunctionArguments { ["projectId"] = other }));
+        Assert.Equal(403, denied.StatusCode);
+    }
+
+    [Fact]
     public async Task Interactive_tools_use_automatic_mutation_leases_without_exposing_explicit_lease_tokens()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -1242,10 +1325,11 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             ]);
     }
 
-    private static async Task<AgentDefinition> CreateAgentAsync(IServiceProvider services, Guid projectId, bool canWriteTasks = false) {
+    private static async Task<AgentDefinition> CreateAgentAsync(IServiceProvider services, Guid projectId, bool canWriteTasks = false,
+        string agentName = "Project Structure Integration Agent") {
         var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agentId = await workspace.SaveAgentAsync(new AgentEditorModel {
-            Name = "Project Structure Integration Agent",
+            Name = agentName,
             RoleTitle = "Portfolio architect",
             Summary = "Exercises the project-structure runtime tool boundary.",
             Instructions = "Use selected project-structure context and store generated files as project assets.",
@@ -1312,7 +1396,8 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         IServiceProvider services,
         Guid projectId,
         AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat,
-        bool canWriteTasks = false)
+        bool canWriteTasks = false,
+        string agentName = "Project Structure Integration Agent")
     {
         var provider = services
             .GetServices<IAgentRuntimeToolProvider>()
@@ -1320,7 +1405,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             .Single();
 
         return await provider.CreateToolsAsync(
-            CreateContext(await CreateAgentAsync(services, projectId, canWriteTasks), projectId, purpose),
+            CreateContext(await CreateAgentAsync(services, projectId, canWriteTasks, agentName), projectId, purpose),
             CancellationToken.None);
     }
 

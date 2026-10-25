@@ -1,5 +1,25 @@
 # AgentFramework rendering UI
 
+## Agent policy editor
+
+`Catalog/AgentDecisionPolicySurface` renders policy fields, retained-operation feedback
+and explicit current-state comparison. Its pure editor state keeps original authority,
+submitted values, later typing and historical acceptance separate. It never dispatches
+an owner write or accesses the browser directly.
+
+The module editor session uses `IAgentDecisionPolicyPendingStore`; Web supplies bounded,
+strict IndexedDB persistence keyed by native caller/profile/scope/Agent. Retention must
+succeed before dispatch. Reopening restores the original submission, and recovery uses
+its receipt without resending. Historical acceptance requires a current read and explicit
+reconciliation before another save. See [native proof and limits](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md).
+
+`Catalog/AgentDecisionPolicyRecoverySurface` renders bounded retained-save summaries in
+the catalog independently of a live Agent selection. The module owns workspace capture,
+list reads and exact selection checks. A recovery-only editor has no current baseline;
+historical acceptance does not enable another save. See the
+[deleted-Agent recovery design](../../../codex/bundles/concurrent-mutations/plan/P07-agent-policy-deleted-recovery.md)
+and [native deletion/restart proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-deleted-recovery.md).
+
 ## Request History
 
 `History` owns the complete `ProviderHistoryWorkspace`: raw filter draft and validation,

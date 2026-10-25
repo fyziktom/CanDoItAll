@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "sourceOnly": true,
+  "mergePolicy": "Replace these two existing rows only after exact predecessor validation; preserve Resource and parent metadata successors. Do not copy the whole managed register.",
+  "rows": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+      "predecessorSha256Lf": "559d765caf7524a003e83da214dbeb07fc4abd9840937770b666c9fe0174efdb",
+      "entry": {
+        "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+        "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+        "sha256_lf": "888f47e88dea65846776ec81798f56956950e92da8c4a1633859257168b751bf",
+        "kind": "RAZOR",
+        "role": "PRODUCT",
+        "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
+        "project": "src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj",
+        "classification": "NATIVE_HOST",
+        "caller": [
+          "/projects"
+        ],
+        "native_owner": "ProjectsService ProjectsService; IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService; ILogger<ProjectsPage> Logger; IProjectPackageService ProjectPackageService; IDatabaseProfileService DatabaseProfileService; NavigationManager Navigation; IAppNavigationHistory History; ProjectNativeDefinitionOperations; IProjectPendingSubmissionStore; ProjectPendingStoreLimits; IProjectPendingReferenceStore",
+        "visual_owner": "ProjectDeletionStatusSurface, ProjectFilesDialog, ProjectFilesPortfolioPane, ProjectHierarchyModal, ProjectModalHost, ProjectsAgentChatContextProvider, ProjectsBoard, ProjectPendingListSurface, ProjectPendingReferenceSurface",
+        "descendants": [
+          "ProjectDeletionStatusSurface",
+          "ProjectFilesDialog",
+          "ProjectFilesPortfolioPane",
+          "ProjectHierarchyModal",
+          "ProjectModalHost",
+          "ProjectsAgentChatContextProvider",
+          "ProjectsBoard",
+          "ProjectPendingListSurface",
+          "ProjectPendingReferenceSurface"
+        ],
+        "assets": "CanDoItAll.Modules.Projects",
+        "scenario": "CanDoItAll.Modules.Projects",
+        "evidence": "CanDoItAll.Modules.Projects",
+        "rationale": "Reviewed native host owns scope-bound coherent reads, protected definition dispatch, durable pending sessions and explicit recovery callbacks. It supplies submission readiness from the completed scoped pending index/context; the modal cannot submit during that acquisition. Metadata-only cross-binding inventory/export/disposal remains separate from authorized body recovery and cannot dispatch or re-identify a save. Renderers own no authority or storage. Source proof plan: codex/bundles/concurrent-mutations/plan/P02c-native-pending-recovery.md. Package import maps acknowledged cleanup warnings and unconfirmed outcomes to explicit retained evidence and a dispatch hold through existing renderer parameters. Independent target-read errors do not replace terminal package evidence; the package hold is page-instance scoped. Page-local exact cleanup targets retain owner-completion or retry-outcome uncertainty across later inventories; no read enables another callback.",
+        "excluded_non_rendering_type_uses": [
+          {
+            "type": "ProjectsPage",
+            "lines": [
+              21
+            ],
+            "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+          }
+        ]
+      }
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectDeletionStatusSurface.razor",
+      "predecessorSha256Lf": "a50ad20fc3ee232f54960e96efe8454834dcbdd9a8e9a480c5c6952577b64d3e",
+      "entry": {
+        "identity": "src/UI/CanDoItAll.Projects.UI/ProjectDeletionStatusSurface.razor",
+        "path": "src/UI/CanDoItAll.Projects.UI/ProjectDeletionStatusSurface.razor",
+        "sha256_lf": "e9a1399c761a39d927976045e99145245fcbfb08e952f10e693abbcf4514b55d",
+        "kind": "RAZOR",
+        "role": "PRODUCT",
+        "type": "CanDoItAll.Projects.UI.ProjectDeletionStatusSurface",
+        "project": "src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj",
+        "classification": "EXTRACTED_RENDERER",
+        "caller": [
+          "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+          "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor"
+        ],
+        "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
+        "visual_owner": "CanDoItAll.Projects.UI",
+        "descendants": [
+          "Dialog"
+        ],
+        "assets": "CanDoItAll.Projects.UI",
+        "scenario": "CanDoItAll.Projects.UI",
+        "evidence": "CanDoItAll.Projects.UI",
+        "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects. Typed RetryBlocked disables the existing action and queued callbacks recheck current supplied rows and busy state; the host independently enforces its retained hold."
+      }
+    }
+  ]
+}

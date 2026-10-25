@@ -31,7 +31,8 @@ public sealed partial class ProcessLaunchApplicationService(
     IExternalTargetPathRegistry externalTargetPathRegistry,
     IProcessPreparedLaunchStore? preparedLaunchStore = null,
     IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null,
-    ProcessExecutableDefinitionResolver? executableDefinitions = null)
+    ProcessExecutableDefinitionResolver? executableDefinitions = null,
+    ProcessDecisionLaunchAdmissionCoordinator? decisionAdmissions = null)
 {
     private const string ProcessRunNodePrefix = "process-run:";
     private const string ProcessRunIdVariableName = "ProcessRunId";
@@ -61,6 +62,7 @@ public sealed partial class ProcessLaunchApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ProcessDecisionLaunchAdmissionCoordinator.RequireRequest(request);
         if (UsesPreparedPreview(request)) {
             RequirePreparedStore();
             return await PreviewPreparedLaunchAsync(request, cancellationToken).ConfigureAwait(false);
@@ -97,6 +99,7 @@ public sealed partial class ProcessLaunchApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ProcessDecisionLaunchAdmissionCoordinator.RequireRequest(request);
         if (preparedLaunchStore is not null) {
             return await LaunchPreparedAsync(request, cancellationToken).ConfigureAwait(false);
         }

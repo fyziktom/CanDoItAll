@@ -283,6 +283,7 @@ public partial class AgentExecutionActivityStatus : IAsyncDisposable
             AgentExecutionActivityPhase.Streaming => "Agent responding",
             AgentExecutionActivityPhase.UsingTool => "Using tool",
             AgentExecutionActivityPhase.AwaitingApproval => "Approval required",
+            AgentExecutionActivityPhase.AwaitingContinuation => "Continuation required",
             AgentExecutionActivityPhase.PersistingResult => "Saving result",
             AgentExecutionActivityPhase.Completed => "Completed",
             AgentExecutionActivityPhase.Failed => "Failed",
@@ -297,7 +298,7 @@ public partial class AgentExecutionActivityStatus : IAsyncDisposable
         return phase switch
         {
             AgentExecutionActivityPhase.Completed => "success",
-            AgentExecutionActivityPhase.AwaitingApproval => "warning",
+            AgentExecutionActivityPhase.AwaitingApproval or AgentExecutionActivityPhase.AwaitingContinuation => "warning",
             AgentExecutionActivityPhase.Failed => "danger",
             AgentExecutionActivityPhase.Cancelled => "neutral",
             _ => "info"

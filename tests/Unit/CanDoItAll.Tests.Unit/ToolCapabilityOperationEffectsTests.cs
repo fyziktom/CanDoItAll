@@ -12,7 +12,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
     public void Every_installed_metadata_field_matches_the_independent_pre_cut_catalog() {
         var expected = Rows(ExpectedMetadata);
         var actual = ProductToolPolicies.Capabilities.OrderBy(policy => policy.Name, StringComparer.Ordinal).Select(Describe).ToArray();
-        Assert.Equal(217, actual.Length);
+        Assert.Equal(218, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -22,7 +22,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             .Select(policy => RuntimeToolCapabilityDescriptorFactory.CreateRuntimeToolCapabilityDescriptor(
                 policy.Name, policy.Name, "Descriptor parity", [], toolPolicies: ProductToolPolicies))
             .Select(Describe).ToArray();
-        Assert.Equal(217, actual.Length);
+        Assert.Equal(218, actual.Length);
         Assert.Equal(Rows(ExpectedDescriptors), actual);
     }
 
@@ -40,7 +40,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             values[2] = "maf.tool." + values[1];
             return string.Join('|', values);
         }).ToArray();
-        Assert.Equal(217, actual.Length);
+        Assert.Equal(218, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -245,6 +245,7 @@ project_structure_nodes_status_update|Mutation|true|true|ProjectStructureMutatio
 project_structure_nodes_to_new_subproject|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_process_subprocess_launch|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_project_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
+project_structure_project_definition_get|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
 project_structure_project_lease_acquire|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_project_update|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_projects_list|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
@@ -465,6 +466,7 @@ project_structure_nodes_status_update|project-structure-nodes-status-update|maf.
 project_structure_nodes_to_new_subproject|project-structure-nodes-to-new-subproject|maf.project_structure_nodes_to_new_subproject|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_process_subprocess_launch|project-structure-process-subprocess-launch|maf.project_structure_process_subprocess_launch|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_project_create|project-structure-project-create|maf.project_structure_project_create|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
+project_structure_project_definition_get|project-structure-project-definition-get|maf.project_structure_project_definition_get|Read|WorkspaceRead|false|false
 project_structure_project_lease_acquire|project-structure-project-lease-acquire|maf.project_structure_project_lease_acquire|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_project_update|project-structure-project-update|maf.project_structure_project_update|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_projects_list|project-structure-projects-list|maf.project_structure_projects_list|Read|WorkspaceRead|false|false

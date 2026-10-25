@@ -3405,6 +3405,8 @@ internal sealed class WorkflowRunRecordEntityConfiguration : IEntityTypeConfigur
         builder.Property(item => item.OriginKind).HasConversion<int?>();
         builder.HasIndex(item => new { item.OriginProcessRunId, item.OriginProcessAssignmentId })
             .HasDatabaseName("IX_WorkflowRuns_ProcessAssignment");
+        builder.HasIndex(item => new { item.OriginProcessRunId, item.RunId })
+            .HasDatabaseName("IX_WorkflowRuns_ProcessRecovery");
         builder.Property(item => item.BackendRunId).HasMaxLength(300);
         builder.Property(item => item.Summary).HasColumnType("TEXT");
         builder.Property(item => item.OriginJson).HasColumnType("TEXT");
@@ -3450,6 +3452,8 @@ internal sealed class WorkflowExternalRequestRecordEntityConfiguration : IEntity
         builder.Property(item => item.RequestJson).HasColumnType("TEXT");
         builder.Property(item => item.ResponseJson).HasColumnType("TEXT");
         builder.HasIndex(item => new { item.RunId, item.RespondedAtUtc });
+        builder.HasIndex(item => new { item.RunId, item.Id })
+            .HasFilter("\"RespondedAtUtc\" IS NULL").HasDatabaseName("IX_WorkflowRequests_ProcessRecovery");
     }
 }
 

@@ -66,8 +66,12 @@ public partial class ProjectStructurePage {
                 operation, context.Origin.ProjectId, context.Origin.LifetimeId, targets, message);
         }
         if (IsCurrentInsights(context)) {
+            var current = CurrentInsights;
             workflowFeedback = message;
             workflowFeedbackTone = exception is null ? "mint" : "warn";
+            if (current.Origin == context.Origin) {
+                insightsContext = current with { Selection = BuildSelectionPanelState() };
+            }
         }
     }
 
@@ -206,8 +210,7 @@ public partial class ProjectStructurePage {
     private async Task<bool> PersistInsightsStateAsync(InsightsContext context, CanvasWorkbenchUiState state, string operation) {
         CancelPendingCanvasViewStatePersistence();
         var json = NormalizePersistedCanvasUiState(state).ToJson();
-        currentViewStateJson = json;
-        surface = surface! with { ViewStateJson = json };
+        ApplyCanvasViewState(json);
         RefreshCanvasSurface();
         await InvokeAsync(StateHasChanged);
         try {
@@ -220,6 +223,15 @@ public partial class ProjectStructurePage {
         }
         RecordInsightsEffect(context, operation, [], [], "View state saved for the original project.");
         return true;
+    }
+
+    private void ApplyCanvasViewState(string stateJson) {
+        var previousSurface = surface;
+        currentViewStateJson = stateJson;
+        surface = surface! with { ViewStateJson = stateJson };
+        if (insightsContext is { } current && ReferenceEquals(current.Native.Surface, previousSurface) && IsCurrentInsights(current)) {
+            insightsContext = current with { Native = current.Native with { Surface = surface } };
+        }
     }
 
     private async Task HandleInsightsWindowAsync(InsightsWindowIntent intent) {
@@ -253,15 +265,12 @@ public partial class ProjectStructurePage {
     }
 
     private async Task FocusInsightsAsync(InsightsContext context, string nodeId) {
+        if (!string.IsNullOrWhiteSpace(reconnectNodeId)) {
+            await HandleReconnectSelectionAsync(nodeId);
+            return;
+        }
         if (IsDependencyMode && !string.IsNullOrWhiteSpace(linkModeSourceId) && linkModeSourceId != nodeId) {
-            var sourceId = linkModeSourceId;
-            await ProjectWorkbenchService.LinkObjectsAsync(context.Origin.ProjectId, sourceId, nodeId,
-                ProjectObjectLinkKind.DependsOn, expectedProjectAdmission: context.Native.Admission);
-            RecordInsightsEffect(context, "Dependency", [sourceId, nodeId], [sourceId, nodeId], "The dependency was added.");
-            if (IsCurrentInsights(context)) {
-                await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
-                await ReloadSurfaceAsync(nodeId);
-            }
+            await CreateDependencyAsync(linkModeSourceId, nodeId);
             return;
         }
         await SelectInsightsAsync(context, [nodeId]);

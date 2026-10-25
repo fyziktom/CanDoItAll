@@ -19,7 +19,7 @@ public sealed class ProcessAuthoringAdmissionPolicy(ICanonicalRuntimeDatabase da
             throw new ArgumentException("Authoring requires an explicit global or project scope.");
         }
         var captured = await projects.CaptureAsync(projectId, cancellationToken)
-            ?? throw new InvalidOperationException("The authoring project no longer exists.");
+            ?? throw new ProcessAuthoringProjectUnavailableException(projectId);
         return new(captured.DatabaseProfileId, captured.ProjectId, captured.LifetimeId, key.Value);
     }
 

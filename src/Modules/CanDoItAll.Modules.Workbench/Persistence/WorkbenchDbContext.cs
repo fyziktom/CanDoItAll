@@ -20,6 +20,7 @@ public sealed class WorkbenchDbContext(DbContextOptions<WorkbenchDbContext> opti
         modelBuilder.ApplyConfiguration(new ProjectWorkAssignmentRecordConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectProcessAssetContributionRecordConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectWorkAssignmentHistoryRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new ProjectTaskPlanReceiptRecordConfiguration());
         base.OnModelCreating(modelBuilder);
     }
 
@@ -39,7 +40,7 @@ public sealed class WorkbenchDbContext(DbContextOptions<WorkbenchDbContext> opti
     private void RecordDomainChanges() {
         if (ChangeTracker.Entries().Any(entry =>
                 entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted &&
-                entry.Entity is not (ProjectStructureLeaseRecord or ProjectStructureOperationAnalyticsRecord))) {
+                entry.Entity is not (ProjectStructureLeaseRecord or ProjectStructureOperationAnalyticsRecord or ProjectTaskPlanReceiptRecord))) {
             ProjectStructureToolEffectObservation.RecordDomainWrite();
         }
     }

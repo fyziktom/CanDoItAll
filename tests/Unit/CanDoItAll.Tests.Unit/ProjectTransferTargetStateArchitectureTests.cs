@@ -28,6 +28,8 @@ public sealed class ProjectTransferTargetStateArchitectureTests {
         Residue<ProjectWorkAssignmentHistoryRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
         Residue<SchedulerFireAdmissionRecord>(ProjectTransferTargetStateArea.SchedulerPlanner, SemanticProjectStateKind.DynamicInput),
         Residue<ProjectCreationReservationRecord>(ProjectTransferTargetStateArea.Projects, SemanticProjectStateKind.RootAggregate),
+        Residue<ProjectDefinitionReceiptRecord>(ProjectTransferTargetStateArea.Projects, SemanticProjectStateKind.TypedScope),
+        Residue<ProjectTaskPlanReceiptRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedScope),
         Residue<ProjectWorkAssignmentRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedScope),
         Residue<Project>(
             ProjectTransferTargetStateArea.Projects,

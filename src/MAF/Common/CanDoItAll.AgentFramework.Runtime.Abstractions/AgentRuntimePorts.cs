@@ -13,6 +13,12 @@ public interface IAgentExecutionRuntime
 
 public interface IAgentContinuationRuntime
 {
+    AgentSavedEffectDispatchSupport SavedEffectDispatchSupport => AgentSavedEffectDispatchSupport.Unsupported;
+
+    Task<AgentSavedEffectDispatchResult> DispatchSavedEffectAsync(AgentSavedEffectDispatchRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This runtime does not support dispatch of an original saved effect.");
+
     Task<AgentRuntimeResponse> ContinueAsync(
         AgentRuntimeContinuationRequest request,
         CancellationToken cancellationToken = default);

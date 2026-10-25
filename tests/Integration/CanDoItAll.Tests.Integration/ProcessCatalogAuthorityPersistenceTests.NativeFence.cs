@@ -422,7 +422,8 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
 
     private static ProcessToolBackgroundSourcePolicy NativeBackgroundPolicy(IServiceProvider services, Fixture fixture, TimeProvider clock)
         => new(new(new Factory<ProcessPersistenceDbContext>(NativeOptions<ProcessPersistenceDbContext>(services), static options => new(options)), clock),
-            services.GetRequiredService<ICanonicalRuntimeDatabase>(), services.GetRequiredService<IAgentExecutionProfileGenerationSource>(), fixture.Authority);
+            services.GetRequiredService<ICanonicalRuntimeDatabase>(), services.GetRequiredService<IAgentExecutionProfileGenerationSource>(), fixture.Authority,
+            services.GetRequiredService<IProcessExecutionMutationGuard>());
 
     private static AgentToolProfileBinding NativeProfile(IServiceProvider services)
         => new(services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id,

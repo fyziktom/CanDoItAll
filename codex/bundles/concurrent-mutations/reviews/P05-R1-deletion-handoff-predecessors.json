@@ -1,0 +1,59 @@
+{
+  "kind": "Managed-only stage2 source ownership before authoring",
+  "workCardSha256": "86A6A6511EDE5AA38E4996C4C44492A9F018F0CC1A76B13D6AE187A2D3AC3BF8",
+  "stage1InventorySha256": "C96FC10B145F5925330045DDC7AB52FEABAFE1FFF9A35696D9165CF976F45143",
+  "newPaths": [
+    "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletionTransactionEntry.cs",
+    "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.FreshSnapshot.cs"
+  ],
+  "entries": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs",
+      "managedSha256": "F22358393AEB90C03AC3EAD810F388DE8930E5AD4145A5D701C8EF06C52BB132",
+      "mainSha256": "F22358393AEB90C03AC3EAD810F388DE8930E5AD4145A5D701C8EF06C52BB132",
+      "backup": "P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectMutationAuthority.cs",
+      "managedSha256": "7E7CC14FED428739A48D7845E0A98B0064B8FF05D4D0F2C824B04B29625025F4",
+      "mainSha256": "7E7CC14FED428739A48D7845E0A98B0064B8FF05D4D0F2C824B04B29625025F4",
+      "backup": "P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Projects/ProjectMutationAuthority.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletion.cs",
+      "managedSha256": "8701132C911D01222783128216C5548DE88F583A0DE78C59194645FD1508E23D",
+      "mainSha256": "8701132C911D01222783128216C5548DE88F583A0DE78C59194645FD1508E23D",
+      "backup": "P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Projects/ProjectDeletion.cs"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetLifecycleStore.cs",
+      "managedSha256": "76C674A152C08BB3D82B72BA9B708C314DEA04F4E7C690C6A0C402DB19D1D864",
+      "mainSha256": "76C674A152C08BB3D82B72BA9B708C314DEA04F4E7C690C6A0C402DB19D1D864",
+      "backup": "P05-R1-deletion-handoff-predecessors/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetLifecycleStore.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectCreationPartialCompletion.cs",
+      "managedSha256": "8BD4845F1C5D4C60D6386EA54F1BA5B9410AA181559DBD5351FD0B259976DCBD",
+      "mainSha256": "8BD4845F1C5D4C60D6386EA54F1BA5B9410AA181559DBD5351FD0B259976DCBD",
+      "backup": "P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectCreationPartialCompletion.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSubprojectTransferCoordinator.cs",
+      "managedSha256": "44B54175005CBC0BEC770E0E377BEBBCDBB20CD282EDC8AC5D309BBCCDF10287",
+      "mainSha256": "44B54175005CBC0BEC770E0E377BEBBCDBB20CD282EDC8AC5D309BBCCDF10287",
+      "backup": "P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSubprojectTransferCoordinator.cs"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProjectsApi.cs",
+      "managedSha256": "73E455B5C62992AFDDDD57DB1EF14970DD701D3B088DCCC2D67E4ED5136DC3C2",
+      "mainSha256": "73E455B5C62992AFDDDD57DB1EF14970DD701D3B088DCCC2D67E4ED5136DC3C2",
+      "backup": "P05-R1-deletion-handoff-predecessors/src/App/CanDoItAll.Web/Api/ProjectsApi.cs"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+      "managedSha256": "B5E148800FA3A765F14FA5159C8F1EA3BFDA38F657E774708091632D473048B3",
+      "mainSha256": "71D0BE01FCE6D409940C2EFBF68229151FA0A9FE1984E132A2FB6B0FA1FA64B1",
+      "backup": "P05-R1-deletion-handoff-predecessors/tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs"
+    }
+  ]
+}

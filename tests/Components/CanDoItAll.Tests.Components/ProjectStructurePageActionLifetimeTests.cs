@@ -7,6 +7,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
@@ -400,7 +401,12 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
 
     private static async Task RecreateProjectAsync(ComponentTestHarness harness, Target original) {
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(original.ProjectId, expectedProjectAdmission: original.Admission);
+        Assert.Equal(original.Admission, (await Workbench(harness).GetStructureAsync(original.ProjectId)).ExpectedProjectAdmission);
+        var native = harness.Context.Services.GetRequiredService<ProjectNativeLifecycleOperations>();
+        var context = await native.GetContextAsync();
+        var deletion = native.Freeze(new ProjectLifecycleCommand.Delete((await projects.GetAsync(original.ProjectId)).ExpectedDefinition!),
+            ProjectNativeLifecycleOperations.Scope(context), context, Guid.NewGuid());
+        Assert.IsType<ProjectLifecycleOutcome.Accepted>(await native.DispatchAsync(deletion.Submission));
         Assert.True((await projects.CreateAsync(original.ProjectId, new() { Name = "Unrelated replacement" })).IsSuccess);
         await using var db = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
         db.Set<ProjectObjectRecord>().Add(new() {

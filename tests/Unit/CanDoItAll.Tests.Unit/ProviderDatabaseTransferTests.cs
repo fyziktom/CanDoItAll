@@ -102,6 +102,7 @@ public sealed class ProviderDatabaseTransferTests
 
         source.Add(new WorkspaceSettings
         {
+            IsCurrent = true,
             DefaultProviderProfileId = sourceProviderId,
             UpdatedAtUtc = DateTimeOffset.UtcNow
         });
@@ -172,11 +173,13 @@ public sealed class ProviderDatabaseTransferTests
         });
         source.Add(new WorkspaceSettings
         {
+            IsCurrent = true,
             DefaultProviderProfileId = sourceProviderId,
             UpdatedAtUtc = DateTimeOffset.UtcNow
         });
         target.Add(new WorkspaceSettings
         {
+            IsCurrent = true,
             DefaultProviderProfileId = targetPreferenceId,
             UpdatedAtUtc = DateTimeOffset.UtcNow
         });

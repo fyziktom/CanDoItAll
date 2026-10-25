@@ -574,10 +574,10 @@ public sealed class SharedProviderHybridSelectionTests(
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
         var settings = await dbContext.Set<WorkspaceSettings>()
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync(item => item.IsCurrent);
         if (settings is null)
         {
-            settings = new WorkspaceSettings();
+            settings = new WorkspaceSettings { IsCurrent = true };
             dbContext.Add(settings);
         }
 
@@ -594,9 +594,9 @@ public sealed class SharedProviderHybridSelectionTests(
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
         return await dbContext.Set<WorkspaceSettings>()
-            .OrderByDescending(settings => settings.UpdatedAtUtc)
+            .Where(settings => settings.IsCurrent)
             .Select(settings => settings.DefaultProviderProfileId)
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync();
     }
 
     private static async Task MarkSourceOfflineAsync(

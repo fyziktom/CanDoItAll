@@ -113,7 +113,7 @@ public sealed class AgentNativeProjectAdmissionIntegrationTests {
             .AddInterceptors(probe).Options;
         var coordinator = services.GetRequiredService<CoordinatedDatabaseTransaction>();
         var admissionReader = new ProjectWriteAdmissionService(new ProjectFactory(options), options, coordinator,
-            services.GetRequiredService<ICanonicalRuntimeDatabase>());
+            services.GetRequiredService<ICanonicalRuntimeDatabase>(), services.GetRequiredService<DatasetActivationService>());
         var scopes = new ProjectStructureMutationScopeFactory(services.GetRequiredService<ProjectRecordQueryService>(), admissionReader, coordinator);
         var id = Guid.NewGuid();
         await using (var owner = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync()) {

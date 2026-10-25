@@ -1,0 +1,1504 @@
+{
+  "status": "Owned asynchronous Agent cancellation signals qualified; durable Process recovery and integrated activation remain open.",
+  "passed": 60,
+  "newCases": 13,
+  "discovery": {
+    "lanes": [
+      {
+        "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "testNames": [
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Exact_execution_stop_signals_only_the_selected_run_and_reports_disposal",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.RequestCancellationByProcessRunIds_cancels_only_matching_active_execution",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.RequestCancellationByProcessRunIds_ignores_disposed_registration",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Signals_return_while_callbacks_are_blocked_and_disposal_retains_the_exact_identity(byProcess: False)",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Signals_return_while_callbacks_are_blocked_and_disposal_retains_the_exact_identity(byProcess: True)",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Upstream_cancellation_signals_without_waiting_for_consumer_callbacks",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Already_cancelled_upstream_is_visible_before_registration_returns",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Concurrent_exact_group_and_upstream_signals_execute_each_callback_once",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.A_callback_can_dispose_its_registration_without_waiting_for_itself",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Callback_faults_are_observed_once_without_logging_callback_data_or_skipping_other_callbacks",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Disposal_unlinks_upstream_and_old_disposal_cannot_remove_a_replacement",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Invalid_or_duplicate_registration_does_not_remove_the_live_owner",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Concurrent_signal_and_disposal_leave_no_identity_or_source_lifetime_race",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Existing_composition_resolves_one_logged_registry_without_creating_a_workspace(module: False)",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Existing_composition_resolves_one_logged_registry_without_creating_a_workspace(module: True)"
+        ],
+        "sourceMethods": [
+          "Exact_execution_stop_signals_only_the_selected_run_and_reports_disposal",
+          "RequestCancellationByProcessRunIds_cancels_only_matching_active_execution",
+          "RequestCancellationByProcessRunIds_ignores_disposed_registration",
+          "Signals_return_while_callbacks_are_blocked_and_disposal_retains_the_exact_identity",
+          "Upstream_cancellation_signals_without_waiting_for_consumer_callbacks",
+          "Already_cancelled_upstream_is_visible_before_registration_returns",
+          "Concurrent_exact_group_and_upstream_signals_execute_each_callback_once",
+          "A_callback_can_dispose_its_registration_without_waiting_for_itself",
+          "Callback_faults_are_observed_once_without_logging_callback_data_or_skipping_other_callbacks",
+          "Disposal_unlinks_upstream_and_old_disposal_cannot_remove_a_replacement",
+          "Invalid_or_duplicate_registration_does_not_remove_the_live_owner",
+          "Concurrent_signal_and_disposal_leave_no_identity_or_source_lifetime_race",
+          "Existing_composition_resolves_one_logged_registry_without_creating_a_workspace"
+        ],
+        "sourceMethodsMatched": true,
+        "expectedDiscovery": 15,
+        "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.",
+        "actualDiscovery": 15,
+        "id": "Unit-AgentExecutionCancellationRegistryTests"
+      },
+      {
+        "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "testNames": [
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Idle_selected_stop_retains_work_and_replays_without_another_revision",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.A_live_registration_receives_a_signal_without_journal_mutation_or_lease_wait",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Parent_revocation_before_signal_after_lease_or_before_publication_makes_no_write(boundary: 1)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Parent_revocation_before_signal_after_lease_or_before_publication_makes_no_write(boundary: 2)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Parent_revocation_before_signal_after_lease_or_before_publication_makes_no_write(boundary: 3)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Open_work_is_not_closed_even_when_no_local_execution_is_registered(duringWrite: False)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Open_work_is_not_closed_even_when_no_local_execution_is_registered(duringWrite: True)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Closed_work_with_an_unresolved_provider_entry_remains_pending",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Dispatched_effects_require_their_original_reconciliation_or_completion_owner(state: Executing, effect: Unknown, expected: UnresolvedEffects)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Dispatched_effects_require_their_original_reconciliation_or_completion_owner(state: ReconciliationRequired, effect: Unknown, expected: UnresolvedEffects)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Dispatched_effects_require_their_original_reconciliation_or_completion_owner(state: Completed, effect: Unknown, expected: UnresolvedEffects)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Dispatched_effects_require_their_original_reconciliation_or_completion_owner(state: Completed, effect: Committed, expected: CompletionPending)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.A_changed_immutable_run_after_lease_wait_refuses_before_a_write",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.A_backward_clock_is_rejected_without_changing_the_journal",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Caller_cancellation_is_not_a_stop_acknowledgement",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Missing_selected_journal_remains_explicitly_missing",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Malformed_retained_journal_is_rejected_before_signalling_or_mutation",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Another_original_parent_or_profile_cannot_stop_the_execution(profile: False)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Another_original_parent_or_profile_cannot_stop_the_execution(profile: True)",
+          "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Inconsistent_terminal_run_is_not_declared_closed_or_rewritten"
+        ],
+        "sourceMethods": [
+          "Idle_selected_stop_retains_work_and_replays_without_another_revision",
+          "A_live_registration_receives_a_signal_without_journal_mutation_or_lease_wait",
+          "Parent_revocation_before_signal_after_lease_or_before_publication_makes_no_write",
+          "Open_work_is_not_closed_even_when_no_local_execution_is_registered",
+          "Closed_work_with_an_unresolved_provider_entry_remains_pending",
+          "Dispatched_effects_require_their_original_reconciliation_or_completion_owner",
+          "A_changed_immutable_run_after_lease_wait_refuses_before_a_write",
+          "A_backward_clock_is_rejected_without_changing_the_journal",
+          "Caller_cancellation_is_not_a_stop_acknowledgement",
+          "Missing_selected_journal_remains_explicitly_missing",
+          "Malformed_retained_journal_is_rejected_before_signalling_or_mutation",
+          "Another_original_parent_or_profile_cannot_stop_the_execution",
+          "Inconsistent_terminal_run_is_not_declared_closed_or_rewritten"
+        ],
+        "sourceMethodsMatched": true,
+        "expectedDiscovery": 20,
+        "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.",
+        "actualDiscovery": 20,
+        "id": "Unit-AgentInheritedParentStopTests"
+      },
+      {
+        "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "testNames": [
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.Inherited_markers_are_never_repaired_by_the_legacy_observer(listedAsInherited: False, schemaOnly: False)",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.Inherited_markers_are_never_repaired_by_the_legacy_observer(listedAsInherited: False, schemaOnly: True)",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.Inherited_markers_are_never_repaired_by_the_legacy_observer(listedAsInherited: True, schemaOnly: False)",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.Inherited_markers_are_never_repaired_by_the_legacy_observer(listedAsInherited: True, schemaOnly: True)",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.OnRunsCancelled_signals_active_execution_and_marks_execution_record_cancelled",
+          "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.OnRunsCancelled_preserves_terminal_cancellation_when_process_cleanup_throws"
+        ],
+        "sourceMethods": [
+          "Inherited_markers_are_never_repaired_by_the_legacy_observer",
+          "OnRunsCancelled_signals_active_execution_and_marks_execution_record_cancelled",
+          "OnRunsCancelled_preserves_terminal_cancellation_when_process_cleanup_throws"
+        ],
+        "sourceMethodsMatched": true,
+        "expectedDiscovery": 6,
+        "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.",
+        "actualDiscovery": 6,
+        "id": "Unit-AgentFrameworkProcessRuntimeCancellationObserverTests"
+      },
+      {
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "testNames": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Idle_approval_stop_rejects_only_undispatched_work_and_replays_without_a_new_revision(mode: RunSnapshot)",
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Idle_approval_stop_rejects_only_undispatched_work_and_replays_without_a_new_revision(mode: StepSnapshot)",
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Another_owner_holding_the_real_dispatch_lease_remains_pending",
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Caller_cancellation_during_the_real_lease_wait_is_propagated",
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Lost_file_commit_acknowledgement_recovers_the_original_stop",
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Revoked_parent_after_lease_or_at_file_publication_preserves_the_original_journal(boundary: 2)",
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Revoked_parent_after_lease_or_at_file_publication_preserves_the_original_journal(boundary: 3)",
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Released_dispatch_lease_does_not_prove_that_interrupted_work_closed",
+          "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.A_live_file_backed_execution_signals_while_its_callback_is_blocked_without_mutating_the_journal"
+        ],
+        "sourceMethods": [
+          "Idle_approval_stop_rejects_only_undispatched_work_and_replays_without_a_new_revision",
+          "Another_owner_holding_the_real_dispatch_lease_remains_pending",
+          "Caller_cancellation_during_the_real_lease_wait_is_propagated",
+          "Lost_file_commit_acknowledgement_recovers_the_original_stop",
+          "Revoked_parent_after_lease_or_at_file_publication_preserves_the_original_journal",
+          "Released_dispatch_lease_does_not_prove_that_interrupted_work_closed",
+          "A_live_file_backed_execution_signals_while_its_callback_is_blocked_without_mutating_the_journal"
+        ],
+        "sourceMethodsMatched": true,
+        "expectedDiscovery": 9,
+        "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.",
+        "actualDiscovery": 9,
+        "id": "Integration-AgentInheritedParentStopTests"
+      },
+      {
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "testNames": [
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Registered_stop_closes_waiting_child_and_accounts_original_work_once(mode: RunSnapshot)",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Registered_stop_closes_waiting_child_and_accounts_original_work_once(mode: StepSnapshot)",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.An_active_root_cannot_authorize_a_parent_stop",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.An_already_cancelled_root_can_recover_its_original_waiting_child",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Changed_accepted_source_cannot_authorize_a_journal_write_after_root_stop",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Publication_before_parent_stop_retains_and_accounts_the_accepted_effect",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Historical_profile_generation_is_retained_but_a_change_during_publication_refuses(changeDuringStop: False)",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Historical_profile_generation_is_retained_but_a_change_during_publication_refuses(changeDuringStop: True)",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Another_child_binding_or_material_cannot_stop_the_original_journal(material: False)",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Another_child_binding_or_material_cannot_stop_the_original_journal(material: True)"
+        ],
+        "sourceMethods": [
+          "Registered_stop_closes_waiting_child_and_accounts_original_work_once",
+          "An_active_root_cannot_authorize_a_parent_stop",
+          "An_already_cancelled_root_can_recover_its_original_waiting_child",
+          "Changed_accepted_source_cannot_authorize_a_journal_write_after_root_stop",
+          "Publication_before_parent_stop_retains_and_accounts_the_accepted_effect",
+          "Historical_profile_generation_is_retained_but_a_change_during_publication_refuses",
+          "Another_child_binding_or_material_cannot_stop_the_original_journal"
+        ],
+        "sourceMethodsMatched": true,
+        "expectedDiscovery": 10,
+        "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.",
+        "actualDiscovery": 10,
+        "id": "Integration-ProjectTaskPlanProcessChildStopperTests"
+      }
+    ],
+    "expectedTotal": 60.0,
+    "actualTotal": 60.0
+  },
+  "results": [
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Callback_faults_are_observed_once_without_logging_callback_data_or_skipping_other_callbacks",
+      "outcome": "Passed",
+      "duration": "00:00:00.0300272"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Invalid_or_duplicate_registration_does_not_remove_the_live_owner",
+      "outcome": "Passed",
+      "duration": "00:00:00.0012998"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.A_callback_can_dispose_its_registration_without_waiting_for_itself",
+      "outcome": "Passed",
+      "duration": "00:00:00.0017361"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Signals_return_while_callbacks_are_blocked_and_disposal_retains_the_exact_identity(byProcess: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0026785"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Concurrent_signal_and_disposal_leave_no_identity_or_source_lifetime_race",
+      "outcome": "Passed",
+      "duration": "00:00:00.0045462"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Disposal_unlinks_upstream_and_old_disposal_cannot_remove_a_replacement",
+      "outcome": "Passed",
+      "duration": "00:00:00.0005004"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Already_cancelled_upstream_is_visible_before_registration_returns",
+      "outcome": "Passed",
+      "duration": "00:00:00.0003974"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Exact_execution_stop_signals_only_the_selected_run_and_reports_disposal",
+      "outcome": "Passed",
+      "duration": "00:00:00.0008866"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.RequestCancellationByProcessRunIds_ignores_disposed_registration",
+      "outcome": "Passed",
+      "duration": "00:00:00.0014037"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Upstream_cancellation_signals_without_waiting_for_consumer_callbacks",
+      "outcome": "Passed",
+      "duration": "00:00:00.0019732"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Existing_composition_resolves_one_logged_registry_without_creating_a_workspace(module: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0041141"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Existing_composition_resolves_one_logged_registry_without_creating_a_workspace(module: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.3606557"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Concurrent_exact_group_and_upstream_signals_execute_each_callback_once",
+      "outcome": "Passed",
+      "duration": "00:00:00.0046318"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.Signals_return_while_callbacks_are_blocked_and_disposal_retains_the_exact_identity(byProcess: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0008957"
+    },
+    {
+      "lane": "Unit-AgentExecutionCancellationRegistryTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.RequestCancellationByProcessRunIds_cancels_only_matching_active_execution",
+      "outcome": "Passed",
+      "duration": "00:00:00.0002191"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Parent_revocation_before_signal_after_lease_or_before_publication_makes_no_write(boundary: 3)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0005564"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Parent_revocation_before_signal_after_lease_or_before_publication_makes_no_write(boundary: 1)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0004166"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Parent_revocation_before_signal_after_lease_or_before_publication_makes_no_write(boundary: 2)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0022094"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Caller_cancellation_is_not_a_stop_acknowledgement",
+      "outcome": "Passed",
+      "duration": "00:00:00.0011936"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Dispatched_effects_require_their_original_reconciliation_or_completion_owner(state: Completed, effect: Committed, expected: CompletionPending)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0016967"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Another_original_parent_or_profile_cannot_stop_the_execution(profile: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0004996"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Another_original_parent_or_profile_cannot_stop_the_execution(profile: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0013079"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.A_live_registration_receives_a_signal_without_journal_mutation_or_lease_wait",
+      "outcome": "Passed",
+      "duration": "00:00:00.0012060"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Dispatched_effects_require_their_original_reconciliation_or_completion_owner(state: Completed, effect: Unknown, expected: UnresolvedEffects)",
+      "outcome": "Passed",
+      "duration": "00:00:00.1566278"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Malformed_retained_journal_is_rejected_before_signalling_or_mutation",
+      "outcome": "Passed",
+      "duration": "00:00:00.0068794"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Open_work_is_not_closed_even_when_no_local_execution_is_registered(duringWrite: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0006420"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.A_changed_immutable_run_after_lease_wait_refuses_before_a_write",
+      "outcome": "Passed",
+      "duration": "00:00:00.0008983"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Closed_work_with_an_unresolved_provider_entry_remains_pending",
+      "outcome": "Passed",
+      "duration": "00:00:00.0026360"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Open_work_is_not_closed_even_when_no_local_execution_is_registered(duringWrite: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.1564650"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Inconsistent_terminal_run_is_not_declared_closed_or_rewritten",
+      "outcome": "Passed",
+      "duration": "00:00:00.0011054"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Missing_selected_journal_remains_explicitly_missing",
+      "outcome": "Passed",
+      "duration": "00:00:00.0664730"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Dispatched_effects_require_their_original_reconciliation_or_completion_owner(state: Executing, effect: Unknown, expected: UnresolvedEffects)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0018038"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.A_backward_clock_is_rejected_without_changing_the_journal",
+      "outcome": "Passed",
+      "duration": "00:00:00.0010001"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Dispatched_effects_require_their_original_reconciliation_or_completion_owner(state: ReconciliationRequired, effect: Unknown, expected: UnresolvedEffects)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0057553"
+    },
+    {
+      "lane": "Unit-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.Idle_selected_stop_retains_work_and_replays_without_another_revision",
+      "outcome": "Passed",
+      "duration": "00:00:00.0093259"
+    },
+    {
+      "lane": "Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.Inherited_markers_are_never_repaired_by_the_legacy_observer(listedAsInherited: True, schemaOnly: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0002062"
+    },
+    {
+      "lane": "Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.Inherited_markers_are_never_repaired_by_the_legacy_observer(listedAsInherited: True, schemaOnly: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0204460"
+    },
+    {
+      "lane": "Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.Inherited_markers_are_never_repaired_by_the_legacy_observer(listedAsInherited: False, schemaOnly: False)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0000872"
+    },
+    {
+      "lane": "Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.OnRunsCancelled_preserves_terminal_cancellation_when_process_cleanup_throws",
+      "outcome": "Passed",
+      "duration": "00:00:00.0644095"
+    },
+    {
+      "lane": "Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.Inherited_markers_are_never_repaired_by_the_legacy_observer(listedAsInherited: False, schemaOnly: True)",
+      "outcome": "Passed",
+      "duration": "00:00:00.0004227"
+    },
+    {
+      "lane": "Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+      "name": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.OnRunsCancelled_signals_active_execution_and_marks_execution_record_cancelled",
+      "outcome": "Passed",
+      "duration": "00:00:00.0049734"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Revoked_parent_after_lease_or_at_file_publication_preserves_the_original_journal(boundary: 3)",
+      "outcome": "Passed",
+      "duration": "00:00:04.8100863"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Released_dispatch_lease_does_not_prove_that_interrupted_work_closed",
+      "outcome": "Passed",
+      "duration": "00:00:03.3276409"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Idle_approval_stop_rejects_only_undispatched_work_and_replays_without_a_new_revision(mode: RunSnapshot)",
+      "outcome": "Passed",
+      "duration": "00:00:04.1255531"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Revoked_parent_after_lease_or_at_file_publication_preserves_the_original_journal(boundary: 2)",
+      "outcome": "Passed",
+      "duration": "00:00:04.0067755"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Another_owner_holding_the_real_dispatch_lease_remains_pending",
+      "outcome": "Passed",
+      "duration": "00:00:04.4488227"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.A_live_file_backed_execution_signals_while_its_callback_is_blocked_without_mutating_the_journal",
+      "outcome": "Passed",
+      "duration": "00:00:03.6777929"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Lost_file_commit_acknowledgement_recovers_the_original_stop",
+      "outcome": "Passed",
+      "duration": "00:00:04.1853077"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Caller_cancellation_during_the_real_lease_wait_is_propagated",
+      "outcome": "Passed",
+      "duration": "00:00:03.1945095"
+    },
+    {
+      "lane": "Integration-AgentInheritedParentStopTests",
+      "name": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.Idle_approval_stop_rejects_only_undispatched_work_and_replays_without_a_new_revision(mode: StepSnapshot)",
+      "outcome": "Passed",
+      "duration": "00:00:03.9337188"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Registered_stop_closes_waiting_child_and_accounts_original_work_once(mode: RunSnapshot)",
+      "outcome": "Passed",
+      "duration": "00:00:16.6812539"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Historical_profile_generation_is_retained_but_a_change_during_publication_refuses(changeDuringStop: False)",
+      "outcome": "Passed",
+      "duration": "00:00:17.4146725"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Another_child_binding_or_material_cannot_stop_the_original_journal(material: True)",
+      "outcome": "Passed",
+      "duration": "00:00:18.0877231"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.An_active_root_cannot_authorize_a_parent_stop",
+      "outcome": "Passed",
+      "duration": "00:00:15.5666740"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Publication_before_parent_stop_retains_and_accounts_the_accepted_effect",
+      "outcome": "Passed",
+      "duration": "00:00:27.3895931"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Changed_accepted_source_cannot_authorize_a_journal_write_after_root_stop",
+      "outcome": "Passed",
+      "duration": "00:00:38.4633684"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Historical_profile_generation_is_retained_but_a_change_during_publication_refuses(changeDuringStop: True)",
+      "outcome": "Passed",
+      "duration": "00:00:16.5386723"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Another_child_binding_or_material_cannot_stop_the_original_journal(material: False)",
+      "outcome": "Passed",
+      "duration": "00:00:15.4367257"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.An_already_cancelled_root_can_recover_its_original_waiting_child",
+      "outcome": "Passed",
+      "duration": "00:00:16.1428834"
+    },
+    {
+      "lane": "Integration-ProjectTaskPlanProcessChildStopperTests",
+      "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.Registered_stop_closes_waiting_child_and_accounts_original_work_once(mode: StepSnapshot)",
+      "outcome": "Passed",
+      "duration": "00:00:16.9961338"
+    }
+  ],
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-1-agent-module",
+      "Arguments": [
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-22T05:40:05.6381629+00:00",
+      "State": "Completed",
+      "RunnerPid": 56032,
+      "ChildPid": 36032,
+      "ChildStartedUtc": "2026-10-22T05:40:05.6490246Z",
+      "ExitCode": 0,
+      "Seconds": 47.2280291,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 101794,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-1-core",
+      "Arguments": [
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-22T05:39:38.9703635+00:00",
+      "State": "Completed",
+      "RunnerPid": 56032,
+      "ChildPid": 53632,
+      "ChildStartedUtc": "2026-10-22T05:39:39.0663018Z",
+      "ExitCode": 0,
+      "Seconds": 9.0509724,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4126,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-1-hosting",
+      "Arguments": [
+        "build",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-22T05:39:48.1406351+00:00",
+      "State": "Completed",
+      "RunnerPid": 56032,
+      "ChildPid": 42112,
+      "ChildStartedUtc": "2026-10-22T05:39:48.1502726Z",
+      "ExitCode": 0,
+      "Seconds": 17.4671113,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 27142,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-1-integration",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-dependencies"
+      ],
+      "StartedUtc": "2026-10-22T05:42:21.9008079+00:00",
+      "State": "Completed",
+      "RunnerPid": 56032,
+      "ChildPid": 38212,
+      "ChildStartedUtc": "2026-10-22T05:42:21.9056985Z",
+      "ExitCode": 0,
+      "Seconds": 32.3279475,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 148174,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-1-unit",
+      "Arguments": [
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-dependencies"
+      ],
+      "StartedUtc": "2026-10-22T05:41:50.8663606+00:00",
+      "State": "Completed",
+      "RunnerPid": 56032,
+      "ChildPid": 20128,
+      "ChildStartedUtc": "2026-10-22T05:41:50.8780983Z",
+      "ExitCode": 0,
+      "Seconds": 30.9883544,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 120368,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-1-web",
+      "Arguments": [
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-22T05:40:52.8996265+00:00",
+      "State": "Completed",
+      "RunnerPid": 56032,
+      "ChildPid": 51816,
+      "ChildStartedUtc": "2026-10-22T05:40:52.9112793Z",
+      "ExitCode": 0,
+      "Seconds": 57.9322309,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 142717,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-1",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-22T05:37:34.4812419+00:00",
+      "State": "Completed",
+      "RunnerPid": 56472,
+      "ChildPid": 17864,
+      "ChildStartedUtc": "2026-10-22T05:37:34.4866149Z",
+      "ExitCode": 0,
+      "Seconds": 0.0929903,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-readonly-1-Integration-AgentInheritedParentStopTests",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-22T05:47:35.3683819+00:00",
+      "State": "Completed",
+      "RunnerPid": 7660,
+      "ChildPid": 49052,
+      "ChildStartedUtc": "2026-10-22T05:47:35.3776419Z",
+      "ExitCode": 0,
+      "Seconds": 6.2511618,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1608,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-readonly-1-Integration-ProjectTaskPlanProcessChildStopperTests",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-22T05:47:41.6650453+00:00",
+      "State": "Completed",
+      "RunnerPid": 7660,
+      "ChildPid": 42468,
+      "ChildStartedUtc": "2026-10-22T05:47:41.6743278Z",
+      "ExitCode": 0,
+      "Seconds": 3.0200205,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1769,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-readonly-1-Unit-AgentExecutionCancellationRegistryTests",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-22T05:47:19.7512275+00:00",
+      "State": "Completed",
+      "RunnerPid": 7660,
+      "ChildPid": 14476,
+      "ChildStartedUtc": "2026-10-22T05:47:19.8222378Z",
+      "ExitCode": 0,
+      "Seconds": 8.3030253,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2598,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-readonly-1-Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-22T05:47:31.9280431+00:00",
+      "State": "Completed",
+      "RunnerPid": 7660,
+      "ChildPid": 54036,
+      "ChildStartedUtc": "2026-10-22T05:47:31.9328549Z",
+      "ExitCode": 0,
+      "Seconds": 3.4161651,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1341,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-readonly-1-Unit-AgentInheritedParentStopTests",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-22T05:47:28.1998999+00:00",
+      "State": "Completed",
+      "RunnerPid": 7660,
+      "ChildPid": 23516,
+      "ChildStartedUtc": "2026-10-22T05:47:28.2091411Z",
+      "ExitCode": 0,
+      "Seconds": 3.6833227,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3085,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-1",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-22T05:37:26.6890982+00:00",
+      "State": "Completed",
+      "RunnerPid": 56472,
+      "ChildPid": 29532,
+      "ChildStartedUtc": "2026-10-22T05:37:26.6955529Z",
+      "ExitCode": 0,
+      "Seconds": 7.7780513,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-Integration-AgentInheritedParentStopTests",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentInheritedParentStopTests.",
+        "--logger",
+        "trx;LogFileName=Integration-AgentInheritedParentStopTests.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-cancellation-signal"
+      ],
+      "StartedUtc": "2026-10-22T05:48:16.1465520+00:00",
+      "State": "Completed",
+      "RunnerPid": 44444,
+      "ChildPid": 57932,
+      "ChildStartedUtc": "2026-10-22T05:48:16.1572139Z",
+      "ExitCode": 0,
+      "Seconds": 39.0384781,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2433,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-Integration-ProjectTaskPlanProcessChildStopperTests",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanProcessChildStopperTests.",
+        "--logger",
+        "trx;LogFileName=Integration-ProjectTaskPlanProcessChildStopperTests.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-cancellation-signal"
+      ],
+      "StartedUtc": "2026-10-22T05:48:55.2109191+00:00",
+      "State": "Completed",
+      "RunnerPid": 44444,
+      "ChildPid": 23296,
+      "ChildStartedUtc": "2026-10-22T05:48:55.2233771Z",
+      "ExitCode": 0,
+      "Seconds": 202.1810454,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2630,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-Unit-AgentExecutionCancellationRegistryTests",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionCancellationRegistryTests.",
+        "--logger",
+        "trx;LogFileName=Unit-AgentExecutionCancellationRegistryTests.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-cancellation-signal"
+      ],
+      "StartedUtc": "2026-10-22T05:48:03.2025468+00:00",
+      "State": "Completed",
+      "RunnerPid": 44444,
+      "ChildPid": 9524,
+      "ChildStartedUtc": "2026-10-22T05:48:03.2396768Z",
+      "ExitCode": 0,
+      "Seconds": 4.3122007,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3523,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessRuntimeCancellationObserverTests.",
+        "--logger",
+        "trx;LogFileName=Unit-AgentFrameworkProcessRuntimeCancellationObserverTests.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-cancellation-signal"
+      ],
+      "StartedUtc": "2026-10-22T05:48:12.1140460+00:00",
+      "State": "Completed",
+      "RunnerPid": 44444,
+      "ChildPid": 56772,
+      "ChildStartedUtc": "2026-10-22T05:48:12.1260325Z",
+      "ExitCode": 0,
+      "Seconds": 4.0023309,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2120,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-Unit-AgentInheritedParentStopTests",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentInheritedParentStopTests.",
+        "--logger",
+        "trx;LogFileName=Unit-AgentInheritedParentStopTests.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-cancellation-signal"
+      ],
+      "StartedUtc": "2026-10-22T05:48:07.6253142+00:00",
+      "State": "Completed",
+      "RunnerPid": 44444,
+      "ChildPid": 22924,
+      "ChildStartedUtc": "2026-10-22T05:48:07.6368961Z",
+      "ExitCode": 0,
+      "Seconds": 4.471012,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4087,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 3660,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-cancellation-signal\\Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "3600"
+      ],
+      "StartedUtc": "2026-10-22T05:47:50.0574570+00:00",
+      "State": "Completed",
+      "RunnerPid": 35604,
+      "ChildPid": 17900,
+      "ChildStartedUtc": "2026-10-22T05:47:50.0778748Z",
+      "ExitCode": 0,
+      "Seconds": 268.1572236,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 55,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-1",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-cancellation-signal\\portability-scan-1.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-22T05:37:25.9754537+00:00",
+      "State": "Completed",
+      "RunnerPid": 56472,
+      "ChildPid": 40708,
+      "ChildStartedUtc": "2026-10-22T05:37:25.9836788Z",
+      "ExitCode": 0,
+      "Seconds": 0.6868071,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-1",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-cancellation-signal\\portability-scan-1.json"
+      ],
+      "StartedUtc": "2026-10-22T05:35:15.4546600+00:00",
+      "State": "Completed",
+      "RunnerPid": 56472,
+      "ChildPid": 29788,
+      "ChildStartedUtc": "2026-10-22T05:35:15.4633846Z",
+      "ExitCode": 0,
+      "Seconds": 130.4775947,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 424,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-register-1",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-22T05:35:12.4027067+00:00",
+      "State": "Completed",
+      "RunnerPid": 56472,
+      "ChildPid": 57908,
+      "ChildStartedUtc": "2026-10-22T05:35:12.4348028Z",
+      "ExitCode": 0,
+      "Seconds": 2.9514671,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "inputs": {
+    "sourceAndRuntimeUnchanged": true,
+    "sourceSha256": "9C2D7D14A1F06255B089B2494DE3760519E48C87358010C69423BDBB3FC2C876",
+    "runtimeSha256": "BC69F87101D5D51D838602793E390F9712A5E0401CD9A2D9A85C489CFC2C75A6"
+  },
+  "buildRevision": {
+    "gitRevisionUnchanged": true,
+    "recordedUtc": "2026-10-22T05:42:54.3045773+00:00",
+    "afterHead": "94a4d1ac9d451d11c304d6b89619e1b82f15771a",
+    "beforeHead": "94a4d1ac9d451d11c304d6b89619e1b82f15771a"
+  },
+  "inputManifests": [
+    {
+      "path": ".artifacts/concurrent-mutations/validation/c4-cancellation-signal/prebuild-source-inputs-build1.json",
+      "bytes": 2375180,
+      "sha256": "9C2D7D14A1F06255B089B2494DE3760519E48C87358010C69423BDBB3FC2C876"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/c4-cancellation-signal/complete-source-inputs.json",
+      "bytes": 2375180,
+      "sha256": "9C2D7D14A1F06255B089B2494DE3760519E48C87358010C69423BDBB3FC2C876"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/c4-cancellation-signal/runtime-inputs.json",
+      "bytes": 2221379,
+      "sha256": "BC69F87101D5D51D838602793E390F9712A5E0401CD9A2D9A85C489CFC2C75A6"
+    }
+  ],
+  "resourceManifest": {
+    "path": ".artifacts/concurrent-mutations/validation/c4-cancellation-signal/c4-resource-families-v5.json",
+    "bytes": 125126,
+    "sha256": "7A2FFFB0D31CDF6F9AC18F883656D9515D7A7F335B535156B15BA45A09F3E22D"
+  },
+  "companionManifest": {
+    "path": ".artifacts/concurrent-mutations/validation/c4-cancellation-signal/c4-companion-source-inventory-v5.json",
+    "bytes": 2778,
+    "sha256": "5238B8A0B882A991E030F864C8666523A6C0F74569009350CDCFC7A2559BA2C0"
+  },
+  "helperPinReview": {
+    "previous": "c4-root-cancellation-final",
+    "changedHelpers": [
+      {
+        "path": "Build.ps1",
+        "before": {
+          "path": "Build.ps1",
+          "bytes": 2422,
+          "sha256": "A71AFE4BB52228B4C8E7F46428A047E2AE02945B21EDF0D892BA9C0F1F14D81A"
+        },
+        "reason": "Add direct Hosting consumer build in standard Release; all existing runner behavior is unchanged.",
+        "after": {
+          "path": "Build.ps1",
+          "bytes": 2547,
+          "sha256": "0B4437F06F48BF57FCED2B65E39B5CE0BD731229652DECE071D75865A385A88B"
+        }
+      }
+    ]
+  },
+  "architecture": {
+    "status": "Six Release builds and all 60 selected cases qualified. Three pre-existing cycles and two reviewed informational size findings remain.",
+    "beforeId": "snap-20261022044934-ee223b1b",
+    "afterId": "snap-20261022053019-ee223b1b",
+    "before": {
+      "projectCount": 1,
+      "typeCount": 795,
+      "memberCount": 5887,
+      "serviceRegistrationCount": 0,
+      "entityCount": 0,
+      "findingCount": 226,
+      "openQuestionCount": 0,
+      "diagnosticCount": 0
+    },
+    "after": {
+      "projectCount": 1,
+      "typeCount": 794,
+      "memberCount": 5901,
+      "serviceRegistrationCount": 0,
+      "entityCount": 0,
+      "findingCount": 228,
+      "openQuestionCount": 0,
+      "diagnosticCount": 0
+    },
+    "dependenciesBefore": 1060,
+    "dependenciesAfter": 1058,
+    "sameThreePreexistingCycles": true,
+    "cycles": [
+      {
+        "level": "Type",
+        "nodeIds": [
+          "type-proj-candoitall-agentframework-core-candoitall-agen-152cf43aa7bb",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-1a990fe814d7",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-244216b46507",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-6783a14556a8",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-9ad3f723b960",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-9c7b9e7ebdc1",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-ddf87e625d14",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-fb60e0ed084c"
+        ]
+      },
+      {
+        "level": "Type",
+        "nodeIds": [
+          "type-proj-candoitall-agentframework-core-candoitall-agen-5b51f78cf7ac",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-dde9fb0d855d"
+        ]
+      },
+      {
+        "level": "Type",
+        "nodeIds": [
+          "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+          "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+        ]
+      }
+    ],
+    "owners": [
+      {
+        "name": "CanDoItAll.AgentFramework.Core.AgentExecutionCancellationRegistration",
+        "members": 20,
+        "source": {
+          "path": "Execution/AgentExecutionCancellationRegistration.cs",
+          "line": 5,
+          "column": 1,
+          "endLine": 93,
+          "endColumn": 2
+        }
+      },
+      {
+        "name": "CanDoItAll.AgentFramework.Core.AgentExecutionCancellationRegistry",
+        "members": 9,
+        "source": {
+          "path": "Execution/AgentExecutionCancellation.cs",
+          "line": 26,
+          "column": 1,
+          "endLine": 96,
+          "endColumn": 2
+        }
+      }
+    ],
+    "newFindings": [
+      {
+        "findingId": "finding-type-size-type-proj-candoitall-agentframework-core-7b37e43aedb9",
+        "ruleId": "COMPLEXITY-002",
+        "severity": "Info",
+        "category": "Complexity",
+        "title": "Type with many members",
+        "description": "CanDoItAll.AgentFramework.Core.AgentExecutionCancellationRegistration exposes 20 source members.",
+        "rationale": "Large types often become aggregation points for unrelated behavior.",
+        "confidence": 0.71,
+        "relatedIds": [
+          "type-proj-candoitall-agentframework-core-candoitall-agen-f8316ed2cddd"
+        ],
+        "source": {
+          "path": "Execution/AgentExecutionCancellationRegistration.cs",
+          "line": 5,
+          "column": 1,
+          "endLine": 93,
+          "endColumn": 2
+        }
+      },
+      {
+        "findingId": "finding-type-size-type-proj-candoitall-agentframework-core-040c2f28834e",
+        "ruleId": "COMPLEXITY-002",
+        "severity": "Info",
+        "category": "Complexity",
+        "title": "Type with many members",
+        "description": "CanDoItAll.AgentFramework.Core.AgentExecutionCancellationRegistry exposes 9 source members.",
+        "rationale": "Large types often become aggregation points for unrelated behavior.",
+        "confidence": 0.71,
+        "relatedIds": [
+          "type-proj-candoitall-agentframework-core-candoitall-agen-c533881bdb81"
+        ],
+        "source": {
+          "path": "Execution/AgentExecutionCancellation.cs",
+          "line": 26,
+          "column": 1,
+          "endLine": 96,
+          "endColumn": 2
+        }
+      }
+    ],
+    "review": "The two information-level size findings cover a 93-line lifecycle owner with 20 source members (largely private state/properties), and a 71-line registry with nine. Both responsibilities are cohesive; splitting fields or forwarding methods would not improve the boundary. Two old nested types disappear; the new owner receives an exact-release callback and no registry type dependency. No project reference, Process/Workbench dependency, schema, partial or service-locator change.",
+    "compatibility": "Existing registration contract adds IAsyncDisposable; synchronous Dispose remains supported and does not drain callbacks. Mandatory logger construction is wired through both existing DI registrations and the explicit workspace-service compatibility constructor. Known sibling source consumers contain no additional implementations/calls; external binary compatibility remains a release gate.",
+    "diagnostics": []
+  },
+  "resources": {
+    "previousHttpBlockedCleanup": {
+      "state": "BlockedByAutomaticApprovalReview",
+      "database": "cditall_primary_40a332c695a94161a74b78718c28b907",
+      "reason": "Observed API-test host finalizer crash; exact original run metadata binds this fixture directory to its new primary database. All observed processes exited.",
+      "activeConnections": 0,
+      "recordedUtc": "2026-10-21T13:19:09.6396158-04:00",
+      "sourceEvidence": [
+        {
+          "sha256": "3D27E32BCE667F2802FF368DE5BE67ED72016BD091F6C7CF21223E5F46FA8EF0",
+          "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/6f716289a47642e590153bef907eadc2/run.json"
+        },
+        {
+          "sha256": "8113A3D3E76338D0E0E3F3C70AA78A4C5FD5C5FF6673BC60A866096AA30C9FE4",
+          "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/a46b7f22c3468762959f3308ae040e76/run.json"
+        }
+      ],
+      "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+      "root": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-api-tests\\069475322dcc45a2816c596f2d8beb24",
+      "rejection": "The combined exact DROP DATABASE and Remove-Item command was rejected before execution: blocked by policy. Neither action executed; no alternative route will be attempted."
+    },
+    "postgres": [
+      "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+      "cditall_primary_40a332c695a94161a74b78718c28b907|0",
+      "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+      "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+      "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+      "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+      "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1|0",
+      "postgres|1"
+    ],
+    "recordedUtc": "2026-10-22T05:52:33.2148645+00:00",
+    "ownedValidationDirectory": "Retained for producer integration: small reviewed logs, source/runtime manifests and shared validation helpers; no new compiled outputs or host.",
+    "remainingObservedProcesses": [],
+    "temporaryDeltasPreservedWithoutOwnership": [],
+    "databaseNameDelta": [],
+    "historicalCleanupDenials": "Earlier denials remain. Automatic approval review additionally rejected c4-process-owner-outcome-verified and c4-process-owner-outcome-final cleanup with blocked by policy. Both remain; no denied resource was retried.",
+    "inheritedBlockedCleanup": {
+      "requiredAction": "Manual cleanup or an explicit approval-system change is required for these exact resources. They remain excluded from subsequent cleanup attempts.",
+      "journalSha256": "8A8165E2B2250EED621740669396B6870172ABF8D4E10CEB7859BBAB7CCCFD6F",
+      "reason": "Automatic approval review rejected the combined exact test database and temporary-directory removal with blocked by policy before execution. No deletion was attempted through another route.",
+      "source": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewCompletionTests.cs:159",
+      "recordedUtc": "2026-10-21T08:05:31.9832225-04:00",
+      "evidence": "The sole new isolated database has the declared reviewed-completion profile prefix and is named inside this exact pending-run journal. The test command and its observed child processes have exited. The latest database observation has zero active connections.",
+      "state": "CleanupRejected",
+      "test": "ProjectTaskPlanReviewCompletionTests.Lost_commit_acknowledgement_replays_after_full_host_restart_without_another_outcome_read",
+      "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+      "path": "C:/Users/lucys/AppData/Local/Temp/process-reviewed-completion/6ea9ebeae3b74434ab0dfcda9483bd27",
+      "database": "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1"
+    }
+  },
+  "observation": {
+    "allCovered": true,
+    "observerStartedUtc": "2026-10-22T01:47:51.275199-04:00",
+    "observerEndedUtc": "2026-10-22T01:52:18.1708712-04:00",
+    "commands": [
+      {
+        "command": "execute-Integration-AgentInheritedParentStopTests",
+        "endedUtc": "2026-10-22T01:48:55.1850300-04:00",
+        "covered": true,
+        "startedUtc": "2026-10-22T01:48:16.1465520-04:00"
+      },
+      {
+        "command": "execute-Integration-ProjectTaskPlanProcessChildStopperTests",
+        "endedUtc": "2026-10-22T01:52:17.3919644-04:00",
+        "covered": true,
+        "startedUtc": "2026-10-22T01:48:55.2109191-04:00"
+      },
+      {
+        "command": "execute-Unit-AgentExecutionCancellationRegistryTests",
+        "endedUtc": "2026-10-22T01:48:07.5147475-04:00",
+        "covered": true,
+        "startedUtc": "2026-10-22T01:48:03.2025468-04:00"
+      },
+      {
+        "command": "execute-Unit-AgentFrameworkProcessRuntimeCancellationObserverTests",
+        "endedUtc": "2026-10-22T01:48:16.1163768-04:00",
+        "covered": true,
+        "startedUtc": "2026-10-22T01:48:12.1140460-04:00"
+      },
+      {
+        "command": "execute-Unit-AgentInheritedParentStopTests",
+        "endedUtc": "2026-10-22T01:48:12.0963262-04:00",
+        "covered": true,
+        "startedUtc": "2026-10-22T01:48:07.6253142-04:00"
+      }
+    ]
+  },
+  "static": {
+    "portability": "RESULT: PASS (15665 reviewed executable-source findings unchanged)",
+    "rendering": "Rendering review register PASS: 1212 current inputs. Semantic, evaluated and runtime proof remain separate gates.",
+    "documentation": "Documentation validation passed for 433 maintained Markdown files."
+  },
+  "limits": "One retained CancelAsync notification per registration. Synchronous signal and Dispose do not await callbacks; DisposeAsync explicitly drains. A blocked callback retains the exact identity until completion. This is not callback preemption, global storm capacity, a durable recovery worker, or production throughput proof.",
+  "compatibility": "Public registration adds IAsyncDisposable and registry construction requires a logger. Both existing DI paths and the workspace compatibility constructor build; known sibling source callers were audited. External binary consumers require release compatibility review.",
+  "next": "Terminal empty-decision reconciliation, fair durable root recovery, snapshot refresh, producer/Workflow/settings integration, remaining writers, sustained capacity and final integrated/Stable closure. SPA remains on its own branch.",
+  "cleanup": "No new observed process/database/temp residue. Reused isolated fixture remains required. Historical automatic cleanup denials remain unresolved and were not retried."
+}

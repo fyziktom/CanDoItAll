@@ -127,6 +127,9 @@ public sealed class ApiTokenAdministrationTests {
         public int SearchCount { get; private set; }
         public int RevokeCount { get; private set; }
         public int DeleteCount { get; private set; }
+        public Task PrepareCurrentReadAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<ApiTokenCurrentObservation> ObserveCurrentAsync(Guid id, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
         public void Register(ApiTokenRecord record) => token = record;
         public Task<ApiTokenRecord?> FindAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(token);
         public Task<ApiTokenPage> SearchAsync(ApiTokenQuery query, CancellationToken cancellationToken = default) {

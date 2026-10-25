@@ -129,9 +129,9 @@ public sealed class ResourcesPageUrlStateTests {
             ConfigSchemaVersion = resources.ListConnectorManifests().Single(m => m.PluginKey == ResourceConnectorPluginKeys.WebLink).ConfigurationSchema.Version
         };
         model.Configuration.SetText(ResourceConnectorFieldKeys.WebUrl, $"https://fixture.test/{Guid.NewGuid():N}");
-        var result = await resources.SaveAsync(model);
-        Assert.True(result.IsSuccess);
-        return result.Value;
+        var expected = new ResourceMetadataExpectation.Absent(await resources.ReadContextAsync(), Guid.NewGuid());
+        var result = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await resources.SaveAsync(new(expected, project, ResourceMetadataValues.Capture(model))));
+        return result.Snapshot.Expected.ResourceId;
     }
 
     private static AngleSharp.Dom.IElement Item(IRenderedComponent<ResourcesPage> cut, string name)

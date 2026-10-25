@@ -93,7 +93,8 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
         {
             UserSafeSummary = result.UserSafeSummary,
             ExecutionRunId = result.ExecutionRunId,
-            HostCapabilityEvidence = result.HostCapabilityEvidence
+            HostCapabilityEvidence = result.HostCapabilityEvidence,
+            OwnerEvidence = result.OwnerEvidence
         };
     }
 

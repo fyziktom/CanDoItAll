@@ -1,0 +1,24 @@
+{
+  "databaseNameDelta": [],
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "recordedUtc": "2026-10-18T20:31:00.2205757+00:00",
+  "outcome": "Four actual restart cases passed; final source and runtime identity verification required",
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_32208_20261018_162726_333.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\l5tip4ur.4jx",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\rowrundb.ofu",
+      "family": "shared-temp-directory-entries"
+    }
+  ],
+  "remainingObservedProcesses": []
+}

@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Bunit;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
@@ -11,6 +13,53 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureComposerLifetimeTests {
+    [Fact]
+    public async Task Runtime_validation_rejects_without_a_write_and_a_fresh_corrected_opening_can_commit() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var project = (await projects.SaveAsync(new() { Name = "Runtime composer validation" })).Value;
+        var page = harness.Context.Render<ProjectStructurePage>(p => p.Add(c => c.ProjectId, project));
+        page.WaitForElement("[data-testid='project-structure-canvas-loaded']");
+        var canvas = page.FindComponent<CanvasWorkbench>();
+        var root = Assert.Single(canvas.Instance.Surface.Nodes, node => node.Id == $"project:{project:D}");
+        var openingId = Guid.NewGuid();
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "add-script-console", root.Id, 0, 0, root.Id, "Runtime script", "", "Retained draft",
+            "child", "dialog", "console", null,
+            [new() { Key = "scriptKind", Value = "console" }, new() { Key = "command", Value = "" }]) {
+            ComposerOpeningId = openingId, ComposerSubmissionId = Guid.NewGuid()
+        };
+        await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(openingId, request, null))));
+        await page.InvokeAsync(() => canvas.Instance.OnCreateAction(JsonSerializer.Serialize(request)));
+
+        var outcome = Assert.Single(page.Instance.AuthoringOutcomes);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Rejected, outcome.Kind);
+        Assert.Equal(AgentToolEffectState.NotCommitted, Assert.IsType<ProjectStructureAgentException>(outcome.Failure).EffectState);
+        Assert.Contains("typed command or explicit script path", outcome.Message, StringComparison.Ordinal);
+        var acknowledgement = Assert.IsType<CanvasWorkbenchComposerResult>(Assert.Single(
+            harness.Context.JSInterop.Invocations["CanDoItAll.canvasWorkbench.acknowledgeComposer"]).Arguments[1]);
+        Assert.Equal(CanvasWorkbenchComposerResultKind.Rejected, acknowledgement.Kind);
+        Assert.DoesNotContain((await workbench.GetStructureAsync(project)).Nodes, node => node.ObjectType == ProjectObjectType.Script);
+
+        var corrected = request with {
+            ComposerOpeningId = null, ComposerSubmissionId = Guid.NewGuid(),
+            InputValues = [new() { Key = "scriptKind", Value = "console" },
+                new() { Key = "command", Value = "dotnet --version" },
+                new() { Key = "workingDirectory", Value = harness.ActiveProfile.WorkspaceRootPath }]
+        };
+        await page.InvokeAsync(() => canvas.Instance.OnCreateAction(JsonSerializer.Serialize(corrected with { ComposerOpeningId = openingId })));
+        Assert.Single(page.Instance.AuthoringOutcomes);
+        Assert.DoesNotContain((await workbench.GetStructureAsync(project)).Nodes, node => node.ObjectType == ProjectObjectType.Script);
+
+        await page.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvas.Instance, JsonSerializer.Serialize(corrected)));
+        var stored = Assert.Single((await workbench.GetStructureAsync(project)).Nodes, node => node.ObjectType == ProjectObjectType.Script);
+        Assert.Equal(request.Notes, stored.Notes);
+        Assert.Equal("dotnet --version", ProjectObjectMetadataSerializer.Parse(stored.MetadataJson).Script?.Command);
+        Assert.Contains(page.Instance.AuthoringOutcomes, item => item.Kind == ProjectStructureAuthoringResultKind.Committed && item.Node?.Id == stored.Id);
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]
@@ -87,7 +136,11 @@ public sealed class ProjectStructureComposerLifetimeTests {
         var edit = new CanvasWorkbenchNodeEditRequest(note.Id, "Stale", "Should not write") { ComposerOpeningId = id };
         await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(id, null, edit))));
         if (recreate) {
-            await projects.DeleteAsync(project, expectedProjectAdmission: (await projects.GetAsync(project)).ExpectedProjectAdmission);
+            var native = harness.Context.Services.GetRequiredService<ProjectNativeLifecycleOperations>();
+            var context = await native.GetContextAsync();
+            var original = native.Freeze(new ProjectLifecycleCommand.Delete((await projects.GetAsync(project)).ExpectedDefinition!),
+                ProjectNativeLifecycleOperations.Scope(context), context, Guid.NewGuid());
+            Assert.IsType<ProjectLifecycleOutcome.Accepted>(await native.DispatchAsync(original.Submission));
             Assert.True((await projects.CreateAsync(project, new() { Name = "Replacement lifetime" })).IsSuccess);
         } else {
             await page.InvokeAsync(() => canvas.Instance.OnComposerClosed(id));

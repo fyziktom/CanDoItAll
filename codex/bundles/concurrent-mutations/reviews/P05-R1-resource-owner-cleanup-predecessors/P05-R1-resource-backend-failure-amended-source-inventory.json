@@ -1,0 +1,476 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "source-frozen-unbuilt-unexecuted-independent-source-review-passed",
+  "workspace": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "parentWorkspace": "C:/repositories/CanDoItAll",
+  "createdUtc": "2026-10-17T04:49:11.284033+00:00",
+  "predecessorOwnershipPath": ".artifacts/concurrent-mutations/candidates/resource-r1-backend-predecessor-ownership.json",
+  "predecessorOwnershipSha256": "D05CCDB20C745246C3A1E43FCE835F4196B2FBCAAF1032A1A85D101AAA0D792B",
+  "entryCount": 37,
+  "entries": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceMetadataContracts.cs",
+      "operation": "add",
+      "sha256": "B7B58985E909ABAD7A49719EDDE1996537790090D3ED944E1F42DDBD7EA69C14",
+      "bytes": 18966,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceRegistryOwner.cs",
+      "operation": "replace",
+      "sha256": "38862C9D69A7A6C11392E29216270A9C5D7BAF7669F533AD50847BE191E73F00",
+      "bytes": 1630,
+      "parentBaseSha256": "265E32BD870CFDB8C0876F26D7E9C334A2ADA935575241E8AE2F19B3D5F2E4F7",
+      "parentBaseBytes": 1334
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "operation": "replace",
+      "sha256": "76BB61C35C84D76DA24A3D069245B98EB2DA1AF167EA4530C534988B1BE23211",
+      "bytes": 6492,
+      "parentBaseSha256": "73428CFC61129756A04F6A5E365AAEF6F3AB62A29172376D3B79ADCF9DA05487",
+      "parentBaseBytes": 3407
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceMutationKind.cs",
+      "operation": "add",
+      "sha256": "EA6DBC8BB8DD6F2F223B2820A952DA0F6AAE23E400FCA754E4293F4E3318492B",
+      "bytes": 100,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceCommittedMutationException.cs",
+      "operation": "delete",
+      "sha256": null,
+      "bytes": 0,
+      "parentBaseSha256": "CC336060C11DF65A15B9F4A4ADA5650B44A28D91699673B3CEFBEC7C5D2FD92B",
+      "parentBaseBytes": 575
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataValues.cs",
+      "operation": "add",
+      "sha256": "D2F681114E8CCCC30E9B4398F4DDE7A2826436073EB1EB6869A760FC0DFEBBF9",
+      "bytes": 13156,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataStore.cs",
+      "operation": "add",
+      "sha256": "EC95ECC1A63923CDCBB1E75677B7ACA5AE3C005933E3F3BCB4C903AA32DE7109",
+      "bytes": 10576,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataWriter.cs",
+      "operation": "add",
+      "sha256": "6320752EFDC88C3B78A666E5769199FE1C99684457CDC111281561317F50A385",
+      "bytes": 21581,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "operation": "replace",
+      "sha256": "2B374A5FC43379D72B631216B1F22652D769B5C38844732AE7B5F5E4E913E833",
+      "bytes": 10670,
+      "parentBaseSha256": "ADC12BD0E78453281C8BF06C746B5623F80297A2D5C7B432F57102EF58DAC368",
+      "parentBaseBytes": 22774
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceRegistryOwner.cs",
+      "operation": "replace",
+      "sha256": "DAF279E0134E0BF0719654A373769595EB272ECCFFDFD2081F405320BA581848",
+      "bytes": 3697,
+      "parentBaseSha256": "F99BA5722FEB5BD29FAC3B22B7F20B1CAAD6FA1667C43B4174954EE6A012450A",
+      "parentBaseBytes": 3181
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectPromotion.cs",
+      "operation": "replace",
+      "sha256": "14AB30A57095D6964D3DBDA9DE2EF51CE67944DE7DCF2536D484E0105D00F0B6",
+      "bytes": 12881,
+      "parentBaseSha256": "B57F201F4F0F8F4714EDC2328F053D5D0604ACF56B878E6139E6CBC488F43427",
+      "parentBaseBytes": 14643
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourcePromotionCommittedException.cs",
+      "operation": "delete",
+      "sha256": null,
+      "bytes": 0,
+      "parentBaseSha256": "4A6D8E9C2D6B1A63111CE3C2A692CE31A7CD19034C7A0E4BF9CE7603ACFC98A7",
+      "parentBaseBytes": 555
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
+      "operation": "replace",
+      "sha256": "6918B51EC802D35309484214880E342C09082197BA8C09A654AAADD4C3C35E30",
+      "bytes": 6434,
+      "parentBaseSha256": "90D356A7C8EBAF51BFBF5193BAA92E7C4B2C41C696EA2FB1707A7A3178C89818",
+      "parentBaseBytes": 5282
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourcesModuleServiceCollectionExtensions.cs",
+      "operation": "replace",
+      "sha256": "5B93F17C85DEDB13509F063BC2BB1ACB664A8627120CFDF2AF0FF187D0A4F693",
+      "bytes": 2544,
+      "parentBaseSha256": "D399E8A7F90931798317F970CE98A3AA55585C4CEF7DE57DEA2D0959285D63B3",
+      "parentBaseBytes": 2431
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Search/SearchIndexing.cs",
+      "operation": "replace",
+      "sha256": "E62842810E79FC688799CC6340880D285FD8689A4950CB1A2E4AB07FF1B821D8",
+      "bytes": 8681,
+      "parentBaseSha256": "A511B0AA1DFB4E40655ADDA94523199973DE4A092A0D83F381E57499E2641F12",
+      "parentBaseBytes": 7697
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ResourceMetadataContractTests.cs",
+      "operation": "add",
+      "sha256": "D27A7F25267D1665B4BD5872DBBFCEB5D34DB7BCAB24B47D37EE62BF59721945",
+      "bytes": 10697,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/StorageObjectResourceConnectorTests.cs",
+      "operation": "replace",
+      "sha256": "3B122CE9AF7D7C1EB4C71E9CE351B1DEEC3A6B1FEDC8059A0EFC750909B688AD",
+      "bytes": 17118,
+      "parentBaseSha256": "E3509856939FB4667906D435387DF15E94E4047FCB19A277946C3899532EA32B",
+      "parentBaseBytes": 22523
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ResourceStorageObjectPromotionTests.cs",
+      "operation": "replace",
+      "sha256": "A43E6571491315FEC651A80F9EFE48A30FDAAC6D0943C66BF8999385D0304083",
+      "bytes": 17503,
+      "parentBaseSha256": "03196C67C7662FC5BCD335D54355989B502DDBC509D77DC1E21CC7F87AA80876",
+      "parentBaseBytes": 16461
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CrmAgentCommittedSaveTests.cs",
+      "operation": "replace",
+      "sha256": "07CB4DFCCD1B48F7F207CFD9399C99AC3D502963F2126F58A9F2D1AEB5846A0D",
+      "bytes": 8533,
+      "parentBaseSha256": "C2C8CF88FC37E97A5D0C4309F9BF76BCB76FB946C648371BBFBAC4AB3A679E9E",
+      "parentBaseBytes": 8368
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.cs",
+      "operation": "add",
+      "sha256": "6FCA0DAFF4F4C56337C3F418EE402C21A23354C511DF93819E54D6FD1DE932EF",
+      "bytes": 28061,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Bounds.cs",
+      "operation": "add",
+      "sha256": "7AEAB1090ADFFD05B583B6BFC22B5DB5DB3BC7B863D5E34672555A560128DBC9",
+      "bytes": 12627,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+      "operation": "replace",
+      "sha256": "B5E148800FA3A765F14FA5159C8F1EA3BFDA38F657E774708091632D473048B3",
+      "bytes": 24891,
+      "parentBaseSha256": "71D0BE01FCE6D409940C2EFBF68229151FA0A9FE1984E132A2FB6B0FA1FA64B1",
+      "parentBaseBytes": 20234
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/OwnerPostcommitPersistenceTests.cs",
+      "operation": "replace",
+      "sha256": "C37E0E8A52B325DCF4FF7F1D54445FBFB6A5BB5138ACD1C0C144254B5E764D8B",
+      "bytes": 22416,
+      "parentBaseSha256": "599F6001332D7E02C78A5955E18C005D9DCFF86FC97522BE8912FC88B7AD8704",
+      "parentBaseBytes": 19272
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourcePromotionOutcomeTests.cs",
+      "operation": "replace",
+      "sha256": "6CBA9B73E442E882E268BD1F98A686A544E9258FC673BDE899D600B6C3A6E34C",
+      "bytes": 22138,
+      "parentBaseSha256": "E2A7248744646CF7C02D0C17F3A05C239F5583F7492D4BD79DFEC322B4E0A7F1",
+      "parentBaseBytes": 21006
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceStorageObjectIntegrationTests.cs",
+      "operation": "replace",
+      "sha256": "A01760288E12C22B64DFF351BB7EEFA2F4D5BF69A303867E1FF0FA8E62462B45",
+      "bytes": 5353,
+      "parentBaseSha256": "7D2D5E903F2F2B9E79C12EB58E246D363B188CCBD3DBD1095D11AFA4B6F60BE7",
+      "parentBaseBytes": 5080
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourcesOwnerPersistenceTests.cs",
+      "operation": "replace",
+      "sha256": "5615AB6FC718A8CD2CEE612079BE9260BB0ADBD1BD1297CF543FB2DBE9AB72D0",
+      "bytes": 9555,
+      "parentBaseSha256": "0F8C4B83E0C3EA9061F6430C55AFB030ED0161BBC8C02F8252CC09071709580A",
+      "parentBaseBytes": 8533
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ConnectorPluginIntegrationTests.cs",
+      "operation": "replace",
+      "sha256": "EE44AE7685138095CE589F29CC6C61276B5A6D006B35870CF1ACEB966AC57D00",
+      "bytes": 5112,
+      "parentBaseSha256": "E15AFC401D09E653DB360A68B3FB36DB7111B67AEA053AB632045451F59D30AE",
+      "parentBaseBytes": 4828
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CrmHrCrossModuleIntegrationTests.cs",
+      "operation": "replace",
+      "sha256": "5E9D86641F64AAC805CEAF814C22B794F258E1BDDACE8E88979429D0DDCB3A12",
+      "bytes": 12351,
+      "parentBaseSha256": "E84B062E14394361AA1B83867178AAD96239E4409CB4945B667DC563F3DA1478",
+      "parentBaseBytes": 12216
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/UnknownConnectorManifestIntegrationTests.cs",
+      "operation": "replace",
+      "sha256": "F262602D67591AD8B3D89C734971E542ECC6870E1D141A449A2F1E22848FEB96",
+      "bytes": 11880,
+      "parentBaseSha256": "512865A36E2F3ACCC837D5624932CB5749E2BF4D8C664DE938B896F7105A8E7B",
+      "parentBaseBytes": 11788
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsServiceIntegrationTests.cs",
+      "operation": "replace",
+      "sha256": "4CD24164D36487E687C7EE29F474229D750541226FC1DC2DEA7439E67EF87572",
+      "bytes": 13499,
+      "parentBaseSha256": "1888B00116C0AD3706A4A785DA7931A4F9618E19ED5327F5B3700F8005AAC3D1",
+      "parentBaseBytes": 13264
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/OwnerPostcommitTestProbe.cs",
+      "operation": "replace",
+      "sha256": "2CE57F72675DCF123F45A9958582F890506EBAD57A9A3E791B689F3DD83F3C4D",
+      "bytes": 10132,
+      "parentBaseSha256": "EB52C33DF775C414B59E90B2115C875465558D2E94FF2392786C135A52734332",
+      "parentBaseBytes": 9814
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/ResourceMetadataTestCommands.cs",
+      "operation": "add",
+      "sha256": "44481064B5425500045F58168E6C9358A0DEB4A633154FBEE3D06FFC7DB2671D",
+      "bytes": 1647,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserHost.cs",
+      "operation": "replace",
+      "sha256": "EAC9248FD670C79627CB0CF80D082087B0A7D7B8935133E45E0658B64F01E4DF",
+      "bytes": 13228,
+      "parentBaseSha256": "F4EC9EABB6263D5E96260A7328D7E8E876DE1947C94D71BDA1E9673B58F85D53",
+      "parentBaseBytes": 13085
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserTests.cs",
+      "operation": "replace",
+      "sha256": "A923E3897D7621C780137291115A0FE7D6316A0E472901F5DDE669A34E30D331",
+      "bytes": 15994,
+      "parentBaseSha256": "326CA1A795CA4D44792E8DF18D2DE24A5DE7BA0F3E56D5AD9889679383C37356",
+      "parentBaseBytes": 15960
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrRegressionTests.cs",
+      "operation": "replace",
+      "sha256": "359630A4635F6B49EF07BAB782D99AAC6368D0892B0BA983C4838A44F639A792",
+      "bytes": 21965,
+      "parentBaseSha256": "41948C7F8ED39CD908223C4C0CAAE9CAD2D217086DA1D14F87101A0BB7508226",
+      "parentBaseBytes": 21883
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-backend-source.md",
+      "operation": "add",
+      "sha256": "D5AF071344ACDA6499068DB921470C77B3CCDF79A400339B31FC14F43E47579E",
+      "bytes": 8996,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-backend-failure-amendment.md",
+      "operation": "add",
+      "sha256": "9303F3A3EB12074EC16B053329803093C43EDCB8054038A28D97B8D030EA9003",
+      "bytes": 3289,
+      "parentBaseSha256": null,
+      "parentBaseBytes": 0
+    }
+  ],
+  "selections": [
+    {
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "class": "CanDoItAll.Tests.Unit.ResourceMetadataContractTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.ResourceMetadataContractTests",
+      "expectedDiscovery": 8,
+      "expectedRuntime": 8
+    },
+    {
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "class": "CanDoItAll.Tests.Unit.Storage.StorageObjectResourceConnectorTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.StorageObjectResourceConnectorTests",
+      "expectedDiscovery": 10,
+      "expectedRuntime": 10
+    },
+    {
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "class": "CanDoItAll.Tests.Unit.Storage.ResourceStorageObjectPromotionTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.ResourceStorageObjectPromotionTests",
+      "expectedDiscovery": 9,
+      "expectedRuntime": 9
+    },
+    {
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "class": "CanDoItAll.Tests.Unit.CrmHr.CrmAgentCommittedSaveTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmAgentCommittedSaveTests",
+      "expectedDiscovery": 5,
+      "expectedRuntime": 5
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.ResourceMetadataOwnerTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourceMetadataOwnerTests",
+      "expectedDiscovery": 18,
+      "expectedRuntime": 18
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests",
+      "expectedDiscovery": 10,
+      "expectedRuntime": 10
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.OwnerPostcommitPersistenceTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.OwnerPostcommitPersistenceTests",
+      "expectedDiscovery": 16,
+      "expectedRuntime": 16
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.ResourcePromotionOutcomeTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourcePromotionOutcomeTests",
+      "expectedDiscovery": 13,
+      "expectedRuntime": 13
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.Persistence.ResourceStorageObjectIntegrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.ResourceStorageObjectIntegrationTests",
+      "expectedDiscovery": 1,
+      "expectedRuntime": 1
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.ResourcesOwnerPersistenceTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourcesOwnerPersistenceTests",
+      "expectedDiscovery": 3,
+      "expectedRuntime": 3
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.External.ConnectorPluginIntegrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.External.ConnectorPluginIntegrationTests",
+      "expectedDiscovery": 2,
+      "expectedRuntime": 2
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.CrmHr.CrmHrCrossModuleIntegrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmHrCrossModuleIntegrationTests",
+      "expectedDiscovery": 2,
+      "expectedRuntime": 2
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.External.UnknownConnectorManifestIntegrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.External.UnknownConnectorManifestIntegrationTests",
+      "expectedDiscovery": 1,
+      "expectedRuntime": 1
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectsServiceIntegrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectsServiceIntegrationTests",
+      "expectedDiscovery": 8,
+      "expectedRuntime": 8
+    },
+    {
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "class": "CanDoItAll.Tests.Integration.SearchStorageOwnerPersistenceTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.SearchStorageOwnerPersistenceTests",
+      "expectedDiscovery": 6,
+      "expectedRuntime": 6
+    }
+  ],
+  "expectedUnit": 32,
+  "expectedIntegration": 80,
+  "expectedOrdinaryTotal": 112,
+  "newFacts": 26,
+  "removedMovedUnitFacts": 1,
+  "netNewBackendRows": 25,
+  "separateBrowserRows": 2,
+  "dependencies": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SearchStorageOwnerPersistenceTests.cs",
+      "sha256": "0301758A1AA0205EC042B6C5BCFF5800DB8322CF56E6C6021D4C9D9214E4C221",
+      "purpose": "Unchanged six-row Search owner regression; not a transfer input"
+    }
+  ],
+  "notes": [
+    "ResourceMetadataOwnerTests includes both partial files (12+6 Facts).",
+    "All ordinary selections have fixed Fact/InlineData cardinality; no dynamic or skipped rows. HostPlatform retained.",
+    "Browser fixture adaptations are two separate Facts and not included in ordinary count. UI-owned native inventory is separate.",
+    "No migrations, canonical snapshot, new entity, durable Resource receipts or runtime performance claims.",
+    "Parent-base hashes are read-only current main observations; transfer must recheck each exact predecessor.",
+    "Main source untouched; no builds/tests/scans/DB/processes/commits.",
+    "Initial57CE inventory and its original proof retained byte-exact; this successor changes five source/test hashes and adds one amendment proof. No count or public-contract change."
+  ],
+  "supersedes": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-backend-source-inventory.json",
+    "sha256": "57CE00C84E5EC4503FA8F3710AEA7B038C56586E6AD65DAB97360F3E7BC73066",
+    "reason": "Approved precommit activation classification and cleanup diagnostic priority; source rows unchanged."
+  },
+  "amendedSource": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataWriter.cs",
+      "priorSha256": "8A4A5C1E04419EBF0BA73A9BCE6F817332652E6C819870376842FD273A24C291",
+      "sha256": "6320752EFDC88C3B78A666E5769199FE1C99684457CDC111281561317F50A385"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectPromotion.cs",
+      "priorSha256": "439039BD269C498DA5587CF008700C274F76D821D0A5A07EF571CE77989BF408",
+      "sha256": "14AB30A57095D6964D3DBDA9DE2EF51CE67944DE7DCF2536D484E0105D00F0B6"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.cs",
+      "priorSha256": "2075D42C894616F22DDD3F8D008C8026DE5077FE0857E81627271E0A85F4994A",
+      "sha256": "6FCA0DAFF4F4C56337C3F418EE402C21A23354C511DF93819E54D6FD1DE932EF"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Bounds.cs",
+      "priorSha256": "F8F98450FC3EF5D628D2FFFF21B7F4C976F9857E372B65354EC9A20CCBA52175",
+      "sha256": "7AEAB1090ADFFD05B583B6BFC22B5DB5DB3BC7B863D5E34672555A560128DBC9"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourcePromotionOutcomeTests.cs",
+      "priorSha256": "66721BC10D07869AC27ED9C9CC2E411549947B3404FBAB29ACBE4917D3AC6B1A",
+      "sha256": "6CBA9B73E442E882E268BD1F98A686A544E9258FC673BDE899D600B6C3A6E34C"
+    }
+  ],
+  "peerReview": {
+    "reviewer": "/root/agent_process_architecture",
+    "scope": "Initial 15 production add/replace/delete states and final five-file failure amendment; exact hashes verified.",
+    "result": "No remaining source blocker found. No build, execution, migration or capacity claim."
+  }
+}

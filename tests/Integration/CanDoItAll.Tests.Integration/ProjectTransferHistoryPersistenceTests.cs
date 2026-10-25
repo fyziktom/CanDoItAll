@@ -61,7 +61,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
 
         await using var projects = await fixture.TargetServices.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         await using var workbench = await fixture.TargetServices.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
-        Assert.Equal(6, projects.Model.GetEntityTypes().Count());
+        Assert.Equal(9, projects.Model.GetEntityTypes().Count());
         Assert.Equal(15, workbench.Model.GetEntityTypes().Count());
         foreach (var type in new[] { typeof(ProjectRetirementRecord), typeof(ProjectCreationReservationRecord), typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord) }) {
             var model = type == typeof(ProjectRetirementRecord) || type == typeof(ProjectCreationReservationRecord) ? projects.Model : workbench.Model;
@@ -360,7 +360,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         var targetAdmissions = fixture.TargetServices.GetRequiredService<ProjectWriteAdmissionService>();
         var forgedCurrentProfile = reserved with { DatabaseProfileId = fixture.TargetProfile.Profile.Id };
         await Assert.ThrowsAsync<InvalidOperationException>(() => targetAdmissions.RequireCreationGrantAsync(forgedCurrentProfile));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => targetAdmissions.CancelCreationAsync(forgedCurrentProfile));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => targetAdmissions.CaptureReservationCancellationAsync(forgedCurrentProfile));
         await Assert.ThrowsAsync<InvalidOperationException>(() => targetAdmissions.ReserveCreationAsync(reserved.ProjectId, reserved.RequesterId, reserved.Id));
         Assert.Empty((await targetAdmissions.ListAccessBindingFactsAsync([reserved.ProjectId])).Reservations);
         var rejected = await fixture.TargetServices.GetRequiredService<ProjectsService>().CreateAsync(forgedCurrentProfile, new() { Name = "Stale imported reservation" });
@@ -632,7 +632,8 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
             await using var targetContext = new AppDbContext(options.Options);
             var transfer = new DatabaseTransferOperation(SourceProfile, TargetProfile, true);
             var inspections = SourceServices.GetRequiredService<ProjectTransferTargetInspectionRunner>();
-            var operations = DatabaseTransferTestSupport.For(transfer, sourceContext, targetContext, inspections: inspections);
+            var operations = DatabaseTransferTestSupport.For(transfer, sourceContext, targetContext, inspections: inspections,
+                activation: SourceServices.GetRequiredService<DatasetActivationService>());
             var guard = new ProjectTransferTargetStateGuard(SourceServices.GetRequiredService<IEnumerable<IProjectTransferTargetStateParticipant>>(), operations);
             var handler = new ProjectsDatabaseTransferHandler(new Profiles(SourceProfile, TargetProfile), guard, operations, new(operations));
             return await handler.TransferAsync(transfer);

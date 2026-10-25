@@ -89,11 +89,12 @@ internal sealed class AgentFrameworkProcessRuntimeCancellationObserver(
         CancellationToken cancellationToken)
     {
         var processRunIdSet = processRunIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var executionRuns = await executionRunStore.ListExecutionRunsAsync(cancellationToken).ConfigureAwait(false);
+        var executionRuns = await executionRunStore.ListExecutionRunCandidatesAsync(
+            new ExecutionRunQuery { ProcessRunIds = processRunIds }, cancellationToken).ConfigureAwait(false);
         var activeRuns = executionRuns
             .Where(run =>
                 processRunIdSet.Contains(run.ProcessRunId) &&
-                IsActiveExecutionRun(run))
+                IsActiveExecutionRun(run) && !IsInheritedPlanning(run))
             .OrderBy(run => run.CreatedAtUtc)
             .ToArray();
         var repairedCount = 0;
@@ -102,7 +103,7 @@ internal sealed class AgentFrameworkProcessRuntimeCancellationObserver(
             cancellationToken.ThrowIfCancellationRequested();
 
             var detail = await executionRunStore.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
-            if (detail is null || !IsActiveExecutionRun(detail.Run))
+            if (detail is null || !IsActiveExecutionRun(detail.Run) || IsInheritedPlanning(detail.Run))
             {
                 continue;
             }
@@ -183,6 +184,10 @@ internal sealed class AgentFrameworkProcessRuntimeCancellationObserver(
                 run.Id);
         }
     }
+
+    private static bool IsInheritedPlanning(ExecutionRunRecord run)
+        => run.ToolAdmission?.SchemaVersion == AgentToolJournalRecord.InheritedPlanningSchemaVersion ||
+            run.ToolAdmission?.PlanningDecision?.InheritedOrigin is not null;
 
     private static bool IsActiveExecutionRun(ExecutionRunRecord run)
     {

@@ -130,8 +130,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
     }
 
     [Fact]
-    public async Task Compensation_failure_aggregates_transfer_failure_before_cleanup_failure()
-    {
+    public async Task Compensation_failure_aggregates_transfer_failure_before_cleanup_failure() {
         var sourceProjectId = Guid.NewGuid();
         var targetProjectId = Guid.NewGuid();
         var cleanupFailure = new InvalidOperationException("Delete failed.");
@@ -156,6 +155,31 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
         Assert.Same(cleanupFailure, exception.InnerExceptions[1]);
         Assert.Equal(["create", "move-descendants", "compensate"], harness.Events);
         Assert.True(harness.TargetExists);
+
+        var recovery = new ProjectDeletionRecovery(targetProjectId,
+            [new(ProjectDeletionRecoveryOperation.ParticipantCleanup, new("actual-participant"), Guid.NewGuid())],
+            "Operator review is required before cleanup retry.", OwnerCompletionUnconfirmed: true);
+        var committedDeletion = new ProjectDeletionPartialCommitException(recovery,
+            "Deletion committed; owner cleanup failed.", new IOException("Source release failed."));
+        var committed = new OperationHarness(sourceProjectId, targetProjectId) {
+            DescendantsTransfer = null,
+            DeleteFailure = committedDeletion
+        };
+        var committedCoordinator = new ProjectStructureSubprojectTransferCoordinator(committed.CreateOperations());
+        var committedWarning = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            committedCoordinator.MoveDescendantsToNewSubprojectAsync(sourceProjectId, targetProjectId, CreateEditor(), "anchor"));
+        var details = Assert.IsType<ProjectCreationPartialCompletion>(committedWarning.Details);
+        Assert.True(details.CreationObserved);
+        Assert.False(details.RequestedOperationCompleted);
+        Assert.Same(recovery, details.CompensationDeletion);
+        Assert.False(committedWarning.CanRetryWithCorrectedInput);
+        Assert.Contains("compensating deletion committed", committedWarning.SafeMessage, StringComparison.Ordinal);
+        Assert.Contains(recovery.RetryGuidance, committedWarning.SafeMessage, StringComparison.Ordinal);
+        var committedFailures = Assert.IsType<AggregateException>(committedWarning.InnerException);
+        Assert.IsType<ProjectStructureTransferRejectedException>(committedFailures.InnerExceptions[0]);
+        Assert.Same(committedDeletion, committedFailures.InnerExceptions[1]);
+        Assert.Equal(["create", "move-descendants", "compensate"], committed.Events);
+        Assert.False(committed.TargetExists);
     }
 
     [Fact]
@@ -313,7 +337,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
             Assert.False(cancellationToken.IsCancellationRequested);
             Events.Add("create");
             TargetExists = true;
-            var receipt = new ProjectCreationReceipt(new(Guid.NewGuid(), targetProjectId, Guid.NewGuid()), null, "test-owner-receipt");
+            var receipt = new ProjectCreationReceipt(new(Guid.NewGuid(), targetProjectId, Guid.NewGuid()), new(Guid.NewGuid()), null, "test-owner-receipt");
             CreatedReceipt = receipt;
             return CreationFailure is null ? Task.FromResult(Result<ProjectCreationReceipt>.Success(receipt)) :
                 Task.FromException<Result<ProjectCreationReceipt>>(CreationFailure);
@@ -364,6 +388,9 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
                 return Task.FromResult(false);
             }
             if (DeleteFailure is not null) {
+                if (DeleteFailure is ProjectDeletionPartialCommitException) {
+                    TargetExists = false;
+                }
                 return Task.FromException<bool>(DeleteFailure);
             }
             TargetExists = false;

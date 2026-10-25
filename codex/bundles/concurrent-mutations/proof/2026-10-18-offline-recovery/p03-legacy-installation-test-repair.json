@@ -1,0 +1,807 @@
+{
+  "candidate": "p03-legacy-installation-test-repair",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-final-release",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-19T02:02:27.5731170+00:00",
+      "State": "Completed",
+      "RunnerPid": 58700,
+      "ChildPid": 19812,
+      "ChildStartedUtc": "2026-10-19T02:02:27.6036589Z",
+      "ExitCode": 0,
+      "Seconds": 45.770256,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 174787,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-19T02:03:58.2712487+00:00",
+      "State": "Completed",
+      "RunnerPid": 48476,
+      "ChildPid": 52172,
+      "ChildStartedUtc": "2026-10-19T02:03:58.2748092Z",
+      "ExitCode": 0,
+      "Seconds": 0.2135878,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 10345,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-legacy-test-repair",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectDeletionLegacyQueryPlanTests|FullyQualifiedName=CanDoItAll.Tests.Integration.ProjectDeletionLegacyInstallationTests.Competing_installation_cannot_rebind_while_the_first_actor_holds_selection",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T02:03:47.1370836+00:00",
+      "State": "Completed",
+      "RunnerPid": 36216,
+      "ChildPid": 56804,
+      "ChildStartedUtc": "2026-10-19T02:03:47.1794692Z",
+      "ExitCode": 0,
+      "Seconds": 2.0458501,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 690,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-19T02:03:52.5843210+00:00",
+      "State": "Completed",
+      "RunnerPid": 48476,
+      "ChildPid": 848,
+      "ChildStartedUtc": "2026-10-19T02:03:52.5873804Z",
+      "ExitCode": 0,
+      "Seconds": 5.6643374,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-legacy-test-repair",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectDeletionLegacyQueryPlanTests|FullyQualifiedName=CanDoItAll.Tests.Integration.ProjectDeletionLegacyInstallationTests.Competing_installation_cannot_rebind_while_the_first_actor_holds_selection",
+        "--logger",
+        "trx;LogFileName=legacy-test-repair.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/p03-legacy-installation-test-repair"
+      ],
+      "StartedUtc": "2026-10-19T02:05:24.9639772+00:00",
+      "State": "Completed",
+      "RunnerPid": 50624,
+      "ChildPid": 42848,
+      "ChildStartedUtc": "2026-10-19T02:05:25.0024966Z",
+      "ExitCode": 0,
+      "Seconds": 17.5881611,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1409,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-chat-browser-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\p03-legacy-installation-test-repair/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-19T02:05:16.9662657+00:00",
+      "State": "Completed",
+      "RunnerPid": 50536,
+      "ChildPid": 60056,
+      "ChildStartedUtc": "2026-10-19T02:05:16.9837521Z",
+      "ExitCode": 0,
+      "Seconds": 25.8075899,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/p03-legacy-installation-test-repair/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-19T02:04:18.3072983+00:00",
+      "State": "Completed",
+      "RunnerPid": 50552,
+      "ChildPid": 3480,
+      "ChildStartedUtc": "2026-10-19T02:04:18.3101452Z",
+      "ExitCode": 0,
+      "Seconds": 0.4199608,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/p03-legacy-installation-test-repair/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-19T02:03:09.0582312+00:00",
+      "State": "Completed",
+      "RunnerPid": 50552,
+      "ChildPid": 10784,
+      "ChildStartedUtc": "2026-10-19T02:03:09.0891797Z",
+      "ExitCode": 0,
+      "Seconds": 69.1871961,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 457,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-final",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-19T02:03:50.0935443+00:00",
+      "State": "Completed",
+      "RunnerPid": 48476,
+      "ChildPid": 52600,
+      "ChildStartedUtc": "2026-10-19T02:03:50.1288628Z",
+      "ExitCode": 0,
+      "Seconds": 2.4219305,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "22398e6a-41cb-46fc-860d-47b6ce60d8a5",
+      "testId": "07a0167c-ab7c-568a-bc84-d4dd362375eb",
+      "testName": "CanDoItAll.Tests.Integration.ProjectDeletionLegacyQueryPlanTests.Subject_inspection_stops_at_its_indexed_bound_despite_large_terminal_history(mode: Exclusive)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.6070328",
+      "startTime": "2026-10-18T22:05:39.8231611-04:00",
+      "endTime": "2026-10-18T22:05:42.4282356-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "22398e6a-41cb-46fc-860d-47b6ce60d8a5",
+      "trx": "legacy-test-repair.trx"
+    },
+    {
+      "executionId": "ba51af1c-401d-4e60-b597-516083f6f4b4",
+      "testId": "51403548-66f2-e542-7734-038bc1ffefcc",
+      "testName": "CanDoItAll.Tests.Integration.ProjectDeletionLegacyInstallationTests.Competing_installation_cannot_rebind_while_the_first_actor_holds_selection",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:09.0748438",
+      "startTime": "2026-10-18T22:05:26.9328096-04:00",
+      "endTime": "2026-10-18T22:05:36.0147744-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ba51af1c-401d-4e60-b597-516083f6f4b4",
+      "trx": "legacy-test-repair.trx"
+    },
+    {
+      "executionId": "954ed54e-dd94-4003-bbfb-21644e020fff",
+      "testId": "684b3646-a669-64cd-9c6e-8608e7b49b90",
+      "testName": "CanDoItAll.Tests.Integration.ProjectDeletionLegacyQueryPlanTests.Subject_inspection_stops_at_its_indexed_bound_despite_large_terminal_history(mode: Observe)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8003168",
+      "startTime": "2026-10-18T22:05:36.0287251-04:00",
+      "endTime": "2026-10-18T22:05:39.8206740-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "954ed54e-dd94-4003-bbfb-21644e020fff",
+      "trx": "legacy-test-repair.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "snapshotId": "snap-20261019015122-0fd52be5",
+      "scope": [
+        "CanDoItAll.Composition",
+        "CanDoItAll.Modules.AgentFramework",
+        "CanDoItAll.Modules.Projects",
+        "CanDoItAll.Modules.Workbench",
+        "CanDoItAll.Web"
+      ],
+      "documents": 948,
+      "types": 2638,
+      "dependencies": 4065,
+      "cycles": [
+        {
+          "level": "Module",
+          "nodeIds": [
+            "mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64",
+            "mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2"
+          ]
+        },
+        {
+          "level": "Module",
+          "nodeIds": [
+            "mod-proj-candoitall-modules-workbench-candoitall-module-0f477a149fbd",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-719c9c04c259",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-8728e66eb823",
+            "mod-proj-candoitall-modules-workbench-candoitall-modules-workbench"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751",
+            "type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-projects-candoitall-modules-5426ea5324b7",
+            "type-proj-candoitall-modules-projects-candoitall-modules-9ab4f49abc23"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-02c9ba5465b1",
+            "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-0f41c602b1fe",
+            "type-proj-candoitall-modules-workbench-candoitall-module-4b7d2fcd61a3"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-52c32b619f41",
+            "type-proj-candoitall-modules-workbench-candoitall-module-8069c738a25d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-60d3a4551568",
+            "type-proj-candoitall-modules-workbench-candoitall-module-b68d6311eb55",
+            "type-proj-candoitall-modules-workbench-candoitall-module-c69b5db5dd23"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-683329e17440",
+            "type-proj-candoitall-modules-workbench-candoitall-module-96caa8516513"
+          ]
+        }
+      ],
+      "newCycles": [],
+      "workspaceErrorCount": 189,
+      "nonAdvisoryWorkspaceErrors": [],
+      "projectReferencesChanged": false
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9149,
+      "runtimeFiles": 6436,
+      "sourceSha256": "868012231E687745580899812AB2872309980BA3D618556BFE3242B5FF8C664B",
+      "runtimeSha256": "6303BEAC86C17BB89726D13C165D6D9DBC43827798670F2D4768306D97C25B79"
+    },
+    "final-resource-reconciliation.json": {
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_42848_20261018_220525_184.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\k4hevr5h.atz",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\spjcyb1z.unm",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "postgres|1"
+      ],
+      "remainingObservedProcesses": [],
+      "databaseNameDelta": [],
+      "recordedUtc": "2026-10-19T02:06:13.3953909+00:00",
+      "outcome": "Three corrected cases passed with all 5201 production source paths unchanged from the 158 other passing cases"
+    },
+    "production-bridge.json": {
+      "previousCandidate": "p03-legacy-installation-validation",
+      "unchangedProductionFiles": 5201,
+      "sourceIdentical": true,
+      "scope": "Three corrected test cases; all production paths and hashes unchanged"
+    },
+    "queryPlans": [
+      {
+        "test": "CanDoItAll.Tests.Integration.ProjectDeletionLegacyQueryPlanTests.Subject_inspection_stops_at_its_indexed_bound_despite_large_terminal_history(mode: Exclusive)",
+        "plan": [
+          {
+            "Plan": {
+              "Node Type": "Limit",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 0.29,
+              "Total Cost": 1.98,
+              "Plan Rows": 17,
+              "Plan Width": 163,
+              "Actual Startup Time": 0.021,
+              "Actual Total Time": 0.036,
+              "Actual Rows": 17.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Shared Hit Blocks": 36,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "LockRows",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Startup Cost": 0.29,
+                  "Total Cost": 997.06,
+                  "Plan Rows": 10001,
+                  "Plan Width": 163,
+                  "Actual Startup Time": 0.021,
+                  "Actual Total Time": 0.034,
+                  "Actual Rows": 17.0,
+                  "Actual Loops": 1,
+                  "Disabled": false,
+                  "Shared Hit Blocks": 36,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0,
+                  "Plans": [
+                    {
+                      "Node Type": "Index Scan",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Scan Direction": "Forward",
+                      "Index Name": "UX_AF_ProjectAccessRevocations_ProjectLifetime",
+                      "Relation Name": "AgentFramework_ProjectAccessRevocations",
+                      "Alias": "AgentFramework_ProjectAccessRevocations",
+                      "Startup Cost": 0.29,
+                      "Total Cost": 897.05,
+                      "Plan Rows": 10001,
+                      "Plan Width": 163,
+                      "Actual Startup Time": 0.02,
+                      "Actual Total Time": 0.031,
+                      "Actual Rows": 17.0,
+                      "Actual Loops": 1,
+                      "Disabled": false,
+                      "Index Cond": "(\"ProjectId\" = 'eec2997a-f62c-4780-b2a4-f1437de8410a'::uuid)",
+                      "Rows Removed by Index Recheck": 0,
+                      "Index Searches": 1,
+                      "Shared Hit Blocks": 19,
+                      "Shared Read Blocks": 0,
+                      "Shared Dirtied Blocks": 0,
+                      "Shared Written Blocks": 0,
+                      "Local Hit Blocks": 0,
+                      "Local Read Blocks": 0,
+                      "Local Dirtied Blocks": 0,
+                      "Local Written Blocks": 0,
+                      "Temp Read Blocks": 0,
+                      "Temp Written Blocks": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 1,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.049,
+            "Triggers": [],
+            "Execution Time": 0.051
+          }
+        ]
+      },
+      {
+        "test": "CanDoItAll.Tests.Integration.ProjectDeletionLegacyQueryPlanTests.Subject_inspection_stops_at_its_indexed_bound_despite_large_terminal_history(mode: Exclusive)",
+        "plan": [
+          {
+            "Plan": {
+              "Node Type": "Limit",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 0.12,
+              "Total Cost": 8.15,
+              "Plan Rows": 1,
+              "Plan Width": 22,
+              "Actual Startup Time": 0.018,
+              "Actual Total Time": 0.019,
+              "Actual Rows": 1.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Shared Hit Blocks": 3,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "LockRows",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Startup Cost": 0.12,
+                  "Total Cost": 8.15,
+                  "Plan Rows": 1,
+                  "Plan Width": 22,
+                  "Actual Startup Time": 0.017,
+                  "Actual Total Time": 0.018,
+                  "Actual Rows": 1.0,
+                  "Actual Loops": 1,
+                  "Disabled": false,
+                  "Shared Hit Blocks": 3,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0,
+                  "Plans": [
+                    {
+                      "Node Type": "Index Scan",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Scan Direction": "Forward",
+                      "Index Name": "IX_Workbench_ProjectDeletion_Subject",
+                      "Relation Name": "Workbench_ProjectCrossModuleMutations",
+                      "Alias": "Workbench_ProjectCrossModuleMutations",
+                      "Startup Cost": 0.12,
+                      "Total Cost": 8.14,
+                      "Plan Rows": 1,
+                      "Plan Width": 22,
+                      "Actual Startup Time": 0.016,
+                      "Actual Total Time": 0.017,
+                      "Actual Rows": 1.0,
+                      "Actual Loops": 1,
+                      "Disabled": false,
+                      "Index Cond": "(\"ProjectId\" = 'eec2997a-f62c-4780-b2a4-f1437de8410a'::uuid)",
+                      "Rows Removed by Index Recheck": 0,
+                      "Filter": "(\"MutationKind\" = 4)",
+                      "Rows Removed by Filter": 0,
+                      "Index Searches": 1,
+                      "Shared Hit Blocks": 2,
+                      "Shared Read Blocks": 0,
+                      "Shared Dirtied Blocks": 0,
+                      "Shared Written Blocks": 0,
+                      "Local Hit Blocks": 0,
+                      "Local Read Blocks": 0,
+                      "Local Dirtied Blocks": 0,
+                      "Local Written Blocks": 0,
+                      "Temp Read Blocks": 0,
+                      "Temp Written Blocks": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.047,
+            "Triggers": [],
+            "Execution Time": 0.03
+          }
+        ]
+      },
+      {
+        "test": "CanDoItAll.Tests.Integration.ProjectDeletionLegacyQueryPlanTests.Subject_inspection_stops_at_its_indexed_bound_despite_large_terminal_history(mode: Observe)",
+        "plan": [
+          {
+            "Plan": {
+              "Node Type": "Limit",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 0.29,
+              "Total Cost": 1.78,
+              "Plan Rows": 17,
+              "Plan Width": 157,
+              "Actual Startup Time": 0.021,
+              "Actual Total Time": 0.034,
+              "Actual Rows": 17.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Shared Hit Blocks": 19,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "UX_AF_ProjectAccessRevocations_ProjectLifetime",
+                  "Relation Name": "AgentFramework_ProjectAccessRevocations",
+                  "Alias": "AgentFramework_ProjectAccessRevocations",
+                  "Startup Cost": 0.29,
+                  "Total Cost": 877.05,
+                  "Plan Rows": 10001,
+                  "Plan Width": 157,
+                  "Actual Startup Time": 0.02,
+                  "Actual Total Time": 0.033,
+                  "Actual Rows": 17.0,
+                  "Actual Loops": 1,
+                  "Disabled": false,
+                  "Index Cond": "(\"ProjectId\" = '24d48c9e-1f2a-4f9b-bdc7-41662efa2cdf'::uuid)",
+                  "Rows Removed by Index Recheck": 0,
+                  "Index Searches": 1,
+                  "Shared Hit Blocks": 19,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 1,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.054,
+            "Triggers": [],
+            "Execution Time": 0.047
+          }
+        ]
+      },
+      {
+        "test": "CanDoItAll.Tests.Integration.ProjectDeletionLegacyQueryPlanTests.Subject_inspection_stops_at_its_indexed_bound_despite_large_terminal_history(mode: Observe)",
+        "plan": [
+          {
+            "Plan": {
+              "Node Type": "Limit",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 0.12,
+              "Total Cost": 8.14,
+              "Plan Rows": 1,
+              "Plan Width": 16,
+              "Actual Startup Time": 0.035,
+              "Actual Total Time": 0.036,
+              "Actual Rows": 1.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Index Only Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "IX_Workbench_ProjectDeletion_Subject",
+                  "Relation Name": "Workbench_ProjectCrossModuleMutations",
+                  "Alias": "Workbench_ProjectCrossModuleMutations",
+                  "Startup Cost": 0.12,
+                  "Total Cost": 8.14,
+                  "Plan Rows": 1,
+                  "Plan Width": 16,
+                  "Actual Startup Time": 0.034,
+                  "Actual Total Time": 0.035,
+                  "Actual Rows": 1.0,
+                  "Actual Loops": 1,
+                  "Disabled": false,
+                  "Index Cond": "(\"ProjectId\" = '24d48c9e-1f2a-4f9b-bdc7-41662efa2cdf'::uuid)",
+                  "Rows Removed by Index Recheck": 0,
+                  "Heap Fetches": 1,
+                  "Index Searches": 1,
+                  "Shared Hit Blocks": 2,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.091,
+            "Triggers": [],
+            "Execution Time": 0.053
+          }
+        ]
+      }
+    ]
+  }
+}

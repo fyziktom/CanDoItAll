@@ -34,6 +34,9 @@ public sealed record AgentRuntimeToolMetadata
     public Func<JsonElement, AgentToolPreparedPayload>? PrepareAdmission { get; init; }
 
     [JsonIgnore]
+    public Func<JsonElement, AgentToolProtocolEnvelope, AgentToolPreparedPayload>? RestoreAdmission { get; init; }
+
+    [JsonIgnore]
     public Func<AgentToolPreparedPayload, CancellationToken, ValueTask<IAsyncDisposable>>? AuthorizeAdmissionAsync { get; init; }
 
     [JsonIgnore]

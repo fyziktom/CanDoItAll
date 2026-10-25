@@ -22,7 +22,7 @@ public sealed class ApiSectionPermissionsTests {
     [Fact]
     public async Task Each_section_read_grant_allows_its_real_read_and_denies_unrelated_reads_and_writes() {
         var password = Password();
-        await using var host = await CreateHostAsync(password);
+        await using var host = await CreateHostAsync(password, useInMemoryDatabase: false);
         var admin = await LoginAsync(host.Client, "admin", password);
         SetToken(host.Client, admin.Token);
         var user = await CreateUserAsync(host.Client, "section-reader", password, []);
@@ -63,7 +63,7 @@ public sealed class ApiSectionPermissionsTests {
     [Fact]
     public async Task New_process_reads_and_workspace_settings_use_current_catalog_and_persist_authorized_changes() {
         var password = Password();
-        await using var host = await CreateHostAsync(password);
+        await using var host = await CreateHostAsync(password, useInMemoryDatabase: false);
         var admin = await LoginAsync(host.Client, "admin", password);
         SetToken(host.Client, admin.Token);
         await CreateUserAsync(host.Client, "business", password,
@@ -84,15 +84,18 @@ public sealed class ApiSectionPermissionsTests {
         using var invalid = await host.Client.GetAsync("/api/processes/definitions?scopeFilter=999");
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
-        var proposed = new { workspaceName = "API saved workspace", defaultProviderProfileId = (Guid?)null,
-            defaultPromptOutputFormat = "Markdown", currencyCode = "USD", currencyCultureName = "en-US", notes = "Persisted through the application owner" };
+        var original = (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!;
+        var proposed = new ReplaceWorkspaceSettingsCommand(original.Expectation,
+            new("API saved workspace", null, "Markdown", "USD", "en-US", "Persisted through the application owner"));
         using var saved = await host.Client.PutAsJsonAsync("/api/settings/workspace", proposed);
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
-        Assert.Equal(proposed.workspaceName, (await saved.Content.ReadFromJsonAsync<WorkspaceSettingsModel>())!.WorkspaceName);
-        Assert.Equal(proposed.notes, (await host.Client.GetFromJsonAsync<WorkspaceSettingsModel>("/api/settings/workspace"))!.Notes);
-        using var rejected = await host.Client.PutAsJsonAsync("/api/settings/workspace", proposed with { currencyCode = "invalid" });
+        var accepted = Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await saved.Content.ReadFromJsonAsync<WorkspaceSettingsSaveOutcome>());
+        Assert.Equal(proposed.Values.WorkspaceName, accepted.Snapshot.Values.WorkspaceName);
+        Assert.Equal(proposed.Values.Notes, (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!.Values.Notes);
+        using var rejected = await host.Client.PutAsJsonAsync("/api/settings/workspace", new ReplaceWorkspaceSettingsCommand(accepted.Snapshot.Expectation,
+            new("Invalid currency", null, "Markdown", "invalid", "en-US", "Rejected")));
         Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
-        Assert.Equal("USD", (await host.Client.GetFromJsonAsync<WorkspaceSettingsModel>("/api/settings/workspace"))!.CurrencyCode);
+        Assert.Equal("USD", (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!.Values.CurrencyCode);
     }
 
     [Fact]

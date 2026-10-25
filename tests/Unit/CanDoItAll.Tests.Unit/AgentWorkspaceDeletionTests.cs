@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -168,6 +169,107 @@ public sealed class AgentWorkspaceDeletionTests
             Assert.Single((await store.LoadUsageProjectionAsync()).Agents, agent => agent.AgentId == survivor.Id);
         } finally {
             TestFileSystem.DeleteDirectoryWithRetry(rootPath);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Deletion_refuses_audit_changes_across_projection_preparation_and_plan_reads(bool duringProjection) {
+        var rootPath = TestFileSystem.CreateTemporaryRoot("agent-deletion-audit-plan-conflict");
+        Exception? primary = null;
+        try {
+            var store = new FileSandboxWorkspaceStore(rootPath);
+            var target = await CreateAgentAsync(store, "Plan conflict target");
+            var survivor = await CreateAgentAsync(store, "Plan conflict survivor");
+            var targetDetail = CreateRunDetail(target, DateTimeOffset.UtcNow);
+            var survivorDetail = CreateRunDetail(survivor, DateTimeOffset.UtcNow);
+            await store.SaveExecutionRunDetailAsync(targetDetail);
+            await store.SaveExecutionRunDetailAsync(survivorDetail);
+            var layout = new FileSandboxWorkspaceStorageLayout(rootPath);
+            var jsonStore = new FileSandboxWorkspaceJsonStore();
+            var index = Assert.IsType<ExecutionStorageIndex>(await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(layout.ExecutionIndexPath, default));
+            await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionIndexPath, index with { SessionCount = index.SessionCount + 1 }, default);
+            File.Delete(layout.ExecutionChatIndexPath);
+            if (duringProjection) {
+                var usage = Assert.IsType<AgentUsageProjection>(await jsonStore.ReadJsonAsync<AgentUsageProjection>(layout.ExecutionUsageIndexPath, default));
+                await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionUsageIndexPath, usage with { Revision = usage.Revision + 1 }, default);
+            } else {
+                File.Delete(layout.ExecutionUsageIndexPath);
+            }
+            var preservedPaths = new[] { layout.CatalogPath, layout.WorkspaceIndexPath,
+                layout.RunPath(targetDetail.Run.Id), layout.SessionPath(targetDetail.ChatSession!.Id),
+                layout.RunPath(survivorDetail.Run.Id), layout.SessionPath(survivorDetail.ChatSession!.Id) };
+            var before = preservedPaths.ToDictionary(path => path, File.ReadAllBytes);
+            var injected = 0;
+            void InjectReceipt() {
+                if (Interlocked.Exchange(ref injected, 1) != 0) {
+                    return;
+                }
+                Assert.True(File.Exists(layout.ExecutionChatIndexPath));
+                Assert.True(File.Exists(layout.ExecutionUsageIndexPath));
+                using var auditScope = WorkspaceExecutionAuditContext.BeginScope(survivorDetail.Run);
+                var receipt = new WorkspaceToolReceipt("workspace_read_file", false, "workspace", "Succeeded", "Read",
+                    "artifacts/late-receipt.json", [], [], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow) {
+                    ExecutionRunId = survivorDetail.Run.Id
+                };
+                WorkspaceExecutionAuditTrailWriter.PersistReceipt(rootPath, WorkspaceScopeDescriptor.Sandbox, receipt,
+                    "workspace", "workspace_read_file", "read", "automatic", "workspace", "Read", "workspace", "Succeeded");
+            }
+            var deletingStore = CreateStore(rootPath, new FileSandboxWorkspaceJsonReadDiagnostics(read => {
+                if (duringProjection && read.FullPath == layout.ExecutionUsageIndexPath) {
+                    InjectReceipt();
+                }
+            }));
+            using var parent = new Activity("agent-deletion-audit-plan-conflict").SetIdFormat(ActivityIdFormat.W3C).Start();
+            using var listener = new ActivityListener {
+                ShouldListenTo = source => source.Name == AgentFrameworkTelemetry.SourceName,
+                Sample = (ref ActivityCreationOptions<ActivityContext> options) => options.TraceId == parent.TraceId
+                    ? ActivitySamplingResult.AllData : ActivitySamplingResult.None,
+                ActivityStarted = activity => {
+                    if (!duringProjection && activity.TraceId == parent.TraceId && activity.OperationName == "workspace.run.load") {
+                        InjectReceipt();
+                    }
+                }
+            };
+            ActivitySource.AddActivityListener(listener);
+
+            var failure = await Assert.ThrowsAsync<SandboxWorkspacePublicationConflictException>(
+                () => deletingStore.DeleteAgentWorkspaceDataAsync(target.Id));
+
+            Assert.Equal(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged, failure.Kind);
+            Assert.Equal(1, injected);
+            foreach (var file in before) {
+                Assert.Equal(file.Value, File.ReadAllBytes(file.Key));
+            }
+            Assert.False(File.Exists(PendingJournalPath(rootPath)));
+            var receiptPath = Assert.Single(Directory.GetFiles(layout.RunReceiptsRoot(survivorDetail.Run.Id), "*.json"));
+            var retained = Assert.IsType<ToolExecutionReceiptRecord>(await jsonStore.ReadJsonAsync<ToolExecutionReceiptRecord>(receiptPath, default));
+            Assert.Equal(survivorDetail.Run.Id, retained.ExecutionRunId);
+            var reconciled = Assert.IsType<ExecutionStorageIndex>(await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(layout.ExecutionIndexPath, default));
+            Assert.Equal(index.SessionCount, reconciled.SessionCount);
+            Assert.Equal(index.RunCount, reconciled.RunCount);
+            var pendingPath = Path.Combine(Path.GetDirectoryName(layout.ExecutionUsageIndexPath)!,
+                $".{Path.GetFileName(layout.ExecutionUsageIndexPath)}.{Guid.NewGuid():N}.pending");
+            byte[] pendingBytes = [1, 2, 3];
+            File.WriteAllBytes(pendingPath, pendingBytes);
+            var pendingFailure = await Assert.ThrowsAsync<SandboxWorkspacePublicationConflictException>(
+                () => deletingStore.DeleteAgentWorkspaceDataAsync(target.Id));
+            Assert.Equal(SandboxWorkspacePublicationConflictKind.PendingRecoveryChanged, pendingFailure.Kind);
+            Assert.Equal(pendingBytes, File.ReadAllBytes(pendingPath));
+            foreach (var file in before) {
+                Assert.Equal(file.Value, File.ReadAllBytes(file.Key));
+            }
+            Assert.False(File.Exists(PendingJournalPath(rootPath)));
+        } catch (Exception failure) {
+            primary = failure;
+            throw;
+        } finally {
+            try {
+                TestFileSystem.DeleteDirectoryWithRetry(rootPath);
+            } catch (Exception cleanup) when (primary is not null) {
+                throw new AggregateException("Deletion witness proof and fixture cleanup failed.", primary, cleanup);
+            }
         }
     }
 

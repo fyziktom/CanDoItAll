@@ -7,6 +7,7 @@ namespace CanDoItAll.Infrastructure.Search;
 public sealed class SearchDocument
 {
     public const string ProjectSourceType = "project";
+    public const string ResourceSourceType = "resource";
 
     public Guid Id { get; set; } = Guid.NewGuid();
 
@@ -72,6 +73,8 @@ public interface ISearchIndexService
 
     Task DeleteAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default);
 
+    Task DeleteForMutationAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default);
 }
 
@@ -104,16 +107,10 @@ public sealed class SearchIndexService(
     }
 
     private async Task UpsertAsync(SearchDbContext dbContext, SearchDocumentInput input, CancellationToken cancellationToken) {
-        var entity = await dbContext.Set<SearchDocument>()
-            .FirstOrDefaultAsync(
-                document => document.SourceType == input.SourceType && document.SourceKey == input.SourceKey,
-                cancellationToken);
-
-        if (entity is null)
-        {
-            entity = new SearchDocument();
-            await dbContext.Set<SearchDocument>().AddAsync(entity, cancellationToken);
-        }
+        var id = await dbContext.Set<SearchDocument>().AsNoTracking()
+            .Where(document => document.SourceType == input.SourceType && document.SourceKey == input.SourceKey)
+            .Select(document => (Guid?)document.Id).SingleOrDefaultAsync(cancellationToken);
+        var entity = new SearchDocument { Id = id ?? Guid.NewGuid() };
 
         entity.SourceType = input.SourceType.Trim();
         entity.SourceKey = input.SourceKey.Trim();
@@ -125,23 +122,38 @@ public sealed class SearchIndexService(
         entity.Route = input.Route.Trim();
         entity.UpdatedAtUtc = clock.GetUtcNow();
 
+        if (id is null) {
+            dbContext.Add(entity);
+        } else {
+            dbContext.Attach(entity);
+            dbContext.Entry(entity).State = EntityState.Modified;
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await dbContext.Set<SearchDocument>()
-            .FirstOrDefaultAsync(
-                document => document.SourceType == sourceType && document.SourceKey == sourceKey,
-                cancellationToken);
+        await DeleteAsync(dbContext, sourceType, sourceKey, cancellationToken);
+    }
 
-        if (entity is null)
-        {
+    public async Task DeleteForMutationAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default) {
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new SearchDbContext(options), cancellationToken);
+        await DeleteAsync(dbContext, sourceType, sourceKey, cancellationToken);
+    }
+
+    private static async Task DeleteAsync(SearchDbContext dbContext, string sourceType, string sourceKey, CancellationToken cancellationToken) {
+        var id = await dbContext.Set<SearchDocument>().AsNoTracking()
+            .Where(document => document.SourceType == sourceType && document.SourceKey == sourceKey)
+            .Select(document => (Guid?)document.Id).SingleOrDefaultAsync(cancellationToken);
+
+        if (id is null) {
             return;
         }
 
-        dbContext.Remove(entity);
+        dbContext.Remove(new SearchDocument { Id = id.Value });
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 

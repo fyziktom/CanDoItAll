@@ -62,3 +62,21 @@ public sealed class SandboxWorkspaceConcurrencyException : InvalidOperationExcep
 
     public long ActualRevision { get; }
 }
+
+public enum SandboxWorkspacePublicationConflictKind {
+    OriginalBytesChanged,
+    PendingRecoveryChanged,
+    WriteSetChanged
+}
+
+public sealed class SandboxWorkspacePublicationConflictException : InvalidOperationException {
+    public SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind kind)
+        : base("The prepared workspace publication was not applied because its original state or write set changed. Reconcile current state before a new explicit mutation.") {
+        if (!Enum.IsDefined(kind)) {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+        Kind = kind;
+    }
+
+    public SandboxWorkspacePublicationConflictKind Kind { get; }
+}

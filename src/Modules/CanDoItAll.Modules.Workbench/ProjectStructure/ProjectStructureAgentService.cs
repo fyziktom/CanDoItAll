@@ -4,6 +4,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 
@@ -28,6 +29,7 @@ public sealed partial class ProjectStructureAgentService(
     ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver,
     ProjectStructureProcessNodeService processNodeService,
     ProjectStructureWorkflowNodeService workflowNodeService,
+    ILogger<ProjectStructureAgentService> logger,
     ProjectAgentSourceMutationAuthority? projectSourceAuthority = null,
     ProjectProcessExecutionMutationService? processProjectAuthority = null)
 {
@@ -82,32 +84,54 @@ public sealed partial class ProjectStructureAgentService(
         return projectsService.GetHierarchyAsync(projectId, cancellationToken);
     }
 
+    public async Task<ProjectDefinitionSnapshot> GetProjectDefinitionAsync(Guid projectId, CancellationToken cancellationToken = default)
+        => ProjectStructureProjectDefinitionResult.Require(await projectsService.GetDefinitionAsync(projectId, cancellationToken));
+
+    public async Task<ProjectDefinitionScalarsAcknowledgement> UpdateProjectDefinitionAsync(
+        Guid projectId, ProjectStructureProjectSaveRequest request, ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default) {
+        ValidateProjectRequest(request);
+        if (request.ExpectedDefinition is not { } expected) {
+            throw InvalidAgentRequest(400, ProjectErrorCodes.DefinitionExpectationRequired,
+                "Read the project definition and retain its original expectation before updating it.");
+        }
+        if (expected.Project is null || expected.Project.ProjectId != projectId) {
+            throw InvalidAgentRequest(400, ProjectErrorCodes.DefinitionExpectationInvalid,
+                "The original definition expectation must identify the requested project.");
+        }
+
+        UpdateProjectDefinitionScalarsCommand command = new(expected, new(request.Name, request.Description,
+            request.Objective, request.Status, request.CurrentPhase, request.TargetDateUtc));
+        ProjectDefinitionScalarsAcknowledgement? accepted = null;
+        try {
+            return await ExecuteWithAgentFailureMappingAsync(() => leaseService.RunWithProjectMutationLeaseAsync(
+                projectId, request.LeaseToken, agent, "save-project", async token => {
+                    accepted = ProjectStructureProjectDefinitionResult.Require(await projectsService.SaveScalarsAsync(command, token,
+                        ProjectAuthorization(agent, ProjectProcessProjectOperation.Update, projectId)));
+                    return accepted;
+                }, cancellationToken));
+        } catch (Exception exception) when (accepted is not null) {
+            logger.LogError(exception,
+                "Project {ProjectId} definition {Revision} committed, but mutation lease cleanup failed. Returning the exact accepted definition; inspect its outstanding lease before another mutation.",
+                projectId, accepted.Definition.Revision);
+            return accepted;
+        }
+    }
+
     public async Task<ProjectSummary> SaveProjectAsync(
         Guid? projectId,
         ProjectStructureProjectSaveRequest request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
-        ValidateProjectRequest(request);
-
-        var editor = BuildProjectEditor(projectId, request);
+        if (projectId is { } existingId) {
+            await UpdateProjectDefinitionAsync(existingId, request, agent, cancellationToken);
+            return await ResolveSavedProjectAsync(Result<Guid>.Success(existingId), cancellationToken);
+        }
+        ValidateProjectRequest(request, creating: true);
+        var editor = BuildProjectEditor(null, request);
         return await ExecuteWithAgentFailureMappingAsync(async () =>
         {
-            if (projectId.HasValue)
-            {
-                return await leaseService.RunWithProjectMutationLeaseAsync(
-                    projectId.Value,
-                    request.LeaseToken,
-                    agent,
-                    "save-project",
-                    async cancellationToken =>
-                    {
-                        var saveResult = await projectsService.SaveAsync(editor, cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.Update, projectId.Value));
-                        return await ResolveSavedProjectAsync(saveResult, cancellationToken);
-                    },
-                    cancellationToken);
-            }
-
             var createResult = await projectsService.SaveAsync(editor, cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.CreateRoot));
             return await ResolveSavedProjectAsync(createResult, cancellationToken);
         });
@@ -130,7 +154,7 @@ public sealed partial class ProjectStructureAgentService(
             throw InvalidAgentRequest(400, "ProjectIdRequired", "A reserved project id is required.");
         }
 
-        ValidateProjectRequest(request);
+        ValidateProjectRequest(request, creating: true);
         return await ExecuteWithAgentFailureMappingAsync(async () =>
         {
             var editor = BuildProjectEditor(projectId: null, request);
@@ -178,7 +202,7 @@ public sealed partial class ProjectStructureAgentService(
             throw InvalidAgentRequest(400, "SubprojectIdRequired", "A reserved subproject id is required.");
         }
 
-        ValidateProjectRequest(request);
+        ValidateProjectRequest(request, creating: true);
         return await ExecuteWithAgentFailureMappingAsync(() =>
             leaseService.RunWithProjectMutationLeaseAsync(
                 parentProjectId,
@@ -197,43 +221,12 @@ public sealed partial class ProjectStructureAgentService(
                 cancellationToken));
     }
 
-    public async Task ChangeSubprojectAsync(
+    public Task ChangeSubprojectAsync(
         Guid parentProjectId,
         ProjectStructureSubprojectChangeRequest request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
-    {
-        if (request.ChildProjectId == Guid.Empty)
-        {
-            throw InvalidAgentRequest(400, "ChildProjectRequired", "A child project id is required.");
-        }
-
-        await leaseService.RunWithProjectMutationLeaseAsync(
-            request.ChildProjectId,
-            request.LeaseToken,
-            agent,
-            "change-subproject-link",
-            async cancellationToken =>
-            {
-                Result result;
-                if (request.CurrentParentProjectId.HasValue)
-                {
-                    result = await projectsService.ReconnectSubprojectAsync(
-                        request.ChildProjectId,
-                        request.CurrentParentProjectId.Value,
-                        parentProjectId,
-                        cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.ChangeHierarchy, request.ChildProjectId, request.CurrentParentProjectId.Value, parentProjectId));
-                }
-                else
-                {
-                    result = await projectsService.AddSubprojectAsync(parentProjectId, request.ChildProjectId, cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.ChangeHierarchy, parentProjectId, request.ChildProjectId));
-                }
-
-                ThrowIfFailure(result);
-                return 0;
-            },
-            cancellationToken);
-    }
+        => throw new ProjectLifecycleOriginalIntentRequiredException();
 
     public async Task<ProjectStructureReadResponse> GetStructureAsync(
         Guid projectId,
@@ -2399,8 +2392,12 @@ public sealed partial class ProjectStructureAgentService(
         };
     }
 
-    private static void ValidateProjectRequest(ProjectStructureProjectSaveRequest request)
+    private static void ValidateProjectRequest(ProjectStructureProjectSaveRequest request, bool creating = false)
     {
+        if (creating && request.ExpectedDefinition is not null) {
+            throw InvalidAgentRequest(400, ProjectErrorCodes.DefinitionExpectationInvalid,
+                "A new project cannot carry an existing definition expectation.");
+        }
         if (string.IsNullOrWhiteSpace(request.Name))
         {
             throw InvalidAgentRequest(400, "ProjectNameRequired", "Project name is required.");

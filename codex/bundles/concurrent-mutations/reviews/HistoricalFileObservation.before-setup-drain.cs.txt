@@ -1,0 +1,104 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
+
+namespace CanDoItAll.Tests.Integration.Runtime;
+
+internal sealed class HistoricalFileObservation : IDisposable {
+    private const int MaximumEvents = 4096;
+    private const int MaximumDiagnosticEvents = 16;
+    private readonly FileSystemWatcher watcher;
+    private readonly ConcurrentQueue<(WatcherChangeTypes Kind, string Path)> events = new();
+    private readonly string root;
+    private readonly string sentinel;
+    private readonly string renamedSentinel;
+    private readonly object sync = new();
+    private TaskCompletionSource? deleted;
+    private Exception? failure;
+    private int eventCount;
+
+    private HistoricalFileObservation(string root) {
+        this.root = root;
+        sentinel = Path.Combine(root, $"historical-observer-{Guid.NewGuid():N}.tmp");
+        renamedSentinel = sentinel + ".renamed";
+        watcher = new(root) {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.Security,
+            InternalBufferSize = 64 * 1024
+        };
+        watcher.Created += Observe;
+        watcher.Changed += Observe;
+        watcher.Deleted += Observe;
+        watcher.Renamed += Observe;
+        watcher.Error += (_, args) => {
+            lock (sync) {
+                failure ??= args.GetException();
+            }
+        };
+        watcher.EnableRaisingEvents = true;
+    }
+
+    internal static async Task<HistoricalFileObservation> StartAsync(string root) {
+        var observation = new HistoricalFileObservation(root);
+        try {
+            await observation.BarrierAsync();
+            var calibration = observation.events.ToArray();
+            Assert.Contains(calibration, item => item.Kind == WatcherChangeTypes.Created);
+            Assert.Contains(calibration, item => item.Kind == WatcherChangeTypes.Changed);
+            Assert.Contains(calibration, item => item.Kind == WatcherChangeTypes.Renamed);
+            Assert.Contains(calibration, item => item.Kind == WatcherChangeTypes.Deleted);
+            observation.events.Clear();
+            Interlocked.Exchange(ref observation.eventCount, 0);
+            return observation;
+        } catch {
+            observation.Dispose();
+            throw;
+        }
+    }
+
+    internal async Task AssertNoChangesAsync() {
+        await BarrierAsync();
+        Assert.Null(failure);
+        var unexpected = events.Where(item => item.Path != sentinel && item.Path != renamedSentinel).ToArray();
+        Assert.True(unexpected.Length == 0,
+            $"Historical no-write observation found {unexpected.Length} unexpected events; showing at most {MaximumDiagnosticEvents}." +
+            Environment.NewLine + string.Join(Environment.NewLine, unexpected.Take(MaximumDiagnosticEvents)
+                .Select(item => $"Kind={item.Kind}; Path={JsonSerializer.Serialize(item.Path)}")));
+    }
+
+    private async Task BarrierAsync() {
+        lock (sync) {
+            deleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+        await File.WriteAllBytesAsync(sentinel, [1]);
+        await File.AppendAllTextAsync(sentinel, "barrier");
+        File.Move(sentinel, renamedSentinel);
+        File.Delete(renamedSentinel);
+        await deleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Null(failure);
+    }
+
+    private void Observe(object sender, FileSystemEventArgs args) {
+        if (Interlocked.Increment(ref eventCount) > MaximumEvents) {
+            lock (sync) {
+                failure ??= new InvalidOperationException("Historical filesystem observation exceeded its bounded event capacity.");
+            }
+            return;
+        }
+        events.Enqueue((args.ChangeType, args.FullPath));
+        if (args.ChangeType == WatcherChangeTypes.Deleted && args.FullPath == renamedSentinel) {
+            lock (sync) {
+                deleted?.TrySetResult();
+            }
+        }
+    }
+
+    public void Dispose() {
+        watcher.Dispose();
+        foreach (var path in new[] { sentinel, renamedSentinel }) {
+            if (!Path.GetFullPath(path).StartsWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar, StringComparison.Ordinal)) {
+                throw new InvalidOperationException("Historical observer cleanup escaped its recorded fixture root.");
+            }
+            File.Delete(path);
+        }
+    }
+}

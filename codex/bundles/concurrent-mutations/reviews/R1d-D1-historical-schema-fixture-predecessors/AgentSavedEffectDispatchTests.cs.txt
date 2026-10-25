@@ -1,0 +1,411 @@
+using System.Reflection;
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using CanDoItAll.AgentFramework.Tooling;
+using Microsoft.Extensions.AI;
+using static CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchFixture;
+
+namespace CanDoItAll.Tests.Integration.Runtime;
+
+[Trait("Category", "FileSystemPortability")]
+public sealed class AgentSavedEffectDispatchTests {
+    [Fact]
+    public async Task Full_exact_decisions_select_after_rejection_and_preserve_original_checkpoint_on_conflict() {
+        await using var fixture = await CreateAsync();
+        var original = fixture.Prepared;
+        var owner = fixture.Files.NewJournal();
+        var before = JsonSerializer.Serialize(original);
+        var both = Decisions(original, true, true);
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.AcquireSavedEffectDispatchAsync(
+            Request(original, 1, both), AllowRead, default));
+        Assert.Equal(before, JsonSerializer.Serialize(await fixture.ReadAsync()));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.AcquireSavedEffectDispatchAsync(
+            Request(original, decisions: both.Take(1).ToArray()), AllowRead, default));
+        Assert.Equal(before, JsonSerializer.Serialize(await fixture.ReadAsync()));
+        var stale = new AgentSavedEffectContinuationRequest(original.Id, original.ChatSessionId, original.Revision + 1,
+            original.ToolAdmission!.Revision, Binding(original), both);
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.AcquireSavedEffectDispatchAsync(stale, AllowRead, default));
+        Assert.Throws<ArgumentException>(() => Request(original, decisions: [both[0], both[0]]));
+        Assert.Throws<ArgumentNullException>(() => Request(original, decisions: [new(both[0].ApprovalId, true)]));
+        Assert.Equal(before, JsonSerializer.Serialize(await fixture.ReadAsync()));
+
+        var mutable = Decisions(original, true, false).ToList();
+        var request = Request(original, 1, mutable);
+        mutable.Clear();
+        await using var lease = await owner.AcquireSavedEffectDispatchAsync(request, AllowRead, default);
+        using var bound = lease.Bind();
+        var saved = (await fixture.ReadAsync())!;
+        Assert.Empty(saved.PendingApprovals);
+        Assert.Equal(ExecutionApprovalStatus.Approved, saved.ToolAdmission!.Batches[0].Proposals[0].ApprovalStatus);
+        var rejected = saved.ToolAdmission.Batches[0].Proposals[1];
+        Assert.Equal(AgentToolProposalState.Rejected, rejected.State);
+        Assert.Null(rejected.DispatchClaimId);
+        var result = await owner.CheckpointSavedEffectAsync(lease, default);
+        Assert.Equal(request.Binding, result.Binding);
+        Assert.Equal(AgentToolProposalState.Rejected, result.State);
+        AssertOriginPreserved(Assert.Single(original.ToolAdmission.Segments), Assert.Single(saved.ToolAdmission.Segments));
+        Assert.Null(saved.SerializedSessionStateJson);
+        var detail = (await fixture.Files.NewStore().GetExecutionRunDetailAsync(saved.Id))!;
+        Assert.Equal(2, detail.Approvals.Count);
+        Assert.Empty(detail.Metrics);
+
+        await using var allRejected = await CreateAsync();
+        var other = allRejected.Files.NewJournal();
+        await using var rejectedLease = await other.AcquireSavedEffectDispatchAsync(
+            Request(allRejected.Prepared, decisions: Decisions(allRejected.Prepared, false, false)), AllowRead, default);
+        using var rejectedBound = rejectedLease.Bind();
+        Assert.Equal(AgentToolProposalState.Rejected, (await other.CheckpointSavedEffectAsync(rejectedLease, default)).State);
+        Assert.All((await allRejected.ReadAsync())!.ToolAdmission!.Batches[0].Proposals, proposal => {
+            Assert.Equal(AgentToolProposalState.Rejected, proposal.State);
+            Assert.Null(proposal.DispatchClaimId);
+        });
+    }
+
+    [Fact]
+    public async Task Saved_lease_claims_one_exact_restored_effect_and_cannot_resume_the_original_provider_origin() {
+        await using var fixture = await CreateAsync(1);
+        var owner = fixture.Files.NewJournal();
+        var request = Request(fixture.Prepared, decisions: Decisions(fixture.Prepared, true));
+        await Assert.ThrowsAsync<AgentToolReceiptAccessDeniedException>(() => owner.AcquireSavedEffectDispatchAsync(request,
+            (_, _) => ValueTask.FromResult(false), default));
+        var unavailable = await Assert.ThrowsAsync<AgentToolReceiptReadUnavailableException>(() => owner.AcquireSavedEffectDispatchAsync(request,
+            (_, _) => throw new IOException("current-read-unavailable"), default));
+        Assert.Equal("current-read-unavailable", Assert.IsType<IOException>(unavailable.InnerException).Message);
+        var changedProfile = fixture.Files.Profile;
+        var wrongGeneration = new AgentToolAdmissionJournal(fixture.Files.Store,
+            new(changedProfile.ProfileId, changedProfile.Fingerprint, new(changedProfile.Generation.Value + 1)));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => wrongGeneration.AcquireSavedEffectDispatchAsync(request, AllowRead, default));
+        Assert.Equal(JsonSerializer.Serialize(fixture.Prepared), JsonSerializer.Serialize(await fixture.ReadAsync()));
+        await using var lease = await owner.AcquireSavedEffectDispatchAsync(request, AllowRead, default);
+        using var bound = lease.Bind();
+        var selected = fixture.Prepared.ToolAdmission!.Batches[0].Proposals[0];
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.ClaimSavedInvocationAsync(lease, request.Binding, selected.Payload, default));
+        var reader = new ReceiptReader();
+        await owner.ObserveSavedEffectReceiptAsync(lease, reader, default);
+        var changedSource = new AgentToolPreparedPayload(selected.Payload.ToolName, selected.Payload.SemanticVersion,
+            selected.Payload.Digest, selected.Payload.ArgumentsJson, selected.Payload.Effect, selected.Payload.Recovery, Envelope("{\"changed\":true}"));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.ClaimSavedInvocationAsync(lease, request.Binding, changedSource, default));
+        var segment = fixture.Prepared.ToolAdmission.Segments[0];
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.BeginEffectSegmentAsync(lease, default));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.BeginSegmentAsync(lease, Envelope(), null, default));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.AdmitBatchAsync(lease, selected.Payload.Digest, Envelope(), [], default));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.SaveEffectApprovalsAsync(lease, segment.Id, [], default));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.BeginProviderDispatchAsync(lease, segment.Id,
+            selected.Payload.Digest, selected.Payload.Digest, [], default));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.ClaimInvocationAsync(lease,
+            request.Binding.BatchId, selected.CallId, selected.Payload, default));
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => fixture.Files.NewJournal().ReadAsync(lease, default));
+        var claim = await owner.ClaimSavedInvocationAsync(lease, request.Binding, selected.Payload, default);
+        Assert.Equal(AgentToolProposalState.Prepared, claim.Proposal.State);
+        using (claim.Bind()) {
+            Assert.Equal(selected.Payload, (await owner.RequireInvocationAsync(lease.Session,
+                selected.Payload.ToolName, selected.Payload.Digest)).Payload);
+        }
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.ClaimSavedInvocationAsync(lease, request.Binding, selected.Payload, default));
+        await owner.CompleteInvocationAsync(claim, Envelope("{\"accepted\":true}"), AgentToolEffectState.Committed, default);
+        var checkpoint = await owner.CheckpointSavedEffectAsync(lease, default);
+        var saved = (await fixture.ReadAsync())!;
+        Assert.Equal(saved.Revision, checkpoint.RunRevision);
+        Assert.Equal(saved.ToolAdmission!.Revision, checkpoint.JournalRevision);
+        Assert.Equal(ExecutionState.WaitingOnTool, saved.State);
+        AssertOriginPreserved(segment, Assert.Single(saved.ToolAdmission.Segments));
+        Assert.NotEqual(segment.OriginDispatchLeaseId, lease.Id);
+        Assert.True(saved.ToolAdmission.ProviderDispatches.IsDefaultOrEmpty);
+        await lease.DisposeAsync();
+        Assert.Throws<AgentToolAdmissionException>(() => claim.Bind());
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => reader.LastClaim!.RequireAsync().AsTask());
+        await using var released = await fixture.Files.NewJournal().AcquireRunAsync(fixture.Files.Session, default);
+    }
+
+    [Fact]
+    public async Task Competing_exact_commands_and_cancellation_cannot_replace_an_entered_effect_outcome() {
+        await using var competing = await CreateAsync(1);
+        using var competitionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var arrivals = 0;
+        async ValueTask<bool> BothRead(AgentToolSessionObservation observation, CancellationToken token) {
+            if (Interlocked.Increment(ref arrivals) == 2) {
+                ready.TrySetResult();
+            }
+            await ready.Task.WaitAsync(TimeSpan.FromSeconds(10), token);
+            return true;
+        }
+        var request = Request(competing.Prepared, decisions: Decisions(competing.Prepared, true));
+        var first = competing.Files.NewJournal().AcquireSavedEffectDispatchAsync(request, BothRead, competitionDeadline.Token);
+        var second = competing.Files.NewJournal(competing.Files.NewStore()).AcquireSavedEffectDispatchAsync(request, BothRead, competitionDeadline.Token);
+        HashSet<AgentToolRunLease> disposalAttempts = new(ReferenceEqualityComparer.Instance);
+        async Task DisposeOnceAsync(AgentToolRunLease acquired) {
+            lock (disposalAttempts) {
+                if (!disposalAttempts.Add(acquired)) {
+                    return;
+                }
+            }
+            await acquired.DisposeAsync();
+        }
+        async Task<Exception?> DrainAsync(Task<AgentToolRunLease> acquisition) {
+            AgentToolRunLease acquired;
+            try {
+                acquired = await acquisition;
+            } catch (AgentToolAdmissionException) {
+                return null;
+            } catch (OperationCanceledException) when (competitionDeadline.IsCancellationRequested) {
+                return null;
+            } catch (Exception failure) {
+                return failure;
+            }
+            return await Record.ExceptionAsync(() => DisposeOnceAsync(acquired));
+        }
+        Exception? primaryFailure = null;
+        try {
+            var winningTask = await Task.WhenAny(first, second).WaitAsync(TimeSpan.FromSeconds(10));
+            var winner = await winningTask;
+            await DisposeOnceAsync(winner);
+            await Assert.ThrowsAsync<AgentToolAdmissionException>(() => ReferenceEquals(winningTask, first) ? second : first);
+            Assert.Empty((await competing.ReadAsync())!.PendingApprovals);
+        } catch (Exception failure) {
+            primaryFailure = failure;
+            throw;
+        } finally {
+            var cancellationFailure = Record.Exception(() => competitionDeadline.Cancel());
+            var drainFailures = await Task.WhenAll(DrainAsync(first), DrainAsync(second));
+            var cleanupFailures = drainFailures.Append(cancellationFailure)
+                .OfType<Exception>().Where(failure => !ReferenceEquals(failure, primaryFailure)).ToList();
+            if (cleanupFailures.Count > 0) {
+                if (primaryFailure is not null) {
+                    cleanupFailures.Insert(0, primaryFailure);
+                }
+                throw new AggregateException("Competing saved-effect acquisition cleanup failed.", cleanupFailures);
+            }
+        }
+
+        await using var beforeClaim = await CreateAsync(1);
+        var beforeOwner = beforeClaim.Files.NewJournal();
+        await using var preparedLease = await beforeOwner.AcquireSavedEffectDispatchAsync(
+            Request(beforeClaim.Prepared, decisions: Decisions(beforeClaim.Prepared, true)), AllowRead, default);
+        using (preparedLease.Bind()) {
+            await beforeOwner.ObserveSavedEffectReceiptAsync(preparedLease, new ReceiptReader(), default);
+            var current = (await beforeClaim.ReadAsync())!;
+            var cancelled = await beforeClaim.Files.NewJournal().CancelSavedEffectsAsync(Cancellation(current), AllowRead, default);
+            Assert.Equal(RunOutcome.Cancelled, cancelled.Run.Outcome);
+            await Assert.ThrowsAsync<AgentToolAdmissionException>(() => beforeOwner.ClaimSavedInvocationAsync(preparedLease,
+                Binding(current), current.ToolAdmission!.Batches[0].Proposals[0].Payload, default));
+        }
+
+        await using var entered = await CreateAsync();
+        var owner = entered.Files.NewJournal();
+        await using var lease = await owner.AcquireSavedEffectDispatchAsync(
+            Request(entered.Prepared, decisions: Decisions(entered.Prepared, true, true)), AllowRead, default);
+        using var bound = lease.Bind();
+        await owner.ObserveSavedEffectReceiptAsync(lease, new ReceiptReader(), default);
+        var claim = await owner.ClaimSavedInvocationAsync(lease, Binding(entered.Prepared), Payload(0), default);
+        var executing = (await entered.ReadAsync())!;
+        var cancellation = await entered.Files.NewJournal().CancelSavedEffectsAsync(Cancellation(executing), AllowRead, default);
+        Assert.Equal(AgentToolProposalState.Executing, cancellation.Run.ToolAdmission!.Batches[0].Proposals[0].State);
+        Assert.Equal(AgentToolProposalState.Cancelled, cancellation.Run.ToolAdmission.Batches[0].Proposals[1].State);
+        var accepted = Envelope("{\"acceptedBeforeCancellationObservation\":true}");
+        await owner.CompleteInvocationAsync(claim, accepted, AgentToolEffectState.Committed, default);
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.CheckpointSavedEffectAsync(lease, default));
+        var retained = (await entered.ReadAsync())!;
+        Assert.Equal(RunOutcome.Cancelled, retained.Outcome);
+        Assert.Equal(ExecutionState.Failed, retained.State);
+        Assert.Equal(accepted, retained.ToolAdmission!.Batches[0].Proposals[0].Result);
+        Assert.Equal(AgentToolEffectState.Committed, retained.ToolAdmission.Batches[0].Proposals[0].EffectState);
+        Assert.Equal(claim.Id, retained.ToolAdmission.Batches[0].Proposals[0].DispatchClaimId);
+        Assert.Equal(cancellation.Run.ToolAdmission.Batches[0].Proposals[1], retained.ToolAdmission.Batches[0].Proposals[1]);
+    }
+
+    [Fact]
+    public async Task Prepared_receipt_inconsistency_refuses_without_fabricated_claim_while_entered_effect_uses_existing_reconciliation() {
+        await using var inconsistent = await CreateAsync(1);
+        var owner = inconsistent.Files.NewJournal();
+        await using (var lease = await owner.AcquireSavedEffectDispatchAsync(
+            Request(inconsistent.Prepared, decisions: Decisions(inconsistent.Prepared, true)), AllowRead, default)) {
+            using var bound = lease.Bind();
+            var failure = await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.ObserveSavedEffectReceiptAsync(lease, new ReceiptReader(true), default));
+            Assert.Equal("tool-admission.prepared-receipt-conflict", failure.Code);
+            await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.ObserveSavedEffectReceiptAsync(lease, new ReceiptReader(), default));
+            await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.ClaimSavedInvocationAsync(lease, Binding(inconsistent.Prepared), Payload(0), default));
+            var proposal = (await inconsistent.ReadAsync())!.ToolAdmission!.Batches[0].Proposals[0];
+            Assert.Equal(AgentToolProposalState.Prepared, proposal.State);
+            Assert.Null(proposal.DispatchClaimId);
+            Assert.Null(proposal.OwnerReceipt);
+        }
+
+        await using var entered = await CreateAsync(1);
+        var actual = entered.Files.NewJournal();
+        Guid claimId;
+        await using (var lease = await actual.AcquireSavedEffectDispatchAsync(
+            Request(entered.Prepared, decisions: Decisions(entered.Prepared, true)), AllowRead, default)) {
+            using var bound = lease.Bind();
+            await actual.ObserveSavedEffectReceiptAsync(lease, new ReceiptReader(), default);
+            var claim = await actual.ClaimSavedInvocationAsync(lease, Binding(entered.Prepared), Payload(0), default);
+            claimId = claim.Id;
+            await actual.PreserveUncertainInvocationAsync(claim, default);
+        }
+        var uncertain = (await entered.ReadAsync())!;
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => actual.AcquireSavedEffectDispatchAsync(Request(uncertain), AllowRead, default));
+        await using var recovery = await actual.AcquireInterruptedReconciliationAsync(entered.Files.Session, default);
+        using var held = recovery.Bind();
+        var reader = new ReceiptReader(true);
+        var receipt = await actual.ReconcileInterruptedAsync(recovery, [reader], AllowRead, default);
+        Assert.Equal(AgentEffectCheckpointPersistence.Confirmed, receipt.Persistence);
+        Assert.Equal(1, reader.Calls);
+        var confirmed = (await entered.ReadAsync())!.ToolAdmission!.Batches[0].Proposals[0];
+        Assert.Equal(AgentToolProposalState.OwnerReceiptConfirmed, confirmed.State);
+        Assert.Equal(claimId, confirmed.DispatchClaimId);
+        Assert.NotNull(confirmed.OwnerReceipt);
+        Assert.Null(confirmed.Result);
+    }
+
+    [Fact]
+    public async Task Real_journal_publication_faults_and_lease_cleanup_preserve_exact_decisions_and_outcome() {
+        await using var fixture = await CreateAsync(1);
+        ExistingRunDetailCommitStage? fault = ExistingRunDetailCommitStage.JournalPersisted;
+        var store = fixture.Files.NewStore(stage => {
+            if (stage == fault) {
+                fault = null;
+                throw new IOException("saved-publication-ack");
+            }
+        });
+        var owner = fixture.Files.NewJournal(store);
+        var changeFinalRevision = false;
+        async ValueTask<bool> CurrentRead(AgentToolSessionObservation observation, CancellationToken token) {
+            if (changeFinalRevision) {
+                changeFinalRevision = false;
+                await ((ISandboxWorkspaceExecutionRunMutationStore)fixture.Files.Store).UpdateExecutionRunDetailAsync(fixture.Prepared.Id,
+                    current => current with { Run = current.Run with { Revision = current.Run.Revision + 1 } }, token);
+            }
+            return true;
+        }
+        AssertIoCause(await Record.ExceptionAsync(() => owner.AcquireSavedEffectDispatchAsync(
+            Request(fixture.Prepared, decisions: Decisions(fixture.Prepared, true)), AllowRead, default)), "saved-publication-ack");
+        var decided = (await fixture.ReadAsync())!;
+        Assert.Empty(decided.PendingApprovals);
+        Assert.Equal(ExecutionApprovalStatus.Approved, decided.ToolAdmission!.Batches[0].Proposals[0].ApprovalStatus);
+        Assert.Null(decided.ToolAdmission.Batches[0].Proposals[0].DispatchClaimId);
+        await using (var lease = await owner.AcquireSavedEffectDispatchAsync(Request(decided), CurrentRead, default)) {
+            using var bound = lease.Bind();
+            await owner.ObserveSavedEffectReceiptAsync(lease, new ReceiptReader(), default);
+            var claim = await owner.ClaimSavedInvocationAsync(lease, Binding(decided), Payload(0), default);
+            fault = ExistingRunDetailCommitStage.RunPersisted;
+            var accepted = Envelope("{\"accepted\":true}");
+            AssertIoCause(await Record.ExceptionAsync(() => owner.CompleteInvocationAsync(claim, accepted,
+                AgentToolEffectState.Committed, default)), "saved-publication-ack");
+            var retained = (await fixture.ReadAsync())!;
+            Assert.Equal(AgentToolProposalState.Completed, retained.ToolAdmission!.Batches[0].Proposals[0].State);
+            Assert.Equal(accepted, retained.ToolAdmission.Batches[0].Proposals[0].Result);
+            Assert.Equal(claim.Id, retained.ToolAdmission.Batches[0].Proposals[0].DispatchClaimId);
+            await owner.PreserveUncertainInvocationAsync(claim, default);
+            Assert.Equal(retained.ToolAdmission.Batches[0].Proposals[0], (await fixture.ReadAsync())!.ToolAdmission!.Batches[0].Proposals[0]);
+            changeFinalRevision = true;
+            await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.CheckpointSavedEffectAsync(lease, default));
+            var afterConflict = (await fixture.ReadAsync())!;
+            Assert.Equal(ExecutionState.Running, afterConflict.State);
+            Assert.Equal(retained.ToolAdmission.Batches[0].Proposals[0], afterConflict.ToolAdmission!.Batches[0].Proposals[0]);
+        }
+
+        await using var cleanup = await CreateAsync(1);
+        var proxy = DispatchProxy.Create<ISavedEffectFailureStore, SavedEffectFailureStore>();
+        var failures = (SavedEffectFailureStore)(object)proxy;
+        failures.Inner = cleanup.Files.NewStore();
+        var cleanupOwner = new AgentToolAdmissionJournal(proxy, cleanup.Files.Profile);
+        async ValueTask<bool> ChangeWhileReading(AgentToolSessionObservation observation, CancellationToken token) {
+            await ((ISandboxWorkspaceExecutionRunMutationStore)cleanup.Files.Store).UpdateExecutionRunDetailAsync(cleanup.Prepared.Id,
+                current => current with { Run = current.Run with { Revision = current.Run.Revision + 1 } }, token);
+            return true;
+        }
+        var combined = await Assert.ThrowsAsync<AgentEffectReconciliationLeaseException>(() => cleanupOwner.AcquireSavedEffectDispatchAsync(
+            Request(cleanup.Prepared, decisions: Decisions(cleanup.Prepared, true)), ChangeWhileReading, default));
+        var causes = Assert.IsType<AggregateException>(combined.InnerException).InnerExceptions;
+        Assert.IsType<AgentToolAdmissionException>(causes[0]);
+        Assert.IsType<IOException>(causes[1]);
+        Assert.Equal(1, failures.Releases);
+        var unchanged = (await cleanup.ReadAsync())!;
+        Assert.Equal(cleanup.Prepared.PendingApprovals.ToArray(), unchanged.PendingApprovals.ToArray());
+        await using var released = await cleanup.Files.NewJournal().AcquireSavedEffectDispatchAsync(
+            Request(unchanged, decisions: Decisions(unchanged, true)), AllowRead, default);
+    }
+
+    [Fact]
+    public async Task Dormant_defaults_and_historical_journal_schemas_do_not_acquire_saved_effect_authority() {
+        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync();
+        foreach (var version in new[] { 1, 3, 4 }) {
+            var attachment = new AgentToolAdmittedContextAttachment(AgentChatContextScopeId.Create(),
+                new(new("tests"), new("saved-effect")), WorkspaceScopeDescriptor.Sandbox, new("tests.saved-effect"),
+                new("tests.saved-snapshot"), new(1), new("content"), new("coverage"), source.Profile.Generation,
+                new("freshness"), source.Detail.Run.CreatedAtUtc, null, Envelope());
+            var run = source.Detail.Run with { ToolAdmission = source.Detail.Run.ToolAdmission! with {
+                SchemaVersion = version,
+                RuntimeContext = version == 4 ? new("Retained typed context", WorkspaceScopeDescriptor.Sandbox, [attachment]) : null
+            } };
+            await using var files = await AgentToolAdmissionJournalFixture.RestoreRetainedAsync(source.Agent, source.Provider, source.Profile, run);
+            var owner = files.NewJournal();
+            var payload = Payload(0);
+            var binding = new AgentToolApprovalBinding(new(Guid.NewGuid()), new(Guid.NewGuid()), payload.SemanticVersion, payload.Digest);
+            var request = new AgentSavedEffectContinuationRequest(run.Id, run.ChatSessionId, run.Revision, run.ToolAdmission.Revision, binding, []);
+            var before = JsonSerializer.Serialize(await files.NewStore().GetExecutionRunAsync(run.Id));
+            await Assert.ThrowsAsync<AgentToolAdmissionException>(() => owner.AcquireSavedEffectDispatchAsync(request,
+                (_, _) => throw new InvalidOperationException("A legacy journal cannot reach saved-effect policy."), default));
+            Assert.Equal(before, JsonSerializer.Serialize(await files.NewStore().GetExecutionRunAsync(run.Id)));
+            await using var ordinary = await owner.AcquireRunAsync(files.Session, default);
+            using var bound = ordinary.Bind();
+            var journal = await owner.BeginSegmentAsync(ordinary, Envelope(), null, default);
+            Assert.Equal(version, journal.SchemaVersion);
+            Assert.Equal(AgentToolCheckpointKind.ProviderRestart, Assert.Single(journal.Segments).CheckpointKind);
+        }
+        var backgroundPolicy = new BackgroundPolicy();
+        var backgroundOwner = new AgentToolAdmissionJournal(source.Store, source.Profile, backgroundSources: [backgroundPolicy]);
+        var background = source.Detail.Run with {
+            Id = Guid.NewGuid(), ChatSessionId = null, MetadataJson = "{}", ToolAdmission = null,
+            SourceKind = backgroundPolicy.SourceKind, SourceId = "saved-effect-compatibility"
+        };
+        background = background with { ToolAdmission = await backgroundOwner.CreateForNewBackgroundRunAsync(background, "Original background input") };
+        await source.Store.SaveExecutionRunDetailAsync(new(background, null, [], []));
+        var backgroundBinding = new AgentToolApprovalBinding(new(Guid.NewGuid()), new(Guid.NewGuid()), 2, Payload(0).Digest);
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => backgroundOwner.AcquireSavedEffectDispatchAsync(
+            new(background.Id, null, background.Revision, background.ToolAdmission.Revision, backgroundBinding, []),
+            (_, _) => throw new InvalidOperationException("A background journal cannot acquire this interactive saved-effect admission."), default));
+        await using (var ordinary = await backgroundOwner.AcquireRunAsync(background.ToolAdmission.Session.Reference, default)) {
+            using var bound = ordinary.Bind();
+            var journal = await backgroundOwner.BeginSegmentAsync(ordinary, Envelope(), null, default);
+            Assert.Equal(AgentToolJournalRecord.BackgroundSchemaVersion, journal.SchemaVersion);
+            Assert.Equal(background.ToolAdmission.Session, journal.Session);
+        }
+        IAgentContinuationRuntime runtime = new OrdinaryRuntime();
+        IAgentRuntimeToolProvider provider = new OrdinaryProvider();
+        Assert.Equal(AgentSavedEffectDispatchSupport.Unsupported, runtime.SavedEffectDispatchSupport);
+        Assert.False(provider.SupportsSavedEffect(Payload(0)));
+        var requestBinding = new AgentToolApprovalBinding(new(Guid.NewGuid()), new(Guid.NewGuid()), 2, Payload(0).Digest);
+        await Assert.ThrowsAsync<NotSupportedException>(() => runtime.DispatchSavedEffectAsync(new(source.Session, requestBinding)));
+        var governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(source.Detail.Run.MetadataJson)!;
+        var context = new AgentRuntimeSavedEffectContext(source.Detail.Run.ToolAdmission!.Session, source.Agent, governance);
+        var readOnly = new AgentExecutionGovernanceSnapshot(governance.AuthorityId, governance.AgentId,
+            governance.DatabaseProfileId, governance.DatabaseProfileGeneration, governance.WorkspaceScope,
+            true, false, governance.PolicyVersion, governance.PolicyFingerprint);
+        Assert.Throws<ArgumentException>(() => new AgentRuntimeSavedEffectContext(source.Detail.Run.ToolAdmission.Session, source.Agent, readOnly));
+        await Assert.ThrowsAsync<NotSupportedException>(() => provider.RestoreSavedEffectAsync(context, Payload(0), default).AsTask());
+        Assert.Throws<ArgumentException>(() => new AgentSavedEffectDispatchResult(requestBinding,
+            AgentToolProposalState.Executing, AgentToolEffectState.Unknown, 1, 1));
+    }
+
+    private sealed class OrdinaryRuntime : IAgentContinuationRuntime {
+        public Task<AgentRuntimeResponse> ContinueAsync(AgentRuntimeContinuationRequest request, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Saved-effect capability probing must not invoke the ordinary provider.");
+    }
+
+    private sealed class BackgroundPolicy : IAgentToolBackgroundSourcePolicy {
+        public string SourceKind => "saved-effect-compatibility";
+        public ValueTask<AgentToolBackgroundSourceObservation> ObserveAsync(ExecutionRunRecord execution,
+            AgentToolProfileBinding profile, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(new AgentToolBackgroundSourceObservation(AgentToolProtocolEnvelope.ComputeDigest("original-owner"), true, true));
+    }
+
+    private sealed class OrdinaryProvider : IAgentRuntimeToolProvider {
+        public int Order => 0;
+        public ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(AgentRuntimeToolProviderContext context, CancellationToken cancellationToken)
+            => throw new InvalidOperationException("Saved-effect capability probing must not construct the ordinary tool set.");
+    }
+}

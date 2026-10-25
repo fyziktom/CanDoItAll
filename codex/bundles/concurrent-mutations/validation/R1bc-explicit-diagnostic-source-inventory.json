@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "status": "Frozen after independent source review; no build/runtime proof",
+  "scope": "Explicit opt-in receipt diagnostic session",
+  "sourceCount": {
+    "theories": 3,
+    "inlineRows": 22,
+    "addedRows": 0,
+    "category": "LongRunning"
+  },
+  "productionChanged": false,
+  "files": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceTests.cs",
+      "sha256": "E1A7F021149280AB6FC64C198C5B7CB5A35B4A2B7A14B1652B51F243BF7B6924",
+      "bytes": 17841,
+      "parentBaseSha256": "86DDBFECA7407E157EA641056516D1126267E740EFF9FA137D9C4F205CADD1C0"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceEvidence.cs",
+      "sha256": "C185DB729B9C67B5B6BA79CDBDDBCC571EA1DE9FD6200BA8BB8D32A1AEA04FF5",
+      "bytes": 12561,
+      "parentBaseSha256": "A19645D4BB6E1960DC529B095D0A64075794D7AC26E08ACABFE82B8C849BC260"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStoreDiagnosticSession.cs",
+      "sha256": "18343965339915256EEAF05CA7C01B2DE3C1FEB33714A0F2442DD2DFCF794927",
+      "bytes": 10684,
+      "parentBaseSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/R1bc-explicit-diagnostic-session.md",
+      "sha256": "3B5C7FE18BCF3F1F684980AFCFF6A9A049F6B0B0AF5E7BFCB8B3E9F4B9EEFEB4",
+      "bytes": 10614,
+      "parentBaseSha256": null
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/diagnostics/collector/ReceiptTraceCollector.csproj",
+      "sha256": "048BDDEF05458498CF2B2E5EACE66BDDF0995A1CF4643733EF1A99A942843966",
+      "bytes": 2292,
+      "parentBaseSha256": null
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/diagnostics/collector/Program.cs",
+      "sha256": "C9D96687DC031ABB04F8AA37CFFD2C51B193962F3DE6CB57F94357164154C209",
+      "bytes": 13685,
+      "parentBaseSha256": null
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/diagnostics/collector/README.md",
+      "sha256": "505183156913DA2443E966978329B1C8C2B3801A75E0B879975F55970E5820BF",
+      "bytes": 4518,
+      "parentBaseSha256": null
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/diagnostics/collector/source-inventory.json",
+      "sha256": "CBFC8CEAB77AA49753F4ACA5B6A768A7A59A687DA51A2191A0CAF11F370458D4",
+      "bytes": 1969,
+      "parentBaseSha256": null
+    }
+  ],
+  "validationOwner": "parent",
+  "pending": [
+    "Standard Release builds",
+    "Required static gates",
+    "Exact one-row discovery",
+    "Missing/wrong/interrupted collector refusal arrangements",
+    "Controlled start/stop/rundown/EOF and watchdog/host release proof",
+    "Strict offline parser gates"
+  ],
+  "supersedesInventorySha256": "9D9A649728C79A905C6D06138EE4B9841776B55F114F6CA613FD5095EDCAFAAF",
+  "independentSourceReview": {
+    "reviewer": "ui_validation_architecture",
+    "result": "No remaining source blocker after guaranteed output disposal and explicit host handle corrections",
+    "reviewedProgramSha256": "C9D96687DC031ABB04F8AA37CFFD2C51B193962F3DE6CB57F94357164154C209",
+    "runtimeProof": false
+  }
+}

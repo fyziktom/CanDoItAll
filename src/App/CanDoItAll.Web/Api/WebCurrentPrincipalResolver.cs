@@ -22,6 +22,20 @@ internal sealed class WebCurrentPrincipalResolver(
     TimeProvider clock) {
     private const string AuthorizationRevisionClaim = "auth_rev";
 
+    internal Task<ApiAuthenticationObservation> CaptureDefinitionWriteAuthorityAsync(CancellationToken cancellationToken) {
+        cancellationToken.ThrowIfCancellationRequested();
+        var context = http.HttpContext;
+        var observation = context?.Features.Get<ApiAuthenticationObservation>();
+        if (!options.Value.Enabled || !options.Value.Authorization.Enabled || observation is null ||
+                observation.Issuer != options.Value.Authorization.Issuer ||
+                observation.ExpiresAt <= clock.GetUtcNow().ToUnixTimeSeconds() || !observation.HasProjectsAccess ||
+                !observation.MatchesPrincipal(context!.User) ||
+                observation.Session is { } session && !sessions.IsAuthoritySnapshotCurrent(session, observation.Credential!)) {
+            throw Denied();
+        }
+        return Task.FromResult(observation);
+    }
+
     internal async Task<WebCurrentPrincipal> ResolveAsync(CancellationToken cancellationToken) {
         var principal = interactive.IsAvailable ? await interactive.GetCurrentAsync(cancellationToken) : http.HttpContext?.User;
         if (principal?.Identity?.IsAuthenticated != true && interactive.IsAvailable) {

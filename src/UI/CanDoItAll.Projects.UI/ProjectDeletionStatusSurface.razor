@@ -56,7 +56,7 @@
                                     <TextBlock Value="@($"The active claim can be taken over after {cleanup.RetryAvailableAtUtc.Value:u}; retry refreshes its state.")" />
                                 }
                                 <Button Text="Retry cleanup" ButtonStyle="ButtonStyle.Warning"
-                                        Disabled="@BusyTargets.Contains(cleanup.Target)" Click="@(() => Retry.InvokeAsync(cleanup.Target))"
+                                        Disabled="@(cleanup.RetryBlocked || BusyTargets.Contains(cleanup.Target))" Click="@(() => RetryCleanupAsync(cleanup.Target))"
                                         data-testid="project-deletion-retry" />
                             </Stack>
                         }
@@ -102,6 +102,9 @@
     private static int PageCount(int count) => Math.Max(1, (count + PageSize - 1) / PageSize);
     private static string OperationLabel(ProjectCleanupTarget target, string operation)
         => $"Project {target.ProjectId:D} · {target.ParticipantId} · {operation} · operation {target.RecoveryId:D}";
+    private Task RetryCleanupAsync(ProjectCleanupTarget target)
+        => Pending.Any(item => item.Target == target && !item.RetryBlocked) && !BusyTargets.Contains(target)
+            ? Retry.InvokeAsync(target) : Task.CompletedTask;
     private Task Open() => ChangeView(Pending.Count > 0 ? ProjectCleanupView.Pending : ProjectCleanupView.RetainedMedia);
     private Task Close() => ReviewChanged.InvokeAsync((ProjectCleanupReview?)null);
     private Task ChangeView(ProjectCleanupView view) => ReviewChanged.InvokeAsync(new(view));

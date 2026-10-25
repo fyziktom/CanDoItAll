@@ -12,88 +12,105 @@ public sealed class OwnerPostcommitPersistenceTests {
     [InlineData(PostcommitFault.Search)]
     [InlineData(PostcommitFault.SearchCancellation)]
     [InlineData(PostcommitFault.Activity)]
-    public async Task Resource_confirmed_save_keeps_identity_and_original_failure_across_restart(PostcommitFault fault) {
+    public async Task Resource_search_fault_rolls_back_while_activity_fault_retains_exact_save_across_restart(PostcommitFault fault) {
         await using var environment = CanDoItAllTestEnvironment.Create("resource-postcommit-save");
         var probe = new OwnerPostcommitTestProbe();
         var options = Options(environment, probe);
         using var cancellation = new CancellationTokenSource();
-        var originalFailure = Failure(fault, cancellation.Token);
         ResourceEditorModel editor;
-        Guid resourceId;
+        ReplaceResourceMetadataCommand command;
+        ResourceMetadataSnapshot? accepted = null;
         await using (var application = await TestApplication.CreateAsync(options)) {
             await using var scope = application.Services.CreateAsyncScope();
             var services = scope.ServiceProvider;
-            var admission = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Resource confirmed save");
+            var admission = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Resource save outcome");
+            var owner = services.GetRequiredService<ResourcesService>();
             editor = OwnerPostcommitTestProbe.Resource(services, admission);
-            probe.ArmFault(PostcommitOwner.Resource, fault, originalFailure, cancellation);
-            var failure = await Assert.ThrowsAsync<ResourceCommittedMutationException>(() =>
-                services.GetRequiredService<ResourcesService>().SaveAsync(editor, cancellation.Token));
-            resourceId = failure.ResourceId;
-            Assert.NotEqual(Guid.Empty, resourceId);
-            Assert.Equal(resourceId, editor.Id);
-            Assert.Equal(ResourceMutationKind.Save, failure.MutationKind);
-            Assert.Same(originalFailure, failure.InnerException);
-            AssertCancellation(fault, cancellation, failure.InnerException);
+            command = await ResourceMetadataTestCommands.NewAsync(owner, editor);
+            probe.ArmFault(PostcommitOwner.Resource, fault, Failure(fault, cancellation.Token), cancellation);
+            var outcome = await owner.SaveAsync(command, cancellation.Token);
+            Assert.Null(editor.Id);
+            if (fault == PostcommitFault.Activity) {
+                var confirmed = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(outcome);
+                accepted = confirmed.Snapshot;
+                Assert.Equal(ResourceMetadataSecondaryDiagnostic.ActivityPending, confirmed.Diagnostic);
+                await AssertResourceAsync(services, editor, command.Expected.ResourceId);
+            } else {
+                Assert.Equal(fault == PostcommitFault.SearchCancellation ? ResourceMetadataRejectionReason.Cancelled :
+                    ResourceMetadataRejectionReason.PersistenceUnavailable, Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(outcome).Reason);
+                Assert.IsType<ResourceMetadataReadResult.Missing>(await owner.ReadAsync(command.Expected.ResourceId));
+            }
+            Assert.Equal(fault == PostcommitFault.SearchCancellation, cancellation.IsCancellationRequested);
             Assert.Equal(1, probe.SearchReturns);
             Assert.Equal(fault == PostcommitFault.Activity ? 1 : 0, probe.ActivityReturns);
-            await AssertResourceAsync(services, editor, resourceId);
+            await AssertResourceSearchAsync(services, command.Expected.ResourceId, fault == PostcommitFault.Activity);
         }
-
         await using var restarted = await TestApplication.CreateAsync(options);
         await using var restartedScope = restarted.Services.CreateAsyncScope();
-        await AssertResourceAsync(restartedScope.ServiceProvider, editor, resourceId);
+        var current = restartedScope.ServiceProvider;
+        var currentOwner = current.GetRequiredService<ResourcesService>();
+        if (accepted is null) {
+            Assert.IsType<ResourceMetadataReadResult.Missing>(await currentOwner.ReadAsync(command.Expected.ResourceId));
+            await AssertResourceSearchAsync(current, command.Expected.ResourceId, false);
+            return;
+        }
+        Assert.Equal(accepted, await ResourceMetadataTestCommands.FoundAsync(currentOwner, command.Expected.ResourceId));
         editor.Name = "Explicit same-editor update";
-        var saved = await restartedScope.ServiceProvider.GetRequiredService<ResourcesService>().SaveAsync(editor);
-        Assert.True(saved.IsSuccess);
-        Assert.Equal(resourceId, saved.Value);
-        await AssertResourceAsync(restartedScope.ServiceProvider, editor, resourceId);
+        var saved = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await currentOwner.SaveAsync(ResourceMetadataTestCommands.Replace(accepted, editor)));
+        Assert.NotEqual(accepted.Expected.Revision, saved.Snapshot.Expected.Revision);
+        await AssertResourceAsync(current, editor, command.Expected.ResourceId);
     }
-
     [Theory]
     [InlineData(PostcommitFault.Search)]
     [InlineData(PostcommitFault.SearchCancellation)]
     [InlineData(PostcommitFault.Activity)]
-    public async Task Resource_confirmed_delete_remains_deleted_after_postcommit_fault_and_restart(PostcommitFault fault) {
+    public async Task Resource_search_fault_rolls_back_delete_while_activity_fault_preserves_deletion_across_restart(PostcommitFault fault) {
         await using var environment = CanDoItAllTestEnvironment.Create("resource-postcommit-delete");
         var probe = new OwnerPostcommitTestProbe();
         var options = Options(environment, probe);
         using var cancellation = new CancellationTokenSource();
-        var originalFailure = Failure(fault, cancellation.Token);
-        Guid resourceId;
-        ProjectWriteAdmission admission;
+        ResourceMetadataSnapshot original;
         await using (var application = await TestApplication.CreateAsync(options)) {
             await using var scope = application.Services.CreateAsyncScope();
             var services = scope.ServiceProvider;
-            admission = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Resource confirmed deletion");
+            var admission = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Resource deletion outcome");
             var owner = services.GetRequiredService<ResourcesService>();
-            var saved = await owner.SaveAsync(OwnerPostcommitTestProbe.Resource(services, admission));
-            Assert.True(saved.IsSuccess);
-            resourceId = saved.Value;
-            probe.ArmFault(PostcommitOwner.Resource, fault, originalFailure, cancellation);
-            var failure = await Assert.ThrowsAsync<ResourceCommittedMutationException>(() =>
-                owner.DeleteAsync(resourceId, admission, cancellation.Token));
-            Assert.Equal(resourceId, failure.ResourceId);
-            Assert.Equal(ResourceMutationKind.Delete, failure.MutationKind);
-            Assert.Same(originalFailure, failure.InnerException);
-            AssertCancellation(fault, cancellation, failure.InnerException);
+            original = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await owner.SaveAsync(
+                await ResourceMetadataTestCommands.NewAsync(owner, OwnerPostcommitTestProbe.Resource(services, admission)))).Snapshot;
+            probe.ArmFault(PostcommitOwner.Resource, fault, Failure(fault, cancellation.Token), cancellation);
+            var outcome = await owner.DeleteAsync(new(original.Expected), cancellation.Token);
+            if (fault == PostcommitFault.Activity) {
+                var accepted = Assert.IsType<ResourceMetadataDeleteOutcome.Accepted>(outcome);
+                Assert.Equal(original.Expected, accepted.Deleted);
+                Assert.Equal(ResourceMetadataSecondaryDiagnostic.ActivityPending, accepted.Diagnostic);
+            } else {
+                Assert.Equal(fault == PostcommitFault.SearchCancellation ? ResourceMetadataRejectionReason.Cancelled :
+                    ResourceMetadataRejectionReason.PersistenceUnavailable, Assert.IsType<ResourceMetadataDeleteOutcome.Rejected>(outcome).Reason);
+                Assert.Equal(original, await ResourceMetadataTestCommands.FoundAsync(owner, original.Expected.ResourceId));
+            }
+            Assert.Equal(fault == PostcommitFault.SearchCancellation, cancellation.IsCancellationRequested);
             Assert.Equal(2, probe.SearchReturns);
             Assert.Equal(fault == PostcommitFault.Activity ? 2 : 1, probe.ActivityReturns);
-            Assert.Null((await owner.GetAsync(resourceId)).Id);
+            await AssertResourceSearchAsync(services, original.Expected.ResourceId, fault != PostcommitFault.Activity);
         }
-
         await using var restarted = await TestApplication.CreateAsync(options);
         await using var restartedScope = restarted.Services.CreateAsyncScope();
-        var restartedOwner = restartedScope.ServiceProvider.GetRequiredService<ResourcesService>();
-        Assert.Null((await restartedOwner.GetAsync(resourceId)).Id);
+        var servicesAfterRestart = restartedScope.ServiceProvider;
+        var restartedOwner = servicesAfterRestart.GetRequiredService<ResourcesService>();
+        if (fault != PostcommitFault.Activity) {
+            Assert.Equal(original, await ResourceMetadataTestCommands.FoundAsync(restartedOwner, original.Expected.ResourceId));
+            await AssertResourceSearchAsync(servicesAfterRestart, original.Expected.ResourceId, true);
+            return;
+        }
+        Assert.IsType<ResourceMetadataReadResult.Missing>(await restartedOwner.ReadAsync(original.Expected.ResourceId));
         var searchReturns = probe.SearchReturns;
         var activityReturns = probe.ActivityReturns;
-        await restartedOwner.DeleteAsync(resourceId, admission);
+        Assert.Equal(ResourceMetadataRejectionReason.ResourceMissing,
+            Assert.IsType<ResourceMetadataDeleteOutcome.Rejected>(await restartedOwner.DeleteAsync(new(original.Expected))).Reason);
         Assert.Equal(searchReturns, probe.SearchReturns);
         Assert.Equal(activityReturns, probe.ActivityReturns);
-        await using var database = await restartedScope.ServiceProvider.GetRequiredService<IDbContextFactory<ResourcesDbContext>>().CreateDbContextAsync();
-        Assert.False(await database.Set<ProjectResource>().AnyAsync(item => item.Id == resourceId));
+        await AssertResourceSearchAsync(servicesAfterRestart, original.Expected.ResourceId, false);
     }
-
     [Theory]
     [InlineData(false, PostcommitFault.Search)]
     [InlineData(false, PostcommitFault.SearchCancellation)]
@@ -167,14 +184,14 @@ public sealed class OwnerPostcommitPersistenceTests {
         Assert.NotEqual(original.LifetimeId, Assert.IsType<ProjectWriteAdmission>(current).LifetimeId);
         var resource = OwnerPostcommitTestProbe.Resource(services, original);
         var plan = OwnerPostcommitTestProbe.Plan(original);
-        var failure = await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(async () => {
-            if (owner == PostcommitOwner.Resource) {
-                await services.GetRequiredService<ResourcesService>().SaveAsync(resource);
-            } else {
-                await services.GetRequiredService<TestLabService>().SaveAsync(plan);
-            }
-        });
-        Assert.Equal(original, failure.Admission);
+        if (owner == PostcommitOwner.Resource) {
+            var resources = services.GetRequiredService<ResourcesService>();
+            var result = await resources.SaveAsync(await ResourceMetadataTestCommands.NewAsync(resources, resource));
+            Assert.Equal(ResourceMetadataRejectionReason.ProjectUnavailable, Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(result).Reason);
+        } else {
+            var failure = await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => services.GetRequiredService<TestLabService>().SaveAsync(plan));
+            Assert.Equal(original, failure.Admission);
+        }
         Assert.Null(resource.Id);
         AssertUnassigned(plan);
         Assert.Equal(0, probe.SearchReturns);
@@ -200,14 +217,14 @@ public sealed class OwnerPostcommitPersistenceTests {
             cancellation.Cancel();
             throw expected;
         };
-        var observed = await Assert.ThrowsAsync<OperationCanceledException>(async () => {
-            if (owner == PostcommitOwner.Resource) {
-                await services.GetRequiredService<ResourcesService>().SaveAsync(resource, cancellation.Token);
-            } else {
-                await services.GetRequiredService<TestLabService>().SaveAsync(plan, cancellation.Token);
-            }
-        });
-        Assert.Same(expected, observed);
+        if (owner == PostcommitOwner.Resource) {
+            var resources = services.GetRequiredService<ResourcesService>();
+            var result = await resources.SaveAsync(await ResourceMetadataTestCommands.NewAsync(resources, resource), cancellation.Token);
+            Assert.Equal(ResourceMetadataRejectionReason.Cancelled, Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(result).Reason);
+        } else {
+            var observed = await Assert.ThrowsAsync<OperationCanceledException>(() => services.GetRequiredService<TestLabService>().SaveAsync(plan, cancellation.Token));
+            Assert.Same(expected, observed);
+        }
         Assert.Null(resource.Id);
         AssertUnassigned(plan);
         Assert.Equal(0, probe.SearchReturns);
@@ -255,7 +272,8 @@ public sealed class OwnerPostcommitPersistenceTests {
         Assert.Equal(OwnerPostcommitTestProbe.ResourceLocation, row.LocationOrIdentifier);
         Assert.Equal(expected.ConnectorPluginKey, row.ConnectorPluginKey);
         Assert.True(row.SupportsPreview);
-        var read = await services.GetRequiredService<ResourcesService>().GetAsync(resourceId);
+        var owner = services.GetRequiredService<ResourcesService>();
+        var read = owner.CreateEditor(await ResourceMetadataTestCommands.FoundAsync(owner, resourceId));
         Assert.Equal(resourceId, read.Id);
         Assert.Equal(expected.ExpectedProjectAdmission, read.ExpectedProjectAdmission);
         var expectedValues = expected.Configuration.Values.ToDictionary();
@@ -265,6 +283,11 @@ public sealed class OwnerPostcommitPersistenceTests {
             read.Configuration.Values.OrderBy(item => item.Key, StringComparer.Ordinal));
     }
 
+    private static async Task AssertResourceSearchAsync(IServiceProvider services, Guid id, bool exists) {
+        await using var search = await services.GetRequiredService<IDbContextFactory<CanDoItAll.Infrastructure.Search.SearchDbContext>>().CreateDbContextAsync();
+        Assert.Equal(exists, await search.Set<CanDoItAll.Infrastructure.Search.SearchDocument>().AnyAsync(row =>
+            row.SourceType == CanDoItAll.Infrastructure.Search.SearchDocument.ResourceSourceType && row.SourceKey == id.ToString()));
+    }
     private static async Task AssertPlanAsync(IServiceProvider services, TestPlanEditorModel expected,
         Guid planId, Guid caseId, Guid evidenceId, Guid runId) {
         await using var database = await services.GetRequiredService<IDbContextFactory<TestLabDbContext>>().CreateDbContextAsync();

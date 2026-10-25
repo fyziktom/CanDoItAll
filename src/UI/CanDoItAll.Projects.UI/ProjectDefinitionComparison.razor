@@ -1,0 +1,64 @@
+<Stack GapScale="LayoutGap.Large" data-testid="project-definition-comparison">
+    <Stack GapScale="LayoutGap.Small">
+        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@Model.Name" />
+        <TextBlock Value="@($"Status: {Model.Status}")" />
+        <TextBlock Value="@($"Current phase: {Model.CurrentPhase}")" />
+        <TextBlock Value="@($"Target: {ProjectsPresentation.FormatDate(Model.TargetDateUtc)}")" />
+        @if (Model.ExternalNamespace is not null) {
+            <TextBlock Value="@($"External identity: {Model.ExternalNamespace}/{Model.ExternalKey}")" />
+        }
+        <TextBlock TextStyle="TextStyle.Caption" Value="Description" />
+        <TextBlock Value="@Model.Description" />
+        <TextBlock TextStyle="TextStyle.Caption" Value="Objective" />
+        <TextBlock Value="@Model.Objective" />
+    </Stack>
+    <FormSection Title="Phases">
+        @if (Model.Phases.Count == 0) {
+            <TextBlock Value="No phases." />
+        }
+        @foreach (var phase in Model.Phases) {
+            <Stack GapScale="LayoutGap.Tiny" @key="phase">
+                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@phase.Name" />
+                <TextBlock Value="@phase.Goal" />
+                <TextBlock Value="@($"{phase.Status} · {ProjectsPresentation.FormatDate(phase.StartDateUtc)} – {ProjectsPresentation.FormatDate(phase.EndDateUtc)}")" />
+            </Stack>
+        }
+    </FormSection>
+    <FormSection Title="Technology options">
+        @if (!Model.Options.Any(option => Meaningful(option))) {
+            <TextBlock Value="No technology options." />
+        }
+        @foreach (var option in Model.Options.Where(Meaningful)) {
+            <Stack GapScale="LayoutGap.Tiny" @key="option">
+                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@($"{option.Category}: {option.OptionName}")" />
+                <TextBlock Value="@option.Notes" />
+            </Stack>
+        }
+    </FormSection>
+    @if (PreviousStarterObjects.Count > 0) {
+        <FormSection Title="Previous linked-object plans" Description="These are local plans from the previous draft. Copy a plan into the editor only if you still want to create it.">
+            @foreach (var starter in PreviousStarterObjects) {
+                <Stack GapScale="LayoutGap.Tiny" @key="starter">
+                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="@($"{starter.ObjectType}: {starter.Title}")" />
+                    <TextBlock Value="@starter.Subtitle" />
+                    @if (starter.IsSeeded) {
+                        <TextBlock Value="Already created; open Structure to edit the created object." />
+                    } else if (starter.WasDispatched) {
+                        <TextBlock Value="Creation was attempted; inspect Structure before making any replacement plan." />
+                    }
+                </Stack>
+            }
+        </FormSection>
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<StarterObjectDraft> PreviousStarterObjects { get; set; } = [];
+
+    private static bool Meaningful(ProjectOptionEditorModel option)
+        => !string.IsNullOrWhiteSpace(option.OptionName) || !string.IsNullOrWhiteSpace(option.Notes);
+}

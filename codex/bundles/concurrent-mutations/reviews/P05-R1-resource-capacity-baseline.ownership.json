@@ -1,0 +1,36 @@
+{
+  "owner": "/root/persistence_architecture",
+  "status": "PreparedBeforeSourceCreation",
+  "authorizedScope": [
+    "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Performance.cs",
+    "codex/bundles/concurrent-mutations/validation/P05-R1-resource-capacity-baseline-source.md",
+    "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-capacity-baseline-source-inventory.json"
+  ],
+  "productionEdits": false,
+  "sourceOnly": true,
+  "predecessors": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.cs",
+      "managedSha256": "AABF746AEFC7115CC6B7F86A5FE060CD3A7CD0316DEE23AAEA26CDBA78A59B45",
+      "mainSha256": "AABF746AEFC7115CC6B7F86A5FE060CD3A7CD0316DEE23AAEA26CDBA78A59B45"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Bounds.cs",
+      "managedSha256": "7AEAB1090ADFFD05B583B6BFC22B5DB5DB3BC7B863D5E34672555A560128DBC9",
+      "mainSha256": "7AEAB1090ADFFD05B583B6BFC22B5DB5DB3BC7B863D5E34672555A560128DBC9"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataWriter.cs",
+      "managedSha256": "6320752EFDC88C3B78A666E5769199FE1C99684457CDC111281561317F50A385",
+      "mainSha256": "6320752EFDC88C3B78A666E5769199FE1C99684457CDC111281561317F50A385"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectPromotion.cs",
+      "managedSha256": "14AB30A57095D6964D3DBDA9DE2EF51CE67944DE7DCF2536D484E0105D00F0B6",
+      "mainSha256": "14AB30A57095D6964D3DBDA9DE2EF51CE67944DE7DCF2536D484E0105D00F0B6"
+    }
+  ],
+  "design": "2FEC9D556FC4032F0DE12F9F403A0BC8059A71A09CC84EF1B12339C0871C8151",
+  "ordinaryPassed": 346,
+  "ordinaryParentAcceptance": "E9FB5746062FF1BCC5A950B90DC5D75B86A28A6DF345C7BC67EEE5D44CC056F6"
+}

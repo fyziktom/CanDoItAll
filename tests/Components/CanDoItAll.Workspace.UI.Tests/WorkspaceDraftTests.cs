@@ -56,7 +56,7 @@ public sealed class WorkspaceDraftTests {
         Assert.Equal(" submitted ", state.Draft.Model.WorkspaceName);
         Assert.Equal("newer notes", state.Draft.Model.Notes);
         Assert.Equal("EUR", state.Draft.Model.CurrencyCode);
-        var saved = await store.ReadAsync(default);
+        var saved = (await store.ReadAsync(default)).Values;
         Assert.Equal("submitted", saved.WorkspaceName);
         Assert.Equal("submitted notes", saved.Notes);
         Assert.Equal("de-DE", saved.CurrencyCultureName);
@@ -76,6 +76,42 @@ public sealed class WorkspaceDraftTests {
         Assert.Contains("Unavailable provider", cut.Markup);
         Assert.Equal(WorkspaceScenarioStore.ProviderId, state.Draft.Model.DefaultProviderProfileId);
         Assert.True(state.CanSave);
+    }
+
+    [Fact]
+    public async Task Provider_comparisons_show_catalog_labels_and_preserve_unavailable_reference_values() {
+        var enabledId = Guid.NewGuid();
+        var disabledId = Guid.NewGuid();
+        var unavailableId = Guid.NewGuid();
+        WorkspaceProviderOption[] providers = [new(enabledId, "Team provider", true), new(disabledId, "Archived provider", false)];
+        (Guid? Id, string Label)[] cases = [
+            (enabledId, "Team provider"),
+            (disabledId, "Archived provider (disabled)"),
+            (unavailableId, "Unavailable provider"),
+            (null, "None")
+        ];
+        using var context = Context();
+        foreach (var (id, label) in cases) {
+            var values = WorkspaceSettingsValues.Capture(new() { DefaultProviderProfileId = id });
+            using var comparison = context.Render<WorkspaceDefaultsComparison>(parameters => parameters
+                .Add(component => component.Title, "Saved values")
+                .Add(component => component.Values, values)
+                .Add(component => component.Providers, providers));
+            Assert.Contains($"Default provider: {label}", comparison.Markup);
+            Assert.Equal(id, values.DefaultProviderProfileId);
+            if (id is { } selected) {
+                Assert.DoesNotContain(selected.ToString(), comparison.Markup);
+            }
+        }
+        var store = new WorkspaceScenarioStore(WorkspaceScenario.MissingProvider);
+        using var state = new WorkspaceDefaultsController(store);
+        await state.RefreshAsync();
+        var calls = store.Calls.ToArray();
+        var surface = context.Render<WorkspaceDefaultsSurface>(parameters => parameters.Add(component => component.State, state));
+        var option = surface.Find($"[data-testid=defaults-provider] option[value='{WorkspaceScenarioStore.ProviderId}']");
+        Assert.Equal("Unavailable provider", option.TextContent);
+        Assert.Equal(WorkspaceScenarioStore.ProviderId, state.Draft.Capture().Values.DefaultProviderProfileId);
+        Assert.Equal(calls, store.Calls.ToArray());
     }
 
     [Fact]

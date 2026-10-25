@@ -52,21 +52,23 @@ public sealed class ResourceStorageObjectIntegrationTests
                     item.Key,
                     projectId,
                     "Governed integration resource",
-                    sources.Projects.Single(project => project.Id == projectId).Admission));
+                    sources.Projects.Single(project => project.Id == projectId).Admission,
+                    await scope.ServiceProvider.GetRequiredService<ResourcesService>().ReadContextAsync(), Guid.NewGuid()));
 
-            Assert.True(result.Created);
-            Assert.Equal(before.Scope + 1, result.Revision.Scope);
+            var accepted = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(result.Outcome);
+            Assert.True(accepted.Created);
+            Assert.Equal(before.Scope + 1, result.Revision!.Value.Scope);
             await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync();
             ProjectResource resource = await dbContext.Set<ProjectResource>()
                 .AsNoTracking()
-                .SingleAsync(candidate => candidate.Id == result.ResourceId);
+                .SingleAsync(candidate => candidate.Id == accepted.Snapshot.Expected.ResourceId);
             StorageObjectResourceConfig config = StorageObjectResourceConnectorPlugin.Deserialize(resource.ConfigJson);
             Assert.Equal(storage.Id, config.StorageId);
             Assert.Equal(StorageLocatorKind.RelativePath, config.LocatorKind);
             Assert.Equal(fileName, config.Locator);
             Assert.DoesNotContain(fileName, resource.LocationOrIdentifier, StringComparison.Ordinal);
 
-            await using ResourceStorageObjectInteraction interaction = await interactionService.OpenAsync(result.ResourceId);
+            await using ResourceStorageObjectInteraction interaction = await interactionService.OpenAsync(accepted.Snapshot.Expected.ResourceId);
             await using FileContentLease lease = await interaction.Session.ContentSource.OpenReadAsync(
                 new FileContentReadRequest(interaction.Session.File));
             using var reader = new StreamReader(lease.Stream);

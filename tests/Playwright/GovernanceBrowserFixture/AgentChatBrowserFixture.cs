@@ -99,12 +99,12 @@ internal sealed class AgentChatBrowserFixture : IAgentChatExecutionOrchestrator,
         return Task.FromResult(thread);
     }
 
-    public Task<ChatSessionRecord> Rename(Guid agent, Guid session, string title) {
+    public Task<ChatSessionRecord> Rename(Guid agent, Guid session, string title, string expectedTitle) {
         if (sessions[session].AgentId != agent) {
             throw new InvalidOperationException("Fixture rename target mismatch.");
         }
         renames++;
-        sessions[session] = sessions[session] with { Title = title };
+        sessions[session] = new ChatSessionTitleChange(agent, session, expectedTitle, title, DateTimeOffset.UtcNow).Apply(sessions[session]);
         return Task.FromResult(sessions[session]);
     }
 
@@ -215,7 +215,7 @@ public class ChatWorkspaceBrowserProxy : DispatchProxy {
         nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) => Fixture.Agents(Inner, (CancellationToken)args![1]!),
         nameof(IAgentFrameworkWorkspaceService.GetChatAgentWorkspaceAsync) => Fixture.Workspace((Guid)args![0]!, (Guid?)args![1]),
         nameof(IAgentFrameworkWorkspaceService.GetOrCreateChatSessionAsync) => Fixture.Create((Guid)args![0]!),
-        nameof(IAgentFrameworkWorkspaceService.RenameChatSessionAsync) => Fixture.Rename((Guid)args![0]!, (Guid)args[1]!, (string)args[2]!),
+        nameof(IAgentFrameworkWorkspaceService.RenameChatSessionAsync) => Fixture.Rename((Guid)args![0]!, (Guid)args[1]!, (string)args[2]!, (string)args[3]!),
         nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync) => Fixture.ReadDetail((Guid)args![0]!),
         nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) => Fixture.Favorite((AgentEditorModel)args![0]!),
         nameof(IAgentFrameworkWorkspaceService.SendMessageAsync) or nameof(IAgentFrameworkWorkspaceService.RespondToPendingApprovalsAsync)

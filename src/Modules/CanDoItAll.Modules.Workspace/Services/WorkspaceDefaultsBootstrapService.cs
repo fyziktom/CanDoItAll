@@ -20,9 +20,11 @@ public sealed class WorkspaceDefaultsBootstrapService {
         AppDbContextOptionsConfigurator.Configure(options, profile);
         await using var dbContext = await transactions.CreateEnlistedAsync(options.Options,
             static value => new WorkspaceSettingsDbContext(value), cancellationToken);
-        var settings = await dbContext.Set<WorkspaceSettings>().FirstOrDefaultAsync(cancellationToken);
+        await WorkspaceSettingsHeadStore.ExcludeWritersAsync(dbContext, cancellationToken);
+        var settings = await WorkspaceSettingsHeadStore.ReadAsync(dbContext, tracking: true, cancellationToken);
         if (settings is null) {
             dbContext.Set<WorkspaceSettings>().Add(new WorkspaceSettings {
+                IsCurrent = true,
                 DefaultProviderProfileId = newWorkspaceDefaultProviderId,
                 WorkspaceName = "CanDoItAll",
                 DefaultPromptOutputFormat = "Markdown",
@@ -33,7 +35,7 @@ public sealed class WorkspaceDefaultsBootstrapService {
             (!settings.DefaultProviderProfileId.HasValue ||
                 !await providerExists(settings.DefaultProviderProfileId.Value, cancellationToken))) {
             settings.DefaultProviderProfileId = matchedProviderId;
-            settings.UpdatedAtUtc = timestamp;
+            WorkspaceSettingsHeadStore.Advance(dbContext, settings, timestamp);
         } else {
             return false;
         }

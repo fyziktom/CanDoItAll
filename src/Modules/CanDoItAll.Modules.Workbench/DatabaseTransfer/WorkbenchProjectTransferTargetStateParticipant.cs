@@ -24,7 +24,8 @@ internal sealed class WorkbenchProjectTransferTargetStateParticipant(ProjectTran
         typeof(ProjectWorkflowAdmissionRecord),
         typeof(ProjectWorkAssignmentRecord),
         typeof(ProjectWorkAssignmentHistoryRecord),
-        typeof(ProjectProcessAssetContributionRecord)
+        typeof(ProjectProcessAssetContributionRecord),
+        typeof(ProjectTaskPlanReceiptRecord)
     ];
 
     public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
@@ -83,6 +84,9 @@ internal sealed class WorkbenchProjectTransferTargetStateParticipant(ProjectTran
         }
         if (await dbContext.Set<ProjectProcessAssetContributionRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
             residues.Add(new("retained Process asset contributions"));
+        }
+        if (await dbContext.Set<ProjectTaskPlanReceiptRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained task-plan publication receipts"));
         }
         return residues;
     }

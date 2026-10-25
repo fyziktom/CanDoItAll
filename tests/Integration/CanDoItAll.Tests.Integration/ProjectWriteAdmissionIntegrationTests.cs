@@ -88,28 +88,42 @@ public sealed class ProjectWriteAdmissionIntegrationTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Delayed_postcommit_search_cannot_resurrect_a_deleted_project_or_overwrite_its_new_lifetime(bool recreate) {
+    public async Task Delayed_commit_acknowledgement_cannot_resurrect_a_deleted_project_or_overwrite_its_new_lifetime(bool recreate) {
         await using var application = await TestApplication.CreateAsync();
         await using var delayedScope = application.Services.CreateAsyncScope();
         await using var deletionScope = application.Services.CreateAsyncScope();
-        var factory = new PausingProjectsFactory(delayedScope.ServiceProvider.GetRequiredService<IDbContextFactory<ProjectsDbContext>>());
-        var delayed = ActivatorUtilities.CreateInstance<ProjectsService>(delayedScope.ServiceProvider, factory);
+        var acknowledgement = new PausingCommitAcknowledgement();
+        var options = new DbContextOptionsBuilder<ProjectsDbContext>(delayedScope.ServiceProvider.GetRequiredService<DbContextOptions<ProjectsDbContext>>());
+        options.AddInterceptors(acknowledgement);
+        var factory = new Factory<ProjectsDbContext>(contextOptions => new(contextOptions), options.Options);
+        var writer = ActivatorUtilities.CreateInstance<ProjectDefinitionWriter>(delayedScope.ServiceProvider, factory);
+        var delayed = ActivatorUtilities.CreateInstance<ProjectsService>(delayedScope.ServiceProvider, factory, writer);
         var projectId = Guid.NewGuid();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var save = delayed.CreateAsync(projectId, new() { Name = "Old delayed search" }, timeout.Token);
         Result<Guid> result;
         try {
-            await factory.Paused.Task.WaitAsync(timeout.Token);
+            await acknowledgement.Committed.Task.WaitAsync(timeout.Token);
+            Assert.False(save.IsCompleted);
             var currentProjects = deletionScope.ServiceProvider.GetRequiredService<ProjectsService>();
+            var committed = await currentProjects.GetAsync(projectId, timeout.Token);
+            Assert.Equal("Old delayed search", committed.Name);
+            await using (var committedSearch = await deletionScope.ServiceProvider.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync(timeout.Token)) {
+                var committedRows = await committedSearch.Set<SearchDocument>().Where(document => document.ProjectId == projectId).ToArrayAsync(timeout.Token);
+                Assert.Equal("Old delayed search", Assert.Single(committedRows).Title);
+            }
             await currentProjects.DeleteAsync(projectId, timeout.Token);
             if (recreate) {
                 Assert.True((await currentProjects.CreateAsync(projectId, new() { Name = "Current restored search" }, timeout.Token)).IsSuccess);
+                var current = await currentProjects.GetAsync(projectId, timeout.Token);
+                Assert.NotEqual(committed.ExpectedDefinition!.Project.LifetimeId, current.ExpectedDefinition!.Project.LifetimeId);
             }
         } finally {
-            factory.Resume.TrySetResult(true);
+            acknowledgement.Resume.TrySetResult(true);
             result = await save;
         }
         Assert.True(result.IsSuccess);
+        Assert.Equal(1, acknowledgement.CommitCount);
         await using var search = await application.Services.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync();
         var rows = await search.Set<SearchDocument>().Where(document => document.ProjectId == projectId).ToArrayAsync();
         if (recreate) {
@@ -132,7 +146,7 @@ public sealed class ProjectWriteAdmissionIntegrationTests {
         AppDbContextOptionsConfigurator.Configure(searchOptions, canonical.Profile);
         searchOptions.AddInterceptors(probe);
         var admissions = new ProjectWriteAdmissionService(new Factory<ProjectsDbContext>(options => new(options), projectOptions.Options),
-            projectOptions.Options, coordinator, canonical);
+            projectOptions.Options, coordinator, canonical, application.Services.GetRequiredService<DatasetActivationService>());
         var search = new SearchIndexService(new Factory<SearchDbContext>(options => new(options), searchOptions.Options),
             application.Services.GetRequiredService<IClock>(), searchOptions.Options, coordinator);
         var project = new Project { Id = Guid.NewGuid(), Name = "Uncommitted admitted project", Slug = "uncommitted-admitted-project" };
@@ -164,18 +178,18 @@ public sealed class ProjectWriteAdmissionIntegrationTests {
             new(SearchDocument.ProjectSourceType, project.Id.ToString(), "Projects", project.Name, "", "", "/projects", project.Id)));
     }
 
-    private sealed class PausingProjectsFactory(IDbContextFactory<ProjectsDbContext> inner) : IDbContextFactory<ProjectsDbContext> {
-        private int creationCount;
-        public TaskCompletionSource<bool> Paused { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private sealed class PausingCommitAcknowledgement : DbTransactionInterceptor {
+        private int commitCount;
+        public int CommitCount => Volatile.Read(ref commitCount);
+        public TaskCompletionSource<bool> Committed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<bool> Resume { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public ProjectsDbContext CreateDbContext() => throw new NotSupportedException("This asynchronous creation path must not block synchronously.");
 
-        public async Task<ProjectsDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
-            if (Interlocked.Increment(ref creationCount) == 2) {
-                Paused.TrySetResult(true);
+        public override async Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData,
+            CancellationToken cancellationToken = default) {
+            if (Interlocked.Increment(ref commitCount) == 1) {
+                Committed.TrySetResult(true);
                 await Resume.Task.WaitAsync(cancellationToken);
             }
-            return await inner.CreateDbContextAsync(cancellationToken);
         }
     }
 

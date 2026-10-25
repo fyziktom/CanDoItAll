@@ -54,6 +54,7 @@ public sealed class Maf122ProcessExecutionIntegrationTests(ITestOutputHelper out
         await using var app = await TestApplication.CreateAsync(new() {
             TestEnvironment = environment,
             ActiveProfile = profile,
+            ConfigurationOverrides = ProcessRootCancellationAdmissionApiTests.Configuration(),
             ConfigureServices = services => {
                 services.AddSingleton<ILoggerProvider>(logs);
                 services.Replace(ServiceDescriptor.Singleton(new ProcessTemplatePackLoader(packRoot)));
@@ -109,9 +110,32 @@ public sealed class Maf122ProcessExecutionIntegrationTests(ITestOutputHelper out
         if (scenario == ProviderScenario.CancelWhileWaiting) {
             await wire.Entered.Task.WaitAsync(TimeSpan.FromSeconds(60));
             await using var cancellationScope = app.Services.CreateAsyncScope();
-            var cancelled = await cancellationScope.ServiceProvider.GetRequiredService<ProcessRuntimeOperatorApplicationService>()
-                .RequestCancellationAsync(new(launched.RunId.Value, "maf122-acceptance", "Cancel the owned acceptance run."));
-            Assert.True(cancelled.Succeeded);
+            using var cancellationDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            var token = cancellationDeadline.Token;
+            var cancelled = await cancellationScope.ServiceProvider.GetRequiredService<ProcessRootCancellationAdmissionService>()
+                .AdmitAsync(launched.RunId.Value, new(new(CanDoItAll.Processes.Core.ProcessEventActorKind.System, new("maf122-acceptance")),
+                    current => {
+                        current.ThrowIfCancellationRequested();
+                        return ValueTask.CompletedTask;
+                    }), token);
+            Assert.Equal(ProcessRootCancellationAdmissionStatus.Accepted, cancelled.Status);
+            var selected = await ((ISandboxWorkspaceProcessRunPageStore)store).ReadProcessExecutionRunPageAsync(
+                new(launched.RunId.Value.Value, null, 1), token);
+            var original = Assert.Single(selected.Candidates);
+            Assert.Equal(AgentToolProviderEffectScope.LocalProposalsOnly,
+                Assert.Single(original.ToolAdmission!.Segments).ProviderEffectScope);
+            Assert.True(original.ToolAdmission.ProviderDispatches.IsDefaultOrEmpty);
+            while (true) {
+                await using var recoveryScope = app.Services.CreateAsyncScope();
+                var recovery = recoveryScope.ServiceProvider;
+                await recovery.GetRequiredService<ProcessCancellationRecoveryCoordinator>().RunSliceAsync(
+                    ProcessCancellationRecoveryOrigin.LiveBarrier, ProcessCancellationRecoverySliceLimits.Default, token);
+                var progress = await recovery.GetRequiredService<IProcessCancellationProgressReader>().ReadAsync(launched.RunId.Value, token);
+                if (progress?.Tracking == ProcessCancellationTracking.Completed) {
+                    break;
+                }
+                await Task.Delay(25, token);
+            }
         }
         var result = await execution.WaitAsync(TimeSpan.FromMinutes(3));
 

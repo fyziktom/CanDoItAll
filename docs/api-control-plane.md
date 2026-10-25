@@ -78,6 +78,34 @@ scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`,
 Workflow HITL response submission and operation-status reads require the exact
 `api.workflows.respond` scope; the broad `api` scope does not authorize this boundary.
 
+## Agent decision policy recovery
+
+`GET /api/agents/{agentId}/decision-data-policy` returns the original workspace and
+catalog expectation. Revisions and profile generations are decimal strings. Submit
+that expectation, a new operation ID and a complete policy override envelope to the
+corresponding `PUT`. A conflict needs explicit comparison; an uncertain response must
+not be retried automatically.
+
+`POST /api/agents/{agentId}/decision-data-policy/lookup` accepts that complete original
+submission under current Agent read permission. It returns the historical accepted
+snapshot and time when retained evidence matches. This is a read-only operation; it
+does not invoke PUT or compare against the current policy. A new active generation
+of the same profile/scope may look up an old receipt, but cannot dispatch the old write.
+An absent or expired receipt returns `NotObserved`, not proof of no effect. Conflicting
+intent, changed context and unavailable storage have distinct outcomes. All bodies are
+bounded to 8 KiB; responses disable caching and omit private failure details.
+
+The file owner commits policy and receipt together, retains receipts for 30 days and
+refuses policy writes at 1,024 unexpired receipts per catalog. Ordinary Agent/catalog
+updates and deletion preserve this history. Deploy updated file writers together under
+maintenance exclusion; mixed old/new catalog writers are unsupported.
+
+The native policy dialog retains the original submission in the current browser before
+dispatch. After reopening, Check retained save uses historical lookup without resending.
+Historical acceptance preserves later draft edits and requires an explicit current read
+and reconciliation before another save. An unsent Prepared record can be discarded;
+a dispatched unresolved record remains blocked. See [native recovery proof and limits](../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md).
+
 ## Shared providers and history
 
 The five [shared-provider operations](shared-providers.md#http-surface) expose a

@@ -1033,7 +1033,8 @@ public enum ActiveAgentChatRunState
 {
     Idle,
     Running,
-    AwaitingApproval
+    AwaitingApproval,
+    AwaitingContinuation
 }
 
 public sealed record AgentChatIdentity

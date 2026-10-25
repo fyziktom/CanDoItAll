@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.SharedKernel;
 using System.ComponentModel;
 
 namespace CanDoItAll.Web.Api;
@@ -10,6 +11,8 @@ internal static class ProjectsApi
     {
         var projects = group.MapGroup("/projects").WithApiSection(ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjects)
             .WithTags("Projects");
+        projects.MapDefinitionOperations();
+        projects.MapLifecycleOperations();
 
         projects.MapGet("/", ListProjectsAsync)
             .WithName("ListProjects")
@@ -27,6 +30,13 @@ internal static class ProjectsApi
             .WithName("GetProjectEditor")
             .Produces<ProjectEditorModel>();
 
+        projects.MapGet("/{projectId:guid}/definition", ProjectDefinitionApi.ReadAsync)
+            .WithName("GetProjectDefinition")
+            .WithSummary("Read a coherent project definition and its original edit expectation.")
+            .WithDescription("Returns normalized definition scalars, ordered phases/options and the matching expectation from one database snapshot. Retain that expectation unchanged for a conditional update. A missing project returns 404; this read never returns a creation template. Uses the current Projects read permission when API authorization is enabled.")
+            .Produces<ProjectDefinitionReadApiResponse>()
+            .ProducesApiErrors(StatusCodes.Status403Forbidden, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
+
         projects.MapGet("/by-external-key/{externalNamespace}/{externalKey}", ResolveExternalIdentityAsync)
             .WithName("ResolveProjectExternalIdentity")
             .WithSummary("Resolve a project by its stable external namespace and key.")
@@ -43,18 +53,20 @@ internal static class ProjectsApi
 
         projects.MapPost("/", SaveProjectAsync)
             .WithName("SaveProject")
+            .WithSummary("Create a project or conditionally replace its definition.")
+            .WithDescription("Existing projects require expectedDefinition unchanged from an original coherent read. Replaces scalar values and both phase/option lists; missing expectations, contradictory identities and unknown child IDs reject. A stale revision or lifetime returns 409 without changing the definition. Creation must omit the expectation. Uses the Projects write permission when API authorization is enabled. Returns the accepted project ID; this compatibility route has no durable retry guarantee, and a lost response must not trigger a blind repeat.")
             .Produces<Guid>()
             .ProducesApiErrors(StatusCodes.Status400BadRequest)
             .ProducesApiErrors(StatusCodes.Status404NotFound, StatusCodes.Status409Conflict)
             .AddOpenApiOperationTransformer((operation, _, _) => {
-                operation.Responses!["409"].Description = "The external identity is already bound to another project, or an existing binding cannot be changed. The project was not saved.";
+                operation.Responses!["409"].Description = "The original definition revision/lifetime is stale, the transaction was rejected by a concurrency guard, the external identity is already bound, or an existing identity binding cannot be changed. The definition was not saved. Inspect the error code; a transaction conflict does not establish that the target definition changed.";
                 return Task.CompletedTask;
             });
 
-        projects.MapDelete("/{projectId:guid}", DeleteProjectAsync)
+        projects.MapDelete("/{projectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("DeleteProject")
-            .Produces<ProjectDeletionResult>(StatusCodes.Status200OK)
-            .Produces<ProjectDeletionCleanupPendingApiResponse>(StatusCodes.Status409Conflict);
+            .WithSummary("Refuse deletion without its original lifecycle intent.")
+            .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
         projects.MapGet("/deletion-cleanups", ListPendingDeletionCleanupsAsync)
             .WithName("ListPendingProjectDeletionCleanups")
@@ -77,20 +89,20 @@ internal static class ProjectsApi
             .WithName("GetProjectHierarchy")
             .Produces<ProjectHierarchySnapshot>();
 
-        projects.MapPost("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", AttachSubprojectAsync)
+        projects.MapPost("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("AttachProjectSubproject")
-            .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .WithSummary("Refuse attachment without its original lifecycle intent.")
+            .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
-        projects.MapDelete("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", DetachSubprojectAsync)
+        projects.MapDelete("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("DetachProjectSubproject")
-            .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .WithSummary("Refuse detachment without its original lifecycle intent.")
+            .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
-        projects.MapPost("/{childProjectId:guid}/reconnect-subproject", ReconnectSubprojectAsync)
+        projects.MapPost("/{childProjectId:guid}/reconnect-subproject", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("ReconnectProjectSubproject")
-            .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .WithSummary("Refuse reconnection without its original lifecycle intent.")
+            .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
         return group;
     }
@@ -170,48 +182,24 @@ internal static class ProjectsApi
         CancellationToken cancellationToken)
         => Results.Ok(await projectsService.GetAsync(projectId, cancellationToken));
 
-    /// <summary>
-    /// Create a project, or overwrite the editable fields, phases and options of an existing project.
-    /// </summary>
-    /// <remarks>
-    /// Without <c>id</c> a new project with a new identifier is created; every such call creates another project. With
-    /// <c>id</c> the project with that identifier is updated: all editable fields are overwritten with the values sent,
-    /// phases and options missing from the request are deleted, entries whose <c>id</c> matches a stored entry are
-    /// updated and the other entries are added. Start from <c>GET /api/projects/{projectId}</c> and send the complete
-    /// object. Phases are stored in array order; option entries with an empty name and empty notes are skipped.
-    ///
-    /// Send <c>expectedLifetimeId</c> from the read: when the project was deleted and recreated with the same
-    /// identifier since then, the save is rejected with <c>projects.lifetime-changed</c>. Without it the save applies
-    /// to the current project with that identifier. There is no other concurrency check; the last save wins. Subproject
-    /// links are changed with the subproject operations, not with this request.
-    ///
-    /// The project is saved first; the search index and the activity feed are updated afterwards, and failures of those
-    /// updates are logged without changing the response.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
-    /// <param name="request">
-    /// The project's editable fields, phases and options; omit <c>id</c> to create a project.
-    /// </param>
-    /// <response code="200">
-    /// The project was saved. The body is its identifier as a JSON string (a GUID); read it back with
-    /// <c>GET /api/projects/{projectId}</c>.
-    /// </response>
-    /// <response code="400">
-    /// The project was not saved: <c>validation</c> (blank name) or <c>projects.lifetime-changed</c>
-    /// (<c>expectedLifetimeId</c> names an earlier lifetime of the project; read it again). A body the framework cannot
-    /// bind is rejected with HTTP 400 without the <c>errors</c> envelope.
-    /// </response>
-    /// <response code="404">
-    /// No project has the sent <c>id</c> (<c>projects.not-found</c>), for example because it was deleted. Omit
-    /// <c>id</c> to create a project.
-    /// </response>
+    internal static async Task<IResult> GetProjectDefinitionAsync(Guid projectId, ProjectsService projectsService,
+        CancellationToken cancellationToken)
+        => DefinitionResult(await projectsService.GetDefinitionAsync(projectId, cancellationToken));
+
     internal static async Task<IResult> SaveProjectAsync(
-        ProjectEditorModel request,
+        ProjectEditorSaveRequest request,
         ProjectsService projectsService,
         CancellationToken cancellationToken) {
-        var result = await projectsService.SaveAsync(request, cancellationToken);
+        if (request.Id.HasValue && !request.HasReplacementCollections) {
+            return ApiEndpointResults.BadRequest("An existing-project replacement requires explicit non-null phases and options arrays.",
+                ProjectErrorCodes.DefinitionChildInvalid);
+        }
+        return DefinitionResult(await projectsService.SaveAsync(request.ToEditor(), cancellationToken));
+    }
+
+    private static IResult DefinitionResult<T>(Result<T> result) {
         var conflict = result.Errors.FirstOrDefault(error => error.Code is
+            ProjectErrorCodes.DefinitionConflict or ProjectErrorCodes.DefinitionTransactionConflict or ProjectErrorCodes.LifetimeChanged or
             ProjectErrorCodes.ExternalIdentityConflict or ProjectErrorCodes.ExternalIdentityImmutable);
         return conflict is not null
             ? ApiEndpointResults.Conflict(conflict.Message, conflict.Code)
@@ -246,10 +234,7 @@ internal static class ProjectsApi
     ///
     /// - 200: the project is deleted and every participant finished. <c>warnings</c> lists objects that were kept, such
     /// as managed media retained by a storage provider, with remediation text.
-    /// - 409 with <c>projects.delete-cleanup-pending</c>: the project is deleted, but at least one participant did not
-    /// finish. The deletion is not rolled back. Retry each entry of <c>recovery.failures</c> with
-    /// <c>POST /api/projects/{projectId}/deletion-cleanups/{participantId}/{recoveryId}/retry</c>, using its exact
-    /// <c>participantId.value</c> and <c>recoveryId</c>; do not delete the project again to finish the cleanup.
+    /// - 409 with <c>projects.delete-cleanup-pending</c>: the project is deleted.
     ///
     /// Deleting an identifier that has no project still runs the participant cleanups for it and returns the same
     /// outcomes.
@@ -261,8 +246,7 @@ internal static class ProjectsApi
     /// The project is deleted (or did not exist) and all cleanup finished; <c>warnings</c> lists retained objects.
     /// </response>
     /// <response code="409">
-    /// The project is deleted but cleanup is incomplete (<c>projects.delete-cleanup-pending</c>); <c>recovery</c> lists
-    /// the participant cleanups to retry.
+    /// The project is deleted but cleanup is incomplete (<c>projects.delete-cleanup-pending</c>).
     /// </response>
     internal static async Task<IResult> DeleteProjectAsync(
         Guid projectId,
@@ -280,7 +264,9 @@ internal static class ProjectsApi
             return Results.Json(
                 new ProjectDeletionCleanupPendingApiResponse(
                     "projects.delete-cleanup-pending",
-                    "The project was deleted, but one or more cleanup steps remain.",
+                    exception.Recovery.OwnerCompletionUnconfirmed
+                        ? "The project deletion committed, but owner completion is unconfirmed. Cleanup retry requires operator review."
+                        : "The project was deleted, but one or more cleanup steps remain.",
                     exception.Recovery),
                 statusCode: StatusCodes.Status409Conflict);
         }
@@ -294,10 +280,6 @@ internal static class ProjectsApi
     /// for Project Structure nodes and managed media and <c>agent-project-structure-access</c> for agents' access to
     /// the project). This read returns one item for each participant cleanup that has not finished, across all
     /// projects, ordered by project, participant and recovery identifier.
-    ///
-    /// Retry an item with <c>POST /api/projects/{projectId}/deletion-cleanups/{participantId}/{recoveryId}/retry</c>,
-    /// using its <c>projectId</c>, <c>participantId.value</c> and <c>recoveryId</c>. When <c>canRetryNow</c> is false,
-    /// another attempt is running and holds the cleanup until <c>retryAvailableAtUtc</c>.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
@@ -353,8 +335,7 @@ internal static class ProjectsApi
     /// (<c>projects.delete-cleanup-not-found</c>).
     /// </response>
     /// <response code="409">
-    /// The cleanup is still incomplete (<c>projects.delete-cleanup-pending</c>); the project stays deleted. Retry later
-    /// with the identifiers in <c>recovery.failures</c>.
+    /// The cleanup is still incomplete (<c>projects.delete-cleanup-pending</c>); the project stays deleted.
     /// </response>
     internal static async Task<IResult> RetryDeletionCleanupAsync(
         Guid projectId,

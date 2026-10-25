@@ -4,7 +4,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Projects.UiSandbox;
 
-public enum ProjectsScenario { Portfolio, LargePortfolio, Empty, ReadFailure, MissingReference, RejectedSave, UnknownSeed, PartialDeletion, CleanupHistory }
+public enum ProjectsScenario { Portfolio, LargePortfolio, Empty, ReadFailure, MissingReference, RejectedSave, UnknownSeed, PartialDeletion, CleanupHistory, DefinitionConflict, PendingRecovery }
 
 public sealed class ProjectsScenarioStore {
     public static readonly Guid ProfileId = Guid.Parse("01010101-1111-2222-3333-010101010101");
@@ -14,6 +14,7 @@ public sealed class ProjectsScenarioStore {
     private readonly Dictionary<Guid, ProjectEditorModel> projects = [];
     private TaskCompletionSource? gate;
     private TaskCompletionSource? readGate;
+    private bool conflictPrepared;
 
     public ProjectsScenarioStore(ProjectsScenario scenario) {
         Scenario = scenario;
@@ -51,7 +52,19 @@ public sealed class ProjectsScenarioStore {
         if (Scenario == ProjectsScenario.ReadFailure && id.HasValue) {
             throw new InvalidOperationException("The synthetic project read was rejected. Reset the scenario to acquire an editor.");
         }
-        return id is { } value ? new(new ProjectEditorDraft(projects[value]).Capture().Model) : new(new() {
+        if (id is { } value) {
+            var acquired = new ProjectEditorDraft(new ProjectEditorDraft(projects[value]).Capture().Model);
+            if (Scenario == ProjectsScenario.DefinitionConflict && !conflictPrepared) {
+                conflictPrepared = true;
+                var current = projects[value];
+                current.ExpectedDefinition = new(current.ExpectedDefinition!.Project, Guid.NewGuid());
+                current.Name = "Changed by another synthetic editor";
+                current.Phases[0].Goal = "Concurrent phase goal";
+                current.Options.Single(row => row.Category == ProjectOptionCategory.Language).OptionName = "Concurrent language";
+            }
+            return acquired;
+        }
+        return new(new() {
             Options = Enum.GetValues<ProjectOptionCategory>().Where(category => category != ProjectOptionCategory.Other)
                 .Select(category => new ProjectOptionEditorModel { Category = category }).ToList()
         });
@@ -62,6 +75,16 @@ public sealed class ProjectsScenarioStore {
             await readGate.Task;
         }
         return Acquire(id);
+    }
+
+    public async Task<ProjectDefinitionSnapshot> ReadDefinitionAsync(Guid id) {
+        var model = (await AcquireAsync(id)).Model;
+        return new(model.ExpectedDefinition!,
+            new(model.Name, model.Description, model.Objective, model.Status, model.CurrentPhase, model.TargetDateUtc),
+            model.ExternalNamespace is not null && model.ExternalKey is not null ? new(model.ExternalNamespace, model.ExternalKey) : null,
+            model.Phases.Select(row => new ProjectDefinitionPhase(row.Id!.Value, row.Name, row.Goal, row.Status, row.StartDateUtc, row.EndDateUtc)).ToArray(),
+            model.Options.Where(row => !string.IsNullOrWhiteSpace(row.OptionName) || !string.IsNullOrWhiteSpace(row.Notes))
+                .Select(row => new ProjectDefinitionOption(row.Id!.Value, row.Category, row.OptionName, row.Notes)).ToArray());
     }
 
     public void HoldNextRead() => readGate ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -81,6 +104,7 @@ public sealed class ProjectsScenarioStore {
     }
 
     public async Task<Result<ProjectEditorAcknowledgement>> SaveAsync(ProjectEditorModel model) {
+        model = new ProjectEditorDraft(model).Capture().Model;
         if (gate is not null) {
             await gate.Task;
         }
@@ -88,13 +112,30 @@ public sealed class ProjectsScenarioStore {
             return Result<ProjectEditorAcknowledgement>.Failure(Error.Validation("Synthetic owner rejected this save."));
         }
         Guid id = model.Id ?? Guid.NewGuid();
-        var admission = model.ExpectedProjectAdmission ?? new(ProfileId, id, Guid.NewGuid());
-        var ack = new ProjectEditorAcknowledgement(admission, model.Name.Trim(), model.Description.Trim(), model.Objective.Trim(),
+        ProjectEditorModel? current = null;
+        if (model.Id.HasValue) {
+            if (!projects.TryGetValue(id, out current)) {
+                return Result<ProjectEditorAcknowledgement>.Failure(Error.Failure("The synthetic project no longer exists.", ProjectErrorCodes.NotFound));
+            }
+            if (model.ExpectedDefinition is null) {
+                return Result<ProjectEditorAcknowledgement>.Failure(Error.Validation("The original definition expectation is required.", ProjectErrorCodes.DefinitionExpectationRequired));
+            }
+            if (current.ExpectedDefinition != model.ExpectedDefinition) {
+                return Result<ProjectEditorAcknowledgement>.Failure(Error.Validation("The synthetic project definition changed.", ProjectErrorCodes.DefinitionConflict));
+            }
+        }
+        var admission = current is null ? new ProjectWriteAdmission(ProfileId, id, Guid.NewGuid()) : current.ExpectedDefinition!.Project;
+        var externalNamespace = model.ExternalNamespace ?? current?.ExternalNamespace;
+        var externalKey = model.ExternalKey ?? current?.ExternalKey;
+        var externalIdentity = externalNamespace is not null && externalKey is not null
+            ? new ProjectDefinitionExternalIdentity(externalNamespace.Trim().ToLowerInvariant(), externalKey.Trim().ToLowerInvariant())
+            : null;
+        var ack = new ProjectEditorAcknowledgement(new(admission, Guid.NewGuid()), model.Name.Trim(), model.Description.Trim(), model.Objective.Trim(),
             model.Status, model.CurrentPhase.Trim(), model.TargetDateUtc,
             model.Phases.Select((row, index) => new ProjectPhaseAcknowledgement(index, row.Id ?? Guid.NewGuid(), row.Name.Trim(), row.Goal.Trim(), row.Status, row.StartDateUtc, row.EndDateUtc)).ToArray(),
             model.Options.Select((row, index) => (row, index)).Where(item => !string.IsNullOrWhiteSpace(item.row.OptionName) || !string.IsNullOrWhiteSpace(item.row.Notes))
-                .Select(item => new ProjectOptionAcknowledgement(item.index, item.row.Id ?? Guid.NewGuid(), item.row.Category, item.row.OptionName.Trim(), item.row.Notes.Trim())).ToArray());
-        var stored = new ProjectEditorDraft(new ProjectEditorDraft(model).Capture().Model);
+                .Select(item => new ProjectOptionAcknowledgement(item.index, item.row.Id ?? Guid.NewGuid(), item.row.Category, item.row.OptionName.Trim(), item.row.Notes.Trim())).ToArray(), externalIdentity);
+        var stored = new ProjectEditorDraft(model);
         stored.Acknowledge(stored.Capture(), ack);
         projects[id] = stored.Model;
         Writes++;
@@ -113,6 +154,7 @@ public sealed class ProjectsScenarioStore {
         Id = id,
         ExpectedLifetimeId = id,
         ExpectedProjectAdmission = new(ProfileId, id, id),
+        ExpectedDefinition = new(new(ProfileId, id, id), Guid.NewGuid()),
         Name = name,
         Description = "A synthetic portfolio used to exercise the shared Projects renderers.",
         Objective = "Keep ownership and editing state explicit.",
@@ -122,6 +164,7 @@ public sealed class ProjectsScenarioStore {
         Phases = [new() { Id = Guid.NewGuid(), Name = "Discovery", Goal = "Agree on scope", Status = ProjectPhaseStatus.Active },
             new() { Id = Guid.NewGuid(), Name = "Delivery", Goal = "Validate the result" }],
         Options = Enum.GetValues<ProjectOptionCategory>().Where(category => category != ProjectOptionCategory.Other)
-            .Select(category => new ProjectOptionEditorModel { Category = category, OptionName = category == ProjectOptionCategory.Language ? "C#" : string.Empty }).ToList()
+            .Select(category => new ProjectOptionEditorModel { Id = category == ProjectOptionCategory.Language ? Guid.NewGuid() : null,
+                Category = category, OptionName = category == ProjectOptionCategory.Language ? "C#" : string.Empty }).ToList()
     };
 }

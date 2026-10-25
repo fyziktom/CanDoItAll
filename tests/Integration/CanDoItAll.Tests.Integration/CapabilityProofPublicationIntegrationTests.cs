@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Runtime.ExceptionServices;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
@@ -63,19 +66,88 @@ public sealed class CapabilityProofPublicationIntegrationTests {
     public async Task Proof_commit_then_index_failure_is_canonically_verified_without_diagnostic_replay() {
         using var fixture = await CapabilityFileFixture.CreateAsync();
         fixture.Proof.Release.SetResult();
-        var index = Path.Combine(WorkspaceScopeDescriptor.Sandbox.ResolveDataRoot(fixture.RootPath), "workspace.index.json");
+        var dataRoot = WorkspaceScopeDescriptor.Sandbox.ResolveDataRoot(fixture.RootPath);
+        var catalogPath = Path.Combine(dataRoot, "workspace.json");
+        var index = Path.Combine(dataRoot, "workspace.index.json");
         var preserved = index + ".preserved";
-        fixture.StoreProbe.BeforeCatalogWrite = () => {
-            File.Move(index, preserved);
-            Directory.CreateDirectory(index);
+        var original = await fixture.Store.LoadCatalogAsync();
+        var originalCatalogBytes = await File.ReadAllBytesAsync(catalogPath);
+        var originalIndexBytes = await File.ReadAllBytesAsync(index);
+        using var trace = new Activity("capability-proof-index-fault")
+            .SetParentId(ActivityTraceId.CreateRandom(), ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded).Start();
+        var completedWrites = 0;
+        var installed = false;
+        Exception? injectionFailure = null;
+        SandboxWorkspaceCatalog? committedBeforeFault = null;
+        byte[]? committedCatalogBytes = null;
+        using var listener = new ActivityListener {
+            ShouldListenTo = source => source.Name == AgentFrameworkTelemetry.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activity => {
+                if (activity.TraceId != trace.TraceId || activity.OperationName != "workspace.json.write" ||
+                    Interlocked.Increment(ref completedWrites) != 1) {
+                    return;
+                }
+                try {
+                    committedCatalogBytes = File.ReadAllBytes(catalogPath);
+                    Assert.False(originalCatalogBytes.AsSpan().SequenceEqual(committedCatalogBytes));
+                    committedBeforeFault = JsonSerializer.Deserialize<SandboxWorkspaceCatalog>(
+                        committedCatalogBytes, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                    Assert.NotNull(committedBeforeFault);
+                    Assert.NotEqual(original.CatalogDataRevision, committedBeforeFault.CatalogDataRevision);
+                    Assert.Equal(CapabilityProofStatus.Verified,
+                        committedBeforeFault.Agents.Single(agent => agent.Id == fixture.Agent.Id).Capabilities.Single().ProofStatus);
+                    Assert.Equal(CapabilityProofStatus.Verified,
+                        committedBeforeFault.Capabilities.Single(capability => capability.Id == fixture.Capability.Id).ProofStatus);
+                    File.Move(index, preserved);
+                    Directory.CreateDirectory(index);
+                    installed = true;
+                } catch (Exception failure) {
+                    injectionFailure = failure;
+                }
+            }
         };
-        var outcome = await fixture.Verification.ExecuteAsync(fixture.Agent.Id, fixture.Capability.Id, CancellationToken.None);
-        Assert.Equal(CapabilityVerificationDisposition.Unconfirmed, outcome.Disposition);
-        fixture.StoreProbe.BeforeCatalogWrite = null;
-        Directory.Delete(index);
-        File.Move(preserved, index);
+        ActivitySource.AddActivityListener(listener);
+        CapabilityVerificationOutcome? outcome = null;
+        var failures = new List<Exception>();
+        try {
+            outcome = await fixture.Verification.ExecuteAsync(fixture.Agent.Id, fixture.Capability.Id, CancellationToken.None);
+            if (injectionFailure is not null) {
+                ExceptionDispatchInfo.Capture(injectionFailure).Throw();
+            }
+            Assert.True(installed);
+            Assert.Equal(2, completedWrites);
+            Assert.Equal(CapabilityVerificationDisposition.Unconfirmed, outcome.Disposition);
+        } catch (Exception failure) {
+            failures.Add(failure);
+        } finally {
+            listener.Dispose();
+            try {
+                if (Directory.Exists(index)) {
+                    Directory.Delete(index);
+                }
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+            try {
+                if (File.Exists(preserved)) {
+                    File.Move(preserved, index);
+                }
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+        }
+        if (failures.Count == 1) {
+            ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        }
+        if (failures.Count > 1) {
+            throw new AggregateException(failures);
+        }
+        Assert.Equal(originalIndexBytes, await File.ReadAllBytesAsync(index));
+        Assert.Equal(committedCatalogBytes, await File.ReadAllBytesAsync(catalogPath));
         var canonical = await fixture.Store.LoadCatalogAsync();
-        var receipt = Assert.IsType<CapabilityProofReceipt>(outcome.Receipt);
+        var receipt = Assert.IsType<CapabilityProofReceipt>(outcome!.Receipt);
+        Assert.Equal(committedBeforeFault!.CatalogDataRevision, canonical.CatalogDataRevision);
         Assert.Equal(CapabilityProofRecovery.Satisfied, receipt.Classify(canonical.Agents, canonical.Capabilities));
         Assert.Equal(CapabilityProofRecovery.Satisfied, receipt.Classify(canonical.Agents, canonical.Capabilities));
         Assert.Equal(1, fixture.Proof.Calls);

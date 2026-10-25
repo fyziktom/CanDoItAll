@@ -20,6 +20,9 @@ internal static class AgentsApi
         var agents = group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents");
         agents.MapUsage();
+        agents.MapAgentHistoricalReceiptsApi();
+        agents.MapAgentPlanningActionsApi();
+        agents.MapAgentDecisionPolicyApi();
 
         agents.MapGet("/", ListAgentsAsync)
             .WithName("ListAgents")
@@ -240,7 +243,10 @@ internal static class AgentsApi
 
         agents.MapPost("/{agentId:guid}/chat-sessions/{chatSessionId:guid}/rename", RenameAgentChatSessionAsync)
             .WithName("RenameAgentChatSession")
-            .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK);
+            .WithSummary("Conditionally rename the selected chat session.")
+            .WithDescription("Requires expectedTitle from the displayed session. A missing expectation is refused before mutation; a changed title returns 409. Only the title changes; transcript, approval and runtime state are preserved. The requested title is normalized to at most 96 characters. Read the selected session after an unconfirmed response before another action.")
+            .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict, StatusCodes.Status428PreconditionRequired);
 
         agents.MapGet("/{agentId:guid}/chat-workspace", GetAgentChatWorkspaceAsync)
             .WithName("GetAgentChatWorkspace")
@@ -1763,36 +1769,26 @@ internal static class AgentsApi
         Results.Ok(AgentApiResponseMapper.ToChatSession(
             await workspaceService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken)));
 
-    /// <summary>
-    /// Rename an agent's chat session.
-    /// </summary>
-    /// <remarks>
-    /// Replaces the session title: runs of white space are collapsed to single spaces and titles longer than 96
-    /// characters are cut. A rename made while a run of the session is still active can be overwritten when that run
-    /// finishes; read the session afterwards to confirm the title.
-    ///
-    /// A blank or null title, an unknown session, or a session of another agent is not translated into the error
-    /// envelope: the request fails with a generic HTTP 500.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="agentId">Identifier of the agent that owns the session.</param>
-    /// <param name="chatSessionId">Identifier of the session to rename.</param>
-    /// <param name="request">The new title.</param>
-    /// <response code="200">The renamed session with its transcript.</response>
     internal static async Task<IResult> RenameAgentChatSessionAsync(
         Guid agentId,
         Guid chatSessionId,
         ChatSessionRenameApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(AgentApiResponseMapper.ToChatSession(
-            await workspaceService.RenameChatSessionAsync(
-                agentId,
-                chatSessionId,
-                request.Title,
-                cancellationToken)));
+        CancellationToken cancellationToken) {
+        if (request.ExpectedTitle is null) {
+            return Results.Json(new ApiErrorResponse([new("chat.title_precondition_required", "The original thread title is required.", CanDoItAll.SharedKernel.ErrorSeverity.Warning)]),
+                statusCode: StatusCodes.Status428PreconditionRequired);
+        }
+        if (agentId == Guid.Empty || chatSessionId == Guid.Empty || string.IsNullOrWhiteSpace(request.Title)) {
+            return ApiEndpointResults.BadRequest("A valid agent, session and title are required.", "chat.title_invalid");
+        }
+        try {
+            return Results.Ok(AgentApiResponseMapper.ToChatSession(await workspaceService.RenameChatSessionAsync(
+                agentId, chatSessionId, request.Title, request.ExpectedTitle, cancellationToken)));
+        } catch (ChatSessionTitleConflictException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, "chat.title_conflict");
+        }
+    }
 
     /// <summary>
     /// Read an agent's chat workspace: its session list, the selected session and its latest runs.
@@ -2025,6 +2021,9 @@ internal static class AgentsApi
         {
             return AgentActivityApiResults.FromAdmissionException(context, exception, executionRunId: executionRunId);
         }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
         catch (AgentToolAdmissionException exception)
         {
             return ApiEndpointResults.AgentValidationFailure(
@@ -2226,6 +2225,12 @@ internal static class AgentsApi
                 context,
                 exception,
                 executionRunId: executionRunId);
+        }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
+        catch (AgentToolAdmissionException exception) {
+            return ApiEndpointResults.AgentValidationFailure(context, exception.Message, exception.Code, executionRunId: executionRunId);
         }
         catch (AgentApprovalDecisionMismatchException exception)
         {
@@ -2497,12 +2502,16 @@ internal static class AgentsApi
     /// Identifier of the agent execution run, as returned by a run command or a run search.
     /// </param>
     /// <response code="200">The run and its evidence.</response>
-    internal static async Task<IResult> GetAgentExecutionRunDetailAsync(
-        Guid executionRunId,
-        IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(AgentApiResponseMapper.ToExecutionRunDetail(
-            await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken)));
+    internal static async Task<IResult> GetAgentExecutionRunDetailAsync(Guid executionRunId, HttpContext context,
+        IAgentFrameworkWorkspaceService workspaceService, CancellationToken cancellationToken) {
+        context.Response.Headers.CacheControl = "no-store";
+        try {
+            return Results.Ok(AgentApiResponseMapper.ToExecutionRunDetail(
+                await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken)));
+        } catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
+    }
 
     /// <summary>
     /// Read an execution run of a given agent with its log, metrics, approvals, artifacts, checkpoints, tool receipts
@@ -2532,14 +2541,11 @@ internal static class AgentsApi
     internal static async Task<IResult> GetAgentScopedExecutionRunDetailAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        await GetAgentExecutionRunPartAsync(
-            agentId,
-            executionRunId,
-            workspaceService,
-            AgentApiResponseMapper.ToExecutionRunDetail,
-            cancellationToken);
+        await GetAgentExecutionRunPartAsync(agentId, executionRunId, context, workspaceService,
+            AgentApiResponseMapper.ToExecutionRunDetail, cancellationToken);
 
     /// <summary>
     /// List the artifacts produced by an agent execution run.
@@ -2581,11 +2587,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionArtifactsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToArtifacts(detail.Artifacts),
             cancellationToken);
@@ -2632,11 +2640,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionCheckpointsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToCheckpoints(detail.Checkpoints),
             cancellationToken);
@@ -2685,11 +2695,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionToolReceiptsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToToolReceipts(detail.ToolReceipts),
             cancellationToken);
@@ -2713,11 +2725,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionLogAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToExecutionLog(detail.ExecutionLog),
             cancellationToken);
@@ -2742,11 +2756,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionMetricsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToMetrics(detail.Metrics),
             cancellationToken);
@@ -2770,11 +2786,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionApprovalsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToExecutionApprovals(detail.Approvals),
             cancellationToken);
@@ -2975,10 +2993,12 @@ internal static class AgentsApi
     private static async Task<IResult> GetAgentExecutionRunPartAsync<T>(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         Func<ExecutionRunDetail, T> select,
         CancellationToken cancellationToken)
     {
+        context.Response.Headers.CacheControl = "no-store";
         try
         {
             var detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
@@ -2987,6 +3007,9 @@ internal static class AgentsApi
                 : ApiEndpointResults.NotFound(
                     "Agent execution run was not found.",
                     "agents.execution-run-not-found");
+        }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
         }
         catch (InvalidOperationException)
         {
@@ -3045,7 +3068,7 @@ internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds);
 /// <param name="Title">
 /// The title. Runs of white space become single spaces and text beyond 96 characters is cut. It must not be blank.
 /// </param>
-internal sealed record ChatSessionRenameApiRequest(string Title);
+internal sealed record ChatSessionRenameApiRequest(string Title, string? ExpectedTitle = null);
 
 /// <summary>
 /// Chat message to an agent, sent to <c>POST /api/agents/{agentId}/chat</c> and to its streaming variant

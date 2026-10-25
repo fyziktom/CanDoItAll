@@ -19,6 +19,60 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class WorkbenchOwnerProjectionIntegrationTests {
     private static readonly DateTimeOffset CreatedAt = new(2026, 2, 3, 4, 5, 6, TimeSpan.Zero);
 
+    public enum PromptReference { None, Layout, Child, SourceLink, TargetLink }
+
+    [Theory]
+    [InlineData(PromptReference.None)]
+    [InlineData(PromptReference.Layout)]
+    [InlineData(PromptReference.Child)]
+    [InlineData(PromptReference.SourceLink)]
+    [InlineData(PromptReference.TargetLink)]
+    public async Task Bound_prompts_are_not_duplicated_unless_the_projected_identity_is_retained(PromptReference reference) {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var project = new Project { Name = "Prompt projection owner" };
+        var prompt = new PromptArtifact { ProjectId = project.Id, Title = "Bound session", Kind = PromptGalleryItemKind.FullPrompt,
+            CreatedAtUtc = CreatedAt, UpdatedAtUtc = CreatedAt };
+        var standalone = new PromptArtifact { ProjectId = project.Id, Title = "Standalone gallery prompt",
+            CreatedAtUtc = CreatedAt, UpdatedAtUtc = CreatedAt };
+        await using (var schema = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
+            schema.AddRange(project, prompt, standalone);
+            await schema.SaveChangesAsync();
+        }
+        var key = $"prompt:{prompt.Id}";
+        var native = new ProjectObjectRecord { ProjectId = project.Id, NodeKey = "custom:session", ObjectType = ProjectObjectType.PromptSession,
+            Title = prompt.Title, PositionX = 42, PositionY = 84,
+            Binding = ProjectStructureProjectionBindingFactory.Create($"/prompt-gallery?promptId={prompt.Id}", "prompt", prompt.Id) };
+        List<ProjectObjectRecord> nodes = [native];
+        List<ProjectObjectLinkRecord> links = [];
+        Dictionary<string, ProjectStructureProjectionLayoutRecord> layouts = new(StringComparer.Ordinal);
+        switch (reference) {
+            case PromptReference.Layout:
+                layouts[key] = new() { ProjectId = project.Id, NodeKey = key, PositionX = 123, PositionY = 456, UpdatedAtUtc = CreatedAt };
+                break;
+            case PromptReference.Child:
+                nodes.Add(new() { ProjectId = project.Id, NodeKey = "custom:child", ParentNodeKey = key, ObjectType = ProjectObjectType.Note });
+                break;
+            case PromptReference.SourceLink:
+            case PromptReference.TargetLink:
+                links.Add(new() { ProjectId = project.Id, SourceNodeKey = reference == PromptReference.SourceLink ? key : native.NodeKey,
+                    TargetNodeKey = reference == PromptReference.TargetLink ? key : native.NodeKey, LinkKind = ProjectObjectLinkKind.DependsOn });
+                break;
+        }
+        var context = new ProjectStructureProjectionContext(project.Id, CreatedAt, layouts, nodes, links);
+        var contributor = Assert.Single(scope.ServiceProvider.GetServices<IProjectStructureProjectionContributor>().OfType<PromptGalleryProjectionContributor>());
+        await contributor.ContributeAsync(context, CancellationToken.None);
+        Assert.Single(context.Nodes, node => node.NodeKey == $"prompt:{standalone.Id}");
+        Assert.Equal(reference != PromptReference.None, context.Nodes.Any(node => node.NodeKey == key));
+        Assert.Same(native, Assert.Single(context.AllNodes, node => node.NodeKey == native.NodeKey));
+        Assert.Equal(ProjectObjectType.PromptSession, native.ObjectType);
+        Assert.Equal((42d, 84d), (native.PositionX, native.PositionY));
+        if (reference == PromptReference.Layout) {
+            var projected = Assert.Single(context.Nodes, node => node.NodeKey == key);
+            Assert.Equal((123d, 456d), (projected.PositionX, projected.PositionY));
+        }
+    }
+
     [Fact]
     public async Task Owner_projections_preserve_fields_order_bindings_layout_and_plan_timestamps() {
         var reads = new OwnerReadProbe();

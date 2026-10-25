@@ -57,6 +57,7 @@ public sealed class ProjectStructureProjectionContext(
     private readonly Dictionary<string, ProjectObjectLinkRecord> _linksByKey = new(StringComparer.Ordinal);
 
     public IReadOnlyList<ProjectObjectLinkRecord> CanonicalLinks => canonicalLinks ?? [];
+    internal IEnumerable<string> RetainedProjectionKeys => layoutOverrides.Keys;
     private ProjectStructureProjectFacts? projectFacts;
 
     internal IReadOnlyDictionary<Guid, Guid> ProjectLifetimes => projectFacts is null
@@ -907,14 +908,26 @@ internal sealed class PromptGalleryProjectionContributor(
         var prompts = context.RequiresCoordinatedOwnerReads
             ? await promptsQuery.ListProjectFactsForMutationAsync(context.ProjectId, cancellationToken)
             : await promptsQuery.ListProjectFactsAsync(context.ProjectId, cancellationToken);
+        var existingNodes = context.AllNodes;
+        var representedPrompts = existingNodes
+            .Where(node => node.Binding.ExternalArtifactKind == "prompt")
+            .Select(node => node.Binding.ExternalArtifactId)
+            .ToHashSet();
+        var retainedKeys = context.RetainedProjectionKeys
+            .Concat(existingNodes.Select(node => node.ParentNodeKey))
+            .Concat(context.CanonicalLinks.SelectMany(link => new[] { link.SourceNodeKey, link.TargetNodeKey }))
+            .ToHashSet(StringComparer.Ordinal);
 
         foreach (var prompt in prompts.Select((prompt, index) => new { Prompt = prompt, Index = index }))
         {
+            var promptNodeKey = $"prompt:{prompt.Prompt.Id}";
+            if (representedPrompts.Contains(prompt.Prompt.Id) && !retainedKeys.Contains(promptNodeKey)) {
+                continue;
+            }
             var phaseNodeKey = phases.FirstOrDefault(phase =>
                 string.Equals(phase.Name, prompt.Prompt.Phase, StringComparison.OrdinalIgnoreCase)) is { } phase
                 ? $"phase:{phase.Id}"
                 : $"project:{context.ProjectId}";
-            var promptNodeKey = $"prompt:{prompt.Prompt.Id}";
             context.AddNode(new ProjectObjectRecord
             {
                 ProjectId = context.ProjectId,

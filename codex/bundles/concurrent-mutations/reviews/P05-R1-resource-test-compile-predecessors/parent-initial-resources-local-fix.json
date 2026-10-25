@@ -1,0 +1,8 @@
+{
+  "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+  "beforeSha256": "aca18813c05ca1e9a50a08396302f682783a698aa9cf05cba81dc3139796c895",
+  "afterSha256": "eefb00e0521bcbc75eae8e6cee2838d3ad87d3ff3b3b01b74bc3c7653e6ea7ed",
+  "beforeBytes": 26203,
+  "afterBytes": 26224,
+  "change": "Rename initial application local to initialResources, avoiding enclosing restarted resources CS0136; behavior/assertions unchanged."
+}

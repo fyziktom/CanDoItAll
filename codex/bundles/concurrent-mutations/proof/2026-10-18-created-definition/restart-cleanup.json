@@ -1,0 +1,80 @@
+[
+  {
+    "owner": "AgentHistoricalReceiptRestartTests",
+    "nonce": "d14e7fc0-103f-40c2-85c4-a5d602edccd3",
+    "kind": 0,
+    "phase": "cleanup",
+    "observedAtUtc": "2026-10-18T17:07:11.6152903-04:00",
+    "evidence": {
+      "workloadFailureType": null,
+      "cleanupSucceeded": true,
+      "allocationMayRequireManifestReconciliation": false,
+      "failureTypes": []
+    }
+  },
+  {
+    "owner": "AgentHistoricalReceiptRestartTests",
+    "nonce": "6e4b2460-ee01-4502-8745-7aaae10ccef4",
+    "kind": 4,
+    "phase": "cleanup",
+    "observedAtUtc": "2026-10-18T17:07:54.6277786-04:00",
+    "evidence": {
+      "workloadFailureType": null,
+      "cleanupSucceeded": true,
+      "allocationMayRequireManifestReconciliation": false,
+      "failureTypes": []
+    }
+  },
+  {
+    "owner": "AgentHistoricalReceiptRestartTests",
+    "nonce": "1fca97d6-080f-4c36-b743-73817fa8ae44",
+    "kind": 2,
+    "phase": "cleanup",
+    "observedAtUtc": "2026-10-18T17:06:35.3909653-04:00",
+    "evidence": {
+      "workloadFailureType": null,
+      "cleanupSucceeded": true,
+      "allocationMayRequireManifestReconciliation": false,
+      "failureTypes": []
+    }
+  },
+  {
+    "owner": "AgentHistoricalReceiptRestartTests",
+    "nonce": "e9a9170c-2c1f-4f6d-9f01-c7340f1a9334",
+    "kind": 1,
+    "phase": "cleanup",
+    "observedAtUtc": "2026-10-18T17:09:48.2707584-04:00",
+    "evidence": {
+      "workloadFailureType": null,
+      "cleanupSucceeded": true,
+      "allocationMayRequireManifestReconciliation": false,
+      "failureTypes": []
+    }
+  },
+  {
+    "owner": "AgentHistoricalReceiptRestartTests",
+    "nonce": "0967173f-dd26-4a3a-8e1a-05ac0d531367",
+    "kind": 5,
+    "phase": "cleanup",
+    "observedAtUtc": "2026-10-18T17:08:50.3542237-04:00",
+    "evidence": {
+      "workloadFailureType": null,
+      "cleanupSucceeded": true,
+      "allocationMayRequireManifestReconciliation": false,
+      "failureTypes": []
+    }
+  },
+  {
+    "owner": "AgentHistoricalReceiptRestartTests",
+    "nonce": "729ec9c3-6d34-4613-8451-82bfa068000d",
+    "kind": 3,
+    "phase": "cleanup",
+    "observedAtUtc": "2026-10-18T17:05:58.2716545-04:00",
+    "evidence": {
+      "workloadFailureType": null,
+      "cleanupSucceeded": true,
+      "allocationMayRequireManifestReconciliation": false,
+      "failureTypes": []
+    }
+  }
+]

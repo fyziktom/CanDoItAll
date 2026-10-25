@@ -118,14 +118,18 @@ public class CapabilityStoreProbe : DispatchProxy {
         if (CatalogReadUnavailable && targetMethod!.Name == nameof(ISandboxWorkspaceStore.LoadCatalogSnapshotAsync)) {
             return Task.FromException<SandboxWorkspaceCatalogSnapshot>(new IOException("Catalog fixture is unavailable"));
         }
-        if (targetMethod!.Name == nameof(ISandboxWorkspaceStore.UpdateCatalogAsync) && args!.Length == 2) {
+        if (targetMethod!.Name == nameof(ISandboxWorkspaceStore.UpdateCatalogAsync) &&
+            (args!.Length == 2 || args.Length == 3 && args[1] is Action<SandboxWorkspaceCatalog>)) {
             Writes++;
             var update = (Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog>)args[0]!;
-            return Inner.UpdateCatalogAsync(catalog => {
+            SandboxWorkspaceCatalog Prepare(SandboxWorkspaceCatalog catalog) {
                 var next = update(BeforeUpdate?.Invoke(catalog) ?? catalog);
                 BeforeCatalogWrite?.Invoke();
                 return next;
-            }, (CancellationToken)args[1]!);
+            }
+            return args.Length == 2
+                ? Inner.UpdateCatalogAsync(Prepare, (CancellationToken)args[1]!)
+                : Inner.UpdateCatalogAsync(Prepare, (Action<SandboxWorkspaceCatalog>)args[1]!, (CancellationToken)args[2]!);
         }
         return targetMethod.Invoke(Inner, args);
     }

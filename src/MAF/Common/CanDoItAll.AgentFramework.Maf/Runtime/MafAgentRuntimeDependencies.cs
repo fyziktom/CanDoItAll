@@ -39,6 +39,10 @@ internal sealed record MafAgentRuntimeDependencies(
 {
     public AgentToolPolicyCatalog ToolPolicies { get; init; } = AgentToolPolicyCatalog.BuiltIn;
 
+    public IAgentCatalogReadLeaseStore? SavedEffectCatalog { get; init; }
+
+    public IReadOnlyList<IAgentToolReceiptReconciliationProvider> SavedEffectReceiptProviders { get; init; } = [];
+
     public static MafAgentRuntimeDependencies FromServices(IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -100,7 +104,9 @@ internal sealed record MafAgentRuntimeDependencies(
                     ?? new DefaultAgentToolInvocationPolicy(),
                 serviceProvider.GetServices<IToolInvocationPolicyContextContributor>().ToList()),
             serviceProvider.GetService<AgentToolAdmissionJournal>()) {
-            ToolPolicies = toolPolicies
+            ToolPolicies = toolPolicies,
+            SavedEffectCatalog = serviceProvider.GetService<IAgentCatalogReadLeaseStore>(),
+            SavedEffectReceiptProviders = serviceProvider.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray()
         };
     }
 }

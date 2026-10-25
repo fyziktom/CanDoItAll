@@ -16,6 +16,8 @@ internal sealed class FileSandboxWorkspaceStorageLayout(string rootPath, Workspa
 
     public string WorkspaceLockPath => Path.Combine(DataRoot, "workspace.lock");
 
+    public string PublicationCoordinationRoot => Path.Combine(DataRoot, "publication-coordination");
+
     public string LegacyExecutionPath => Path.Combine(DataRoot, "workspace.execution.json");
 
     public string ExecutionStorageRoot => Path.Combine(DataRoot, "execution");
@@ -23,6 +25,8 @@ internal sealed class FileSandboxWorkspaceStorageLayout(string rootPath, Workspa
     public string ExecutionIndexPath => Path.Combine(ExecutionStorageRoot, "index.json");
 
     public string ExecutionChatIndexPath => Path.Combine(ExecutionStorageRoot, "chat-index.json");
+
+    public string ExecutionProcessIndexPath => Path.Combine(ExecutionStorageRoot, "process-index.json");
 
     public string ExecutionUsageIndexPath => Path.Combine(ExecutionStorageRoot, "usage-index.json");
 

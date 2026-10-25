@@ -35,6 +35,29 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessAgentExecutionRecoveryPolicy
 {
+    internal static ProcessCompletionIssue EffectContinuationIssue(ProcessRuntimeStepAssignment assignment,
+        AgentEffectContinuation continuation) => new(ProcessExecutionAdapterDiagnosticCodes.AgentEffectContinuationRequired,
+            "The original agent execution has saved effects requiring explicit review or continuation. Do not dispatch a replacement execution.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:{continuation.ExecutionRunId:D}:{continuation.Persistence}",
+            assignment.ProducedArtifactSlotIds, ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.NonIdempotent);
+
+    internal static ProcessCompletionIssue EffectLeaseReleaseIssue(ProcessRuntimeStepAssignment assignment,
+        AgentEffectReconciliationLeaseException exception, ProcessExecutionRunId? executionRunId) => new(
+            ProcessExecutionAdapterDiagnosticCodes.AgentEffectContinuationRequired,
+            "Receipt reconciliation failed and release of its coordination lease is unconfirmed. Inspect the original execution; do not dispatch a replacement.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:{executionRunId?.Value:D}:{exception.FailureKind}",
+            assignment.ProducedArtifactSlotIds, ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.NonIdempotent);
+
+    internal static ProcessCompletionIssue EffectActivityFinalizationIssue(ProcessRuntimeStepAssignment assignment,
+        AgentExecutionActivityPublicationException exception, ProcessExecutionRunId? executionRunId) => new(
+            ProcessExecutionAdapterDiagnosticCodes.AgentEffectContinuationRequired,
+            "Saved-effect activity could not be finalized. Preserve the original execution and its checkpoint knowledge; do not dispatch a replacement.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:{executionRunId?.Value:D}:{exception.EffectFailureKind}:{exception.EffectContinuation?.Persistence}",
+            assignment.ProducedArtifactSlotIds, ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.NonIdempotent);
+
     internal static bool TryBuildRetryableAgentOutputContractIssue(
         ProcessRuntimeStepAssignment assignment,
         Exception exception,
@@ -71,7 +94,7 @@ internal static class ProcessAgentExecutionRecoveryPolicy
         out ProcessCompletionIssue issue)
     {
         issue = null!;
-        if (result.Metric.Outcome != RunOutcome.Failed ||
+        if (result.EffectContinuation is not null || result.Metric is not { Outcome: RunOutcome.Failed } metric ||
             !LooksLikeTransientAgentExecutionFailure(result.ResponseText))
         {
             return false;
@@ -79,7 +102,7 @@ internal static class ProcessAgentExecutionRecoveryPolicy
 
         issue = CreateRetryableAgentTransientExecutionIssue(
             assignment,
-            $"executionRunId={result.ExecutionRunId:D}; outcome={result.Metric.Outcome}; provider={result.Metric.ProviderName}; model={result.Metric.Model}; detail={result.ResponseText}");
+            $"executionRunId={result.ExecutionRunId:D}; outcome={metric.Outcome}; provider={metric.ProviderName}; model={metric.Model}; detail={result.ResponseText}");
         return true;
     }
 
@@ -89,7 +112,9 @@ internal static class ProcessAgentExecutionRecoveryPolicy
         out ProcessCompletionIssue issue)
     {
         issue = null!;
-        if (!LooksLikeTransientAgentExecutionFailure(exception))
+        if (exception is AgentEffectReconciliationIncompleteException or AgentEffectReconciliationCleanupException or AgentEffectReconciliationLeaseException or
+            AgentExecutionActivityPublicationException { HasEffectOutcome: true } ||
+            !LooksLikeTransientAgentExecutionFailure(exception))
         {
             return false;
         }

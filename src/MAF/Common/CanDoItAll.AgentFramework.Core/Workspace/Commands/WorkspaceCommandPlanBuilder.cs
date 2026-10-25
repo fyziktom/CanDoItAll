@@ -574,6 +574,12 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
 
         string trimmedName = name?.Trim() ?? string.Empty;
+        if (trimmedName is "." or "..") {
+            throw WorkspaceCommandInputException.CreateProhibited(
+                "workspace_dotnet_new cannot scaffold into the parent directory or its ancestor.",
+                "Choose a named child project, or inspect and repair the existing project in place. Scaffolding into '.' or '..' is not allowed.");
+        }
+
         if (trimmedName.Length == 0 || !PortablePhysicalFileNamePolicy.IsPortable(trimmedName))
         {
             throw WorkspaceCommandInputException.Create(
@@ -592,7 +598,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         if (InspectTopLevelProjectFiles(
                 workingDirectoryResolution.FullPath,
                 workingDirectoryRelative,
-                includeSolutionFiles: !isSolutionTemplate))
+                includeSolutionFiles: false))
         {
             throw WorkspaceCommandInputException.CreateProhibited(
                 $"workspace_dotnet_new is not allowed inside existing .NET project directory '{workingDirectoryRelative}'.",
@@ -634,6 +640,11 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
         arguments.Add("-n");
         arguments.Add(trimmedName);
+        if (!isSolutionTemplate) {
+            arguments.Add("--output");
+            arguments.Add(trimmedName);
+        }
+
         if (force)
         {
             arguments.Add("--force");

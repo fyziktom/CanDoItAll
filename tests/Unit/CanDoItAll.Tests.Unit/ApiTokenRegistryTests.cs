@@ -102,7 +102,7 @@ public sealed class ApiTokenRegistryTests {
         var resolver = new ControlPlanePathResolver(
             Options.Create(new ControlPlaneOptions { RootPath = environment.ControlPlaneRootPath }),
             environment.CreateHostEnvironment("ApiTokenRegistryTests"), writer);
-        return new FileApiTokenRegistry(resolver, writer);
+        return new FileApiTokenRegistry(resolver, writer, new PhysicalFileSystemPathPolicyFactory());
     }
 
     private static ApiTokenRecord CreateRecord(string subject) => new(

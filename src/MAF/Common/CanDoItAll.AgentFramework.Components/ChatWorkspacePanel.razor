@@ -15,7 +15,7 @@
     }
 } else {
 <AgentChatSurface Presentation="@MapPresentation()" Intent="HandleIntentAsync" Navigation="@Navigation" NavigationIntent="@NavigationIntent"
-                  HeaderActions="@HeaderActions" ComposerActions="@ComposerActions">
+                  HeaderActions="@HeaderActions" HeaderDetails="@HeaderDetails" ComposerActions="@ComposerActions">
     <ActivityContent>
         @if (ActivityStreamId is not null) {
             <AgentExecutionActivityStatus @key="ActivityStreamId"
@@ -59,6 +59,9 @@
     public bool IsBusy { get; set; }
 
     [Parameter]
+    public bool IsSendBlocked { get; set; }
+
+    [Parameter]
     public int ComposerKey { get; set; }
 
     [Parameter]
@@ -84,6 +87,8 @@
 
     [Parameter]
     public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter] public RenderFragment? HeaderDetails { get; set; }
 
     [Parameter]
     public RenderFragment? ComposerActions { get; set; }
@@ -216,7 +221,7 @@
     }
 
     private IReadOnlyList<PendingToolApprovalRecord> PendingApprovals
-        => IsBusy ? [] : ActiveRun?.PendingApprovals ?? [];
+        => IsBusy || ActiveRun?.ToolAdmission?.PlanningDecision is not null ? [] : ActiveRun?.PendingApprovals ?? [];
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
 
@@ -508,6 +513,7 @@
             DraftPrompt = DraftPrompt,
             ComposerKey = ComposerKey,
             IsBusy = IsBusy,
+            IsSendBlocked = IsSendBlocked,
             AutoApproval = IsAutoApprovalActive(),
             ComposerGuidance = ResolveComposerGuidance(),
             Attachments = DraftAttachmentPaths.Select(RelativeAttachmentPath.NormalizeOrNull).OfType<string>().ToImmutableArray(),

@@ -146,6 +146,7 @@ public sealed class CrmAgentCommittedSaveTests {
         }
 
         public Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task DeleteForMutationAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 

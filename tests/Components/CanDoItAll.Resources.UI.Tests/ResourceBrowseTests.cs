@@ -58,7 +58,7 @@ public sealed class ResourceBrowseTests {
         await using var controller = await OpenAsync(store, context);
         await InvokeAsync(controller, store, 0);
         await controller.SavePromotionAsync();
-        var id = Assert.Single(controller.Promotions).Observation!.ResourceId;
+        var id = Assert.Single(controller.Promotions).Snapshot!.Expected.ResourceId;
         await controller.OpenResourceAsync(id);
         var retired = controller.Preview!;
         var gate = store.HoldNext(ResourceScenarioLane.PreviewRelease);
@@ -86,7 +86,7 @@ public sealed class ResourceBrowseTests {
         var pending = controller.SavePromotionAsync();
         await gate.Entered.Task;
         var receipt = Assert.Single(controller.Promotions);
-        Assert.True(store.Records.ContainsKey(receipt.Observation!.ResourceId));
+        Assert.True(store.Records.ContainsKey(receipt.Snapshot!.Expected.ResourceId));
         await controller.SelectAsync(store.Sources[1].Key);
         await controller.SelectAsync(store.Sources[0].Key);
         await InvokeAsync(controller, store, 0);
@@ -216,12 +216,12 @@ public sealed class ResourceBrowseTests {
         var store = new ResourceScenarioStore();
         using var context = Context();
         await using var controller = await OpenAsync(store, context);
-        controller.Promoted = _ => throw new IOException("Parent reference refresh failed.");
+        controller.Promoted = _ => throw new ResourceActionRefusedException("Parent reference refresh failed after acceptance.");
         await InvokeAsync(controller, store, 0);
         await controller.SavePromotionAsync();
         var receipt = Assert.Single(controller.Promotions);
         Assert.Equal(ResourceEffectState.CommittedWarning, receipt.State);
-        Assert.True(store.Records.ContainsKey(receipt.Observation!.ResourceId));
+        Assert.True(store.Records.ContainsKey(receipt.Snapshot!.Expected.ResourceId));
         Assert.Null(controller.Promotion);
         await controller.RefreshAsync();
         Assert.Single(store.PromotionCommands);
@@ -241,7 +241,7 @@ public sealed class ResourceBrowseTests {
         Assert.Equal(state, receipt.State);
         Assert.Equal(known, receipt.Observation is not null);
         if (known) {
-            Assert.Null(receipt.Observation!.ScopeRevision);
+            Assert.Null(receipt.ScopeRevision);
         }
         if (state == ResourceEffectState.Unknown) {
             await controller.SavePromotionAsync();
@@ -258,7 +258,7 @@ public sealed class ResourceBrowseTests {
         await using var controller = await OpenAsync(store, context);
         await InvokeAsync(controller, store, 0);
         await controller.SavePromotionAsync();
-        var id = Assert.Single(controller.Promotions).Observation!.ResourceId;
+        var id = Assert.Single(controller.Promotions).Snapshot!.Expected.ResourceId;
         var gate = store.HoldNext(ResourceScenarioLane.Preview);
         var preview = controller.OpenResourceAsync(id);
         await gate.Entered.Task;
@@ -280,7 +280,7 @@ public sealed class ResourceBrowseTests {
         await using var controller = await OpenAsync(store, context);
         await InvokeAsync(controller, store, 0);
         await controller.SavePromotionAsync();
-        await controller.OpenResourceAsync(Assert.Single(controller.Promotions).Observation!.ResourceId);
+        await controller.OpenResourceAsync(Assert.Single(controller.Promotions).Snapshot!.Expected.ResourceId);
         var preview = controller.Preview!;
         Assert.Equal(FileInteractionMode.View, preview.Request.Mode);
         await using (var content = await preview.ContentSource.OpenReadAsync(new(preview.Request.File))) {

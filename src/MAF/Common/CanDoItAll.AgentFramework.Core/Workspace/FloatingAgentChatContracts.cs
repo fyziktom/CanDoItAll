@@ -70,6 +70,14 @@ public interface IFloatingAgentChatSettingsService
 
 public interface IAgentChatExecutionOrchestrator
 {
+    (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPlanningAction(
+        Guid agentId, AgentPlanningActionRequest request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This chat host does not support saved planning actions.");
+
+    Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This chat host does not support historical receipt review.");
+
     AgentChatOperationHandle StartSendMessage(
         AgentChatSendRequest request,
         CancellationToken cancellationToken = default);
@@ -127,6 +135,8 @@ public sealed record AgentChatSendRequest(
     Guid? ChatSessionId,
     string Prompt)
 {
+    public AgentPlanningOwner? PlanningOwner { get; init; }
+
     public IReadOnlyList<string>? AttachmentPaths { get; init; }
 
     public AgentChatExecutionBehavior Behavior { get; init; } =

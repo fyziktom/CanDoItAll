@@ -50,6 +50,11 @@ public sealed record AgentExecutionAuthorityRevalidation(
 /// </summary>
 public interface IAgentExecutionAuthorityResolver
 {
+    ValueTask<AgentHistoricalReceiptReadPolicy> ObserveHistoricalReceiptReadAsync(
+        AgentToolSessionObservation original, AgentHistoricalReceiptReadFence currentFence,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(AgentHistoricalReceiptReadPolicy.Unsupported);
+
     ValueTask<AgentExecutionAuthorityRecord> ResolveAsync(
         AgentExecutionAuthorityResolutionRequest request,
         CancellationToken cancellationToken = default);
@@ -75,7 +80,8 @@ public sealed record AgentTurnContextCaptureCommand(
     AgentExecutionOperationId ActivityOperationId,
     DatabaseProfileGeneration ExpectedDatabaseProfileGeneration,
     AgentChatExecutionBehavior Behavior,
-    AgentConversationKey? ConversationKey = null);
+    AgentConversationKey? ConversationKey = null,
+    AgentPlanningOwner? PlanningOwner = null);
 
 /// <summary>
 /// Result of one turn capture: the composed invocation (prompt, run options,
@@ -198,7 +204,8 @@ public sealed class AgentTurnContextCaptureService(
             command.ActivityOperationId,
             command.ExpectedDatabaseProfileGeneration,
             nowUtc,
-            command.Behavior);
+            command.Behavior,
+            command.PlanningOwner);
 
         // 6c. Rebuild the transient lease: the workspace scope originates from
         // the resolved authority snapshot (value-equal to the published scope
@@ -287,7 +294,8 @@ public sealed class AgentTurnContextCaptureService(
             command.ActivityOperationId,
             command.ExpectedDatabaseProfileGeneration,
             timeProvider.GetUtcNow(),
-            command.Behavior);
+            command.Behavior,
+            command.PlanningOwner);
         return new AgentTurnContextCaptureResult(
             detachedInvocation,
             Context: null,

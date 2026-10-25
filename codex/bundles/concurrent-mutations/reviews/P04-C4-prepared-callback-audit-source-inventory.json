@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/agent_process_architecture",
+  "createdAtUtc": "2026-10-17T05:56:24.3942121+00:00",
+  "status": "read-only source audit; no production or test changes; no execution",
+  "note": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P04-C4-prepared-callback-compatibility-audit.md",
+    "sha256": "61217AA91B85CB0F92857874B622143016A44783BF177B168130466C6D4C1C88",
+    "bytes": 10699
+  },
+  "productionEdits": 0,
+  "newTestRows": 0,
+  "readOnlyInputCount": 34,
+  "readOnlyInputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P04-C4-narrow-publication-protocol-decision.md",
+      "sha256": "E73E4BEBE6F530B54270AB4015547E2322214232C9825DE04FF010A1C84C76DF",
+      "bytes": 16020
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentExternalProvisioningService.cs",
+      "sha256": "404565804C17FEBDEAFCA77E02E44852BC48886A5B3CA5A759F24116650C555F",
+      "bytes": 24080
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs",
+      "sha256": "6F7A6847D0DD012EC86EB61005D5E789CA5B6703A65B243E2CCA22E134FA47D2",
+      "bytes": 10696
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Packages/AgentPackageImportService.cs",
+      "sha256": "5D25A8A54449F5ED17A0E3886D4DA27816DFB2DB08F87B5FF58E5C04AA24E924",
+      "bytes": 22878
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ContinuationGuards.cs",
+      "sha256": "30BD37D5487398CED8D9BB0A7E4680E2FCDEB36C2A62BC6082B40B5B6DAA3B85",
+      "bytes": 27506
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Helpers.cs",
+      "sha256": "E5AC67D99A9781CFA6E6B083CB99A46433A69BC500BDF3670335A25458D7D5D6",
+      "bytes": 55107
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Chat.cs",
+      "sha256": "F21D8B06370026DF3A107D8AAFE8C738CCD88DC2E8ADB3C610B976EB55998129",
+      "bytes": 26656
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs",
+      "sha256": "F9B5967199CB2E4D028724386FFD07722B92201D85BB63152B8D1FB2CE01CE64",
+      "bytes": 166180
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/ExecutionRunStateTransitions.cs",
+      "sha256": "28F024B0306CE7AF01BDC08F4680ECB4B78C5D5E4E6D171C73B18D0CC6141638",
+      "bytes": 9271
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.cs",
+      "sha256": "A3D15073CFDEA6D1944E816ABCCC3528EE8A5FF5731C790FE9EB867E5764924D",
+      "bytes": 38807
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.ProviderDispatch.cs",
+      "sha256": "03461D841B99345955D49CDB980CE76171635D802A1FAFBE8E6A76CCD338CB4B",
+      "bytes": 7391
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.Effects.cs",
+      "sha256": "27C2DFDF8F81054612FCA85D95899494BBB1E17499F94A2949519EF7B5A7DB32",
+      "bytes": 33004
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.SavedEffects.cs",
+      "sha256": "03AD3538DB8DDCACAE6BCF5D5F800E1F38B12C0301DEF30B882E3C088A4BDA49",
+      "bytes": 20561
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolRunLease.cs",
+      "sha256": "CE67E8160072E159832868ED6BCF85D3306A02D9F2B0D69CB80A007F0D0D26C4",
+      "bytes": 10043
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/WorkspaceBackedProviderProfileRegistry.cs",
+      "sha256": "50158FB4A4C0F92AD8A72703A7BEBD70089F4FFA2F74510447977C6BF5E7D317",
+      "bytes": 6712
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs",
+      "sha256": "D54CBB93618D75550146B68F167A1435371216BAC5E2A657932CEDF6E5CB6E96",
+      "bytes": 42642
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Teams.cs",
+      "sha256": "65C6267B1FAF8595045DF6A25D44A4133DC38EDC1CFE7B0621E923573CA7B9BA",
+      "bytes": 7896
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+      "sha256": "00DABA1AEAB71FEFD4915977EB287D3B991D3931E252DFCEB221D5E8DF0181E6",
+      "bytes": 13491
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProjectLifetimes.cs",
+      "sha256": "2FD7F5193C066CE72F9C413D071CD39E5E3D69F474C5E41D7AD3F34BE24184EB",
+      "bytes": 3671
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
+      "sha256": "0E1962D654CFDE94C2218711D9E6E132ABD390B7857E7BAF816FC94374C03F94",
+      "bytes": 26800
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/LegacyAgentMemoryCatalog.cs",
+      "sha256": "0600D2E14DC9EB241911BABB1C6F85650CE7F7349CC7ABC532DB96F17FE75A26",
+      "bytes": 1935
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs",
+      "sha256": "9099E82E15827AFBCAFAA3573329B3336F29C0E3F569CBEE79BA2462D6C01FA9",
+      "bytes": 10621
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Execution/AgentFrameworkExecutionRecoveryService.cs",
+      "sha256": "F41EB827FFF034CC51DCDC2E1FA66578EF083BE87E37BB396B4F4E0FE12D7609",
+      "bytes": 13009
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/DatabaseTransfer/AiAgentsDatabaseTransferHandler.cs",
+      "sha256": "0710E5DFA705F6A49BFCF2310444B0172C0B4ED9FD7E465203B0100F851FBE01",
+      "bytes": 3465
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentFrameworkOrganizationCatalogRepairService.cs",
+      "sha256": "90C9A50D15CAA823CE9988368EEB9AF19CFD827DDE8501B24D527C0E7E7344D1",
+      "bytes": 23174
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentProjectAccessCatalogPolicy.cs",
+      "sha256": "FB487966B859AC8A2CA89630D965A3FAE55BDDA8A51CFB6E3A0A707D1BCC6505",
+      "bytes": 4779
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderCatalogProjectionCommitObserver.cs",
+      "sha256": "63199E9FD55E78DAEC94D0F0ABE2390379449191916908B337A36122F920EFA0",
+      "bytes": 3791
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/DatabaseProviderProfileRegistry.cs",
+      "sha256": "CE42EB81157EB7AD3EBB04E89DEE92A3D5C6699EF4F53FDC449BB031F0EDDEDF",
+      "bytes": 25970
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderRuntimeAdministrationService.cs",
+      "sha256": "D19B1FF90AA683D85FE3FCA6C95C2CDBDBCFEEDFC748978AB6B7F1B751B74330",
+      "bytes": 6916
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/ProviderRuntimeProfileSnapshotService.cs",
+      "sha256": "D2A6544C585D02F16A162213AAD44414D4531E1BD41BA048954808E30EDD2721",
+      "bytes": 31301
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolRunContext.cs",
+      "sha256": "826CA6874D35BD746F45FA9755EF4E509835DA48B177B5C6F29AC57D98A85B86",
+      "bytes": 44373
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Execution/WorkflowBackedAgentExecutionCheckpointBridge.cs",
+      "sha256": "5CA66F3DEC8631662B636BD4FAC3EBE4F913C2DA5962AEF15D788F2A54638EAB",
+      "bytes": 15625
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+      "sha256": "007864C9C73288EA1EDD324D6ADC6D7EAC475F248FC0C8F1821E34C7B21B5DE6",
+      "bytes": 98414
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.BackgroundReservation.cs",
+      "sha256": "B0434D3FAE49A4C7D9825124C82A73813AEE8CFA4851640ADE6C9B9CD06B4DCD",
+      "bytes": 4574
+    }
+  ],
+  "limitations": [
+    "First-party concrete caller review, not arbitrary plugin callback purity",
+    "Narrow protocol remains conditional on small coarse probe and parent selection",
+    "No runtime race, capacity, schema or provider activation proof"
+  ]
+}

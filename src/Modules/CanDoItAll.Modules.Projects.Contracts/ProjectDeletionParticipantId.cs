@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.Modules.Projects;
 
 /// <summary>
@@ -7,6 +9,7 @@ namespace CanDoItAll.Modules.Projects;
 /// </summary>
 public readonly record struct ProjectDeletionParticipantId
 {
+    [JsonConstructor]
     public ProjectDeletionParticipantId(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);

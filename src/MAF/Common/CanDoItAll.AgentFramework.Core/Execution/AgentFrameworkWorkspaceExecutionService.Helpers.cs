@@ -7,16 +7,6 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed partial class AgentFrameworkWorkspaceExecutionService
 {
-    private sealed record AgentExecutionStartupAggregate(
-        AgentExecutionPreparationBlueprint Blueprint,
-        SandboxWorkspaceCatalogSnapshot CatalogSnapshot,
-        AgentDefinition Agent,
-        ProviderProfile Provider,
-        ChatSessionRecord? Session,
-        ExecutionRunRecord Run,
-        ChatMessageRecord? UserMessage,
-        IReadOnlyList<AgentRuntimeInputAttachment> InputAttachments);
-
     private sealed record ExecutionStateMutation(
         ExecutionRunRecord? Run = null,
         ChatSessionRecord? Session = null,
@@ -53,7 +43,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             Id: Guid.NewGuid(),
             AgentId: agentId,
             ChatSessionId: chatSessionId,
-            CreatedAtUtc: occurredAtUtc ?? DateTimeOffset.UtcNow,
+            CreatedAtUtc: occurredAtUtc ?? executionClock.GetUtcNow(),
             State: state,
             Phase: phase,
             Message: message)
@@ -156,7 +146,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 currentDetail =>
                 {
                     var chatSession = mutation.Run.ChatSessionId.HasValue
-                        ? mutation.Session ?? currentDetail.ChatSession
+                        ? ChatSessionTitleChange.PreserveCurrentTitle(currentDetail.ChatSession, mutation.Session ?? currentDetail.ChatSession)
                         : null;
                     var persistedRun = MergeAdmissionSnapshot(currentDetail.Run, mutation.Run);
                     return CreateExecutionRunDetail(
@@ -191,7 +181,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var currentDetail = await executionRunStore.GetExecutionRunDetailAsync(mutation.Run.Id, cancellationToken);
             var chatSession = mutation.Run.ChatSessionId.HasValue
-                ? mutation.Session ?? currentDetail?.ChatSession
+                ? ChatSessionTitleChange.PreserveCurrentTitle(currentDetail?.ChatSession, mutation.Session ?? currentDetail?.ChatSession)
                 : null;
 
             await executionRunStore.SaveExecutionRunDetailAsync(
@@ -222,7 +212,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 : ReplaceExecutionRun(executionState.ExecutionRuns, mutation.Run),
             ChatSessions = mutation.Session is null
                 ? executionState.ChatSessions
-                : ReplaceChatSession(executionState.ChatSessions, mutation.Session),
+                : ReplaceChatSession(executionState.ChatSessions, ChatSessionTitleChange.PreserveCurrentTitle(
+                    executionState.ChatSessions.SingleOrDefault(session => session.Id == mutation.Session.Id), mutation.Session)!),
             ExecutionApprovals = mutation.RunApprovals is null
                 ? executionState.ExecutionApprovals
                 : ReplaceRunApprovals(
@@ -243,12 +234,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private ExecutionRunRecord AdmitInteractiveRun(ExecutionRunRecord run, ChatSessionRecord session,
         IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments, ChatMessageRecord input,
-        AgentRuntimeTransientContext? runtimeContext) {
+        AgentRuntimeTransientContext? runtimeContext, AgentPlanningPreparedRun? planningRun) {
         if (toolAdmissionJournal is null || AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson) is null ||
             CreateRuntimeContextIntent(run, activityWorkspaceIdentity.WorkspaceScope).Purpose != AgentRuntimeContextPurpose.InteractiveChat) {
+            if (planningRun is not null) {
+                throw new InvalidOperationException("Planning admission requires its original interactive journal authority.");
+            }
             return run;
         }
 
+        if (planningRun is not null) {
+            run = run with { MetadataJson = AgentPlanningRunMetadata.Apply(run.MetadataJson, planningRun.Owner, planningRun.RuntimeContract) };
+            return run with { ToolAdmission = toolAdmissionJournal.CreateForNewPlanningRun(run, session,
+                new(input.Id, input.Content), planningRun.Admission) };
+        }
         var canRecover = inputAttachments.Count == 0 && toolAdmissionJournal.CanRecoverRuntimeContext(runtimeContext);
         return run with { ToolAdmission = toolAdmissionJournal.CreateForNewRun(run, session,
             canRecover ? AgentToolAdmissionSupport.Recoverable : AgentToolAdmissionSupport.RequestScopedInput,
@@ -258,6 +257,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private static ExecutionRunRecord MergeAdmissionSnapshot(ExecutionRunRecord current, ExecutionRunRecord proposed) {
         if (current.ToolAdmission is null) {
             return proposed;
+        }
+
+        if (current.ToolAdmission.Session.Reference.BackgroundSource is not null && current.Outcome == RunOutcome.Cancelled) {
+            throw new AgentExecutionCancelledException(current.Id, current.ProcessRunId,
+                "The original background execution was cancelled by its owner.");
         }
 
         var cancelled = proposed.Outcome == RunOutcome.Cancelled;
@@ -355,6 +359,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         ArgumentNullException.ThrowIfNull(run);
 
+        if (run.ToolAdmission?.Session.Reference.BackgroundSource is not null) {
+            if (store is not ISandboxWorkspaceExecutionRunReservationStore reservations || toolAdmissionJournal is null) {
+                throw new AgentToolAdmissionException("tool-admission.reservation-policy-missing",
+                    "A background start requires its owner's fenced execution reservation.");
+            }
+            var reserved = await reservations.ReserveBackgroundExecutionRunAsync(
+                ExecutionRunSourceKey.ForBackground(run.SourceKind, run.SourceId, run.CorrelationId, run.CausationId),
+                new(run, null, [], []), await toolAdmissionJournal.PrepareBackgroundReservationAsync(run, cancellationToken), cancellationToken);
+            if (reserved.Disposition != ExecutionRunSourceDisposition.Created) {
+                throw new AgentToolAdmissionException("tool-admission.source-already-reserved",
+                    "The original background source already has work. Recover its original execution through the same-source owner.");
+            }
+            return;
+        }
+
         if (TryGetExecutionRunStore() is { } executionRunStore)
         {
             await executionRunStore.SaveExecutionRunDetailAsync(
@@ -380,19 +399,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run)
             },
             cancellationToken);
-    }
-
-    private async Task SaveChatSessionAsync(
-        ChatSessionRecord session,
-        CancellationToken cancellationToken)
-    {
-        if (store is ISandboxWorkspaceChatSessionStore chatSessionStore)
-        {
-            await chatSessionStore.UpdateChatSessionAsync(session, cancellationToken);
-            return;
-        }
-
-        await PersistExecutionMutationAsync(new ExecutionStateMutation(Session: session), cancellationToken);
     }
 
     private async Task<ExecutionRunDetail> LoadExecutionRunDetailAsync(
@@ -461,6 +467,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments,
         AgentRuntimeTransientContext? runtimeContext,
         AgentExecutionOperationId initialActivityOperationId,
+        AgentPlanningPreparedRun? planningRun,
         CancellationToken cancellationToken)
     {
         if (store is ISandboxWorkspaceChatRunStartStore chatRunStartStore)
@@ -478,6 +485,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 inputAttachments,
                 runtimeContext,
                 initialActivityOperationId,
+                planningRun,
                 cancellationToken);
         }
 
@@ -526,7 +534,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 throw CreateSessionBlockedException(blockingRun!);
             }
 
-            var now = DateTimeOffset.UtcNow;
+            var now = executionClock.GetUtcNow();
             var userMessage = new ChatMessageRecord(
                 Id: Guid.NewGuid(),
                 Role: ChatMessageRole.User,
@@ -565,7 +573,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 now,
                 run.Id);
 
-            run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext);
+            run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext, planningRun);
             prepared = new AgentExecutionStartupAggregate(
                 preparation.Blueprint,
                 catalogSnapshot,
@@ -602,6 +610,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments,
         AgentRuntimeTransientContext? runtimeContext,
         AgentExecutionOperationId initialActivityOperationId,
+        AgentPlanningPreparedRun? planningRun,
         CancellationToken cancellationToken)
     {
         EnsurePreparationCurrentForUse(
@@ -611,7 +620,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var runtimeModel = ResolveEffectiveManagedSeedModel(
             blueprint.Agent,
             provider);
-        var result = await chatRunStartStore.BeginChatBackedRunAsync(
+        var result = await chatRunStartStore.BeginChatBackedRunWithAdmissionKnowledgeAsync(
             new ChatBackedRunStartRequest(
                 blueprint.Agent.Id,
                 blueprint.Provider.Id,
@@ -622,7 +631,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 EnsurePreparationCurrentForUse(
                     blueprint,
                     current.CatalogSnapshot);
-                var now = DateTimeOffset.UtcNow;
+                var now = executionClock.GetUtcNow();
                 var runtimeAgent = CreateProviderCompatibleRuntimeAgent(
                     current.Agent,
                     provider,
@@ -670,7 +679,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         now,
                         run.Id);
 
-                run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext);
+                run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext, planningRun);
                 return new ChatBackedRunStartMutation(
                     CreateExecutionRunDetail(
                         run,
@@ -731,22 +740,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return cleaned.Length <= 48
             ? cleaned
             : $"{cleaned[..45]}...";
-    }
-
-    private static string NormalizeChatSessionTitle(string title)
-    {
-        var normalized = string.Join(
-            ' ',
-            title.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-        if (string.IsNullOrWhiteSpace(normalized))
-        {
-            throw new InvalidOperationException("Thread title is required.");
-        }
-
-        const int maxLength = 96;
-        return normalized.Length <= maxLength
-            ? normalized
-            : normalized[..maxLength].TrimEnd();
     }
 
     private ExecutionRunRecord CreatePreparingRun(

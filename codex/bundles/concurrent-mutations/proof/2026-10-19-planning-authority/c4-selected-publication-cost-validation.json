@@ -1,0 +1,658 @@
+{
+  "candidate": "c4-selected-publication-cost-validation",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-release",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-19T02:18:37.5848000+00:00",
+      "State": "Completed",
+      "RunnerPid": 43796,
+      "ChildPid": 28684,
+      "ChildStartedUtc": "2026-10-19T02:18:37.6160823Z",
+      "ExitCode": 0,
+      "Seconds": 33.9052964,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 175409,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-19T02:23:57.7151443+00:00",
+      "State": "Completed",
+      "RunnerPid": 52816,
+      "ChildPid": 34372,
+      "ChildStartedUtc": "2026-10-19T02:23:57.7186685Z",
+      "ExitCode": 0,
+      "Seconds": 0.210327,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 10345,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-selected-publication-cost",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName=CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_selected_authority_keeps_unrelated_writers_responsive_during_actual_SQL_wait",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T02:19:11.5624397+00:00",
+      "State": "Completed",
+      "RunnerPid": 43796,
+      "ChildPid": 49392,
+      "ChildStartedUtc": "2026-10-19T02:19:11.5674573Z",
+      "ExitCode": 0,
+      "Seconds": 2.1854434,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 367,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-19T02:23:52.8496524+00:00",
+      "State": "Completed",
+      "RunnerPid": 52816,
+      "ChildPid": 59476,
+      "ChildStartedUtc": "2026-10-19T02:23:52.8526312Z",
+      "ExitCode": 0,
+      "Seconds": 4.8508763,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-selected-publication-cost",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName=CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_selected_authority_keeps_unrelated_writers_responsive_during_actual_SQL_wait",
+        "--logger",
+        "trx;LogFileName=selected-publication-cost.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-selected-publication-cost-validation"
+      ],
+      "StartedUtc": "2026-10-19T02:24:44.9592282+00:00",
+      "State": "Completed",
+      "RunnerPid": 59676,
+      "ChildPid": 58948,
+      "ChildStartedUtc": "2026-10-19T02:24:44.9958610Z",
+      "ExitCode": 1,
+      "Seconds": 27.4304863,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 5823,
+      "StderrRetainedBytes": 218,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-chat-browser-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-publication-cost-validation/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-19T02:24:26.6797200+00:00",
+      "State": "Completed",
+      "RunnerPid": 54836,
+      "ChildPid": 10620,
+      "ChildStartedUtc": "2026-10-19T02:24:26.6987056Z",
+      "ExitCode": 0,
+      "Seconds": 46.0903686,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-selected-publication-cost-validation/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-19T02:20:00.7115588+00:00",
+      "State": "Completed",
+      "RunnerPid": 60336,
+      "ChildPid": 58028,
+      "ChildStartedUtc": "2026-10-19T02:20:00.7143989Z",
+      "ExitCode": 0,
+      "Seconds": 0.4609023,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-selected-publication-cost-validation/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-19T02:18:47.9156804+00:00",
+      "State": "Completed",
+      "RunnerPid": 60336,
+      "ChildPid": 52724,
+      "ChildStartedUtc": "2026-10-19T02:18:47.9435605Z",
+      "ExitCode": 0,
+      "Seconds": 72.7417484,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 469,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-final",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-19T02:23:50.6795394+00:00",
+      "State": "Completed",
+      "RunnerPid": 52816,
+      "ChildPid": 57596,
+      "ChildStartedUtc": "2026-10-19T02:23:50.7100507Z",
+      "ExitCode": 0,
+      "Seconds": 2.1167655,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "3c64f6be-e449-44cc-b06d-33342f754206",
+      "testId": "35af77f5-55bc-712e-4e0b-77846d6d92b8",
+      "testName": "CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_selected_authority_keeps_unrelated_writers_responsive_during_actual_SQL_wait",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:25.2928164",
+      "startTime": "2026-10-18T22:24:46.8876127-04:00",
+      "endTime": "2026-10-18T22:25:12.1951160-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3c64f6be-e449-44cc-b06d-33342f754206",
+      "trx": "selected-publication-cost.trx",
+      "error": "\n          \nAssert.All() Failure: 2 out of 7 items in the collection did not pass.\r\n[3]: Item:  OperationSample { Name = same-grant, StartedAtMilliseconds = 475,0055, EndedAtMilliseconds = 1628,8823, ElapsedMilliseconds = 1153,8768, CompletedWhileSqlHolderPresent = True, FailureType = CanDoItAll.AgentFramework.Core.SandboxWorkspaceConcurrencyException }\r\n     Error: Assert.Null() Failure: Value is not null\r\n            Expected: null\r\n            Actual:   \"CanDoItAll.AgentFramework.Core.SandboxWorkspaceCon\"···\r\n[6]: Item:  OperationSample { Name = independent-grant, StartedAtMilliseconds = 548,924, EndedAtMilliseconds = 1173,6483, ElapsedMilliseconds = 624,7243000000001, CompletedWhileSqlHolderPresent = True, FailureType = CanDoItAll.AgentFramework.Core.SandboxWorkspaceConcurrencyException }\r\n     Error: Assert.Null() Failure: Value is not null\r\n            Expected: null\r\n            Actual:   \"CanDoItAll.AgentFramework.Core.SandboxWorkspaceCon\"···\n\n          \n   at CanDoItAll.Tests.Integration.AgentPlanningPublicationCostFixture.MeasureAsync() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentPlanningPublicationCostFixture.cs:line 198\r\n   at CanDoItAll.Tests.Integration.AgentPlanningPublicationCostFixture.MeasureAsync() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentPlanningPublicationCostFixture.cs:line 215\r\n   at CanDoItAll.Tests.Integration.AgentPlanningPublicationCostFixture.MeasureAsync() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentPlanningPublicationCostFixture.cs:line 215\r\n   at CanDoItAll.Tests.Integration.AgentPlanningPublicationCostFixture.RunAsync(AgentPlanningPublicationGuard guard) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentPlanningPublicationCostFixture.cs:line 63\r\n   at CanDoItAll.Tests.Integration.AgentPlanningPublicationCostFixture.RunAsync(AgentPlanningPublicationGuard guard) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentPlanningPublicationCostFixture.cs:line 92\r\n--- End of stack trace from previous location ---\n\n        "
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "snapshotId": "snap-20261019021109-85d8bb99",
+      "baselineSnapshot": "snap-20261019015722-85d8bb99",
+      "documents": 408,
+      "types": 1729,
+      "dependencies": 3515,
+      "cycles": [
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-1a990fe814d7",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-6783a14556a8",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9ad3f723b960",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9c7b9e7ebdc1",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-ddf87e625d14",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-fb60e0ed084c"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-5b51f78cf7ac",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-dde9fb0d855d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-persistence-candoita-8151ee395c7b",
+            "type-proj-candoitall-agentframework-persistence-candoita-ab270b8b396a"
+          ]
+        }
+      ],
+      "newCycles": [],
+      "nonAdvisoryWorkspaceErrors": [],
+      "scope": [
+        "CanDoItAll.AgentFramework.Core",
+        "CanDoItAll.AgentFramework.Models",
+        "CanDoItAll.AgentFramework.Persistence"
+      ]
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9157,
+      "runtimeFiles": 6436,
+      "sourceSha256": "7418ADEAAA85225A8F2D44AAE5291DB75A2A6B258A78E5B66475461771F2F63D",
+      "runtimeSha256": "AB506F70C23BC44CC5B2C417524D7418AC844A9E68450A3E9FF0699ABB289393"
+    },
+    "final-resource-reconciliation.json": {
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "postgres|1"
+      ],
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\c66542a2-c94d-40aa-ad28-3e796613582e.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\1fw1l3wt.qeb",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\kdbawanl.pjg",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\d8153ece-da38-41a9-9e12-d73b5c97b67a.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_58948_20261018_222445_184.log",
+          "family": "anonymous-and-package-temp-files"
+        }
+      ],
+      "databaseNameDelta": [],
+      "outcome": "Selected authority cost failed: grant writers conflicted and one-second criterion exceeded; fixture cleanup complete, failed measurement retained",
+      "remainingObservedProcesses": [],
+      "recordedUtc": "2026-10-19T02:25:51.4934502+00:00"
+    },
+    "production-bridge.json": {
+      "previousCandidate": "c4-planning-authority-validation",
+      "unchangedProductionFiles": 5203,
+      "sourceIdentical": true,
+      "scope": "One selected authority cost case; all prior production paths and hashes unchanged"
+    },
+    "queryPlans": [],
+    "measurements": [
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\001-allocation-intent.json",
+        "data": {
+          "Phase": "allocation-intent",
+          "ObservedAtUtc": "2026-10-19T02:24:46.9201383+00:00",
+          "Evidence": {
+            "DatabasePrefix": "cditall_f400473b778348c38532_",
+            "MaximumDatabases": 1,
+            "EnvironmentParent": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-publication-cost-validation\\measurements\\selected-38fb04d5653f4369adc4a346d6a965fa",
+            "FileWorkspacePrefix": "tool-admission"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\002-environment.json",
+        "data": {
+          "Phase": "environment",
+          "ObservedAtUtc": "2026-10-19T02:24:46.9285655+00:00",
+          "Evidence": {
+            "RootPath": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-publication-cost-validation\\measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\coarse-sql\\203a1158fe564ec9a63f0212c5160410"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\003-database.json",
+        "data": {
+          "Phase": "database",
+          "ObservedAtUtc": "2026-10-19T02:24:47.2766178+00:00",
+          "Evidence": {
+            "DatabaseName": "cditall_f400473b778348c38532_233f19f384f6407bbc932f878831aab2",
+            "ProfileRootPath": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-publication-cost-validation\\measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\coarse-sql\\203a1158fe564ec9a63f0212c5160410\\profiles\\f400473b778348c38532"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\004-workspace.json",
+        "data": {
+          "Phase": "workspace",
+          "ObservedAtUtc": "2026-10-19T02:25:01.9228084+00:00",
+          "Evidence": {
+            "WorkspaceRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-publication-cost-validation\\measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\tool-admission\\63ea9dc9bd654c4a9eb2240805c497cf\\profiles\\primary\\workspace",
+            "Scope": "abb6e4ee121e3a72c76673eb61bfcdaa",
+            "RunBytes": 3669,
+            "CatalogBytes": 816071,
+            "RunSha256": "F350F457F808B4849D4CC2A3A696F39C0E164D4EC3ECC6D40A76DF722D6B1FC3",
+            "CatalogSha256": "73155E4375AFF385B18783B37A1EDB13DA726CAE5B0BC71687BC998A2854A439"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\005-workspace.json",
+        "data": {
+          "Phase": "workspace",
+          "ObservedAtUtc": "2026-10-19T02:25:06.479536+00:00",
+          "Evidence": {
+            "WorkspaceRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-publication-cost-validation\\measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\tool-admission\\ce02bc0b63a3401baeef53d5de79245e\\profiles\\primary\\workspace",
+            "Scope": "abb6e4ee121e3a72c76673eb61bfcdaa",
+            "RunBytes": 3669,
+            "CatalogBytes": 816071,
+            "RunSha256": "98752DF61F54F27EA405886014EBF109D1B696722FEA21D843533D55CA4B75B7",
+            "CatalogSha256": "CDD10F534A78C813BD345DC89595C24B931E1ACEAA35213E79B616357D64C5AE"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\006-cohort.json",
+        "data": {
+          "Phase": "cohort",
+          "ObservedAtUtc": "2026-10-19T02:25:12.0402022+00:00",
+          "Evidence": {
+            "observation": {
+              "TasksRequested": 1,
+              "HolderPid": 127863,
+              "PublisherPid": 127928,
+              "ActualBlockingObservedAtMilliseconds": 421.5806,
+              "HolderReleasedAtMilliseconds": 5421.0338,
+              "EffectiveSqlCommandTimeoutSeconds": 15,
+              "CooperativeHolderBudgetSeconds": 30,
+              "Authority": {
+                "Guard": "SelectedAgent",
+                "Entered": 2664898639894,
+                "Acquired": 2664901839252,
+                "Released": 2664952251922,
+                "AcquireMilliseconds": 319.9358,
+                "HeldMilliseconds": 5041.267
+              },
+              "OutcomeType": "Rejected",
+              "Rejection": "Unavailable",
+              "ProcessAllocatedBytes": 200449408,
+              "AllocationScope": "whole cohort process-wide, not per-operation allocations or peak memory",
+              "ObservedWorkbenchEfCommands": 10,
+              "SqlCoverage": "Workbench interceptor only; raw ADO lifecycle/other enlisted commands excluded; not network roundtrips",
+              "LogicalRunReadBytes": 3669,
+              "PhysicalDeviceIoMeasured": false,
+              "FileReadCoverage": "Single saved run-file size only; repeated owner reads, pending scans and catalog bytes excluded"
+            },
+            "samples": [
+              {
+                "Name": "publisher",
+                "StartedAtMilliseconds": 0.532,
+                "EndedAtMilliseconds": 5415.9764,
+                "ElapsedMilliseconds": 5415.444399999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-checkpoint",
+                "StartedAtMilliseconds": 424.4586,
+                "EndedAtMilliseconds": 1194.1804,
+                "ElapsedMilliseconds": 769.7218,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-cancel",
+                "StartedAtMilliseconds": 452.8325,
+                "EndedAtMilliseconds": 1609.758,
+                "ElapsedMilliseconds": 1156.9255,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-grant",
+                "StartedAtMilliseconds": 475.0055,
+                "EndedAtMilliseconds": 1628.8823,
+                "ElapsedMilliseconds": 1153.8768,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": "CanDoItAll.AgentFramework.Core.SandboxWorkspaceConcurrencyException"
+              },
+              {
+                "Name": "independent-checkpoint",
+                "StartedAtMilliseconds": 495.1734,
+                "EndedAtMilliseconds": 1152.1365,
+                "ElapsedMilliseconds": 656.9631,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-cancel",
+                "StartedAtMilliseconds": 528.1407,
+                "EndedAtMilliseconds": 1683.938,
+                "ElapsedMilliseconds": 1155.7973000000002,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-grant",
+                "StartedAtMilliseconds": 548.924,
+                "EndedAtMilliseconds": 1173.6483,
+                "ElapsedMilliseconds": 624.7243000000001,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": "CanDoItAll.AgentFramework.Core.SandboxWorkspaceConcurrencyException"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\007-cleanup.json",
+        "data": {
+          "Phase": "cleanup",
+          "ObservedAtUtc": "2026-10-19T02:25:12.1761775+00:00",
+          "Evidence": {
+            "Confirmed": true,
+            "AllocationUnknown": false,
+            "Failures": []
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa\\008-result.json",
+        "data": {
+          "Phase": "result",
+          "ObservedAtUtc": "2026-10-19T02:25:12.1795806+00:00",
+          "Evidence": {
+            "SourceOnlyReference": "actual SelectedAgent exclusion, synthetic task-plan authority; no live-provider provenance",
+            "observation": {
+              "TasksRequested": 1,
+              "HolderPid": 127863,
+              "PublisherPid": 127928,
+              "ActualBlockingObservedAtMilliseconds": 421.5806,
+              "HolderReleasedAtMilliseconds": 5421.0338,
+              "EffectiveSqlCommandTimeoutSeconds": 15,
+              "CooperativeHolderBudgetSeconds": 30,
+              "Authority": {
+                "Guard": "SelectedAgent",
+                "Entered": 2664898639894,
+                "Acquired": 2664901839252,
+                "Released": 2664952251922,
+                "AcquireMilliseconds": 319.9358,
+                "HeldMilliseconds": 5041.267
+              },
+              "OutcomeType": "Rejected",
+              "Rejection": "Unavailable",
+              "ProcessAllocatedBytes": 200449408,
+              "AllocationScope": "whole cohort process-wide, not per-operation allocations or peak memory",
+              "ObservedWorkbenchEfCommands": 10,
+              "SqlCoverage": "Workbench interceptor only; raw ADO lifecycle/other enlisted commands excluded; not network roundtrips",
+              "LogicalRunReadBytes": 3669,
+              "PhysicalDeviceIoMeasured": false,
+              "FileReadCoverage": "Single saved run-file size only; repeated owner reads, pending scans and catalog bytes excluded"
+            },
+            "samples": [
+              {
+                "Name": "publisher",
+                "StartedAtMilliseconds": 0.532,
+                "EndedAtMilliseconds": 5415.9764,
+                "ElapsedMilliseconds": 5415.444399999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-checkpoint",
+                "StartedAtMilliseconds": 424.4586,
+                "EndedAtMilliseconds": 1194.1804,
+                "ElapsedMilliseconds": 769.7218,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-cancel",
+                "StartedAtMilliseconds": 452.8325,
+                "EndedAtMilliseconds": 1609.758,
+                "ElapsedMilliseconds": 1156.9255,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-grant",
+                "StartedAtMilliseconds": 475.0055,
+                "EndedAtMilliseconds": 1628.8823,
+                "ElapsedMilliseconds": 1153.8768,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": "CanDoItAll.AgentFramework.Core.SandboxWorkspaceConcurrencyException"
+              },
+              {
+                "Name": "independent-checkpoint",
+                "StartedAtMilliseconds": 495.1734,
+                "EndedAtMilliseconds": 1152.1365,
+                "ElapsedMilliseconds": 656.9631,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-cancel",
+                "StartedAtMilliseconds": 528.1407,
+                "EndedAtMilliseconds": 1683.938,
+                "ElapsedMilliseconds": 1155.7973000000002,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-grant",
+                "StartedAtMilliseconds": 548.924,
+                "EndedAtMilliseconds": 1173.6483,
+                "ElapsedMilliseconds": 624.7243000000001,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": "CanDoItAll.AgentFramework.Core.SandboxWorkspaceConcurrencyException"
+              }
+            ],
+            "ReferenceResponsivenessPassed": false,
+            "WorkloadFailureType": "Xunit.Sdk.AllException",
+            "CleanupFailureType": null,
+            "CleanupConfirmed": true,
+            "CapacityQualified": false,
+            "Limit": "One forced small-file cohort; no normal p95, maximum-size, sustained-load or fairness qualification"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-38fb04d5653f4369adc4a346d6a965fa.intent.json",
+        "data": {
+          "Owner": "AgentPlanningPublicationCostTests",
+          "Guard": "SelectedAgent",
+          "RowRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-publication-cost-validation\\measurements\\selected-38fb04d5653f4369adc4a346d6a965fa",
+          "ProcessId": 52808,
+          "RecordedAtUtc": "2026-10-19T02:24:46.8938884+00:00",
+          "CooperativeRowSeconds": 600,
+          "Profile": "small-file/one-task/one-forced-SQL-wait",
+          "MaximumPostgresLeases": 1,
+          "MaximumFileWorkspaces": 2
+        }
+      }
+    ]
+  }
+}

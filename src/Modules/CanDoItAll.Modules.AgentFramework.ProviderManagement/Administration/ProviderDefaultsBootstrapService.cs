@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-public sealed class ProviderDefaultsBootstrapService {
+public sealed class ProviderDefaultsBootstrapService(DatasetActivationService activation) {
     private static readonly Guid RuntimeBootstrapOpenAiProviderId = Guid.Parse("C1C103DB-707E-3F52-8809-8D804FC171D1");
     private static readonly Guid RuntimeBootstrapOpenAiChatCompletionsProviderId = Guid.Parse("036B360A-E3F4-8350-97CA-F88DE60BA2BB");
     private static readonly Guid RuntimeBootstrapOpenAiImageProviderId = Guid.Parse("8958FA61-4BD6-1451-8123-4E4E4FEA2E26");
@@ -46,18 +46,38 @@ public sealed class ProviderDefaultsBootstrapService {
         var dbContext = new ProvidersDbContext(options.Options);
         IDbContextTransaction? transaction = null;
         try {
-            if (dbContext.Database.IsRelational()) {
+            if (dbContext.Database.IsNpgsql()) {
+                var binding = await activation.ReadActiveBindingAsync(profile.Profile.Id, cancellationToken);
                 transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+                await dbContext.Database.ExecuteSqlRawAsync("""
+                    SELECT set_config('transaction_timeout', '15s', true),
+                        set_config('statement_timeout', '5s', true), set_config('lock_timeout', '2s', true)
+                    """, cancellationToken);
+                await DatasetLifecycleStore.RequireActiveForMutationAsync(dbContext, binding, cancellationToken);
+            } else if (!dbContext.Database.IsInMemory()) {
+                throw new NotSupportedException("Provider bootstrap requires PostgreSQL or an explicit InMemory fixture.");
             }
             var (providerId, changed) = await PrepareProvidersAsync(dbContext, openAiSecretId, cancellationToken);
             return new ProviderDefaultsBootstrapStage(dbContext, transaction,
                 CoordinatedDatabaseTransaction.ForProfile(profile),
                 RuntimeBootstrapOpenAiProviderId, providerId, changed);
-        } catch {
+        } catch (Exception primary) {
+            List<Exception> failures = [primary];
             if (transaction is not null) {
-                await transaction.DisposeAsync();
+                try {
+                    await transaction.DisposeAsync();
+                } catch (Exception cleanup) {
+                    failures.Add(cleanup);
+                }
             }
-            await dbContext.DisposeAsync();
+            try {
+                await dbContext.DisposeAsync();
+            } catch (Exception cleanup) {
+                failures.Add(cleanup);
+            }
+            if (failures.Count > 1) {
+                throw new AggregateException("Provider bootstrap preparation failed and cleanup requires review.", failures);
+            }
             throw;
         }
     }

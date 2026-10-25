@@ -13,16 +13,13 @@
             <Alert AlertStyle="AlertStyle.Info" data-testid="resources-promotion-success">
                 <TextBlock TextStyle="TextStyle.Body2" Value="@($"{receipt.Command.Selection.Source.DisplayName} / {receipt.Command.Selection.Item.Name} → {receipt.Command.Name} · {receipt.State}")" />
                 <TextBlock TextStyle="TextStyle.Caption" Value="@receipt.Message" />
-                @if (receipt.Observation is { } observation) {
+                @if (receipt.Snapshot is { } snapshot) {
                     <Cluster Gap="LayoutGap.Small">
-                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Resource {observation.ResourceId:D} · revision {observation.ScopeRevision?.ToString() ?? "unavailable"}")" />
-                        <Button Text="Open stored object" Icon="open_in_new" Size="ButtonSize.Small" data-testid="resources-open-stored-object" Click="() => Workspace.OpenResourceAsync(observation.ResourceId)" />
+                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Stored: {snapshot.Values.Name} · {snapshot.Values.Sensitivity} · source revision {receipt.ScopeRevision?.ToString() ?? "unavailable"}")" />
+                        <Button Text="Open stored object" Icon="open_in_new" Size="ButtonSize.Small" data-testid="resources-open-stored-object" Click="() => Workspace.OpenResourceAsync(snapshot.Expected.ResourceId)" />
                     </Cluster>
                 } else if (receipt.State == ResourceEffectState.Unknown) {
-                    <Cluster Gap="LayoutGap.Small">
-                        <TextBox Value="@ReviewId(receipt.Id)" ValueChanged="value => reviewIds[receipt.Id] = value" Immediate="true" Placeholder="Exact resource ID to review" />
-                        <Button Text="Review identity" Disabled="@(receipt.IsReviewing || !Guid.TryParse(ReviewId(receipt.Id), out _))" Click="() => ReviewAsync(receipt)" />
-                    </Cluster>
+                    <Button Text="Review candidate identity" Disabled="@receipt.IsReviewing" Click="() => Workspace.ReviewPromotionAsync(receipt, receipt.Command.ResourceId)" />
                 }
             </Alert>
         }
@@ -36,12 +33,4 @@
 
 @code {
     [Parameter, EditorRequired] public IResourceBrowseWorkspace Workspace { get; set; } = default!;
-    private readonly Dictionary<Guid, string> reviewIds = [];
-    protected override void OnParametersSet() {
-        foreach (var id in reviewIds.Keys.Where(id => !Workspace.Promotions.Any(receipt => receipt.Id == id)).ToArray()) {
-            reviewIds.Remove(id);
-        }
-    }
-    private string ReviewId(Guid id) => reviewIds.GetValueOrDefault(id, string.Empty);
-    private Task ReviewAsync(ResourcePromotionReceipt receipt) => Guid.TryParse(ReviewId(receipt.Id), out var id) ? Workspace.ReviewPromotionAsync(receipt, id) : Task.CompletedTask;
 }

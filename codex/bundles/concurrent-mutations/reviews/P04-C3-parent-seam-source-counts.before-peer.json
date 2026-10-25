@@ -1,0 +1,400 @@
+{
+  "sourceOnly": true,
+  "ordinaryRows": 187,
+  "classes": [
+    {
+      "assembly": "Unit",
+      "class": "ProjectTaskPlanOperationContractTests",
+      "facts": 10,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 10,
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTaskPlanOperationContractTests.cs",
+          "sha256": "5820E72EC2AC62FE466BB023BC0AF1E8BE62EAF592C865EC54E5C1231D0C1EF9"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Unit",
+      "class": "ProjectTaskPlanBasisTests",
+      "facts": 12,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 12,
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTaskPlanBasisTests.cs",
+          "sha256": "5219F0BD3683F1FE86BF218C86D74151ECDB6D22D1D5C8D031FD79FF3DA2F0BA"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.ProjectTaskPlanBasisTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.ProjectTaskPlanBasisTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Unit",
+      "class": "ProjectTaskPlanTaskStagingTests",
+      "facts": 10,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 10,
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTaskPlanTaskStagingTests.cs",
+          "sha256": "AEDD2836FA296F62714E3EFB119B387E9BE2BD5E7BF83AB2BA10F2F59A51B6B7"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.ProjectTaskPlanTaskStagingTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.ProjectTaskPlanTaskStagingTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Unit",
+      "class": "ProjectTransferTargetStateArchitectureTests",
+      "facts": 3,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 3,
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTransferTargetStateArchitectureTests.cs",
+          "sha256": "C9507945024E82EECD0A9168741DF44AF436DF26030E28AA678FAC9848252814"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.Projects.ProjectTransferTargetStateArchitectureTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.Projects.ProjectTransferTargetStateArchitectureTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Unit",
+      "class": "FiniteOperationContractTests",
+      "facts": 8,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 8,
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/FiniteOperationContractTests.cs",
+          "sha256": "E0D4357112B04D9D2B0D3952F5E9269CE9EF1FB92A3E41E5EA895DD4A9FBD42E"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.FiniteOperationContractTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.FiniteOperationContractTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Unit",
+      "class": "DatasetActivationCommandTests",
+      "facts": 1,
+      "theories": 2,
+      "inlineRows": 12,
+      "dynamicProviders": 0,
+      "expected": 13,
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/DatasetActivationCommandTests.cs",
+          "sha256": "532D7D80976C642F7D86978507CAD782FEDE41FF3458980CA7FAF4107984484F"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.DatasetActivationCommandTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.DatasetActivationCommandTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Unit",
+      "class": "DatabaseCanonicalityArchitectureTests",
+      "facts": 4,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 4,
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/DatabaseCanonicalityArchitectureTests.cs",
+          "sha256": "97663717B6F7A801BDDBAEEBA14C053876C6E4F76C7087A5DDF82DE68999F0CC"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.Infrastructure.DatabaseCanonicalityArchitectureTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.Infrastructure.DatabaseCanonicalityArchitectureTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "ProjectTaskPlanOperationTests",
+      "facts": 14,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 14,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationTests.cs",
+          "sha256": "9D2C378F8FC0D211CF894FC1AA0D478AD9ACA49DA70B2C75D30D016B6C97DC60"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "ProjectTaskPlanCurrentnessTests",
+      "facts": 12,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 12,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanCurrentnessTests.cs",
+          "sha256": "0E779345606AD3804932148664AC190190D585C162FA6B588106B73E13FFA707"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "ProjectTaskPlanRetentionTests",
+      "facts": 6,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 6,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanRetentionTests.cs",
+          "sha256": "5F5BBB16AA460CE66CA8680AB89F713858D772F59DF3C4A879499722DE3B9717"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "ProjectTaskPlanBasisCaptureTests",
+      "facts": 10,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 10,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanBasisCaptureTests.cs",
+          "sha256": "E76CCD790A53FCDE0C6F3407CD778110F97B329E211A3F04FDF338A9FED8CE2D"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanBasisCaptureTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanBasisCaptureTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "ProjectTaskPlanStagingPersistenceTests",
+      "facts": 6,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 6,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanStagingPersistenceTests.cs",
+          "sha256": "05EA03BA7FAB42F02E9A509F1360DA729D3DA76ABF135017B369EC3D85AF5545"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanStagingPersistenceTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanStagingPersistenceTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "WorkbenchOwnerPersistenceTests",
+      "facts": 5,
+      "theories": 1,
+      "inlineRows": 2,
+      "dynamicProviders": 0,
+      "expected": 7,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkbenchOwnerPersistenceTests.cs",
+          "sha256": "5B01AC873D61CB7D49C8E8A3260CC63394CB63FDD92AFF5B4D328F98DEF7CDE7"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.WorkbenchOwnerPersistenceTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.WorkbenchOwnerPersistenceTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "ProjectTransferOwnerInspectionTests",
+      "facts": 5,
+      "theories": 3,
+      "inlineRows": 12,
+      "dynamicProviders": 0,
+      "expected": 17,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTransferOwnerInspectionTests.cs",
+          "sha256": "8A8EF1B38D9F57707E2B52E966B302E11F621527E66A9DA76509B7B58A3B674B"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTransferOwnerInspectionTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTransferOwnerInspectionTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "SharedProviderPremergeUpgradeTests",
+      "facts": 1,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 1,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPremergeUpgradeTests.cs",
+          "sha256": "F5F5212326398718AFE86D1224D53501EBEE76AC3A6C990E4AB7397B6D8FBE85"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.SharedProviderPremergeUpgradeTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderPremergeUpgradeTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "SourceBoundExecutionAdmissionMigrationTests",
+      "facts": 4,
+      "theories": 1,
+      "inlineRows": 6,
+      "dynamicProviders": 0,
+      "expected": 10,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/SourceBoundExecutionAdmissionMigrationTests.cs",
+          "sha256": "486DDCA082537FAE1DCC4D3BF68A2DC6DB516F0AF8ED7D8ACCB32C388506C294"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.SourceBoundExecutionAdmissionMigrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.SourceBoundExecutionAdmissionMigrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "WorkAssignmentMigrationIntegrationTests",
+      "facts": 5,
+      "theories": 1,
+      "inlineRows": 5,
+      "dynamicProviders": 0,
+      "expected": 10,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkAssignmentMigrationIntegrationTests.cs",
+          "sha256": "635916BF983A28AC54C5A185495590BCBA86B0EC7A41BA1072507B8A1CE3E9B4"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.WorkAssignmentMigrationIntegrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.WorkAssignmentMigrationIntegrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "WorkflowReceiptMigrationIntegrationTests",
+      "facts": 2,
+      "theories": 1,
+      "inlineRows": 4,
+      "dynamicProviders": 0,
+      "expected": 6,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkflowReceiptMigrationIntegrationTests.cs",
+          "sha256": "47F6C2B60AF49B78381BF241DF7D6D934E0D31B3933269B35F2B8EF9DFF8F8E7"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.WorkflowReceiptMigrationIntegrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.WorkflowReceiptMigrationIntegrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "FiniteOperationMigrationTests",
+      "facts": 4,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 4,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FiniteOperationMigrationTests.cs",
+          "sha256": "8C45DD222DF2412BB56E9501302E3C832198A657FBEFAF631D52E142409ECC49"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.FiniteOperationMigrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.FiniteOperationMigrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "FiniteOperationPersistenceTests",
+      "facts": 12,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 12,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FiniteOperationPersistenceTests.cs",
+          "sha256": "D5D3EE8F3D491849908E9C80DD0BF2D3E7BAB9ECC80320A40DA475E63DA91212"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.FiniteOperationPersistenceTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.FiniteOperationPersistenceTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "DatasetActivationCoordinatorTests",
+      "facts": 9,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 9,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCoordinatorTests.cs",
+          "sha256": "17A4C9D9ABA5EC1CBC81DE0DBC8CB1059CF678F1EDDDFDE23AA84335CF661C59"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCoordinatorTests.PoolFence.cs",
+          "sha256": "1B5AD4EFFD2A9B91A9899E64AD23B6AE52C5AE35652FAFB62372935EE477545F"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "assembly": "Integration",
+      "class": "ProjectTaskPlanMigrationTests",
+      "facts": 3,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicProviders": 0,
+      "expected": 3,
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanMigrationTests.cs",
+          "sha256": "FAC6F304681502D1AE15B3B260D2DF81957C2334158B890C1B3AFBF5657BDC7F"
+        }
+      ],
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanMigrationTests",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanMigrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    }
+  ],
+  "separateLanes": [
+    {
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.DatasetActivationCommandProcessTests",
+      "expected": 2,
+      "category": "LiveProcess",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCommandProcessTests.cs",
+      "sha256": "D1DD712AEA79D7C64AD27416865809659B637B7CD86B66C78082141A8F5AA226"
+    },
+    {
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationPerformanceTests",
+      "expected": 1,
+      "category": "LongRunning",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationPerformanceTests.cs",
+      "sha256": "0796CE9A68F63525F3D3543CA7B79F1E83A5344ED11479EF50A7BD826F7363AB"
+    }
+  ]
+}

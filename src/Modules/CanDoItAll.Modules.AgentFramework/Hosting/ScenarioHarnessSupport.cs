@@ -45,7 +45,11 @@ internal sealed record ScenarioHarnessSnapshot(
         : LatestRun.State switch
         {
             ExecutionState.Completed => "Completed",
-            ExecutionState.WaitingOnTool => "Waiting on approval",
+            ExecutionState.WaitingOnTool when LatestDetail?.EffectContinuation is not null ||
+                LatestRun.ToolAdmission?.ToolContinuationRequirement is AgentToolContinuationRequirement.EffectReconciliationRequired or
+                    AgentToolContinuationRequirement.ProviderInputRequired => "Awaiting continuation",
+            ExecutionState.WaitingOnTool when HasPendingApprovals => "Waiting on approval",
+            ExecutionState.WaitingOnTool => "Waiting on tool",
             ExecutionState.Failed => "Failed",
             _ => LatestRun.State.ToString()
         };

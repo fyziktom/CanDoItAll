@@ -35,7 +35,7 @@ public sealed class ProjectsProfileTransferStore(DatabaseTransferOperationRunner
                 LifetimeId = row.LifetimeId, ProjectId = row.ProjectId, RetiredAtUtc = row.RetiredAtUtc, ImportedHistory = row.ImportedHistory
             }).ToArrayAsync(cancellationToken),
             await context.Set<ProjectCreationReservationRecord>().AsNoTracking().Select(row => new ProjectTransferReservation {
-                Id = row.Id, DatabaseProfileId = row.DatabaseProfileId, ProjectId = row.ProjectId, LifetimeId = row.LifetimeId, RequesterId = row.RequesterId, ParentProjectId = row.ParentProjectId, ParentLifetimeId = row.ParentLifetimeId, State = row.State, CreatedAtUtc = row.CreatedAtUtc, ConsumedAtUtc = row.ConsumedAtUtc, CancelledAtUtc = row.CancelledAtUtc, ImportedHistory = row.ImportedHistory
+                Id = row.Id, DatabaseProfileId = row.DatabaseProfileId, NamespaceId = row.NamespaceId, ProjectId = row.ProjectId, LifetimeId = row.LifetimeId, RequesterId = row.RequesterId, ParentProjectId = row.ParentProjectId, ParentLifetimeId = row.ParentLifetimeId, State = row.State, CreatedAtUtc = row.CreatedAtUtc, ConsumedAtUtc = row.ConsumedAtUtc, CancelledAtUtc = row.CancelledAtUtc, ImportedHistory = row.ImportedHistory
             }).ToArrayAsync(cancellationToken));
     }
 
@@ -43,8 +43,11 @@ public sealed class ProjectsProfileTransferStore(DatabaseTransferOperationRunner
         RequireMutation(session);
         await using var context = await CreateAsync(session, cancellationToken);
         if (await context.Set<ProjectRetirementRecord>().AnyAsync(cancellationToken) ||
-            await context.Set<ProjectCreationReservationRecord>().AnyAsync(cancellationToken)) {
-            throw new InvalidOperationException("Project transfer cannot replace retained project lifetime evidence.");
+            await context.Set<ProjectCreationReservationRecord>().AnyAsync(cancellationToken) ||
+            await context.Set<ProjectDefinitionReceiptRecord>().AnyAsync(cancellationToken) ||
+            await context.Set<ProjectLifecycleReceiptRecord>().AnyAsync(cancellationToken) ||
+            await context.Set<ProjectDeletionCompletionRecord>().AnyAsync(cancellationToken)) {
+            throw new InvalidOperationException("Project transfer cannot replace retained project lifetime or operation evidence.");
         }
         context.RemoveRange(await context.Set<ProjectHierarchyLink>().ToArrayAsync(cancellationToken));
         await context.SaveChangesAsync(cancellationToken);
@@ -85,7 +88,7 @@ public sealed class ProjectsProfileTransferStore(DatabaseTransferOperationRunner
         }));
         await context.SaveChangesAsync(cancellationToken);
         context.AddRange(data.CreationReservations.Select(row => new ProjectCreationReservationRecord {
-            Id = row.Id, DatabaseProfileId = row.DatabaseProfileId, ProjectId = row.ProjectId, LifetimeId = row.LifetimeId, RequesterId = row.RequesterId, ParentProjectId = row.ParentProjectId, ParentLifetimeId = row.ParentLifetimeId, State = row.State, CreatedAtUtc = row.CreatedAtUtc, ConsumedAtUtc = row.ConsumedAtUtc, CancelledAtUtc = row.CancelledAtUtc, ImportedHistory = row.ImportedHistory
+            Id = row.Id, DatabaseProfileId = row.DatabaseProfileId, NamespaceId = row.NamespaceId, ProjectId = row.ProjectId, LifetimeId = row.LifetimeId, RequesterId = row.RequesterId, ParentProjectId = row.ParentProjectId, ParentLifetimeId = row.ParentLifetimeId, State = row.State, CreatedAtUtc = row.CreatedAtUtc, ConsumedAtUtc = row.ConsumedAtUtc, CancelledAtUtc = row.CancelledAtUtc, ImportedHistory = row.ImportedHistory
         }));
         await context.SaveChangesAsync(cancellationToken);
     }

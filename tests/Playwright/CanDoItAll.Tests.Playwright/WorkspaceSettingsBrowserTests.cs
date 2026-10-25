@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -174,11 +176,209 @@ public sealed class WorkspaceSettingsBrowserTests(PlaywrightAppFixture fixture) 
     }
 
     [Fact]
+    public async Task Two_native_editors_preserve_the_stale_draft_and_require_explicit_current_based_reconciliation() {
+        Directory.CreateDirectory(Artifacts);
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(fixture.OwnedDatabaseProfile,
+            "Workspace.Settings.Conflict.Browser", TestSchemaBootstrapModules.Full,
+            new Dictionary<string, string?> { [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind });
+        await using var scope = provider.CreateAsyncScope();
+        var workspace = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
+        await using var firstContext = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
+        await using var secondContext = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
+        var first = await firstContext.NewPageAsync();
+        var second = await secondContext.NewPageAsync();
+        var firstErrors = Observe(first);
+        var secondErrors = Observe(second);
+        await first.GotoAsync(fixture.BaseUrl + "/settings");
+        await ShellReady(first);
+        await Assertions.Expect(first.GetByTestId("defaults-save")).ToBeEnabledAsync();
+        await second.GotoAsync(fixture.BaseUrl + "/settings");
+        await ShellReady(second);
+        await Assertions.Expect(second.GetByTestId("defaults-save")).ToBeEnabledAsync();
+        var original = await workspace.ReadSettingsSnapshotAsync();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var firstName = "First workspace " + suffix;
+        var localName = "Retained local workspace " + suffix;
+        var localNotes = "First local line\nSecond local line " + suffix;
+        await first.GetByTestId("defaults-name").FillAsync(firstName);
+        await second.GetByTestId("defaults-name").FillAsync(localName);
+        await second.GetByTestId("defaults-notes").FillAsync(localNotes);
+        await first.GetByTestId("defaults-save").ClickAsync();
+        await Assertions.Expect(first.GetByTestId("settings-operation").First).ToContainTextAsync("Committed");
+        var accepted = await workspace.ReadSettingsSnapshotAsync();
+        Assert.Equal(firstName, accepted.Values.WorkspaceName);
+        Assert.NotEqual(original.Expectation.Head!.Revision, accepted.Expectation.Head!.Revision);
+
+        await second.GetByTestId("defaults-save").ClickAsync();
+        await Assertions.Expect(second.GetByTestId("settings-operation").First).ToContainTextAsync("Refused");
+        await Assertions.Expect(second.GetByTestId("defaults-save")).ToBeDisabledAsync();
+        await Assertions.Expect(second.GetByTestId("defaults-name")).ToHaveValueAsync(localName);
+        await Assertions.Expect(second.GetByTestId("defaults-notes")).ToHaveValueAsync(localNotes);
+        Assert.Equal(accepted, await workspace.ReadSettingsSnapshotAsync());
+        await second.GetByTestId("defaults-read-current").ClickAsync();
+        await Assertions.Expect(second.GetByTestId("defaults-current-comparison")).ToContainTextAsync(firstName);
+        await Assertions.Expect(second.GetByTestId("defaults-name")).ToHaveValueAsync(localName);
+        await Assertions.Expect(second.GetByTestId("defaults-save")).ToBeDisabledAsync();
+        await Shot(second, "production-defaults-conflict");
+        await second.GetByTestId("defaults-reconcile").ClickAsync();
+        await Assertions.Expect(second.GetByTestId("defaults-name")).ToHaveValueAsync(firstName);
+        await Assertions.Expect(second.GetByTestId("defaults-previous-comparison")).ToContainTextAsync(localName);
+        await Assertions.Expect(second.GetByLabel("Previous local draft notes", new() { Exact = true })).ToHaveValueAsync(localNotes);
+        await Assertions.Expect(second.GetByTestId("defaults-save")).ToBeEnabledAsync();
+        await second.GetByTestId("defaults-name").FillAsync(localName);
+        await second.GetByTestId("defaults-notes").FillAsync(localNotes);
+        await second.GetByTestId("defaults-save").ClickAsync();
+        await Assertions.Expect(second.GetByTestId("settings-operation").First).ToContainTextAsync("Committed");
+        var reconciled = await workspace.ReadSettingsSnapshotAsync();
+        Assert.Equal(localName, reconciled.Values.WorkspaceName);
+        Assert.Equal(localNotes, reconciled.Values.Notes);
+        Assert.NotEqual(accepted.Expectation.Head.Revision, reconciled.Expectation.Head!.Revision);
+        await Assertions.Expect(second.GetByLabel("Previous local draft notes", new() { Exact = true })).ToHaveValueAsync(localNotes);
+        Assert.False(await second.EvaluateAsync<bool>("document.documentElement.scrollWidth > innerWidth"));
+        await Shot(second, "production-defaults-reconciled");
+        Assert.Empty(firstErrors);
+        Assert.Empty(secondErrors);
+    }
+
+    [Fact]
+    public async Task Complete_decision_policy_persists_reloads_and_keeps_a_conflicting_editors_original_draft() {
+        Directory.CreateDirectory(Artifacts);
+        ServiceProvider? provider = null;
+        IAsyncDisposable? serviceScope = null;
+        IBrowserContext? firstContext = null;
+        IBrowserContext? secondContext = null;
+        Exception? primary = null;
+        try {
+            provider = await TestApplicationBootstrap.BuildServiceProviderAsync(fixture.OwnedDatabaseProfile,
+                "Workspace.Settings.Policy.Browser", TestSchemaBootstrapModules.Full,
+                new Dictionary<string, string?> { [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind });
+            var scope = provider.CreateAsyncScope();
+            serviceScope = scope;
+            var workspace = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
+            firstContext = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
+            secondContext = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
+            var first = await firstContext.NewPageAsync();
+            var second = await secondContext.NewPageAsync();
+            var firstErrors = Observe(first);
+            var secondErrors = Observe(second);
+            await first.GotoAsync(fixture.BaseUrl + "/settings");
+            await ShellReady(first);
+            await Assertions.Expect(first.GetByTestId("defaults-save")).ToBeEnabledAsync();
+            await second.GotoAsync(fixture.BaseUrl + "/settings");
+            await ShellReady(second);
+            await Assertions.Expect(second.GetByTestId("defaults-save")).ToBeEnabledAsync();
+            var original = await workspace.ReadSettingsSnapshotV2Async();
+            var selected = new DecisionDataPolicy(ReadBasisMode.StepSnapshot, PublicationFreshness.RequireCurrent,
+                OnBasisChange.Replan, new(3, new TimeSpan(0, 7, 11), new TimeSpan(0, 2, 13)));
+            var stalePolicy = new DecisionDataPolicy(ReadBasisMode.RunSnapshot, PublicationFreshness.PinnedObservation,
+                OnBasisChange.Fail, new(0, new TimeSpan(0, 9, 17), new TimeSpan(0, 4, 19)));
+            var localNotes = "Retained policy draft " + Guid.NewGuid().ToString("N");
+            await FillPolicy(first, selected);
+            await FillPolicy(second, stalePolicy);
+            await second.GetByTestId("defaults-notes").FillAsync(localNotes);
+            await Assertions.Expect(first.GetByTestId("defaults-save")).ToContainTextAsync("Save defaults and policy");
+            await first.GetByTestId("defaults-save").ClickAsync();
+            await Assertions.Expect(first.GetByTestId("settings-operation").First).ToContainTextAsync("Committed");
+            var accepted = await workspace.ReadSettingsSnapshotV2Async();
+            Assert.Equal(selected, accepted.DecisionDataPolicy);
+            Assert.Equal(original.Values, accepted.Values);
+            Assert.Equal(original.Expectation.Namespace, accepted.Expectation.Namespace);
+            Assert.NotEqual(original.Expectation.Head?.Revision, accepted.Expectation.Head!.Revision);
+            if (original.Expectation.Head is { } originalHead) {
+                Assert.Equal(originalHead.Id, accepted.Expectation.Head.Id);
+            }
+            await first.ReloadAsync();
+            await ShellReady(first);
+            await ExpectPolicy(first, selected);
+            await Shot(first, "production-decision-policy-reloaded");
+
+            await second.GetByTestId("defaults-save").ClickAsync();
+            await Assertions.Expect(second.GetByTestId("settings-operation").First).ToContainTextAsync("Refused");
+            await Assertions.Expect(second.GetByTestId("defaults-save")).ToBeDisabledAsync();
+            await ExpectPolicy(second, stalePolicy);
+            await Assertions.Expect(second.GetByTestId("defaults-notes")).ToHaveValueAsync(localNotes);
+            Assert.Equal(accepted, await workspace.ReadSettingsSnapshotV2Async());
+            await second.GetByTestId("defaults-read-current").ClickAsync();
+            await Assertions.Expect(second.GetByTestId("defaults-current-comparison")).ToContainTextAsync("StepSnapshot; RequireCurrent; Replan; replans 3");
+            await ExpectPolicy(second, stalePolicy);
+            await Assertions.Expect(second.GetByTestId("defaults-notes")).ToHaveValueAsync(localNotes);
+            await Assertions.Expect(second.GetByTestId("defaults-save")).ToBeDisabledAsync();
+            Assert.Equal(accepted, await workspace.ReadSettingsSnapshotV2Async());
+            await Shot(second, "production-decision-policy-conflict");
+
+            await second.GetByTestId("defaults-reconcile").ClickAsync();
+            await ExpectPolicy(second, selected);
+            await Assertions.Expect(second.GetByTestId("defaults-previous-comparison")).ToContainTextAsync("RunSnapshot; PinnedObservation; Fail; replans 0");
+            await Assertions.Expect(second.GetByLabel("Previous local draft notes", new() { Exact = true })).ToHaveValueAsync(localNotes);
+            await Assertions.Expect(second.GetByTestId("defaults-save")).ToBeEnabledAsync();
+            await FillPolicy(second, stalePolicy);
+            await second.GetByTestId("defaults-notes").FillAsync(localNotes);
+            await second.GetByTestId("defaults-save").ClickAsync();
+            await Assertions.Expect(second.GetByTestId("settings-operation").First).ToContainTextAsync("Committed");
+            var reconciled = await workspace.ReadSettingsSnapshotV2Async();
+            Assert.Equal(stalePolicy, reconciled.DecisionDataPolicy);
+            Assert.Equal(new WorkspaceSettingsValues(accepted.Values.WorkspaceName, accepted.Values.DefaultProviderProfileId,
+                accepted.Values.DefaultPromptOutputFormat, accepted.Values.CurrencyCode, accepted.Values.CurrencyCultureName, localNotes), reconciled.Values);
+            Assert.Equal(accepted.Expectation.Namespace, reconciled.Expectation.Namespace);
+            Assert.Equal(accepted.Expectation.Head.Id, reconciled.Expectation.Head!.Id);
+            Assert.NotEqual(accepted.Expectation.Head.Revision, reconciled.Expectation.Head.Revision);
+            await second.ReloadAsync();
+            await ShellReady(second);
+            await ExpectPolicy(second, stalePolicy);
+            await Assertions.Expect(second.GetByTestId("defaults-notes")).ToHaveValueAsync(localNotes);
+            await Shot(second, "production-decision-policy-reconciled");
+            Assert.Empty(firstErrors);
+            Assert.Empty(secondErrors);
+            await File.WriteAllTextAsync(Path.Combine(Artifacts, "decision-policy-proof.json"), JsonSerializer.Serialize(new {
+                Original = original, ObservedAfterFirstSave = accepted, ObservedAfterExplicitReconciliation = reconciled,
+                ConflictPreservedPolicyAndNotes = true, CurrentReadDidNotAuthorizeRetry = true,
+                ReloadVerifiedAllSixPolicyFields = true, RuntimePolicyEnforcementTested = false
+            }, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }));
+        } catch (Exception failure) {
+            primary = failure;
+            throw;
+        } finally {
+            List<Exception> cleanup = [];
+            IAsyncDisposable?[] owned = [secondContext, firstContext, serviceScope, provider];
+            foreach (var resource in owned) {
+                if (resource is null) {
+                    continue;
+                }
+                try {
+                    await resource.DisposeAsync();
+                } catch (Exception failure) {
+                    cleanup.Add(failure);
+                }
+            }
+            if (cleanup.Count != 0) {
+                throw new AggregateException(primary is null ? cleanup : [primary, .. cleanup]);
+            }
+        }
+
+        static async Task FillPolicy(IPage page, DecisionDataPolicy policy) {
+            await page.GetByTestId("defaults-policy-read").SelectOptionAsync(policy.ReadBasisMode.ToString());
+            await page.GetByTestId("defaults-policy-freshness").SelectOptionAsync(policy.PublicationFreshness.ToString());
+            await page.GetByTestId("defaults-policy-change").SelectOptionAsync(policy.OnBasisChange.ToString());
+            await page.GetByTestId("defaults-policy-replans").FillAsync(policy.Budget.MaximumReplans.ToString(CultureInfo.InvariantCulture));
+            await page.GetByTestId("defaults-policy-work").FillAsync(policy.Budget.MaximumWorkDuration.ToString("c", CultureInfo.InvariantCulture));
+            await page.GetByTestId("defaults-policy-age").FillAsync(policy.Budget.MaximumBasisAge.ToString("c", CultureInfo.InvariantCulture));
+        }
+        static async Task ExpectPolicy(IPage page, DecisionDataPolicy policy) {
+            await Assertions.Expect(page.GetByTestId("defaults-policy-read")).ToHaveValueAsync(policy.ReadBasisMode.ToString());
+            await Assertions.Expect(page.GetByTestId("defaults-policy-freshness")).ToHaveValueAsync(policy.PublicationFreshness.ToString());
+            await Assertions.Expect(page.GetByTestId("defaults-policy-change")).ToHaveValueAsync(policy.OnBasisChange.ToString());
+            await Assertions.Expect(page.GetByTestId("defaults-policy-replans")).ToHaveValueAsync(policy.Budget.MaximumReplans.ToString(CultureInfo.InvariantCulture));
+            await Assertions.Expect(page.GetByTestId("defaults-policy-work")).ToHaveValueAsync(policy.Budget.MaximumWorkDuration.ToString("c", CultureInfo.InvariantCulture));
+            await Assertions.Expect(page.GetByTestId("defaults-policy-age")).ToHaveValueAsync(policy.Budget.MaximumBasisAge.ToString("c", CultureInfo.InvariantCulture));
+        }
+    }
+
+    [Fact]
     public async Task Standalone_sandbox_preserves_focus_and_uses_real_secret_and_policy_controls() {
         Directory.CreateDirectory(Artifacts);
         await using var host = new WorkspaceSandboxHost();
         await host.ReadyAsync();
-        await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1600, Height = 1000 } });
+        await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
         var page = await context.NewPageAsync();
         var errors = Observe(page);
         await page.GotoAsync(host.BaseUrl);

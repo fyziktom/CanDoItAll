@@ -10,6 +10,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
@@ -31,6 +32,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
@@ -2209,10 +2211,10 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(row => row.AttributionScopeKind, WorkspaceScopeKind.Project)
                 .SetProperty(row => row.AttributionScopeKey, attributedProjectId.ToString("D")));
-        var handler = CreateTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
+        var handler = await CreateTransferHandlerAsync(target, new LlmChatTransferOptions(), TimeProvider.System);
         var context = new DatabaseTransferOperation(
-            CreateProfile(source.ConnectionString),
-            CreateProfile(target.ConnectionString),
+            source.Profile,
+            target.Profile,
             ReplaceExisting: true);
 
         var result = await handler.TransferAsync(context);
@@ -2275,9 +2277,9 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         row.HistoryAttemptsJson = System.Text.Json.JsonSerializer.Serialize(new[] { HistoryAttemptEvidence.Create(foreign.Start(), foreign.Completion()) });
         await sourceContext.SaveChangesAsync();
         await using var targetContext = target.CreateDbContext();
-        var handler = CreateTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
+        var handler = await CreateTransferHandlerAsync(target, new LlmChatTransferOptions(), TimeProvider.System);
         await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(new(
-            CreateProfile(source.ConnectionString), CreateProfile(target.ConnectionString), true)));
+            source.Profile, target.Profile, true)));
         await using var verification = target.CreateDbContext();
         Assert.Empty(await verification.Set<LlmChatConversationRow>().ToListAsync());
         Assert.Empty(await verification.Set<HistoryOutboxRow>().ToListAsync());
@@ -2292,9 +2294,10 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var result = await CreateTransferHandler(new LlmChatTransferOptions(), TimeProvider.System).TransferAsync(new DatabaseTransferOperation(
-            CreateProfile(source.ConnectionString),
-            CreateProfile(target.ConnectionString),
+        var handler = await CreateTransferHandlerAsync(target, new LlmChatTransferOptions(), TimeProvider.System);
+        var result = await handler.TransferAsync(new DatabaseTransferOperation(
+            source.Profile,
+            target.Profile,
             ReplaceExisting: true));
 
         Assert.True(result.Success, result.Message);
@@ -2327,10 +2330,10 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var handler = CreateTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
+        var handler = await CreateTransferHandlerAsync(target, new LlmChatTransferOptions(), TimeProvider.System);
         var transfer = new DatabaseTransferOperation(
-            CreateProfile(source.ConnectionString),
-            CreateProfile(target.ConnectionString),
+            source.Profile,
+            target.Profile,
             ReplaceExisting: true);
 
         await sourceContext.Set<LlmChatOperationRow>()
@@ -2402,7 +2405,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         _ = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var handler = CreateTransferHandler(new LlmChatTransferOptions
+        var handler = await CreateTransferHandlerAsync(target, new LlmChatTransferOptions
         {
             MaximumRecordsPerCollection = 1,
             MaximumTotalRecords = 9
@@ -2410,8 +2413,8 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
 
         var exception = await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(
             new DatabaseTransferOperation(
-                CreateProfile(source.ConnectionString),
-                CreateProfile(target.ConnectionString),
+                source.Profile,
+                target.Profile,
                 ReplaceExisting: true)));
 
         Assert.Contains("definition revisions", exception.Message, StringComparison.Ordinal);
@@ -2451,12 +2454,12 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         });
         await using var sourceContext = source.CreateDbContext(interceptor);
         await using var targetContext = target.CreateDbContext();
-        var transfer = new DatabaseTransferOperation(CreateProfile(source.ConnectionString), CreateProfile(target.ConnectionString), true);
+        var transfer = new DatabaseTransferOperation(source.Profile, target.Profile, true);
         var sessions = new DatabaseTransferOwnerSessionRunner();
         var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions {
             MaximumRecordsPerCollection = 2,
             MaximumTotalRecords = 12
-        }, TimeProvider.System, DatabaseTransferTestSupport.For(transfer, sourceContext, targetContext, sessions), sessions);
+        }, TimeProvider.System, DatabaseTransferTestSupport.For(transfer, sourceContext, targetContext, sessions, activation: await target.ActivateDatasetAsync()), sessions);
         var result = await handler.TransferAsync(transfer);
 
         Assert.True(result.Success, result.Message);
@@ -2614,18 +2617,6 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         return new SeededGraph(definitionId, conversationId, operationId);
     }
 
-    private static ResolvedDatabaseProfile CreateProfile(string connectionString)
-        => new(
-            new DatabaseProfileRecord
-            {
-                Id = Guid.NewGuid(),
-                DisplayName = "Test",
-                ProviderKind = DatabaseProviderKind.PostgreSql,
-                SourceKind = DatabaseProfileSourceKind.PostgresConnection
-            },
-            DatabaseProfileResolutionSource.ExplicitOverride,
-            connectionString);
-
     private sealed class InsertAfterCountPreflightInterceptor(
         Func<CancellationToken, Task> insert) : DbCommandInterceptor
     {
@@ -2656,9 +2647,11 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         }
     }
 
-    private static LlmChatsDatabaseTransferHandler CreateTransferHandler(LlmChatTransferOptions options, TimeProvider clock) {
+    private static async Task<LlmChatsDatabaseTransferHandler> CreateTransferHandlerAsync(
+        LlmChatsPostgreSqlTestDatabase target, LlmChatTransferOptions options, TimeProvider clock) {
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        return new(options, clock, DatabaseTransferTestSupport.Create(sessions), sessions);
+        var activation = await target.ActivateDatasetAsync();
+        return new(options, clock, DatabaseTransferTestSupport.Create(sessions, activation: activation), sessions);
     }
 
     private sealed record SeededGraph(Guid DefinitionId, Guid ConversationId, Guid OperationId);
@@ -2667,13 +2660,22 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
 internal sealed class LlmChatsPostgreSqlTestDatabase : IAsyncDisposable
 {
     private readonly PostgresTestDatabaseLease lease;
+    private CanDoItAllTestEnvironment? activationEnvironment;
+    private DatasetActivationService? activation;
 
-    private LlmChatsPostgreSqlTestDatabase(PostgresTestDatabaseLease lease)
-    {
+    private LlmChatsPostgreSqlTestDatabase(PostgresTestDatabaseLease lease) {
         this.lease = lease;
+        Profile = new(new DatabaseProfileRecord {
+            Id = Guid.NewGuid(),
+            DisplayName = "Simple Chat test database",
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+            PostgreSql = new() { DatabaseName = lease.DatabaseName }
+        }, DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString);
     }
 
     public string ConnectionString => lease.ConnectionString;
+    public ResolvedDatabaseProfile Profile { get; }
 
     public static async Task<LlmChatsPostgreSqlTestDatabase> CreateAsync(string key)
     {
@@ -2707,8 +2709,27 @@ internal sealed class LlmChatsPostgreSqlTestDatabase : IAsyncDisposable
         return new AppDbContext(options);
     }
 
-    public ValueTask DisposeAsync()
-        => lease.DisposeAsync();
+    internal async Task<DatasetActivationService> ActivateDatasetAsync() {
+        if (activation is not null) {
+            return activation;
+        }
+        activationEnvironment ??= CanDoItAllTestEnvironment.Create("llm-transfer-dataset-activation");
+        var candidate = DatabaseTransferTestSupport.CreateActivationService(activationEnvironment);
+        await new DatasetActivationCoordinator(candidate, [ProjectFiniteOperationPool.Create(new())])
+            .EnsureReadyAsync(Profile);
+        activation = candidate;
+        return candidate;
+    }
+
+    public async ValueTask DisposeAsync() {
+        try {
+            await lease.DisposeAsync();
+        } finally {
+            if (activationEnvironment is not null) {
+                await activationEnvironment.DisposeAsync();
+            }
+        }
+    }
 
     public static LlmConversationDocument CreateDocument(Guid conversationId)
     {

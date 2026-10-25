@@ -18,8 +18,10 @@ internal static class AgentDefinitionFactory
             model.Name);
         EnsureUniqueTemplateKey(catalog.Agents, id, normalizedTemplateKey, operationLabel);
 
+        var originalConfiguration = AgentDecisionDataPolicyMetadata.Preserve(
+            existingAgent?.ConfigurationJson, model.ConfigurationJson);
         var configurationJson = AgentProjectStructureAccessMetadata.Write(
-            model.ConfigurationJson,
+            AgentDecisionDataPolicyMetadata.ProjectOrdinaryConfiguration(originalConfiguration),
             model.ProjectStructureAccess);
         configurationJson = AgentProcessAccessMetadata.Write(configurationJson, model.ProcessAccess);
         configurationJson = AgentWorkspaceToolAccessMetadata.Write(configurationJson, model.WorkspaceToolAccess);
@@ -51,6 +53,7 @@ internal static class AgentDefinitionFactory
             configurationJson,
             thinkingEffortOverride);
         configurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(configurationJson);
+        configurationJson = AgentDecisionDataPolicyMetadata.Preserve(existingAgent?.ConfigurationJson, configurationJson);
 
         var capabilities = catalog.Capabilities
             .Where(item => model.SelectedCapabilityIds.Contains(item.Id))

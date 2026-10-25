@@ -1,0 +1,108 @@
+@using CanDoItAll.AgentFramework.UI.Catalog
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IAgentFrameworkWorkspaceService Workspace
+@inject IAgentDecisionPolicyPendingStore Pending
+@inject ILogger<AgentDecisionPolicyEditorSession> SessionLogger
+@inject ILogger<AgentDecisionPolicyDialog> Logger
+
+<AgentDecisionPolicySurface State="State" AgentName="@AgentName" Intent="HandleAsync" />
+
+@code {
+    [Parameter, EditorRequired] public AgentDecisionPolicyEditorState State { get; set; } = default!;
+    [Parameter] public string AgentName { get; set; } = string.Empty;
+    [Parameter] public CancellationToken OwnerLifetime { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback<Guid> Saved { get; set; }
+    private readonly CancellationTokenSource reads = new();
+    private bool disposed;
+    private AgentDecisionPolicyEditorSession session = default!;
+
+    protected override void OnInitialized() {
+        State.Changed += Changed;
+        session = new(State, Workspace, Pending, SessionLogger, OwnerLifetime);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender && !State.RecoveryReady && !State.Busy) {
+            await ReadAsync();
+        }
+    }
+
+    private async Task HandleAsync(AgentDecisionPolicyIntent intent) {
+        if (disposed) {
+            return;
+        }
+        switch (intent) {
+            case AgentDecisionPolicyIntent.Save:
+                await SaveAsync();
+                break;
+            case AgentDecisionPolicyIntent.ReadCurrent:
+                await ReadAsync();
+                break;
+            case AgentDecisionPolicyIntent.Recover:
+            case AgentDecisionPolicyIntent.DiscardPrepared:
+                using (var cancellation = CancellationTokenSource.CreateLinkedTokenSource(reads.Token, OwnerLifetime)) {
+                    if (intent == AgentDecisionPolicyIntent.Recover) {
+                        await session.RecoverAsync(cancellation.Token);
+                    } else {
+                        await session.DiscardPreparedAsync(cancellation.Token);
+                    }
+                }
+                break;
+            case AgentDecisionPolicyIntent.UseCurrentValues:
+                State.AdoptCurrent(false);
+                break;
+            case AgentDecisionPolicyIntent.KeepDraft:
+                State.AdoptCurrent(true);
+                break;
+            case AgentDecisionPolicyIntent.Close:
+                await Closed.InvokeAsync();
+                break;
+        }
+    }
+
+    private async Task ReadAsync() {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(reads.Token, OwnerLifetime);
+        await session.ReadAsync(cancellation.Token);
+    }
+
+    private async Task SaveAsync() {
+        var owner = State;
+        var outcome = await session.SaveAsync();
+        if (outcome is AgentDecisionDataPolicySaveOutcome.Accepted && !owner.Retired && !OwnerLifetime.IsCancellationRequested) {
+            try {
+                await Saved.InvokeAsync(owner.AgentId);
+            } catch (Exception failure) when (failure is not OutOfMemoryException) {
+                owner.CatalogRefreshFailed();
+                Log(owner.AgentId, owner.Submitted?.OperationId, failure);
+            }
+        }
+    }
+
+    private void Log(Guid agentId, Guid? operationId, Exception failure) => Logger.LogWarning(
+        "Agent policy editor for Agent {AgentId}, operation {OperationId}, failed with {FailureType}.",
+        agentId, operationId, failure.GetType().FullName);
+    private void Changed() {
+        if (!disposed) {
+            _ = RenderAsync();
+        }
+    }
+    private async Task RenderAsync() {
+        try {
+            await InvokeAsync(() => {
+                if (!disposed) {
+                    StateHasChanged();
+                }
+            });
+        } catch (Exception failure) when (failure is not OutOfMemoryException) {
+            Log(State.AgentId, State.Submitted?.OperationId, failure);
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        State.Changed -= Changed;
+        reads.Cancel();
+        reads.Dispose();
+    }
+}

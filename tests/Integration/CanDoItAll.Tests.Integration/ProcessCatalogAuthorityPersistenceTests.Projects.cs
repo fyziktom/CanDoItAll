@@ -101,17 +101,22 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             _ => [child, parent, other]
         };
         var authority = services.GetRequiredService<ProjectAgentSourceMutationAuthority>().Bind(owner.AgentMutationAdmission!, affected);
+        var lifecycle = new ProjectLifecycleTestDriver(services);
+        var edge = await lifecycle.ReadEdgeAsync(parent, child);
+        ProjectLifecycleCommand command = change switch {
+            HierarchyChange.Add => new ProjectLifecycleCommand.EnsureLink(other, child),
+            HierarchyChange.Remove => new ProjectLifecycleCommand.RemoveLink(edge),
+            _ => new ProjectLifecycleCommand.ReconnectLink(edge, other)
+        };
+        var submit = await lifecycle.CaptureSourceOwnerAsync(command, authority, ProjectLifecycleEffectKind.Agent);
         await fixture.RevokeAsync(Revocation.Write);
-        await Assert.ThrowsAsync<ProjectStructureAgentException>(async () => {
-            _ = change switch {
-                HierarchyChange.Add => await projects.AddSubprojectAsync(other.ProjectId, child.ProjectId, authorization: authority),
-                HierarchyChange.Remove => await projects.RemoveSubprojectAsync(parent.ProjectId, child.ProjectId, authorization: authority),
-                _ => await projects.ReconnectSubprojectAsync(child.ProjectId, parent.ProjectId, other.ProjectId, authorization: authority)
-            };
-        });
+        var unresolved = Assert.IsType<ProjectLifecycleOutcome.Unconfirmed>(await submit());
+        Assert.Equal(ProjectLifecycleRecoveryReason.OwnerReleaseUnconfirmed, unresolved.Reason);
         await using var read = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         var link = Assert.Single(await read.Set<ProjectHierarchyLink>().Where(row => row.ChildProjectId == child.ProjectId).ToArrayAsync());
         Assert.Equal(parent.ProjectId, link.ParentProjectId);
+        Assert.Empty(await read.Set<ProjectLifecycleReceiptRecord>().ToArrayAsync());
+        await fixture.Writer.UpdateCatalogAsync(catalog => catalog).WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     [Theory]
@@ -141,8 +146,13 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         };
         var provider = Assert.Single(services.GetServices<IAgentRuntimeToolProvider>().OfType<ProjectStructureAgentRuntimeToolProvider>());
         var tool = Assert.Single((await provider.CreateToolsAsync(context, default)).OfType<AIFunction>(), item => item.Name == name);
+        var original = creation ? null : (await services.GetRequiredService<ProjectsService>()
+            .GetDefinitionAsync(fixture.Project.ProjectId)).Value!;
+        var request = new ProjectStructureProjectSaveRequest("Must not commit", "", "", "") {
+            ExpectedDefinition = original?.Expectation
+        };
         probe.BeforeRead = () => fixture.RevokeAsync(Revocation.Tools);
-        var arguments = new AIFunctionArguments { ["request"] = new ProjectStructureProjectSaveRequest("Must not commit", "", "", "") };
+        var arguments = new AIFunctionArguments { ["request"] = request };
         if (!creation) {
             arguments["projectId"] = fixture.Project.ProjectId;
         }
@@ -188,7 +198,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                 break;
             case CreationChange.Hierarchy:
                 var parent = (await projects.CreateWithReceiptAsync(Guid.NewGuid(), new() { Name = "Later parent" })).Value!;
-                Assert.True((await projects.AddSubprojectAsync(parent.Project.ProjectId, id)).IsSuccess);
+                await new ProjectLifecycleTestDriver(services).EnsureLinkAsync(parent.Project.ProjectId, id);
                 break;
             case CreationChange.NativeNode:
                 await SeedOrdinaryGraphAsync(services, id);
@@ -257,7 +267,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var projects = services.GetRequiredService<ProjectsService>();
         var id = Guid.NewGuid();
         var receipt = (await projects.CreateWithReceiptAsync(id, new() { Name = "Old lifetime" })).Value!;
-        await projects.DeleteAsync(id);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(id);
         Assert.True((await projects.CreateAsync(id, new() { Name = "Recreated lifetime" })).IsSuccess);
         Assert.False(await projects.TryCompensateCreationAsync(receipt));
         Assert.Equal("Recreated lifetime", (await projects.GetAsync(id)).Name);
@@ -351,7 +361,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             ExpectedProjectAdmissions = [source.ExpectedProjectAdmission!, oldTarget],
             ExpectedGraph = ProjectStructureGraphStateGuard.Capture(nodes.Origin)
         };
-        await projects.DeleteAsync(targetId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(targetId);
         Assert.True((await projects.CreateAsync(targetId, new() { Name = "Recreated target" })).IsSuccess);
         await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => services.GetRequiredService<ProjectWorkbenchService>()
             .MoveNodesToProjectAsync(fixture.Project.ProjectId, [nodes.First], targetId, false, mutationOwner: owner));
@@ -366,7 +376,8 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                 var profile = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
                 var source = new CanonicalAgentCatalogLeaseSource(profile, provider.GetRequiredService<IOptions<StorageOptions>>(),
                     provider.GetRequiredService<IHostEnvironment>(), provider.GetRequiredService<ProjectWriteAdmissionService>());
-                return new(profile, new OrdinaryCatalogStore(source, sourceProbe), provider.GetRequiredService<IAgentExecutionProfileGenerationSource>());
+                return new(profile, new OrdinaryCatalogStore(source, sourceProbe), provider.GetRequiredService<IAgentExecutionProfileGenerationSource>(),
+                    provider.GetRequiredService<ProjectWriteAdmissionService>());
             });
         }
         if (probe is not null) {

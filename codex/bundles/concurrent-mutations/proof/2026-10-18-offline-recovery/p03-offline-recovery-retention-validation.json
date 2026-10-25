@@ -1,0 +1,450 @@
+{
+  "run": "p03-offline-recovery-retention-validation",
+  "commands": {
+    "build-components-release-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-components-release-final",
+      "Arguments": [
+        "build",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-18T23:26:21.9100503+00:00",
+      "State": "Completed",
+      "RunnerPid": 48804,
+      "ChildPid": 3636,
+      "ChildStartedUtc": "2026-10-18T23:26:21.9478887Z",
+      "ExitCode": 0,
+      "Seconds": 30.0326815,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 164983,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-components-release-repaired.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-components-release-repaired",
+      "Arguments": [
+        "build",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-18T23:25:03.1083258+00:00",
+      "State": "Completed",
+      "RunnerPid": 16404,
+      "ChildPid": 58260,
+      "ChildStartedUtc": "2026-10-18T23:25:03.1464336Z",
+      "ExitCode": 1,
+      "Seconds": 30.130865,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 165782,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-components-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-components-release",
+      "Arguments": [
+        "build",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-18T23:23:30.8287645+00:00",
+      "State": "Completed",
+      "RunnerPid": 14684,
+      "ChildPid": 50756,
+      "ChildStartedUtc": "2026-10-18T23:23:30.8488681Z",
+      "ExitCode": 1,
+      "Seconds": 42.8783111,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 165788,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "diff-check-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-18T23:24:12.5845169+00:00",
+      "State": "Completed",
+      "RunnerPid": 53828,
+      "ChildPid": 58144,
+      "ChildStartedUtc": "2026-10-18T23:24:12.5922842Z",
+      "ExitCode": 0,
+      "Seconds": 0.3329771,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 10307,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "discover-retention-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-retention-final",
+      "Arguments": [
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~Delete_refusal_preserves_the_replacement_and_retains_the_original_operation|FullyQualifiedName~Delayed_partial_deletion_preserves_successor|FullyQualifiedName~Project_files_tab_and_cards_share_include_subprojects_projection|FullyQualifiedName~Partial_project_deletion_closes_stale_editor"
+      ],
+      "StartedUtc": "2026-10-18T23:26:52.0141662+00:00",
+      "State": "Completed",
+      "RunnerPid": 48804,
+      "ChildPid": 58448,
+      "ChildStartedUtc": "2026-10-18T23:26:52.0180787Z",
+      "ExitCode": 0,
+      "Seconds": 1.9338691,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1030,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "documentation-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-18T23:24:00.3918145+00:00",
+      "State": "Completed",
+      "RunnerPid": 53828,
+      "ChildPid": 36484,
+      "ChildStartedUtc": "2026-10-18T23:24:00.3956416Z",
+      "ExitCode": 0,
+      "Seconds": 12.1348252,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "execute-recovery-retention.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-recovery-retention",
+      "Arguments": [
+        "test",
+        "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~Delete_refusal_preserves_the_replacement_and_retains_the_original_operation|FullyQualifiedName~Delayed_partial_deletion_preserves_successor|FullyQualifiedName~Project_files_tab_and_cards_share_include_subprojects_projection|FullyQualifiedName~Partial_project_deletion_closes_stale_editor",
+        "--logger",
+        "trx;LogFileName=recovery-retention.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/p03-offline-recovery-retention-validation"
+      ],
+      "StartedUtc": "2026-10-18T23:29:33.2613361+00:00",
+      "State": "Completed",
+      "RunnerPid": 44864,
+      "ChildPid": 19572,
+      "ChildStartedUtc": "2026-10-18T23:29:33.3003175Z",
+      "ExitCode": 1,
+      "Seconds": 36.2935554,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 7973,
+      "StderrRetainedBytes": 450,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "observer-chat-browser-v2.command.json": {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-chat-browser-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\p03-offline-recovery-retention-validation/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-18T23:29:23.1146578+00:00",
+      "State": "Completed",
+      "RunnerPid": 44956,
+      "ChildPid": 5552,
+      "ChildStartedUtc": "2026-10-18T23:29:23.1332224Z",
+      "ExitCode": 0,
+      "Seconds": 46.8945543,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "portability-enforce-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/p03-offline-recovery-retention-validation/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-18T23:25:08.0166390+00:00",
+      "State": "Completed",
+      "RunnerPid": 27252,
+      "ChildPid": 37148,
+      "ChildStartedUtc": "2026-10-18T23:25:08.0202497Z",
+      "ExitCode": 0,
+      "Seconds": 0.4949207,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "portability-enforce-verified.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-verified",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/p03-offline-recovery-retention-validation/portability-scan-final.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-18T23:28:49.2521012+00:00",
+      "State": "Completed",
+      "RunnerPid": 51872,
+      "ChildPid": 3844,
+      "ChildStartedUtc": "2026-10-18T23:28:49.2545771Z",
+      "ExitCode": 0,
+      "Seconds": 0.4423347,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "portability-scan-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-final",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/p03-offline-recovery-retention-validation/portability-scan-final.json"
+      ],
+      "StartedUtc": "2026-10-18T23:27:38.7799249+00:00",
+      "State": "Completed",
+      "RunnerPid": 51872,
+      "ChildPid": 13004,
+      "ChildStartedUtc": "2026-10-18T23:27:38.8166543Z",
+      "ExitCode": 0,
+      "Seconds": 70.4133649,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 493,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "portability-scan.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/p03-offline-recovery-retention-validation/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-18T23:23:47.1596905+00:00",
+      "State": "Completed",
+      "RunnerPid": 27252,
+      "ChildPid": 36148,
+      "ChildStartedUtc": "2026-10-18T23:23:47.1934151Z",
+      "ExitCode": 0,
+      "Seconds": 80.7949127,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 475,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "rendering-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-final",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-18T23:23:57.1278508+00:00",
+      "State": "Completed",
+      "RunnerPid": 53828,
+      "ChildPid": 47744,
+      "ChildStartedUtc": "2026-10-18T23:23:57.1637277Z",
+      "ExitCode": 0,
+      "Seconds": 3.1926966,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  },
+  "testResults": [
+    {
+      "file": "recovery-retention.trx",
+      "sha256": "1C43C35508814E0E3D911E6ADBB65DFD027EF9E85F6097D9191D55F5802CBEB6",
+      "counters": {
+        "total": "5",
+        "executed": "5",
+        "passed": "3",
+        "failed": "2",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "cases": [
+        {
+          "name": "CanDoItAll.Tests.Components.ProjectStructure.ProjectsEditorMutationTests.Delete_refusal_preserves_the_replacement_and_retains_the_original_operation(reacquireWhilePending: False)",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.ProjectStructure.ProjectsEditorMutationTests.Delete_refusal_preserves_the_replacement_and_retains_the_original_operation(reacquireWhilePending: True)",
+          "outcome": "Failed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.ProjectStructure.ProjectsPageTests.Partial_project_deletion_closes_stale_editor_and_exposes_explicit_cleanup_retry",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.ProjectStructure.ProjectsPageTests.Project_files_tab_and_cards_share_include_subprojects_projection",
+          "outcome": "Passed"
+        },
+        {
+          "name": "CanDoItAll.Tests.Components.ProjectStructure.ProjectsEditorMutationTests.Delayed_partial_deletion_preserves_successor_and_exact_retry_even_when_the_list_read_fails",
+          "outcome": "Failed"
+        }
+      ]
+    }
+  ],
+  "identity": {
+    "sourceAndRuntimeUnchanged": true,
+    "sourceFiles": 9110,
+    "runtimeFiles": 6436,
+    "sourceSha256": "7D0354F4204FE42512AE4CAC180FB30D8DE0628EB6FDEA7E0C02BA1128999AE1",
+    "runtimeSha256": "05DE9C8722590D58E68D5716B1C30269726AE79B05179CDD988234FB998B4CE3"
+  },
+  "cleanup": {
+    "outcome": "Three of five component cases passed; two assertion mismatches retained for cancellation-before-observation and independent participant cleanup",
+    "recordedUtc": "2026-10-18T23:31:34.2369600+00:00",
+    "remainingObservedProcesses": [],
+    "databaseNameDelta": [],
+    "temporaryDeltasPreservedWithoutOwnership": [
+      {
+        "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\cg1ptmu1.31s",
+        "family": "shared-temp-directory-entries"
+      },
+      {
+        "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_19572_20261018_192933_494.log",
+        "family": "anonymous-and-package-temp-files"
+      },
+      {
+        "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\zocrmvzm.okv",
+        "family": "shared-temp-directory-entries"
+      }
+    ],
+    "postgres": [
+      "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+      "postgres|1"
+    ]
+  },
+  "acceptance": "Focused evidence only; failed candidates are retained, not superseded into a pass. Overall bundle remains open."
+}

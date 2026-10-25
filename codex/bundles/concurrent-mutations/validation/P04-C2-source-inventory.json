@@ -1,0 +1,213 @@
+{
+  "status": "Authored managed source only; not built or tested",
+  "worktree": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "sourceFiles": [
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/FiniteOperations/FiniteOperationContracts.cs",
+      "sha256": "A631AE2A1FA01B396374A46D7B84D53ADE31830FDBBC86A041B29F7B8A3817BD"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/FiniteOperations/FiniteOperationRecords.cs",
+      "sha256": "4ED171425303E415419C82774B5FFF33E4A4D152D6852B8EF24E2F60BCBF948D"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/FiniteOperations/FiniteOperationDbContext.cs",
+      "sha256": "1E27D2226A6449D306BC93E133B78AEF9F81A9526195DA1E66D911C550C223DC"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/FiniteOperations/FiniteOperationEpochStore.cs",
+      "sha256": "FE080AEF206ADD6553119409134E442FCA7F387A178102A00958EDB84ABB4F7D"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/FiniteOperations/FiniteOperationReceiptMaintenance.cs",
+      "sha256": "4FF60BCBCC531BED5BCB314A128DCACF7B1FB80D8B5357833FB5C2F75FF84BD6"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/FiniteOperations/FiniteOperationMaintenanceState.cs",
+      "sha256": "4771285BDF15E5D1B2A23CB2A9B02889005E87015F0E1A64C4DEB84E33970BBE"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs",
+      "sha256": "E1EA4836456CCB79DF067C6E91F594231C7751B4B823B38BAF981E86955F6D9E"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFiniteOperationPool.cs",
+      "sha256": "D653933FC50FE74EBB91D079A519ACD379B95445DD3BD7BFAC9866492C1AE51B"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionReceiptRetention.cs",
+      "sha256": "7FF3360AFD059434F27020B33F9D3FE442467BD6E0E5BB9DC2F1583FAE700D92"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionOperationRecords.cs",
+      "sha256": "39578EA736D33C9E4CBF7289F26DAEA486F14D969EEB7FD474B07088767D5988"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Persistence/ProjectsDbContext.cs",
+      "sha256": "43F017DE10A6F8FE33A2C2109B17C35E6C65AEEEF9B5A6A59BBFA7A1E2C30295"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionOperationProtocol.cs",
+      "sha256": "2A68CF453ADC42498DD64E7D2020F4ED8F9593F3D865BFE3F9C2ED76D10D5FDB"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectMutationAuthority.cs",
+      "sha256": "7E7CC14FED428739A48D7845E0A98B0064B8FF05D4D0F2C824B04B29625025F4"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionOperationStore.cs",
+      "sha256": "3D1E7E3A52C6FB61A9CBDE536AC038CD65B8F219F5CEDBAFABBDF86162DDD6DC"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionReceiptReader.cs",
+      "sha256": "02568B5FF10D1498F0E9FAA7741C332082E3A70E6301D4958AD93213A83D4F30"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionWriter.cs",
+      "sha256": "E261B4A57E06AE03C6278F17939F923EBC54FAE04AD553B893643E1E356DD873"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionOperationOptions.cs",
+      "sha256": "543AF9886D407CB98EBDD61625B50C156AFCB3521F0A608BC3F68B4411848429"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectsModuleServiceCollectionExtensions.cs",
+      "sha256": "EE74E2D81ADB26F8B719665A2330DA8C180524104F6950731F2379B10A821884"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectTransferReferenceQuery.cs",
+      "sha256": "E3CCCAD63CAB020CE6F1549F6FF9EBAF764994788ADFF0D7C6310FDB8DD3CB32"
+    },
+    {
+      "path": "src/App/CanDoItAll.Composition/FiniteOperationComposition.cs",
+      "sha256": "6BD3AB6F90AEE98217EEB1186283BE6879634ADAFC64D117EC580EF4A7CC6D8F"
+    },
+    {
+      "path": "src/App/CanDoItAll.Composition/DatasetActivationCoordinator.cs",
+      "sha256": "954EF1698370BCD69197ACB0A69AA2632A627EFC089616B5312D4DCF98212E6F"
+    },
+    {
+      "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+      "sha256": "3FBF7996388665A2A998B3EE84C3267CFCBD0DDF7D35577024C92258A47F3274"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Infrastructure/DatasetActivationCommand.cs",
+      "sha256": "3CDB8D39D117D32A3C78AD957662F462FE5F54A01F2B8C2C48CEF370BFBC99AB"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FiniteOperationContractTests.cs",
+      "sha256": "E0D4357112B04D9D2B0D3952F5E9269CE9EF1FB92A3E41E5EA895DD4A9FBD42E"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectOperationMaintenanceTests.cs",
+      "sha256": "CB6F104D50198A2D52CCBCAA7DA320FFF234E5BE6DB0B81309DF738F048D2EAD"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectsWorkbenchDbContextTests.cs",
+      "sha256": "208AB89E1041F8466A917F7B2554661B69FACBA08BDBDAA7198C8ABA9650A8DC"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FiniteOperationPersistenceFixture.cs",
+      "sha256": "094950433EC9C45FCF1711D86A3447C48B8D2A50365A4A7AC7436C7103DC3E43"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FiniteOperationPersistenceTests.cs",
+      "sha256": "7D6EC5A4151375FA9D8F35F8B21BE37676A70F050F65F480E835CCC74B6AB13F"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectOperationEpochTests.cs",
+      "sha256": "74BB1938ED53BC5CB5ED4EE57136578820438862DF71A74178D73A0689402C3F"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectOperationMaintenanceTests.cs",
+      "sha256": "BCDF490C5EFF6AA7F3512B185A9E7A67316B26DC59ADC0F0E3BEAB30CB201BA0"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCoordinatorTests.cs",
+      "sha256": "A817267B46206E8CC9A59C3A6A1978B61B3066DEFF4D0B7D1E54D3D9AEC2F7E3"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCommandProcessTests.cs",
+      "sha256": "FF5BF901C4DD2C0C03806D8D73EC766A5E596B39CF3621A9C136BEB230FDE59A"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatabaseTransferLifecycleTests.cs",
+      "sha256": "7D7D776C30A17AF87B065442BFE170817D1F29A92BB98042A9922F13A5AD611A"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoryPersistenceTestDatabase.cs",
+      "sha256": "8CE29C82FD78B95A015A3A677B8D4CA94BD555D62F330AF3A087C6A589001B8F"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/LlmChatPersistenceIntegrationTests.cs",
+      "sha256": "9379225F4B2FDFF13734D7022D66A7292724F75EC442D45C4BEE8D83ABF27D72"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/LlmChatReceiptMigrationAndTransferIntegrationTests.cs",
+      "sha256": "F960E2266D0E01FEC23F7BC3CABA804F15FB18528B126B41E3D137D2FB5F83B7"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPremergeUpgradeTests.cs",
+      "sha256": "084D5EB670C4E3C5951307F446ED1887E84010D2005657546AF6F47D9C80883B"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDefinitionOperationTests.AdmissionRecovery.cs",
+      "sha256": "78F45713B59B28A2C6E9E609217381A0C5AEBB0A63CC4F86E703AABE52789DEF"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProjectStructureProjectCreatePendingTests.cs",
+      "sha256": "D81C1E9B65DCB5069B2EE65BC562836DD6944AAF61E1904C568DE8F398523062"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsProtectedMutationPerformanceTests.cs",
+      "sha256": "E8FD754D841316996C1123DA60657EC33881E822BF92A79E045385D967389A30"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsOperationPerformanceProbe.cs",
+      "sha256": "E02E6F302A43C44424973896453868AC002778A73B0116C76A3BE59CB55ED19C"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsMaintenanceCapacityStorage.cs",
+      "sha256": "E5C01C616718A7D713178483F0EF715EC5EEFCFAE890F020FD4A70B5ABB31A88"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsMaintenanceCapacityLoad.cs",
+      "sha256": "CF90C40DCA4F71B661BD0B4D767692A736CCF3345A62F2FCD517F029530CEA95"
+    },
+    {
+      "path": "tests/Support/CanDoItAll.ProjectsMaintenance.TestHost/Program.cs",
+      "sha256": "551A68342BAC0156C22736930AA6EC490CE9F54E888BE1A9D8B4E6284FCC47C3"
+    },
+    {
+      "path": "tests/Support/CanDoItAll.ProjectsMaintenance.TestHost/MaintenanceHostProtocol.cs",
+      "sha256": "2CBF81B5073C46C334ECD98EA40D3F6DF117FF99D212E3DE81A5EE914CBBF7DD"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P04-C2-neutral-epoch-extraction.md",
+      "sha256": "9E5C781F9EB0DF28B8789D22C02236D610EB79CBF4F56F651E5E58371E76270A"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P04-C2-neutral-source.md",
+      "sha256": "3AA8C66FA0DAF8A4676494F055E6417933128BECDCD1ACEE0D1D40E29CC8582D"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDefinitionOperationTests.cs",
+      "sha256": "0CB5DF9E98A2F4D0D97C271F45258951A3777176FBF52549E6BC0F8A4A28E28B"
+    }
+  ],
+  "deletedFiles": [
+    "src/Modules/CanDoItAll.Modules.Projects/ProjectOperationEpochService.cs",
+    "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionOperationMaintenance.cs",
+    "src/Modules/CanDoItAll.Modules.Projects/ProjectOperationMaintenanceResult.cs",
+    "src/Modules/CanDoItAll.Modules.Projects/ProjectOperationMaintenanceMetrics.cs"
+  ],
+  "authoredNewDiscovery": {
+    "Unit": 8,
+    "Integration": 12
+  },
+  "authoredNewExecution": {
+    "Unit": 8,
+    "Integration": 12
+  },
+  "parentMigrationFactsPlanned": 4
+}

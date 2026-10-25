@@ -130,6 +130,8 @@ public sealed class ProcessRuntimeStepAssignmentEntity
 
     public string CapabilityScopeJson { get; set; } = string.Empty;
 
+    public string? DecisionDataPolicyJson { get; set; }
+
     public string? BranchGateSourceStepKey { get; set; }
 
     public string? BranchGateRequiredOutcomeKey { get; set; }
@@ -336,6 +338,11 @@ public sealed class ProcessRuntimeIdempotencyEntity
     public ProcessRuntimeTransitionOutcome Outcome { get; set; }
 
     public DateTimeOffset CompletedAtUtc { get; set; }
+
+    public string? DecisionBudgetReceiptJson { get; set; }
+    public string? DecisionRunScopeReceiptJson { get; set; }
+
+    public string? DecisionReceiptJson { get; set; }
 }
 
 public sealed class ProcessProjectionSnapshotEntity

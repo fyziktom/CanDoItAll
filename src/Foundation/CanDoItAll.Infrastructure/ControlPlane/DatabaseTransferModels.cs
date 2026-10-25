@@ -34,18 +34,24 @@ public sealed class DatabaseTransferRequest {
     public bool ReplaceExisting { get; set; } = true;
 }
 
+public enum DatabaseTransferWarning { PostCommitCleanupIncomplete }
+
 public sealed record DatabaseTransferItemResult(
     string Key,
     string Label,
     bool Success,
     string Message,
-    int RecordsCopied);
+    int RecordsCopied) {
+    public DatabaseTransferWarning? Warning { get; init; }
+}
 
 public sealed record DatabaseTransferResult(
     Guid SourceProfileId,
     Guid TargetProfileId,
     IReadOnlyList<DatabaseTransferItemResult> Items) {
     public bool IsSuccess => Items.Count > 0 && Items.All(item => item.Success);
+
+    public bool HasWarnings => Items.Any(item => item.Warning is not null);
 
     public int RecordsCopied => Items.Sum(item => Math.Max(0, item.RecordsCopied));
 }

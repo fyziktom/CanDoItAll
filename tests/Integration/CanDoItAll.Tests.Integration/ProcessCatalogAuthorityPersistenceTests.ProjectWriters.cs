@@ -20,13 +20,12 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed partial class ProcessCatalogAuthorityPersistenceTests {
-    public enum ProcessProjectWrite { Update, Root, Child, Hierarchy }
+    public enum ProcessProjectWrite { Update, Root, Child }
 
     [Theory]
     [InlineData(ProcessProjectWrite.Update)]
     [InlineData(ProcessProjectWrite.Root)]
     [InlineData(ProcessProjectWrite.Child)]
-    [InlineData(ProcessProjectWrite.Hierarchy)]
     public async Task Process_Project_writer_rechecks_the_original_claim_after_real_owner_flush(ProcessProjectWrite kind) {
         var clock = new NativeClock();
         var probe = new ProcessProjectFlushProbe();
@@ -50,7 +49,6 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     [InlineData(ProcessProjectWrite.Update)]
     [InlineData(ProcessProjectWrite.Root)]
     [InlineData(ProcessProjectWrite.Child)]
-    [InlineData(ProcessProjectWrite.Hierarchy)]
     public async Task Process_Project_writer_rejects_current_source_revocation_before_any_owner_change(ProcessProjectWrite kind) {
         var clock = new NativeClock();
         await using var app = await TestApplication.CreateAsync(ProcessProjectsHarness(clock));
@@ -64,6 +62,42 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         await fixture.RevokeAsync(Revocation.Write);
         await Assert.ThrowsAsync<ProcessLaunchAuthorityRejectedException>(write);
         Assert.Equal(before, await ProjectWriterStateAsync(services));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Process_hierarchy_owner_refuses_revoked_source_or_expired_claim_after_flush(bool afterFlush) {
+        var clock = new NativeClock();
+        var probe = new ProcessProjectFlushProbe();
+        await using var app = await TestApplication.CreateAsync(ProcessProjectsHarness(clock, probe));
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var fixture = await Fixture.CreateAsync(services);
+        var run = await CreateClaimedExecutionAsync(services, fixture, clock, authority: await CaptureProjectOperationsAsync(fixture));
+        var policy = services.GetRequiredService<ProjectProcessExecutionMutationService>();
+        var admission = (await policy.ObserveAsync(run.Id))!;
+        var (reservation, receipt) = await CreateProcessTargetAsync(services, admission, false);
+        var authorization = policy.BindProjectSource(admission.WithCreatedProject(reservation), [admission.ProjectAdmission, receipt.Project],
+            ProjectProcessProjectOperation.ChangeHierarchy);
+        var submit = await new ProjectLifecycleTestDriver(services).CaptureSourceOwnerAsync(
+            new ProjectLifecycleCommand.EnsureLink(admission.ProjectAdmission, receipt.Project), authorization, ProjectLifecycleEffectKind.Process);
+        var before = await ProjectWriterStateAsync(services);
+        if (afterFlush) {
+            probe.AfterFlush = () => clock.Now = clock.Now.AddHours(2);
+        } else {
+            await fixture.RevokeAsync(Revocation.Write);
+        }
+        var outcome = await submit();
+        if (afterFlush) {
+            Assert.IsType<ProjectLifecycleOutcome.Refused>(outcome);
+        } else {
+            Assert.Equal(ProjectLifecycleRecoveryReason.OwnerReleaseUnconfirmed,
+                Assert.IsType<ProjectLifecycleOutcome.Unconfirmed>(outcome).Reason);
+        }
+        Assert.Equal(afterFlush ? 1 : 0, probe.ArmedFlushes);
+        Assert.Equal(before, await ProjectWriterStateAsync(services));
+        await fixture.Writer.UpdateCatalogAsync(catalog => catalog).WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -161,10 +195,13 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             ["request"] = new ProjectStructureProjectSaveRequest("Governed original source creation", "", "", "")
         }));
         var update = Assert.Single(tools.OfType<AIFunction>(), tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureProjectUpdate);
-        var edited = ReadRegisteredToolResult<ProjectSummary>(update, await update.InvokeAsync(new AIFunctionArguments {
-            ["projectId"] = created.Id, ["request"] = new ProjectStructureProjectSaveRequest("Same-session retained target", "", "", "")
+        var definition = (await services.GetRequiredService<ProjectsService>().GetDefinitionAsync(created.Id)).Value!;
+        var edited = ReadRegisteredToolResult<ProjectDefinitionScalarsAcknowledgement>(update, await update.InvokeAsync(new AIFunctionArguments {
+            ["projectId"] = created.Id, ["request"] = new ProjectStructureProjectSaveRequest("Same-session retained target", "", "", "") {
+                ExpectedDefinition = definition.Expectation
+            }
         }));
-        Assert.Equal(created.Id, edited.Id);
+        Assert.Equal(created.Id, edited.Definition.Project.ProjectId);
         Assert.Equal("Same-session retained target", (await services.GetRequiredService<ProjectsService>().GetAsync(created.Id)).Name);
         await using var read = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         var reservation = await read.Set<ProjectCreationReservationRecord>().SingleAsync(row => row.ProjectId == created.Id);
@@ -217,13 +254,18 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var (reservation, receipt) = await CreateProcessTargetAsync(services, original, false);
         var captured = original.WithCreatedProject(reservation);
         var projects = services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(receipt.Project.ProjectId);
-        Assert.True((await projects.CreateAsync(receipt.Project.ProjectId, new() { Name = "Recreated target" })).IsSuccess);
         var editor = await projects.GetAsync(receipt.Project.ProjectId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(receipt.Project.ProjectId);
+        Assert.True((await projects.CreateAsync(receipt.Project.ProjectId, new() { Name = "Recreated target" })).IsSuccess);
         editor.Name = "Must not overwrite recreated target";
         var authorization = service.BindProjectSource(captured, [receipt.Project], ProjectProcessProjectOperation.Update);
-        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => projects.SaveAsync(editor, authorization: authorization));
-        Assert.Contains("exact created project reservation", failure.Message, StringComparison.Ordinal);
+        var failure = await Assert.ThrowsAsync<ProcessLaunchAuthorityRejectedException>(() => projects.SaveAsync(editor, authorization: authorization));
+        Assert.Contains("exact created target", failure.Message, StringComparison.Ordinal);
+        var recreatedEditor = await projects.GetAsync(receipt.Project.ProjectId);
+        Assert.NotEqual(editor.ExpectedDefinition!.Project.LifetimeId, recreatedEditor.ExpectedDefinition!.Project.LifetimeId);
+        recreatedEditor.Name = "Must not combine new target with old authority";
+        var mismatched = await Assert.ThrowsAsync<ArgumentException>(() => projects.SaveAsync(recreatedEditor, authorization: authorization));
+        Assert.Equal("expectedProjectAdmissions", mismatched.ParamName);
         Assert.Equal("Recreated target", (await projects.GetAsync(receipt.Project.ProjectId)).Name);
         var unrelated = (await projects.CreateWithReceiptAsync(Guid.NewGuid(), new() { Name = "Unrelated target" })).Value!.Project;
         var denied = service.BindProjectSource(original, [unrelated], ProjectProcessProjectOperation.Update);
@@ -242,7 +284,8 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var original = (await services.GetRequiredService<ProjectProcessExecutionMutationService>().ObserveAsync(run.Id))!;
         var (reservation, receipt) = await CreateProcessTargetAsync(services, original, true);
         clock.Now = clock.Now.AddHours(2);
-        await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => services.GetRequiredService<ProjectsService>().TryCompensateCreationAsync(receipt));
+        Assert.IsType<ProjectCreationCompensationOutcome.Unconfirmed>(
+            await services.GetRequiredService<ProjectsService>().CompensateCreationAsync(receipt));
         await using var read = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         Assert.True(await read.Set<Project>().AnyAsync(row => row.Id == receipt.Project.ProjectId && row.LifetimeId == receipt.Project.LifetimeId));
         Assert.Equal(ProjectCreationReservationState.Consumed, (await read.Set<ProjectCreationReservationRecord>().SingleAsync(row => row.Id == reservation.Id)).State);
@@ -404,12 +447,6 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             var authorization = policy.BindProjectSource(admission, [admission.ProjectAdmission], ProjectProcessProjectOperation.Update);
             return async () => { Assert.True((await projects.SaveAsync(editor, authorization: authorization)).IsSuccess); };
         }
-        if (kind == ProcessProjectWrite.Hierarchy) {
-            var (reservation, receipt) = await CreateProcessTargetAsync(services, admission, false);
-            var authority = policy.BindProjectSource(admission.WithCreatedProject(reservation), [admission.ProjectAdmission, receipt.Project],
-                ProjectProcessProjectOperation.ChangeHierarchy);
-            return async () => { Assert.True((await projects.AddSubprojectAsync(admission.ProjectAdmission.ProjectId, receipt.Project.ProjectId, authorization: authority)).IsSuccess); };
-        }
         var child = kind == ProcessProjectWrite.Child;
         var createAuthority = policy.BindProjectSource(admission, child ? [admission.ProjectAdmission] : [],
             child ? ProjectProcessProjectOperation.CreateChild : ProjectProcessProjectOperation.CreateRoot);
@@ -427,6 +464,8 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var result = await services.GetRequiredService<ProjectsService>().CreateWithReceiptAsync(reservation,
             new() { Name = "Retained Process target" }, authorization: authorization);
         Assert.True(result.IsSuccess);
+        await services.GetRequiredService<ProjectStructureAgentAuthorizationService>()
+            .GrantCreatedProjectAccessAsync(admission.Dispatch.Evidence.ExecutorAgentId, reservation, CancellationToken.None);
         return (reservation, Assert.IsType<ProjectCreationReceipt>(result.Value));
     }
 
@@ -435,7 +474,8 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         return JsonSerializer.Serialize(new {
             Projects = await context.Set<Project>().AsNoTracking().OrderBy(row => row.Id).Select(row => new { row.Id, row.LifetimeId, row.Name }).ToArrayAsync(),
             Links = await context.Set<ProjectHierarchyLink>().AsNoTracking().OrderBy(row => row.Id).ToArrayAsync(),
-            Reservations = await context.Set<ProjectCreationReservationRecord>().AsNoTracking().OrderBy(row => row.Id).ToArrayAsync()
+            Reservations = await context.Set<ProjectCreationReservationRecord>().AsNoTracking().OrderBy(row => row.Id).ToArrayAsync(),
+            LifecycleReceipts = await context.Set<ProjectLifecycleReceiptRecord>().CountAsync()
         });
     }
 

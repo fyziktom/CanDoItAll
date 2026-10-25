@@ -1,0 +1,1790 @@
+{
+  "run": "p03-dataset-readiness-validation",
+  "commands": {
+    "build-agent-framework-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-agent-framework-release",
+      "Arguments": [
+        "build",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:30:00.1573356+00:00",
+      "State": "Completed",
+      "RunnerPid": 43256,
+      "ChildPid": 53148,
+      "ChildStartedUtc": "2026-10-19T00:30:00.1625795Z",
+      "ExitCode": 0,
+      "Seconds": 30.3742056,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 101810,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-composition-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-composition-release",
+      "Arguments": [
+        "build",
+        "src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:30:44.9234177+00:00",
+      "State": "Completed",
+      "RunnerPid": 43256,
+      "ChildPid": 2088,
+      "ChildStartedUtc": "2026-10-19T00:30:44.9268014Z",
+      "ExitCode": 0,
+      "Seconds": 25.8890343,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 137748,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-infrastructure-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-infrastructure-release",
+      "Arguments": [
+        "build",
+        "src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:29:48.0394638+00:00",
+      "State": "Completed",
+      "RunnerPid": 43256,
+      "ChildPid": 25792,
+      "ChildStartedUtc": "2026-10-19T00:29:48.0703222Z",
+      "ExitCode": 0,
+      "Seconds": 3.5895818,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3479,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-integration-release-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-release-final",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:35:23.7015623+00:00",
+      "State": "Completed",
+      "RunnerPid": 56160,
+      "ChildPid": 1836,
+      "ChildStartedUtc": "2026-10-19T00:35:23.7062200Z",
+      "ExitCode": 0,
+      "Seconds": 32.9546672,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 174787,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-integration-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-release",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:33:04.7715896+00:00",
+      "State": "Completed",
+      "RunnerPid": 43404,
+      "ChildPid": 55280,
+      "ChildStartedUtc": "2026-10-19T00:33:04.7757164Z",
+      "ExitCode": 0,
+      "Seconds": 36.8457267,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 175293,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-migrations-release-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-migrations-release-final",
+      "Arguments": [
+        "build",
+        "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:34:58.4853720+00:00",
+      "State": "Completed",
+      "RunnerPid": 56160,
+      "ChildPid": 45924,
+      "ChildStartedUtc": "2026-10-19T00:34:58.5189299Z",
+      "ExitCode": 0,
+      "Seconds": 25.1600309,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 140927,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-migrations-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-migrations-release",
+      "Arguments": [
+        "build",
+        "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:32:39.3410694+00:00",
+      "State": "Completed",
+      "RunnerPid": 43404,
+      "ChildPid": 16636,
+      "ChildStartedUtc": "2026-10-19T00:32:39.3734396Z",
+      "ExitCode": 0,
+      "Seconds": 25.3724828,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 140927,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-projects-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-projects-release",
+      "Arguments": [
+        "build",
+        "src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:29:51.6845127+00:00",
+      "State": "Completed",
+      "RunnerPid": 43256,
+      "ChildPid": 51224,
+      "ChildStartedUtc": "2026-10-19T00:29:51.6877268Z",
+      "ExitCode": 0,
+      "Seconds": 8.457879,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 16105,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-unit-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-unit-release",
+      "Arguments": [
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:33:41.6346204+00:00",
+      "State": "Completed",
+      "RunnerPid": 43404,
+      "ChildPid": 56672,
+      "ChildStartedUtc": "2026-10-19T00:33:41.6380859Z",
+      "ExitCode": 0,
+      "Seconds": 34.2935684,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 155076,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-web-for-migration-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-web-for-migration-release",
+      "Arguments": [
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:31:41.3649475+00:00",
+      "State": "Completed",
+      "RunnerPid": 50888,
+      "ChildPid": 47168,
+      "ChildStartedUtc": "2026-10-19T00:31:41.3970893Z",
+      "ExitCode": 0,
+      "Seconds": 28.7735518,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 142717,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "build-workbench-release.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-workbench-release",
+      "Arguments": [
+        "build",
+        "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T00:30:30.5470838+00:00",
+      "State": "Completed",
+      "RunnerPid": 43256,
+      "ChildPid": 49964,
+      "ChildStartedUtc": "2026-10-19T00:30:30.5507411Z",
+      "ExitCode": 0,
+      "Seconds": 14.3623491,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 52338,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "diff-check-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-19T00:37:51.6232979+00:00",
+      "State": "Completed",
+      "RunnerPid": 50900,
+      "ChildPid": 55752,
+      "ChildStartedUtc": "2026-10-19T00:37:51.6267550Z",
+      "ExitCode": 0,
+      "Seconds": 0.192667,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 10161,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "discover-readiness-integration.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-readiness-integration",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectDeletionDatasetReadinessTests|FullyQualifiedName~DatasetActivationCoordinatorTests|FullyQualifiedName~DatasetActivationRestorationIntegrationTests|FullyQualifiedName~ProjectLifecycleOperationTests|FullyQualifiedName~ProjectDeletionCompletionParticipantTests|FullyQualifiedName~ProjectLifecycleMigrationTests"
+      ],
+      "StartedUtc": "2026-10-19T00:36:02.4506306+00:00",
+      "State": "Completed",
+      "RunnerPid": 42796,
+      "ChildPid": 55292,
+      "ChildStartedUtc": "2026-10-19T00:36:02.4880731Z",
+      "ExitCode": 0,
+      "Seconds": 2.2460964,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 17821,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "documentation-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-19T00:37:46.7083304+00:00",
+      "State": "Completed",
+      "RunnerPid": 50900,
+      "ChildPid": 26704,
+      "ChildStartedUtc": "2026-10-19T00:37:46.7107495Z",
+      "ExitCode": 0,
+      "Seconds": 4.9015673,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "execute-readiness-integration.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-readiness-integration",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectDeletionDatasetReadinessTests|FullyQualifiedName~DatasetActivationCoordinatorTests|FullyQualifiedName~DatasetActivationRestorationIntegrationTests|FullyQualifiedName~ProjectLifecycleOperationTests|FullyQualifiedName~ProjectDeletionCompletionParticipantTests|FullyQualifiedName~ProjectLifecycleMigrationTests",
+        "--logger",
+        "trx;LogFileName=readiness-integration.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/p03-dataset-readiness-validation"
+      ],
+      "StartedUtc": "2026-10-19T00:38:30.7635672+00:00",
+      "State": "Completed",
+      "RunnerPid": 60308,
+      "ChildPid": 49552,
+      "ChildStartedUtc": "2026-10-19T00:38:30.8013366Z",
+      "ExitCode": 0,
+      "Seconds": 329.8016213,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 20129,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "generate-deletion-inventory-indexes.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "generate-deletion-inventory-indexes",
+      "Arguments": [
+        "ef",
+        "migrations",
+        "add",
+        "IndexUnfinishedProjectDeletion",
+        "--project",
+        "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+        "--startup-project",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "--context",
+        "AppDbContext",
+        "--configuration",
+        "Release",
+        "--no-build"
+      ],
+      "StartedUtc": "2026-10-19T00:32:10.1979927+00:00",
+      "State": "Completed",
+      "RunnerPid": 50888,
+      "ChildPid": 45160,
+      "ChildStartedUtc": "2026-10-19T00:32:10.2026863Z",
+      "ExitCode": 0,
+      "Seconds": 4.1845444,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 249,
+      "StderrRetainedBytes": 2020,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "inventory-idempotent-migration-sql.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "inventory-idempotent-migration-sql",
+      "Arguments": [
+        "ef",
+        "migrations",
+        "script",
+        "20261018172443_AddProjectLifecycleOperations",
+        "20261019003214_IndexUnfinishedProjectDeletion",
+        "--idempotent",
+        "--project",
+        "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+        "--startup-project",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "--context",
+        "AppDbContext",
+        "--configuration",
+        "Release",
+        "--no-build"
+      ],
+      "StartedUtc": "2026-10-19T00:36:08.8436526+00:00",
+      "State": "Completed",
+      "RunnerPid": 42796,
+      "ChildPid": 22764,
+      "ChildStartedUtc": "2026-10-19T00:36:08.8470736Z",
+      "ExitCode": 0,
+      "Seconds": 3.7729773,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1506,
+      "StderrRetainedBytes": 2020,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "model-pending-check.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "model-pending-check",
+      "Arguments": [
+        "ef",
+        "migrations",
+        "has-pending-model-changes",
+        "--project",
+        "src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj",
+        "--startup-project",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "--context",
+        "AppDbContext",
+        "--configuration",
+        "Release",
+        "--no-build"
+      ],
+      "StartedUtc": "2026-10-19T00:36:04.7624934+00:00",
+      "State": "Completed",
+      "RunnerPid": 42796,
+      "ChildPid": 58992,
+      "ChildStartedUtc": "2026-10-19T00:36:04.7666640Z",
+      "ExitCode": 0,
+      "Seconds": 4.0636018,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 260,
+      "StderrRetainedBytes": 2020,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "observer-chat-browser-v2.command.json": {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-chat-browser-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\p03-dataset-readiness-validation/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-19T00:38:20.9274046+00:00",
+      "State": "Completed",
+      "RunnerPid": 19808,
+      "ChildPid": 6116,
+      "ChildStartedUtc": "2026-10-19T00:38:20.9460023Z",
+      "ExitCode": 0,
+      "Seconds": 339.9129454,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 55,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "portability-enforce-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/p03-dataset-readiness-validation/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-19T00:37:43.1143339+00:00",
+      "State": "Completed",
+      "RunnerPid": 58544,
+      "ChildPid": 24388,
+      "ChildStartedUtc": "2026-10-19T00:37:43.1184150Z",
+      "ExitCode": 0,
+      "Seconds": 0.4354307,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "portability-enforce.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/p03-dataset-readiness-validation/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-19T00:36:51.7643399+00:00",
+      "State": "Completed",
+      "RunnerPid": 29180,
+      "ChildPid": 54364,
+      "ChildStartedUtc": "2026-10-19T00:36:51.7669933Z",
+      "ExitCode": 1,
+      "Seconds": 0.4586516,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 829,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "portability-reviewed-baseline.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-reviewed-baseline",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/p03-dataset-readiness-validation/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json",
+        "--write-baseline"
+      ],
+      "StartedUtc": "2026-10-19T00:37:42.6192815+00:00",
+      "State": "Completed",
+      "RunnerPid": 58544,
+      "ChildPid": 49372,
+      "ChildStartedUtc": "2026-10-19T00:37:42.6502761Z",
+      "ExitCode": 0,
+      "Seconds": 0.4378557,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 120,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "portability-scan.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/p03-dataset-readiness-validation/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-19T00:35:39.3288621+00:00",
+      "State": "Completed",
+      "RunnerPid": 29180,
+      "ChildPid": 16820,
+      "ChildStartedUtc": "2026-10-19T00:35:39.3649498Z",
+      "ExitCode": 0,
+      "Seconds": 72.3770118,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 448,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    "rendering-final.command.json": {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-final",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-19T00:37:44.5646175+00:00",
+      "State": "Completed",
+      "RunnerPid": 50900,
+      "ChildPid": 58196,
+      "ChildStartedUtc": "2026-10-19T00:37:44.5972968Z",
+      "ExitCode": 0,
+      "Seconds": 2.0868003,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  },
+  "testResults": [
+    {
+      "file": "readiness-integration.trx",
+      "counters": {
+        "total": "102",
+        "executed": "102",
+        "passed": "102",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "cases": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Acknowledged_deletion_keeps_acceptance_when_owner_disposal_fails_and_cannot_dispatch_a_participant",
+          "outcome": "Passed",
+          "duration": "00:00:02.8785892"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Hierarchy_cycle_and_exact_edge_expectations_refuse_stale_intent_without_adopting_a_new_edge",
+          "outcome": "Passed",
+          "duration": "00:00:02.8264894"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Reservation_cancellation_retains_native_never_consumed_evidence_and_replays_without_effects(child: True)",
+          "outcome": "Passed",
+          "duration": "00:00:02.9903540"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: PartialAgent)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3789921"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: MissingCompletion)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3074794"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_refuses_a_held_lifecycle_owner_without_waiting_for_it_to_finish",
+          "outcome": "Passed",
+          "duration": "00:00:02.8305930"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_preserves_a_real_committed_release_after_losing_commit_or_disposal_acknowledgement(failure: ReleaseDisposal)",
+          "outcome": "Passed",
+          "duration": "00:00:02.9929621"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Workbench_first_invalid_or_oversized_payload_never_looks_like_an_empty_inventory(oversized: True)",
+          "outcome": "Passed",
+          "duration": "00:00:02.5381050"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Native_lifecycle_adapter_retains_original_submission_and_can_read_acceptance_after_target_deletion",
+          "outcome": "Passed",
+          "duration": "00:00:02.9250446"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.An_older_compiled_pool_set_refuses_every_readiness_and_activation_entry_without_changing_SQL",
+          "outcome": "Passed",
+          "duration": "00:00:02.8679070"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_refuses_different_SQL_protocol_or_retained_identity(fault: OtherNamespace)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3345763"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_never_marks_after_probe_failure_or_uncertain_terminal_release(failure: ProbeDisposal)",
+          "outcome": "Passed",
+          "duration": "00:00:03.0148914"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Compensation_completion_insert_failure_rolls_back_native_effects_and_exact_reservation_cancellation",
+          "outcome": "Passed",
+          "duration": "00:00:02.5095447"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Workbench_byte_limited_short_page_does_not_skip_later_invalid_work",
+          "outcome": "Passed",
+          "duration": "00:00:02.9199897"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Rotation_resume_after_SQL_commit_validates_the_new_binding",
+          "outcome": "Passed",
+          "duration": "00:00:02.8116154"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Cancellation_final_write_revocation_rolls_back_the_saved_cancelled_row",
+          "outcome": "Passed",
+          "duration": "00:00:02.8201905"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_inspectors_refuse_missing_foreign_and_unbound_records_without_dispatch(owner: Workbench)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3955570"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.Separate_host_bootstrap_plans_have_one_SQL_winner_and_do_not_autoheal_the_losing_plan",
+          "outcome": "Passed",
+          "duration": "00:00:02.6662475"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_probes_preparation_keys_even_when_the_participant_produced_no_obligation",
+          "outcome": "Passed",
+          "duration": "00:00:02.8284180"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_never_marks_after_probe_failure_or_uncertain_terminal_release(failure: ReleaseUpdate)",
+          "outcome": "Passed",
+          "duration": "00:00:02.8187023"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_survives_publication_interruption_without_changing_SQL(interruption: AfterActive)",
+          "outcome": "Passed",
+          "duration": "00:00:02.6462787"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Identity_only_service_entry_refuses_before_any_owner_or_participant_effect(entry: Add)",
+          "outcome": "Passed",
+          "duration": "00:00:02.8360392"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_survives_publication_interruption_without_changing_SQL(interruption: BeforeActive)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7993777"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Agent_stored_original_blocks_claim_and_file_dispatch_until_release_and_never_adopts_legacy_rows",
+          "outcome": "Passed",
+          "duration": "00:00:02.4600870"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_never_marks_after_probe_failure_or_uncertain_terminal_release(failure: ProfileAfterProbe)",
+          "outcome": "Passed",
+          "duration": "00:00:03.0681317"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Cancellation_lost_acknowledgement_keeps_original_intent_and_recovers_read_only",
+          "outcome": "Passed",
+          "duration": "00:00:02.9781444"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_preserves_a_real_committed_release_after_losing_commit_or_disposal_acknowledgement(failure: ReleaseCommitAcknowledgement)",
+          "outcome": "Passed",
+          "duration": "00:00:02.8182380"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_survives_publication_interruption_without_changing_SQL(interruption: BeforePrepared)",
+          "outcome": "Passed",
+          "duration": "00:00:02.4141874"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_inspectors_refuse_missing_foreign_and_unbound_records_without_dispatch(owner: Agent)",
+          "outcome": "Passed",
+          "duration": "00:00:02.4245423"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectLifecycleMigrationTests.Unsupported_protocol_or_user_trigger_refuses_the_whole_schema_change(trigger: True)",
+          "outcome": "Passed",
+          "duration": "00:00:01.9789920"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.Prepared_resume_of_an_already_committed_binding_never_reinitializes_missing_issued_metadata",
+          "outcome": "Passed",
+          "duration": "00:00:09.8811057"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Governed_lifecycle_checks_held_source_at_commit_and_fresh_authority_only_after_release",
+          "outcome": "Passed",
+          "duration": "00:00:03.1351334"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.Prepared_plan_survives_SQL_initialization_rollback_and_resumes_the_same_identity",
+          "outcome": "Passed",
+          "duration": "00:00:02.3042394"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_refuses_different_SQL_protocol_or_retained_identity(fault: ChangedMaintenance)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3654453"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Workbench_stored_original_gates_dependencies_direct_dispatch_and_fresh_recovery_before_any_claim",
+          "outcome": "Passed",
+          "duration": "00:00:02.4636135"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Actual_left_join_observes_an_orphan_future_receipt_instead_of_reporting_genuine_future_absence",
+          "outcome": "Passed",
+          "duration": "00:00:02.7289590"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_never_marks_after_probe_failure_or_uncertain_terminal_release(failure: SourceAcquisition)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7725158"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Identity_only_service_entry_refuses_before_any_owner_or_participant_effect(entry: Reconnect)",
+          "outcome": "Passed",
+          "duration": "00:00:02.6963104"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Unfinished_existence_and_header_reads_use_partial_indexes_with_large_terminal_history",
+          "outcome": "Passed",
+          "duration": "00:00:02.6507800"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_retains_Prepared_when_profile_recheck_fails_after_SQL_release",
+          "outcome": "Passed",
+          "duration": "00:00:02.4914243"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.Bootstrap_restart_and_explicit_alias_preserve_SQL_identity_and_existing_epoch_deadline",
+          "outcome": "Passed",
+          "duration": "00:00:02.6324145"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.Global_installation_audit_refuses_unknown_or_open_history_and_does_not_bootstrap_over_lost_lifecycle",
+          "outcome": "Passed",
+          "duration": "00:00:25.0779508"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_exclusive_inspection_uses_nowait_against_the_actual_participant_row(owner: Agent)",
+          "outcome": "Passed",
+          "duration": "00:00:02.2680573"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_refuses_different_SQL_protocol_or_retained_identity(fault: AdvancedNamespace)",
+          "outcome": "Passed",
+          "duration": "00:00:02.5269168"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_rejects_changed_plans_before_acquiring_sources",
+          "outcome": "Passed",
+          "duration": "00:00:02.7701695"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_releases_only_the_original_gate_without_repeating_deletion_or_dispatching_cleanup",
+          "outcome": "Passed",
+          "duration": "00:00:02.5259511"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.SQL_commit_before_file_completion_resumes_exactly_without_allocating_another_namespace",
+          "outcome": "Passed",
+          "duration": "00:00:02.3150165"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Compensation_lost_acknowledgement_recovers_after_provider_recreation_without_reexecuting",
+          "outcome": "Passed",
+          "duration": "00:00:03.0351318"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Identity_only_service_entry_refuses_before_any_owner_or_participant_effect(entry: Delete)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7486257"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Current_write_revocation_at_the_final_commit_boundary_rolls_back_the_staged_effect_and_receipt(deletion: False)",
+          "outcome": "Passed",
+          "duration": "00:00:02.8179416"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.Readiness_waits_for_actual_installation_then_sees_its_complete_pool_set_and_reactivation_closes_every_pool",
+          "outcome": "Passed",
+          "duration": "00:00:02.6123573"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Typed_preparation_preserves_one_original_in_both_owner_records_and_rolls_back_with_the_owner",
+          "outcome": "Passed",
+          "duration": "00:00:02.4046495"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_observes_another_reconciler_committing_in_the_probe_to_mark_gap",
+          "outcome": "Passed",
+          "duration": "00:00:02.6032462"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_previous_selection_restoration_preserves_native_work_and_enables_exact_release",
+          "outcome": "Passed",
+          "duration": "00:00:17.4352725"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_refuses_held_file_or_SQL_exclusion_then_succeeds_after_release(sqlHeld: False)",
+          "outcome": "Passed",
+          "duration": "00:00:07.4575143"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectLifecycleMigrationTests.Unsupported_protocol_or_user_trigger_refuses_the_whole_schema_change(trigger: False)",
+          "outcome": "Passed",
+          "duration": "00:00:02.0316341"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_exclusive_inspection_uses_nowait_against_the_actual_participant_row(owner: Workbench)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3554196"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_refuses_held_file_or_SQL_exclusion_then_succeeds_after_release(sqlHeld: True)",
+          "outcome": "Passed",
+          "duration": "00:00:07.5075739"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_never_marks_after_probe_failure_or_uncertain_terminal_release(failure: ProbeRollback)",
+          "outcome": "Passed",
+          "duration": "00:00:02.6698076"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Creation_compensation_commits_the_original_receipt_and_replays_without_participant_dispatch(reserved: True)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7719569"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests.Reactivation_mints_a_new_namespace_preserves_exact_resume_and_closes_previous_owner_epoch",
+          "outcome": "Passed",
+          "duration": "00:00:02.6095889"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Cancellation_rejects_foreign_namespace_requester_parent_and_legacy_namespace_without_rebinding",
+          "outcome": "Passed",
+          "duration": "00:00:02.6579538"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Hierarchy_capture_keeps_exact_edge_and_endpoint_lifetimes_and_checks_empty_original_targets",
+          "outcome": "Passed",
+          "duration": "00:00:03.0930559"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_never_marks_after_probe_failure_or_uncertain_terminal_release(failure: SourceRelease)",
+          "outcome": "Passed",
+          "duration": "00:00:02.8215445"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectLifecycleMigrationTests.Upgrade_preserves_promises_opaque_receipts_and_legacy_rows_without_minting_release_authority",
+          "outcome": "Passed",
+          "duration": "00:00:02.4281555"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Deleted_target_replay_returns_the_exact_retained_receipt_and_changed_intent_cannot_reuse_its_address",
+          "outcome": "Passed",
+          "duration": "00:00:02.7859302"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_command_releases_native_completion_without_starting_host_or_running_callbacks",
+          "outcome": "Passed",
+          "duration": "00:00:08.0136587"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Governed_source_refusal_after_receipt_staging_rolls_back_hierarchy_and_receipt_without_post_release_work",
+          "outcome": "Passed",
+          "duration": "00:00:02.5549231"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: ForeignProfile)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3754631"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_survives_publication_interruption_without_changing_SQL(interruption: AfterPrepared)",
+          "outcome": "Passed",
+          "duration": "00:00:02.6054896"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Identity_only_service_entry_refuses_before_any_owner_or_participant_effect(entry: Remove)",
+          "outcome": "Passed",
+          "duration": "00:00:02.6694777"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Racing_compensation_of_the_same_original_waits_then_recovers_the_single_committed_completion",
+          "outcome": "Passed",
+          "duration": "00:00:02.6444836"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: MissingRetirement)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7098840"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Awaiting_completion_without_pending_native_rows_still_blocks_rotation",
+          "outcome": "Passed",
+          "duration": "00:00:02.8400711"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Original_deletion_revision_and_lifetime_are_not_rebased_at_admission(staleLifetime: False)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7055364"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Creation_compensation_commits_the_original_receipt_and_replays_without_participant_dispatch(reserved: False)",
+          "outcome": "Passed",
+          "duration": "00:00:02.9069943"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Compensation_refuses_an_edited_creation_or_foreign_original_namespace_without_adopting_current_state",
+          "outcome": "Passed",
+          "duration": "00:00:02.7774114"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Reservation_cancellation_retains_native_never_consumed_evidence_and_replays_without_effects(child: False)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7485819"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Cancellation_refuses_a_reservation_consumed_by_a_live_project",
+          "outcome": "Passed",
+          "duration": "00:00:02.9473478"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Receipt_failure_rolls_back_deletion_retirement_completion_and_preserves_the_original_project",
+          "outcome": "Passed",
+          "duration": "00:00:02.7464327"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Cancellation_known_commit_with_uncertain_owner_release_keeps_participants_blocked",
+          "outcome": "Passed",
+          "duration": "00:00:02.7613275"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Native_participant_catalog_requires_the_two_explicit_inventory_owners",
+          "outcome": "Passed",
+          "duration": "00:00:00.0036718"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_refuses_different_SQL_protocol_or_retained_identity(fault: OtherPlan)",
+          "outcome": "Passed",
+          "duration": "00:00:02.2573960"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_accepts_bound_pending_pages_but_rotation_waits_for_release_and_native_completion(released: False)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7670187"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: UnboundWorkbench)",
+          "outcome": "Passed",
+          "duration": "00:00:02.7503108"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: WrongObligation)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3944823"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: InvalidAgentStatus)",
+          "outcome": "Passed",
+          "duration": "00:00:02.5451544"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Workbench_first_invalid_or_oversized_payload_never_looks_like_an_empty_inventory(oversized: False)",
+          "outcome": "Passed",
+          "duration": "00:00:02.4188369"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Current_write_revocation_at_the_final_commit_boundary_rolls_back_the_staged_effect_and_receipt(deletion: True)",
+          "outcome": "Passed",
+          "duration": "00:00:03.0653674"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Hierarchy_capture_bounds_incident_degree_before_returning_witnesses_and_excludes_unrelated_edges",
+          "outcome": "Passed",
+          "duration": "00:00:02.5854967"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Deletion_committed_after_preflight_is_refused_under_SQL_exclusion_and_previous_selection_can_be_restored",
+          "outcome": "Passed",
+          "duration": "00:00:02.5241283"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Compensation_final_write_revocation_rolls_back_staged_deletion_and_completion",
+          "outcome": "Passed",
+          "duration": "00:00:02.6564247"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Original_deletion_revision_and_lifetime_are_not_rebased_at_admission(staleLifetime: True)",
+          "outcome": "Passed",
+          "duration": "00:00:02.8500005"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_accepts_bound_pending_pages_but_rotation_waits_for_release_and_native_completion(released: True)",
+          "outcome": "Passed",
+          "duration": "00:00:02.8364345"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Offline_recovery_refuses_the_original_callers_session_lock_during_a_native_handoff",
+          "outcome": "Passed",
+          "duration": "00:00:03.1800783"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Legacy_reservation_cancellation_refuses_before_effects",
+          "outcome": "Passed",
+          "duration": "00:00:02.3936012"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Cancellation_completion_insert_failure_rolls_back_reservation_and_participant_preparation",
+          "outcome": "Passed",
+          "duration": "00:00:02.6431741"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: UnboundAgent)",
+          "outcome": "Passed",
+          "duration": "00:00:02.4313145"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectDeletionDatasetReadinessTests.Readiness_refuses_inconsistent_native_work_without_changing_it(fault: ForeignNamespace)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3307109"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatasetActivationRestorationIntegrationTests.Previous_selection_restoration_refuses_different_SQL_protocol_or_retained_identity(fault: PoolVersion)",
+          "outcome": "Passed",
+          "duration": "00:00:02.3558366"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_workbench_inspector_refuses_an_oversized_otherwise_valid_payload",
+          "outcome": "Passed",
+          "duration": "00:00:02.4480412"
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Compensation_known_commit_survives_owner_disposal_failure_and_keeps_participants_blocked",
+          "outcome": "Passed",
+          "duration": "00:00:02.6163793"
+        }
+      ]
+    }
+  ],
+  "identity": {
+    "sourceAndRuntimeUnchanged": true,
+    "sourceFiles": 9132,
+    "runtimeFiles": 6436,
+    "sourceSha256": "27CD39D7B67CACCE9926FD833EDD0A95AFFE20DA8FF43206FD46A06A2C7A8491",
+    "runtimeSha256": "D29AE9521AAD7EF9EE983341641787C14F1E663CB7EF3053660BA07DC892114B"
+  },
+  "cleanup": {
+    "recordedUtc": "2026-10-19T00:45:03.6500275+00:00",
+    "remainingObservedProcesses": [],
+    "postgres": [
+      "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+      "postgres|1"
+    ],
+    "outcome": "All 102 selected readiness, lifecycle and restoration integration cases passed; candidate resource reconciliation.",
+    "temporaryDeltasPreservedWithoutOwnership": [
+      {
+        "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\lh3j5zb0.l1e",
+        "family": "shared-temp-directory-entries"
+      },
+      {
+        "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\3e32bd43-e26f-4f1c-b8a7-7843c9db0d25.tmp",
+        "family": "anonymous-and-package-temp-files"
+      },
+      {
+        "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_49552_20261018_203830_981.log",
+        "family": "anonymous-and-package-temp-files"
+      },
+      {
+        "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\rxspyo2c.tau",
+        "family": "shared-temp-directory-entries"
+      }
+    ],
+    "databaseNameDelta": []
+  },
+  "architecture": {
+    "snapshotId": "snap-20261019003445-cfc506a8",
+    "projects": 5,
+    "documents": 939,
+    "types": 2686,
+    "dependencies": 5191,
+    "cycles": [
+      {
+        "level": "Module",
+        "names": [
+          "CanDoItAll.Infrastructure.Persistence",
+          "CanDoItAll.Infrastructure.ControlPlane",
+          "CanDoItAll.Infrastructure.Storage"
+        ]
+      },
+      {
+        "level": "Module",
+        "names": [
+          "CanDoItAll.Modules.AgentFramework.Hosting",
+          "CanDoItAll.Modules.AgentFramework"
+        ]
+      },
+      {
+        "level": "Module",
+        "names": [
+          "CanDoItAll.Modules.Workbench.CanvasAdapters",
+          "CanDoItAll.Modules.Workbench.Pages",
+          "CanDoItAll.Modules.Workbench.ProjectStructure",
+          "CanDoItAll.Modules.Workbench"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+          "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.Projects.ProjectDeletionCompletionOwner.Attempt",
+          "CanDoItAll.Modules.Projects.ProjectDeletionCompletionOwner"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.Workbench.ProjectProcessLaunchAuthorityService.ProjectProcessProjectAuthorityLease",
+          "CanDoItAll.Modules.Workbench.ProjectProcessLaunchAuthorityService"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.Workbench.ProjectAgentSourceMutationAuthority",
+          "CanDoItAll.Modules.Workbench.ProjectAgentSourceMutationLease"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.Workbench.ProjectPackageService",
+          "CanDoItAll.Modules.Workbench.ProjectPackageStorageImporter"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService",
+          "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService.WorkflowReadSourceLease",
+          "CanDoItAll.Modules.Workbench.ProjectStructureWorkflowAuthorityService.MappedProcessSourceLease"
+        ]
+      },
+      {
+        "level": "Type",
+        "names": [
+          "CanDoItAll.Modules.Workbench.ProjectAgentNativeMutationScope",
+          "CanDoItAll.Modules.Workbench.ProjectAgentNativeMutationService"
+        ]
+      }
+    ],
+    "changed": [
+      {
+        "name": "CanDoItAll.Composition.ProjectDeletionDatasetGuardComposition",
+        "members": 1
+      },
+      {
+        "name": "CanDoItAll.Modules.AgentFramework.AgentProjectDeletionPendingInventory",
+        "members": 4
+      },
+      {
+        "name": "CanDoItAll.Modules.Projects.IProjectDeletionPendingInventory",
+        "members": 3
+      },
+      {
+        "name": "CanDoItAll.Modules.Projects.ProjectDeletionDatasetGuard",
+        "members": 7
+      },
+      {
+        "name": "CanDoItAll.Modules.Projects.ProjectDeletionPendingBinding",
+        "members": 3
+      },
+      {
+        "name": "CanDoItAll.Modules.Projects.ProjectDeletionPendingCleanup",
+        "members": 8
+      },
+      {
+        "name": "CanDoItAll.Modules.Projects.ProjectDeletionPendingPage",
+        "members": 3
+      },
+      {
+        "name": "CanDoItAll.Modules.Workbench.ProjectWorkbenchDeletionPendingInventory",
+        "members": 5
+      },
+      {
+        "name": "CanDoItAll.Modules.Workbench.ProjectWorkbenchDeletionPendingInventory.PendingRow",
+        "members": 5
+      }
+    ],
+    "workspaceAdvisories": 189,
+    "nonAdvisoryWorkspaceErrors": 0
+  },
+  "queryPlans": [
+    [
+      {
+        "Plan": {
+          "Node Type": "Result",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 8.14,
+          "Total Cost": 8.15,
+          "Plan Rows": 1,
+          "Plan Width": 1,
+          "Actual Startup Time": 0.016,
+          "Actual Total Time": 0.017,
+          "Actual Rows": 1.0,
+          "Actual Loops": 1,
+          "Disabled": false,
+          "Shared Hit Blocks": 2,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Index Only Scan",
+              "Parent Relationship": "InitPlan",
+              "Subplan Name": "InitPlan 1",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "IX_AF_ProjectAccessRevocations_Unfinished",
+              "Relation Name": "AgentFramework_ProjectAccessRevocations",
+              "Alias": "AgentFramework_ProjectAccessRevocations",
+              "Startup Cost": 0.12,
+              "Total Cost": 8.14,
+              "Plan Rows": 1,
+              "Plan Width": 0,
+              "Actual Startup Time": 0.014,
+              "Actual Total Time": 0.014,
+              "Actual Rows": 1.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Heap Fetches": 1,
+              "Index Searches": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            }
+          ]
+        },
+        "Planning": {
+          "Shared Hit Blocks": 48,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.33,
+        "Triggers": [],
+        "Execution Time": 0.035
+      }
+    ],
+    [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 0.12,
+          "Total Cost": 8.14,
+          "Plan Rows": 1,
+          "Plan Width": 16,
+          "Actual Startup Time": 0.037,
+          "Actual Total Time": 0.038,
+          "Actual Rows": 1.0,
+          "Actual Loops": 1,
+          "Disabled": false,
+          "Shared Hit Blocks": 2,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Index Only Scan",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "IX_AF_ProjectAccessRevocations_Unfinished",
+              "Relation Name": "AgentFramework_ProjectAccessRevocations",
+              "Alias": "AgentFramework_ProjectAccessRevocations",
+              "Startup Cost": 0.12,
+              "Total Cost": 8.14,
+              "Plan Rows": 1,
+              "Plan Width": 16,
+              "Actual Startup Time": 0.036,
+              "Actual Total Time": 0.036,
+              "Actual Rows": 1.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Heap Fetches": 1,
+              "Index Searches": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            }
+          ]
+        },
+        "Planning": {
+          "Shared Hit Blocks": 0,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.072,
+        "Triggers": [],
+        "Execution Time": 0.06
+      }
+    ],
+    [
+      {
+        "Plan": {
+          "Node Type": "Result",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 8.14,
+          "Total Cost": 8.15,
+          "Plan Rows": 1,
+          "Plan Width": 1,
+          "Actual Startup Time": 0.014,
+          "Actual Total Time": 0.014,
+          "Actual Rows": 1.0,
+          "Actual Loops": 1,
+          "Disabled": false,
+          "Shared Hit Blocks": 2,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Index Only Scan",
+              "Parent Relationship": "InitPlan",
+              "Subplan Name": "InitPlan 1",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "IX_Workbench_ProjectCrossModuleMutations_UnfinishedDeletion",
+              "Relation Name": "Workbench_ProjectCrossModuleMutations",
+              "Alias": "Workbench_ProjectCrossModuleMutations",
+              "Startup Cost": 0.12,
+              "Total Cost": 8.14,
+              "Plan Rows": 1,
+              "Plan Width": 0,
+              "Actual Startup Time": 0.012,
+              "Actual Total Time": 0.012,
+              "Actual Rows": 1.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Heap Fetches": 1,
+              "Index Searches": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            }
+          ]
+        },
+        "Planning": {
+          "Shared Hit Blocks": 51,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.356,
+        "Triggers": [],
+        "Execution Time": 0.029
+      }
+    ],
+    [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 0.12,
+          "Total Cost": 8.14,
+          "Plan Rows": 1,
+          "Plan Width": 16,
+          "Actual Startup Time": 0.028,
+          "Actual Total Time": 0.03,
+          "Actual Rows": 1.0,
+          "Actual Loops": 1,
+          "Disabled": false,
+          "Shared Hit Blocks": 2,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Index Only Scan",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "IX_Workbench_ProjectCrossModuleMutations_UnfinishedDeletion",
+              "Relation Name": "Workbench_ProjectCrossModuleMutations",
+              "Alias": "Workbench_ProjectCrossModuleMutations",
+              "Startup Cost": 0.12,
+              "Total Cost": 8.14,
+              "Plan Rows": 1,
+              "Plan Width": 16,
+              "Actual Startup Time": 0.028,
+              "Actual Total Time": 0.028,
+              "Actual Rows": 1.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Heap Fetches": 1,
+              "Index Searches": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            }
+          ]
+        },
+        "Planning": {
+          "Shared Hit Blocks": 0,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.064,
+        "Triggers": [],
+        "Execution Time": 0.049
+      }
+    ],
+    [
+      {
+        "Plan": {
+          "Node Type": "Result",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 8.14,
+          "Total Cost": 8.15,
+          "Plan Rows": 1,
+          "Plan Width": 1,
+          "Actual Startup Time": 0.014,
+          "Actual Total Time": 0.014,
+          "Actual Rows": 1.0,
+          "Actual Loops": 1,
+          "Disabled": false,
+          "Shared Hit Blocks": 2,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Index Only Scan",
+              "Parent Relationship": "InitPlan",
+              "Subplan Name": "InitPlan 1",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "IX_Projects_DeletionCompletions_Awaiting",
+              "Relation Name": "Projects_DeletionCompletions",
+              "Alias": "Projects_DeletionCompletions",
+              "Startup Cost": 0.12,
+              "Total Cost": 8.14,
+              "Plan Rows": 1,
+              "Plan Width": 0,
+              "Actual Startup Time": 0.013,
+              "Actual Total Time": 0.013,
+              "Actual Rows": 1.0,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Heap Fetches": 1,
+              "Index Searches": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            }
+          ]
+        },
+        "Planning": {
+          "Shared Hit Blocks": 42,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.273,
+        "Triggers": [],
+        "Execution Time": 0.026
+      }
+    ]
+  ],
+  "acceptance": "All 102 selected cases passed; existing-dataset readiness/rotation foundation. Initial legacy selection and actual cursor query-plan follow-up remain open, as do legacy installation and the broader concurrency runtime policy."
+}

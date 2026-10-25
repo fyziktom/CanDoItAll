@@ -15,7 +15,10 @@ internal sealed class ProjectsProjectTransferTargetStateParticipant(ProjectTrans
         typeof(ProjectOptionSelection),
         typeof(ProjectPhase),
         typeof(ProjectRetirementRecord),
-        typeof(ProjectCreationReservationRecord)
+        typeof(ProjectCreationReservationRecord),
+        typeof(ProjectDefinitionReceiptRecord),
+        typeof(ProjectLifecycleReceiptRecord),
+        typeof(ProjectDeletionCompletionRecord)
     ];
 
     public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
@@ -32,8 +35,19 @@ internal sealed class ProjectsProjectTransferTargetStateParticipant(ProjectTrans
             await dbContext.Set<ProjectPhase>().AsNoTracking().AnyAsync(cancellationToken) ||
             await dbContext.Set<ProjectRetirementRecord>().AsNoTracking().AnyAsync(cancellationToken) ||
             await dbContext.Set<ProjectCreationReservationRecord>().AsNoTracking().AnyAsync(cancellationToken);
-        return hasResidue
-            ? [new("project core records")]
-            : [];
+        var residues = new List<ProjectTransferTargetStateResidue>();
+        if (hasResidue) {
+            residues.Add(new("project core records"));
+        }
+        if (await dbContext.Set<ProjectDefinitionReceiptRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained project definition receipts"));
+        }
+        if (await dbContext.Set<ProjectLifecycleReceiptRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained project lifecycle receipts"));
+        }
+        if (await dbContext.Set<ProjectDeletionCompletionRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained project deletion completions"));
+        }
+        return residues;
     }
 }

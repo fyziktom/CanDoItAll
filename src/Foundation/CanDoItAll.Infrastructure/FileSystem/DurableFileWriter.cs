@@ -32,6 +32,7 @@ public sealed record DurableFileWriteOptions
     public DurableFileCommitMode CommitMode { get; init; }
 
     public bool RequirePrivateUnixMode { get; init; }
+    public bool RequireExistingPrivateTarget { get; init; }
 }
 
 internal enum DurableFileWriteStage
@@ -41,9 +42,22 @@ internal enum DurableFileWriteStage
     Committed
 }
 
+public sealed class DurableFilePublicationRecoveryException : IOException {
+    internal DurableFilePublicationRecoveryException(string recoveryFilePath, Exception? innerException = null)
+        : base("Durable-file publication requires operator recovery. Further writes and deletes are blocked by preserved pending bytes.", innerException) {
+        RecoveryFilePath = recoveryFilePath;
+    }
+
+    public string RecoveryFilePath { get; }
+}
+
 public sealed class DurableFileWriter
 {
     internal const string CleanupFailureDataKey = "CanDoItAll.DurableFileWriter.CleanupFailure";
+    private const string TemporaryExtension = ".tmp";
+    private const string PendingExtension = ".pending";
+    private const int UnableToMoveReplacement = 1176;
+    private const int UnableToMoveReplacementAfterMerge = 1177;
 
     private const UnixFileMode PrivateDirectoryMode =
         UnixFileMode.UserRead |
@@ -55,6 +69,7 @@ public sealed class DurableFileWriter
 
     private readonly IPhysicalFileSystemPathPolicyFactory pathPolicyFactory;
     private readonly Action<DurableFileWriteStage>? stageObserver;
+    private readonly Action<string, string, string?> replaceFile;
 
     public DurableFileWriter(IPhysicalFileSystemPathPolicyFactory pathPolicyFactory)
         : this(pathPolicyFactory, stageObserver: null)
@@ -63,10 +78,12 @@ public sealed class DurableFileWriter
 
     internal DurableFileWriter(
         IPhysicalFileSystemPathPolicyFactory pathPolicyFactory,
-        Action<DurableFileWriteStage>? stageObserver)
-    {
+        Action<DurableFileWriteStage>? stageObserver,
+        Action<string, string, string?>? replaceFile = null) {
         this.pathPolicyFactory = pathPolicyFactory ?? throw new ArgumentNullException(nameof(pathPolicyFactory));
         this.stageObserver = stageObserver;
+        this.replaceFile = replaceFile ?? ((source, destination, backup) =>
+            File.Replace(source, destination, backup, ignoreMetadataErrors: true));
     }
 
     public void EnsureDirectory(
@@ -187,16 +204,29 @@ public sealed class DurableFileWriter
                 PhysicalPathValidationErrorCode.InvalidPath,
                 "The durable file target does not have a directory parent.");
 
-        EnsureDirectoryTree(policy.RootPath, parentPath, options.RequirePrivateUnixMode);
+        if (options.RequireExistingPrivateTarget) {
+            if (!options.RequirePrivateUnixMode || options.CommitMode != DurableFileCommitMode.ReplaceExisting || options.CreateBackup) {
+                throw new ArgumentException("Existing private publication requires replacement without a backup.");
+            }
+            ExistingPrivateFileReader.RequireDirectory(policy.RootPath, parentPath);
+            policy.EnsureSafePath(fullPath);
+            if ((File.GetAttributes(fullPath) & FileAttributes.Directory) != 0) {
+                throw new IOException("Existing private publication requires an existing file.");
+            }
+            VerifyPrivateFileMode(fullPath, true);
+        } else {
+            EnsureDirectoryTree(policy.RootPath, parentPath, options.RequirePrivateUnixMode);
+        }
         policy = pathPolicyFactory.Create(policy.RootPath);
         policy.RevalidateMutationTarget(fullPath);
 
         string lockPath = fullPath + ".candoitall.lock";
-        await using IAsyncDisposable coordination = await AcquireCoordinationAsync(
+        await using IAsyncDisposable coordination = await AcquireCoordinationCoreAsync(
             policy.RootPath,
             lockPath,
             options.LockTimeout,
             options.RequirePrivateUnixMode,
+            options.RequireExistingPrivateTarget,
             cancellationToken).ConfigureAwait(false);
 
         policy = pathPolicyFactory.Create(policy.RootPath);
@@ -204,7 +234,7 @@ public sealed class DurableFileWriter
         CleanupStaleTemporaryFiles(policy, parentPath, Path.GetFileName(fullPath));
         string temporaryPath = Path.Combine(
             parentPath,
-            $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+            $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}{TemporaryExtension}");
         policy.RevalidateMutationTarget(temporaryPath);
 
         try
@@ -232,11 +262,21 @@ public sealed class DurableFileWriter
             policy.EnsureSafePath(temporaryPath);
             stageObserver?.Invoke(DurableFileWriteStage.BeforeCommit);
 
+            bool useWindowsReplacement = OperatingSystem.IsWindows() &&
+                options.CommitMode == DurableFileCommitMode.ReplaceExisting && File.Exists(fullPath);
+            if (useWindowsReplacement) {
+                string pendingPath = Path.ChangeExtension(temporaryPath, PendingExtension);
+                policy.RevalidateMutationTarget(pendingPath);
+                File.Move(temporaryPath, pendingPath);
+                temporaryPath = pendingPath;
+            }
+
             await CommitWithRetryAsync(
                 temporaryPath,
                 fullPath,
                 options.CommitMode,
                 options.CreateBackup,
+                useWindowsReplacement,
                 options.LockTimeout,
                 cancellationToken).ConfigureAwait(false);
             ApplyPrivateFileMode(fullPath, options.RequirePrivateUnixMode);
@@ -247,9 +287,9 @@ public sealed class DurableFileWriter
             }
 
             stageObserver?.Invoke(DurableFileWriteStage.Committed);
-        }
-        catch (Exception writeFailure)
-        {
+        } catch (DurableFilePublicationRecoveryException) {
+            throw;
+        } catch (Exception writeFailure) {
             try
             {
                 CleanupGeneratedFile(policy, temporaryPath);
@@ -296,6 +336,8 @@ public sealed class DurableFileWriter
         cancellationToken.ThrowIfCancellationRequested();
         policy = pathPolicyFactory.Create(policy.RootPath);
         policy.RevalidateMutationTarget(fullPath);
+        string parentPath = Path.GetDirectoryName(fullPath)!;
+        EnsureNoPendingPublication(policy, new DirectoryInfo(parentPath).EnumerateFiles(), Path.GetFileName(fullPath));
         if (File.Exists(fullPath))
         {
             File.Delete(fullPath);
@@ -319,56 +361,103 @@ public sealed class DurableFileWriter
             .GetAwaiter()
             .GetResult();
 
-    public async ValueTask<IAsyncDisposable> AcquireCoordinationAsync(
+    public ValueTask<IAsyncDisposable> AcquireCoordinationAsync(
         string managedRoot,
         string lockPath,
         TimeSpan timeout,
         bool requirePrivateUnixMode,
         CancellationToken cancellationToken = default)
-    {
-        if (timeout <= TimeSpan.Zero)
-        {
+        => AcquireCoordinationCoreAsync(managedRoot, lockPath, timeout, requirePrivateUnixMode,
+            requireExistingDirectories: false, cancellationToken);
+
+    public ValueTask<IAsyncDisposable> AcquireExistingCoordinationAsync(
+        string managedRoot, string lockPath, TimeSpan timeout, bool requirePrivateUnixMode,
+        CancellationToken cancellationToken = default)
+        => AcquireCoordinationCoreAsync(managedRoot, lockPath, timeout, requirePrivateUnixMode,
+            requireExistingDirectories: true, cancellationToken);
+
+    private async ValueTask<IAsyncDisposable> AcquireCoordinationCoreAsync(
+        string managedRoot, string lockPath, TimeSpan timeout, bool requirePrivateUnixMode,
+        bool requireExistingDirectories, CancellationToken cancellationToken) {
+        if (timeout <= TimeSpan.Zero) {
             throw new ArgumentOutOfRangeException(nameof(timeout), "The lock timeout must be positive.");
         }
-
-        IPhysicalFileSystemPathPolicy policy = pathPolicyFactory.Create(managedRoot);
+        cancellationToken.ThrowIfCancellationRequested();
+        IPhysicalFileSystemPathPolicy policy = CreatePolicy(managedRoot);
         string fullLockPath = policy.ResolveContainedPath(lockPath);
         string parentPath = Path.GetDirectoryName(fullLockPath)
             ?? throw new PhysicalPathValidationException(
                 PhysicalPathValidationErrorCode.InvalidPath,
                 "The coordination file does not have a directory parent.");
-        EnsureDirectoryTree(policy.RootPath, parentPath, requirePrivateUnixMode);
-        policy = pathPolicyFactory.Create(policy.RootPath);
+        if (requireExistingDirectories) {
+            RequireExistingDirectories();
+        } else {
+            EnsureDirectoryTree(policy.RootPath, parentPath, requirePrivateUnixMode);
+        }
+        policy = CreatePolicy(policy.RootPath);
         policy.RevalidateMutationTarget(fullLockPath);
 
         var stopwatch = Stopwatch.StartNew();
-        while (true)
-        {
+        while (true) {
             cancellationToken.ThrowIfCancellationRequested();
-            policy.RevalidateMutationTarget(fullLockPath);
-            try
-            {
-                FileStream stream = OpenLockFile(fullLockPath, requirePrivateUnixMode);
-                ApplyPrivateFileMode(fullLockPath, requirePrivateUnixMode);
-                VerifyPrivateFileMode(fullLockPath, requirePrivateUnixMode);
-                return new FileLockLease(stream);
+            if (requireExistingDirectories) {
+                RequireExistingDirectories();
             }
-            catch (IOException) when (stopwatch.Elapsed < timeout)
-            {
+            policy.RevalidateMutationTarget(fullLockPath);
+            FileStream stream;
+            try {
+                stream = OpenLockFile(fullLockPath, requirePrivateUnixMode);
+            } catch (IOException) when (stopwatch.Elapsed < timeout) {
                 TimeSpan remaining = timeout - stopwatch.Elapsed;
                 TimeSpan delay = remaining < TimeSpan.FromMilliseconds(25)
                     ? remaining
                     : TimeSpan.FromMilliseconds(25);
-                if (delay > TimeSpan.Zero)
-                {
+                if (delay > TimeSpan.Zero) {
                     await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                 }
-            }
-            catch (IOException exception)
-            {
+                continue;
+            } catch (IOException exception) {
                 throw new TimeoutException(
                     "Timed out waiting for exclusive durable-file coordination.",
                     exception);
+            }
+            try {
+                if (requireExistingDirectories) {
+                    RequireExistingDirectories();
+                }
+                policy.RevalidateMutationTarget(fullLockPath);
+                ApplyPrivateFileMode(fullLockPath, requirePrivateUnixMode);
+                VerifyPrivateFileMode(fullLockPath, requirePrivateUnixMode);
+                cancellationToken.ThrowIfCancellationRequested();
+                return new FileLockLease(stream);
+            } catch (Exception primary) {
+                try {
+                    await stream.DisposeAsync().ConfigureAwait(false);
+                } catch (Exception cleanup) {
+                    throw new AggregateException("Coordination admission and handle release both failed.", primary, cleanup);
+                }
+                throw;
+            }
+        }
+
+        IPhysicalFileSystemPathPolicy CreatePolicy(string root)
+            => requireExistingDirectories
+                ? new PhysicalFileSystemPathPolicyFactory().Create(root, PhysicalFileSystemCaseSensitivity.Sensitive)
+                : pathPolicyFactory.Create(root);
+
+        void RequireExistingDirectories() {
+            policy.EnsureSafePath(parentPath);
+            var current = parentPath;
+            while (true) {
+                if ((File.GetAttributes(current) & FileAttributes.Directory) == 0) {
+                    throw new IOException("Existing coordination requires its original workspace directories.");
+                }
+                VerifyPrivateDirectoryMode(current, requirePrivateUnixMode);
+                if (policy.PathComparer.Equals(current, policy.RootPath)) {
+                    return;
+                }
+                current = Path.GetDirectoryName(current)
+                    ?? throw new IOException("The existing coordination directory is outside its original root.");
             }
         }
     }
@@ -384,6 +473,11 @@ public sealed class DurableFileWriter
         bool hasCaseIndependentContainment =
             string.Equals(fullDirectory, policy.RootPath, StringComparison.Ordinal) ||
             fullDirectory.StartsWith(rootPrefix, StringComparison.Ordinal);
+        if (!requirePrivateUnixMode && hasCaseIndependentContainment &&
+            policy.CaseSensitivity != PhysicalFileSystemCaseSensitivity.Unknown &&
+            Directory.Exists(fullDirectory)) {
+            return;
+        }
         string currentPath = policy.RootPath;
 
         if (!Directory.Exists(currentPath))
@@ -470,15 +564,28 @@ public sealed class DurableFileWriter
         return new FileStream(path, options);
     }
 
-    private static void Commit(
+    private void Commit(
         string temporaryPath,
         string fullPath,
         DurableFileCommitMode commitMode,
-        bool createBackup)
-    {
+        bool createBackup,
+        bool useWindowsReplacement) {
         if (commitMode == DurableFileCommitMode.CreateNew)
         {
             File.Move(temporaryPath, fullPath);
+            return;
+        }
+
+        if (useWindowsReplacement) {
+            try {
+                replaceFile(temporaryPath, fullPath, createBackup ? GetBackupPath(fullPath) : null);
+            } catch (IOException exception) when (
+                (exception.HResult & 0xFFFF) is UnableToMoveReplacement or UnableToMoveReplacementAfterMerge) {
+                throw new DurableFilePublicationRecoveryException(temporaryPath, exception);
+            } catch (Exception exception) when (exception is not IOException and not UnauthorizedAccessException) {
+                throw new DurableFilePublicationRecoveryException(temporaryPath, exception);
+            }
+
             return;
         }
 
@@ -497,17 +604,17 @@ public sealed class DurableFileWriter
         File.Move(temporaryPath, fullPath, overwrite: true);
     }
 
-    private static async Task CommitWithRetryAsync(
+    private async Task CommitWithRetryAsync(
         string temporaryPath,
         string fullPath,
         DurableFileCommitMode commitMode,
         bool createBackup,
+        bool useWindowsReplacement,
         TimeSpan lockTimeout,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         if (commitMode == DurableFileCommitMode.CreateNew)
         {
-            Commit(temporaryPath, fullPath, commitMode, createBackup);
+            Commit(temporaryPath, fullPath, commitMode, createBackup, useWindowsReplacement);
             return;
         }
 
@@ -520,10 +627,11 @@ public sealed class DurableFileWriter
         {
             try
             {
-                Commit(temporaryPath, fullPath, commitMode, createBackup);
+                Commit(temporaryPath, fullPath, commitMode, createBackup, useWindowsReplacement);
                 return;
             }
             catch (Exception exception) when (
+                exception is not DurableFilePublicationRecoveryException &&
                 (exception is IOException or UnauthorizedAccessException) &&
                 stopwatch.Elapsed < retryWindow)
             {
@@ -560,11 +668,16 @@ public sealed class DurableFileWriter
         string parentPath,
         string targetFileName)
     {
-        FileInfo[] staleFiles = new DirectoryInfo(parentPath)
-            .EnumerateFiles()
-            .Where(file => IsGeneratedTemporaryFileName(
+        FileInfo[] files = new DirectoryInfo(parentPath).EnumerateFiles()
+            .Where(file => IsGeneratedFileName(file.Name, targetFileName, TemporaryExtension, policy.PathComparison) ||
+                IsGeneratedFileName(file.Name, targetFileName, PendingExtension, policy.PathComparison))
+            .ToArray();
+        EnsureNoPendingPublication(policy, files, targetFileName);
+        FileInfo[] staleFiles = files
+            .Where(file => IsGeneratedFileName(
                 file.Name,
                 targetFileName,
+                TemporaryExtension,
                 policy.PathComparison))
             .OrderBy(file => file.Name, policy.PathComparer)
             .ThenBy(file => file.Name, StringComparer.Ordinal)
@@ -576,23 +689,42 @@ public sealed class DurableFileWriter
         }
     }
 
-    private static bool IsGeneratedTemporaryFileName(
-        string candidate,
-        string targetFileName,
-        StringComparison comparison)
-    {
-        string prefix = $".{targetFileName}.";
-        const string suffix = ".tmp";
+    private static void EnsureNoPendingPublication(
+        IPhysicalFileSystemPathPolicy policy,
+        IEnumerable<FileInfo> files,
+        string targetFileName) {
+        foreach (FileInfo file in files) {
+            if (!IsGeneratedFileName(file.Name, targetFileName, PendingExtension, policy.PathComparison)) {
+                continue;
+            }
+
+            policy.EnsureSafePath(file.FullName);
+            throw new DurableFilePublicationRecoveryException(file.FullName);
+        }
+    }
+
+    public static bool IsPendingPublicationFileName(string candidate, string targetFileName, StringComparison comparison)
+        => IsGeneratedFileName(candidate, targetFileName, PendingExtension, comparison);
+
+    public static bool IsPendingPublicationFileName(ReadOnlySpan<char> candidate, ReadOnlySpan<char> targetFileName, StringComparison comparison)
+        => IsGeneratedFileName(candidate, targetFileName, PendingExtension, comparison);
+
+    private static bool IsGeneratedFileName(
+        ReadOnlySpan<char> candidate,
+        ReadOnlySpan<char> targetFileName,
+        ReadOnlySpan<char> suffix,
+        StringComparison comparison) {
+        var prefixLength = targetFileName.Length + 2;
         const int tokenLength = 32;
-        if (candidate.Length != prefix.Length + tokenLength + suffix.Length ||
-            !candidate.StartsWith(prefix, comparison) ||
-            !candidate.EndsWith(suffix, StringComparison.Ordinal))
-        {
+        if (candidate.Length != prefixLength + tokenLength + suffix.Length ||
+            candidate[0] != '.' || candidate[prefixLength - 1] != '.' ||
+            !candidate.Slice(1, targetFileName.Length).Equals(targetFileName, comparison) ||
+            !candidate.EndsWith(suffix, StringComparison.Ordinal)) {
             return false;
         }
 
         return Guid.TryParseExact(
-            candidate.AsSpan(prefix.Length, tokenLength),
+            candidate.Slice(prefixLength, tokenLength),
             "N",
             out _);
     }

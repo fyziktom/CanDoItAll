@@ -1,0 +1,58 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Frozen parent-authored compile-only fixture correction mirrored under exact guards; runtime proof pending",
+  "baseInventory": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-combined-transfer-preflight.json",
+    "bytes": 94509,
+    "sha256": "4947CBAF5AE9E479E53DED60090CA8D8E9240792E233A772E66C6314BC5B1544"
+  },
+  "sourceOverlay": {
+    "path": "tests/Unit/CanDoItAll.Tests.Unit/StorageObjectResourceConnectorTests.cs",
+    "bytes": 17149,
+    "sha256": "44AB450DE9762AC0BA5C13F5CA68A3EEF182C5791D1689C15E3F459FF23418F5"
+  },
+  "predecessorSha256": "3B122CE9AF7D7C1EB4C71E9CE351B1DEEC3A6B1FEDC8059A0EFC750909B688AD",
+  "mainSuccessorSha256": "44AB450DE9762AC0BA5C13F5CA68A3EEF182C5791D1689C15E3F459FF23418F5",
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-unit-command-amendment.md",
+    "bytes": 1581,
+    "sha256": "6ACA0B29464C6022B1338EDFCAFE64E1F41385483ACF1DC471FEA6C479277301"
+  },
+  "preservedInputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-unit-command-ownership.json",
+      "bytes": 750,
+      "sha256": "1E42EC22B7F6BBAC52B3576D151900498105BB7EF588B7CC1E892E0A5C7FE89A"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-unit-command-predecessors/StorageObjectResourceConnectorTests.cs.txt",
+      "bytes": 17118,
+      "sha256": "3B122CE9AF7D7C1EB4C71E9CE351B1DEEC3A6B1FEDC8059A0EFC750909B688AD"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-unit-command-predecessors/P05-R1-combined-transfer-preflight.json",
+      "bytes": 94509,
+      "sha256": "4947CBAF5AE9E479E53DED60090CA8D8E9240792E233A772E66C6314BC5B1544"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-unit-command-predecessors/parent-explicit-command-fix.json",
+      "bytes": 451,
+      "sha256": "F632D50E4519A9157ECC217B6635DB731A8C15F9AE872AA06ED601315BDB674C"
+    }
+  ],
+  "counts": {
+    "facts": 6,
+    "theoryMethods": 1,
+    "theoryRows": 4,
+    "fileRows": 10,
+    "newRows": 0,
+    "combinedOrdinary": 346,
+    "separateBrowser": 4,
+    "stage1First": 14
+  },
+  "delta": "Only explicit ReplaceResourceMetadataCommand type in one existing Prepare argument; assertions and all other source bytes unchanged.",
+  "productionChanged": false,
+  "mainChangedByThisAgent": false,
+  "originalInventoriesUnchanged": true
+}
