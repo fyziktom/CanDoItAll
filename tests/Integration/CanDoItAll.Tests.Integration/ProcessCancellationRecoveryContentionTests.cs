@@ -38,7 +38,7 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
         => RunAsync(mode, writers);
 
     internal async Task RunAsync(ReadBasisMode mode, int writers, Action<IServiceCollection>? configureServices = null) {
-        await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync(mode,
+        await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync(mode, freezeClock: false,
             configureServices: services => {
                 services.Configure<ProcessCancellationRecoveryOptions>(options => {
                     options.Enabled = true;
@@ -216,6 +216,12 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
     private static async Task<(ProcessDecisionChildMaterialBinding Binding, ExecutionRunRecord Run, ProcessRuntimeStateSnapshot State)>
         StartSiblingAsync(ProjectTaskPlanReviewFixture fixture, ProcessStepMaterialFixture sibling, CancellationToken token) {
         var (binding, request) = await ProjectTaskPlanReviewFixture.PrepareRequestAsync(fixture.Entry, sibling, token);
+        fixture.Clock.Freeze();
+        fixture.Entry.Wire.OnRequest = token => {
+            fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+            token.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        };
         var services = fixture.Services;
         var run = (await services.GetRequiredService<IAgentInheritedPlanningWorkspaceService>().ExecuteInheritedPlanningAsync(request, token)).Run;
         Assert.True(run.State == ExecutionState.WaitingOnTool, run.ResultSummary);
