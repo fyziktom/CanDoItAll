@@ -430,7 +430,7 @@ jobs:
           - name: macos-arm64
             os: macos-15
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 180
+    timeout-minutes: ${{ needs.dependencies.outputs.platform-scope == 'full' && 240 || 180 }}
     env:
       CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG
     defaults:

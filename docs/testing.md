@@ -1049,8 +1049,8 @@ apart:
 ./tools/Validation/Update-TestShardWeights.ps1 -TrxPath <components.trx>,<integration.trx> -Source "<commit and host>"
 ```
 
-The shard counts and budgets come from a 2026-09-25 Linux Docker run of application `95abfbae9`
-(8 CPUs, PostgreSQL 18.6) that also produced the committed weights. It passed Unit (9,061 cases)
+The initial shard counts and budgets came from a 2026-09-25 Linux Docker run of application `95abfbae9`
+(8 CPUs, PostgreSQL 18.6) that produced the original weights. It passed Unit (9,061 cases)
 in 1.5 minutes, Components (2,331) in 18.1 minutes and Integration (3,170) in 106 minutes.
 Host-platform classes accounted for 25% of the Components time and 38% of the Integration time;
 the largest class, `ProcessCatalogAuthorityPersistenceTests`, took 13.3 minutes and bounds the
@@ -1058,9 +1058,24 @@ shortest possible shard. The earlier single-job gates took 84–104 minutes on L
 macOS and 219–273 on Windows. Scaling those gates by the measured shares projects about 17
 minutes of tests per Linux shard and about 27 per Windows host-platform shard, each after roughly
 7 (Linux) or 17 (Windows) minutes of setup and build; a Windows full-scope shard projects to about
-75 minutes. The budgets (`stable` 90–120, `tests-linux` 90, `tests-host` 180 minutes) leave room
-for the full scope. These are projections: compare the first CI run's step durations with them and
-record the result here before changing a shard count or budget.
+75 minutes. The original budgets were `stable` 90–120, `tests-linux` 90 and `tests-host`
+180 minutes. These projections informed the initial setup; the actual CI measurements
+below supersede them for the current test inventory.
+
+CI run 91 (`304dbc35a`, 2026-10-26) completed all five Linux shards with 10,495
+Components and Integration results across 1,047 classes: 10,493 passed and two failed.
+Its complete timings refresh the shared class weights, retaining the failed cases' costs.
+The measured Linux costs projected onto three shards with the old weights were 92.3,
+79.8 and 81.9 minutes; the refreshed weights balance those costs at approximately 84.7
+minutes each. This is a scheduling projection, not a passing test result or a guarantee
+of equal host-platform timings.
+
+Windows full-scope shards 2 and 3 completed after approximately 168 and 178 minutes,
+including setup, while shard 1 was cancelled at 180 minutes. macOS shard 1 also reached
+that limit; its other shards completed. The full-scope host job budget is now 240 minutes
+to allow completion and evidence collection. The split-scope host budget remains 180
+minutes. Test selection, assertions, per-operation deadlines and failure reporting are
+unchanged; both the code failures and the refreshed scheduling require another CI run.
 
 ## Runtime Portability Gate
 

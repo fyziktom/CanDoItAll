@@ -1610,7 +1610,17 @@ public sealed partial class FileSandboxWorkspaceStore :
             !executionSliceStore.ExecutionStorageExists())
         {
             var seeded = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create());
-            await SaveCoreAsync(operation, SandboxWorkspaceDocument.Empty, seeded, currentRevision: 0L, cancellationToken);
+            try {
+                await SaveCoreAsync(operation, SandboxWorkspaceDocument.Empty, seeded, currentRevision: 0L, cancellationToken);
+            } catch (SandboxWorkspacePublicationConflictException conflict) when (
+                conflict.Kind == SandboxWorkspacePublicationConflictKind.OriginalBytesChanged &&
+                File.Exists(layout.CatalogPath) && File.Exists(layout.ExecutionIndexPath) && File.Exists(layout.WorkspaceIndexPath)) {
+                if (await jsonStore.ReadJsonAsync<WorkspaceStorageIndex>(layout.WorkspaceIndexPath, cancellationToken)
+                    is not { Revision: > 0 }) {
+                    throw;
+                }
+                using var observation = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.initialization.existing");
+            }
             return;
         }
 

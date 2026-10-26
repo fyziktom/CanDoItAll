@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentCatalogOperationsIntegrationTests {
     [Fact]
     public async Task Real_operations_respect_initial_data_and_repair_then_reload() {
