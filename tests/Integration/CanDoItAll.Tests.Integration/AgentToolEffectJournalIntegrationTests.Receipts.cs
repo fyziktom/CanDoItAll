@@ -197,6 +197,66 @@ public sealed partial class AgentToolEffectJournalIntegrationTests {
         Assert.Equal(run.ToolAdmission.Batches[0].Proposals[0].IntentId, saved.IntentId);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Final_read_has_its_own_bounded_authority_check_after_checkpoint_deadline(bool denyRead, bool expireRead) {
+        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync();
+        var run = EffectsRun(source);
+        await using var fixture = await RestoreAsync(source, run);
+        var armed = false;
+        var checkpointPublished = false;
+        CancellationToken checkpointToken = default;
+        var store = fixture.NewStore(stage => {
+            if (armed && stage == ExistingRunDetailCommitStage.JournalPersisted) {
+                armed = false;
+                checkpointPublished = true;
+                Assert.True(checkpointToken.CanBeCanceled);
+                Assert.True(checkpointToken.WaitHandle.WaitOne(TimeSpan.FromSeconds(10)));
+            }
+        });
+        var owner = fixture.NewJournal(store);
+        await using var lease = await owner.AcquireInterruptedReconciliationAsync(fixture.Session, default);
+        using var bound = lease.Bind();
+        var reader = new ReceiptReader();
+        var finalReads = 0;
+        armed = true;
+        var pending = owner.ReconcileInterruptedAsync(lease, [reader], (_, token) => {
+            if (!checkpointPublished) {
+                checkpointToken = token;
+                return new(true);
+            }
+            finalReads++;
+            Assert.True(checkpointToken.IsCancellationRequested);
+            Assert.NotEqual(checkpointToken, token);
+            Assert.True(token.CanBeCanceled);
+            Assert.False(token.IsCancellationRequested);
+            if (expireRead) {
+                Assert.True(token.WaitHandle.WaitOne(TimeSpan.FromSeconds(10)));
+                token.ThrowIfCancellationRequested();
+            }
+            return new(!denyRead);
+        }, default);
+        if (denyRead) {
+            await Assert.ThrowsAsync<AgentToolReceiptAccessDeniedException>(() => pending);
+        } else if (expireRead) {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+        } else {
+            var result = await pending;
+            Assert.Equal(AgentEffectCheckpointPersistence.Confirmed, result.Persistence);
+            Assert.Equal(1, result.Counts.KnownCommitted);
+            Assert.True(Assert.Single(result.Observations).Persisted);
+        }
+        Assert.True(checkpointPublished);
+        Assert.Equal(1, finalReads);
+        Assert.Equal(1, reader.Calls);
+        var saved = (await fixture.NewStore().GetExecutionRunAsync(run.Id))!;
+        Assert.Equal(AgentToolProposalState.OwnerReceiptConfirmed, saved.ToolAdmission!.Batches[0].Proposals[0].State);
+        Assert.Equal(ExecutionState.WaitingOnTool, saved.State);
+        Assert.Equal(Binding(run.ToolAdmission!), Binding(saved.ToolAdmission));
+    }
+
     [Fact]
     public async Task Journal_commit_ack_loss_or_capacity_failure_preserves_exact_intent_and_known_commitment() {
         await using var source = await AgentToolAdmissionJournalFixture.CreateAsync();

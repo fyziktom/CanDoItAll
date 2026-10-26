@@ -288,7 +288,8 @@ public sealed partial class AgentToolAdmissionJournal {
                 }
             }
         }
-        await RequireEffectReadAsync(lease, pinned, currentRead, checkpointBudget.Token);
+        using var finalReadBudget = new CancellationTokenSource(ReceiptCheckpointBudget);
+        await RequireEffectReadAsync(lease, pinned, currentRead, finalReadBudget.Token);
         return new(original.Id, original.ChatSessionId, runRevision, journalRevision, requirement, counts, observations.Count,
             checked(snapshot.Counts.EligibleOwnerEffects - observations.Count), stop, persistence,
             observations.Select(item => new AgentEffectReceiptSummary(item.Candidate.Binding, item.Knowledge,
