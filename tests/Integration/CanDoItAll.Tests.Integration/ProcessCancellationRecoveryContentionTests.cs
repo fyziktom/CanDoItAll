@@ -38,7 +38,7 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
         => RunAsync(mode, writers);
 
     internal async Task RunAsync(ReadBasisMode mode, int writers, Action<IServiceCollection>? configureServices = null) {
-        await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync(mode, freezeClock: false,
+        await using var fixture = await ProjectTaskPlanReviewFixture.CreateAsync(mode,
             configureServices: services => {
                 services.Configure<ProcessCancellationRecoveryOptions>(options => {
                     options.Enabled = true;
@@ -52,6 +52,8 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
         using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(5));
         var token = deadline.Token;
         var (siblingBinding, siblingRun, siblingState) = await StartSiblingAsync(fixture, sibling, token);
+        fixture.Entry.Wire.OnRequest = null;
+        fixture.Clock.Resume();
         var services = fixture.Services;
         var store = fixture.Entry.Files.Store;
         var layout = new FileSandboxWorkspaceStorageLayout(services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
