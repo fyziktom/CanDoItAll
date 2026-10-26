@@ -13,9 +13,9 @@ internal static partial class OpenApiContractDescriptions {
 
     private static Dictionary<Type, Description> CreateProcessPlanningDescriptions() => new() {
         [typeof(DecisionDataPolicyOverride)] = new("Optional policy overrides. Each null field inherits its owner's value; admission still enforces owner capabilities and budget ceilings.",
-            (nameof(DecisionDataPolicyOverride.ReadBasisMode), "When the planning input snapshot is captured."),
-            (nameof(DecisionDataPolicyOverride.PublicationFreshness), "Whether publication must still match the current source basis."),
-            (nameof(DecisionDataPolicyOverride.OnBasisChange), "Response when publication detects that its source basis changed."),
+            (nameof(DecisionDataPolicyOverride.ReadBasisMode), EnumText<ReadBasisMode>("When the planning input snapshot is captured; null inherits.")),
+            (nameof(DecisionDataPolicyOverride.PublicationFreshness), EnumText<PublicationFreshness>("Whether publication must still match the current source basis; null inherits.")),
+            (nameof(DecisionDataPolicyOverride.OnBasisChange), EnumText<OnBasisChange>("Response when publication detects that its source basis changed; null inherits.")),
             (nameof(DecisionDataPolicyOverride.MaximumReplans), "Nonnegative automatic semantic replan allowance; null inherits."),
             (nameof(DecisionDataPolicyOverride.MaximumWorkDuration), "Positive cumulative work allowance in TimeSpan format; null inherits."),
             (nameof(DecisionDataPolicyOverride.MaximumBasisAge), "Positive maximum snapshot age in TimeSpan format; null inherits.")),

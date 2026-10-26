@@ -88,6 +88,9 @@ public sealed class ProjectTaskPlanProducedWorkspaceTests {
         }
         if (exhaustWork) {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => workspace.ExecuteInheritedPlanningAsync(request));
+            var cancelled = await entry.Files.Store.GetExecutionRunAsync(request.ExecutionRunId);
+            Assert.NotNull(cancelled);
+            Assert.Equal(RunOutcome.Cancelled, cancelled.Outcome);
             Assert.Single(entry.Wire.Requests);
             await entry.Files.Sql.VerifyAsync(0, 0);
             return;

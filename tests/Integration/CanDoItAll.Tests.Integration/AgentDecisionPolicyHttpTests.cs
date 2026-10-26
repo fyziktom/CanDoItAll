@@ -262,7 +262,9 @@ public sealed class AgentDecisionPolicyHttpTests {
         Assert.Equal(7, policy.GetProperty("required").GetArrayLength());
         Assert.False(policy.GetProperty("additionalProperties").GetBoolean());
         Assert.Equal(1, policy.GetProperty("properties").GetProperty("schemaVersion").GetProperty("enum")[0].GetInt32());
-        Assert.Contains("null inherits", policy.GetProperty("properties").GetProperty("readBasisMode").GetProperty("description").GetString(), StringComparison.Ordinal);
+        foreach (var name in new[] { "readBasisMode", "publicationFreshness", "onBasisChange", "maximumReplans", "maximumWorkDuration", "maximumBasisAge" }) {
+            Assert.Contains("null inherits", policy.GetProperty("properties").GetProperty(name).GetProperty("description").GetString(), StringComparison.Ordinal);
+        }
         Assert.False(submission.GetProperty("additionalProperties").GetBoolean());
         Assert.Equal(3, submission.GetProperty("required").GetArrayLength());
         var lookup = document.RootElement.GetProperty("paths").GetProperty("/api/agents/{agentId}/decision-data-policy/lookup").GetProperty("post");
