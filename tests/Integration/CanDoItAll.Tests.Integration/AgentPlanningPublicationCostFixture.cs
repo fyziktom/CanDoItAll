@@ -24,6 +24,9 @@ internal enum AgentPlanningPublicationGuard { CoarseCatalog = 1, SelectedAgent =
 
 internal sealed class AgentPlanningPublicationCostFixture(string outputRoot, AgentPlanningPublicationGuard guard) {
     internal const string OutputRootEnvironment = "CANDOITALL_AGENT_PLANNING_COST_OUTPUT_ROOT";
+    private const double ReferenceResponsivenessMilliseconds = 1000;
+    private const string SameWorkspacePrefix = "same-";
+    private const string IndependentWorkspacePrefix = "independent-";
     private readonly CancellationTokenSource deadline = new(TimeSpan.FromMinutes(10));
     private readonly List<FileWorkspace> workspaces = [];
     private CanDoItAllTestEnvironment? environment;
@@ -38,7 +41,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot, Age
     private object? observation;
     private bool responsive;
 
-    internal static async Task RunAsync(AgentPlanningPublicationGuard guard = AgentPlanningPublicationGuard.CoarseCatalog) {
+    internal static async Task RunAsync(AgentPlanningPublicationGuard guard) {
         if (!Enum.IsDefined(guard)) {
             throw new ArgumentOutOfRangeException(nameof(guard));
         }
@@ -91,8 +94,21 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot, Age
         if (failures.Length == 1) {
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failures[0]).Throw();
         }
-        Assert.True(fixture.responsive,
-            "The publication guard failed the declared one-second unrelated-writer reference; complete timing and cleanup evidence was retained.");
+        if (guard == AgentPlanningPublicationGuard.SelectedAgent) {
+            Assert.True(fixture.responsive,
+                "The selected-agent guard failed the declared one-second unrelated-writer reference; complete timing and cleanup evidence was retained.");
+            return;
+        }
+
+        Assert.False(fixture.responsive, "The coarse negative control must retain its measured responsiveness failure.");
+        var sameWorkspace = fixture.samples.Where(sample => sample.Name.StartsWith(SameWorkspacePrefix, StringComparison.Ordinal)).ToArray();
+        var independentWorkspace = fixture.samples.Where(sample => sample.Name.StartsWith(IndependentWorkspacePrefix, StringComparison.Ordinal)).ToArray();
+        Assert.Equal(3, sameWorkspace.Length);
+        Assert.Equal(3, independentWorkspace.Length);
+        Assert.All(sameWorkspace, sample => Assert.True(sample.ElapsedMilliseconds >= ReferenceResponsivenessMilliseconds,
+            $"The coarse negative control did not block {sample.Name} for the declared reference interval."));
+        Assert.All(independentWorkspace, sample => Assert.True(IsResponsive(sample),
+            $"The coarse negative control also delayed {sample.Name}; this is not an isolated same-workspace comparison."));
     }
 
     private async Task InitializeAsync() {
@@ -153,9 +169,9 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot, Age
             blockedAt = Elapsed();
             Assert.NotEqual(0, fixture.Probe.ProjectWaiterPid);
             writers = workspaces.SelectMany((workspace, index) => new[] {
-                MeasureOperationAsync($"{(index == 0 ? "same" : "independent")}-checkpoint", () => workspace.CheckpointAsync(token)),
-                MeasureOperationAsync($"{(index == 0 ? "same" : "independent")}-cancel", () => workspace.CancelAsync(token)),
-                MeasureOperationAsync($"{(index == 0 ? "same" : "independent")}-grant", () => workspace.GrantAsync(token))
+                MeasureOperationAsync($"{(index == 0 ? SameWorkspacePrefix : IndependentWorkspacePrefix)}checkpoint", () => workspace.CheckpointAsync(token)),
+                MeasureOperationAsync($"{(index == 0 ? SameWorkspacePrefix : IndependentWorkspacePrefix)}cancel", () => workspace.CancelAsync(token)),
+                MeasureOperationAsync($"{(index == 0 ? SameWorkspacePrefix : IndependentWorkspacePrefix)}grant", () => workspace.GrantAsync(token))
             }).ToArray();
             await Task.WhenAny(publishing, timer);
         } catch (Exception failure) {
@@ -212,10 +228,13 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot, Age
                 $"SELECT pg_try_advisory_xact_lock(hashtextextended({ProjectMutationScopeKeys.ForProject(fixture.Project.ProjectId)}, 0)) AS \"Value\"").SingleAsync(token));
         }
         responsive = samples.Where(sample => sample.Name != "publisher")
-            .All(sample => sample.ElapsedMilliseconds < 1000 && sample.CompletedWhileSqlHolderPresent);
+            .All(IsResponsive);
         await RecordAsync("effects-verified", new { TaskRows = 0, ReceiptRows = 0, Writers = writers.Length,
             FileAndProjectGuardsReacquired = true, ReferenceResponsivenessPassed = responsive });
     }
+
+    private static bool IsResponsive(OperationSample sample)
+        => sample.ElapsedMilliseconds < ReferenceResponsivenessMilliseconds && sample.CompletedWhileSqlHolderPresent;
 
     private async Task<OperationSample> MeasureOperationAsync(string name, Func<Task> operation) {
         using var activity = new Activity("planning-cost-operation").SetBaggage(AgentPlanningPublicationTrace.OperationKey, name).Start();

@@ -153,15 +153,7 @@ public sealed class SharedProviderRealCatalogUiTests {
         await page.GetByTestId("chat-approve-once-button").WaitForAsync(new() { Timeout = 90_000 });
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "real-image-approval.png"), FullPage = true });
         await page.GetByTestId("chat-approve-once-button").ClickAsync();
-        try {
-            await page.GetByTestId("chat-workspace-panel").GetByText("REAL_IMAGE_CREATED_OK", new() { Exact = true }).WaitForAsync(new() { Timeout = 180_000 });
-            await WaitForCompletedAgentRunAsync(page);
-        } catch {
-            await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "real-image-failure.png") });
-            await File.WriteAllTextAsync(Path.Combine(evidence, "real-image-failure.txt"),
-                await page.GetByTestId("chat-workspace-panel").InnerTextAsync());
-            throw;
-        }
+        await ExpectAgentAnswerAsync(page, "REAL_IMAGE_CREATED_OK", evidence, "real-image", timeoutMilliseconds: 180_000);
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "real-image-response.png"), FullPage = true });
         await File.WriteAllTextAsync(Path.Combine(evidence, "image-output-path.txt"), outputPath);
         await using var visualContext = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 480, Height = 320 } });
@@ -214,10 +206,10 @@ public sealed class SharedProviderRealCatalogUiTests {
         await page.GetByTestId("chat-workspace-panel").GetByText(prompt, new() { Exact = true }).WaitForAsync();
     }
 
-    private static async Task ExpectAgentAnswerAsync(IPage page, string answer, string evidence, string label) {
+    private static async Task ExpectAgentAnswerAsync(IPage page, string answer, string evidence, string label, float timeoutMilliseconds = 300_000) {
         try {
             var phase = page.GetByTestId("agent-execution-activity-phase");
-            await Assertions.Expect(phase).ToHaveTextAsync(new Regex("^(Completed|Failed)$"), new() { Timeout = 300_000 });
+            await Assertions.Expect(phase).ToHaveTextAsync(new Regex("^(Completed|Failed)$"), new() { Timeout = timeoutMilliseconds });
             await Assertions.Expect(phase).ToHaveTextAsync("Completed");
             await page.GetByTestId("chat-workspace-panel").GetByText(answer, new() { Exact = true }).WaitForAsync();
         } catch {

@@ -1248,6 +1248,9 @@ For the synthetic pair, set `CANDOITALL_SHARED_UI_SHARED_URL`,
 the publishing host), `CANDOITALL_SHARED_UI_UPSTREAM_TOKEN_FILE`,
 `CANDOITALL_SHARED_UI_VISION_IMAGE` and `CANDOITALL_SHARED_UI_EVIDENCE_DIRECTORY`.
 The upstream URL is explicit; the tests do not assume a particular Docker hostname.
+Start both synthetic hosts with `AgentFramework:Providers:SeedDefaults=false` so the
+empty-client case has no managed providers or runtime fallback. A normal application
+startup is not an empty provider fixture.
 Set `CANDOITALL_ALLOW_SHARED_PROVIDER_FIXTURE_WRITES=1` only for these disposable
 synthetic fixtures. Bootstrap the provider-import scenario before the full run,
 because its companion simple-chat case consumes the imported catalog.

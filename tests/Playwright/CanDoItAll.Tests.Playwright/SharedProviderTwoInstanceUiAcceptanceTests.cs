@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -29,6 +30,8 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
     private const string OpenAiChatProviderName = "UI Shared OpenAI Chat";
     private const string OpenAiImageProviderName = "UI Shared OpenAI Image";
     private const string OllamaProviderName = "UI Shared Ollama";
+    private const string SuggestedChatModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
+    private const string AlternateChatModel = OpenAiModelIds.Gpt6Sol;
     private const string OllamaAgentName = "UI Shared Ollama Agent";
     private const string MultimediaAgentName = "UI Shared Multimedia Agent";
 
@@ -45,7 +48,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         var client = await clientContext.NewPageAsync();
         await AuthorizeSimpleChatsBrowserAsync(client, settings);
         foreach (var (provider, defaultModel, selectedModel, label) in new[] {
-            (OpenAiChatProviderName, "e2e-duplicate-model", "gpt-5.4-mini", "openai"),
+            (OpenAiChatProviderName, "e2e-duplicate-model", AlternateChatModel, "openai"),
             (OllamaProviderName, "e2e-ollama", "e2e-ollama-vision", "ollama") }) {
             var models = await SharedProviderMetadataUiChecks.AssertMirroredAsync(source, client,
                 settings.SharedUrl, settings.ClientUrl, provider, settings.EvidenceDirectory, label);
@@ -88,7 +91,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
 
         var sourceToken = await ConfigureSharedInstanceAsync(sharedPage, settings);
         await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
-            OpenAiChatProviderName, "e2e-duplicate-model", false, 1.23m, "gpt-4.1-mini");
+            OpenAiChatProviderName, "e2e-duplicate-model", false, 1.23m, SuggestedChatModel);
         await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
             OpenAiImageProviderName, "e2e-openai-image", false, 2.34m);
         await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
@@ -101,13 +104,13 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
                 settings.SharedUrl, settings.ClientUrl, providerName, settings.EvidenceDirectory, label);
         }
         await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
-            OpenAiChatProviderName, "e2e-duplicate-model", false, 9.87m, "gpt-4.1-mini", "gpt-5.4-mini");
+            OpenAiChatProviderName, "e2e-duplicate-model", false, 9.87m, SuggestedChatModel, AlternateChatModel);
         await ConfigureClientInstanceAsync(clientPage, settings, sourceToken);
         var openAiModels = await SharedProviderMetadataUiChecks.AssertMirroredAsync(sharedPage, clientPage,
             settings.SharedUrl, settings.ClientUrl, OpenAiChatProviderName, settings.EvidenceDirectory, "resynced");
         Assert.Equal(3, openAiModels.Count);
         await SharedProviderMetadataUiChecks.AssertAgentModelNamesAsync(clientPage, settings.ClientUrl,
-            MultimediaAgentName, "e2e-duplicate-model", settings.EvidenceDirectory, openAiModels, "gpt-4.1-mini", "openai");
+            MultimediaAgentName, "e2e-duplicate-model", settings.EvidenceDirectory, openAiModels, SuggestedChatModel, "openai");
         var ollamaModels = await SharedProviderMetadataUiChecks.AssertMirroredAsync(sharedPage, clientPage,
             settings.SharedUrl, settings.ClientUrl, OllamaProviderName, settings.EvidenceDirectory, "ollama-final");
         Assert.Equal(3, ollamaModels.Count);
@@ -120,7 +123,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await ExerciseClientAgentsAsync(clientPage, settings);
         await AuthorizeSimpleChatsBrowserAsync(clientPage, settings);
         await SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(clientPage, settings.ClientUrl,
-            OpenAiChatProviderName, "e2e-duplicate-model", openAiModels, "gpt-5.4-mini", settings.EvidenceDirectory, "openai");
+            OpenAiChatProviderName, "e2e-duplicate-model", openAiModels, AlternateChatModel, settings.EvidenceDirectory, "openai");
         await SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(clientPage, settings.ClientUrl,
             OllamaProviderName, "e2e-ollama", ollamaModels, "e2e-ollama-vision", settings.EvidenceDirectory, "ollama");
 
@@ -171,7 +174,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await NavigateAsync(page, $"{settings.SharedUrl}/settings?tab=api-access");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Token subject", Exact = true }).FillAsync("shared-providers-ui-client");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Token display name", Exact = true }).FillAsync("Shared provider desktop client");
-        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token lifetime minutes", Exact = true }).FillAsync("120");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token lifetime minutes", Exact = true }).FillAsync("1440");
         await page.GetByTestId("api-token-scopes").FillAsync(
             "api.shared-providers.catalog.read api.shared-providers.invoke");
         await page.GetByRole(AriaRole.Button, new() { Name = "Create token", Exact = true }).ClickAsync();
@@ -484,7 +487,14 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             .First;
         if (await existingProvider.CountAsync() > 0)
         {
-            await existingProvider.ClickAsync();
+            await SharedProviderMetadataUiChecks.OpenProviderAsync(page, settings.SharedUrl, name);
+            await page.GetByTestId("provider-editor-tab-connection").ClickAsync();
+            var endpoint = page.GetByTestId("providers-base-url-input");
+            if (!string.Equals(await endpoint.InputValueAsync(), baseUrl, StringComparison.Ordinal)) {
+                await endpoint.FillAsync(baseUrl);
+                await page.GetByTestId("providers-save").ClickAsync();
+                await page.GetByText("Provider saved", new() { Exact = true }).WaitForAsync();
+            }
             await page.GetByTestId("provider-editor-tab-sharing").ClickAsync();
             var publicationStatus = page.GetByTestId("shared-provider-publication-status");
             await publicationStatus.WaitForAsync();
@@ -505,8 +515,10 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await NewProviderAsync(page);
         var kindSelect = page.GetByTestId("providers-kind-select");
         if (!string.Equals(await kindSelect.InputValueAsync(), kind, StringComparison.Ordinal)) {
+            var defaultModel = page.GetByTestId("providers-model-input");
+            await defaultModel.FillAsync(model);
             await kindSelect.SelectOptionAsync(kind);
-            await page.GetByText("Provider kind changed", new() { Exact = true }).WaitForAsync();
+            await Assertions.Expect(defaultModel).ToHaveValueAsync(string.Empty);
         }
         await page.GetByTestId("providers-purpose-select").SelectOptionAsync(purpose);
         await page.GetByTestId("providers-name-input").FillAsync(name);

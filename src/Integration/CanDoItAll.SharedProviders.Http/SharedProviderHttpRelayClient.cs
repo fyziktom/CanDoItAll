@@ -305,6 +305,8 @@ internal sealed class SharedProviderHttpRelayClient(
 
 internal static class SharedProviderRelayResponsePolicy
 {
+    private const int MaximumSafetyIdentifierCharacters = 128;
+
     private static readonly JsonDocumentOptions JsonOptions = new()
     {
         AllowTrailingCommas = false,
@@ -482,7 +484,7 @@ internal static class SharedProviderRelayResponsePolicy
             }
 
             foreach (var property in root.EnumerateObject()) {
-                if (property.Name is not ("created" or "data")) {
+                if (property.Name is not ("created" or "data" or "safety_identifier")) {
                     property.WriteTo(writer);
                 }
             }
@@ -518,6 +520,10 @@ internal static class SharedProviderRelayResponsePolicy
     private static bool IsValidImageMetadata(JsonProperty property) => property.Name switch {
         "created" or "data" => true,
         "usage" => IsValidImageUsage(property.Value),
+        "safety_identifier" => property.Value.ValueKind == JsonValueKind.Null ||
+            property.Value.ValueKind == JsonValueKind.String &&
+            property.Value.GetString() is { Length: <= MaximumSafetyIdentifierCharacters } identifier &&
+            !identifier.Any(char.IsControl),
         _ => property.Value.ValueKind == JsonValueKind.String && property.Name switch {
             "background" => property.Value.GetString() is "transparent" or "opaque",
             "output_format" => property.Value.GetString() is "png" or "jpeg" or "webp",
