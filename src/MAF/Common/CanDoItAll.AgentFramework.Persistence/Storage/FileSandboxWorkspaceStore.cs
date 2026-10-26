@@ -1857,8 +1857,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         {
             CatalogDataRevision = revision
         };
-        var changed = !catalogExists ||
-                      jsonStore.RequiresSave(currentCatalog, savedCatalog);
+        var changed = payloadChanged || revision != currentCatalog.CatalogDataRevision;
         return new CatalogSaveResult(savedCatalog, changed);
     }
 
