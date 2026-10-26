@@ -38,6 +38,8 @@ The supplied CI archive reports failures in unit, component and integration cont
 
 ## Validation record
 
+The macOS historical no-write observer now waits for creation, modification, relocation and deletion acknowledgements within one existing five-second barrier budget. It keeps the renamed probe present until relocation is observed. The .NET macOS watcher can represent a move with a `Renamed` event or separate deletion/creation events; calibration requires the exact original and destination paths for either representation. Unexpected files, overflow, directory links and setup capacity remain failures. Five direct cases cover repeated quiet barriers and detection of real create/delete, write, rename and delete operations. The six failing historical-reader cases and other observer consumers still require runtime revalidation on the repaired candidate, including macOS CI.
+
 Local proof is retained under `.artifacts/ci-windows-repair-20261025`. The existing isolated PostgreSQL 18 fixture on port 53619 is reused; the ordinary application database is preserved.
 
 - Earlier candidate Stable and Playwright Release builds passed with zero errors. Later source repairs require rebuilt outputs before final acceptance.
