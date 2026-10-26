@@ -38,11 +38,14 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await SelectFileNodeAsync(page, node.Id, node.Title);
         var chat = await OpenFloatingChatFromCatalogAsync(page, "project-structure-agents-toggle", firstAgent,
             Path.Combine(fixture.Settings.Evidence, "ac1-context-catalog-failure.png"));
+        var context = page.GetByTestId("floating-agent-chat-context-dialog");
         var firstHandle = await HandleAsync();
         var first = await TurnAsync(firstAgent, marker + "_A", "Original context");
         AssertContext(first);
-        await chat.GetByTestId("floating-agent-chat-affinity-toggle").ClickAsync();
-        await Assertions.Expect(chat.GetByTestId("floating-agent-chat-affinity-status")).ToHaveTextAsync("Detached from application context");
+        await OpenContextAsync();
+        await context.GetByTestId("floating-agent-chat-affinity-toggle").ClickAsync();
+        await Assertions.Expect(context.GetByTestId("floating-agent-chat-affinity-status")).ToHaveTextAsync("Detached from application context");
+        await CloseContextAsync();
         var detached = await TurnAsync(firstAgent, marker + "_A", "Detached context");
         Assert.NotEqual(AgentChatTrustedSourceKinds.ProjectStructure, detached.GetProperty("sourceKind").GetString());
         Assert.Empty(detached.GetProperty("snapshots").EnumerateArray());
@@ -80,8 +83,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await firstItem.GetByRole(AriaRole.Button, new() { Name = "Open", Exact = true }).ClickAsync();
         Assert.Equal(firstHandle, await HandleAsync());
         await Assertions.Expect(chat).ToContainTextAsync("Detached context " + marker + "_A");
-        await Assertions.Expect(chat.GetByTestId("floating-agent-chat-affinity-status")).ToHaveTextAsync("Detached from application context");
-        await chat.GetByTestId("floating-agent-chat-affinity-toggle").ClickAsync();
+        await OpenContextAsync();
+        await Assertions.Expect(context.GetByTestId("floating-agent-chat-affinity-status")).ToHaveTextAsync("Detached from application context");
+        await context.GetByTestId("floating-agent-chat-affinity-toggle").ClickAsync();
+        await CloseContextAsync();
         await TurnAsync(firstAgent, marker + "_A", "Follow restored");
         var drag = await page.GetByTestId("floating-agent-chat-window").Locator("[data-cda-overlay-drag='true']").BoundingBoxAsync();
         Assert.NotNull(drag);
@@ -91,13 +96,17 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await page.Mouse.UpAsync();
         await Assertions.Expect(page.GetByTestId("floating-agent-chat-window")).ToHaveCSSAsync("top", new System.Text.RegularExpressions.Regex("^2[0-9]{2}px$"));
         await page.GetByRole(AriaRole.Tab, new() { Name = "Gantt", Exact = true }).ClickAsync();
-        await Assertions.Expect(chat.GetByTestId("floating-agent-chat-pending-context")).ToContainTextAsync("gantt", new() { IgnoreCase = true });
+        await OpenContextAsync();
+        await Assertions.Expect(context.GetByTestId("floating-agent-chat-pending-context")).ToContainTextAsync("gantt", new() { IgnoreCase = true });
+        await CloseContextAsync();
         var followed = await TurnAsync(firstAgent, marker + "_A", "New view accepted");
         Assert.Equal(projectId.ToString("D"), followed.GetProperty("sourceId").GetString());
         var followedDetail = await fixture.GetAsync($"api/agents/{firstAgent:D}/execution-runs/{followed.GetProperty("runId").GetGuid():D}");
         Assert.Equal(firstSession, followedDetail.GetProperty("run").GetProperty("chatSessionId").GetGuid());
-        await Assertions.Expect(chat.GetByTestId("floating-agent-chat-affinity-status")).ToContainTextAsync("gantt", new() { IgnoreCase = true });
-        await Assertions.Expect(chat.GetByTestId("floating-agent-chat-pending-context")).ToHaveCountAsync(0);
+        await OpenContextAsync();
+        await Assertions.Expect(context.GetByTestId("floating-agent-chat-affinity-status")).ToContainTextAsync("gantt", new() { IgnoreCase = true });
+        await Assertions.Expect(context.GetByTestId("floating-agent-chat-pending-context")).ToHaveCountAsync(0);
+        await CloseContextAsync();
         await fixture.ScreenshotAsync("ac1-context-followed-1920");
 
         await catalog.GetByRole(AriaRole.Tab, new() { Name = "Available", Exact = true }).ClickAsync();
@@ -119,6 +128,16 @@ public sealed partial class SharedProviderNativeConsumerTests {
         Assert.Equal(secondConfiguration.GetRawText(), (await fixture.GetAsync($"api/agents/{secondAgent:D}")).GetRawText());
         await fixture.EvidenceAsync("ac1-floating-context-close", new { projectId, node.Id, firstAgent, secondAgent, firstHandle, secondHandle,
             First = first, Detached = detached, Followed = followed, Pending = pending, AfterClose = afterClose, Rejected = rejected });
+
+        async Task OpenContextAsync() {
+            await chat.GetByTestId("floating-agent-chat-context-details").ClickAsync();
+            await Assertions.Expect(context).ToBeVisibleAsync();
+        }
+
+        async Task CloseContextAsync() {
+            await context.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+            await Assertions.Expect(context).ToHaveCountAsync(0);
+        }
 
         async Task<string> HandleAsync() {
             var id = await page.GetByTestId("floating-agent-chat-window").GetAttributeAsync("data-cda-overlay-window");
