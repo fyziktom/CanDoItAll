@@ -43,19 +43,23 @@ internal sealed record ProjectTaskPlanReviewFixture(ProjectTaskPlanExecutionEntr
                 executorId: entry.Files.Agent.Id, allowTaskPublication: true, promptCharacters: promptCharacters);
             var services = entry.Files.Sql.Services;
             var (parent, request) = await PrepareRequestAsync(entry, process);
-            if (freezeClock) {
-                clock.Freeze();
-            }
+            clock.Freeze();
             entry.Wire.OnRequest = token => {
-                if (freezeClock) {
-                    clock.Advance(TimeSpan.FromSeconds(1));
-                }
+                clock.Advance(TimeSpan.FromSeconds(1));
                 token.ThrowIfCancellationRequested();
                 return Task.CompletedTask;
             };
+            using var setup = new CancellationTokenSource(TimeSpan.FromMinutes(5));
             var waiting = (await services.GetRequiredService<IAgentInheritedPlanningWorkspaceService>()
-                .ExecuteInheritedPlanningAsync(request)).Run;
+                .ExecuteInheritedPlanningAsync(request, setup.Token)).Run;
             Assert.True(waiting.State == ExecutionState.WaitingOnTool, waiting.ResultSummary);
+            if (!freezeClock) {
+                entry.Wire.OnRequest = token => {
+                    token.ThrowIfCancellationRequested();
+                    return Task.CompletedTask;
+                };
+                clock.Resume();
+            }
             var claim = process.State.Claims.Single(item => item.ClaimToken == process.Claim.ClaimToken);
             var key = Guid.NewGuid();
             StrategyId strategy = new("review-completion-fixture");

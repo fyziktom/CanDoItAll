@@ -1,22 +1,25 @@
 namespace CanDoItAll.Tests.Integration;
 
-internal sealed class ProjectTaskPlanScenarioClock : TimeProvider {
+internal sealed class ProjectTaskPlanScenarioClock(TimeProvider? source = null) : TimeProvider {
+    private readonly TimeProvider live = source ?? System;
     private readonly Lock gate = new();
     private readonly List<ScenarioTimer> timers = [];
     private DateTimeOffset? frozen;
     private long timestamp;
+    private TimeSpan utcOffset;
+    private long timestampOffset;
 
     public override long TimestampFrequency => TimeSpan.TicksPerSecond;
 
     public override DateTimeOffset GetUtcNow() {
         lock (gate) {
-            return frozen ?? System.GetUtcNow();
+            return frozen ?? live.GetUtcNow() + utcOffset;
         }
     }
 
     public override long GetTimestamp() {
         lock (gate) {
-            return frozen is null ? global::System.Diagnostics.Stopwatch.GetElapsedTime(0).Ticks : timestamp;
+            return frozen is null ? live.GetElapsedTime(0).Ticks + timestampOffset : timestamp;
         }
     }
 
@@ -26,14 +29,28 @@ internal sealed class ProjectTaskPlanScenarioClock : TimeProvider {
                 throw new InvalidOperationException("The scenario clock is already frozen.");
             }
             timestamp = GetTimestamp();
-            frozen = System.GetUtcNow();
+            frozen = GetUtcNow();
+        }
+    }
+
+    internal void Resume() {
+        lock (gate) {
+            if (frozen is not { } now) {
+                throw new InvalidOperationException("The scenario clock is not frozen.");
+            }
+            if (timers.Count != 0) {
+                throw new InvalidOperationException("Dispose all frozen timers before resuming live time.");
+            }
+            utcOffset = TimeSpan.FromTicks(Math.Max(0, (now - live.GetUtcNow()).Ticks));
+            timestampOffset = Math.Max(0, timestamp - live.GetElapsedTime(0).Ticks);
+            frozen = null;
         }
     }
 
     public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) {
         lock (gate) {
             if (frozen is null) {
-                return System.CreateTimer(callback, state, dueTime, period);
+                return live.CreateTimer(callback, state, dueTime, period);
             }
             var timer = new ScenarioTimer(this, callback, state);
             timer.Change(dueTime, period);
