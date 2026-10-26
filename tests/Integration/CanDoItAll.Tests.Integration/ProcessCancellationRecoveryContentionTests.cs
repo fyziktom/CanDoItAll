@@ -27,8 +27,6 @@ namespace CanDoItAll.Tests.Integration;
 [Trait("Category", "FileSystemPortability")]
 [Trait("Category", "HostPlatform")]
 public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper output) {
-    private const int HistorySeedBatchSize = 128;
-
     [Theory]
     [InlineData(ReadBasisMode.StepSnapshot, 1)]
     [InlineData(ReadBasisMode.StepSnapshot, 8)]
@@ -65,9 +63,9 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
         };
         var selected = Enumerable.Range(0, writers).Select(_ => BackgroundRun()).ToArray();
         var history = Enumerable.Range(0, 2000).Select(_ => BackgroundRun()).ToArray();
-        foreach (var runs in selected.Concat(history).Chunk(HistorySeedBatchSize)) {
-            await store.UpdateExecutionAsync(state => state with { ExecutionRuns = [.. state.ExecutionRuns, .. runs] }, token);
-        }
+        var preparation = Stopwatch.StartNew();
+        await ProcessExecutionHistoryFixture.SeedBeforeActorsStartAsync(layout, [.. selected, .. history], token);
+        output.WriteLine($"History preparation: {history.Length} historical runs, {selected.Length} selected runs, {preparation.Elapsed.TotalMilliseconds:F1} ms before concurrent actors start.");
         var original = await File.ReadAllBytesAsync(layout.RunPath(fixture.Waiting.Id), token);
         var key = Assert.Single(FileSandboxWorkspaceWriteSet.Run(null, fixture.Waiting with { ChatSessionId = null }, readsAgent: false).LockPaths(layout));
         IAsyncDisposable? blocker = await new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory())

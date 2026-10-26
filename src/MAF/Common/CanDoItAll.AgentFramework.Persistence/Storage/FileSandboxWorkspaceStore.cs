@@ -1228,7 +1228,7 @@ public sealed partial class FileSandboxWorkspaceStore :
                 await jsonStore.WriteJsonAtomicallyAsync(
                     PendingExistingRunDetailCommitJournalPath,
                     journal,
-                    cancellationToken);
+                    cancellationToken, compact: true);
                 NotifyExistingRunDetailCommitBoundary(
                     ExistingRunDetailCommitStage.JournalPersisted);
                 return await CommitExistingRunDetailJournalAsync(
