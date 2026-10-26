@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using Bunit;
 using Bunit.TestDoubles;
 using CanDoItAll.AppComponents.Navigation;
@@ -143,6 +144,7 @@ public sealed class ProjectsPageUrlStateTests {
         cut.WaitForElement("[data-testid='project-name-input']");
         Assert.Equal("/projects", fixture.Location);
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "Addressed draft" }));
+        cut.WaitForAssertion(() => Assert.True(cut.FindComponent<ProjectModalHost>().Instance.SubmissionReady));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
 
         var saved = Assert.Single(await projects.ListAsync());
@@ -157,7 +159,7 @@ public sealed class ProjectsPageUrlStateTests {
         var projects = fixture.Harness.Context.Services.GetRequiredService<ProjectsService>();
         var parent = await fixture.CreateProjectAsync("Hierarchy root");
         var child = await fixture.CreateProjectAsync("Hierarchy child");
-        Assert.True((await projects.AddSubprojectAsync(parent, child)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(fixture.Harness.Context.Services, parent, child));
         var cut = fixture.Render("/projects");
         var card = Card(cut, "Hierarchy root");
         var entries = fixture.Navigation.History.Count;

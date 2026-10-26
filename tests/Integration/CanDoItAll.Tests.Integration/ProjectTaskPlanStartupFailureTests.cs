@@ -26,6 +26,7 @@ using static CanDoItAll.Tests.Integration.Processes.ProcessDecisionPersistenceFi
 namespace CanDoItAll.Tests.Integration;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectTaskPlanStartupFailureTests {
     [Theory]
     [InlineData(ReadBasisMode.RunSnapshot, false, 2)]

@@ -26,6 +26,7 @@ internal sealed class ApiAccessProductionHost : IAsyncDisposable {
     public string RootPath => environment.RootPath;
     public string ControlPlaneRoot => environment.ControlPlaneRootPath;
     public string CertificatePath => certificatePath;
+    internal TestDatabaseProfile OwnedDatabaseProfile => primary;
     public HttpClient Client { get; }
 
     public ApiAccessProductionHost() {

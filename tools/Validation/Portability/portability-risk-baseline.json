@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-25T01:23:47.776342+00:00",
+  "generated_utc": "2026-10-26T03:58:21.969250+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -50638,7 +50638,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessStepExecutor.cs",
       "category": "case-policy",
-      "source_fingerprint": "80825a84a4d76622df1203be9485dd139aaf8a09725f626ac6ceae9b6ab39b59",
+      "source_fingerprint": "0ccafc375df144022f3fbe6818042c9ddbe92bdd84d68e32355f4b382fd2ca46",
       "count": 1
     },
     {

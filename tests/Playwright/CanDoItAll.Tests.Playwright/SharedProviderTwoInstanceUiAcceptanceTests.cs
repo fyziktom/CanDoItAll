@@ -20,6 +20,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
     private const string FixtureWriteOptInEnvironmentVariable = "CANDOITALL_ALLOW_SHARED_PROVIDER_FIXTURE_WRITES";
     private const string ClientUrlEnvironmentVariable = "CANDOITALL_SHARED_UI_CLIENT_URL";
     private const string UpstreamTokenFileEnvironmentVariable = "CANDOITALL_SHARED_UI_UPSTREAM_TOKEN_FILE";
+    private const string UpstreamUrlEnvironmentVariable = "CANDOITALL_SHARED_UI_UPSTREAM_URL";
     private const string EvidenceDirectoryEnvironmentVariable = "CANDOITALL_SHARED_UI_EVIDENCE_DIRECTORY";
     private const string VisionImageEnvironmentVariable = "CANDOITALL_SHARED_UI_VISION_IMAGE";
     private const string UpstreamSecretName = "UI acceptance upstream token";
@@ -193,7 +194,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             "e2e-duplicate-model",
             "OpenAi",
             "Chat",
-            "http://candoitall-spui-upstream:8080/v1",
+            new Uri(settings.UpstreamBaseUri, "v1").AbsoluteUri,
             UpstreamSecretName,
             "ChatCompletions");
         await CreateAndPublishProviderAsync(
@@ -203,7 +204,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             "e2e-openai-image",
             "OpenAi",
             "ImageGeneration",
-            "http://candoitall-spui-upstream:8080/v1",
+            new Uri(settings.UpstreamBaseUri, "v1").AbsoluteUri,
             UpstreamSecretName,
             "Responses");
         await CreateAndPublishProviderAsync(
@@ -213,7 +214,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             "e2e-ollama",
             "Ollama",
             "Chat",
-            "http://candoitall-spui-upstream:8080",
+            settings.UpstreamBaseUri.AbsoluteUri.TrimEnd('/'),
             UpstreamSecretName,
             "ChatCompletions");
         await ScreenshotAsync(page, settings, "02-shared-three-providers-published.png");
@@ -834,6 +835,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         var sharedUrl = Environment.GetEnvironmentVariable(SharedUrlEnvironmentVariable);
         var clientUrl = Environment.GetEnvironmentVariable(ClientUrlEnvironmentVariable);
         var upstreamTokenFile = Environment.GetEnvironmentVariable(UpstreamTokenFileEnvironmentVariable);
+        var upstreamUrl = Environment.GetEnvironmentVariable(UpstreamUrlEnvironmentVariable);
         var evidenceDirectory = Environment.GetEnvironmentVariable(EvidenceDirectoryEnvironmentVariable);
         var visionImagePath = Environment.GetEnvironmentVariable(VisionImageEnvironmentVariable);
         var sharedApiUrl = Environment.GetEnvironmentVariable(SharedApiUrlEnvironmentVariable);
@@ -842,13 +844,20 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         if (string.IsNullOrWhiteSpace(sharedUrl) ||
             string.IsNullOrWhiteSpace(clientUrl) ||
             string.IsNullOrWhiteSpace(upstreamTokenFile) ||
+            string.IsNullOrWhiteSpace(upstreamUrl) ||
             string.IsNullOrWhiteSpace(evidenceDirectory) ||
             string.IsNullOrWhiteSpace(visionImagePath))
         {
             throw SkipException.ForSkip(
                 $"Set {SharedUrlEnvironmentVariable}, {ClientUrlEnvironmentVariable}, " +
-                $"{UpstreamTokenFileEnvironmentVariable}, {EvidenceDirectoryEnvironmentVariable}, and " +
+                $"{UpstreamTokenFileEnvironmentVariable}, {UpstreamUrlEnvironmentVariable}, {EvidenceDirectoryEnvironmentVariable}, and " +
                 $"{VisionImageEnvironmentVariable} to run the external two-instance UI acceptance test.");
+        }
+
+        if (!Uri.TryCreate(upstreamUrl.TrimEnd('/') + "/", UriKind.Absolute, out var upstreamBaseUri) ||
+            upstreamBaseUri.Scheme is not ("http" or "https") ||
+            upstreamBaseUri.UserInfo.Length != 0 || upstreamBaseUri.Query.Length != 0 || upstreamBaseUri.Fragment.Length != 0) {
+            throw new InvalidOperationException($"{UpstreamUrlEnvironmentVariable} must be an absolute HTTP(S) base URL without credentials, query or fragment.");
         }
 
         if (!File.Exists(upstreamTokenFile))
@@ -872,7 +881,8 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             clientUrl.TrimEnd('/'),
             Path.GetFullPath(upstreamTokenFile),
             Path.GetFullPath(evidenceDirectory),
-            Path.GetFullPath(visionImagePath));
+            Path.GetFullPath(visionImagePath),
+            upstreamBaseUri);
     }
 
     private sealed record AcceptanceSettings(
@@ -883,5 +893,6 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         string ClientUrl,
         string UpstreamTokenFile,
         string EvidenceDirectory,
-        string VisionImagePath);
+        string VisionImagePath,
+        Uri UpstreamBaseUri);
 }

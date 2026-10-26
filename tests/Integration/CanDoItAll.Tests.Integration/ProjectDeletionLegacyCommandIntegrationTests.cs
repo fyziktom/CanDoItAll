@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectDeletionLegacyCommandIntegrationTests {
     [Fact]
     public async Task Real_offline_legacy_commands_hold_native_dispatch_until_release_then_complete_the_original_work() {

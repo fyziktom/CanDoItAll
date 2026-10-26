@@ -93,6 +93,7 @@ public sealed class EfProcessExecutionAuthorityQuery(
 
     private async Task<ProcessExecutionDispatchAuthorityResult> WithSelectedReadContextAsync(
         Func<ProcessPersistenceDbContext, Task<ProcessExecutionDispatchAuthorityResult>> read, CancellationToken cancellationToken) {
+        cancellationToken.ThrowIfCancellationRequested();
         await using var context = await factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         var relational = context.Database.IsRelational();
         try {

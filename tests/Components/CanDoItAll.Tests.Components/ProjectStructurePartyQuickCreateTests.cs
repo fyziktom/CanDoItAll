@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
@@ -11,6 +12,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Structure.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
@@ -185,7 +187,7 @@ public sealed class ProjectStructurePartyQuickCreateTests(ITestOutputHelper outp
         if (change == OriginalChange.ProjectLifetime) {
             var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
             var admission = (await harness.Context.Services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(projectId)).ExpectedProjectAdmission;
-            await projects.DeleteAsync(projectId, expectedProjectAdmission: admission);
+            await ProjectLifecycleTestCommands.DeleteAsync(harness.Context.Services, projectId, expectedProjectAdmission: admission);
             Assert.True((await projects.CreateAsync(projectId, new() { Name = "Replacement project" })).IsSuccess);
         } else {
             await using var db = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
@@ -233,6 +235,9 @@ public sealed class ProjectStructurePartyQuickCreateTests(ITestOutputHelper outp
                     .AddChildContent<ProjectStructurePage>(child => child.Add(component => component.ProjectId, projectId))));
             } else {
                 runtime!.Generation++;
+                var workspace = cut.FindComponent<StructureWorkspace>().Instance;
+                await cut.InvokeAsync(() => workspace.Dispatch.InvokeAsync(
+                    new StructureToolbarIntent(workspace.Presentation.ContextId, StructureToolbarCommand.Retry)));
             }
             await SelectAsync(cut, second.Id);
             await DraftAsync(cut, "New authority draft");

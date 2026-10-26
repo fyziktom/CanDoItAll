@@ -592,8 +592,9 @@ public sealed class ProjectsPageTests
 
         var cut = RenderProjectsPage(harness);
 
-        cut.Find("[data-testid='hierarchy-filter-project']").Change(parentProjectId.ToString());
-        cut.Find("[data-testid='hierarchy-filter-mode']").Change(ProjectHierarchyFilterMode.Children.ToString());
+        cut.WaitForAssertion(() => Assert.Contains("Alpha parent", cut.Find("[data-testid='hierarchy-filter-project']").InnerHtml));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='hierarchy-filter-project']").ChangeAsync(new() { Value = parentProjectId.ToString() }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='hierarchy-filter-mode']").ChangeAsync(new() { Value = ProjectHierarchyFilterMode.Children.ToString() }));
 
         cut.WaitForAssertion(() =>
         {

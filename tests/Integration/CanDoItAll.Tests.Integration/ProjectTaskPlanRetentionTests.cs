@@ -13,13 +13,13 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectTaskPlanRetentionTests {
     [Fact]
-    public async Task Dormant_owner_has_exact_pool_participant_and_retained_receipt_blocks_business_import() {
+    public async Task Composed_owner_has_exact_pool_participant_and_retained_receipt_blocks_business_import() {
         await using var fixture = await ProjectTaskPlanOperationFixture.CreateAsync();
         var registrations = fixture.Services.GetServices<FiniteOperationPoolRegistration>().ToArray();
         Assert.Single(registrations, pool => pool.Pool == WorkbenchTaskPlanFiniteOperations.Pool);
         Assert.Single(fixture.Services.GetServices<IFiniteOperationReceiptRetentionParticipant>(),
             owner => owner.Pool == fixture.Pool.Pool && owner.Family == WorkbenchTaskPlanFiniteOperations.Family);
-        Assert.Null(fixture.Services.GetService<ProjectTaskPlanPublisher>());
+        Assert.IsType<ProjectTaskPlanPublisher>(fixture.Services.GetRequiredService<ProjectTaskPlanPublisher>());
         Assert.Null(fixture.Services.GetService<IProjectTaskPlanPublicationAuthority>());
         await using var context = await fixture.ContextAsync();
         var entity = context.Model.FindEntityType(typeof(ProjectTaskPlanReceiptRecord))!;
@@ -56,7 +56,7 @@ public sealed class ProjectTaskPlanRetentionTests {
                         fixture.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile,
                         fixture.Binding.Namespace, Guid.NewGuid(), token);
                 } else {
-                    await fixture.Services.GetRequiredService<ProjectsService>().DeleteAsync(fixture.Project.ProjectId,
+                    await ProjectLifecycleTestCommands.DeleteAsync(fixture.Services, fixture.Project.ProjectId,
                         token, fixture.Project);
                 }
             };

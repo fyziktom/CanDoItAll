@@ -365,7 +365,7 @@ public sealed class ProcessDecisionPersistenceTests {
         Assert.Contains("\"StepInstanceId\" IS NULL", scope, StringComparison.Ordinal);
         Assert.DoesNotContain("PayloadJson", scope, StringComparison.Ordinal);
         Assert.DoesNotContain(probe.Reads, sql => sql.Contains("FROM process_runtime_events", StringComparison.Ordinal));
-        Assert.InRange(probe.Reads.Count, 4, 5);
+        Assert.Equal(6, probe.Reads.Count);
     }
 
     [Fact]
@@ -465,7 +465,9 @@ public sealed class ProcessDecisionPersistenceTests {
     private static Task ApplyMigrationAsync(ProcessPersistenceDbContext context, bool downgrade)
         => ProcessDecisionMigrationFixture.ApplyAsync(context, downgrade,
             new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionGenerations(),
-            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedRunMaterialScopes());
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedRunMaterialScopes(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRefreshAdmission(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRefreshCaptureJournal());
 
     private sealed class AfterFlushFault : SaveChangesInterceptor {
         public Exception Failure { get; } = new InvalidOperationException("Injected failure after generation SQL flush.");

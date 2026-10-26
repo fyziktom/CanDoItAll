@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed partial class AgentToolBackgroundJournalIntegrationTests {
     [Theory]
     [InlineData(false)]

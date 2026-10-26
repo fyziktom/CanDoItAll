@@ -15,7 +15,7 @@ internal enum MaintenanceHealth { NoProgress, CapacityPressure, Recovery }
 internal sealed record MaintenanceCycleObservation(long DeletedReceipts, long DeletedPayloadBytes,
     MaintenanceStop Stop, MaintenanceEligibility Eligibility, double DurationMilliseconds,
     int? EligibleObserved, double? ObservedEligibilityAgeSeconds, double? SinceProgressSeconds,
-    DateTimeOffset CompletedAtUtc);
+    DateTimeOffset CompletedAtUtc, MaintenanceEligibility PoolEligibility);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record MaintenanceHostFrame(int Version, Guid RunId, int Worker, long Sequence,
@@ -24,7 +24,7 @@ internal sealed record MaintenanceHostFrame(int Version, Guid RunId, int Worker,
     string? FailureType = null, string? SqlState = null, double? ProcessCpuMilliseconds = null, int[]? BackendProcesses = null);
 
 internal static class MaintenanceHostProtocol {
-    internal const int Version = 1;
+    internal const int Version = 2;
     internal const int MaximumFrameBytes = 4096;
     internal const int MaximumFrames = 2048;
     internal const int MaximumQueuedFrames = 256;
@@ -44,6 +44,25 @@ internal static class MaintenanceHostProtocol {
         MaxDepth = 8,
         Converters = { new JsonStringEnumConverter(allowIntegerValues: false) }
     };
+
+    internal static bool IsDefinitionMetric(ReadOnlySpan<KeyValuePair<string, object?>> tags, bool family) {
+        Guid? pool = null;
+        Guid? receiptFamily = null;
+        foreach (var tag in tags) {
+            if (tag.Key == "pool" && pool is null && tag.Value is Guid poolId && poolId != Guid.Empty) {
+                pool = poolId;
+            } else if (family && tag.Key == "family" && receiptFamily is null && tag.Value is Guid familyId && familyId != Guid.Empty) {
+                receiptFamily = familyId;
+            } else if (family || tag.Key is not ("stop" or "eligibility")) {
+                throw new InvalidDataException("The maintenance metric identity is invalid or duplicated.");
+            }
+        }
+        if (pool is null || family && receiptFamily is null) {
+            throw new InvalidDataException("The maintenance metric is missing its pool or family identity.");
+        }
+        return pool == ProjectFiniteOperationPool.Pool.Value &&
+            (!family || receiptFamily == ProjectFiniteOperationPool.DefinitionFamily.Value);
+    }
 
     internal static string Encode(MaintenanceHostFrame frame) {
         Validate(frame);
@@ -111,7 +130,9 @@ internal static class MaintenanceHostProtocol {
             cycle.DeletedReceipts > ProjectDefinitionOperationOptions.MaximumMaintenanceBatches * ProjectDefinitionOperationOptions.PurgeBatchCount ||
             cycle.DeletedPayloadBytes > (long)ProjectDefinitionOperationOptions.MaximumMaintenanceBatches * ProjectDefinitionOperationOptions.PurgeBatchBytes ||
             cycle.DeletedReceipts == 0 && cycle.DeletedPayloadBytes != 0 ||
-            !Enum.IsDefined(cycle.Stop) || !Enum.IsDefined(cycle.Eligibility) ||
+            !Enum.IsDefined(cycle.Stop) || !Enum.IsDefined(cycle.Eligibility) || !Enum.IsDefined(cycle.PoolEligibility) ||
+            cycle.PoolEligibility == MaintenanceEligibility.NoneObserved && cycle.Eligibility != MaintenanceEligibility.NoneObserved ||
+            cycle.PoolEligibility == MaintenanceEligibility.Present && cycle.Eligibility == MaintenanceEligibility.Unknown ||
             !double.IsFinite(cycle.DurationMilliseconds) || cycle.DurationMilliseconds < 0 ||
             cycle.CompletedAtUtc == default || cycle.CompletedAtUtc.Offset != TimeSpan.Zero ||
             !FiniteNonnegative(cycle.ObservedEligibilityAgeSeconds) || !FiniteNonnegative(cycle.SinceProgressSeconds) ||
@@ -242,13 +263,18 @@ internal sealed class MaintenanceMetricSequence {
             return null;
         }
         if (bytes is null || stop is null || eligibility is null || duration is null ||
-            eligibility == MaintenanceEligibility.Unknown && observed is not null ||
+            eligibility != MaintenanceEligibility.Unknown && observed is null ||
             eligibility == MaintenanceEligibility.NoneObserved && observed != 0 ||
-            eligibility == MaintenanceEligibility.Present && observed != 1) {
+            observed is not (null or 0 or 1)) {
             throw new InvalidDataException("Maintenance metrics ended with missing or contradictory evidence.");
         }
-        var result = new MaintenanceCycleObservation(receipts.Value, bytes.Value, stop.Value, eligibility.Value,
-            duration.Value, observed, age, progress, completedAt);
+        var familyEligibility = observed switch {
+            0 => MaintenanceEligibility.NoneObserved,
+            1 => MaintenanceEligibility.Present,
+            _ => MaintenanceEligibility.Unknown
+        };
+        var result = new MaintenanceCycleObservation(receipts.Value, bytes.Value, stop.Value, familyEligibility,
+            duration.Value, observed, age, progress, completedAt, eligibility.Value);
         receipts = null;
         bytes = null;
         stop = null;

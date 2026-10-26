@@ -47,7 +47,7 @@ public sealed partial class WorkspaceSettingsMigrationTests {
                     await UpgradePolicyAsync(seed);
                 }
             }
-            var originalBinding = await source.PolicyCoordinator.EnsureReadyAsync(source.Profile);
+            var originalBinding = await source.SeedHistoricalPolicyActivationAsync();
             if (configured) {
                 var writer = source.PolicyWriter();
                 var original = await writer.ReadV2Async();
@@ -98,6 +98,8 @@ public sealed partial class WorkspaceSettingsMigrationTests {
                 await UpgradePolicyAsync(restored);
                 Assert.Equal(installed, await PolicyFullPayloadsAsync(restored));
                 Assert.False(restored.Database.HasPendingModelChanges());
+                await restored.Database.MigrateAsync();
+                Assert.Equal(installed, await PolicyFullPayloadsAsync(restored));
             }
             await Assert.ThrowsAsync<InvalidOperationException>(() => target.PolicyCoordinator.EnsureReadyAsync(target.Profile));
             await using (var unchanged = target.Canonical()) {
@@ -172,6 +174,12 @@ public sealed partial class WorkspaceSettingsMigrationTests {
 
         internal DatasetActivationCoordinator PolicyCoordinator => new(PolicyActivation,
             [ProjectFiniteOperationPool.Create(new()), WorkbenchTaskPlanFiniteOperations.Create(new())]);
+
+        internal async Task<DatasetActivationBinding> SeedHistoricalPolicyActivationAsync() {
+            await using var context = Canonical();
+            return await HistoricalDatasetActivation.SeedSharedRowsAsync(context, PolicyActivation, Profile.Profile.Id, SavedAt,
+                ProjectFiniteOperationPool.Pool, WorkbenchTaskPlanFiniteOperations.Pool);
+        }
 
         internal WorkspaceSettingsWriter PolicyWriter() => new(new PolicyOwnerFactory(this), new PolicyCanonicalDatabase(Profile),
             PolicyActivation, new SystemClock(), new CurrencyDisplayState(Options.Create(new CurrencyOptions())),

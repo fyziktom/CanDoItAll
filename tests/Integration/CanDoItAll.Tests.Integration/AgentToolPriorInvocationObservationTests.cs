@@ -9,6 +9,7 @@ using CanDoItAll.Infrastructure.FileSystem;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class AgentToolPriorInvocationObservationTests {
     [Theory]
     [InlineData(WorkspaceScopeKind.Organization)]

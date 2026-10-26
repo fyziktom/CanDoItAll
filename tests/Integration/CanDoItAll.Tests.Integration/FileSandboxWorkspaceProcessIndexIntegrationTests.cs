@@ -120,7 +120,7 @@ public sealed class FileSandboxWorkspaceProcessIndexIntegrationTests {
         }
         var faulted = new FileSandboxWorkspaceStore(fixture.WorkspaceRoot, fixture.StorageScope, null,
             stage => {
-                if (!newRun && stage == ExistingRunDetailCommitStage.ExecutionIndexPersisted) {
+                if (!newRun && stage == ExistingRunDetailCommitStage.RemainingRecordsPersisted) {
                     Obstruct();
                 }
             },

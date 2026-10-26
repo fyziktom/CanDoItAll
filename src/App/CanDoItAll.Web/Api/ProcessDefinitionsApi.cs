@@ -13,17 +13,17 @@ internal static class ProcessDefinitionsApi {
         var definitions = processes.MapGroup("/definitions").WithTags("Process definitions");
         definitions.MapGet("", ListAsync).WithName("ListProcessDefinitions").Produces<ProcessDefinitionCatalogApiResponse>().ProducesApiErrors(400, 401, 403, 404, 503)
             .DescribeApi("List process definitions", "Read the global catalog, or the current project catalog including overlays when projectId is supplied. Requires process read capability; catalog availability is not launch eligibility.", "Matching process definition catalog entries.");
-        definitions.MapGet("/{definitionKey}", ([Description("Opaque catalog key returned by the definition list; URL-encode it and preserve its value.")] string definitionKey, Guid? projectId, ProcessDefinitionCatalogProjectionService catalog,
+        definitions.MapGet("/{definitionKey}", ([Description("Opaque catalog key returned by the definition list; URL-encode it and preserve its value.")] string definitionKey, [Description("Optional project scope containing the definition; omit for the global catalog.")] Guid? projectId, ProcessDefinitionCatalogProjectionService catalog,
             ProcessDefinitionEditorProjectionService editor, CancellationToken cancellationToken) =>
             ReadAsync(definitionKey, projectId, catalog, (scope, key) => editor.GetEditorAsync(scope, key, cancellationToken), cancellationToken))
             .WithName("GetProcessDefinition").Produces<ProcessDefinitionEditorProjection>().ProducesApiErrors(400, 401, 403, 404, 503)
             .DescribeApi("Read process definition", "Read the definition overview in the optional project scope, or globally when projectId is omitted. Requires process read capability; exposes no definition write operation.", "Current definition overview projection.");
-        definitions.MapGet("/{definitionKey}/roles", ([Description("Opaque definition catalog key returned by the definition list.")] string definitionKey, Guid? projectId, ProcessDefinitionCatalogProjectionService catalog,
+        definitions.MapGet("/{definitionKey}/roles", ([Description("Opaque definition catalog key returned by the definition list.")] string definitionKey, [Description("Optional project scope containing the definition; omit for the global catalog.")] Guid? projectId, ProcessDefinitionCatalogProjectionService catalog,
             ProcessDefinitionRoleEditorProjectionService editor, CancellationToken cancellationToken) =>
             ReadAsync(definitionKey, projectId, catalog, (scope, key) => editor.GetEditorAsync(scope, key, cancellationToken), cancellationToken))
             .WithName("GetProcessDefinitionRoles").Produces<ProcessDefinitionRoleEditorProjection>().ProducesApiErrors(400, 401, 403, 404, 503)
             .DescribeApi("Read process definition roles", "Read role staffing, step bindings and validation in the optional project scope. Omitted projectId means global. Requires process read capability; authoring command availability is informational.", "Current definition role projection.");
-        definitions.MapGet("/{definitionKey}/steps", ([Description("Opaque definition catalog key returned by the definition list.")] string definitionKey, Guid? projectId, ProcessDefinitionCatalogProjectionService catalog,
+        definitions.MapGet("/{definitionKey}/steps", ([Description("Opaque definition catalog key returned by the definition list.")] string definitionKey, [Description("Optional project scope containing the definition; omit for the global catalog.")] Guid? projectId, ProcessDefinitionCatalogProjectionService catalog,
             ProcessDefinitionStepEditorProjectionService editor, CancellationToken cancellationToken) =>
             ReadAsync(definitionKey, projectId, catalog, (scope, key) => editor.GetEditorAsync(scope, key, cancellationToken), cancellationToken))
             .WithName("GetProcessDefinitionSteps").Produces<ProcessDefinitionStepEditorProjection>().ProducesApiErrors(400, 401, 403, 404, 503)
@@ -41,7 +41,7 @@ internal static class ProcessDefinitionsApi {
             await catalog.GetCompleteCatalogItemsAsync(scope, searchText, scopeFilter ?? ProcessDefinitionCatalogScopeKind.All, cancellationToken))));
     }
 
-    private static Task<IResult> ReadAsync<T>(string definitionKey, Guid? projectId, ProcessDefinitionCatalogProjectionService catalog,
+    private static Task<IResult> ReadAsync<T>(string definitionKey, [Description("Optional project scope containing the definition; omit for the global catalog.")] Guid? projectId, ProcessDefinitionCatalogProjectionService catalog,
         Func<ProcessWorkspaceShellScope, ProcessDefinitionCatalogItemKey, Task<T>> read, CancellationToken cancellationToken) =>
         InScopeAsync(projectId, async scope => {
         if (string.IsNullOrWhiteSpace(definitionKey) || definitionKey.Length > 256) {

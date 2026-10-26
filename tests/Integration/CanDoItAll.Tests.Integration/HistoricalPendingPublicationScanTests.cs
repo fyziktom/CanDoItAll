@@ -7,6 +7,7 @@ using CanDoItAll.Infrastructure;
 
 namespace CanDoItAll.Tests.Integration.Runtime;
 
+[Trait("Category", "HostPlatform")]
 public sealed class HistoricalPendingPublicationScanTests {
     [Fact]
     public async Task Flat_sessions_beyond_the_former_entry_limit_remain_readable_without_writes() {

@@ -18,10 +18,11 @@ public sealed class FiniteOperationContractTests {
     [Fact]
     public void Stable_pool_and_family_identities_are_typed_nonempty_and_registration_captures_the_family_set() {
         Assert.Equal(new Guid("e6eaf1c1-5dbc-46bf-8641-1ae9fe3ae376"), Projects.Pool.Value);
-        Assert.Equal(new Guid("574607ce-cb66-4783-9675-8a59d4383ab4"), Projects.Families.Single().Family.Value);
+        Assert.Equal(new[] { new Guid("574607ce-cb66-4783-9675-8a59d4383ab4"), new Guid("10547738-2635-4baf-9ef0-f0fdd49c4b8a") },
+            Projects.Families.Select(family => family.Family.Value));
         Assert.Throws<ArgumentOutOfRangeException>(() => new FiniteOperationPoolId(Guid.Empty));
         Assert.Throws<ArgumentOutOfRangeException>(() => new FiniteReceiptFamilyId(Guid.Empty));
-        var original = Projects.Families.Single();
+        var original = Projects.Families.Single(family => family.Family == ProjectFiniteOperationPool.DefinitionFamily);
         var families = new[] { original };
         var captured = new FiniteOperationPoolRegistration(Projects.Pool, 1, Projects.Timing, families);
         families[0] = new(new(Guid.NewGuid()), 1);
@@ -52,18 +53,23 @@ public sealed class FiniteOperationContractTests {
     [Fact]
     public async Task Installed_receipt_families_require_exactly_one_participant_before_any_database_work() {
         var participant = new NeverExecuteParticipant(Projects.Pool, ProjectFiniteOperationPool.DefinitionFamily);
-        _ = Maintenance([Projects], [participant]);
+        var lifecycle = new NeverExecuteParticipant(Projects.Pool, ProjectFiniteOperationPool.LifecycleFamily);
+        _ = Maintenance([Projects], [participant, lifecycle]);
         Assert.Throws<FiniteOperationProtocolException>(() => Maintenance([Projects], []));
-        Assert.Throws<FiniteOperationProtocolException>(() => Maintenance([Projects], [participant, participant]));
+        Assert.Throws<FiniteOperationProtocolException>(() => Maintenance([Projects], [participant]));
+        Assert.Throws<FiniteOperationProtocolException>(() => Maintenance([Projects], [lifecycle]));
+        Assert.Throws<FiniteOperationProtocolException>(() => Maintenance([Projects], [participant, lifecycle, participant]));
+        Assert.Throws<FiniteOperationProtocolException>(() => Maintenance([Projects], [participant, lifecycle, lifecycle]));
         Assert.Throws<InvalidOperationException>(() => Maintenance([Projects, Projects], [participant]));
-        Assert.Throws<InvalidOperationException>(() => Maintenance([Projects], [participant,
+        Assert.Throws<InvalidOperationException>(() => Maintenance([Projects], [participant, lifecycle,
             new NeverExecuteParticipant(new(Guid.NewGuid()), new(Guid.NewGuid()))]));
         Assert.Throws<FiniteOperationProtocolException>(() => Projects.RequireFamily(new(Guid.NewGuid())));
         var services = new ServiceCollection();
         services.AddProjectsModule();
-        var registration = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IFiniteOperationReceiptRetentionParticipant));
-        Assert.Equal(typeof(ProjectDefinitionReceiptRetention), registration.ImplementationType);
-        Assert.Equal(ServiceLifetime.Singleton, registration.Lifetime);
+        var registrations = services.Where(descriptor => descriptor.ServiceType == typeof(IFiniteOperationReceiptRetentionParticipant)).ToArray();
+        Assert.Equal(new[] { typeof(ProjectDefinitionReceiptRetention), typeof(ProjectLifecycleReceiptRetention) },
+            registrations.Select(registration => registration.ImplementationType));
+        Assert.All(registrations, registration => Assert.Equal(ServiceLifetime.Singleton, registration.Lifetime));
         await using var environment = CanDoItAllTestEnvironment.Create("finite-bootstrap-registration");
         var profile = environment.CreateInMemoryProfile("registration");
         foreach (var participantCount in new[] { 0, 1, 2 }) {

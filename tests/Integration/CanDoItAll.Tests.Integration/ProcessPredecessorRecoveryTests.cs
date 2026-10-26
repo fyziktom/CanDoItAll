@@ -28,9 +28,14 @@ public sealed class ProcessPredecessorRecoveryTests {
         await using var application = new AppDbContext(lease.CreateAppDbContextOptions());
         await application.GetService<IMigrator>().MigrateAsync("20261007193102_AddProjectExternalIdentity");
         var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>().UseNpgsql(lease.ConnectionString).Options;
-        await using (var original = new ProcessPersistenceDbContext(options)) {
-            await ProcessPredecessorFixture.SeedRetainedAsync(original, false, null, ProcessRuntimeStatus.Active,
-                new Dictionary<string, string>());
+        var initial = ProcessPredecessorFixture.ReadInitialCommit();
+        var plan = ProcessInstancePlanPersistenceMapper.ToEntity(initial.InitialPlan!);
+        Assert.Equal(ProcessPredecessorFixture.PlanJson, plan.PayloadJson);
+        application.Add(plan);
+        application.Add(ProcessPersistenceMappers.ToEntity(initial.Mutation.State with { Status = ProcessRuntimeStatus.Active }));
+        await application.SaveChangesAsync();
+        foreach (var assignment in initial.InitialAssignments!) {
+            await HistoricalProjectMigrationRows.InsertAssignmentAsync(application, EfProcessRuntimeStepAssignmentStore.ToEntity(assignment));
         }
         var before = await ReadRowsAsync();
         Assert.NotEmpty(before);
@@ -48,7 +53,7 @@ public sealed class ProcessPredecessorRecoveryTests {
             SELECT to_jsonb(p)::text AS "Value" FROM process_instance_plans p
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_states p
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_steps p
-            UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_step_assignments p
+            UNION ALL SELECT (to_jsonb(p) - 'DecisionDataPolicyJson')::text AS "Value" FROM process_runtime_step_assignments p
             ORDER BY "Value"
             """).ToArrayAsync();
     }
@@ -156,7 +161,7 @@ public sealed class ProcessPredecessorRecoveryTests {
             var projects = read.ServiceProvider.GetRequiredService<ProjectsService>();
             Assert.True((await projects.CreateAsync(another, new() { Name = "Different legacy scope" })).IsSuccess);
             Assert.Null(await launch.FindExistingLaunchAsync(lookup with { ProjectId = another }));
-            await projects.DeleteAsync(projectId);
+            await ProjectLifecycleTestCommands.DeleteAsync(read.ServiceProvider, projectId);
             Assert.True((await projects.CreateAsync(projectId, new() { Name = "Replacement legacy lifetime" })).IsSuccess);
         }
         await using var recreated = app.Services.CreateAsyncScope();

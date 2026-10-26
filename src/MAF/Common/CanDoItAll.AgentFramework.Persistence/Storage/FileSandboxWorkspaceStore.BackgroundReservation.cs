@@ -37,11 +37,11 @@ public sealed partial class FileSandboxWorkspaceStore {
                     witness, cancellationToken, acquireAuthority: reservation.AcquirePublication);
             } catch (SandboxWorkspaceConcurrencyException conflict) {
                 try {
-                    await RequireCompletedBackgroundPublicationAsync(null, cancellationToken);
+                    await RequireCompletedReservationPublicationAsync(null, cancellationToken);
                     var replay = await FindBackgroundReservationAsync(source, reservation, acknowledged, cancellationToken);
                     if (replay is { Disposition: ExecutionRunSourceDisposition.ExistingActive or
                             ExecutionRunSourceDisposition.ExistingAdmittedFailure or ExecutionRunSourceDisposition.ReusedCompleted }) {
-                        await RequireCompletedBackgroundPublicationAsync(replay.Run.Id, cancellationToken);
+                        await RequireCompletedReservationPublicationAsync(replay.Run.Id, cancellationToken);
                         return replay;
                     }
                 } catch (Exception lookupFailure) {
@@ -93,7 +93,7 @@ public sealed partial class FileSandboxWorkspaceStore {
         return null;
     }
 
-    private async Task RequireCompletedBackgroundPublicationAsync(Guid? executionRunId, CancellationToken cancellationToken) {
+    private async Task RequireCompletedReservationPublicationAsync(Guid? executionRunId, CancellationToken cancellationToken) {
         var policy = physicalPathPolicyFactory.Create(layout.RootPath);
         foreach (var path in PendingCommitJournalPaths) {
             cancellationToken.ThrowIfCancellationRequested();

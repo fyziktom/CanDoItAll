@@ -40,8 +40,7 @@ using static CanDoItAll.Modules.Processes.ProcessSubprocessState;
 namespace CanDoItAll.Modules.Processes;
 
 
-internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcessStepExecutor
-{
+internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcessStepExecutor {
     private readonly ICanDoItAllAgentWorkspaceFactory workspaceFactory;
     private readonly IAgentReferenceDataProvider agentReferenceDataProvider;
     private readonly IProcessRuntimeStepAssignmentStore assignmentStore;
@@ -71,8 +70,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator,
         ProcessExecutionMetadataComposer executionMetadataComposer,
         ILogger<AgentFrameworkProcessStepExecutor> logger,
-        IEnumerable<IProcessDecisionStepExecutor> decisionExecutors)
-    {
+        IEnumerable<IProcessDecisionStepExecutor> decisionExecutors) {
         this.workspaceFactory = workspaceFactory;
         this.agentReferenceDataProvider = agentReferenceDataProvider;
         this.assignmentStore = assignmentStore;
@@ -94,26 +92,22 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
 
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
         ProcessExecutionAdapterRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (request.DispatchClaimIdentity.Value == Guid.Empty)
-        {
+        if (request.DispatchClaimIdentity.Value == Guid.Empty) {
             return Failed(
                 "process.adapter.dispatch_claim_missing",
                 "The process execution adapter requires a concrete dispatch claim identity.",
                 "dispatch-claim-missing");
         }
 
-        if (request.StepId is not { } stepId)
-        {
+        if (request.StepId is not { } stepId) {
             return Failed("process.adapter.step_missing", "The process execution adapter requires a concrete step id.", "step-missing");
         }
 
         var assignment = await assignmentStore.LoadAsync(request.RunId, stepId, cancellationToken).ConfigureAwait(false);
-        if (assignment is null)
-        {
+        if (assignment is null) {
             return Failed("process.adapter.assignment_missing", $"No runtime assignment exists for step '{stepId}'.", stepId.ToString());
         }
 
@@ -128,8 +122,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         }
 
         if (!ProcessRequiredRuntimeToolNames.IsValidBoundedContract(
-                request.StepContract.RequiredRuntimeToolNames))
-        {
+                request.StepContract.RequiredRuntimeToolNames)) {
             var invalidContractPreflight = await runtimeToolPreflightService
                 .EvaluateStepHostCapabilitiesAsync(
                     request.StepContract.RequiredRuntimeToolNames,
@@ -145,8 +138,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             request.StepContract);
         if (!currentRuntimeToolNames.SequenceEqual(
                 request.StepContract.RequiredRuntimeToolNames,
-                StringComparer.OrdinalIgnoreCase))
-        {
+                StringComparer.OrdinalIgnoreCase)) {
             return AttachHostCapabilityEvidence(
                 CreateRuntimeToolContractChangedResult(assignment),
                 request.DispatchHostCapabilityEvidence);
@@ -155,8 +147,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(
                 assignment,
                 cancellationToken,
-                request.StepContract).ConfigureAwait(false) is { } existingBridgeResult)
-        {
+                request.StepContract).ConfigureAwait(false) is { } existingBridgeResult) {
             return existingBridgeResult;
         }
 
@@ -169,8 +160,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 ? result with { ExecutionRunId = admitted } : result, dispatchHostCapabilityEvidence);
 
         async ValueTask<ProcessExecutionAdapterResult?> EvaluateHostCapabilityGateAsync(
-            CancellationToken gateCancellationToken)
-        {
+            CancellationToken gateCancellationToken) {
             var preflight = await runtimeToolPreflightService
                 .EvaluateStepHostCapabilitiesAsync(
                     request.StepContract.RequiredRuntimeToolNames,
@@ -181,32 +171,28 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             if (!ProcessHostCapabilityEvidencePolicy.TryMerge(
                     dispatchHostCapabilityEvidence,
                     preflight.HostCapabilityEvidence,
-                    out var mergedHostCapabilityEvidence))
-            {
+                    out var mergedHostCapabilityEvidence)) {
                 var inconsistentEvidence = ProcessHostCapabilityEvidencePolicy.CreateUnstableEvidence(
                     dispatchHostCapabilityEvidence,
                     preflight.HostCapabilityEvidence);
                 var inconsistentPreflight = new ProcessRuntimeToolPreflightResult(
                     false,
                     ["host-capability-snapshot-changed"],
-                    "Process host capability facts changed between dispatch checks. The step was rejected before execution; retry after the host profile is stable.")
-                {
+                    "Process host capability facts changed between dispatch checks. The step was rejected before execution; retry after the host profile is stable.") {
                     HostCapabilityEvidence = inconsistentEvidence
                 };
                 return CreateHostCapabilityFailureResult(assignment, inconsistentPreflight);
             }
 
             dispatchHostCapabilityEvidence = mergedHostCapabilityEvidence;
-            if (!preflight.IsSatisfied)
-            {
+            if (!preflight.IsSatisfied) {
                 return CreateHostCapabilityFailureResult(assignment, preflight);
             }
 
             return null;
         }
 
-        if (ProcessLaunchExecutorKinds.IsWorkflow(assignment.ExecutorKind))
-        {
+        if (ProcessLaunchExecutorKinds.IsWorkflow(assignment.ExecutorKind)) {
             var workflowResult = await workflowStepExecutor
                 .ExecuteAsync(
                     assignment,
@@ -218,8 +204,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             return CompleteWithDispatchHostEvidence(workflowResult);
         }
 
-        if (await EvaluateHostCapabilityGateAsync(cancellationToken).ConfigureAwait(false) is { } hostCapabilityFailure)
-        {
+        if (await EvaluateHostCapabilityGateAsync(cancellationToken).ConfigureAwait(false) is { } hostCapabilityFailure) {
             return hostCapabilityFailure;
         }
 
@@ -228,22 +213,19 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 assignmentStore,
                 stateStore,
                 cancellationToken,
-                request.StepContract).ConfigureAwait(false) is { } launchedSubprocessResult)
-        {
+                request.StepContract).ConfigureAwait(false) is { } launchedSubprocessResult) {
             return CompleteWithDispatchHostEvidence(launchedSubprocessResult);
         }
 
         if (await runtimeOwnedStepCoordinator.TryExecuteRuntimeOwnedStepAsync(
                 assignment,
                 cancellationToken,
-                request.StepContract).ConfigureAwait(false) is { } runtimeOwnedStepResult)
-        {
+                request.StepContract).ConfigureAwait(false) is { } runtimeOwnedStepResult) {
             return CompleteWithDispatchHostEvidence(runtimeOwnedStepResult);
         }
 
         if (!string.Equals(assignment.ExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase) ||
-            !Guid.TryParse(assignment.ExecutorId, out var agentId))
-        {
+            !Guid.TryParse(assignment.ExecutorId, out var agentId)) {
             return CompleteWithDispatchHostEvidence(Failed(
                 "process.adapter.executor_invalid",
                 $"Step '{assignment.StepKey}' has invalid executor binding '{assignment.ExecutorKind}:{assignment.ExecutorId}'.",
@@ -254,8 +236,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             .GetAsync(new AgentReferenceDataRequest(AgentReferenceDataSections.Agents), cancellationToken)
             .ConfigureAwait(false);
         var agent = referenceData.Agents.FirstOrDefault(candidate => candidate.Id == agentId);
-        if (agent is null)
-        {
+        if (agent is null) {
             return CompleteWithDispatchHostEvidence(NeedsManager(
                 "process.adapter.executor_agent_missing",
                 $"Step '{assignment.StepKey}' is assigned to missing agent '{agentId}'.",
@@ -263,8 +244,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         }
 
         var readiness = AgentProcessReadinessEvaluator.Evaluate(agent, CreateRuntimeReadinessRequest(assignment));
-        if (!readiness.IsExecutionReady || !readiness.HasRoleFit)
-        {
+        if (!readiness.IsExecutionReady || !readiness.HasRoleFit) {
             return CompleteWithDispatchHostEvidence(NeedsManager(
                 "process.adapter.executor_readiness_failed",
                 $"Step '{assignment.StepKey}' cannot run with assigned agent '{agent.Name}': {readiness.ReadinessSummary}",
@@ -273,8 +253,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
 
         IAgentFrameworkWorkspaceService? workspaceService = null;
         var executionStage = ProcessAgentExecutionStage.RuntimeToolPreflight;
-        try
-        {
+        try {
             var runtimeToolPreflight = await runtimeToolPreflightService
                 .EvaluateAsync(
                     new ProcessRuntimeToolPreflightRequest(
@@ -288,16 +267,14 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             if (!ProcessHostCapabilityEvidencePolicy.TryMerge(
                     gateHostCapabilityEvidence,
                     runtimeToolPreflight.HostCapabilityEvidence,
-                    out var mergedHostCapabilityEvidence))
-            {
+                    out var mergedHostCapabilityEvidence)) {
                 var inconsistentEvidence = ProcessHostCapabilityEvidencePolicy.CreateUnstableEvidence(
                     gateHostCapabilityEvidence,
                     runtimeToolPreflight.HostCapabilityEvidence);
                 var inconsistentPreflight = new ProcessRuntimeToolPreflightResult(
                     false,
                     ["host-capability-snapshot-changed"],
-                    "Process host capability facts changed between dispatch checks. The step was rejected before agent execution; retry after the host profile is stable.")
-                {
+                    "Process host capability facts changed between dispatch checks. The step was rejected before agent execution; retry after the host profile is stable.") {
                     HostCapabilityEvidence = inconsistentEvidence
                 };
                 return CreateHostCapabilityFailureResult(assignment, inconsistentPreflight);
@@ -305,8 +282,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
 
             dispatchHostCapabilityEvidence = mergedHostCapabilityEvidence;
 
-            if (!runtimeToolPreflight.IsSatisfied)
-            {
+            if (!runtimeToolPreflight.IsSatisfied) {
                 var issue = CreateRuntimeToolPreflightIssue(assignment, runtimeToolPreflight);
                 return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(
                     assignment,
@@ -322,8 +298,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 dispatchHostCapabilityEvidence);
             executionStage = ProcessAgentExecutionStage.ParentArtifactContextHydration;
             var parentArtifactContext = parentArtifactContextHydrator.Hydrate(assignment);
-            if (parentArtifactContext.Issue is { } parentArtifactContextIssue)
-            {
+            if (parentArtifactContext.Issue is { } parentArtifactContextIssue) {
                 return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(
                     assignment,
                     ComputeHash(parentArtifactContextIssue.Evidence),
@@ -383,13 +358,11 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(
                     assignment,
                     cancellationToken,
-                    request.StepContract).ConfigureAwait(false) is { } bridgeResultAfterExecution)
-            {
+                    request.StepContract).ConfigureAwait(false) is { } bridgeResultAfterExecution) {
                 return CompleteWithDispatchHostEvidence(bridgeResultAfterExecution);
             }
 
-            if (TryBuildRetryableAgentTransientExecutionIssue(assignment, result, out var transientExecutionIssue))
-            {
+            if (TryBuildRetryableAgentTransientExecutionIssue(assignment, result, out var transientExecutionIssue)) {
                 transientExecutionIssue = await AttestRetryableAgentTransientExecutionIssueAsync(
                         assignment,
                         workspaceService,
@@ -406,8 +379,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                         StringComparison.Ordinal)
                         ? ComputeHash(transientExecutionIssue.Evidence)
                         : ComputeHash($"{result.ExecutionRunId:D}:{metric.Outcome}:{result.ResponseText}"),
-                    transientExecutionIssue) with
-                {
+                    transientExecutionIssue) with {
                     ExecutionRunId = new ProcessExecutionRunId(result.ExecutionRunId)
                 });
             }
@@ -422,8 +394,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 result.ResponseText,
                 new ProcessStepOutcomeValidator());
 
-            if (!validation.Succeeded || validation.Output is null)
-            {
+            if (!validation.Succeeded || validation.Output is null) {
                 return CompleteWithDispatchHostEvidence(Failed(
                     "process.adapter.output_invalid",
                     FormatValidationErrors(validation.Validation.Errors),
@@ -436,8 +407,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     assignmentStore,
                     stateStore,
                     cancellationToken,
-                    request.StepContract).ConfigureAwait(false) is { } subprocessResult)
-            {
+                    request.StepContract).ConfigureAwait(false) is { } subprocessResult) {
                 return CompleteWithDispatchHostEvidence(subprocessResult);
             }
 
@@ -453,8 +423,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 result.ExecutionRunId,
                 executionDetail.ToolReceipts,
                 request.StepContract);
-            if (materialization.Issue is { } materializationIssue)
-            {
+            if (materialization.Issue is { } materializationIssue) {
                 return CompleteWithDispatchHostEvidence(
                     NeedsManagerForCompletionIssue(assignment, validation.RawOutputHash, materializationIssue));
             }
@@ -465,16 +434,14 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     assignmentStore,
                     stateStore,
                     cancellationToken,
-                    request.StepContract).ConfigureAwait(false) is { } materializedSubprocessResult)
-            {
+                    request.StepContract).ConfigureAwait(false) is { } materializedSubprocessResult) {
                 return CompleteWithDispatchHostEvidence(materializedSubprocessResult);
             }
 
             if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(
                     assignment,
                     cancellationToken,
-                    request.StepContract).ConfigureAwait(false) is { } materializedBridgeResult)
-            {
+                    request.StepContract).ConfigureAwait(false) is { } materializedBridgeResult) {
                 return CompleteWithDispatchHostEvidence(materializedBridgeResult);
             }
 
@@ -530,19 +497,16 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     assignment.ProducedArtifactSlotIds, ProcessDiagnosticRetrySafety.UnsafeToRetry,
                     ProcessDiagnosticIdempotencyClassification.NonIdempotent)) with { ExecutionRunId = exception.ExecutionRunId });
         }
-        catch (ProcessRuntimeDispatchDeferredException)
-        {
+        catch (ProcessRuntimeDispatchDeferredException) {
             throw;
         }
-        catch (AgentExecutionCancelledException exception)
-        {
+        catch (AgentExecutionCancelledException exception) {
             return CompleteWithDispatchHostEvidence(Canceled(
                 "process.adapter.agent_execution_cancelled",
                 $"Agent execution was cancelled for step '{assignment.StepKey}'. Review the restricted execution log using the recorded evidence hash if more detail is required.",
                 $"{exception.ExecutionRunId:N}:{exception.ProcessRunId}:{exception.Message}"));
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
+        catch (Exception exception) when (exception is not OperationCanceledException) {
             if (exception is AgentRunFailedException admittedFailure && admittedFailure.ExecutionRunId != Guid.Empty) {
                 admittedExecutionRunId = new(admittedFailure.ExecutionRunId);
             }
@@ -555,24 +519,20 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     assignment,
                     assignmentStore,
                     stateStore,
-                    CancellationToken.None).ConfigureAwait(false) is { } pendingChildRunId)
-            {
+                    CancellationToken.None).ConfigureAwait(false) is { } pendingChildRunId) {
                 throw CreatePendingChildRunDeferredException(assignment, pendingChildRunId);
             }
 
-            if (TryBuildRetryableAgentOutputContractIssue(assignment, exception, out var outputContractIssue))
-            {
+            if (TryBuildRetryableAgentOutputContractIssue(assignment, exception, out var outputContractIssue)) {
                 return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(
                     assignment,
                     ComputeHash(exception.GetType().FullName + ":" + exception.Message),
                     outputContractIssue));
             }
 
-            if (TryBuildRetryableAgentTransientExecutionIssue(assignment, exception, out var transientExecutionIssue))
-            {
+            if (TryBuildRetryableAgentTransientExecutionIssue(assignment, exception, out var transientExecutionIssue)) {
                 if (exception is AgentRunFailedException agentRunFailedException &&
-                    workspaceService is not null)
-                {
+                    workspaceService is not null) {
                     transientExecutionIssue = await AttestRetryableAgentTransientExecutionIssueAsync(
                             assignment,
                             workspaceService,
@@ -591,8 +551,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                         StringComparison.Ordinal)
                         ? ComputeHash(transientExecutionIssue.Evidence)
                         : ComputeHash(exception.GetType().FullName + ":" + exception.Message),
-                    transientExecutionIssue) with
-                {
+                    transientExecutionIssue) with {
                     ExecutionRunId = exception is AgentRunFailedException failedException &&
                                      failedException.ExecutionRunId != Guid.Empty
                         ? new ProcessExecutionRunId(failedException.ExecutionRunId)
@@ -614,8 +573,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         }
 
         async ValueTask<IReadOnlyList<CapabilityCatalogItem>> ResolveAttachedCapabilityCatalogAsync(
-            CancellationToken token)
-        {
+            CancellationToken token) {
             workspaceService ??= workspaceFactory.GetOrganizationWorkspaceService();
             var capabilityCatalog = await workspaceService
                 .ListCapabilitiesAsync(token)

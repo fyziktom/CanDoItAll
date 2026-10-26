@@ -133,10 +133,7 @@ public sealed class ProjectLifetimeMigrationIntegrationTests {
                     VALUES ({projectId}, {lifetimeId}, {SavedAt})
                     """);
             } else {
-                context.Add(new AgentProjectStructureAccessRevocationRecord {
-                    Id = Guid.NewGuid(), ProjectId = projectId, DatabaseProfileId = Guid.NewGuid(), ProjectLifetimeId = lifetimeId,
-                    Status = AgentProjectStructureAccessRevocationStatus.Failed, CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt
-                });
+                await InsertRecoveryAsync(context, projectId, Guid.NewGuid(), lifetimeId);
             }
             await context.SaveChangesAsync();
             var failure = await Assert.ThrowsAsync<PostgresException>(() => context.GetService<IMigrator>().MigrateAsync(PreviousMigration));
@@ -208,7 +205,7 @@ public sealed class ProjectLifetimeMigrationIntegrationTests {
 
     private static Task<string> ReadLegacyRecoveryAsync(AppDbContext context)
         => context.Database.SqlQueryRaw<string>("""
-            SELECT (to_jsonb(recovery) - 'DatabaseProfileId' - 'ProjectLifetimeId')::text AS "Value"
+            SELECT (to_jsonb(recovery) - 'DatabaseProfileId' - 'ProjectLifetimeId' - 'CompletionId' - 'CompletionNamespaceId')::text AS "Value"
             FROM "AgentFramework_ProjectAccessRevocations" recovery
             """).SingleAsync();
 }

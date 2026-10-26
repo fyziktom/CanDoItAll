@@ -33,7 +33,7 @@ public sealed class ProductToolPolicyTests {
     public void Every_moved_policy_has_exactly_one_owner_and_a_legacy_contract_row() {
         var names = MovedProductPolicies.Select(policy => policy.Name).Order(StringComparer.Ordinal).ToArray();
         var expected = LegacyPolicyRows.Select(row => ((string)row[0]).Split('|')[0]).Order(StringComparer.Ordinal).ToArray();
-        Assert.Equal(107, names.Length);
+        Assert.Equal(108, names.Length);
         Assert.Equal(names.Length, names.Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(expected, names);
     }
@@ -44,7 +44,7 @@ public sealed class ProductToolPolicyTests {
         using var second = new ServiceCollection().AddProductToolPolicies().BuildServiceProvider();
         var firstPolicies = first.GetRequiredService<AgentToolPolicyCatalog>();
         var secondPolicies = second.GetRequiredService<AgentToolPolicyCatalog>();
-        Assert.Equal(142, first.GetServices<ToolCapabilityMetadata>().Count());
+        Assert.Equal(143, first.GetServices<ToolCapabilityMetadata>().Count());
         Assert.Equal(firstPolicies.Capabilities.OrderBy(policy => policy.Name).Select(Describe),
             secondPolicies.Capabilities.OrderBy(policy => policy.Name).Select(Describe));
     }
@@ -152,8 +152,8 @@ hr_crm_item_summary_get|Read|false|false|InternalDataRead|None|||false|false|tru
 hr_crm_party_affiliations_list|Read|false|false|InternalDataRead|None|||false|false|true|false|None|Idempotent|hr-approval-redacted-v1|true
 hr_crm_party_create|Mutation|true|true|InternalStateMutation|None|||false|false|false|false|None|StateChanging|hr-approval-redacted-v1|true
 hr_crm_search|Read|false|false|InternalDataRead|None|||false|false|true|false|None|Idempotent|hr-approval-redacted-v1|true
-hr_simple_chat_create_receipt_get|Read|false|false|InternalDataRead|None|||false|false|true|false|None|Idempotent|hr-approval-redacted-v1|true
 hr_simple_chat_create|Mutation|true|true|InternalStateMutation|None|||false|false|false|false|None|StateChanging|hr-approval-redacted-v1|true
+hr_simple_chat_create_receipt_get|Read|false|false|InternalDataRead|None|||false|false|true|false|None|Idempotent|hr-approval-redacted-v1|true
 hr_simple_chat_creation_options_get|Read|false|false|InternalDataRead|None|||false|false|true|false|None|Idempotent|hr-approval-redacted-v1|true
 hr_simple_chat_settings_get|Read|true|false|InternalDataRead|None|||false|false|true|false|None|Idempotent|hr-approval-redacted-v1|true
 hr_simple_chat_settings_update|Mutation|true|true|InternalStateMutation|None|||false|false|false|false|None|StateChanging|hr-approval-redacted-v1|true
@@ -164,8 +164,8 @@ project_plan_summary_get|Read|false|false|WorkspaceRead|None|||false|false|true|
 project_structure_analytics_query|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false
 project_structure_approval_request|Mutation|true|true|ProjectStructureMutation|Static|EscalateOrDecide,ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_structure_asset_content_get|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false
-project_structure_asset_create_revision|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_structure_asset_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
+project_structure_asset_create_revision|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_structure_asset_get|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false
 project_structure_asset_image_analyze|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false
 project_structure_asset_text_get|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false
@@ -220,6 +220,7 @@ project_structure_repo_branch_lease_acquire|Mutation|true|true|ProjectStructureM
 project_structure_subproject_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_structure_subproject_link|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_task_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
+project_task_plan_publish|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_task_resource_attach|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 project_task_update|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false
 scheduler_workflow_schedule_create|Mutation|true|true|InternalStateMutation|None|||false|false|false|false|None|StateChanging|scheduler-approval-redacted-v1|false

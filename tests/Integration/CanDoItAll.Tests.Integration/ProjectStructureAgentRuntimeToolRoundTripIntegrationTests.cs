@@ -96,7 +96,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         var original = await InvokeAsync<ProjectDefinitionSnapshot>(
             FindTool(originalTools, ProjectStructureToolPolicy.ProjectStructureProjectDefinitionGet),
             new AIFunctionArguments { ["projectId"] = projectId });
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Recreated project" })).IsSuccess);
         var currentTools = await CreateToolsAsync(scope.ServiceProvider, projectId,
             agentName: "Recreated Project Integration Agent");

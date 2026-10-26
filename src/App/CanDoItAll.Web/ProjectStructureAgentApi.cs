@@ -74,6 +74,7 @@ public static class ProjectStructureAgentApi
                 StatusCodes.Status500InternalServerError);
 
         group.MapPost("/projects/{parentProjectId:guid}/subprojects", ChangeSubprojectAsync)
+            .WithMetadata(new ApiEndpointDocumentation("Accepted original hierarchy mutation result.", "Original parent, child and edge expectations with the requested hierarchy change."))
             .Produces<ApiErrorResponse>(StatusCodes.Status428PreconditionRequired)
             .ProducesProjectStructureErrors(
                 StatusCodes.Status400BadRequest,

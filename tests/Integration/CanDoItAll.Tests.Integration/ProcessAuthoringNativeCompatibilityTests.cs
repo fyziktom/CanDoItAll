@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
@@ -53,7 +54,7 @@ public sealed class ProcessAuthoringNativeCompatibilityTests {
         Assert.Null(await launch.FindExistingLaunchAsync(new(key, null, anotherProject, variables)));
         Assert.Null(await launch.FindExistingLaunchAsync(new(key, null, null, variables)));
         var projects = services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Recreated lookup project" })).IsSuccess);
         await using var recreated = app.Services.CreateAsyncScope();
         Assert.Null(await recreated.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>()
@@ -75,7 +76,7 @@ public sealed class ProcessAuthoringNativeCompatibilityTests {
             await gate.Entered.Task.WaitAsync(deadline.Token);
             await using var retiring = app.Services.CreateAsyncScope();
             var projects = retiring.ServiceProvider.GetRequiredService<ProjectsService>();
-            await projects.DeleteAsync(projectId, deadline.Token);
+            await ProjectLifecycleTestCommands.DeleteAsync(retiring.ServiceProvider, projectId, deadline.Token);
             if (recreate) {
                 Assert.True((await projects.CreateAsync(projectId, new() { Name = "Replacement native project" }, cancellationToken: deadline.Token)).IsSuccess);
             }

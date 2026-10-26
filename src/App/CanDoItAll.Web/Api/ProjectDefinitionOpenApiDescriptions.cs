@@ -7,8 +7,7 @@ using Microsoft.OpenApi;
 
 namespace CanDoItAll.Web.Api;
 
-internal static class ProjectDefinitionOpenApiDescriptions {
-    private const string DescriptionMetadataKey = "candoitall-project-definition-description";
+internal static partial class OpenApiContractDescriptions {
     private const string OriginalExpectation = "Original project admission and definition revision from a coherent read. Preserve both unchanged with the draft; a newer token does not reconcile older values.";
     private const string Operation = "Complete original dataset, epoch, operation ID and caller binding. Preserve every field through retry and lookup; this address grants no authority.";
     private const string Scalars = "Complete project scalar values. Scalar-only commands preserve child collections; full replacement commands replace the submitted collections too.";
@@ -21,78 +20,7 @@ internal static class ProjectDefinitionOpenApiDescriptions {
     private const string OptionCategory = "Technology option category as a JSON integer: 0 Language, 1 Database, 2 Ui, 3 ExternalApi, 4 Storage, 5 Deployment, 6 Testing, 7 Other.";
     private const string ProjectStatusDescription = "Project lifecycle label as a JSON integer: 0 Draft, 1 Active, 2 OnHold, 3 Completed, 4 Archived. The label does not itself lock or delete a project.";
 
-    private sealed record Description(string Text, params (string Name, string Text)[] Properties);
-
-    private static readonly IReadOnlyDictionary<Type, Description> Descriptions = CreateDescriptions();
-
-    internal static void Apply(OpenApiSchema schema, OpenApiSchemaTransformerContext context) {
-        var type = Key(context.JsonTypeInfo.Type);
-        if (Descriptions.TryGetValue(type, out var description)) {
-            schema.Metadata ??= new Dictionary<string, object>();
-            schema.Metadata[DescriptionMetadataKey] = description;
-            if (string.IsNullOrWhiteSpace(schema.Description)) {
-                schema.Description = description.Text;
-            }
-            ApplyProperties(schema, description, wrapReferences: false);
-        }
-        if (context.JsonPropertyInfo is { } jsonProperty &&
-            Descriptions.TryGetValue(Key(jsonProperty.DeclaringType), out var owner)) {
-            foreach (var (name, text) in owner.Properties) {
-                if (JsonSerializerOptions.Web.PropertyNamingPolicy!.ConvertName(name) == jsonProperty.Name) {
-                    schema.Description = text;
-                    break;
-                }
-            }
-        }
-    }
-
-    internal static Task TransformDocumentAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken) {
-        HashSet<OpenApiSchema> visited = new(ReferenceEqualityComparer.Instance);
-        foreach (var schema in document.Components?.Schemas?.Values ?? []) {
-            Visit(schema);
-        }
-        return Task.CompletedTask;
-
-        void Visit(IOpenApiSchema? value) {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (value is not OpenApiSchema schema || !visited.Add(schema)) {
-                return;
-            }
-            if (schema.Metadata?.TryGetValue(DescriptionMetadataKey, out var metadata) == true && metadata is Description description) {
-                ApplyProperties(schema, description, wrapReferences: true);
-            }
-            foreach (var property in schema.Properties?.Values ?? []) {
-                Visit(property);
-            }
-            foreach (var branch in (schema.AllOf ?? []).Concat(schema.AnyOf ?? []).Concat(schema.OneOf ?? [])) {
-                Visit(branch);
-            }
-            Visit(schema.Items);
-            Visit(schema.AdditionalProperties);
-            Visit(schema.Not);
-        }
-    }
-
-    private static void ApplyProperties(OpenApiSchema schema, Description description, bool wrapReferences) {
-        foreach (var (name, text) in description.Properties) {
-            var propertyName = JsonSerializerOptions.Web.PropertyNamingPolicy!.ConvertName(name);
-            if (schema.Properties?.TryGetValue(propertyName, out var property) != true) {
-                continue;
-            }
-            if (wrapReferences && property is OpenApiSchemaReference reference) {
-                schema.Properties[propertyName] = new OpenApiSchema {
-                    Description = text,
-                    AllOf = [reference]
-                };
-            } else {
-                property.Description = text;
-            }
-        }
-    }
-
-    private static Type Key(Type type) => type.IsGenericType ? type.GetGenericTypeDefinition() : type;
-
-    private static IReadOnlyDictionary<Type, Description> CreateDescriptions() {
+    private static IReadOnlyDictionary<Type, Description> CreateDefinitionDescriptions() {
         Dictionary<Type, Description> descriptions = new() {
             [typeof(DatasetNamespaceId)] = new("Nonempty dataset activation identifier. Restore or replacement changes this identity even if project rows and revisions reappear."),
             [typeof(ProjectCallerBinding)] = new("Opaque server-derived caller binding for operation recovery. Preserve its supported pc1 value; it is not a credential or permission."),
@@ -275,6 +203,4 @@ internal static class ProjectDefinitionOpenApiDescriptions {
         (nameof(ProjectDefinitionOption.Notes), "Notes about the selected option; normalized by trimming.")
     ];
 
-    private static string EnumText<T>(string description) where T : struct, Enum => description + " Values: " +
-        string.Join(", ", Enum.GetValues<T>().Select(value => $"{Convert.ToInt64(value, CultureInfo.InvariantCulture)} {value}")) + ".";
 }

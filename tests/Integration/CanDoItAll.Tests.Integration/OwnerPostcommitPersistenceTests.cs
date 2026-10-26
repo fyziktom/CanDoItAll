@@ -177,7 +177,7 @@ public sealed class OwnerPostcommitPersistenceTests {
         var services = scope.ServiceProvider;
         var original = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Original lifetime");
         var projects = services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(original.ProjectId, expectedProjectAdmission: original);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, original.ProjectId, expectedProjectAdmission: original);
         var replacement = await projects.CreateAsync(original.ProjectId, new ProjectEditorModel { Name = "Replacement lifetime" });
         Assert.True(replacement.IsSuccess);
         var current = await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId);

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Maintenance;
 
 namespace CanDoItAll.Tests.Integration;
@@ -15,11 +16,11 @@ public sealed class ProjectsMaintenanceCapacityAccountingTests {
             accounting.Accept(Frame(worker, 1, MaintenanceFrameKind.Ready));
             accounting.Accept(Frame(worker, 2, MaintenanceFrameKind.Start));
             accounting.Accept(Frame(worker, 3, MaintenanceFrameKind.CycleObservation,
-                new(4, 40, MaintenanceStop.Budget, MaintenanceEligibility.Unknown, 2001, null, null, null, now)));
+                new(4, 40, MaintenanceStop.Budget, MaintenanceEligibility.Unknown, 2001, null, null, null, now, MaintenanceEligibility.Unknown)));
         }
         Assert.Equal((8L, 9L, 1L), CapacityWorkerAccounting.Reconcile(first.ConfirmedRows + second.ConfirmedRows, 10, 1));
         Assert.Throws<InvalidDataException>(() => first.Accept(Frame(1, 3, MaintenanceFrameKind.CycleObservation,
-            new(4, 40, MaintenanceStop.Empty, MaintenanceEligibility.NoneObserved, 1, 0, null, null, now))));
+            new(4, 40, MaintenanceStop.Empty, MaintenanceEligibility.NoneObserved, 1, 0, null, null, now, MaintenanceEligibility.NoneObserved))));
         Assert.Throws<InvalidDataException>(() => first.Accept(Frame(1, 5, MaintenanceFrameKind.Stopped)));
         Assert.Throws<InvalidDataException>(() => first.Accept(Frame(2, 4, MaintenanceFrameKind.Stopped)));
         Assert.Throws<InvalidDataException>(() => CapacityWorkerAccounting.Reconcile(10, 10, 1));
@@ -45,13 +46,16 @@ public sealed class ProjectsMaintenanceCapacityAccountingTests {
 
         var ready = Frame(1, 1, MaintenanceFrameKind.Ready);
         var cycle = Frame(1, 4, MaintenanceFrameKind.CycleObservation,
-            new(0, 0, MaintenanceStop.Contention, MaintenanceEligibility.Unknown, 1, null, null, null, now));
+            new(0, 0, MaintenanceStop.Contention, MaintenanceEligibility.Unknown, 1, null, null, null, now, MaintenanceEligibility.Unknown));
         foreach (var invalid in new[] {
             ready with { Profile = null }, ready with { Namespace = Guid.Empty },
             Frame(1, 2, MaintenanceFrameKind.Start) with { Profile = run },
             Frame(1, 4, MaintenanceFrameKind.HealthTransition) with { Health = (MaintenanceHealth)99 },
             cycle with { Cycle = cycle.Cycle! with { ObservedEligibilityAgeSeconds = double.NaN } },
             cycle with { Cycle = cycle.Cycle! with { SinceProgressSeconds = -1 } },
+            cycle with { Cycle = cycle.Cycle! with { PoolEligibility = (MaintenanceEligibility)99 } },
+            cycle with { Cycle = cycle.Cycle! with { PoolEligibility = MaintenanceEligibility.NoneObserved } },
+            cycle with { Cycle = cycle.Cycle! with { PoolEligibility = MaintenanceEligibility.Present } },
             cycle with { ProcessCpuMilliseconds = double.PositiveInfinity },
             Frame(1, 4, MaintenanceFrameKind.Failure),
             Frame(1, 4, MaintenanceFrameKind.Failure) with { FailureType = "Exception", SqlState = "not-sql" },
@@ -94,6 +98,48 @@ public sealed class ProjectsMaintenanceCapacityAccountingTests {
                 Profile: kind == MaintenanceFrameKind.Ready ? run : null, Namespace: kind == MaintenanceFrameKind.Ready ? run : null,
                 Maintenance: kind == MaintenanceFrameKind.Ready ? run : null, Cycle: cycle, ProcessCpuMilliseconds: 0,
                 BackendProcesses: kind == MaintenanceFrameKind.Stopped ? [123] : null);
+    }
+
+    [Fact]
+    public void Definition_observation_selects_its_family_without_rejecting_other_registered_maintenance() {
+        var pool = new KeyValuePair<string, object?>("pool", ProjectFiniteOperationPool.Pool.Value);
+        var family = new KeyValuePair<string, object?>("family", ProjectFiniteOperationPool.DefinitionFamily.Value);
+        Assert.True(MaintenanceHostProtocol.IsDefinitionMetric([pool, family], true));
+        Assert.True(MaintenanceHostProtocol.IsDefinitionMetric([pool, new("stop", "Empty"), new("eligibility", "NoneObserved")], false));
+        Assert.False(MaintenanceHostProtocol.IsDefinitionMetric([pool, new("family", ProjectFiniteOperationPool.LifecycleFamily.Value)], true));
+        Assert.False(MaintenanceHostProtocol.IsDefinitionMetric([new("pool", Guid.NewGuid()), family], true));
+        Assert.False(MaintenanceHostProtocol.IsDefinitionMetric([new("pool", Guid.NewGuid()), new("stop", "Empty"), new("eligibility", "NoneObserved")], false));
+        Assert.Throws<InvalidDataException>(() => MaintenanceHostProtocol.IsDefinitionMetric([family], true));
+        Assert.Throws<InvalidDataException>(() => MaintenanceHostProtocol.IsDefinitionMetric([pool], true));
+        Assert.Throws<InvalidDataException>(() => MaintenanceHostProtocol.IsDefinitionMetric([pool, pool, family], true));
+        Assert.Throws<InvalidDataException>(() => MaintenanceHostProtocol.IsDefinitionMetric([pool, family, family], true));
+        Assert.Throws<InvalidDataException>(() => MaintenanceHostProtocol.IsDefinitionMetric([pool, new("family", Guid.Empty)], true));
+        Assert.Throws<InvalidDataException>(() => MaintenanceHostProtocol.IsDefinitionMetric([pool, family], false));
+    }
+
+    [Theory]
+    [InlineData((int)MaintenanceEligibility.Unknown, null, (int)MaintenanceEligibility.Unknown)]
+    [InlineData((int)MaintenanceEligibility.Unknown, 0, (int)MaintenanceEligibility.NoneObserved)]
+    [InlineData((int)MaintenanceEligibility.Unknown, 1, (int)MaintenanceEligibility.Present)]
+    [InlineData((int)MaintenanceEligibility.Present, 0, (int)MaintenanceEligibility.NoneObserved)]
+    [InlineData((int)MaintenanceEligibility.Present, 1, (int)MaintenanceEligibility.Present)]
+    [InlineData((int)MaintenanceEligibility.NoneObserved, 0, (int)MaintenanceEligibility.NoneObserved)]
+    public void Family_eligibility_stays_distinct_from_the_combined_pool(int poolValue, int? observed, int expected) {
+        var pool = (MaintenanceEligibility)poolValue;
+        var metrics = new MaintenanceMetricSequence();
+        Assert.Null(metrics.Begin(0));
+        metrics.SetBytes(0);
+        metrics.SetCycle(1, MaintenanceStop.Contention, pool);
+        metrics.SetDuration(1, MaintenanceStop.Contention, pool);
+        if (observed is { } value) {
+            metrics.SetOptional(MaintenanceHostProtocol.Eligible, value);
+        }
+        var cycle = Assert.IsType<MaintenanceCycleObservation>(metrics.Complete());
+        Assert.Equal(pool, cycle.PoolEligibility);
+        Assert.Equal((MaintenanceEligibility)expected, cycle.Eligibility);
+        Assert.Equal(observed, cycle.EligibleObserved);
+        MaintenanceHostProtocol.ValidateObservation(new(MaintenanceHostProtocol.Version, Guid.NewGuid(), 1, 1,
+            MaintenanceFrameKind.CycleObservation, DateTimeOffset.UtcNow, Cycle: cycle, ProcessCpuMilliseconds: 0));
     }
 
     [Fact]

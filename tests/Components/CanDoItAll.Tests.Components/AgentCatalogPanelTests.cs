@@ -329,6 +329,7 @@ public sealed class AgentCatalogPanelTests
             DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnusedWorkspaceServiceProxy>());
         context.Services.AddSingleton<IAgentFrameworkOrganizationCatalogRepairService, UnusedOrganizationCatalogRepairService>();
         context.Services.AddSingleton(launcher);
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
     }
 

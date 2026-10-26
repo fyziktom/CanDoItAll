@@ -216,9 +216,10 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
     private static async Task<ProjectWriteAdmission> RecreateProjectAsync(Fixture fixture) {
         var original = fixture.Plan.ProjectLifetime!;
         var projects = fixture.Services.GetRequiredService<ProjectsService>();
-        var deleted = await projects.DeleteAsync(fixture.ProjectId, expectedProjectAdmission:
+        var deleted = await ProjectLifecycleTestCommands.DeleteAsync(fixture.Services, fixture.ProjectId, expectedProjectAdmission:
             new(original.DatabaseProfileId, original.ProjectId, original.LifetimeId));
-        Assert.Equal(fixture.ProjectId, deleted.ProjectId);
+        Assert.Equal(fixture.ProjectId, Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(deleted.Result.Acknowledgement)
+            .Completion.Original.Project.ProjectId);
         await using var owner = await fixture.Services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         owner.Add(new Project { Id = fixture.ProjectId, Name = "Replacement project", Slug = $"replacement-{Guid.NewGuid():N}" });
         await owner.SaveChangesAsync();

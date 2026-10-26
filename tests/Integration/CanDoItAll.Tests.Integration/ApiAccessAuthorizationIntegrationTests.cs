@@ -119,7 +119,7 @@ public sealed class ApiAccessAuthorizationIntegrationTests
     {
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: true,
-            useInMemoryDatabase: true);
+            useInMemoryDatabase: false);
         Guid projectId;
         await using (var scope = host.App.Services.CreateAsyncScope())
         {
@@ -253,7 +253,7 @@ public sealed class ApiAccessAuthorizationIntegrationTests
 
     [Fact]
     public async Task Project_structure_analytics_returns_recorded_bodies_only_to_the_caller_that_made_the_call() {
-        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: false);
         Guid projectId;
         await using (var scope = host.App.Services.CreateAsyncScope()) {
             var savedProject = await scope.ServiceProvider.GetRequiredService<ProjectsService>()

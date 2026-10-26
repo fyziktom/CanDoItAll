@@ -207,8 +207,8 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
         var providers = services.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray();
         Assert.Equal(new[] {
             typeof(HrSimpleChatRuntimeToolProvider),
-            typeof(ProjectDefinitionToolReceiptRecovery), typeof(ProjectProcessAssetToolAdmission),
-            typeof(ProjectStructureProcessToolAdmission), typeof(WorkflowProcessToolAdmission)
+            typeof(ProjectDefinitionToolReceiptRecovery), typeof(ProjectLifecycleToolReceiptRecovery), typeof(ProjectProcessAssetToolAdmission),
+            typeof(ProjectStructureProcessToolAdmission), typeof(ProjectTaskPlanAgentToolProvider), typeof(WorkflowProcessToolAdmission)
         }.OrderBy(type => type.FullName), providers.Select(provider => provider.GetType()).OrderBy(type => type.FullName));
         var definitions = Assert.Single(providers.OfType<ProjectDefinitionToolReceiptRecovery>());
         foreach (var tool in new[] {

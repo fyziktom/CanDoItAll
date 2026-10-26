@@ -106,7 +106,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var (reservation, authority) = await ReserveChildAsync(fixture, owner, services);
         var projects = services.GetRequiredService<ProjectsService>();
         var receipt = (await projects.CreateWithReceiptAsync(reservation, new() { Name = "Ordinary deletion target" }, authorization: authority)).Value!;
-        await projects.DeleteAsync(receipt.Project.ProjectId, expectedProjectAdmission: receipt.Project);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, receipt.Project.ProjectId, expectedProjectAdmission: receipt.Project);
         await using var read = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         var retained = await read.Set<ProjectCreationReservationRecord>().SingleAsync(row => row.Id == reservation.Id);
         Assert.Equal(ProjectCreationReservationState.Consumed, retained.State);
@@ -121,9 +121,11 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var services = scope.ServiceProvider;
         var projects = services.GetRequiredService<ProjectsService>();
         var original = (await projects.CreateWithAdmissionAsync(new() { Name = "Original public deletion" })).Value!;
-        await projects.DeleteAsync(original.ProjectId, expectedProjectAdmission: original);
+        var stale = await ProjectLifecycleTestCommands.CaptureDeleteAsync(services, original.ProjectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, original.ProjectId, expectedProjectAdmission: original);
         var replacement = (await projects.CreateWithReceiptAsync(original.ProjectId, new() { Name = "Human replacement" })).Value!;
-        await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => projects.DeleteAsync(original.ProjectId, expectedProjectAdmission: original));
+        Assert.Equal(ProjectLifecycleRefusal.TransactionConflict,
+            Assert.IsType<ProjectLifecycleOutcome.Refused>(await ProjectLifecycleTestCommands.SubmitAsync(services, stale)).Reason);
         Assert.Equal(replacement.Project, await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId));
         Assert.Equal("Human replacement", (await projects.GetAsync(original.ProjectId)).Name);
     }
@@ -161,7 +163,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             await using var scope = Services.CreateAsyncScope();
             var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
             Original = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(request.ProjectId!.Value, cancellationToken);
-            await projects.DeleteAsync(Original!.ProjectId, cancellationToken, Original);
+            await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, Original!.ProjectId, cancellationToken, Original);
             Replacement = (await projects.CreateWithReceiptAsync(Original.ProjectId, new() { Name = "Replacement during callback" }, cancellationToken: cancellationToken)).Value!;
         }
     }

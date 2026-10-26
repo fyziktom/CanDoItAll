@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Globalization;
 using System.Data.Common;
 using CanDoItAll.Modules.Workspace.ApiAccess;
@@ -11,6 +12,7 @@ internal static class ProcessCancellationApi {
     internal static void MapProcessCancellationApi(this RouteGroupBuilder processes) {
         processes.MapGet(Route, ReadAsync)
             .WithName("GetProcessCancellationProgress")
+            .WithMetadata(new ApiEndpointDocumentation("Observed runtime status and root recovery evidence; reading does not advance cleanup.", null))
             .WithSummary("Observe cancellation and cleanup progress without advancing recovery.")
             .WithDescription("Requires Process read permission. ChildRun describes only the selected child; it does not report root cleanup. Cancelled runtime status alone is not completed recovery. LegacyUntracked and ReconciliationRequired need operator attention. Progress revisions are decimal strings, not edit preconditions. This read does not promise an enabled recovery worker.")
             .Produces<ProcessCancellationApiView>()
@@ -18,6 +20,7 @@ internal static class ProcessCancellationApi {
                 StatusCodes.Status404NotFound);
         processes.MapPost(Route, AdmitAsync)
             .WithName("RequestRootProcessCancellation")
+            .WithMetadata(new ApiEndpointDocumentation("The existing root cancellation barrier and observed completion progress.", null))
             .WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .WithSummary("Save one root cancellation barrier and return before descendant cleanup.")
             .WithDescription("Requires Process read and execute grants and an enabled, registered recovery worker. Accepts no body. A child identity is refused without cancelling its root or siblings. Accepted means pending cleanup, not completion. On an unconfirmed response or timeout, observe the Location GET before another action; do not assume rollback. The legacy /cancel route accepts only a selected child and refuses root mutation before writing.")
@@ -29,7 +32,7 @@ internal static class ProcessCancellationApi {
                 StatusCodes.Status404NotFound);
     }
 
-    internal static async Task<IResult> ReadAsync(Guid runId, HttpContext context, IProcessCancellationProgressReader reader,
+    internal static async Task<IResult> ReadAsync([Description("Selected Process run ID. Cancellation admission accepts only a root; observation may select a child.")] Guid runId, HttpContext context, IProcessCancellationProgressReader reader,
         CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
         if (runId == Guid.Empty) {
@@ -41,7 +44,7 @@ internal static class ProcessCancellationApi {
             : Results.Ok(ProcessCancellationApiView.From(progress));
     }
 
-    internal static async Task<IResult> AdmitAsync(Guid runId, HttpContext context, ProcessCancellationHttpAccess access,
+    internal static async Task<IResult> AdmitAsync([Description("Selected Process run ID. Cancellation admission accepts only a root; observation may select a child.")] Guid runId, HttpContext context, ProcessCancellationHttpAccess access,
         ProcessRootCancellationAdmissionService admissions, TimeProvider clock, ILoggerFactory logs, CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
         if (runId == Guid.Empty || context.Request.ContentLength is > 0 || context.Request.Headers.ContainsKey("Transfer-Encoding")) {

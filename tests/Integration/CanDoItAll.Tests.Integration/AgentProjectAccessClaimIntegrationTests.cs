@@ -13,6 +13,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentProjectAccessClaimIntegrationTests {
     [Fact]
     public async Task Concurrent_owner_claims_admit_one_generation_and_active_lease_is_not_reported_as_completion() {
@@ -221,13 +222,18 @@ public sealed class AgentProjectAccessClaimIntegrationTests {
     };
 
     private static async Task<AgentProjectStructureAccessRevocationRecord> SeedAsync(IServiceProvider services) {
-        await using var context = await services.GetRequiredService<IDbContextFactory<AgentProjectAccessDbContext>>().CreateDbContextAsync();
-        var now = await context.Database.SqlQueryRaw<DateTimeOffset>("SELECT CURRENT_TIMESTAMP AS \"Value\"").SingleAsync();
-        var record = new AgentProjectStructureAccessRevocationRecord {
-            Id = Guid.NewGuid(), ProjectId = Guid.NewGuid(), Status = AgentProjectStructureAccessRevocationStatus.Pending,
-            CreatedAtUtc = now, UpdatedAtUtc = now
-        };
-        context.Add(record);
+        await using var scope = services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var created = await projects.SaveAsync(new() { Name = "Claim generation fixture" });
+        Assert.True(created.IsSuccess);
+        await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, created.Value);
+        await using var context = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<AgentProjectAccessDbContext>>().CreateDbContextAsync();
+        var record = await context.Set<AgentProjectStructureAccessRevocationRecord>().SingleAsync(row => row.ProjectId == created.Value);
+        record.Status = AgentProjectStructureAccessRevocationStatus.Pending;
+        record.AttemptCount = 0;
+        record.LastAttemptAtUtc = null;
+        record.CompletedAtUtc = null;
+        record.LastFailureCode = null;
         await context.SaveChangesAsync();
         return record;
     }

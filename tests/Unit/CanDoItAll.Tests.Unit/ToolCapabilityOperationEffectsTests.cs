@@ -12,7 +12,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
     public void Every_installed_metadata_field_matches_the_independent_pre_cut_catalog() {
         var expected = Rows(ExpectedMetadata);
         var actual = ProductToolPolicies.Capabilities.OrderBy(policy => policy.Name, StringComparer.Ordinal).Select(Describe).ToArray();
-        Assert.Equal(218, actual.Length);
+        Assert.Equal(219, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -22,7 +22,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             .Select(policy => RuntimeToolCapabilityDescriptorFactory.CreateRuntimeToolCapabilityDescriptor(
                 policy.Name, policy.Name, "Descriptor parity", [], toolPolicies: ProductToolPolicies))
             .Select(Describe).ToArray();
-        Assert.Equal(218, actual.Length);
+        Assert.Equal(219, actual.Length);
         Assert.Equal(Rows(ExpectedDescriptors), actual);
     }
 
@@ -40,7 +40,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             values[2] = "maf.tool." + values[1];
             return string.Join('|', values);
         }).ToArray();
-        Assert.Equal(218, actual.Length);
+        Assert.Equal(219, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -105,7 +105,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
         Assert.Throws<ArgumentException>(() => new ToolCapabilityOperationEffects([scope!]));
     }
 
-    private static string[] Rows(string value) => value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    private static string[] Rows(string value) => value.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     private static string Flag(bool value) => value ? "true" : "false";
 
     private static string Describe(ToolCapabilityMetadata policy) => string.Join('|', policy.Name, policy.Classification.ToString(),
@@ -254,6 +254,7 @@ project_structure_repo_branch_lease_acquire|Mutation|true|true|ProjectStructureM
 project_structure_subproject_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_subproject_link|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_task_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
+project_task_plan_publish|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction
 project_task_resource_attach|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_task_update|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 prompt_gallery_catalog_search|Read|false|false|InternalDataRead|None|||false|false|true|false|None|Idempotent|prompt-curator-approval-redacted-v1|false|
@@ -475,6 +476,7 @@ project_structure_repo_branch_lease_acquire|project-structure-repo-branch-lease-
 project_structure_subproject_create|project-structure-subproject-create|maf.project_structure_subproject_create|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_subproject_link|project-structure-subproject-link|maf.project_structure_subproject_link|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_task_create|project-task-create|maf.project_task_create|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
+project_task_plan_publish|project-task-plan-publish|maf.project_task_plan_publish|ExternalAction|ProjectStructureMutation|true|true
 project_task_resource_attach|project-task-resource-attach|maf.project_task_resource_attach|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_task_update|project-task-update|maf.project_task_update|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 prompt_gallery_catalog_search|prompt-gallery-catalog-search|maf.prompt_gallery_catalog_search|Read|InternalDataRead|false|false

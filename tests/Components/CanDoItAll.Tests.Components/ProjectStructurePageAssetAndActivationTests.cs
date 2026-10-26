@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Text;
 using System.Text.Json;
 using Bunit;
@@ -273,7 +274,7 @@ public sealed class ProjectStructurePageAssetAndActivationTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         Guid projectId = await CreateProjectAsync(projectsService, "Parent activation");
         Guid subprojectId = await CreateProjectAsync(projectsService, "Child activation");
-        Assert.True((await projectsService.AddSubprojectAsync(projectId, subprojectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(harness.Context.Services, projectId, subprojectId));
         string subprojectNodeId = $"project-child:{subprojectId}";
         var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters
             .Add(component => component.ProjectId, projectId));

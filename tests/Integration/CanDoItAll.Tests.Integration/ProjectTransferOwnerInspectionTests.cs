@@ -386,7 +386,7 @@ public sealed class ProjectTransferOwnerInspectionTests {
                 Assert.NotEmpty(probe.Commands);
                 Assert.All(probe.Commands, command => {
                     Assert.Equal(typeof(ProcessPersistenceDbContext), command.ContextType);
-                    Assert.Equal(34, command.EntityCount);
+                    Assert.Equal(37, command.EntityCount);
                     Assert.Same(owner.Database.GetDbConnection(), command.Connection);
                     Assert.Same(transaction.GetDbTransaction(), command.Transaction);
                 });
@@ -423,7 +423,7 @@ public sealed class ProjectTransferOwnerInspectionTests {
         Dictionary<Type, int> expected = new() {
             [typeof(SearchDbContext)] = 1, [typeof(StorageDbContext)] = 3,
             [typeof(WorkflowDbContext)] = 17, [typeof(AgentProjectAccessDbContext)] = 1, [typeof(AgentHistoryDbContext)] = 1,
-            [typeof(CollaborationDbContext)] = 4, [typeof(CrmHrDbContext)] = 30, [typeof(ProcessPersistenceDbContext)] = 34,
+            [typeof(CollaborationDbContext)] = 4, [typeof(CrmHrDbContext)] = 30, [typeof(ProcessPersistenceDbContext)] = 37,
             [typeof(ProjectsDbContext)] = 9, [typeof(PromptsDbContext)] = 10, [typeof(ResourcesDbContext)] = 1,
             [typeof(SchedulerPlannerDbContext)] = 3, [typeof(TestLabDbContext)] = 4, [typeof(WorkbenchDbContext)] = 16,
             [typeof(WorkspaceConnectorCommandDbContext)] = 2

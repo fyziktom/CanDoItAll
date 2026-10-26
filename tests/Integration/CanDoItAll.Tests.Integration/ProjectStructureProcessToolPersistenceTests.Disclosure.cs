@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Tests.Integration.ProjectStructure;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -23,10 +24,10 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
-        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var disclosure = await CompleteForDisclosureAsync(fixture, journal, lease, effect);
         await fixture.ChangeSourceAsync(ReadOnlySource);
         await using var context = new ProcessPersistenceDbContext(Options(scope.ServiceProvider));
@@ -56,10 +57,10 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
-        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var disclosure = await CompleteForDisclosureAsync(fixture, journal, lease);
         var original = ReadResult(disclosure);
         var changed = change switch {
@@ -90,10 +91,10 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
-        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var disclosure = await CompleteForDisclosureAsync(fixture, journal, lease);
         await fixture.ChangeSourceAsync(agent => revocation switch {
             0 => agent with { Permissions = agent.Permissions with { CanUseTools = false } },
@@ -113,10 +114,10 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
-        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var batch = await fixture.AdmitAsync(journal, lease, "failed");
         var claim = await journal.ClaimInvocationAsync(lease, batch.Id, "failed", fixture.Payload, default);
         await journal.CompleteInvocationAsync(claim, AgentToolAdmissionJournalFixture.Envelope(), AgentToolEffectState.NotCommitted, default);
@@ -137,10 +138,10 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
-        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var disclosure = await CompleteForDisclosureAsync(fixture, journal, lease);
         await using var held = await callback(disclosure, default);
         Assert.NotNull(held);
@@ -161,10 +162,10 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
-        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var disclosure = await CompleteForDisclosureAsync(fixture, journal, lease);
         var result = ReadResult(disclosure);
         await fixture.ChangeSourceAsync(agent => ChangeSourceAccess(agent, access => {
@@ -172,9 +173,9 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
             access.AllowAllProjects = true;
         }));
         if (retireProject) {
-            var deleted = await scope.ServiceProvider.GetRequiredService<ProjectsService>().DeleteAsync(fixture.Input.ProjectId);
-            Assert.Equal(fixture.Input.ProjectId, deleted.ProjectId);
-            Assert.Empty(deleted.Warnings);
+            var deleted = await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, fixture.Input.ProjectId);
+            Assert.Equal(fixture.Input.ProjectId, Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(deleted.Result.Acknowledgement)
+                .Completion.Original.Project.ProjectId);
         } else {
             Assert.True(await scope.ServiceProvider.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(fixture.Input.ProjectId,
                 fixture.Input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId!.Value), ProjectObjectLinkKind.Uses,

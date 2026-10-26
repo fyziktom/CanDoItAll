@@ -195,9 +195,9 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
             input = fixture.Input;
             Assert.Equal(ProcessLaunchLinkDeliveryState.Delivered, first.Observation!.LinkDeliveryState);
             if (deleteProject) {
-                var deletion = await scope.ServiceProvider.GetRequiredService<ProjectsService>().DeleteAsync(input.ProjectId);
-                Assert.Equal(input.ProjectId, deletion.ProjectId);
-                Assert.Empty(deletion.Warnings);
+                var deletion = await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, input.ProjectId);
+                Assert.Equal(input.ProjectId, Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(deletion.Result.Acknowledgement)
+                    .Completion.Original.Project.ProjectId);
             } else {
                 Assert.True(await scope.ServiceProvider.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(input.ProjectId,
                     input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(first.RunId!.Value), ProjectObjectLinkKind.Uses,

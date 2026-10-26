@@ -1,0 +1,71 @@
+using CanDoItAll.AgentFramework.Models;
+
+namespace CanDoItAll.Web.Api;
+
+internal static partial class OpenApiContractDescriptions {
+    private const string PlanningExpectation = "Exact displayed execution, run revision, journal revision, decision identity and generation. Preserve every field; never refresh an old action's expectation.";
+    private const string PlanningPublication = "Currently authorized saved publication awaiting review, or null. Content is evidence for this exact proposal and grants no authority by itself.";
+    private const string PlanningWork = "Work charged to the original planning generation, including settled work. Unsettled intervals require owner accounting before continuation.";
+
+    private static IReadOnlyDictionary<Type, Description> CreateAgentPlanningDescriptions() => new Dictionary<Type, Description> {
+        [typeof(AgentPlanningDecisionExpectation)] = new(PlanningExpectation,
+            (nameof(AgentPlanningDecisionExpectation.ExecutionRunId), "Original execution run ID."),
+            (nameof(AgentPlanningDecisionExpectation.RunRevision), "Original positive Int64 run revision as an exact decimal string."),
+            (nameof(AgentPlanningDecisionExpectation.JournalRevision), "Original positive Int64 journal revision as an exact decimal string."),
+            (nameof(AgentPlanningDecisionExpectation.DecisionId), "Original planning decision identity."),
+            (nameof(AgentPlanningDecisionExpectation.Generation), "Original positive decision generation; it is not a retry count.")),
+        [typeof(AgentPlanningReview)] = new("Current authorized planning review and the original expectations required for an explicit action.",
+            (nameof(AgentPlanningReview.Expected), PlanningExpectation),
+            (nameof(AgentPlanningReview.ChatSessionId), "Original owning chat session ID."),
+            (nameof(AgentPlanningReview.Owner), "Owner of this planning protocol."),
+            (nameof(AgentPlanningReview.Policy), "Resolved policy admitted for this planning decision."),
+            (nameof(AgentPlanningReview.State), "Current state of the observed planning generation."),
+            (nameof(AgentPlanningReview.ObservedAtUtc), "UTC time of this authorized review."),
+            (nameof(AgentPlanningReview.BasisCapturedAtUtc), "UTC time of the admitted source basis; null before capture."),
+            (nameof(AgentPlanningReview.ChargedWork), PlanningWork),
+            (nameof(AgentPlanningReview.RemainingWork), "Remaining admitted work allowance, or null when not bounded."),
+            (nameof(AgentPlanningReview.HasUnsettledWork), "True when an original work interval still needs settlement."),
+            (nameof(AgentPlanningReview.AutomaticReplans), "Number of automatic semantic replans already charged to this decision."),
+            (nameof(AgentPlanningReview.AvailableActions), "Actions offered by this observation; current authority and exact expectations are checked again on submission."),
+            (nameof(AgentPlanningReview.Publication), PlanningPublication)),
+        [typeof(AgentPlanningPublicationReview)] = new(PlanningPublication,
+            (nameof(AgentPlanningPublicationReview.Binding), "Exact original proposal binding; approval cannot substitute another proposal."),
+            (nameof(AgentPlanningPublicationReview.ApprovalId), "Original saved approval identity, bounded to 1024 UTF-8 bytes."),
+            (nameof(AgentPlanningPublicationReview.Content), "Currently authorized publication content, bounded to 300000 UTF-8 bytes.")),
+        [typeof(AgentPlanningActionApiSubmission)] = new("One explicit planning action bound to the displayed original decision.",
+            (nameof(AgentPlanningActionApiSubmission.Request), "Exact original action request; the total body is limited to 8192 UTF-8 bytes."),
+            (nameof(AgentPlanningActionApiSubmission.ActivityOperationId), "Optional nonempty activity correlation ID; it is not effect authority or an idempotency receipt.")),
+        [typeof(AgentPlanningActionRequest)] = new("Approve an exact saved publication, explicitly refresh planning, or cancel the original chat decision.",
+            (nameof(AgentPlanningActionRequest.Action), "Requested explicit action."),
+            (nameof(AgentPlanningActionRequest.ChatSessionId), "Original nonempty owning chat session ID."),
+            (nameof(AgentPlanningActionRequest.Expected), PlanningExpectation),
+            (nameof(AgentPlanningActionRequest.Binding), "Required exact publication binding for Approve; must be null for Refresh and Cancel."),
+            (nameof(AgentPlanningActionRequest.ApprovalId), "Required original approval ID for Approve; must be null for Refresh and Cancel.")),
+        [typeof(AgentPlanningAction)] = new(EnumText<AgentPlanningAction>("Explicit planning action; refresh starts renewed review rather than approving older output.")),
+        [typeof(AgentPlanningGenerationState)] = new(EnumText<AgentPlanningGenerationState>("State of the original planning generation.")),
+        [typeof(AgentPlanningOwner)] = new(EnumText<AgentPlanningOwner>("Owner implementing the admitted planning contract.")),
+        [typeof(AgentDecisionDataPolicyRejection)] = new(EnumText<AgentDecisionDataPolicyRejection>("Definite refusal of the original Agent policy change.")),
+        [typeof(AgentDecisionPolicyApiLookupOutcome)] = new("Lookup outcome as a JSON string: HistoricalAccepted, NotObserved, Conflict, ContextChanged or Unavailable. NotObserved is not proof that a previous write rolled back."),
+        [typeof(AgentDecisionPolicyApiLookupResult)] = new("Read-only observation of the original Agent policy operation and its retained receipt.",
+            (nameof(AgentDecisionPolicyApiLookupResult.Outcome), "Typed observation status; preserve earlier uncertainty when evidence is unavailable."),
+            (nameof(AgentDecisionPolicyApiLookupResult.OperationId), "Original submitted policy operation ID."),
+            (nameof(AgentDecisionPolicyApiLookupResult.HistoricalSnapshot), "Exact historical accepted policy and revision, present only for HistoricalAccepted; it is not current configuration."),
+            (nameof(AgentDecisionPolicyApiLookupResult.AcceptedAtUtc), "Original UTC acceptance time when an accepted receipt is disclosed.")),
+        [typeof(AgentDecisionPolicyApiResult)] = new("Accepted, rejected or unconfirmed original Agent policy replacement.",
+            (nameof(AgentDecisionPolicyApiResult.Outcome), "JSON string Accepted, Rejected or Unconfirmed. Reconcile the original operation before repeating an uncertain write."),
+            (nameof(AgentDecisionPolicyApiResult.Snapshot), "Exact accepted policy snapshot, or null when acceptance is not acknowledged."),
+            (nameof(AgentDecisionPolicyApiResult.Rejection), "Typed definite refusal, or null when no definite refusal is reported.")),
+        [typeof(AgentDecisionPolicyApiSnapshot)] = new("Original Agent policy read and its whole-catalog expectation.",
+            (nameof(AgentDecisionPolicyApiSnapshot.Expectation), "Exact original workspace, host generation, Agent and catalog revision.")),
+        [typeof(AgentDecisionPolicyApiSubmission)] = new("Frozen original policy replacement for conditional dispatch.",
+            (nameof(AgentDecisionPolicyApiSubmission.Expectation), "Exact original expectation; a later catalog read cannot be substituted during recovery.")),
+        [typeof(AgentExternalProvisioningReceipt)] = new("Historical external Agent write receipt, retained for exact replay.",
+            (nameof(AgentExternalProvisioningReceipt.ConfigurationVersion), "Opaque accepted configuration version. It can already be stale and must not be replaced in a historical receipt.")),
+        [typeof(AgentExternalProvisioningResource)] = new("Current Agent and opaque version resolved through its external identity.",
+            (nameof(AgentExternalProvisioningResource.ConfigurationVersion), "Opaque current version binding Agent identity, revision, configuration and original workspace. Use it as If-Match for a conditional update."),
+            (nameof(AgentExternalProvisioningResource.IsArchived), "True when this Agent is archived."),
+            (nameof(AgentExternalProvisioningResource.UpdatedAtUtc), "UTC timestamp of the current Agent's last update.")),
+        [typeof(ChatSessionRenameApiRequest)] = new("Conditional chat title change.",
+            (nameof(ChatSessionRenameApiRequest.ExpectedTitle), "Original displayed title. A differing current title refuses the rename rather than overwriting another edit."))
+    };
+}

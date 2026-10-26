@@ -31,6 +31,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     internal const string RolePurpose = "Review the retained workflow result.";
     internal const string RoleStaffing = "One explicitly assigned workflow reviewer.";
     internal const string RoleSnapshot = "PC4 original resource snapshot.";
+    private const string RunRecordProcessingEnabled = "Processes:RunRecords:Enabled";
     private const string CancellationRecoveryEnabled = "Processes:CancellationRecovery:Enabled";
     private const string CancellationRecoveryIdleDelay = "Processes:CancellationRecovery:IdleDelay";
     private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("process-native-browser");
@@ -206,6 +207,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
             builder.UseContentRoot(Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "App", "CanDoItAll.Web"));
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(profile.CreateConfigurationValues(new Dictionary<string, string?> {
                 ["DevelopmentManager:TuningModeEnabled"] = "false",
+                [RunRecordProcessingEnabled] = "false",
                 ["Workbench:RuntimePresentation:EnableWindowsTerminal"] = "false",
                 [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = cancellationRecovery ? "Application" : LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind,
                 [CancellationRecoveryEnabled] = cancellationRecovery.ToString(),

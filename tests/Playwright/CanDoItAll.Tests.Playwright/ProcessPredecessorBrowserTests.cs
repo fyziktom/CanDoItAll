@@ -110,7 +110,7 @@ public sealed class ProcessPredecessorBrowserTests {
             await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, $"pc4-legacy-{knownOrigin}-retained.png"), FullPage = true });
             await host.ReadAsync(async services => {
                 var projects = services.GetRequiredService<ProjectsService>();
-                await projects.DeleteAsync(projectId);
+                await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
                 var created = await projects.CreateAsync(projectId, new() { Name = "Successor legacy project" });
                 Assert.True(created.IsSuccess);
                 return created;

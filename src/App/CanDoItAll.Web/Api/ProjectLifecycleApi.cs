@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -16,11 +17,14 @@ internal static class ProjectLifecycleApi {
     internal static void MapLifecycleOperations(this RouteGroupBuilder projects) {
         projects.MapGet("/lifecycle-write-context", GetContextAsync)
             .WithName("GetProjectLifecycleWriteContext")
+            .WithMetadata(new ApiEndpointDocumentation("Current caller-bound context and operation deadlines; this read accepts no mutation.", null))
             .WithSummary("Read the caller-bound original context for project deletion and hierarchy operations.")
+            .WithDescription("Capture the current database profile, namespace, epoch and caller before freezing a new conditional operation. This read does not reconcile an earlier uncertain intent.")
             .Produces<ProjectLifecycleWriteContext>()
             .ProducesApiErrors(StatusCodes.Status403Forbidden);
         projects.MapPost("/lifecycle-operations", SubmitAsync)
             .WithName("SubmitProjectLifecycleOperation")
+            .WithMetadata(new ApiEndpointDocumentation("Typed original-operation outcome and any historical receipt. Accepted database change and unfinished cleanup are reported separately.", "Complete original operation, supported interpretation version and exact conditional command; retain the entire bounded request before dispatch."))
             .WithSummary("Submit one immutable conditional deletion or hierarchy operation.")
             .WithDescription("Retain the complete original request before dispatch. Delete requires the original project revision and lifetime; removing or reconnecting an edge requires its original ID and endpoint lifetimes. Exact replay returns the historical receipt. Accepted confirms the database change and separately identifies cleanup obligations; it does not confirm all cleanup finished. Unconfirmed requires original-address lookup or exact retry, never a fresh identity or refreshed expectations.")
             .Accepts<ProjectLifecycleApiSubmission>("application/json")
@@ -34,6 +38,7 @@ internal static class ProjectLifecycleApi {
             .AddOpenApiOperationTransformer(ProjectDefinitionOperationOpenApiSchemas.AddAccessDeniedResponseAsync);
         projects.MapGet("/lifecycle-operations/{namespaceId:guid}/{epoch}/{operationId:guid}", LookupAsync)
             .WithName("LookupProjectLifecycleOperation")
+            .WithMetadata(new ApiEndpointDocumentation("Read-only original-operation observation; NotObserved and unavailable evidence do not authorize replacement intent.", null))
             .WithSummary("Observe an original lifecycle operation without executing it.")
             .WithDescription("Supply the original databaseProfileId and callerBinding. NotObserved is not proof of rollback. Expiry, unavailable evidence and a changed dataset never authorize replacement intent. Deletion receipts remain readable after the target was deleted, subject to current Projects read permission.")
             .Produces<ProjectLifecycleApiResponse>()
@@ -77,8 +82,8 @@ internal static class ProjectLifecycleApi {
             return Result(await writer.SubmitAsync(original, invocation, cancellationToken));
         });
 
-    internal static Task<IResult> LookupAsync(Guid namespaceId, string epoch, Guid operationId, Guid databaseProfileId,
-        string callerBinding, ProjectDefinitionHttpAccess access, ProjectLifecycleReceiptReader receipts,
+    internal static Task<IResult> LookupAsync([Description("Original operation dataset namespace; do not substitute the active namespace.")] Guid namespaceId, [Description("Original positive Int64 operation epoch as a canonical decimal string.")] string epoch, [Description("Original nonempty operation ID; lookup never executes it.")] Guid operationId, [Description("Original database profile ID associated with the operation.")] Guid databaseProfileId,
+        [Description("Original opaque caller binding; current credentials are independently required.")] string callerBinding, ProjectDefinitionHttpAccess access, ProjectLifecycleReceiptReader receipts,
         CancellationToken cancellationToken) => GuardAsync(async () => {
             var invocation = await access.ResolveLifecycleReadAsync(cancellationToken);
             if (!ProjectOperationEpochHttpContract.TryParse(epoch, out var parsed)) {

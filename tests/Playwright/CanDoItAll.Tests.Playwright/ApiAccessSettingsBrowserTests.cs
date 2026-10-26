@@ -36,12 +36,14 @@ public sealed class ApiAccessSettingsBrowserTests {
         await Assertions.Expect(page.GetByTestId("api-issued-token")).ToHaveCountAsync(0);
         await AssertStatusAsync(host.Client, machine, "/api/workflows/templates", HttpStatusCode.OK);
         host.Client.DefaultRequestHeaders.Authorization = new("Bearer", machine);
-        using var workspaceWrite = await host.Client.PutAsJsonAsync("/api/settings/workspace", new {
-            workspaceName = "Original database workspace", defaultProviderProfileId = (Guid?)null,
-            defaultPromptOutputFormat = "Markdown", currencyCode = "USD", currencyCultureName = "en-US", notes = "Database switch proof"
-        });
+        var original = (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!;
+        var replacement = new ReplaceWorkspaceSettingsCommand(original.Expectation,
+            new("Original database workspace", null, "Markdown", "USD", "en-US", "Database switch proof"));
+        using var workspaceWrite = await host.Client.PutAsJsonAsync("/api/settings/workspace", replacement);
         Assert.Equal(HttpStatusCode.OK, workspaceWrite.StatusCode);
-        Assert.Equal("Original database workspace", (await host.Client.GetFromJsonAsync<WorkspaceSettingsModel>("/api/settings/workspace"))!.WorkspaceName);
+        var accepted = Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await workspaceWrite.Content.ReadFromJsonAsync<WorkspaceSettingsSaveOutcome>());
+        Assert.Equal(replacement.Values, accepted.Snapshot.Values);
+        Assert.Equal("Original database workspace", (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!.Values.WorkspaceName);
         host.Client.DefaultRequestHeaders.Authorization = null;
         await page.GetByTestId("api-users-panel").WaitForAsync();
         await page.GetByTestId("api-user-create").ClickAsync();
@@ -108,7 +110,7 @@ public sealed class ApiAccessSettingsBrowserTests {
         await context.CloseAsync();
         await host.StartAsync(adminPassword, management: false, otherDatabase: true);
         host.Client.DefaultRequestHeaders.Authorization = new("Bearer", machine);
-        Assert.NotEqual("Original database workspace", (await host.Client.GetFromJsonAsync<WorkspaceSettingsModel>("/api/settings/workspace"))!.WorkspaceName);
+        Assert.NotEqual("Original database workspace", (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!.Values.WorkspaceName);
         host.Client.DefaultRequestHeaders.Authorization = null;
         await AssertStatusAsync(host.Client, administrator.Token, "/api/access/me", HttpStatusCode.OK);
         await AssertStatusAsync(host.Client, enabled.Token, "/api/llm-chats", HttpStatusCode.OK);
@@ -176,10 +178,14 @@ public sealed class ApiAccessSettingsBrowserTests {
     private static async Task SaveOnceWithContendedStoreAsync(IPage page, ApiAccessProductionHost host) {
         var accountPath = Path.Combine(host.ControlPlaneRoot, "api-users", "accounts.json");
         await using (var lease = new FileStream(accountPath + ".mutation.lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)) {
+            var before = await File.ReadAllBytesAsync(accountPath);
+            using var original = System.Text.Json.JsonDocument.Parse(before);
+            Assert.Empty(original.RootElement.GetProperty("users").EnumerateArray());
             await page.GetByTestId("api-user-save").ClickAsync();
             await Assertions.Expect(page.GetByTestId("api-user-save")).ToBeDisabledAsync();
             await page.GetByTestId("api-user-save").DispatchEventAsync("click");
-            Assert.False(File.Exists(accountPath));
+            var whileContended = await File.ReadAllBytesAsync(accountPath);
+            Assert.True(before.AsSpan().SequenceEqual(whileContended), "A contended save must not change the initialized account store.");
         }
         await page.GetByTestId("api-user-dialog").WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await Assertions.Expect(page.GetByTestId("api-users-message")).ToContainTextAsync("saved");

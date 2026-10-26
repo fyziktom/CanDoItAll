@@ -1,3 +1,5 @@
+using CanDoItAll.Tests.Support;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -65,8 +67,9 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
         Assert.Equal(HttpStatusCode.OK, bound.StatusCode);
 
         editor = (await host.Client.GetFromJsonAsync<ProjectEditorModel>($"/api/projects/{id}"))!;
-        using var deleted = await host.Client.DeleteAsync($"/api/projects/{id}");
-        deleted.EnsureSuccessStatusCode();
+        await using (var deletionScope = host.App.Services.CreateAsyncScope()) {
+            await ProjectLifecycleTestCommands.DeleteAsync(deletionScope.ServiceProvider, id);
+        }
         editor.Name = "Deleted project must not be recreated";
         using var missing = await host.Client.PostAsJsonAsync("/api/projects/", editor);
         await AssertErrorAsync(missing, HttpStatusCode.NotFound, ProjectErrorCodes.NotFound);
@@ -80,8 +83,9 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
         using var created = await host.Client.PostAsJsonAsync("/api/projects/", NewProject());
         created.EnsureSuccessStatusCode();
         var original = (await host.Client.GetFromJsonAsync<ProjectExternalIdentityResolution>(ResolvePath))!;
-        using var deleted = await host.Client.DeleteAsync($"/api/projects/{original.ProjectId}");
-        deleted.EnsureSuccessStatusCode();
+        await using (var deletionScope = host.App.Services.CreateAsyncScope()) {
+            await ProjectLifecycleTestCommands.DeleteAsync(deletionScope.ServiceProvider, original.ProjectId);
+        }
         using var missing = await host.Client.GetAsync(ResolvePath);
         await AssertErrorAsync(missing, HttpStatusCode.NotFound, ProjectErrorCodes.NotFound);
         using var sameName = await host.Client.PostAsJsonAsync("/api/projects/", new ProjectEditorModel { Name = NewProject().Name });
@@ -112,7 +116,7 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
 
     [Fact]
     public async Task Read_and_write_scopes_are_enforced_independently() {
-        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: false);
         using var anonymous = await host.Client.GetAsync(ResolvePath);
         Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
         SetScope(host, ApiAccessScopeNames.WriteProjects);
@@ -147,7 +151,7 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
 
     [Fact]
     public async Task Length_boundaries_and_invalid_lookup_preconditions_are_explicit() {
-        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: false);
         var project = NewProject();
         project.ExternalKey = new string('a', 101);
         using var oversized = await host.Client.PostAsJsonAsync("/api/projects/", project);

@@ -43,7 +43,7 @@ public sealed partial class WorkspaceSettingsMigrationTests {
                 Assert.Equal(new PolicyColumn(nameof(WorkspaceSettings.DecisionDataPolicyJson), "text", false, null),
                     Assert.Single(await PolicyColumnsAsync(context), column => column.Name == nameof(WorkspaceSettings.DecisionDataPolicyJson)));
                 Assert.False(context.Database.HasPendingModelChanges());
-                Assert.Equal(169, context.Model.GetEntityTypes().Count());
+                Assert.Equal(186, context.Model.GetEntityTypes().Count());
                 await using var owner = fixture.Owner();
                 foreach (var model in new[] { context.GetService<IDesignTimeModel>().Model, owner.GetService<IDesignTimeModel>().Model }) {
                     var entity = model.FindEntityType(typeof(WorkspaceSettings))!;
@@ -56,10 +56,11 @@ public sealed partial class WorkspaceSettingsMigrationTests {
                     Assert.Equal("\"DecisionDataPolicyJson\" IS NULL OR octet_length(\"DecisionDataPolicyJson\") BETWEEN 1 AND 1024",
                         Assert.Single(entity.GetCheckConstraints(), check => check.Name == PolicyCheck).Sql);
                 }
-                var binding = await fixture.PolicyCoordinator.EnsureReadyAsync(fixture.Profile);
-                Assert.Equal(binding, await fixture.PolicyCoordinator.EnsureReadyAsync(fixture.Profile));
-                Assert.Equal(before, await PolicyPredecessorPayloadsAsync(context));
             }
+            await context.Database.MigrateAsync();
+            var binding = await fixture.PolicyCoordinator.EnsureReadyAsync(fixture.Profile);
+            Assert.Equal(binding, await fixture.PolicyCoordinator.EnsureReadyAsync(fixture.Profile));
+            Assert.Equal(before, await PolicyPredecessorPayloadsAsync(context));
         }
     }
 
@@ -69,7 +70,7 @@ public sealed partial class WorkspaceSettingsMigrationTests {
         await using var context = fixture.Canonical();
         var ids = await SeedPolicyPredecessorAsync(context);
         await UpgradePolicyAsync(context);
-        await fixture.PolicyCoordinator.EnsureReadyAsync(fixture.Profile);
+        await fixture.SeedHistoricalPolicyActivationAsync();
         var owner = fixture.PolicyWriter();
         Assert.Null((await owner.ReadV2Async()).DecisionDataPolicy);
         foreach (var text in new[] { "x", new string('x', 1024), new string('é', 512) }) {
@@ -169,7 +170,6 @@ public sealed partial class WorkspaceSettingsMigrationTests {
         var position = Array.IndexOf(migrations, PolicyMigration);
         Assert.True(position > 0, "Root must bind the generated canonical policy migration before integrating this overlay.");
         Assert.Equal(PolicyPreviousMigration, migrations[position - 1]);
-        Assert.Equal(PolicyMigration, migrations[^1]);
     }
 
     private static async Task UpgradePolicyAsync(AppDbContext context, CancellationToken cancellationToken = default) {

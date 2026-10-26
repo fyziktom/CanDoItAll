@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -21,7 +22,7 @@ internal static class AgentDecisionPolicyApi {
             .Produces<AgentDecisionPolicyApiLookupResult>(409).Produces<AgentDecisionPolicyApiLookupResult>(503)
             .ProducesApiErrors(400, 401, 403, 413, 415)
             .DescribeApi("Look up the original Agent policy save", "Read-only historical receipt lookup under current Agent read permission. Requires the complete original submission. A missing receipt remains unresolved and never authorizes another PUT. Receipts are retained for 30 days; policy writes refuse when 1024 unexpired receipts occupy the log.",
-                "The exact historical snapshot and acceptance time, or an explicit unresolved/context/conflict/unavailable result.");
+                "The exact historical snapshot and acceptance time, or an explicit unresolved/context/conflict/unavailable result.", "Complete original policy submission, retained unchanged; maximum 8192 UTF-8 bytes.");
         agents.MapGet("/{agentId:guid}/decision-data-policy", ReadAsync)
             .WithName("GetAgentDecisionDataPolicy")
             .Produces<AgentDecisionPolicyApiSnapshot>().ProducesApiErrors(400, 401, 403, 404, 409, 503)
@@ -34,7 +35,7 @@ internal static class AgentDecisionPolicyApi {
             .DescribeApi("Conditionally replace the Agent decision data policy", "Requires the original expectation and a complete version-one override envelope, with null fields for inheritance. Updates future admissions only. Conflicts preserve the original intent; an uncertain outcome must not be automatically retried. Use read-only receipt lookup to investigate an unconfirmed save; PUT does not replay it.", "Exact acceptance, definite rejection or unconfirmed outcome. FollowupRequired preserves known acceptance when postcommit work failed.", "A nonempty operation ID, original expectation and nonnull override; maximum 8192 UTF-8 bytes.");
     }
 
-    private static async Task<IResult> ReadAsync(Guid agentId, IAgentFrameworkWorkspaceService workspace,
+    private static async Task<IResult> ReadAsync([Description("Original selected Agent ID. Current access and workspace binding are independently checked.")] Guid agentId, IAgentFrameworkWorkspaceService workspace,
         HttpContext context, ILoggerFactory logs, CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
         if (agentId == Guid.Empty) {
@@ -58,7 +59,7 @@ internal static class AgentDecisionPolicyApi {
         }
     }
 
-    private static async Task<IResult> ReplaceAsync(Guid agentId, HttpContext context,
+    private static async Task<IResult> ReplaceAsync([Description("Original selected Agent ID. Current access and workspace binding are independently checked.")] Guid agentId, HttpContext context,
         IOptions<JsonOptions> options, ILoggerFactory logs, CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
         var parsed = await ReadSubmissionAsync(agentId, context, options, cancellationToken);
@@ -81,7 +82,7 @@ internal static class AgentDecisionPolicyApi {
         }
     }
 
-    private static async Task<IResult> LookupAsync(Guid agentId, HttpContext context,
+    private static async Task<IResult> LookupAsync([Description("Original selected Agent ID. Current access and workspace binding are independently checked.")] Guid agentId, HttpContext context,
         IOptions<JsonOptions> options, ILoggerFactory logs, CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
         var parsed = await ReadSubmissionAsync(agentId, context, options, cancellationToken);
@@ -120,7 +121,7 @@ internal static class AgentDecisionPolicyApi {
     }
 
     private static async Task<(ReplaceAgentDecisionDataPolicyCommand? Command, IResult? Refusal)> ReadSubmissionAsync(
-        Guid agentId, HttpContext context, IOptions<JsonOptions> options, CancellationToken cancellationToken) {
+        [Description("Original selected Agent ID. Current access and workspace binding are independently checked.")] Guid agentId, HttpContext context, IOptions<JsonOptions> options, CancellationToken cancellationToken) {
         try {
             if (!context.Request.HasJsonContentType()) {
                 return (null, Invalid(StatusCodes.Status415UnsupportedMediaType));
@@ -163,7 +164,7 @@ internal static class AgentDecisionPolicyApi {
     private static IResult Invalid(int status) => ApiAccessEndpoints.Error(status,
         "The Agent policy request is invalid; no write was dispatched.", InvalidRequestCode);
 
-    private static void Log(ILoggerFactory logs, Guid agentId, Guid? operationId, Exception failure)
+    private static void Log(ILoggerFactory logs, [Description("Original selected Agent ID. Current access and workspace binding are independently checked.")] Guid agentId, Guid? operationId, Exception failure)
         => logs.CreateLogger(typeof(AgentDecisionPolicyApi).FullName!).LogWarning(
             "Agent policy access for Agent {AgentId}, operation {OperationId}, failed with {FailureType}.",
             agentId, operationId, failure.GetType().FullName);

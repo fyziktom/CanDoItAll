@@ -79,8 +79,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
                 default:
                     throw new ArgumentOutOfRangeException(nameof(evidence));
             }
-            database.Add(row);
-            await database.SaveChangesAsync();
+            await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(database, row);
         });
 
     [Theory]
@@ -120,8 +119,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
                 default:
                     throw new ArgumentOutOfRangeException(nameof(table));
             }
-            database.Add(row);
-            await database.SaveChangesAsync();
+            await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(database, row);
             if (malformed) {
                 var update = $"UPDATE {TableName(table)} SET \"ImportedHistory\" = {{0}}";
                 await database.Database.ExecuteSqlRawAsync(update,
@@ -147,8 +145,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
                 NewTableEvidence.BoundWorkHistory => WorkHistory(bound: true),
                 _ => throw new ArgumentOutOfRangeException(nameof(evidence))
             };
-            database.Add(row);
-            await database.SaveChangesAsync();
+            await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(database, row);
         });
 
     [Theory]
@@ -181,8 +178,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
                 default:
                     throw new ArgumentOutOfRangeException(nameof(table));
             }
-            database.Add(row);
-            await database.SaveChangesAsync();
+            await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(database, row);
         });
 
     [Fact]

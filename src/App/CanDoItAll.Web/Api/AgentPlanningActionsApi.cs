@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -20,6 +21,7 @@ internal static class AgentPlanningActionsApi {
     internal static void MapAgentPlanningActionsApi(this RouteGroupBuilder agents) {
         agents.MapPost("/execution-runs/{executionRunId:guid}/planning/actions", ApplyAsync)
             .WithName("ApplyAgentPlanningAction")
+            .WithMetadata(new ApiEndpointDocumentation("Exact Agent planning action result and current review state.", "Original displayed expectation and explicit approval, refresh or cancellation; maximum 8192 UTF-8 bytes."))
             .WithApiPermission(ApiAccessScopeNames.WriteAgents)
             .WithSummary("Apply an exact displayed planning approval, refresh or cancellation.")
             .WithDescription("Requires the original chat, decision generation and lossless run/journal revisions. Approval names its exact saved publication; Refresh requires renewed review. An uncertain result never permits automatic replay. The JSON body is limited to 8192 UTF-8 bytes.")
@@ -30,7 +32,7 @@ internal static class AgentPlanningActionsApi {
                 StatusCodes.Status503ServiceUnavailable);
     }
 
-    internal static async Task<IResult> ApplyAsync(Guid executionRunId, HttpContext context,
+    internal static async Task<IResult> ApplyAsync([Description("Original selected Agent planning execution ID, matching the submitted expectation.")] Guid executionRunId, HttpContext context,
         IOptions<JsonOptions> options, ILoggerFactory logs, CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
         AgentPlanningActionApiSubmission submission;

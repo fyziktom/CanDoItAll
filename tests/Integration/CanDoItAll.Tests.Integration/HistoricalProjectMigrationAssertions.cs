@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Integration;
 
 internal static class HistoricalProjectMigrationAssertions {
     internal static async Task<Guid> CurrentMetadataAsync(AppDbContext context, Guid? expectedRevision = null) {
-        Assert.Equal(169, context.Model.GetEntityTypes().Count());
+        Assert.Equal(186, context.Model.GetEntityTypes().Count());
         (Type EntityType, string TableName)[] lifecycleEntities = [
             (typeof(DatasetLifecycleRecord), DatasetLifecycleRecord.TableName),
             (typeof(FiniteOperationStateRecord), FiniteOperationStateRecord.TableName),

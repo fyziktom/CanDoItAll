@@ -308,7 +308,8 @@ public sealed class ProjectStructureProjectCreatePendingTests {
                 UPDATE "Infrastructure_FiniteOperationEpochs"
                 SET "OpenedAtUtc" = clock_timestamp() - interval '1 hour',
                     "AdmissionClosesAtUtc" = clock_timestamp() - interval '1 second'
-                WHERE "NamespaceId" = {original.Operation.Namespace.Value} AND "Epoch" = {original.Operation.Epoch.Value}
+                WHERE "NamespaceId" = {original.Operation.Namespace.Value} AND "PoolId" = {ProjectFiniteOperationPool.Pool.Value}
+                    AND "Epoch" = {original.Operation.Epoch.Value}
                 """, deadline.Token));
         }
 

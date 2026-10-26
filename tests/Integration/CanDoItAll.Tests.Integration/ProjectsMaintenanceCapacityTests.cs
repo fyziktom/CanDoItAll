@@ -15,6 +15,7 @@ using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectsMaintenanceCapacityTests(ITestOutputHelper output) {
     private const string WorkloadVersion = "protected-projects-maintenance-v2";
     private const string ApprovedCapacityEnvironment = "CANDOITALL_TESTS_MAINTENANCE_CAPACITY_APPROVED_BYTES";
@@ -200,7 +201,7 @@ public sealed class ProjectsMaintenanceCapacityTests(ITestOutputHelper output) {
             }
         });
         if (!mixed) {
-            await PhaseAsync(480, token, phase => PressureAsync(app, resources, storage, load, binding, profile.Id, cadence, workerCount, phase));
+            await PressureAsync(app, resources, storage, load, binding, profile.Id, cadence, workerCount, token);
         }
         await load.VerifyOriginalReplayAsync(token);
         Write("cell-cleanup", new { Run = run, ChildProcessesExited = true, SyntheticNamespacesRemoved = true,
@@ -215,28 +216,37 @@ public sealed class ProjectsMaintenanceCapacityTests(ITestOutputHelper output) {
         await using var receipt = await storage.LockAsync(seed.Namespace, false, token);
         var run = Guid.NewGuid();
         var workers = Enumerable.Range(1, workerCount).Select(ordinal => new ProjectsMaintenanceCapacityWorker(app, resources, profile, run, ordinal, cadence)).ToArray();
+        var observationInterval = cadence + 5;
         Exception? failure = null;
         try {
             await Task.WhenAll(workers.Select(worker => worker.LaunchAsync(binding, token)));
             await Task.WhenAll(workers.Select(worker => worker.StartAsync(token)));
-            await UntilAsync(() => workers.All(worker => worker.Accounting.Snapshot().Any(frame => frame.Health == MaintenanceHealth.NoProgress)), workers, token);
+            await WaitAsync("no-progress warning", 120 + 2 * observationInterval + 30,
+                () => workers.All(worker => worker.Accounting.Snapshot().Any(frame => frame.Health == MaintenanceHealth.NoProgress)));
             await using (var state = await storage.LockAsync(load.Namespace, true, token)) {
                 var lockedAt = DateTimeOffset.UtcNow;
                 await receipt.DisposeAsync();
-                await UntilAsync(() => workers.All(worker => worker.Accounting.Snapshot().Any(frame =>
+                await WaitAsync("retired receipts with contended state", 3 * observationInterval + 30,
+                    () => workers.All(worker => worker.Accounting.Snapshot().Any(frame =>
                     frame.Cycle is { Stop: MaintenanceStop.Contention, Eligibility: MaintenanceEligibility.NoneObserved } cycle &&
-                    cycle.CompletedAtUtc > lockedAt)), workers, token);
+                    cycle.CompletedAtUtc > lockedAt)));
                 Assert.DoesNotContain(workers.SelectMany(worker => worker.Accounting.Snapshot()), frame => frame.Health == MaintenanceHealth.Recovery);
             }
-            await UntilAsync(() => workers.All(worker => worker.Accounting.Snapshot().Any(frame => frame.Health == MaintenanceHealth.Recovery)), workers, token);
-            using var stop = CancellationTokenSource.CreateLinkedTokenSource(token);
-            stop.CancelAfter(TimeSpan.FromSeconds(15));
-            await Task.WhenAll(workers.Select(worker => worker.StopAsync(stop.Token)));
+            var recovering = workers.ToList();
+            while (recovering.Count > 0) {
+                await WaitAsync("empty-cycle recovery", 2 * observationInterval + 30,
+                    () => recovering.Any(HasRecovered));
+                using var stop = CancellationTokenSource.CreateLinkedTokenSource(token);
+                stop.CancelAfter(TimeSpan.FromSeconds(15));
+                var recovered = recovering.Where(HasRecovered).ToArray();
+                await Task.WhenAll(recovered.Select(worker => worker.StopAsync(stop.Token)));
+                recovering.RemoveAll(recovered.Contains);
+            }
             Assert.Equal(0, (await storage.CountAsync(seed.Namespace, token)).Rows);
             Assert.Equal(1, workers.Sum(worker => worker.Accounting.ConfirmedRows));
             Write("pressure-busy-recovery", new { Streams = workers.Select(worker => worker.Accounting.Snapshot()).ToArray(),
                 WarningSeconds = 120, BusyLaterBacklog = "Unknown; absence of already-retired receipts is not overall empty work",
-                Recovery = "Only after non-Busy Empty observation", AdmissionExpiry = "Not measured" });
+                Recovery = "Each worker stops after non-Busy Empty recovery so its peer can acquire the maintenance lock", AdmissionExpiry = "Not measured" });
         } catch (Exception exception) {
             failure = exception;
             Write("incomplete-pressure", new { FailureType = exception.GetType().Name,
@@ -254,6 +264,18 @@ public sealed class ProjectsMaintenanceCapacityTests(ITestOutputHelper output) {
             throw failure;
         }
         await storage.ClearSyntheticAsync(seed.Namespace, load.Namespace, token);
+
+        static bool HasRecovered(ProjectsMaintenanceCapacityWorker worker) =>
+            worker.Accounting.Snapshot().Any(frame => frame.Health == MaintenanceHealth.Recovery);
+
+        async Task WaitAsync(string phaseName, int seconds, Func<bool> condition) {
+            Write("pressure-phase", new { Phase = phaseName, BudgetSeconds = seconds, CadenceSeconds = cadence, Workers = workerCount });
+            try {
+                await PhaseAsync(seconds, token, phase => UntilAsync(condition, workers, phase));
+            } catch (OperationCanceledException exception) when (!token.IsCancellationRequested) {
+                throw new TimeoutException($"The maintenance pressure phase '{phaseName}' did not complete within {seconds} seconds.", exception);
+            }
+        }
     }
 
     private async Task ObserveDuringAsync(ProjectsMaintenanceCapacityStorage storage, ProjectsMaintenanceCapacityWorker[] workers,

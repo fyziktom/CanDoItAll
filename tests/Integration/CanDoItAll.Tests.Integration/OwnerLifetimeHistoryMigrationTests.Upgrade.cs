@@ -25,7 +25,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
         await using var readback = await ContextAsync(restarted);
         await MigrateCurrentAsync(readback);
         Assert.Empty(await SnapshotDataAsync(readback));
-        Assert.Equal(164, readback.Model.GetEntityTypes().Count());
+        Assert.Equal(186, readback.Model.GetEntityTypes().Count());
         Assert.False(readback.Database.HasPendingModelChanges());
     }
 

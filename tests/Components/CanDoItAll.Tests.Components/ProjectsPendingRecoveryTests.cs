@@ -130,7 +130,7 @@ public sealed class ProjectsPendingRecoveryTests {
         var frozen = codec.Freeze(new ProjectDefinitionSubmission.Create(new(operation, ProjectDefinitionRequestVersion.VersionOne,
             new(new("Private foreign draft body", "", "", ProjectStatus.Active, "", null), [], [], null))), ProjectDefinitionLimits.VersionOneMaximum);
         await store.PrepareAsync(frozen, false);
-        var cut = Render(harness);
+        var cut = Render(harness, waitForSubmission: false);
         cut.WaitForAssertion(() => Assert.Contains("Retained saves could not be read safely", cut.Markup));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-reference-manage']").ClickAsync(new()));
         Assert.Contains("current context unavailable", cut.Markup);
@@ -183,8 +183,12 @@ public sealed class ProjectsPendingRecoveryTests {
         }
     }
 
-    private static IRenderedComponent<ProjectsPage> Render(ComponentTestHarness harness) {
+    private static IRenderedComponent<ProjectsPage> Render(ComponentTestHarness harness, bool waitForSubmission = true) {
         harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/projects");
-        return harness.Context.Render<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
+        if (waitForSubmission) {
+            cut.WaitForAssertion(() => Assert.True(cut.FindComponent<ProjectModalHost>().Instance.SubmissionReady));
+        }
+        return cut;
     }
 }

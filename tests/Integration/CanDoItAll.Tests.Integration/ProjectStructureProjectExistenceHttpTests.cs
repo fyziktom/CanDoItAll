@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -130,8 +131,7 @@ public sealed class ProjectStructureProjectExistenceHttpTests
 
         await using (var scope = host.App.Services.CreateAsyncScope())
         {
-            await scope.ServiceProvider.GetRequiredService<ProjectsService>()
-                .DeleteAsync(projectId);
+            await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, projectId);
         }
 
         await AssertMissingProjectBoundaryAsync(host.Client, projectId, leaseToken);

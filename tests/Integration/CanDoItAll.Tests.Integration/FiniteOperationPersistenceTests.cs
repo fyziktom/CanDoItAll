@@ -258,7 +258,7 @@ public sealed class FiniteOperationPersistenceTests {
             .UseNpgsql(projectContext.Database.GetConnectionString()).AddInterceptors(barrier).Options;
         var participant = new ProjectDefinitionReceiptRetention(options, fixture.Owner.Transactions);
         var shared = new FiniteOperationReceiptMaintenance(fixture.Owner.CreateNeutralOptions(), fixture.Owner.Transactions,
-            [fixture.Owner.Pool], [participant]);
+            [fixture.Owner.Pool], [participant, new ProjectLifecycleReceiptRetention(options, fixture.Owner.Transactions)]);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var purges = await Task.WhenAll(
             shared.PurgeRetiredBatchAsync(fixture.Binding, fixture.Owner.Pool, participant.Family, deadline.Token),

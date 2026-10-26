@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -19,13 +20,16 @@ internal static class ProcessPlanningReviewApi {
     internal static void MapProcessPlanningReviewApi(this RouteGroupBuilder processes) {
         processes.MapGet(Route, ReadAsync)
             .WithName("GetProcessPlanningReview")
+            .WithMetadata(new ApiEndpointDocumentation("Observed Agent and Process review state with separate expectations; no choice is submitted.", null))
             .WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .WithSummary("Read the original Process child's planning review and available choices.")
+            .WithDescription("Read the selected original Agent child and Process decision under current Process, Agent and Project access. Reading neither approves publication nor settles pending accounting. Preserve returned original expectations when choosing an action.")
             .Produces<ProcessPlanningReviewApiView>()
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden,
                 StatusCodes.Status409Conflict, StatusCodes.Status503ServiceUnavailable);
         processes.MapPost(Route, ApplyAsync)
             .WithName("ApplyProcessPlanningReview")
+            .WithMetadata(new ApiEndpointDocumentation("Original Agent choice outcome and separate Process accounting status.", "Original action ID, explicit Agent choice and exact Process expectation; maximum 24576 UTF-8 bytes."))
             .WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .WithSummary("Apply or recover one exact manager choice for the original Process child.")
             .WithDescription("Retain the entire request and its action ID before sending. An uncertain response permits only exact recovery of that request. Requires Process and Agent read/write/execute and Project read/write grants. The body is limited to 24576 UTF-8 bytes.")
@@ -36,6 +40,7 @@ internal static class ProcessPlanningReviewApi {
                 StatusCodes.Status503ServiceUnavailable);
         processes.MapPost(Route + "/accounting", ReconcileAsync)
             .WithName("ReconcileProcessPlanningAccounting")
+            .WithMetadata(new ApiEndpointDocumentation("Process accounting reconciliation for the retained Agent action; no publication is repeated.", "Retained action ID and original Agent and Process expectations; maximum 24576 UTF-8 bytes."))
             .WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .WithSummary("Settle Process accounting for a verified completed original Agent child.")
             .WithDescription("Retain the complete accounting request and action ID before sending. This action cannot approve or republish an effect. Requires the same Process, Agent and Project grants as review. The body is limited to 24576 UTF-8 bytes.")
@@ -46,7 +51,7 @@ internal static class ProcessPlanningReviewApi {
                 StatusCodes.Status503ServiceUnavailable);
     }
 
-    internal static async Task<IResult> ReadAsync(Guid runId, Guid stepInstanceId, Guid executionRunId, HttpContext context,
+    internal static async Task<IResult> ReadAsync([Description("Original Process run ID, matching the submitted expectation.")] Guid runId, [Description("Original owning step instance ID, matching the submitted expectation.")] Guid stepInstanceId, [Description("Original Agent child execution ID, matching both expectations.")] Guid executionRunId, HttpContext context,
         ProcessPlanningReviewHttpAccess access, ProjectTaskPlanProcessReviewReader reader, ILoggerFactory logs,
         CancellationToken cancellationToken) {
         using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("process.planning.review.http");
@@ -65,7 +70,7 @@ internal static class ProcessPlanningReviewApi {
         }
     }
 
-    internal static async Task<IResult> ApplyAsync(Guid runId, Guid stepInstanceId, Guid executionRunId, HttpContext context,
+    internal static async Task<IResult> ApplyAsync([Description("Original Process run ID, matching the submitted expectation.")] Guid runId, [Description("Original owning step instance ID, matching the submitted expectation.")] Guid stepInstanceId, [Description("Original Agent child execution ID, matching both expectations.")] Guid executionRunId, HttpContext context,
         IOptions<JsonOptions> options, ProcessPlanningReviewHttpAccess access, ProjectTaskPlanProcessReviewService reviews,
         ILoggerFactory logs, CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
@@ -94,7 +99,7 @@ internal static class ProcessPlanningReviewApi {
         }
     }
 
-    internal static async Task<IResult> ReconcileAsync(Guid runId, Guid stepInstanceId, Guid executionRunId, HttpContext context,
+    internal static async Task<IResult> ReconcileAsync([Description("Original Process run ID, matching the submitted expectation.")] Guid runId, [Description("Original owning step instance ID, matching the submitted expectation.")] Guid stepInstanceId, [Description("Original Agent child execution ID, matching both expectations.")] Guid executionRunId, HttpContext context,
         IOptions<JsonOptions> options, ProcessPlanningReviewHttpAccess access, ProjectTaskPlanProcessReconciliationService accounting,
         ILoggerFactory logs, CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
@@ -118,7 +123,7 @@ internal static class ProcessPlanningReviewApi {
         }
     }
 
-    private static IResult Failure(HttpContext context, ILoggerFactory logs, Exception exception, Guid executionRunId, Guid? actionId) {
+    private static IResult Failure(HttpContext context, ILoggerFactory logs, Exception exception, [Description("Original Agent child execution ID, matching both expectations.")] Guid executionRunId, Guid? actionId) {
         if (AgentEffectRecoveryApiResults.Handles(exception)) {
             return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
         }

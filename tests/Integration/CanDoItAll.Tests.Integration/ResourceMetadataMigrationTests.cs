@@ -63,7 +63,7 @@ public sealed class ResourceMetadataMigrationTests {
         await using var canonical = fixture.Canonical();
         await UpgradeAsync(canonical);
         Assert.False(canonical.Database.HasPendingModelChanges());
-        Assert.Equal(169, canonical.Model.GetEntityTypes().Count());
+        Assert.Equal(186, canonical.Model.GetEntityTypes().Count());
         await using var owner = fixture.Owner();
         var entity = Assert.Single(owner.GetService<IDesignTimeModel>().Model.GetEntityTypes());
         Assert.Equal(typeof(ProjectResource), entity.ClrType);

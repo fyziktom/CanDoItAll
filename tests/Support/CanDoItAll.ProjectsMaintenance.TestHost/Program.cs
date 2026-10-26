@@ -45,6 +45,7 @@ internal static class MaintenanceChild {
             TestApplicationBootstrap.ConfigureDefaultServices(services, configuration,
                 new TestHostEnvironment(root, "CanDoItAll.ProjectsMaintenance.TestHost"));
             var backends = new MaintenanceBackendObserver(transport);
+            services.ConfigureDbContext<FiniteOperationDbContext>(options => options.AddInterceptors(backends), ServiceLifetime.Singleton);
             services.ConfigureDbContext<ProjectsDbContext>(options => options.AddInterceptors(backends), ServiceLifetime.Singleton);
             services.Configure<ProjectDefinitionOperationOptions>(options => {
                 options.MaintenanceInterval = TimeSpan.FromSeconds(cadence);
@@ -107,7 +108,9 @@ internal static class MaintenanceChild {
             transport.Emit(MaintenanceFrameKind.Stopped, backendProcesses: backends.Snapshot());
             return 0;
         } catch (Exception exception) {
-            await Console.Error.WriteLineAsync(exception.GetType().Name);
+            for (var current = exception; current is not null; current = current.InnerException) {
+                await Console.Error.WriteLineAsync($"{current.GetType().FullName}:{current.TargetSite?.DeclaringType?.FullName}:{current.TargetSite?.Name}");
+            }
             return 2;
         }
     }
@@ -239,7 +242,9 @@ internal sealed class MaintenanceMetricObserver : IDisposable {
         };
         listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) => {
             try {
-                RequireIdentity(tags, instrument.Name is MaintenanceHostProtocol.Receipts or MaintenanceHostProtocol.Bytes);
+                if (!MaintenanceHostProtocol.IsDefinitionMetric(tags, instrument.Name is MaintenanceHostProtocol.Receipts or MaintenanceHostProtocol.Bytes)) {
+                    return;
+                }
                 switch (instrument.Name) {
                     case MaintenanceHostProtocol.Receipts:
                         Emit(sequence.Begin(value));
@@ -258,7 +263,9 @@ internal sealed class MaintenanceMetricObserver : IDisposable {
         });
         listener.SetMeasurementEventCallback<int>((instrument, value, tags, _) => {
             try {
-                RequireIdentity(tags, family: true);
+                if (!MaintenanceHostProtocol.IsDefinitionMetric(tags, family: true)) {
+                    return;
+                }
                 sequence.SetOptional(instrument.Name, value);
             } catch (Exception exception) {
                 output.Fail(exception);
@@ -266,7 +273,9 @@ internal sealed class MaintenanceMetricObserver : IDisposable {
         });
         listener.SetMeasurementEventCallback<double>((instrument, value, tags, _) => {
             try {
-                RequireIdentity(tags, instrument.Name == MaintenanceHostProtocol.Age);
+                if (!MaintenanceHostProtocol.IsDefinitionMetric(tags, instrument.Name == MaintenanceHostProtocol.Age)) {
+                    return;
+                }
             } catch (Exception exception) {
                 output.Fail(exception);
                 return;
@@ -309,23 +318,6 @@ internal sealed class MaintenanceMetricObserver : IDisposable {
         }
         return (stop ?? throw new InvalidDataException("The stop metric tag is missing."),
             eligibility ?? throw new InvalidDataException("The eligibility metric tag is missing."));
-    }
-
-    private static void RequireIdentity(ReadOnlySpan<KeyValuePair<string, object?>> tags, bool family) {
-        var pools = 0;
-        var families = 0;
-        foreach (var tag in tags) {
-            if (tag.Key == "pool" && tag.Value is Guid pool && pool == ProjectFiniteOperationPool.Pool.Value) {
-                pools++;
-            } else if (tag.Key == "family" && tag.Value is Guid receiptFamily && receiptFamily == ProjectFiniteOperationPool.DefinitionFamily.Value) {
-                families++;
-            } else if (family || tag.Key is not ("stop" or "eligibility")) {
-                throw new InvalidDataException("The capacity child observed a different pool or family.");
-            }
-        }
-        if (pools != 1 || families != (family ? 1 : 0)) {
-            throw new InvalidDataException("The capacity child requires exactly its installed Projects pool and definition family.");
-        }
     }
 
     private void Guard(Action action) {

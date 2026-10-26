@@ -776,31 +776,30 @@ public sealed partial class FileSandboxWorkspaceStore :
         try {
             await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
-            var sameSourceRuns = (await executionSliceStore.ListRunsAsync(cancellationToken))
-                .Where(source.Matches)
-                .OrderByDescending(run => run.UpdatedAtUtc)
-                .ToArray();
-            var completedRun = sameSourceRuns.FirstOrDefault(run =>
-                run.State == ExecutionState.Completed &&
-                run.Outcome == RunOutcome.Succeeded);
-            if (completedRun is not null)
-            {
-                return new ExecutionRunSourceReservationResult(
-                    ExecutionRunSourceDisposition.ReusedCompleted,
-                    completedRun);
-            }
-
-            var activeRun = sameSourceRuns.FirstOrDefault(run =>
-                run.State is not ExecutionState.Completed and not ExecutionState.Failed);
-            if (activeRun is not null)
-            {
-                return new ExecutionRunSourceReservationResult(
-                    ExecutionRunSourceDisposition.ExistingActive,
-                    activeRun);
+            var existing = await FindSourceReservationAsync(source, cancellationToken);
+            if (existing is not null) {
+                return existing;
             }
 
             var catalog = await LoadCatalogCoreAsync(cancellationToken);
             ValidateExecutionRunDetail(catalog, candidate);
+            var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.RunRoot(candidate.Run.Id)]);
+            try {
+                _ = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Run(null, candidate.Run, readsAgent: true),
+                    witness, cancellationToken);
+            } catch (SandboxWorkspaceConcurrencyException conflict) {
+                try {
+                    await RequireCompletedReservationPublicationAsync(null, cancellationToken);
+                    var replay = await FindSourceReservationAsync(source, cancellationToken);
+                    if (replay is not null) {
+                        await RequireCompletedReservationPublicationAsync(replay.Run.Id, cancellationToken);
+                        return replay;
+                    }
+                } catch (Exception lookupFailure) {
+                    throw new AggregateException("Source reservation admission and original-run lookup failed.", conflict, lookupFailure);
+                }
+                throw;
+            }
             var persisted = await SaveExecutionRunDetailCoreAsync(operation,
                 previousDetail: null,
                 candidate,
@@ -813,6 +812,18 @@ public sealed partial class FileSandboxWorkspaceStore :
             operation.RetainFailure(failure);
             throw;
         }
+    }
+
+    private async Task<ExecutionRunSourceReservationResult?> FindSourceReservationAsync(
+        ExecutionRunSourceKey source, CancellationToken cancellationToken) {
+        var runs = (await executionSliceStore.ListRunsAsync(cancellationToken))
+            .Where(source.Matches).OrderByDescending(run => run.UpdatedAtUtc).ToArray();
+        if (runs.FirstOrDefault(run => run.State == ExecutionState.Completed && run.Outcome == RunOutcome.Succeeded) is { } completed) {
+            return new(ExecutionRunSourceDisposition.ReusedCompleted, completed);
+        }
+        return runs.FirstOrDefault(run => run.State is not (ExecutionState.Completed or ExecutionState.Failed)) is { } active
+            ? new(ExecutionRunSourceDisposition.ExistingActive, active)
+            : null;
     }
 
     public ValueTask<IAsyncDisposable> AcquireToolDispatchLeaseAsync(

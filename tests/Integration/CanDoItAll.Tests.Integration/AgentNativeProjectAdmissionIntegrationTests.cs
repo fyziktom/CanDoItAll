@@ -39,7 +39,7 @@ public sealed class AgentNativeProjectAdmissionIntegrationTests {
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
         var node = await workbench.CreateObjectAsync(projectId, new(ProjectObjectType.ProjectBlock, "Original", "", "", $"project:{projectId}"));
         var originalState = ProjectStructureNodeStateGuard.Capture(node, old)!;
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Restored public id" })).IsSuccess);
         await using (var restored = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync()) {
             restored.Add(new ProjectObjectRecord {
@@ -157,7 +157,7 @@ public sealed class AgentNativeProjectAdmissionIntegrationTests {
         var original = await capture.CaptureNonTaskWriteAsync(agentId, originalAccess, projectId);
         await workspace.RevokeAgentProjectStructureLifetimeAsync(agentId, new(original.DatabaseProfileId, projectId, original.LifetimeId));
         await Assert.ThrowsAsync<ProjectStructureAgentException>(() => capture.CaptureNonTaskWriteAsync(agentId, originalAccess, projectId));
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "New project grant" })).IsSuccess);
         var current = (await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId))!;
         await workspace.GrantAgentProjectStructureLifetimeAsync(agentId, new(current.DatabaseProfileId, projectId, current.LifetimeId));

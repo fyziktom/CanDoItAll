@@ -130,7 +130,9 @@ internal static class ProcessPreparedLaunchCodec {
     public static ProcessPreparedLaunchSnapshot Read(ProcessPreparedLaunchEntity entity) {
         var preparation = JsonSerializer.Deserialize<ProcessPreparedLaunch>(entity.PayloadJson, Options)
             ?? throw new InvalidOperationException($"Process launch admission '{entity.Id:D}' has no prepared payload.");
-        if (HashPayload(preparation, entity.PayloadJson) != entity.PreparationFingerprint) {
+        if (preparation is not { Request: not null, Review: not null,
+                InitialCommit: { OriginalState: not null, Mutation.State: not null, InitialPlan: not null, InitialAssignments: not null } } ||
+                HashPayload(preparation, entity.PayloadJson) != entity.PreparationFingerprint) {
             throw new InvalidOperationException($"Process launch admission '{entity.Id:D}' has inconsistent immutable evidence.");
         }
         preparation.Authority?.Validate();

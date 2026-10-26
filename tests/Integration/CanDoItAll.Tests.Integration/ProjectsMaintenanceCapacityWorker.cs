@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Text;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Tests.Maintenance;
 
@@ -60,7 +61,7 @@ internal sealed class ProjectsMaintenanceCapacityWorker : IAsyncDisposable {
     private readonly TaskCompletionSource<MaintenanceHostFrame> ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task? output;
-    private Task<int>? stderr;
+    private Task<string>? stderr;
     private bool launched;
     private bool stopSent;
     private bool disposed;
@@ -114,8 +115,8 @@ internal sealed class ProjectsMaintenanceCapacityWorker : IAsyncDisposable {
             throw new InvalidOperationException("The owned maintenance child could not start.");
         }
         launched = true;
-        output = ReadAsync();
         stderr = DrainErrorAsync();
+        output = ReadAsync();
         await RecordAsync(CapacityResourcePhase.WorkerRunning, token);
         var frame = await ready.Task.WaitAsync(TimeSpan.FromSeconds(60), token);
         Assert.Equal(profile, frame.Profile);
@@ -154,7 +155,7 @@ internal sealed class ProjectsMaintenanceCapacityWorker : IAsyncDisposable {
             await output;
         }
         Assert.Equal(0, child.ExitCode);
-        Assert.Equal(0, await stderr!);
+        Assert.Empty(await stderr!);
         var stopped = Accounting.Snapshot()[^1];
         Assert.Equal(MaintenanceFrameKind.Stopped, stopped.Kind);
         await new ProjectsMaintenanceCapacityStorage(application.ActiveProfile.ConnectionString).VerifyBackendExitAsync(stopped.BackendProcesses!, token);
@@ -173,7 +174,7 @@ internal sealed class ProjectsMaintenanceCapacityWorker : IAsyncDisposable {
                 }
             }
             if (Accounting.Snapshot().LastOrDefault()?.Kind != MaintenanceFrameKind.Stopped) {
-                throw new InvalidDataException("The maintenance transport ended without its terminal observation.");
+                throw new InvalidDataException($"The maintenance transport ended without its terminal observation. Child failure sites: {await stderr!}");
             }
         } catch (Exception exception) {
             ready.TrySetException(exception);
@@ -182,14 +183,23 @@ internal sealed class ProjectsMaintenanceCapacityWorker : IAsyncDisposable {
         }
     }
 
-    private async Task<int> DrainErrorAsync() {
+    private async Task<string> DrainErrorAsync() {
         var buffer = new char[1024];
-        var count = 0;
+        var diagnostics = new StringBuilder();
+        var invalid = false;
         int read;
         while ((read = await child.StandardError.ReadAsync(buffer.AsMemory())) != 0) {
-            count = Math.Min(MaintenanceHostProtocol.MaximumFrameBytes, count + read);
+            if (diagnostics.Length + read > MaintenanceHostProtocol.MaximumFrameBytes ||
+                buffer.AsSpan(0, read).ContainsAnyExcept("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_:.+<>`\r\n")) {
+                invalid = true;
+            } else if (!invalid) {
+                diagnostics.Append(buffer, 0, read);
+            }
         }
-        return count;
+        if (invalid) {
+            throw new InvalidDataException("The maintenance child diagnostics exceeded the bounded type-and-method allowlist.");
+        }
+        return diagnostics.ToString();
     }
 
     private async Task SendAsync(MaintenanceFrameKind kind, long sequence, CancellationToken token) {

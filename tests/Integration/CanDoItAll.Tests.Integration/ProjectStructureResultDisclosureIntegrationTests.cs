@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.Persistence;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
     [Theory]
     [InlineData(ProjectStructureToolPolicy.ProjectStructureRead)]
@@ -29,7 +31,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var services = scope.ServiceProvider;
         var parent = await CreateProjectAsync(services, "Original parent");
         var child = await CreateProjectAsync(services, "Original related child");
-        Assert.True((await services.GetRequiredService<ProjectsService>().AddSubprojectAsync(parent.ProjectId, child.ProjectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(services, parent.ProjectId, child.ProjectId));
         await using var fixture = await CreateJournalAsync(services, parent);
         var agent = await SaveActorAsync(services, fixture.Agent, parent, canRead: true);
         var originalClient = new ScriptClient(toolName, Arguments(toolName, parent.ProjectId), failAfterResult: true);
@@ -93,7 +95,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var parent = await CreateProjectAsync(services, "Stable parent");
         var child = await CreateProjectAsync(services, "Retired child");
         var projects = services.GetRequiredService<ProjectsService>();
-        Assert.True((await projects.AddSubprojectAsync(parent.ProjectId, child.ProjectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(services, parent.ProjectId, child.ProjectId));
         await using var fixture = await CreateJournalAsync(services, parent);
         var agent = await SaveActorAsync(services, fixture.Agent, parent, canRead: true);
         const string toolName = ProjectStructureToolPolicy.ProjectStructureHierarchyGet;
@@ -103,7 +105,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
             "Injected final provider acknowledgement loss after the saved tool result.");
         var saved = await ReadProposalAsync(fixture);
         var original = related ? child : parent;
-        await projects.DeleteAsync(original.ProjectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, original.ProjectId);
         Assert.True((await projects.CreateAsync(original.ProjectId, new() { Name = "Unrelated replacement" })).IsSuccess);
         var replacement = (await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId))!;
         Assert.NotEqual(original.LifetimeId, replacement.LifetimeId);
@@ -138,7 +140,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var services = scope.ServiceProvider;
         var parent = await CreateProjectAsync(services, "Read before replacement");
         var child = await CreateProjectAsync(services, "Old projected child");
-        Assert.True((await services.GetRequiredService<ProjectsService>().AddSubprojectAsync(parent.ProjectId, child.ProjectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(services, parent.ProjectId, child.ProjectId));
         await using var fixture = await CreateJournalAsync(services, parent);
         var agent = await SaveActorAsync(services, fixture.Agent, parent, canRead: true);
         var disclosure = Disclosure(services, fixture);
@@ -166,7 +168,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
             try {
                 await using var independent = application.Services.CreateAsyncScope();
                 var projects = independent.ServiceProvider.GetRequiredService<ProjectsService>();
-                await projects.DeleteAsync(child.ProjectId);
+                await ProjectLifecycleTestCommands.DeleteAsync(independent.ServiceProvider, child.ProjectId);
                 if (recreate) {
                     Assert.True((await projects.CreateAsync(child.ProjectId, new() { Name = "New unrelated child" })).IsSuccess);
                 }
@@ -192,7 +194,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
     }
 
     [Fact]
-    public async Task Actual_creation_coordinator_binds_the_reserved_lifetime_to_the_committed_file_result() {
+    public async Task Actual_creation_coordinator_binds_the_reserved_lifetime_to_the_committed_transfer_result() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
@@ -208,21 +210,21 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         AgentToolProposalRecord saved;
         await using (var lease = await journal.AcquireRunAsync(fixture.Session, default)) {
             using var bound = lease.Bind();
-            var claim = await ClaimReadAsync(journal, lease, ProjectStructureToolPolicy.ProjectStructureProjectCreate, mutation: true);
+            var claim = await ClaimReadAsync(journal, lease, ProjectStructureToolPolicy.ProjectStructureNodesToNewSubproject, mutation: true);
             var function = AIFunctionFactory.Create(async (CancellationToken cancellationToken) => {
                 var id = await coordinator.CreateAsync(agent, async (reservation, token) => {
-                    var result = await owner.CreateAsync(reservation, new() { Name = "Created once" }, token);
+                    var result = await owner.CreateSubprojectAsync(parent.ProjectId, reservation, new() { Name = "Created once" }, token);
                     Assert.True(result.IsSuccess);
                     return result.Value;
-                }, id => id, cancellationToken);
-                var result = new ProjectSummary(id, "Created once", ProjectStatus.Draft, string.Empty, 0, 0, 0, DateTimeOffset.UtcNow);
+                }, id => id, cancellationToken, parentProjectId: parent.ProjectId);
+                var result = new ProjectStructureNodesToSubprojectResult(parent.ProjectId, id, "Created once", [], [], 0, 0, [], []);
                 ProjectStructureResultEvidenceScope.RecordResult(result);
                 return result;
-            }, ProjectStructureToolPolicy.ProjectStructureProjectCreate);
+            }, ProjectStructureToolPolicy.ProjectStructureNodesToNewSubproject);
             using var effect = AgentToolInvocationEffectScope.Begin();
             var wrapped = Assert.IsAssignableFrom<AIFunction>(Assert.Single(disclosure.Wrap(context, [function], null)));
             var result = await wrapped.InvokeAsync(new());
-            var evidence = ProjectStructureDisclosureEvidenceCodec.Read(effect.DisclosureEvidence!);
+            var evidence = ProjectStructureDisclosureEvidenceCodec.Read(Assert.IsType<AgentToolProtocolEnvelope>(effect.DisclosureEvidence));
             Assert.Equal(ProjectStructureDisclosureState.Complete, evidence.State);
             created = Assert.Single(evidence.Targets, target => target.ProjectId != parent.ProjectId);
             Assert.Equal(created, await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(created.ProjectId));

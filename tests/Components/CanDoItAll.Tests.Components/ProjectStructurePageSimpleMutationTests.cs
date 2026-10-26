@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
@@ -2271,7 +2272,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
 
         var projectId = await CreateProjectAsync(projectsService, "Clipboard projected destination");
         var subprojectId = await CreateProjectAsync(projectsService, "Clipboard projected subproject");
-        Assert.True((await projectsService.AddSubprojectAsync(projectId, subprojectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(harness.Context.Services, projectId, subprojectId));
         var projectRootNodeId = $"project:{projectId}";
         var projectedSubprojectNodeId = $"project-child:{subprojectId}";
         var sourceNode = await workbenchService.CreateObjectAsync(

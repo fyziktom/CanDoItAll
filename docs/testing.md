@@ -1241,6 +1241,27 @@ required browsers, hosts, databases, and sibling processes are available. Expect
 quarantine failures and missing environment dependencies are still failures of this
 gate and must be reported as such.
 
+The external shared-provider browser cases need two separately owned fixture pairs.
+For the synthetic pair, set `CANDOITALL_SHARED_UI_SHARED_URL`,
+`CANDOITALL_SHARED_UI_CLIENT_URL`, `CANDOITALL_SHARED_UI_SHARED_SOURCE_URL`
+(reachable from the client host), `CANDOITALL_SHARED_UI_UPSTREAM_URL` (reachable from
+the publishing host), `CANDOITALL_SHARED_UI_UPSTREAM_TOKEN_FILE`,
+`CANDOITALL_SHARED_UI_VISION_IMAGE` and `CANDOITALL_SHARED_UI_EVIDENCE_DIRECTORY`.
+The upstream URL is explicit; the tests do not assume a particular Docker hostname.
+Set `CANDOITALL_ALLOW_SHARED_PROVIDER_FIXTURE_WRITES=1` only for these disposable
+synthetic fixtures. Bootstrap the provider-import scenario before the full run,
+because its companion simple-chat case consumes the imported catalog.
+
+Keep the real pair separate. Set `CANDOITALL_REAL_SHARED_URL`,
+`CANDOITALL_REAL_CLIENT_URL`, `CANDOITALL_REAL_UI_EVIDENCE`,
+`CANDOITALL_REAL_OLLAMA_URL`, `CANDOITALL_REAL_PUBLISHER_OLLAMA_URL`,
+`CANDOITALL_REAL_OLLAMA_PROFILE`, `CANDOITALL_AVATAR_UI_EVIDENCE` and the private
+`OPENAI_API_KEY`. Prepare its published
+providers, imported source and acceptance agents, then run both real catalog setup
+cases before the full suite: the execution cases read their model-inventory evidence.
+These cases make real provider calls. Keep credentials out of retained evidence and
+dispose the owned hosts and database leases after their last use.
+
 ## Memory UI boundary proof
 
 `tests/Components/CanDoItAll.Memory.UI.Tests` is in Components, Stable and the actual component
