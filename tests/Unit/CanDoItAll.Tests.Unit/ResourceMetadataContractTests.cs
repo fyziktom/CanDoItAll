@@ -87,6 +87,26 @@ public sealed class ResourceMetadataContractTests {
         Assert.Throws<ArgumentException>(() => new ResourceMetadataSnapshot(expected, values with { ValidationStatus = (ResourceValidationStatus)int.MaxValue }, default, default));
     }
 
+    [Theory]
+    [InlineData("<")]
+    [InlineData("\u001f")]
+    [InlineData("\u00e9")]
+    [InlineData("\ud83d\ude00")]
+    [InlineData("<\"\\\ud83d\ude00")]
+    public void Snapshot_accepts_the_exact_encoded_limit_and_refuses_one_more_byte(string escaped) {
+        var expected = Existing();
+        var values = Stored() with { Description = new('<', ResourceMetadataLimits.DescriptionBytes), ConfigJson = string.Empty };
+        var empty = new ResourceMetadataSnapshot(expected, values, DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+        var remaining = ResourceMetadataLimits.EncodedSnapshotBytes - JsonSerializer.SerializeToUtf8Bytes(empty).Length;
+        var unitBytes = JsonSerializer.SerializeToUtf8Bytes(escaped).Length - 2;
+        values = values with { ConfigJson = string.Concat(Enumerable.Repeat(escaped, remaining / unitBytes)) + new string('a', remaining % unitBytes) };
+        var exact = new ResourceMetadataSnapshot(expected, values, DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+        Assert.Equal(ResourceMetadataLimits.EncodedSnapshotBytes, JsonSerializer.SerializeToUtf8Bytes(exact).Length);
+        Assert.Same(values, exact.Values);
+        Assert.Throws<ArgumentException>(() => new ResourceMetadataSnapshot(expected,
+            values with { ConfigJson = values.ConfigJson + "a" }, DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch));
+    }
+
     [Fact]
     public void Local_editor_projection_preserves_supported_secret_reference_and_refuses_ambiguous_retained_JSON() {
         var preparation = new ResourceMetadataPreparation(new ResourceConnectorPluginRegistry([new WebhookResourceConnectorPlugin()]));

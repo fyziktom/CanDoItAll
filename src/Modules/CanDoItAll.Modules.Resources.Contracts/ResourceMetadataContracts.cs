@@ -223,7 +223,9 @@ public sealed record ResourceMetadataSnapshot {
         Values = values;
         CreatedAtUtc = createdAtUtc;
         UpdatedAtUtc = updatedAtUtc;
-        if (JsonSerializer.SerializeToUtf8Bytes(this).Length > ResourceMetadataLimits.EncodedSnapshotBytes) {
+        using var encoded = new SnapshotLengthStream();
+        JsonSerializer.Serialize(encoded, this);
+        if (encoded.Length > ResourceMetadataLimits.EncodedSnapshotBytes) {
             throw new ArgumentException("The encoded Resource snapshot exceeds its supported byte limit.", nameof(values));
         }
     }
@@ -232,6 +234,24 @@ public sealed record ResourceMetadataSnapshot {
     public ResourceMetadataStoredValues Values { get; }
     public DateTimeOffset CreatedAtUtc { get; }
     public DateTimeOffset UpdatedAtUtc { get; }
+
+    private sealed class SnapshotLengthStream : Stream {
+        private long length;
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => length;
+        public override long Position {
+            get => length;
+            set => throw new NotSupportedException();
+        }
+        public override void Write(byte[] buffer, int offset, int count) => Write(buffer.AsSpan(offset, count));
+        public override void Write(ReadOnlySpan<byte> buffer) => length += buffer.Length;
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+    }
 }
 
 public enum ResourceMetadataReadOnlyReason { GovernedStorageObject = 1, UnavailableConnector, UnsupportedSecretReferences, InvalidConfiguration, TooLarge, InvalidMetadata }
