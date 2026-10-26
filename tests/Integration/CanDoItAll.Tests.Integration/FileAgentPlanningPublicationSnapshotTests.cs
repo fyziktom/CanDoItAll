@@ -175,11 +175,13 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
     }
 
     internal static async Task RunAsync(Func<Scenario, Task> body, bool inherited = false, bool additionalAgent = false) {
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         var failures = new List<Exception>();
         Scenario? scenario = null;
         try {
             scenario = await Scenario.CreateAsync(deadline.Token, inherited, additionalAgent);
+            deadline.Token.ThrowIfCancellationRequested();
+            deadline.CancelAfter(TimeSpan.FromSeconds(30));
             await body(scenario);
         } catch (Exception failure) {
             failures.Add(failure);
