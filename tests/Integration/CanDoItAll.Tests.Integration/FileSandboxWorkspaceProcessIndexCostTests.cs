@@ -27,7 +27,9 @@ public sealed class FileSandboxWorkspaceProcessIndexCostTests(ITestOutputHelper 
         };
         var selected = Enumerable.Range(0, writers).Select(_ => Run(process)).ToArray();
         var history = Enumerable.Range(0, historyCount).Select(_ => Run(Guid.NewGuid())).ToArray();
-        await fixture.Store.UpdateExecutionAsync(state => state with { ExecutionRuns = [.. state.ExecutionRuns, .. selected, .. history] }, token);
+        foreach (var runs in selected.Concat(history).Chunk(128)) {
+            await fixture.Store.UpdateExecutionAsync(state => state with { ExecutionRuns = [.. state.ExecutionRuns, .. runs] }, token);
+        }
         var accepted = new int[writers];
         var stores = Enumerable.Range(0, writers).Select(_ => fixture.NewStore()).ToArray();
         async Task Write(int owner) {
