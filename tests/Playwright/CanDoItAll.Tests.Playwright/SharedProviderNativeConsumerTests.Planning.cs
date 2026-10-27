@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
@@ -129,6 +130,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await fixture.ScreenshotAsync("wb1-agent-gantt");
         await fixture.NavigateAsync($"/projects/{projectId:D}/calendar");
         await page.GetByRole(AriaRole.Button, new() { Name = "List", Exact = true }).ClickAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]view=list(?:&|$)"));
+        var calendarUrl = page.Url;
         await Assertions.Expect(page.GetByRole(AriaRole.Row).Filter(new() { HasText = PlanningAgentTitle })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Row).Filter(new() { HasText = PlanningMeetingTitle })).ToBeVisibleAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Open downloads menu", Exact = true }).ClickAsync();
@@ -143,6 +146,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await fixture.ScreenshotAsync("wb1-agent-calendar");
         await fixture.NavigateAsync("/projects");
         await page.GoBackAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(calendarUrl);
         await Assertions.Expect(page.GetByRole(AriaRole.Row).Filter(new() { HasText = PlanningAgentTitle })).ToBeVisibleAsync();
         var final = Assert.Single((await TreeAsync(fixture, projectId, includeMetadata: true)).Nodes, node => node.Id == original.Id);
         Assert.Equal(original.MetadataJson, final.MetadataJson);

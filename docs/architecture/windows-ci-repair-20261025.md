@@ -196,6 +196,15 @@ import without recording the preceding credential setup. No import assertion is 
 The resumed native-defaults bootstrap after the consumer journeys, remaining focused and
 unfiltered verification, final static gates and fixture cleanup remain open.
 
+The native planning journey now waits for the List view's URL acknowledgement before
+exporting or navigating away, then requires Back to restore that exact URL and its rows.
+The diagnostic WB2 run exported the correct data but returned to Week. Ten browser
+rechecks of the retained fixture restored List; each immediate row check could precede
+the server's URL update. This is evidence of a missing test acknowledgement, not proof
+of a production state defect. The new assertions retain the same timeout and will fail
+at the missing acknowledgement if the owner rejects or resets the selected view. Both
+complete planning journeys still require verification with the rebuilt test assembly.
+
 The repaired standard Release build passes all 31 graph-lifetime cases, all five live
 refresh/shutdown cases, all six Prompt Gallery renderer cases, and all 34 process-host
 and published-output cases. The shutdown test observes the pending request's cancellation
