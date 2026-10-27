@@ -229,3 +229,52 @@ is signed and pushed at `fe61b70c` on **codex/canvas-node-drag-intent**, and CI 
 revision. All 17 static-tool tests and the 1,212-input rendering register pass. The initial
 post-repair portability scan passes without a baseline rewrite; final-source enforcement
 will run again after the CI revision update.
+
+## Browser follow-up after CI run 99
+
+CI run 99 passes all 17 jobs at application checkpoint `f2ade177`. The separate,
+unfiltered local browser run reports all 297 discovered cases: 275 reported passes and
+22 failures. One reported pass is the unconfigured generated-app preview case, whose
+body did not execute. The user confirmed that preview is unavailable, so only 274
+executed passes count as proof. The external Cognitive Memory service also remains
+explicitly unavailable. Neither exception makes a failing or incomplete suite green.
+
+Six independent failure groups explain that browser result. The shared source lifecycle
+test left its source disabled after a UI acknowledgement timeout, causing the local
+settings case and fifteen native consumer cases to fail downstream. Read-only database
+inspection confirmed the committed disabled source and the independently committed
+local alias. The isolated fixture was restored through its UI before further tests.
+
+The follow-up changes keep the existing product and assertion contracts:
+
+- Dialog initialization preserves focus that is already inside the native dialog. Its
+  deferred animation-frame callback previously stole focus after the user moved it.
+  The controlled browser regression fails before the Components JavaScript guard and
+  passes after it; opener restoration and dialog isolation remain checked.
+- The live-test watchdog permits completion of the tenth admitted batch and stops on
+  the eleventh. The previous inclusive comparison stopped a permitted final response.
+  A scripted real-browser regression reproduces that failure, then verifies successful
+  completion at ten, refusal beyond ten and zero real model requests. File journeys now
+  surface an observed host stop immediately. The ten-request execution limit and
+  forty-request campaign limit are unchanged.
+- Resource editing waits for the existing Save readiness signal before selecting a
+  provider. No production editor policy or acquisition boundary changes.
+- Provider-history verification repeats the same read-only search while its asynchronous
+  index catches up, retaining the exact attempt identities, credential filters and
+  revoked-credential checks. It does not repeat inference calls.
+- Canvas settings geometry is measured in one browser evaluation after opening the
+  dialog. Comparing a toolbar coordinate from before a scroll with a dialog coordinate
+  from afterward produced the original false failure. The one-pixel tolerance remains.
+- Shared-provider tests await each explicit save acknowledgement before checking its
+  result. A controlled source toggle reproduced the original five-second assertion
+  timeout; the successful acknowledgement arrived after 5.9 seconds. Mutating cases
+  restore the original source/import and local alias/enabled settings through fresh
+  browser contexts, even when the scenario fails. Scenario and restoration exceptions
+  are both reported. No mutation retry or configured timeout increase is introduced.
+
+Both controlled dialog/watchdog regressions pass, and Components asset generation and
+verification pass. Signed Components checkpoint `c5f21052` is pushed on
+**codex/canvas-node-drag-intent** and pinned by CI. The 25-case follow-up browser selection
+is in progress. The final
+unfiltered Windows Stable and browser runs, final-source static enforcement, signed
+checkpoint and resource cleanup remain required; this entry is not closure evidence.

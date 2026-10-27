@@ -1391,18 +1391,26 @@ public sealed partial class AppSmokeTests
         var settingsButtonText = await settingsButton.TextContentAsync();
         Assert.DoesNotContain("cfg", settingsButtonText ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
-        var toolbarBounds = await page.Locator(".cw-toolbar").BoundingBoxAsync();
-        Assert.NotNull(toolbarBounds);
         await settingsButton.ClickAsync();
 
         var settingsOverlay = page.GetByTestId("canvas-settings-overlay");
         var settingsDialog = settingsOverlay.GetByRole(AriaRole.Dialog, new() { Name = "Canvas settings" });
         await settingsDialog.WaitForAsync();
-        var settingsBounds = await settingsDialog.BoundingBoxAsync();
-        Assert.NotNull(settingsBounds);
+        var geometry = await settingsDialog.EvaluateAsync<CanvasSettingsGeometry>("""
+            dialog => {
+                const toolbar = dialog.closest('.cw-workbench-frame').querySelector('.cw-toolbar');
+                if (!toolbar) {
+                    throw new Error('The settings dialog has no owning canvas toolbar.');
+                }
+                return {
+                    DialogTop: dialog.getBoundingClientRect().top,
+                    ToolbarBottom: toolbar.getBoundingClientRect().bottom
+                };
+            }
+            """);
         Assert.True(
-            settingsBounds!.Y >= toolbarBounds!.Y + toolbarBounds.Height - 1,
-            $"Expected settings dialog to render below the toolbar safe zone. DialogTop={settingsBounds.Y}, ToolbarBottom={toolbarBounds.Y + toolbarBounds.Height}.");
+            geometry.DialogTop >= geometry.ToolbarBottom - 1,
+            $"Expected settings dialog to render below the toolbar safe zone. DialogTop={geometry.DialogTop}, ToolbarBottom={geometry.ToolbarBottom}.");
         await CaptureLocatorAsync(settingsDialog, Path.Combine(artifactsDir, "03-settings-safe-zone.png"));
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -5283,6 +5291,8 @@ public sealed partial class AppSmokeTests
 
         public bool DialogOwnsCenterPoint { get; set; }
     }
+
+    private sealed record CanvasSettingsGeometry(double DialogTop, double ToolbarBottom);
 
     private sealed record CanvasInputValueSeed(string Key, string Value);
 

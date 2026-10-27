@@ -144,7 +144,7 @@ internal sealed class LiveUiHost : IAsyncDisposable {
                         continue;
                     }
                     ToolAdmissionBatches = Math.Max(ToolAdmissionBatches, used);
-                    if (used >= MaximumToolBatchesPerExecution || requestProxy?.Refused > 0) {
+                    if (used > MaximumToolBatchesPerExecution || requestProxy?.Refused > 0) {
                         await StopAsync(requestProxy?.Refused > 0 ? LiveUiStopReason.RequestBudgetRefusal : LiveUiStopReason.ToolBatchLimit);
                         return;
                     }

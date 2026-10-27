@@ -380,11 +380,19 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         if (credentialId.HasValue) {
             await panel.GetByTestId("history-credential").FillAsync(credentialId.Value.ToString("D"));
         }
-        await panel.GetByTestId("history-search").ClickAsync();
+        var search = panel.GetByTestId("history-search");
         var results = panel.GetByTestId("history-results");
-        await results.WaitForAsync();
-        Assert.Contains(providerName, await results.InnerTextAsync(), StringComparison.Ordinal);
         var details = results.GetByTestId("history-details");
+        for (var attempt = 0; attempt < 60; attempt++) {
+            await search.ClickAsync();
+            await results.WaitForAsync();
+            await Assertions.Expect(search).ToBeEnabledAsync();
+            if (await details.CountAsync() >= minimumAttempts) {
+                break;
+            }
+            await Task.Delay(500);
+        }
+        Assert.Contains(providerName, await results.InnerTextAsync(), StringComparison.Ordinal);
         var available = await details.CountAsync();
         Assert.InRange(available, minimumAttempts, 20);
         var readCount = credentialId.HasValue ? available : minimumAttempts;

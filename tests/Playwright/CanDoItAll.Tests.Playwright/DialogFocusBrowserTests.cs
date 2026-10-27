@@ -27,9 +27,10 @@ public sealed class DialogFocusBrowserTests {
                 const second = document.createElement('dialog');
                 const firstInput = document.createElement('input');
                 const secondInput = document.createElement('input');
+                const firstSelection = document.createElement('button');
                 const ids = [crypto.randomUUID(), crypto.randomUUID()];
                 const callback = { invokeMethodAsync: () => Promise.resolve() };
-                first.append(firstInput);
+                first.append(firstInput, firstSelection);
                 second.append(secondInput);
                 root.append(opener, first, second);
                 document.body.append(root);
@@ -40,7 +41,10 @@ public sealed class DialogFocusBrowserTests {
                     const lostFocusWhileDisabled = document.activeElement === document.body;
                     opener.disabled = false;
                     dialogModule.openDialog(first, ids[0], callback);
+                    const initialFocusAssigned = document.activeElement === firstInput;
+                    firstSelection.focus();
                     await frame();
+                    const deliberateFocusPreserved = document.activeElement === firstSelection;
                     dialogModule.closeDialog(ids[0]);
                     const openerRestored = document.activeElement === opener;
                     dialogModule.openDialog(first, ids[0], callback);
@@ -58,6 +62,8 @@ public sealed class DialogFocusBrowserTests {
                     dialogModule.closeDialog(ids[0]);
                     await frame();
                     return {
+                        InitialFocusAssigned: initialFocusAssigned,
+                        DeliberateFocusPreserved: deliberateFocusPreserved,
                         LostFocusWhileDisabled: lostFocusWhileDisabled,
                         OpenerRestored: openerRestored,
                         UnrelatedPreserved: unrelatedPreserved,
@@ -73,6 +79,8 @@ public sealed class DialogFocusBrowserTests {
             """);
         var result = resultJson.Deserialize<FocusResult>();
         Assert.NotNull(result);
+        Assert.True(result.InitialFocusAssigned);
+        Assert.True(result.DeliberateFocusPreserved);
         Assert.True(result.LostFocusWhileDisabled);
         Assert.True(result.OpenerRestored);
         Assert.True(result.UnrelatedPreserved);
@@ -80,6 +88,7 @@ public sealed class DialogFocusBrowserTests {
         Assert.True(result.OverflowRestored);
     }
 
-    private sealed record FocusResult(bool LostFocusWhileDisabled, bool OpenerRestored,
+    private sealed record FocusResult(bool InitialFocusAssigned, bool DeliberateFocusPreserved,
+        bool LostFocusWhileDisabled, bool OpenerRestored,
         bool UnrelatedPreserved, bool LateFrameIgnored, bool OverflowRestored);
 }

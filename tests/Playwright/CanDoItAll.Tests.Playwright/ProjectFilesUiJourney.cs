@@ -37,6 +37,9 @@ internal static class ProjectFilesUiJourney {
         var deadline = DateTimeOffset.UtcNow.AddMilliseconds(ModelTurnTimeoutMilliseconds);
         while (DateTimeOffset.UtcNow < deadline) {
             cancellationToken.ThrowIfCancellationRequested();
+            if (host.StopReason != LiveUiStopReason.None) {
+                throw new InvalidOperationException($"The live file host stopped before the turn completed: {host.StopReason}.");
+            }
             var approvals = chat.Locator("[data-testid^='chat-approval-approve-']");
             if (await approvals.CountAsync() > 0) {
                 var pending = await host.SeedAsync(services => ReadLatestRunAsync(services, agentId));
