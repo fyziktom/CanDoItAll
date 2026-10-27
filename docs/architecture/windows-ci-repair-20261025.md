@@ -164,7 +164,7 @@ the upstream was stopped before the successful rebuild and then restarted from t
 refreshed standard output. Both fixed Processes sandbox asset modes build with zero
 warnings or errors.
 
-The independent browser recheck passes the ten original selected cases, including all
+The independent browser recheck passes the ten existing selected cases, including all
 four Processes sandbox combinations. The added physical-collapse regression initially
 accessed the canvas before its runtime was attached. Using the existing initialized-host
 helper fixes that setup race; the regression then passes with its stale-refresh and final
@@ -177,11 +177,23 @@ native real/synthetic database leases are retained across application restart. A
 receipt identifies their new Release binaries without rewriting the original startup
 provenance.
 
+The public-asset authorization and exact provider-history journeys both pass, including
+credential rotation, revoked-key refusal and cleanup. A forced-stall diagnostic pauses
+the exact owned read-only oracle container and observes the normal 60-second timeout.
+The Docker command exits, the temporary container is verified absent and the event
+collector exits. This reflection diagnostic uses PowerShell's .NET 10.0.14; normal browser
+acceptance uses the VSTest .NET 10.0.12 host and remains separately required.
+
+The fresh native-defaults bootstrap passes. Its reused publisher credential now covers
+25 hours, matching the owned full-day validation session; the previous four-hour lifetime
+was shorter than the completed 253-minute browser run. Per-case client credentials retain
+four hours, and no operation deadline or credential-expiry assertion changes.
+
 The last provider-catalog timeout has not yet been explained. An unchanged-selection
 manual retry closes the dialog; the focused test now retains a failure trace around
 import without recording the preceding credential setup. No import assertion is relaxed.
-The current native-defaults bootstrap, remaining focused and unfiltered verification,
-final static gates and fixture cleanup remain open.
+The resumed native-defaults bootstrap after the consumer journeys, remaining focused and
+unfiltered verification, final static gates and fixture cleanup remain open.
 
 The repaired standard Release build passes all 31 graph-lifetime cases, all five live
 refresh/shutdown cases, all six Prompt Gallery renderer cases, and all 34 process-host
