@@ -275,6 +275,15 @@ The follow-up changes keep the existing product and assertion contracts:
 Both controlled dialog/watchdog regressions pass, and Components asset generation and
 verification pass. Signed Components checkpoint `c5f21052` is pushed on
 **codex/canvas-node-drag-intent** and pinned by CI. The 25-case follow-up browser selection
-is in progress. The final
-unfiltered Windows Stable and browser runs, final-source static enforcement, signed
-checkpoint and resource cleanup remain required; this entry is not closure evidence.
+finishes with 23 passes and two failures in the new test helpers: a notification-dismiss
+click is blocked by the native modal, and Playwright cannot construct the positional
+geometry record. The helpers now observe the notification's normal expiry and use a
+typed geometry object with a parameterless constructor. The three affected source,
+concurrent-settings and canvas scenarios pass their focused recheck. Resource editing, storage
+selection and both history cases passed in the original selection.
+
+Application checkpoint `61a4fc7e` is signed and pushed. Its final no-write portability
+enforcement, all 17 static-tool tests, rendering register and documentation checks pass.
+The helper corrections require their own signed/static checkpoint. Final unfiltered
+Windows Stable and browser runs and resource cleanup remain required; this entry is not
+closure evidence.

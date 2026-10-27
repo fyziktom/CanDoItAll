@@ -182,7 +182,6 @@ public sealed class SharedProviderFinalUiTests {
     private static async Task AcknowledgeAsync(IPage page, string title) {
         var notice = page.Locator(".rz-notification-stack > div").Filter(new() { Has = page.GetByText(title, new() { Exact = true }) });
         await notice.WaitForAsync();
-        await notice.GetByRole(AriaRole.Button, new() { Name = "Dismiss notification", Exact = true }).ClickAsync();
         await notice.WaitForAsync(new() { State = WaitForSelectorState.Detached });
     }
 

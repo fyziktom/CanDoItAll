@@ -5292,7 +5292,11 @@ public sealed partial class AppSmokeTests
         public bool DialogOwnsCenterPoint { get; set; }
     }
 
-    private sealed record CanvasSettingsGeometry(double DialogTop, double ToolbarBottom);
+    private sealed class CanvasSettingsGeometry {
+        public double DialogTop { get; set; }
+
+        public double ToolbarBottom { get; set; }
+    }
 
     private sealed record CanvasInputValueSeed(string Key, string Value);
 
