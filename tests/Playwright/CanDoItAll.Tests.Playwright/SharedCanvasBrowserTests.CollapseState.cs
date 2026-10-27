@@ -11,6 +11,7 @@ public sealed partial class AppSmokeTests {
         });
         var page = await context.NewPageAsync();
         var projectId = await CreateProjectAsync(page, "Collapse acknowledgement", "Validation");
+        await WaitForInitializedCanvasHostAsync(page);
         var rootId = $"project:{projectId}";
         await page.EvaluateAsync("""
             () => {

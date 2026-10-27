@@ -134,9 +134,11 @@ The follow-up keeps the existing module boundaries and acceptance deadlines:
   state cannot discard newly pasted nodes. The corrected four-case baseline has two
   failures for missing pasted nodes and two passes preserving a later deliberate selection.
   It exercises both immediate selection and delayed state events from the real protocol.
+  All 31 graph-lifetime cases and the original browser copy/cut/paste journey pass.
 - Live Processes cancels its existing read and freshness lifetime when the application
   stops, before DI disposal. A controlled pending-read baseline reproduces the shutdown
-  failure; the repair adds no polling or renderer dependency.
+  failure; the repair adds no polling or renderer dependency. All five focused read,
+  refresh and shutdown cases pass.
 - Public manifest assets short-circuit authentication after routing and HTTPS redirection.
   API and managed-file routes keep their authorization pipeline. The browser regression
   checks public asset bytes with an invalid token and protected-route rejection with both
@@ -152,12 +154,34 @@ The follow-up keeps the existing module boundaries and acceptance deadlines:
 - Windows process termination now waits for the root process as well as the ownership
   boundary, sharing the existing termination budget. A diagnostic with an early-empty
   ownership boundary fails against the old host and passes against the proposed host.
-  Normal production build and process-host tests still determine acceptance.
+  The standard Release build and all 34 process-host/publication cases pass, including
+  the publication cleanup that failed in Windows CI run 96.
+
+At application checkpoint `1635834da`, both Release solution builds pass. The runtime
+portability runner passes all 486 catalog cases: 441 Unit, 44 Integration and one Browser,
+with no failures or skips. Its first attempt stopped on an owned upstream's DLL lock;
+the upstream was stopped before the successful rebuild and then restarted from the
+refreshed standard output. Both fixed Processes sandbox asset modes build with zero
+warnings or errors.
+
+The independent browser recheck passes the ten original selected cases, including all
+four Processes sandbox combinations. The added physical-collapse regression initially
+accessed the canvas before its runtime was attached. Using the existing initialized-host
+helper fixes that setup race; the regression then passes with its stale-refresh and final
+scene assertions intact. The real OpenAI catalog case also passes. Full discovery records
+296 Playwright cases and 23,812 Stable cases; discovery is not execution proof.
+
+The refreshed three-instance fixture passes its exact 19-case backend checkpoint and
+records three immutable image identities, including the published oracle tools. Existing
+native real/synthetic database leases are retained across application restart. A separate
+receipt identifies their new Release binaries without rewriting the original startup
+provenance.
 
 The last provider-catalog timeout has not yet been explained. An unchanged-selection
 manual retry closes the dialog; the focused test now retains a failure trace around
 import without recording the preceding credential setup. No import assertion is relaxed.
-Final focused and unfiltered verification, static gates and fixture cleanup remain open.
+The current native-defaults bootstrap, remaining focused and unfiltered verification,
+final static gates and fixture cleanup remain open.
 
 The repaired standard Release build passes all 31 graph-lifetime cases, all five live
 refresh/shutdown cases, all six Prompt Gallery renderer cases, and all 34 process-host
