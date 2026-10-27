@@ -185,7 +185,8 @@ collector exits. This reflection diagnostic uses PowerShell's .NET 10.0.14; norm
 acceptance uses the VSTest .NET 10.0.12 host and remains separately required.
 
 The fresh native-defaults bootstrap passes. Its reused publisher credential now covers
-25 hours, matching the owned full-day validation session; the previous four-hour lifetime
+24 hours, within the configured maximum and matching the owned full-day validation
+session; the previous four-hour lifetime
 was shorter than the completed 253-minute browser run. Per-case client credentials retain
 four hours, and no operation deadline or credential-expiry assertion changes.
 

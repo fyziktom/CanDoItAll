@@ -351,7 +351,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         await NavigateAsync(page, address + "/settings?tab=api-access");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Token subject", Exact = true }).FillAsync("pp2-native-ui");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Token display name", Exact = true }).FillAsync("PP2 native UI verification");
-        var lifetime = shared ? TimeSpan.FromHours(25) : TimeSpan.FromHours(4);
+        var lifetime = shared ? TimeSpan.FromDays(1) : TimeSpan.FromHours(4);
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Token lifetime minutes", Exact = true })
             .FillAsync(lifetime.TotalMinutes.ToString(CultureInfo.InvariantCulture));
         var scopes = new List<string> { ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.ExecuteAgents,
