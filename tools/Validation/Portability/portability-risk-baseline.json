@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-26T20:16:05.073780+00:00",
+  "generated_utc": "2026-10-27T06:43:50.325867+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15714,
+  "allowance_count": 15713,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -10672,7 +10672,7 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
       "category": "link-reparse",
-      "source_fingerprint": "813859e7c730e302dc48375aabb8e9b3725a0394de095c0c4376fc4e4917abf3",
+      "source_fingerprint": "3678ceb7630240fd316afbebd233cb6235b979f1559262f67a0571d799daf2d3",
       "count": 1
     },
     {
@@ -10721,18 +10721,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
       "category": "path-api",
       "source_fingerprint": "32d1d251c39ed3d7360e2c2ffc555d872e772f607ecc368477fceb2f14efb267",
-      "count": 2
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
-      "category": "path-api",
-      "source_fingerprint": "3c9132b9b8a38841b8a4b157e6b2bcbed9e6c21f7dbb14f6972150b13054f1e2",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
       "category": "path-api",
-      "source_fingerprint": "4f87feaf6cb336e82acecd827418da585dc3cb8efec6bb80417eff1034283dbf",
+      "source_fingerprint": "3c9132b9b8a38841b8a4b157e6b2bcbed9e6c21f7dbb14f6972150b13054f1e2",
       "count": 1
     },
     {
@@ -10775,6 +10769,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
       "category": "path-api",
       "source_fingerprint": "c69a345595178668dffe77c44c8bcaedafd17acc4811e8b470e010018a2375d1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+      "category": "path-api",
+      "source_fingerprint": "d50830de14fa25d5d03c2674374b05c4514ec1508b5a73ef231399217d3341e3",
       "count": 1
     },
     {

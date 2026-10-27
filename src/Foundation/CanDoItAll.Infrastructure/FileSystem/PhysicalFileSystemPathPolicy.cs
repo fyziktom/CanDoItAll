@@ -113,42 +113,40 @@ internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPoli
         }
     }
 
-    public void EnsureSafePath(string fullPath, bool allowMissingLeaf = false)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(fullPath);
-        string normalizedPath;
-        try
-        {
-            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(fullPath, "physical path");
-            normalizedPath = Path.GetFullPath(fullPath);
-        }
-        catch (Exception exception) when (
-            exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
-        {
-            throw new PhysicalPathValidationException(
-                PhysicalPathValidationErrorCode.InvalidPath,
-                "The requested physical path is invalid for this host.",
-                exception);
-        }
-
+    public void EnsureSafePath(string fullPath, bool allowMissingLeaf = false) {
+        string normalizedPath = NormalizePath(fullPath);
         EnsureContained(normalizedPath);
         EnsureNoLinkTraversalFromNativeRoot(RootPath, allowMissingLeaf: true);
         EnsureNoLinkTraversal(RootPath, normalizedPath, allowMissingLeaf);
     }
 
-    public void RevalidateMutationTarget(string fullPath)
-    {
-        EnsureSafePath(fullPath, allowMissingLeaf: true);
-        string normalizedPath = Path.GetFullPath(fullPath);
+    public void RevalidateMutationTarget(string fullPath) {
+        string normalizedPath = NormalizePath(fullPath);
+        EnsureContained(normalizedPath);
         string? parentPath = Path.GetDirectoryName(normalizedPath);
-        if (string.IsNullOrWhiteSpace(parentPath) || !Directory.Exists(parentPath))
-        {
+        if (!string.IsNullOrWhiteSpace(parentPath)) {
+            EnsureSafePath(parentPath, allowMissingLeaf: true);
+        }
+        if (string.IsNullOrWhiteSpace(parentPath) || !Directory.Exists(parentPath)) {
             throw new PhysicalPathValidationException(
                 PhysicalPathValidationErrorCode.InvalidPath,
                 "The physical mutation target does not have an existing directory parent.");
         }
+        EnsureNotLink(normalizedPath, allowMissing: true, allowTrustedSystemAlias: true);
+    }
 
-        EnsureSafePath(parentPath);
+    private static string NormalizePath(string fullPath) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fullPath);
+        try {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(fullPath, "physical path");
+            return Path.GetFullPath(fullPath);
+        } catch (Exception exception) when (
+            exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException) {
+            throw new PhysicalPathValidationException(
+                PhysicalPathValidationErrorCode.InvalidPath,
+                "The requested physical path is invalid for this host.",
+                exception);
+        }
     }
 
     private void EnsureContained(string fullPath)
@@ -324,7 +322,7 @@ internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPoli
         }
     }
 
-    private static void EnsureNotLink(string path, bool allowMissing)
+    private static void EnsureNotLink(string path, bool allowMissing, bool allowTrustedSystemAlias = false)
     {
         if (!TryGetAttributes(path, out FileAttributes attributes))
         {
@@ -338,11 +336,11 @@ internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPoli
                 "The native filesystem root is unavailable.");
         }
 
-        if (attributes.HasFlag(FileAttributes.ReparsePoint))
+        if (attributes.HasFlag(FileAttributes.ReparsePoint) && !(allowTrustedSystemAlias && IsTrustedMacOsSystemAlias(path)))
         {
             throw new PhysicalPathValidationException(
                 PhysicalPathValidationErrorCode.LinkTraversal,
-                "A managed filesystem root cannot traverse a symbolic link or reparse point.");
+                "Filesystem symbolic-link or reparse-point traversal is not allowed for managed paths.");
         }
     }
 
