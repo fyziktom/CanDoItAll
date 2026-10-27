@@ -75,18 +75,21 @@ public sealed class ProjectTaskPlanDispatchTests {
         await using var fixture = await ProjectTaskPlanDispatchFixture.CreateAsync(mode);
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var executionDeadline = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         fixture.Entry.Wire.OnRequest = async token => {
             entered.TrySetResult();
             await release.Task.WaitAsync(token);
         };
-        var first = fixture.ExecuteAsync(cancellationToken: deadline.Token);
+        var first = fixture.ExecuteAsync(cancellationToken: executionDeadline.Token);
         try {
-            await entered.Task.WaitAsync(deadline.Token);
+            await entered.Task.WaitAsync(executionDeadline.Token);
+            using var competitionDeadline = CancellationTokenSource.CreateLinkedTokenSource(executionDeadline.Token);
+            competitionDeadline.CancelAfter(TimeSpan.FromSeconds(30));
             var pending = await Assert.ThrowsAsync<ProcessRuntimeDispatchInProgressException>(() =>
-                fixture.ExecuteAsync(cancellationToken: deadline.Token));
+                fixture.ExecuteAsync(cancellationToken: competitionDeadline.Token));
             Assert.Single(fixture.Entry.Wire.Requests);
-            var held = await fixture.Services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(fixture.Request.RunId);
+            var held = await fixture.Services.GetRequiredService<IProcessRuntimeStateStore>()
+                .LoadAsync(fixture.Request.RunId, competitionDeadline.Token);
             Assert.Equal(fixture.Process.Claim.ClaimToken, Assert.Single(held!.Claims).ClaimToken);
             Assert.Equal(DispatchClaimStatus.Claimed, Assert.Single(held.Claims).Status);
             Assert.Empty(held.AppliedResults);
@@ -109,20 +112,23 @@ public sealed class ProjectTaskPlanDispatchTests {
                 services.AddScoped<IProcessDecisionMaterialCapturer>(provider => new HeldCapture(
                     ActivatorUtilities.CreateInstance<ProjectTaskPlanMaterialCapturer>(provider), entered, release));
             });
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var first = fixture.ExecuteAsync(cancellationToken: deadline.Token);
+        using var executionDeadline = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var first = fixture.ExecuteAsync(cancellationToken: executionDeadline.Token);
         try {
-            await entered.Task.WaitAsync(deadline.Token);
+            await entered.Task.WaitAsync(executionDeadline.Token);
+            using var competitionDeadline = CancellationTokenSource.CreateLinkedTokenSource(executionDeadline.Token);
+            competitionDeadline.CancelAfter(TimeSpan.FromSeconds(30));
             var pending = await Assert.ThrowsAsync<ProcessDecisionPreparationInProgressException>(() =>
-                fixture.ExecuteAsync(cancellationToken: deadline.Token));
+                fixture.ExecuteAsync(cancellationToken: competitionDeadline.Token));
             Assert.Equal(fixture.Process.Claim with { DecisionContract = ProjectTaskPlanProcessContract.Execution }, pending.Claim);
-            var held = await fixture.Services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(fixture.Request.RunId);
+            var held = await fixture.Services.GetRequiredService<IProcessRuntimeStateStore>()
+                .LoadAsync(fixture.Request.RunId, competitionDeadline.Token);
             Assert.Equal(fixture.Process.Claim.ClaimToken, Assert.Single(held!.Claims).ClaimToken);
             Assert.Equal(DispatchClaimStatus.Claimed, Assert.Single(held.Claims).Status);
             Assert.Empty(held.AppliedResults);
             Assert.Empty(fixture.Entry.Wire.Requests);
             var selection = await fixture.Services.GetRequiredService<IProcessDecisionResultQuery>()
-                .ReadAsync(fixture.Request.RunId, fixture.Process.Claim.StepInstanceId, null);
+                .ReadAsync(fixture.Request.RunId, fixture.Process.Claim.StepInstanceId, null, competitionDeadline.Token);
             Assert.Null(selection!.Child);
             Assert.True(selection.OtherWorkPending);
         } finally {
