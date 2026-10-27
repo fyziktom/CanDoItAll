@@ -243,6 +243,7 @@ internal static class AgentsApi
 
         agents.MapPost("/{agentId:guid}/chat-sessions/{chatSessionId:guid}/rename", RenameAgentChatSessionAsync)
             .WithName("RenameAgentChatSession")
+            .WithMetadata(new ApiEndpointDocumentation("Chat session with its accepted title.", "Desired nonblank title and the exact original displayed title."))
             .WithSummary("Conditionally rename the selected chat session.")
             .WithDescription("Requires expectedTitle from the displayed session. A missing expectation is refused before mutation; a changed title returns 409. Only the title changes; transcript, approval and runtime state are preserved. The requested title is normalized to at most 96 characters. Read the selected session after an unconfirmed response before another action.")
             .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK)
@@ -1770,8 +1771,8 @@ internal static class AgentsApi
             await workspaceService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken)));
 
     internal static async Task<IResult> RenameAgentChatSessionAsync(
-        Guid agentId,
-        Guid chatSessionId,
+        [Description("Agent owning the selected chat session.")] Guid agentId,
+        [Description("Original chat session ID whose displayed title is conditionally replaced.")] Guid chatSessionId,
         ChatSessionRenameApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) {

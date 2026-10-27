@@ -100,7 +100,7 @@ public sealed class SharedProviderPremergeUpgradeTests {
         Assert.Equal(db.Database.GetMigrations(), await db.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
-        Assert.Equal(169, db.Model.GetEntityTypes().Count());
+        Assert.Equal(186, db.Model.GetEntityTypes().Count());
         (Type EntityType, string TableName)[] operationLifecycleEntities = [
             (typeof(DatasetLifecycleRecord), DatasetLifecycleRecord.TableName),
             (typeof(FiniteOperationStateRecord), FiniteOperationStateRecord.TableName),

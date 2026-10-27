@@ -122,7 +122,6 @@ internal static class ProjectDefinitionOperationOpenApiSchemas {
             schema.Enum = Enum.GetValues(type).Cast<object>().Select(value => (JsonNode)JsonValue.Create(Convert.ToInt32(value))!).ToList();
         }
 
-        ProjectDefinitionOpenApiDescriptions.Apply(schema, context);
 
         async Task<IOpenApiSchema> Model<T>() => await context.GetOrCreateSchemaAsync(typeof(T), null, cancellationToken);
 

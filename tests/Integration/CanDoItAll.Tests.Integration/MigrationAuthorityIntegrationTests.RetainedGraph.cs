@@ -174,7 +174,7 @@ public sealed partial class MigrationAuthorityIntegrationTests {
     private static async Task<string[]> ReadRetainedGraphRowsAsync(AppDbContext context, RetainedGraph graph) =>
         await context.Database.SqlQuery<string>($"""
             SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL)
-                || (to_jsonb(row) - ARRAY['LifetimeId','LegacyAgentAccessBindingEligible']))::text AS "Value"
+                || (to_jsonb(row) - ARRAY['LifetimeId','LegacyAgentAccessBindingEligible','ConcurrencyToken']))::text AS "Value"
                 FROM "Projects_Projects" row WHERE "Id" = {graph.ProjectId}
             UNION ALL SELECT 'workflow-definition:' || to_jsonb(row)::text
                 FROM "AgentFramework_WorkflowDefinitions" row WHERE "VersionId" = {graph.WorkflowVersionId}

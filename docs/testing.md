@@ -122,12 +122,15 @@ special traits because those tests remain in their owning assemblies for focused
 environment-specific execution. Test-support projects are transitive dependencies of
 their owning test projects and are not standalone gates.
 
-PostgreSQL fixture administration uses a separate 60-second command timeout for database
-creation and cleanup. Ordinary test connections retain their 15-second SQL timeout.
-`DROP DATABASE` can wait for a server checkpoint: a measured local cleanup spent 19.5
-seconds flushing files and exceeded the former shared 15-second deadline after all test
-assertions had passed. Keep the bounded maintenance budget separate from application
-query and HTTP deadlines; do not suppress cleanup failures.
+PostgreSQL fixture administration uses a separate 120-second command timeout for database
+creation and cleanup. Disposal has one two-minute cancellation budget across connection
+opening and the drop operation. Ordinary test connections retain their 15-second SQL
+timeout. `DROP DATABASE` can wait for a server checkpoint: measured local cleanup exceeded
+the former 60-second maintenance deadline while a checkpoint took 70.276 seconds, after
+all test assertions had passed. A forced drop reporting SQLSTATE `55006` is logged and
+retried once within the same budget to allow delayed session termination to finish.
+Persistent or unrelated errors still fail explicitly. Keep this administrative budget
+separate from application query, HTTP and measured workload deadlines.
 
 The shared test bootstrap disables HTTP handler-expiry timers for its short-lived hosts.
 A timer in `DefaultHttpClientFactory` can retain a disposed fixture's root service
@@ -1049,8 +1052,8 @@ apart:
 ./tools/Validation/Update-TestShardWeights.ps1 -TrxPath <components.trx>,<integration.trx> -Source "<commit and host>"
 ```
 
-The shard counts and budgets come from a 2026-09-25 Linux Docker run of application `95abfbae9`
-(8 CPUs, PostgreSQL 18.6) that also produced the committed weights. It passed Unit (9,061 cases)
+The initial shard counts and budgets came from a 2026-09-25 Linux Docker run of application `95abfbae9`
+(8 CPUs, PostgreSQL 18.6) that produced the original weights. It passed Unit (9,061 cases)
 in 1.5 minutes, Components (2,331) in 18.1 minutes and Integration (3,170) in 106 minutes.
 Host-platform classes accounted for 25% of the Components time and 38% of the Integration time;
 the largest class, `ProcessCatalogAuthorityPersistenceTests`, took 13.3 minutes and bounds the
@@ -1058,9 +1061,24 @@ shortest possible shard. The earlier single-job gates took 84–104 minutes on L
 macOS and 219–273 on Windows. Scaling those gates by the measured shares projects about 17
 minutes of tests per Linux shard and about 27 per Windows host-platform shard, each after roughly
 7 (Linux) or 17 (Windows) minutes of setup and build; a Windows full-scope shard projects to about
-75 minutes. The budgets (`stable` 90–120, `tests-linux` 90, `tests-host` 180 minutes) leave room
-for the full scope. These are projections: compare the first CI run's step durations with them and
-record the result here before changing a shard count or budget.
+75 minutes. The original budgets were `stable` 90–120, `tests-linux` 90 and `tests-host`
+180 minutes. These projections informed the initial setup; the actual CI measurements
+below supersede them for the current test inventory.
+
+CI run 91 (`304dbc35a`, 2026-10-26) completed all five Linux shards with 10,495
+Components and Integration results across 1,047 classes: 10,493 passed and two failed.
+Its complete timings refresh the shared class weights, retaining the failed cases' costs.
+The measured Linux costs projected onto three shards with the old weights were 92.3,
+79.8 and 81.9 minutes; the refreshed weights balance those costs at approximately 84.7
+minutes each. This is a scheduling projection, not a passing test result or a guarantee
+of equal host-platform timings.
+
+Windows full-scope shards 2 and 3 completed after approximately 168 and 178 minutes,
+including setup, while shard 1 was cancelled at 180 minutes. macOS shard 1 also reached
+that limit; its other shards completed. The full-scope host job budget is now 240 minutes
+to allow completion and evidence collection. The split-scope host budget remains 180
+minutes. Test selection, assertions, per-operation deadlines and failure reporting are
+unchanged; both the code failures and the refreshed scheduling require another CI run.
 
 ## Runtime Portability Gate
 
@@ -1240,6 +1258,30 @@ Do not report the full suite as green unless both exact no-filter commands pass 
 required browsers, hosts, databases, and sibling processes are available. Expected
 quarantine failures and missing environment dependencies are still failures of this
 gate and must be reported as such.
+
+The external shared-provider browser cases need two separately owned fixture pairs.
+For the synthetic pair, set `CANDOITALL_SHARED_UI_SHARED_URL`,
+`CANDOITALL_SHARED_UI_CLIENT_URL`, `CANDOITALL_SHARED_UI_SHARED_SOURCE_URL`
+(reachable from the client host), `CANDOITALL_SHARED_UI_UPSTREAM_URL` (reachable from
+the publishing host), `CANDOITALL_SHARED_UI_UPSTREAM_TOKEN_FILE`,
+`CANDOITALL_SHARED_UI_VISION_IMAGE` and `CANDOITALL_SHARED_UI_EVIDENCE_DIRECTORY`.
+The upstream URL is explicit; the tests do not assume a particular Docker hostname.
+Start both synthetic hosts with `AgentFramework:Providers:SeedDefaults=false` so the
+empty-client case has no managed providers or runtime fallback. A normal application
+startup is not an empty provider fixture.
+Set `CANDOITALL_ALLOW_SHARED_PROVIDER_FIXTURE_WRITES=1` only for these disposable
+synthetic fixtures. Bootstrap the provider-import scenario before the full run,
+because its companion simple-chat case consumes the imported catalog.
+
+Keep the real pair separate. Set `CANDOITALL_REAL_SHARED_URL`,
+`CANDOITALL_REAL_CLIENT_URL`, `CANDOITALL_REAL_UI_EVIDENCE`,
+`CANDOITALL_REAL_OLLAMA_URL`, `CANDOITALL_REAL_PUBLISHER_OLLAMA_URL`,
+`CANDOITALL_REAL_OLLAMA_PROFILE`, `CANDOITALL_AVATAR_UI_EVIDENCE` and the private
+`OPENAI_API_KEY`. Prepare its published
+providers, imported source and acceptance agents, then run both real catalog setup
+cases before the full suite: the execution cases read their model-inventory evidence.
+These cases make real provider calls. Keep credentials out of retained evidence and
+dispose the owned hosts and database leases after their last use.
 
 ## Memory UI boundary proof
 

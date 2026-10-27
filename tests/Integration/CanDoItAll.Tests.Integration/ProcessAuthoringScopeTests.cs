@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Data.Common;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
@@ -56,7 +57,7 @@ public sealed class ProcessAuthoringScopeTests {
         await using var scope = app.Services.CreateAsyncScope();
         var command = await CommandAsync(scope.ServiceProvider);
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(command.Address.ProjectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, command.Address.ProjectId);
         if (recreate) {
             Assert.True((await projects.CreateAsync(command.Address.ProjectId, new() { Name = "Replacement lifetime" })).IsSuccess);
         }
@@ -110,10 +111,10 @@ public sealed class ProcessAuthoringScopeTests {
             services.GetRequiredService<IProcessAuthoringAdmissionPolicy>(), TimeProvider.System, options.Options);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
         var commit = store.CommitAsync(command, deadline.Token);
-        Task<ProjectDeletionResult>? deletion = null;
+        Task<ProjectLifecycleOutcome.Accepted>? deletion = null;
         try {
             await pause.Entered.Task.WaitAsync(deadline.Token);
-            deletion = deletingScope.ServiceProvider.GetRequiredService<ProjectsService>().DeleteAsync(command.Address.ProjectId, deadline.Token);
+            deletion = ProjectLifecycleTestCommands.DeleteAsync(deletingScope.ServiceProvider, command.Address.ProjectId, deadline.Token);
             await using var observer = await services.GetRequiredService<IDbContextFactory<ProcessPersistenceDbContext>>().CreateDbContextAsync(deadline.Token);
             while (await observer.Database.SqlQueryRaw<int>("""
                 SELECT count(*)::integer AS "Value" FROM pg_stat_activity

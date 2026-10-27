@@ -6599,7 +6599,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Program.cs",
       "path": "src/App/CanDoItAll.Web/Program.cs",
-      "sha256_lf": "af45b0ba39a3359d598b11bde81cb26cd2620f138f449acdf43e127b49a93363",
+      "sha256_lf": "a7c9b14d50452b5e46e45a06d10c9c1d3d82c62800bb79ba868db1f75d744013",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.PostgreSqlDevDatabaseProfileRequest, CanDoItAll.Web.Program",
@@ -6614,7 +6614,7 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Native host composes module renderers and registers scoped Projects definition/lifecycle and Agent policy browser stores with explicit limits. Offline activation and deletion recovery dispatch exit before Web startup. Operational decisions remain in their owning modules; Program owns no reusable rendering body."
+      "rationale": "Native host composes module renderers and registers scoped Projects definition/lifecycle and Agent policy browser stores with explicit limits. Offline activation and deletion recovery dispatch exit before Web startup. Operational decisions remain in their owning modules; Program owns no reusable rendering body. Public manifest assets short-circuit authentication after routing and HTTPS redirection. API and managed-file endpoints retain authorization. This is composition-owned middleware ordering, with no renderer or module dependency change."
     },
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/app.css",
@@ -12177,7 +12177,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor",
-      "sha256_lf": "7d58f9aef139d7baf01e6ba3fbe9ebc8d55a0b0606d68862e4c78eb2a54d8933",
+      "sha256_lf": "483c140e2eec0497855854403d3892d8c247263b6e135feaa2a19c15b463a0f4",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.LiveProcessesDashboard",
@@ -12186,7 +12186,7 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.Processes/Pages/LiveProcessesPage.razor"
       ],
-      "native_owner": "IProcessWorkspaceProjectionClient ProjectionClient; ProcessWorkspaceMockProjectionFactory MockProjectionFactory; ICurrencyFormatter CurrencyFormatter; NavigationManager Navigation; IAppNavigationHistory NavigationHistory; NotificationService Notifications; TooltipService TooltipService; IJSRuntime JsRuntime; IDatabaseRuntimeState DatabaseRuntimeState; TimeProvider TimeProvider; ILogger<LiveProcessesDashboard> Logger",
+      "native_owner": "IProcessWorkspaceProjectionClient ProjectionClient; ProcessWorkspaceMockProjectionFactory MockProjectionFactory; ICurrencyFormatter CurrencyFormatter; NavigationManager Navigation; IAppNavigationHistory NavigationHistory; NotificationService Notifications; TooltipService TooltipService; IJSRuntime JsRuntime; IDatabaseRuntimeState DatabaseRuntimeState; Microsoft.Extensions.Hosting.IHostApplicationLifetime ApplicationLifetime; TimeProvider TimeProvider; ILogger<LiveProcessesDashboard> Logger",
       "visual_owner": "AgentChatContextSurfaceProvider, LiveProcessesSurface, ProcessRunCancellationAction, ProcessRunFilesDialog",
       "descendants": [
         "AgentChatContextSurfaceProvider",
@@ -12197,12 +12197,12 @@
       "assets": "CanDoItAll.Modules.Processes",
       "scenario": "CanDoItAll.Modules.Processes",
       "evidence": "CanDoItAll.Modules.Processes",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. P17 refreshes the existing selected run projection after accepted cancellation and after an explicit status refresh. The initial read does not trigger projection refresh. Selection remains owned by this host; no new state store or timer. Validation: codex/bundles/concurrent-mutations/validation/2026-10-23-native-workflow-cancellation.md.",
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. P17 refreshes the existing selected run projection after accepted cancellation and after an explicit status refresh. The initial read does not trigger projection refresh. Selection remains owned by this host; no new state store or timer. Validation: codex/bundles/concurrent-mutations/validation/2026-10-23-native-workflow-cancellation.md. The native owner cancels its existing read/timer lifetime on application stopping, before service disposal. The renderer receives no host-lifetime dependency and no additional timer is introduced.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "LiveProcessesDashboard",
           "lines": [
-            26
+            30
           ],
           "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
         }
@@ -13850,7 +13850,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Clipboard.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Clipboard.cs",
-      "sha256_lf": "b705a1f4c118f2fd7b0bf5bbd21af69b7150830fb3fee9976b4a14b6992eecd9",
+      "sha256_lf": "8657111406ea9bc7ef4384c8c1dba298e714b02c5f989151f5adf78e9bc6d180",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureClipboardState",
@@ -13865,7 +13865,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. The existing clipboard owner adopts copied selections only with accepted graph readback. Its pending destination echo cannot invalidate that read; later deliberate selection, navigation and clipboard replacement still retire adoption."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
@@ -14410,7 +14410,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "7c5464059d8160691515b60666d33b458a2eaff99e6cae38611f71b0cd828441",
+      "sha256_lf": "b93c7586dca0de5342146a3266a9d628a769751ddf6641e0d25989f5f5329d04",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14444,7 +14444,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route and effect host. Root creation reuses Projects native admission and durable pending sessions; the host owns original binding, lifecycle retirement, receipt checks and separate starter effects. The shared editor action slot exposes explicit Projects recovery navigation without storage or authority in the renderer. Existing hierarchy attachment remains a separate command.",
+      "rationale": "Reviewed native route and effect host. Root creation reuses Projects native admission and durable pending sessions; the host owns original binding, lifecycle retirement, receipt checks and separate starter effects. The shared editor action slot exposes explicit Projects recovery navigation without storage or authority in the renderer. Existing hierarchy attachment remains a separate command. The existing readback boundary accepts an ordered multi-node preferred selection for clipboard publication. Existing single-node callers, admission and read-generation checks remain in place; no new state owner or module reference is added.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProjectStructurePage",
@@ -31996,7 +31996,7 @@
     {
       "identity": "src/UI/CanDoItAll.Prompts.UI/Gallery/PromptGallerySearchSurface.razor",
       "path": "src/UI/CanDoItAll.Prompts.UI/Gallery/PromptGallerySearchSurface.razor",
-      "sha256_lf": "947b39437d43f861be096b6fa86b417f8ff5380673fb7091e19207a026bccf3c",
+      "sha256_lf": "3f64d7faf45dcb7aa83f625ad32fbb08bf89901024231f6d42f1a4f41196f4b7",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Prompts.UI.Gallery.PromptGallerySearchSurface",
@@ -32013,12 +32013,12 @@
       "assets": "CanDoItAll.Prompts.UI",
       "scenario": "CanDoItAll.Prompts.UI",
       "evidence": "CanDoItAll.Prompts.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects. The renderer composes the shared typed Cluster layout with wrapping for the filter rail. Filter state, provider reads and mutations remain with the existing view contract."
     },
     {
       "identity": "src/UI/CanDoItAll.Prompts.UI/Gallery/PromptGallerySearchSurface.razor.css",
       "path": "src/UI/CanDoItAll.Prompts.UI/Gallery/PromptGallerySearchSurface.razor.css",
-      "sha256_lf": "65c5c0bb9846235709f4d604d845a7861a3a000cd82f2e433ffb477973737c4d",
+      "sha256_lf": "af9dbcc33bd62e01020604a2ad097e4d277ce19d7910446659cb384588e1be88",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -32033,7 +32033,7 @@
       "assets": "CanDoItAll.Prompts.UI",
       "scenario": "CanDoItAll.Prompts.UI",
       "evidence": "CanDoItAll.Prompts.UI",
-      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption. The feature asset enables the already defined container-query layout. It contains no application state or effects; the real browser rail tests cover desktop and constrained container widths."
     },
     {
       "identity": "src/UI/CanDoItAll.Prompts.UI/_Imports.razor",

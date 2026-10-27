@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectCrossModuleMutationClaimIntegrationTests
 {
     private static readonly ProjectCrossModuleMutationProcessingOptions ProcessingOptions = new(
@@ -100,8 +102,11 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
         var farFutureProcessor = CreateProcessor(scope.ServiceProvider, farFutureClock);
         var farPastProcessor = CreateProcessor(scope.ServiceProvider, farPastClock);
         var mutationId = Guid.NewGuid();
-        var projectDeletionMutationId = Guid.NewGuid();
-        var projectId = Guid.NewGuid();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var created = await projects.SaveAsync(new() { Name = "Deletion claim clock fixture" });
+        Assert.True(created.IsSuccess);
+        var projectId = created.Value;
+        await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, projectId);
 
         DateTimeOffset databaseNow;
         await using (var seedContext = await dbContextFactory.CreateDbContextAsync())
@@ -126,23 +131,15 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
                     LastAttemptAtUtc = databaseNow,
                     CreatedAtUtc = databaseNow,
                     UpdatedAtUtc = databaseNow
-                },
-                new ProjectCrossModuleMutationRecord
-                {
-                    Id = projectDeletionMutationId,
-                    ProjectId = projectId,
-                    ScopeNodeKey = "project",
-                    MutationKind = ProjectCrossModuleMutationKind.DeleteProject,
-                    Status = ProjectCrossModuleMutationStatus.Processing,
-                    ApprovalState = ProjectCrossModuleMutationApprovalState.NotRequired,
-                    PayloadJson = JsonSerializer.Serialize(
-                        new DeleteProjectMutationPayload([], [])),
-                    ErrorMessage = "existing-project-owner",
-                    AttemptCount = 1,
-                    LastAttemptAtUtc = databaseNow,
-                    CreatedAtUtc = databaseNow,
-                    UpdatedAtUtc = databaseNow
                 });
+            var deletion = await seedContext.Set<ProjectCrossModuleMutationRecord>()
+                .SingleAsync(row => row.ProjectId == projectId && row.MutationKind == ProjectCrossModuleMutationKind.DeleteProject);
+            deletion.Status = ProjectCrossModuleMutationStatus.Processing;
+            deletion.ErrorMessage = "existing-project-owner";
+            deletion.AttemptCount = 1;
+            deletion.LastAttemptAtUtc = databaseNow;
+            deletion.CompletedAtUtc = null;
+            deletion.UpdatedAtUtc = databaseNow;
             await seedContext.SaveChangesAsync();
         }
 

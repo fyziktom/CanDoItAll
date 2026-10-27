@@ -222,6 +222,62 @@ public sealed class ProjectStructureGraphLifetimeTests {
         Assert.Contains(canvas.Nodes, node => node.Id == root.Id);
     }
 
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    public async Task Paste_readback_ignores_the_destination_echo_and_preserves_a_later_selection(int rootCount, bool laterSelection) {
+        var read = new ProjectStructureHierarchyLifetimeTests.OwnerReadGate();
+        await using var harness = await ProjectStructureHierarchyLifetimeTests.CreateHarnessAsync(read: read);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var project = (await projects.SaveAsync(new() { Name = "Clipboard selection echo" })).Value;
+        var projectRoot = $"project:{project:D}";
+        var sources = new List<ProjectStructureNode>();
+        for (var index = 0; index < rootCount; index++) {
+            sources.Add(await workbench.CreateObjectAsync(project,
+                new(ProjectObjectType.Note, $"Source {index}", "", "Retained", projectRoot)));
+        }
+        var target = await workbench.CreateObjectAsync(project,
+            new(ProjectObjectType.Note, "Target", "", "Untouched", projectRoot));
+        var page = Render(harness, project);
+        var canvas = page.FindComponent<CanvasWorkbench>().Instance;
+        await ClipboardAsync(page, CanvasWorkbenchClipboardAction.Copy, sources.Select(node => node.Id).ToArray());
+        var destinationState = new CanvasWorkbenchUiState { SelectedNodeIds = [target.Id] }.ToJson();
+        await page.InvokeAsync(() => canvas.OnSelectionChanged(target.Id, JsonSerializer.Serialize(new[] { target.Id })));
+        read.ArmProjects(() => page.Instance.AuthoringOutcomes.Any(outcome => outcome.Kind == ProjectStructureAuthoringResultKind.Committed));
+        var pending = ClipboardAsync(page, CanvasWorkbenchClipboardAction.Paste, [target.Id]);
+        try {
+            await read.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await page.InvokeAsync(() => canvas.OnStateChanged(destinationState));
+            if (laterSelection) {
+                await page.InvokeAsync(() => canvas.OnSelectionChanged(projectRoot, JsonSerializer.Serialize(new[] { projectRoot })));
+                await page.InvokeAsync(() => canvas.OnStateChanged(new CanvasWorkbenchUiState { SelectedNodeIds = [projectRoot] }.ToJson()));
+            }
+        } finally {
+            read.Release.TrySetResult();
+        }
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        var accepted = Assert.Single(page.Instance.AuthoringOutcomes);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Committed, accepted.Kind);
+        Assert.Equal(rootCount, accepted.NodeIds.Count);
+        var persisted = await workbench.GetStructureAsync(project);
+        Assert.All(accepted.NodeIds, id => Assert.Equal(target.Id, Assert.Single(persisted.Nodes, node => node.Id == id).ParentId));
+        var presented = page.FindComponent<CanvasWorkbench>().Instance.Surface;
+        if (laterSelection) {
+            Assert.Equal(new[] { projectRoot }, presented.UiState.SelectedNodeIds);
+            return;
+        }
+        Assert.All(accepted.NodeIds, id => Assert.Contains(presented.Nodes, node => node.Id == id));
+        Assert.Equal(accepted.NodeIds, presented.UiState.SelectedNodeIds);
+        await page.InvokeAsync(() => canvas.OnStateChanged(destinationState));
+        Assert.Equal(accepted.NodeIds, page.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.SelectedNodeIds);
+        await page.InvokeAsync(() => canvas.OnSelectionChanged(projectRoot, JsonSerializer.Serialize(new[] { projectRoot })));
+        await page.InvokeAsync(() => canvas.OnStateChanged(new CanvasWorkbenchUiState { SelectedNodeIds = [projectRoot] }.ToJson()));
+        Assert.Equal(new[] { projectRoot }, page.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.SelectedNodeIds);
+    }
+
     [Fact]
     public async Task Transfer_refuses_a_reclassified_root_and_compensates_only_its_created_child() {
         await using var harness = await ComponentTestHarness.CreateAsync();

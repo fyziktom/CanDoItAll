@@ -297,7 +297,7 @@ public sealed class OwnerPostcommitPageTests {
         await FillAsync(page, owner, services, original);
         var editor = Editor(page);
         var projects = services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(original.ProjectId, expectedProjectAdmission: original);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, original.ProjectId, expectedProjectAdmission: original);
         var recreated = await projects.CreateAsync(original.ProjectId, new ProjectEditorModel { Name = "Different lifetime" });
         Assert.True(recreated.IsSuccess);
         var current = await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId);

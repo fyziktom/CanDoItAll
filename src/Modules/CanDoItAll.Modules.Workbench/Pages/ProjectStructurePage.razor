@@ -549,8 +549,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
     }
 
-    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null, Action? onPublished = null)
-    {
+    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null,
+        Action? onPublished = null, IReadOnlyList<string>? preferredSelectionIds = null) {
+        IReadOnlyList<string> preferredSelection = preferredSelectionIds ??
+            (string.IsNullOrWhiteSpace(preferredSelectionId) ? [] : [preferredSelectionId]);
         IReadOnlyList<string>? liveSelectionSnapshot = surface?.ProjectId == ProjectId
             ? selectedNodeIds.ToArray()
             : null;
@@ -678,12 +680,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             string? nextPendingClientSelectionId;
             string? nextPendingWorkbenchSelectionId = null;
 
-            if (!string.IsNullOrWhiteSpace(preferredSelectionId) &&
-                reloadedSurface.Nodes.Any(node => string.Equals(node.Id, preferredSelectionId, StringComparison.Ordinal)))
-            {
-                nextSelectedNodeIds = [preferredSelectionId];
-                nextPendingClientSelectionId = preferredSelectionId;
-                nextPendingWorkbenchSelectionId = preferredSelectionId;
+            if (preferredSelection.Count > 0 && preferredSelection.All(id =>
+                    reloadedSurface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal)))) {
+                nextSelectedNodeIds = preferredSelection.ToList();
+                nextPendingClientSelectionId = preferredSelection[0];
+                nextPendingWorkbenchSelectionId = preferredSelection.Count == 1 ? preferredSelection[0] : null;
             }
             else if (nextSelectedNodeIds.Count == 0)
             {

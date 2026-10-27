@@ -55,11 +55,13 @@ $ToolAssembly = Join-Path $RepositoryRoot "tools\SharedProviders\CanDoItAll.Shar
 $AppDockerfile = Join-Path $RepositoryRoot "src\App\CanDoItAll.Web\Dockerfile"
 $UpstreamRoot = Join-Path $RepositoryRoot "tests\Support\CanDoItAll.SharedProviders.TestUpstream"
 $UpstreamDockerfile = Join-Path $UpstreamRoot "Dockerfile"
+$ToolDockerfile = Join-Path $PSScriptRoot "CanDoItAll.SharedProviders.E2E/Dockerfile"
 $ComponentsRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "..\CanDoItAll.Components"))
 $FileToolsRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "..\CanDoItAll.FileTools"))
 $ComposeProjectName = "candoitall-$FixtureName"
 $AppImage = $null
 $UpstreamImage = $null
+$ToolImage = $null
 $SourceFingerprint = $null
 $SourceState = $null
 $RunMarker = $null
@@ -496,6 +498,7 @@ function Set-ChildEnvironmentAssignments {
         "E2E_ARTIFACT_ROOT=$ArtifactRoot",
         "E2E_APP_IMAGE=$AppImage",
         "E2E_UPSTREAM_IMAGE=$UpstreamImage",
+        "E2E_TOOL_IMAGE=$ToolImage",
         "E2E_RUN_MARKER=$RunMarker",
         "E2E_CENTRAL_PORT=$PortBase",
         "E2E_CLIENT_A_PORT=$($PortBase + 1)",
@@ -591,6 +594,7 @@ function Write-HostRunMetadata {
         runMarker = $RunMarker
         appImage = $AppImage
         upstreamImage = $UpstreamImage
+        toolImage = $ToolImage
         repositories = @($SourceState.Repositories)
         markerCounts = $LogMarkerCounts
         lastLogCheckpoint = $LastLogCheckpoint
@@ -627,6 +631,7 @@ function Read-HostRunMarker {
         [string]$metadata.sourceFingerprint -cne $SourceFingerprint -or
         [string]$metadata.appImage -cne $AppImage -or
         [string]$metadata.upstreamImage -cne $UpstreamImage -or
+        [string]$metadata.toolImage -cne $ToolImage -or
         [string]$metadata.runMarker -notmatch "^sb07-[a-f0-9]{32}$" -or
         [string]$metadata.lastLogCheckpoint -notmatch "^[a-z0-9-]{1,64}$" -or
         [int]$metadata.resumeCount -lt 0 -or
@@ -817,10 +822,10 @@ function Write-AndValidateComposeConfig {
         "db" = "postgres:18.6-alpine"
         "deterministic-personal-upstream" = $UpstreamImage
         "deterministic-upstream" = $UpstreamImage
-        "e2e-central" = "mcr.microsoft.com/dotnet/aspnet:10.0.10"
-        "e2e-client-a" = "mcr.microsoft.com/dotnet/aspnet:10.0.10"
-        "e2e-client-b" = "mcr.microsoft.com/dotnet/aspnet:10.0.10"
-        "e2e-runner" = "mcr.microsoft.com/dotnet/aspnet:10.0.10"
+        "e2e-central" = $ToolImage
+        "e2e-client-a" = $ToolImage
+        "e2e-client-b" = $ToolImage
+        "e2e-runner" = $ToolImage
     }
     $expectedPorts = @{
         "central" = @($PortBase, 8080)
@@ -985,15 +990,11 @@ function Write-AndValidateComposeConfig {
         (Get-VolumeKey "client-b" "bind" $clientBDataRoot "/data" $false),
         (Get-VolumeKey "e2e-central" "bind" $ToolStateRoot "/e2e" $false),
         (Get-VolumeKey "e2e-central" "bind" $centralDataRoot "/instance" $false),
-        (Get-VolumeKey "e2e-central" "bind" $ToolPublishRoot "/runner" $true),
         (Get-VolumeKey "e2e-client-a" "bind" $ToolStateRoot "/e2e" $false),
         (Get-VolumeKey "e2e-client-a" "bind" $clientADataRoot "/instance" $false),
-        (Get-VolumeKey "e2e-client-a" "bind" $ToolPublishRoot "/runner" $true),
         (Get-VolumeKey "e2e-client-b" "bind" $ToolStateRoot "/e2e" $false),
         (Get-VolumeKey "e2e-client-b" "bind" $clientBDataRoot "/instance" $false),
-        (Get-VolumeKey "e2e-client-b" "bind" $ToolPublishRoot "/runner" $true),
-        (Get-VolumeKey "e2e-runner" "bind" $ToolStateRoot "/e2e" $false),
-        (Get-VolumeKey "e2e-runner" "bind" $ToolPublishRoot "/runner" $true)
+        (Get-VolumeKey "e2e-runner" "bind" $ToolStateRoot "/e2e" $false)
     )
     $actualVolumeKeys = [System.Collections.Generic.List[string]]::new()
     foreach ($serviceProperty in $config.services.PSObject.Properties) {
@@ -2547,10 +2548,13 @@ function Assert-CurrentImageRevisions {
             "HEAD")
     $appIdentity = Get-ImageIdentity -Image $AppImage
     $upstreamIdentity = Get-ImageIdentity -Image $UpstreamImage
+    $toolIdentity = Get-ImageIdentity -Image $ToolImage
     if ($appIdentity.Revision -cne $sourceRevision -or
         $upstreamIdentity.Revision -cne $sourceRevision -or
+        $toolIdentity.Revision -cne $sourceRevision -or
         $appIdentity.SourceFingerprint -cne $SourceFingerprint -or
-        $upstreamIdentity.SourceFingerprint -cne $SourceFingerprint) {
+        $upstreamIdentity.SourceFingerprint -cne $SourceFingerprint -or
+        $toolIdentity.SourceFingerprint -cne $SourceFingerprint) {
         throw "The proof image labels do not match the current revision and governed worktree fingerprint."
     }
 
@@ -2558,6 +2562,7 @@ function Assert-CurrentImageRevisions {
         SourceRevision = $sourceRevision
         App = $appIdentity
         Upstream = $upstreamIdentity
+        Tool = $toolIdentity
     }
 }
 
@@ -2703,8 +2708,11 @@ function Write-StackHandoff {
         appImageRevision = $imageIdentities.App.Revision
         appContainers = $appStates
         upstreamImage = $UpstreamImage
+        toolImage = $ToolImage
         upstreamImageId = $imageIdentities.Upstream.ImageId
         upstreamImageRevision = $imageIdentities.Upstream.Revision
+        toolImageId = $imageIdentities.Tool.ImageId
+        toolImageRevision = $imageIdentities.Tool.Revision
         sourceFingerprint = $SourceFingerprint
         upstreamContainers = $upstreamStates
         sourceRevision = $imageIdentities.SourceRevision
@@ -2809,6 +2817,27 @@ function Build-E2eInputs {
         -TimeoutSeconds 1200 `
         -MaximumStandardOutputBytes 32MB `
         -MaximumStandardErrorBytes 16MB | Out-Null
+}
+
+function Build-ToolImage {
+    Assert-SourceStateUnchanged
+    $revision = Invoke-NativeText -FilePath "git" -Arguments @("-C", $RepositoryRoot, "rev-parse", "HEAD")
+    $buildDate = [DateTimeOffset]::UtcNow.ToString("O")
+    Write-Step "Building the published E2E tool image once for all oracle roles."
+    Invoke-NativeCommand -FilePath "docker" -Arguments @(
+        "build",
+        "--progress=plain",
+        "--file", $ToolDockerfile,
+        "--tag", $ToolImage,
+        "--build-arg", "BUILD_DATE=$buildDate",
+        "--build-arg", "BUILD_REVISION=$revision",
+        "--build-arg", "BUILD_SOURCE_FINGERPRINT=$SourceFingerprint",
+        "--build-arg", "BUILD_VERSION=sb07-$($SourceFingerprint.Substring(0, 12))",
+        $ToolPublishRoot) `
+        -CaptureBasePath (Join-Path $BuildTranscriptRoot "tool-image-build") `
+        -TimeoutSeconds 600 `
+        -MaximumStandardOutputBytes 8MB `
+        -MaximumStandardErrorBytes 4MB | Out-Null
     [void](Assert-CurrentImageRevisions)
 }
 
@@ -2857,6 +2886,7 @@ function Prepare-FreshTopology {
         -TimeoutSeconds 600 `
         -MaximumStandardOutputBytes 8MB `
         -MaximumStandardErrorBytes 4MB | Out-Null
+    Build-ToolImage
     Write-AndValidateComposeConfig
     Import-BuildTranscripts
     Write-HostRunMetadata
@@ -2985,6 +3015,7 @@ $SourceFingerprint = $SourceState.Fingerprint
 $imageTag = $SourceFingerprint.Substring(0, 12)
 $AppImage = "candoitall-$FixtureName`:$imageTag"
 $UpstreamImage = "candoitall-$FixtureName-upstream:$imageTag"
+$ToolImage = "candoitall-$FixtureName-tools:$imageTag"
 $containerIdentity = Get-HostContainerIdentity
 $AppUid = $containerIdentity.Uid
 $AppGid = $containerIdentity.Gid

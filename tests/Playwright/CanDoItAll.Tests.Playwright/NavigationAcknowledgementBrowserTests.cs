@@ -23,7 +23,7 @@ public sealed class NavigationAcknowledgementBrowserTests(ITestOutputHelper outp
             output.WriteLine(await page.EvaluateAsync<string>("() => JSON.stringify(navigationAcknowledgementProbe.records)"));
             await page.EvaluateAsync("() => navigationAcknowledgementProbe.retire()");
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(80));
-            while (!host.GetLogSnapshot(int.MaxValue).Contains("Navigation stopped because the session ended when navigating to /agents", StringComparison.Ordinal)) {
+            while (!host.GetLogSnapshot(int.MaxValue).Contains($"Navigation stopped because the session ended when navigating to {host.BaseUrl}/agents", StringComparison.Ordinal)) {
                 await Task.Delay(50, deadline.Token);
             }
             Assert.Contains("Closing circuit with id", host.GetLogSnapshot(int.MaxValue), StringComparison.Ordinal);
@@ -103,11 +103,11 @@ public sealed class NavigationAcknowledgementBrowserTests(ITestOutputHelper outp
                 await context.CloseAsync();
             }
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(80));
-            while (!host.GetLogSnapshot(int.MaxValue).Contains("Navigation failed when changing the location to /agents", StringComparison.Ordinal)) {
+            while (!host.GetLogSnapshot(int.MaxValue).Contains($"Navigation failed when changing the location to {host.BaseUrl}/agents", StringComparison.Ordinal)) {
                 await Task.Delay(100, deadline.Token);
             }
             Assert.Contains("TaskCanceledException", host.GetLogSnapshot(int.MaxValue), StringComparison.Ordinal);
-            Assert.DoesNotContain("Navigation completed when changing the location to /agents", host.GetLogSnapshot(int.MaxValue), StringComparison.Ordinal);
+            Assert.DoesNotContain($"Navigation completed when changing the location to {host.BaseUrl}/agents", host.GetLogSnapshot(int.MaxValue), StringComparison.Ordinal);
         } finally {
             output.WriteLine(host.GetLogSnapshot(int.MaxValue));
         }

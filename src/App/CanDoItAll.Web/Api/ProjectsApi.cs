@@ -65,7 +65,9 @@ internal static class ProjectsApi
 
         projects.MapDelete("/{projectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("DeleteProject")
+            .WithMetadata(new ApiEndpointDocumentation("No lifecycle mutation is accepted on this legacy route.", null))
             .WithSummary("Refuse deletion without its original lifecycle intent.")
+            .WithDescription("This legacy route always refuses mutation because it lacks the original lifecycle intent. Submit a captured lifecycle operation with its original project or edge expectation instead.")
             .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
         projects.MapGet("/deletion-cleanups", ListPendingDeletionCleanupsAsync)
@@ -91,17 +93,23 @@ internal static class ProjectsApi
 
         projects.MapPost("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("AttachProjectSubproject")
+            .WithMetadata(new ApiEndpointDocumentation("No lifecycle mutation is accepted on this legacy route.", null))
             .WithSummary("Refuse attachment without its original lifecycle intent.")
+            .WithDescription("This legacy route always refuses mutation because it lacks the original lifecycle intent. Submit a captured lifecycle operation with its original project or edge expectation instead.")
             .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
         projects.MapDelete("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("DetachProjectSubproject")
+            .WithMetadata(new ApiEndpointDocumentation("No lifecycle mutation is accepted on this legacy route.", null))
             .WithSummary("Refuse detachment without its original lifecycle intent.")
+            .WithDescription("This legacy route always refuses mutation because it lacks the original lifecycle intent. Submit a captured lifecycle operation with its original project or edge expectation instead.")
             .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
         projects.MapPost("/{childProjectId:guid}/reconnect-subproject", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("ReconnectProjectSubproject")
+            .WithMetadata(new ApiEndpointDocumentation("No lifecycle mutation is accepted on this legacy route.", null))
             .WithSummary("Refuse reconnection without its original lifecycle intent.")
+            .WithDescription("This legacy route always refuses mutation because it lacks the original lifecycle intent. Submit a captured lifecycle operation with its original project or edge expectation instead.")
             .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
         return group;

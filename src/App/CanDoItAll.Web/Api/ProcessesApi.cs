@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using System.Security.Claims;
 using CanDoItAll.Processes.Runtime;
@@ -28,6 +29,7 @@ internal static class ProcessesApi
 
         processes.MapGet("/launch/decision-contracts", (ProcessDecisionLaunchAdmissionCoordinator admissions) => TypedResults.Ok(admissions.Contracts))
             .WithName("ListProcessDecisionContracts")
+            .WithMetadata(new ApiEndpointDocumentation("Registered exact planning contracts with supported policy combinations and ceilings.", null))
             .WithSummary("List registered Process planning contracts and supported policy ceilings.")
             .WithDescription("Read-only discovery, not launch eligibility, Workspace defaults or authorization. Prepare a launch to review its effective policy and current eligibility.");
 
@@ -51,6 +53,7 @@ internal static class ProcessesApi
 
         processes.MapGet("/launch/intents/{callerIntentId:guid}", GetLaunchIntentStatusAsync)
             .WithName("GetProcessLaunchIntentStatus")
+            .WithMetadata(new ApiEndpointDocumentation("Read-only status of the original caller launch intent.", null))
             .WithSummary("Observe the original Process launch by its caller intent.")
             .WithDescription("Caller, database profile and operator surface must match the original preparation. Reads only; never prepares, resumes or dispatches. A 404 does not prove an earlier in-flight request cannot complete. Retain the intent and use a found admission to restore the saved review before acceptance.")
             .Produces<ProcessLaunchObservationApiView>()
@@ -63,7 +66,8 @@ internal static class ProcessesApi
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         processes.MapPost("/runs/{runId:guid}/cancel", CancelRunAsync)
-            .WithName("CancelProcessRun").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
+            .WithName("CancelProcessRun")
+            .WithMetadata(new ApiEndpointDocumentation("Selected child runtime transition result. Root cancellation is refused by this route.", "Optional cancellation reason and metadata for the selected child; the JSON request object is required.")).WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .WithSummary("Cancel only the selected child Process run.")
             .WithDescription("Legacy child-only contract. A root is refused with 409 process.root_cancellation_requires_admission before writing; use the Location resource for explicit finite root admission and progress. No automatic redirect or retry occurs. Send an object, including {} for defaults. A 200 child result does not certify root cleanup.")
             .Produces<ProcessRuntimeCancelApiResponse>()
@@ -333,7 +337,7 @@ internal static class ProcessesApi
         return await ObserveLaunchAsync(await preparations.GetAsync(new(admissionId), cancellationToken), caller, launchService, cancellationToken);
     }
 
-    private static async Task<IResult> GetLaunchIntentStatusAsync(Guid callerIntentId, HttpContext context,
+    private static async Task<IResult> GetLaunchIntentStatusAsync([Description("Original nonempty caller intent ID retained before launch; lookup does not launch again.")] Guid callerIntentId, HttpContext context,
         IProcessLaunchOperatorAuthoritySource authoritySource, IProcessPreparedLaunchStore preparations,
         ProcessLaunchApplicationService launchService, CancellationToken cancellationToken) {
         var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
@@ -430,7 +434,7 @@ internal static class ProcessesApi
     }
 
     internal static async Task<IResult> CancelRunAsync(
-        Guid runId,
+        [Description("Selected child Process run ID; root cancellation requires the dedicated cancellation route.")] Guid runId,
         ProcessRuntimeCancelApiRequest request,
         ProcessRuntimeOperatorApplicationService operatorService,
         HttpContext context,

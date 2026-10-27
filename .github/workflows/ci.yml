@@ -33,7 +33,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
-  CANDOITALL_COMPONENTS_COMMIT: 755655fa47d2275ba5feb401197533687320e23c
+  CANDOITALL_COMPONENTS_COMMIT: c5f2105254f03fca202e10ce8811f254df2af19a
   CANDOITALL_FILETOOLS_COMMIT: 7885f6098e1bc0e202f8e2cc8ee26a9e89945af7
 
 jobs:
@@ -430,7 +430,7 @@ jobs:
           - name: macos-arm64
             os: macos-15
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 180
+    timeout-minutes: ${{ needs.dependencies.outputs.platform-scope == 'full' && 240 || 180 }}
     env:
       CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG
     defaults:

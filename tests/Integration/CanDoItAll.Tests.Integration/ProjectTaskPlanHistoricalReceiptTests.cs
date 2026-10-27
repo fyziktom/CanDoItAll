@@ -11,6 +11,7 @@ using static CanDoItAll.Tests.Integration.ProjectTaskPlanAgentFixture;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectTaskPlanHistoricalReceiptTests {
     [Fact]
     public async Task Registered_historical_review_reads_the_original_plan_without_coordination_or_file_writes() {

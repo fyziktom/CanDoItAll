@@ -40,7 +40,8 @@ public sealed class AgentsAdjunctSurfaceTests {
         var cut = context.Render<AgentConversationContextSurface>(p => p
             .Add(c => c.State, new(origin, "First source", true, false, "Following first source", "Next turn: second source"))
             .Add(c => c.Intent, intents.Add).AddChildContent("Owned conversation"));
-        var queued = cut.FindComponent<Button>().Instance.Click;
+        await cut.Find("[data-testid='floating-agent-chat-context-details']").ClickAsync();
+        var queued = cut.FindComponents<Button>().Single(button => button.Instance.Text == "Detach").Instance.Click;
         cut.Render(p => p.Add(c => c.State, new(origin with { Activation = Guid.NewGuid() }, "Second source", false, true, "Detached", null)));
         await cut.InvokeAsync(() => queued.InvokeAsync());
         Assert.Equal(new(origin, AgentConversationContextMode.Detached), Assert.Single(intents));

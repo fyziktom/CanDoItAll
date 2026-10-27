@@ -499,7 +499,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
         var saveCounter = scope.ServiceProvider.GetRequiredService<SaveChangesCounter>();
         var projectId = await CreateProjectAsync(projects, "Clipboard projected target");
         var subprojectId = await CreateProjectAsync(projects, "Clipboard projected subproject");
-        Assert.True((await projects.AddSubprojectAsync(projectId, subprojectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(scope.ServiceProvider, projectId, subprojectId));
         var source = await CreateNodeAsync(
             workbench,
             projectId,

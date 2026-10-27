@@ -300,6 +300,8 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await page.GetByTestId("agents-catalog-delete-confirm").ClickAsync();
         await confirmation.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await page.GetByText("Agent deleted", new() { Exact = true }).WaitForAsync();
+        await dialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await Assertions.Expect(page).Not.ToHaveURLAsync(new Regex("[?&]agentId="));
     }
 
     private static async Task OpenAgentCatalogAsync(IPage page, string baseUrl) {
@@ -378,11 +380,19 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         if (credentialId.HasValue) {
             await panel.GetByTestId("history-credential").FillAsync(credentialId.Value.ToString("D"));
         }
-        await panel.GetByTestId("history-search").ClickAsync();
+        var search = panel.GetByTestId("history-search");
         var results = panel.GetByTestId("history-results");
-        await results.WaitForAsync();
-        Assert.Contains(providerName, await results.InnerTextAsync(), StringComparison.Ordinal);
         var details = results.GetByTestId("history-details");
+        for (var attempt = 0; attempt < 60; attempt++) {
+            await search.ClickAsync();
+            await results.WaitForAsync();
+            await Assertions.Expect(search).ToBeEnabledAsync();
+            if (await details.CountAsync() >= minimumAttempts) {
+                break;
+            }
+            await Task.Delay(500);
+        }
+        Assert.Contains(providerName, await results.InnerTextAsync(), StringComparison.Ordinal);
         var available = await details.CountAsync();
         Assert.InRange(available, minimumAttempts, 20);
         var readCount = credentialId.HasValue ? available : minimumAttempts;

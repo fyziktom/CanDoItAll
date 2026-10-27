@@ -36,6 +36,7 @@ public sealed class ProcessesSandboxBrowserTests {
         Directory.CreateDirectory(directory);
         try {
             await page.GotoAsync(host.BaseUrl);
+            await page.GetByTestId("process-scenario-ready").WaitForAsync();
             await Assertions.Expect(page.GetByTestId("processes-definition-editor-name")).ToBeVisibleAsync();
             Assert.True((await page.GetByTestId("process-scenario-toolbar").BoundingBoxAsync())!.Height < 110);
             await Assertions.Expect(page.Locator("html")).ToHaveAttributeAsync("data-asset-mode", fast ? "Fast" : "Parity");

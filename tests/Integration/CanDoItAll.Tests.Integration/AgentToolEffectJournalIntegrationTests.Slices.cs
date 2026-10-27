@@ -185,6 +185,7 @@ public sealed partial class AgentToolEffectJournalIntegrationTests {
     private async Task<ReceiptStoreCost> MeasureSliceAsync(AgentToolAdmissionJournalFixture fixture, int expectedCandidates) {
         var reads = new ConcurrentQueue<FileSandboxWorkspacePhysicalJsonRead>();
         var writes = new ConcurrentQueue<long>();
+        var phases = new ConcurrentQueue<(string Name, double Milliseconds)>();
         var intents = 0;
         var store = new FileSandboxWorkspaceStore(fixture.WorkspaceRoot, fixture.StorageScope, null,
             stage => {
@@ -199,7 +200,11 @@ public sealed partial class AgentToolEffectJournalIntegrationTests {
             ShouldListenTo = source => source.Name == AgentFrameworkTelemetry.ActivitySource.Name,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
             ActivityStopped = activity => {
-                if (activity.TraceId == root.TraceId && activity.OperationName == "workspace.json.write") {
+                if (activity.TraceId != root.TraceId) {
+                    return;
+                }
+                phases.Enqueue((activity.OperationName, activity.Duration.TotalMilliseconds));
+                if (activity.OperationName == "workspace.json.write") {
                     writes.Enqueue(Convert.ToInt64(activity.GetTagItem("payload.bytes"), System.Globalization.CultureInfo.InvariantCulture));
                 }
             }
@@ -221,18 +226,21 @@ public sealed partial class AgentToolEffectJournalIntegrationTests {
         var result = await owner.ReconcileInterruptedAsync(lease, [reader], (_, _) => new(true), default);
         elapsed.Stop();
         var delta = GC.GetTotalAllocatedBytes(precise: false) - allocated;
-        Assert.Equal(expectedCandidates, reader.Calls);
-        Assert.All(lookupReads, count => Assert.Equal(2, count));
-        Assert.Equal(AgentEffectCheckpointPersistence.Confirmed, result.Persistence);
         var full = reads.Where(item => item.PayloadType == typeof(ExecutionRunRecord)).ToArray();
         var cost = new ReceiptStoreCost(full.Length, full.Count(item => item.Kind == FileSandboxWorkspaceJsonReadKind.Deserialization),
             full.Sum(item => item.LengthBytes), writes.Count, writes.Sum(), intents,
             JsonSerializer.SerializeToUtf8Bytes(result, new JsonSerializerOptions(JsonSerializerDefaults.Web)).Length,
             elapsed.Elapsed.TotalMilliseconds, delta);
         output.WriteLine("receipt-slice-source-proof " + JsonSerializer.Serialize(new {
-            proposals = result.Counts.TotalProposals, expectedCandidates, cost,
+            proposals = result.Counts.TotalProposals, expectedCandidates, reader.Calls, result.Stop, result.Persistence, cost,
+            phases = phases.GroupBy(phase => phase.Name).Select(group => new {
+                name = group.Key, count = group.Count(), inclusiveMilliseconds = group.Sum(phase => phase.Milliseconds)
+            }),
             allocationScope = "process-wide; concurrent allocations may contribute", latencyScope = "this owned file fixture only"
         }));
+        Assert.Equal(expectedCandidates, reader.Calls);
+        Assert.All(lookupReads, count => Assert.Equal(2, count));
+        Assert.Equal(AgentEffectCheckpointPersistence.Confirmed, result.Persistence);
         return cost;
     }
 

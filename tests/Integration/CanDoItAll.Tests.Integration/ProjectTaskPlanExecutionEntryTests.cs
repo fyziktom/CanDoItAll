@@ -14,6 +14,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public enum UnsupportedPlanningRequest { Background, AutomaticApproval, Attachments, UnknownOwner }
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectTaskPlanExecutionEntryTests {
     [Theory]
     [InlineData(false)]

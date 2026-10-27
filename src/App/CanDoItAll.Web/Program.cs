@@ -134,12 +134,12 @@ if (!app.Environment.IsDevelopment())
 app.UseWhen(context => !ApiTransportMiddleware.IsApiRequest(context), branch =>
     branch.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
 app.UseMiddleware<ApiTransportMiddleware>();
+if (webHostOptions.HttpsRedirectionEnabled) {
+    app.UseHttpsRedirection();
+}
+app.UseRouting();
 if (webHostOptions.AllowedOrigins.Length > 0) {
     app.UseCors();
-}
-if (webHostOptions.HttpsRedirectionEnabled)
-{
-    app.UseHttpsRedirection();
 }
 var apiOptions = app.Services.GetRequiredService<IOptions<ApiAccessOptions>>().Value;
 if (apiOptions.Authorization.Enabled)
@@ -150,7 +150,7 @@ if (apiOptions.Authorization.Enabled)
 
 app.UseMiddleware<AccessContextReferenceMiddleware>();
 app.UseAntiforgery();
-app.MapStaticAssets();
+app.MapStaticAssets().ShortCircuit();
 app.MapCanDoItAllManagedFiles();
 
 app.MapCanDoItAllApiDocumentation();

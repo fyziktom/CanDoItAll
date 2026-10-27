@@ -45,9 +45,18 @@ public sealed class ProcessAuthoringStoreTests {
         await context.SaveChangesAsync();
         var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>().UseNpgsql(lease.ConnectionString).Options;
         var store = new EfProcessPreparedLaunchStore(new ContextFactory(options), options);
-        var saved = await store.PrepareAsync(ProcessPreparedLaunchFixture.Create());
-        await using (var runtime = new ProcessPersistenceDbContext(options)) {
-            await new EfProcessRuntimeUnitOfWork(runtime).CommitAsync(ProcessPreparedLaunchFixture.Commit(saved));
+        var preparation = ProcessPreparedLaunchCodec.ToEntity(ProcessPreparedLaunchFixture.Create());
+        preparation.AcceptedAtUtc = savedAt;
+        preparation.Execute = false;
+        preparation.State = ProcessLaunchContinuationState.Accepted;
+        await HistoricalProjectMigrationRows.InsertPreparedLaunchAsync(context, preparation);
+        var saved = ProcessPreparedLaunchCodec.Read(preparation);
+        var initial = saved.Preparation.InitialCommit;
+        context.Add(ProcessInstancePlanPersistenceMapper.ToEntity(initial.InitialPlan!));
+        context.Add(ProcessPersistenceMappers.ToEntity(initial.Mutation.State));
+        await context.SaveChangesAsync();
+        foreach (var assignment in initial.InitialAssignments!) {
+            await HistoricalProjectMigrationRows.InsertAssignmentAsync(context, EfProcessRuntimeStepAssignmentStore.ToEntity(assignment));
         }
         var before = await context.Database.SqlQueryRaw<string>("""
             SELECT to_jsonb(p)::text AS "Value" FROM process_prepared_launches p
@@ -59,9 +68,9 @@ public sealed class ProcessAuthoringStoreTests {
             ORDER BY "Value"
             """).ToArrayAsync();
         Assert.NotEmpty(before);
-        await context.Database.MigrateAsync();
-        await context.Database.MigrateAsync();
-        Assert.False(context.Database.HasPendingModelChanges());
+        const string authoringMigration = "20261009124700_AddProcessAuthoring";
+        await context.GetService<IMigrator>().MigrateAsync(authoringMigration);
+        await context.GetService<IMigrator>().MigrateAsync(authoringMigration);
         var after = await context.Database.SqlQueryRaw<string>("""
             SELECT to_jsonb(p)::text AS "Value" FROM process_prepared_launches p
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_instance_plans p
@@ -75,6 +84,8 @@ public sealed class ProcessAuthoringStoreTests {
         Assert.Empty(await context.Set<ProcessAuthoringHeadEntity>().ToArrayAsync());
         Assert.Empty(await context.Set<ProcessAuthoringPublicationEntity>().ToArrayAsync());
         Assert.Empty(await context.Set<ProcessAuthoringReceiptEntity>().ToArrayAsync());
+        await context.Database.MigrateAsync();
+        Assert.False(context.Database.HasPendingModelChanges());
         Assert.Equal(saved.PreparationFingerprint, (await store.GetAsync(saved.Preparation.AdmissionId))!.PreparationFingerprint);
         var restoredWorkflow = JsonSerializer.Deserialize<WorkflowDefinition>((await context.Set<WorkflowDefinitionRecord>().AsNoTracking().SingleAsync()).DefinitionJson,
             new JsonSerializerOptions(JsonSerializerDefaults.Web));

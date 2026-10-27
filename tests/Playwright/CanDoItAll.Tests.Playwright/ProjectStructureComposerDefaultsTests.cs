@@ -131,7 +131,9 @@ public sealed partial class AppSmokeTests
             repeatOptionCount >= 5,
             $"Expected the online meeting repeat select to expose the shared cadence options, but only found {repeatOptionCount} selectable options.");
 
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-composer')?.contains(document.activeElement) === true");
         await page.Keyboard.PressAsync("Escape");
+        await composer.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await CloseStructureToolboxWindowAsync(page);
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();

@@ -2475,6 +2475,7 @@ public sealed partial class ProcessWorkspaceShellTests
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
         context.Services.AddSingleton(effectiveTimeProvider);
+        context.Services.AddSingleton<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(_ => new ProcessTestHostLifetime());
         context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         context.Services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
@@ -3496,6 +3497,7 @@ public sealed partial class ProcessWorkspaceShellTests
         private int editorCommandCount;
 
         public List<ProcessWorkspaceShellRequest> Requests { get; } = [];
+        public CancellationToken LastShellCancellationToken { get; private set; }
 
         public bool DeferShellRequests { get; set; }
 
@@ -3549,6 +3551,7 @@ public sealed partial class ProcessWorkspaceShellTests
             ProcessWorkspaceShellRequest request,
             CancellationToken cancellationToken = default)
         {
+            LastShellCancellationToken = cancellationToken;
             var requestIndex = Requests.Count;
             Requests.Add(request);
             if (DeferShellRequests)

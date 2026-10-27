@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
@@ -32,7 +33,7 @@ public sealed class ProjectProjectionRepairAdmissionIntegrationTests {
         Exception? failure = null;
         try {
             await pausedFactory.Paused.Task.WaitAsync(timeout.Token);
-            await projects.DeleteAsync(projectId, timeout.Token, originalAdmission);
+            await ProjectLifecycleTestCommands.DeleteAsync(replacementServices, projectId, timeout.Token, originalAdmission);
             Assert.Null(await admissions.CaptureAsync(projectId, timeout.Token));
             Assert.True((await projects.CreateAsync(projectId, new() { Name = "Replacement projection lifetime" }, timeout.Token)).IsSuccess);
             replacementAdmission = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureAsync(projectId, timeout.Token));

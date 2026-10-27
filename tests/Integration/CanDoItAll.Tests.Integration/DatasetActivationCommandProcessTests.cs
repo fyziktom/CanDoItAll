@@ -110,11 +110,14 @@ public sealed class DatasetActivationCommandProcessTests {
     }
 
     private static void AssertCurrentPools(SqlSnapshot snapshot) {
-        Guid[] expected = [ProjectFiniteOperationPool.Pool.Value, WorkbenchTaskPlanFiniteOperations.Pool.Value];
+        Dictionary<Guid, int> expected = new() {
+            [ProjectFiniteOperationPool.Pool.Value] = ProjectFiniteOperationPool.ProtocolVersion,
+            [WorkbenchTaskPlanFiniteOperations.Pool.Value] = WorkbenchTaskPlanFiniteOperations.ProtocolVersion
+        };
         var currentEpochs = snapshot.Epochs.Where(epoch => epoch.Namespace == snapshot.Namespace).ToArray();
         var currentStates = snapshot.OwnerStates.Where(state => state.Namespace == snapshot.Namespace).ToArray();
-        Assert.Equal(expected.Order(), currentEpochs.Select(epoch => epoch.Pool).Order());
-        Assert.Equal(expected.Order(), currentStates.Select(state => state.Pool).Order());
+        Assert.Equal(expected.Keys.Order(), currentEpochs.Select(epoch => epoch.Pool).Order());
+        Assert.Equal(expected.Keys.Order(), currentStates.Select(state => state.Pool).Order());
         Assert.All(currentEpochs, epoch => {
             Assert.Equal(1, epoch.Epoch);
             Assert.Equal(FiniteOperationEpochState.Open, epoch.State);
@@ -124,7 +127,7 @@ public sealed class DatasetActivationCommandProcessTests {
             Assert.Equal(604800, epoch.ReplayRetentionSeconds);
         });
         Assert.All(currentStates, state => {
-            Assert.Equal(1, state.ProtocolVersion);
+            Assert.Equal(expected[state.Pool], state.ProtocolVersion);
             Assert.Equal(1, state.CurrentEpoch);
             Assert.Equal(0, state.RetiredThrough);
         });

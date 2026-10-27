@@ -231,7 +231,12 @@ public sealed class ProjectOperationMaintenanceTests {
         Assert.Equal(128, result.DeletedReceipts);
         Assert.Equal(384, result.DeletedBytes);
         Assert.Equal(3, cancellation.Disposals);
-        Assert.Equal(FiniteOperationEligibleWork.Present, result.EligibleWork);
+        Assert.Equal(FiniteOperationEligibleWork.Unknown, result.EligibleWork);
+        var definitions = Assert.Single(result.Families, family => family.Family == ProjectFiniteOperationPool.DefinitionFamily);
+        Assert.Equal(FiniteOperationEligibleWork.Present, definitions.EligibleWork);
+        var lifecycle = Assert.Single(result.Families, family => family.Family == ProjectFiniteOperationPool.LifecycleFamily);
+        Assert.Equal(0, lifecycle.CompletedBatches);
+        Assert.Equal(FiniteOperationEligibleWork.Unknown, lifecycle.EligibleWork);
         await using var read = fixture.Context();
         Assert.Single(await read.Set<ProjectDefinitionReceiptRecord>().ToArrayAsync());
     }
@@ -245,7 +250,10 @@ public sealed class ProjectOperationMaintenanceTests {
         var result = await cycle.RunAsync(fixture.Service, fixture.CreateMaintenance(failure), fixture.Binding, CancellationToken.None);
 
         Assert.Equal(FiniteOperationMaintenanceStop.Failed, result.Stop);
-        Assert.Equal(1, result.CompletedBatches);
+        Assert.Equal(2, result.CompletedBatches);
+        Assert.Equal(1, Assert.Single(result.Families, family => family.Family == ProjectFiniteOperationPool.DefinitionFamily).CompletedBatches);
+        Assert.Equal(FiniteOperationEligibleWork.NoneObserved,
+            Assert.Single(result.Families, family => family.Family == ProjectFiniteOperationPool.LifecycleFamily).EligibleWork);
         Assert.Equal(128, result.DeletedReceipts);
         Assert.Equal(384, result.DeletedBytes);
         Assert.Equal(nameof(InvalidOperationException), result.Failure!.Type);
@@ -351,7 +359,8 @@ public sealed class ProjectOperationMaintenanceTests {
 
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
             CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
-            if (IsReceiptDelete(command.CommandText) && ++deletes == 2) {
+            if (IsReceiptDelete(command.CommandText) &&
+                    command.CommandText.Contains(ProjectDefinitionReceiptRecord.TableName, StringComparison.Ordinal) && ++deletes == 2) {
                 throw new InvalidOperationException(PrivateDiagnostic);
             }
             return ValueTask.FromResult(result);

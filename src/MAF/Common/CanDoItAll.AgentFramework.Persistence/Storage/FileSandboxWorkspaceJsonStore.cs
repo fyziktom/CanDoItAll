@@ -47,6 +47,7 @@ internal sealed class FileSandboxWorkspaceJsonReadDiagnostics
 
 internal sealed class FileSandboxWorkspaceJsonStore
 {
+    internal const int SequentialReadBufferSize = 64 * 1024;
     private static readonly JsonSerializerOptions CompactSerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly FileShare SharedReadFileShare = FileShare.ReadWrite | FileShare.Delete;
     private readonly FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics;
@@ -529,7 +530,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
             FileMode.Open,
             FileAccess.Read,
             SharedReadFileShare,
-            bufferSize: 4096,
+            bufferSize: SequentialReadBufferSize,
             options: FileOptions.Asynchronous | FileOptions.SequentialScan);
     }
 

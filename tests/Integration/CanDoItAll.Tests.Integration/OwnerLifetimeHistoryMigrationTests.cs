@@ -22,7 +22,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
         await using var services = CreateProvider(environment.CreatePostgreSqlProfile("fresh"));
         await using var database = await ContextAsync(services);
         await MigrateCurrentAsync(database);
-        Assert.Equal(164, database.Model.GetEntityTypes().Count());
+        Assert.Equal(186, database.Model.GetEntityTypes().Count());
         Assert.False(database.Database.HasPendingModelChanges());
         Assert.Equal(CurrentMigration(database), (await database.Database.GetAppliedMigrationsAsync()).Last());
         foreach (var table in new[] { EvidenceTable.ProcessAssets, EvidenceTable.WorkHistory }) {
@@ -60,13 +60,13 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
             imported.ImportedHistory = ImportChain();
             var secondHistory = Reservation(projectId);
             secondHistory.ImportedHistory = ImportChain();
-            database.AddRange(native, imported, secondHistory);
-            await database.SaveChangesAsync();
+            foreach (var reservation in new[] { native, imported, secondHistory }) {
+                await HistoricalProjectMigrationRows.InsertReservationAsync(database, reservation);
+            }
             expected = await SnapshotDataAsync(database);
 
-            database.Add(Reservation(projectId));
-            var duplicate = await Assert.ThrowsAsync<DbUpdateException>(() => database.SaveChangesAsync());
-            Assert.Equal(PostgresErrorCodes.UniqueViolation, Assert.IsType<PostgresException>(duplicate.InnerException).SqlState);
+            var duplicate = await Assert.ThrowsAsync<PostgresException>(() => HistoricalProjectMigrationRows.InsertReservationAsync(database, Reservation(projectId)));
+            Assert.Equal(PostgresErrorCodes.UniqueViolation, duplicate.SqlState);
             database.ChangeTracker.Clear();
             var clearMarker = await Assert.ThrowsAsync<PostgresException>(() => database.Database.ExecuteSqlInterpolatedAsync($"""
                 UPDATE "Projects_ProjectCreationReservations" SET "ImportedHistory" = NULL WHERE "Id" = {imported.Id}
@@ -75,16 +75,16 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
             var reusedLifetime = Reservation(Guid.NewGuid());
             reusedLifetime.LifetimeId = imported.LifetimeId;
             reusedLifetime.ImportedHistory = ImportChain();
-            database.Add(reusedLifetime);
-            var lifetimeConflict = await Assert.ThrowsAsync<DbUpdateException>(() => database.SaveChangesAsync());
-            Assert.Equal(PostgresErrorCodes.UniqueViolation, Assert.IsType<PostgresException>(lifetimeConflict.InnerException).SqlState);
+            var lifetimeConflict = await Assert.ThrowsAsync<PostgresException>(() => HistoricalProjectMigrationRows.InsertReservationAsync(database, reusedLifetime));
+            Assert.Equal(PostgresErrorCodes.UniqueViolation, lifetimeConflict.SqlState);
             database.ChangeTracker.Clear();
             Assert.Equal(expected, await SnapshotDataAsync(database));
         }
         await using var restarted = CreateProvider(profile);
         await using var readback = await ContextAsync(restarted);
         Assert.Equal(expected, await SnapshotDataAsync(readback));
-        var rows = await readback.Set<ProjectCreationReservationRecord>().AsNoTracking().ToArrayAsync();
+        var rows = await readback.Set<ProjectCreationReservationRecord>().AsNoTracking()
+            .Select(row => new { row.State, row.ImportedHistory }).ToArrayAsync();
         Assert.Equal(3, rows.Length);
         Assert.All(rows, row => Assert.Equal(ProjectCreationReservationState.Reserved, row.State));
         Assert.Single(rows, row => row.ImportedHistory is null);

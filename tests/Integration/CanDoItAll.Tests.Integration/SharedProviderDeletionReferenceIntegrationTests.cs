@@ -78,11 +78,10 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
             publicationProviderId,
             importProviderId);
 
-        await using var sourceDbContext = await dbContextFactory.CreateDbContextAsync();
         await using var targetDatabase = await HistoryPersistenceTestDatabase.CreateAsync();
-        await using var targetDbContext = targetDatabase.Factory.CreateDbContext();
-        var transferContext = CreateTransferContext(sourceDbContext, targetDbContext);
-        var transferHandler = CreateProviderTransferHandler();
+        var transferContext = new DatabaseTransferOperation(scope.ServiceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile,
+            targetDatabase.Profile, ReplaceExisting: true);
+        var transferHandler = CreateProviderTransferHandler(await targetDatabase.ActivateDatasetAsync());
         var preview = await transferHandler.PreviewAsync(transferContext);
         Assert.False(preview.IsAvailable);
         Assert.Contains(
@@ -110,14 +109,11 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
             dbContextFactory,
             SharedProviderProfileReferenceKinds.None);
 
-        await using (var sourceDbContext = await dbContextFactory.CreateDbContextAsync())
-        await using (var targetDbContext = await dbContextFactory.CreateDbContextAsync())
-        {
-            var transferContext = CreateTransferContext(sourceDbContext, targetDbContext);
-            var preview = await CreateProviderTransferHandler().PreviewAsync(transferContext);
-            Assert.True(preview.IsAvailable);
-            Assert.Null(preview.Warning);
-        }
+        var profile = scope.ServiceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
+        var transferContext = new DatabaseTransferOperation(profile, profile, ReplaceExisting: true);
+        var preview = await CreateProviderTransferHandler(scope.ServiceProvider.GetRequiredService<DatasetActivationService>()).PreviewAsync(transferContext);
+        Assert.True(preview.IsAvailable);
+        Assert.Null(preview.Warning);
 
         await scope.ServiceProvider
             .GetRequiredService<IProviderAdministrationService>()
@@ -297,32 +293,9 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
             persistedIds.Order());
     }
 
-    private static AiProvidersDatabaseTransferHandler CreateProviderTransferHandler() {
+    private static AiProvidersDatabaseTransferHandler CreateProviderTransferHandler(DatasetActivationService activation) {
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        return new(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.Create(sessions), [new SharedProviderDatabaseTransferGuard()]);
-    }
-
-    private static DatabaseTransferOperation CreateTransferContext(
-        AppDbContext sourceDbContext,
-        AppDbContext targetDbContext)
-    {
-        var sourceProfile = new ResolvedDatabaseProfile(
-            new DatabaseProfileRecord
-            {
-                DisplayName = "Shared-provider transfer source"
-            },
-            DatabaseProfileResolutionSource.ExplicitOverride,
-            sourceDbContext.Database.GetConnectionString()!);
-        var targetProfile = new ResolvedDatabaseProfile(
-            new DatabaseProfileRecord
-            {
-                DisplayName = "Shared-provider transfer target"
-            },
-            DatabaseProfileResolutionSource.ExplicitOverride,
-            targetDbContext.Database.GetConnectionString()!);
-        return new DatabaseTransferOperation(
-            sourceProfile,
-            targetProfile,
-            ReplaceExisting: true);
+        return new(new SecretDatabaseTransferParticipant(sessions), sessions,
+            DatabaseTransferTestSupport.Create(sessions, activation: activation), [new SharedProviderDatabaseTransferGuard()]);
     }
 }

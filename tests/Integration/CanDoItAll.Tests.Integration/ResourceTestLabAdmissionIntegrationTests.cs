@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.SharedKernel;
@@ -31,7 +32,7 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
             Assert.True(plan.IsSuccess);
             resourceId = resource.Snapshot.Expected.ResourceId;
             planId = plan.Value;
-            await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+            await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
             Assert.NotEqual(original.LifetimeId, (await CreateProjectAsync(services, projectId)).LifetimeId);
         }
         await using var restarted = await TestApplication.CreateAsync(harness);
@@ -87,7 +88,7 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
                 var pending = PlanService(services, factory).SaveAsync(PlanEditor(original), cancellation.Token);
                 await factory.Paused.Task.WaitAsync(TimeSpan.FromSeconds(20));
                 try {
-                    await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+                    await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
                     Assert.NotEqual(original.LifetimeId, (await CreateProjectAsync(services, projectId)).LifetimeId);
                 } finally {
                     factory.Resume.TrySetResult();
@@ -102,6 +103,7 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
             } else {
                 var ordinary = services.GetRequiredService<ResourcesService>();
                 var command = await ResourceMetadataTestCommands.NewAsync(ordinary, ResourceEditor(original));
+                var deletionIntent = await ProjectLifecycleTestCommands.CaptureDeleteAsync(services, projectId, cancellation.Token);
                 var factory = new PausingFactory<ResourcesDbContext>(services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>(), pauseAt == 1 ? 1 : int.MaxValue);
                 var enteredSearch = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 var resumeSearch = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -117,14 +119,18 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
                 try {
                     if (pauseAt == 1) {
                         await factory.Paused.Task.WaitAsync(TimeSpan.FromSeconds(20));
-                        await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+                        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
                     } else {
                         await enteredSearch.Task.WaitAsync(TimeSpan.FromSeconds(20));
                         var holderPid = ((Npgsql.NpgsqlConnection)factory.LastContext!.Database.GetDbConnection()).ProcessID;
                         var deletionFactory = new PausingFactory<ProjectsDbContext>(
                             services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>(), int.MaxValue);
-                        var deletion = ActivatorUtilities.CreateInstance<ProjectsService>(services, deletionFactory);
-                        retirement = deletion.DeleteAsync(projectId, cancellation.Token);
+                        var writer = ActivatorUtilities.CreateInstance<ProjectLifecycleWriter>(services, deletionFactory);
+                        var deletion = ActivatorUtilities.CreateInstance<ProjectNativeLifecycleOperations>(services, writer);
+                        retirement = RetireAsync();
+                        async Task RetireAsync() {
+                            ProjectLifecycleTestCommands.RequireAccepted(await deletion.DispatchAsync(deletionIntent, cancellation.Token));
+                        }
                         while (deletionFactory.LastContext?.Database.GetDbConnection().State != System.Data.ConnectionState.Open) {
                             await Task.Delay(10, cancellation.Token);
                         }
@@ -193,7 +199,7 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         var request = new StorageObjectResourceWriteRequest(projectId, "Original resource", ResourceSensitivity.Normal, config, original,
             await services.GetRequiredService<ResourcesService>().ReadContextAsync(), Guid.NewGuid());
         var first = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(await writer.SaveAsync(request));
-        await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
         var replacement = await CreateProjectAsync(services, projectId);
 
         var denied = Assert.IsType<StorageObjectResourceWriteResult.Rejected>(await writer.SaveAsync(request));

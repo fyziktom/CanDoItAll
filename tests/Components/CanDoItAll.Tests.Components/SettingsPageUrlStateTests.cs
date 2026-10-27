@@ -66,7 +66,11 @@ public sealed class SettingsPageUrlStateTests {
         navigation.NavigateTo($"http://localhost/settings?tab=secrets&secretId={secretId:D}");
 
         var cut = harness.Context.Render<SettingsPage>();
-        cut.WaitForAssertion(() => Assert.Equal("Addressable secret", cut.Find("[data-testid='secret-name']").GetAttribute("value")));
+        cut.WaitForAssertion(() => {
+            Assert.Equal("Addressable secret", cut.Find("[data-testid='secret-name']").GetAttribute("value"));
+            Assert.Single(cut.FindAll(".cda-selection-list-item__button"),
+                button => button.TextContent.Contains("Addressable secret", StringComparison.Ordinal));
+        });
         var entries = navigation.History.Count;
 
         await cut.InvokeAsync(() => Tab(cut, "Files").ClickAsync(new()));

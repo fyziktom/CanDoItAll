@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Plugins;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.Tests.Support;
@@ -155,6 +156,7 @@ public sealed partial class MigrationAuthorityIntegrationTests {
         }
 
         Guid? projectLifetime = null;
+        Guid? projectRevision = null;
         for (var restart = 0; restart < 2; restart++) {
             await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
                 profile, ApplicationName, TestSchemaBootstrapModules.Full);
@@ -163,6 +165,11 @@ public sealed partial class MigrationAuthorityIntegrationTests {
             Assert.Equal(savedRecords, await ReadRecordsAsync(context, ids));
             AssertRetainedSchema(legacySchema, await ReadSchemaAsync(context));
             Assert.Equal(savedGraphRows, await ReadRetainedGraphRowsAsync(context, graph));
+            var revision = await context.Set<Project>().Where(row => row.Id == graph.ProjectId)
+                .Select(row => row.ConcurrencyToken).SingleAsync();
+            Assert.NotEqual(Guid.Empty, revision);
+            Assert.Equal(projectRevision ?? revision, revision);
+            projectRevision = revision;
             projectLifetime = await AssertRetainedGraphAsync(provider, profile, graph, projectLifetime);
         }
     }
@@ -294,7 +301,7 @@ public sealed partial class MigrationAuthorityIntegrationTests {
         Assert.Equal(PostgreSqlMigrationBaseline.CurrentMigrationId, known[0]);
         Assert.Equal(known, await context.Database.GetAppliedMigrationsAsync());
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(164, context.Model.GetEntityTypes().Count());
+        Assert.Equal(186, context.Model.GetEntityTypes().Count());
     }
 
     private static async Task<FixtureIds> SeedRecordsAsync(AppDbContext context, RetainedGraph graph) {

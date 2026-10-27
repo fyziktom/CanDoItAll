@@ -10,6 +10,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <EmbeddedResource Include="Fixtures/Processes/PrePc3/*.json" />
+    <InternalsVisibleTo Include="CanDoItAll.Tests.Unit" />
   </ItemGroup>
 
   <ItemGroup>

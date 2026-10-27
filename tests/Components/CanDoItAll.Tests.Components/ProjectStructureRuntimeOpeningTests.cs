@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Security.Claims;
 using System.Text.Json;
 using Bunit;
@@ -71,7 +72,7 @@ public sealed partial class ProjectStructureRuntimeOpeningTests {
                 await database.SaveChangesAsync();
             } else if (change == ApprovalChange.ProjectLifetime) {
                 var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
-                await projects.DeleteAsync(target.ProjectId, expectedProjectAdmission: target.Admission);
+                await ProjectLifecycleTestCommands.DeleteAsync(harness.Context.Services, target.ProjectId, expectedProjectAdmission: target.Admission);
                 Assert.True((await projects.CreateAsync(target.ProjectId, new() { Name = "Replacement runtime project" })).IsSuccess);
             } else if (change == ApprovalChange.Navigation) {
                 harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/projects");

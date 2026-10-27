@@ -63,7 +63,7 @@ public sealed class ProjectWriteAdmissionIntegrationTests {
         var editor = await projects.GetAsync(projectId);
         var oldAdmission = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureAsync(projectId));
         Assert.Equal(oldAdmission.LifetimeId, editor.ExpectedLifetimeId);
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
         Assert.Null(await admissions.CaptureAsync(projectId));
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Restored with same public id" })).IsSuccess);
         var current = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureAsync(projectId));
@@ -112,7 +112,7 @@ public sealed class ProjectWriteAdmissionIntegrationTests {
                 var committedRows = await committedSearch.Set<SearchDocument>().Where(document => document.ProjectId == projectId).ToArrayAsync(timeout.Token);
                 Assert.Equal("Old delayed search", Assert.Single(committedRows).Title);
             }
-            await currentProjects.DeleteAsync(projectId, timeout.Token);
+            await ProjectLifecycleTestCommands.DeleteAsync(deletionScope.ServiceProvider, projectId, timeout.Token);
             if (recreate) {
                 Assert.True((await currentProjects.CreateAsync(projectId, new() { Name = "Current restored search" }, timeout.Token)).IsSuccess);
                 var current = await currentProjects.GetAsync(projectId, timeout.Token);

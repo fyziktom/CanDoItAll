@@ -149,7 +149,7 @@ internal sealed class FileSandboxWorkspaceMutationWitness {
         policy.EnsureSafePath(path, allowMissingLeaf: true);
         FileStream stream;
         try {
-            stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 4096,
+            stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, FileSandboxWorkspaceJsonStore.SequentialReadBufferSize,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
         } catch (FileNotFoundException) {
             return new(path, kind, null, null);

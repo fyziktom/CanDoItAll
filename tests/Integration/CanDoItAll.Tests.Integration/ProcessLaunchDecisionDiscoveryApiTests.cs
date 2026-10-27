@@ -73,14 +73,6 @@ public sealed class ProcessLaunchDecisionDiscoveryApiTests {
         using var contract = JsonDocument.Parse(await host.Client.GetStringAsync("/api/processes/contract"));
         Assert.Contains(contract.RootElement.GetProperty("endpoints").EnumerateArray(), item => item.GetString() == $"GET {Route}");
 
-        JsonElement Resolve(JsonElement schema) {
-            while (schema.TryGetProperty("$ref", out var reference)) {
-                schema = root;
-                foreach (var segment in reference.GetString()![2..].Split('/')) {
-                    schema = schema.GetProperty(segment.Replace("~1", "/").Replace("~0", "~"));
-                }
-            }
-            return schema;
-        }
+        JsonElement Resolve(JsonElement schema) => OpenApiSchemaAssertions.Resolve(root, schema);
     }
 }

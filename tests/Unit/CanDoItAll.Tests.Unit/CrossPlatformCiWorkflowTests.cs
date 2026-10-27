@@ -19,12 +19,14 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
     }
 
-    [Fact]
+    [Theory]
     [Trait("Category", "UnixPortabilityCore")]
-    public void Moving_a_pin_to_another_immutable_commit_needs_no_second_edit()
+    [InlineData("CANDOITALL_COMPONENTS_COMMIT")]
+    [InlineData("CANDOITALL_FILETOOLS_COMMIT")]
+    public void Moving_a_pin_to_another_immutable_commit_needs_no_second_edit(string pinKey)
     {
         string workflow = ReadActiveWorkflow();
-        string moved = ReplacePin(workflow, "CANDOITALL_FILETOOLS_COMMIT", "0123456789abcdef0123456789abcdef01234567");
+        string moved = ReplacePin(workflow, pinKey, "0123456789abcdef0123456789abcdef01234567");
 
         Assert.NotEqual(workflow, moved);
         Assert.Empty(CiWorkflowPolicy.Validate(moved));
@@ -33,6 +35,7 @@ public sealed class CrossPlatformCiWorkflowTests
     [Theory]
     [Trait("Category", "UnixPortabilityCore")]
     [InlineData("branch-pin")]
+    [InlineData("components-branch-pin")]
     [InlineData("literal-checkout-ref")]
     [InlineData("pr-source-branch")]
     [InlineData("missing-resolver-dependency")]
@@ -55,11 +58,12 @@ public sealed class CrossPlatformCiWorkflowTests
         string weakened = weakening switch
         {
             "branch-pin" => ReplacePin(workflow, "CANDOITALL_FILETOOLS_COMMIT", "development"),
+            "components-branch-pin" => ReplacePin(workflow, "CANDOITALL_COMPONENTS_COMMIT", "development"),
             "literal-checkout-ref" => ReplaceFirst(
                 workflow,
                 "ref: ${{ needs.dependencies.outputs.components-commit }}",
                 "ref: development"),
-            "pr-source-branch" => ReplaceFirst(workflow, "github.base_ref || github.ref_name", "github.head_ref || github.ref_name"),
+            "pr-source-branch" => ReplaceFirst(workflow, "env.CANDOITALL_COMPONENTS_COMMIT", "github.head_ref || github.ref_name"),
             "missing-resolver-dependency" => ReplaceFirst(workflow, "    needs: dependencies\n", string.Empty),
             "broad-file-copy" => ReplaceFirst(workflow, "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG", "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: FILE_COPY"),
             "missing-source-asset-check" => RemoveFirstStep(workflow, SourceAssetStepName),
@@ -242,7 +246,8 @@ public sealed class CrossPlatformCiWorkflowTests
     {
         private const string ComponentsRepository = "fyziktom/CanDoItAll.Components";
         private const string FileToolsPinKey = "CANDOITALL_FILETOOLS_COMMIT";
-        private const string ComponentsBranchRef = "${{ github.base_ref || github.ref_name }}";
+        private const string ComponentsPinKey = "CANDOITALL_COMPONENTS_COMMIT";
+        private const string ComponentsPinRef = "${{ env.CANDOITALL_COMPONENTS_COMMIT }}";
         private const string ComponentsCommitRef = "${{ needs.dependencies.outputs.components-commit }}";
         private static readonly string[] Siblings = [ComponentsRepository, "fyziktom/CanDoItAll.FileTools"];
 
@@ -304,9 +309,11 @@ public sealed class CrossPlatformCiWorkflowTests
             string workflow = workflowText.Replace("\r\n", "\n", StringComparison.Ordinal);
             var violations = new List<string>();
 
-            Match pin = Regex.Match(workflow, $"(?m)^  {FileToolsPinKey}:[ \\t]*(\\S+)[ \\t]*$");
-            if (!pin.Success || !Regex.IsMatch(pin.Groups[1].Value, "^[0-9a-f]{40}$")) {
-                violations.Add($"{FileToolsPinKey} must declare an immutable 40-character commit.");
+            foreach (var pinKey in new[] { ComponentsPinKey, FileToolsPinKey }) {
+                Match pin = Regex.Match(workflow, $"(?m)^  {pinKey}:[ \\t]*(\\S+)[ \\t]*$");
+                if (!pin.Success || !Regex.IsMatch(pin.Groups[1].Value, "^[0-9a-f]{40}$")) {
+                    violations.Add($"{pinKey} must declare an immutable 40-character commit.");
+                }
             }
 
             foreach (var (jobName, steps) in Jobs(workflow))
@@ -358,7 +365,7 @@ public sealed class CrossPlatformCiWorkflowTests
 
                     string checkoutPath = repository[(repository.IndexOf('/') + 1)..];
                     string expectedRef = repository == ComponentsRepository
-                        ? jobName == "dependencies" ? ComponentsBranchRef : ComponentsCommitRef
+                        ? jobName == "dependencies" ? ComponentsPinRef : ComponentsCommitRef
                         : $"${{{{ env.{FileToolsPinKey} }}}}";
                     if (!step.Contains($"ref: {expectedRef}", StringComparison.Ordinal)) {
                         violations.Add($"Job {jobName} checks out {repository} without consuming {expectedRef}.");

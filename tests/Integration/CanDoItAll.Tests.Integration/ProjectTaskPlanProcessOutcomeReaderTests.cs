@@ -18,6 +18,7 @@ using static CanDoItAll.Tests.Integration.Processes.ProcessDecisionPersistenceFi
 namespace CanDoItAll.Tests.Integration;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectTaskPlanProcessOutcomeReaderTests {
     [Theory]
     [InlineData(AfterPublication.None)]

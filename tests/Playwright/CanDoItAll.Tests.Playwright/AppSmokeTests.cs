@@ -1391,18 +1391,26 @@ public sealed partial class AppSmokeTests
         var settingsButtonText = await settingsButton.TextContentAsync();
         Assert.DoesNotContain("cfg", settingsButtonText ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
-        var toolbarBounds = await page.Locator(".cw-toolbar").BoundingBoxAsync();
-        Assert.NotNull(toolbarBounds);
         await settingsButton.ClickAsync();
 
         var settingsOverlay = page.GetByTestId("canvas-settings-overlay");
         var settingsDialog = settingsOverlay.GetByRole(AriaRole.Dialog, new() { Name = "Canvas settings" });
         await settingsDialog.WaitForAsync();
-        var settingsBounds = await settingsDialog.BoundingBoxAsync();
-        Assert.NotNull(settingsBounds);
+        var geometry = await settingsDialog.EvaluateAsync<CanvasSettingsGeometry>("""
+            dialog => {
+                const toolbar = dialog.closest('.cw-workbench-frame').querySelector('.cw-toolbar');
+                if (!toolbar) {
+                    throw new Error('The settings dialog has no owning canvas toolbar.');
+                }
+                return {
+                    DialogTop: dialog.getBoundingClientRect().top,
+                    ToolbarBottom: toolbar.getBoundingClientRect().bottom
+                };
+            }
+            """);
         Assert.True(
-            settingsBounds!.Y >= toolbarBounds!.Y + toolbarBounds.Height - 1,
-            $"Expected settings dialog to render below the toolbar safe zone. DialogTop={settingsBounds.Y}, ToolbarBottom={toolbarBounds.Y + toolbarBounds.Height}.");
+            geometry.DialogTop >= geometry.ToolbarBottom - 1,
+            $"Expected settings dialog to render below the toolbar safe zone. DialogTop={geometry.DialogTop}, ToolbarBottom={geometry.ToolbarBottom}.");
         await CaptureLocatorAsync(settingsDialog, Path.Combine(artifactsDir, "03-settings-safe-zone.png"));
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -2133,28 +2141,16 @@ public sealed partial class AppSmokeTests
         Assert.True(selected, $"Expected runtime selection bridge to select '{selector}'.");
     }
 
-    private static async Task SelectStructureOutlineNodeAsync(IPage page, string title)
-    {
+    private static async Task SelectStructureOutlineNodeAsync(IPage page, string title) {
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
-
         var outlineItem = page.GetByTestId("project-structure-object-index-window")
             .Locator(".cda-treeview__row")
-            .Filter(new LocatorFilterOptions
-            {
-                HasText = title
-            })
-            .First;
-
-        await outlineItem.WaitForAsync();
+            .Filter(new() { Has = page.GetByText(title, new() { Exact = true }) });
+        await Assertions.Expect(outlineItem).ToHaveCountAsync(1);
         await outlineItem.ClickAsync();
-        await page.WaitForFunctionAsync(
-            @"expectedTitle => {
-                const selectionWindow = document.querySelector('[data-testid=""project-structure-selection-window""]');
-                return !!selectionWindow && (selectionWindow.textContent || '').includes(expectedTitle);
-            }",
-            title);
+        await Assertions.Expect(page.GetByTestId("project-structure-selection-window")
+            .Locator(".cw-floating-window__title")).ToHaveTextAsync(title);
     }
-
     private static async Task FocusCanvasRootAsync(IPage page)
     {
         var button = page.GetByRole(AriaRole.Button, new() { Name = "Focus root", Exact = true });
@@ -5294,6 +5290,12 @@ public sealed partial class AppSmokeTests
         public int BackdropZIndex { get; set; }
 
         public bool DialogOwnsCenterPoint { get; set; }
+    }
+
+    private sealed class CanvasSettingsGeometry {
+        public double DialogTop { get; set; }
+
+        public double ToolbarBottom { get; set; }
     }
 
     private sealed record CanvasInputValueSeed(string Key, string Value);

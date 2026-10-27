@@ -436,8 +436,10 @@ public sealed partial class ProcessDecisionMaterialPersistenceTests {
     internal static Task MigrateAsync(ProcessPersistenceDbContext context, bool down, bool sharedOnly = false) {
         Migration[] migrations = [new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionMaterials(),
             new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedMaterialContracts(),
-            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedRunMaterialScopes()];
-        return ProcessDecisionMigrationFixture.ApplyAsync(context, down, sharedOnly ? [migrations[1], migrations[2]] : migrations);
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedRunMaterialScopes(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRefreshAdmission(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRefreshCaptureJournal()];
+        return ProcessDecisionMigrationFixture.ApplyAsync(context, down, sharedOnly ? migrations[1..] : migrations);
     }
 
     private sealed class AfterMaterialFlush : SaveChangesInterceptor {

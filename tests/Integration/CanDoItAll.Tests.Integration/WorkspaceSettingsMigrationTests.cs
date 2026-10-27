@@ -17,6 +17,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class WorkspaceSettingsMigrationTests {
     private const string PreviousMigration = "20261016163615_AddProjectDefinitionOperationLifecycle";
     private static readonly DateTimeOffset SavedAt = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);

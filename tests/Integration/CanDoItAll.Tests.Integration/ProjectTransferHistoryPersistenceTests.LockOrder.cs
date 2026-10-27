@@ -17,7 +17,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed partial class ProjectTransferHistoryPersistenceTests {
     [Fact]
-    public async Task Project_import_waits_before_its_snapshot_and_refuses_newly_committed_definition_receipt() {
+    public async Task Project_import_refuses_lifecycle_contention_and_then_observes_the_committed_definition_receipt() {
         await using var fixture = await TransferFixture.CreateAsync();
         var sourceProjectId = await SeedImportProjectAsync(fixture);
         var activation = fixture.TargetServices.GetRequiredService<DatasetActivationService>();
@@ -29,27 +29,21 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         var receipt = DatabaseTransferLifecycleTests.Receipt(binding, targetProject);
         writer.AddRange(targetProject, receipt);
         await writer.SaveChangesAsync();
-        var probe = new ImportOrderProbe();
-        var transfer = fixture.TransferAsync(probe);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        try {
-            var processId = await probe.LifecycleStarted.Task.WaitAsync(deadline.Token);
-            await using var observer = await fixture.TargetContextAsync();
-            await WaitForRelationWaiterAsync(observer, processId, deadline.Token);
-            await transaction.CommitAsync(deadline.Token);
-            var result = await transfer.WaitAsync(deadline.Token);
-            Assert.False(result.Success);
-            Assert.Equal(0, result.RecordsCopied);
-            Assert.Contains("retained project definition receipts", result.Message, StringComparison.Ordinal);
-            AssertImportCommandOrder(probe);
-            Assert.False(await observer.Set<Project>().AnyAsync(row => row.Id == sourceProjectId, deadline.Token));
-            Assert.True(await observer.Set<Project>().AnyAsync(row => row.Id == targetProject.Id, deadline.Token));
-            Assert.True(await observer.Set<ProjectDefinitionReceiptRecord>().AnyAsync(row => row.OperationId == receipt.OperationId, deadline.Token));
-            await RequireGateAvailableAsync(observer, ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey, deadline.Token);
-        } finally {
-            await transaction.DisposeAsync();
-            await transfer.WaitAsync(deadline.Token);
-        }
+        var busy = await Assert.ThrowsAsync<PostgresException>(() => fixture.TransferAsync().WaitAsync(deadline.Token));
+        Assert.Equal(PostgresErrorCodes.LockNotAvailable, busy.SqlState);
+        await transaction.CommitAsync(deadline.Token);
+        var probe = new ImportOrderProbe();
+        var result = await fixture.TransferAsync(probe).WaitAsync(deadline.Token);
+        Assert.False(result.Success);
+        Assert.Equal(0, result.RecordsCopied);
+        Assert.Contains("retained project definition receipts", result.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(probe.Commands, command => command.Sql.StartsWith("LOCK TABLE", StringComparison.Ordinal));
+        await using var observer = await fixture.TargetContextAsync();
+        Assert.False(await observer.Set<Project>().AnyAsync(row => row.Id == sourceProjectId, deadline.Token));
+        Assert.True(await observer.Set<Project>().AnyAsync(row => row.Id == targetProject.Id, deadline.Token));
+        Assert.True(await observer.Set<ProjectDefinitionReceiptRecord>().AnyAsync(row => row.OperationId == receipt.OperationId, deadline.Token));
+        await RequireGateAvailableAsync(observer, ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey, deadline.Token);
     }
 
     [Fact]
@@ -264,7 +258,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
     private static void AssertImportCommandOrder(ImportOrderProbe probe) {
         var commands = probe.Commands.ToArray();
         var lifecycleIndex = Array.FindIndex(commands, command => command.Sql ==
-            "LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN EXCLUSIVE MODE");
+            "LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN EXCLUSIVE MODE NOWAIT");
         Assert.True(lifecycleIndex > 0);
         Assert.All(commands.Take(lifecycleIndex).Where(command => command.Transaction is not null),
             command => Assert.Equal("SET LOCAL lock_timeout = '5s'", command.Sql));
@@ -313,7 +307,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
             if (command.CommandText.Contains("pg_advisory_lock(", StringComparison.Ordinal)) {
                 AdvisoryStarted.TrySetResult(((NpgsqlConnection)command.Connection!).ProcessID);
             }
-            if (command.CommandText == "LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN EXCLUSIVE MODE") {
+            if (command.CommandText == "LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN EXCLUSIVE MODE NOWAIT") {
                 LifecycleStarted.TrySetResult(((NpgsqlConnection)command.Connection!).ProcessID);
             }
         }

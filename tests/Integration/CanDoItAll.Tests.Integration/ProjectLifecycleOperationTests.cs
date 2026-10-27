@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class ProjectLifecycleOperationTests {
     [Fact]
     public Task Receipt_failure_rolls_back_deletion_retirement_completion_and_preserves_the_original_project() {

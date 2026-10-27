@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -14,6 +15,7 @@ internal static class AgentHistoricalReceiptsApi {
     internal static void MapAgentHistoricalReceiptsApi(this RouteGroupBuilder agents) {
         agents.MapPost("/execution-runs/{executionRunId:guid}/saved-receipts/read", ReadAsync)
             .WithName(EndpointName)
+            .WithMetadata(new ApiEndpointDocumentation("One page of saved owner observations; reading does not authorize another effect.", "Original saved run and effect selection with paging bounds; maximum 4096 UTF-8 bytes."))
             .WithApiPermission(ApiAccessScopeNames.ReadAgents)
             .WithSummary("Review one page of original saved effect receipts.")
             .WithDescription("Reads at most four currently authorized original owner receipts. This explicit read does not resume execution, recover or update journal files, release coordination warnings, approve tools, or retry effects. Preserve the original request and lossless cursor revisions; a changed snapshot or current context requires explicit view refresh. Each request is limited to 4096 UTF-8 bytes. Receipt observations are ephemeral and contain no accepted payload or source credentials.")
@@ -23,7 +25,7 @@ internal static class AgentHistoricalReceiptsApi {
                 StatusCodes.Status413PayloadTooLarge, StatusCodes.Status415UnsupportedMediaType, StatusCodes.Status503ServiceUnavailable);
     }
 
-    internal static async Task<IResult> ReadAsync(Guid executionRunId, HttpContext context,
+    internal static async Task<IResult> ReadAsync([Description("Original saved Agent execution run ID; reading receipts does not resume it.")] Guid executionRunId, HttpContext context,
         Func<IAgentHistoricalReceiptReviewService> historicalReceipts, IOptions<JsonOptions> options, CancellationToken cancellationToken) {
         context.Response.Headers.CacheControl = "no-store";
         if (!context.Request.HasJsonContentType()) {

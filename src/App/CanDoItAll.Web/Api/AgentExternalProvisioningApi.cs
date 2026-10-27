@@ -12,6 +12,7 @@ internal static class AgentExternalProvisioningApi
     {
         agents.MapGet("/by-external-key/{externalNamespace}/{key}", GetAsync)
             .WithName("GetAgentByExternalKey")
+            .WithMetadata(new ApiEndpointDocumentation("Current Agent with its opaque workspace-bound configuration version.", null))
             .Produces<AgentExternalProvisioningResource>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)

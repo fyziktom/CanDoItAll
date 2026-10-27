@@ -16,7 +16,12 @@ internal sealed class HistoricalFileObservation : IDisposable {
     private readonly string sentinel;
     private readonly string renamedSentinel;
     private readonly object sync = new();
+    private TaskCompletionSource? created;
+    private TaskCompletionSource? changed;
+    private TaskCompletionSource? relocated;
     private TaskCompletionSource? deleted;
+    private bool originalRemoved;
+    private bool destinationCreated;
     private Exception? failure;
     private int eventCount;
     private int nonsentinelEventCount;
@@ -47,11 +52,6 @@ internal sealed class HistoricalFileObservation : IDisposable {
         try {
             var setup = Stopwatch.StartNew();
             await observation.BarrierAsync(RemainingSetupBudget(setup));
-            var calibration = observation.events.ToArray();
-            Assert.Contains(calibration, item => item.Kind == WatcherChangeTypes.Created);
-            Assert.Contains(calibration, item => item.Kind == WatcherChangeTypes.Changed);
-            Assert.Contains(calibration, item => item.Kind == WatcherChangeTypes.Renamed);
-            Assert.Contains(calibration, item => item.Kind == WatcherChangeTypes.Deleted);
             observation.ObserveExistingDirectoryMetadata(setup);
             await observation.DrainSetupAsync(setup);
             lock (observation.sync) {
@@ -134,14 +134,23 @@ internal sealed class HistoricalFileObservation : IDisposable {
     }
 
     private async Task BarrierAsync(TimeSpan? timeout = null) {
+        using var budget = new CancellationTokenSource(timeout ?? SetupBudget);
         lock (sync) {
+            created = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            relocated = new(TaskCreationOptions.RunContinuationsAsynchronously);
             deleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            originalRemoved = false;
+            destinationCreated = false;
         }
-        await File.WriteAllBytesAsync(sentinel, [1]);
-        await File.AppendAllTextAsync(sentinel, "barrier");
+        await File.WriteAllBytesAsync(sentinel, [1], budget.Token);
+        await created.Task.WaitAsync(budget.Token);
+        await File.AppendAllTextAsync(sentinel, "barrier", budget.Token);
+        await changed.Task.WaitAsync(budget.Token);
         File.Move(sentinel, renamedSentinel);
+        await relocated.Task.WaitAsync(budget.Token);
         File.Delete(renamedSentinel);
-        await deleted.Task.WaitAsync(timeout ?? TimeSpan.FromSeconds(5));
+        await deleted.Task.WaitAsync(budget.Token);
         Assert.Null(failure);
     }
 
@@ -154,6 +163,18 @@ internal sealed class HistoricalFileObservation : IDisposable {
             events.Enqueue((args.ChangeType, args.FullPath));
             if (args.FullPath != sentinel && args.FullPath != renamedSentinel) {
                 nonsentinelEventCount++;
+            }
+            if (args.ChangeType == WatcherChangeTypes.Created && args.FullPath == sentinel) {
+                created?.TrySetResult();
+            }
+            if (args.ChangeType == WatcherChangeTypes.Changed && args.FullPath == sentinel) {
+                changed?.TrySetResult();
+            }
+            originalRemoved |= args.ChangeType == WatcherChangeTypes.Deleted && args.FullPath == sentinel;
+            destinationCreated |= args.ChangeType == WatcherChangeTypes.Created && args.FullPath == renamedSentinel;
+            if ((args is RenamedEventArgs rename && rename.OldFullPath == sentinel && rename.FullPath == renamedSentinel)
+                || (originalRemoved && destinationCreated)) {
+                relocated?.TrySetResult();
             }
             if (args.ChangeType == WatcherChangeTypes.Deleted && args.FullPath == renamedSentinel) {
                 deleted?.TrySetResult();

@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using Bunit;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Projects;
@@ -306,7 +307,7 @@ public sealed partial class ProjectStructurePageWorkflowNodeTests {
         await OpenWorkflowAsync(cut, $"project:{projectId}");
         await cut.Find($"[data-testid='project-structure-workflow-add-option-{workflow.Id.Value:N}']").ClickAsync(new MouseEventArgs());
         var original = WorkflowDialogs(cut).WorkflowAddDialog!;
-        await projects.DeleteAsync(projectId, expectedProjectAdmission: original.OpenedSurface!.ExpectedProjectAdmission);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId, expectedProjectAdmission: original.OpenedSurface!.ExpectedProjectAdmission);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Replacement project" })).IsSuccess);
         await cut.InvokeAsync(() => WorkflowDialogs(cut).ExecuteWorkflowAdd.InvokeAsync());
         var replacement = await services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(projectId);

@@ -28,32 +28,35 @@ public sealed class SharedProviderFinalUiTests {
         var originalAlias = await page.GetByTestId("shared-provider-import-alias").InputValueAsync();
         var originalEnabled = await page.GetByTestId("shared-provider-import-enabled").IsCheckedAsync();
         await OpenSharingAsync(other, fixture.Settings.Clients[0], profile.Name);
-        var suffix = Guid.NewGuid().ToString("N")[..8];
-        var firstAlias = "PP2C other first " + suffix;
-        await SaveLocalAsync(other, firstAlias, false);
-        await AssertNativeAsync(firstAlias, false);
-        await page.GetByTestId("providers-refresh").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("shared-provider-import-alias")).ToHaveValueAsync(firstAlias);
-        await Assertions.Expect(page.GetByTestId("shared-provider-import-enabled")).Not.ToBeCheckedAsync();
-        var mine = "PP2C my edited alias " + suffix;
-        await page.GetByTestId("shared-provider-import-alias").FillAsync(mine);
-        var secondAlias = "PP2C other second " + suffix;
-        await SaveLocalAsync(other, secondAlias, true);
-        await AssertNativeAsync(secondAlias, true);
-        await page.GetByTestId("providers-refresh").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("shared-provider-import-conflict")).ToBeVisibleAsync();
-        await Assertions.Expect(page.GetByTestId("shared-provider-import-alias")).ToHaveValueAsync(mine);
-        await Assertions.Expect(page.GetByTestId("shared-provider-import-enabled")).Not.ToBeCheckedAsync();
-        await Assertions.Expect(page.GetByTestId("shared-provider-import-save")).ToBeDisabledAsync();
-        await page.GetByTestId("shared-provider-import-alias").PressAsync("Enter");
-        await AssertNativeAsync(secondAlias, true);
-        await fixture.ScreenshotAsync("final-two-circuit-conflict");
-        await page.GetByTestId("shared-provider-import-keep-edits").ClickAsync();
-        await Assertions.Expect(page.GetByTestId("shared-provider-import-enabled")).ToBeCheckedAsync();
-        await page.GetByTestId("shared-provider-import-save").ClickAsync();
-        await AssertNativeAsync(mine, true);
-        await SaveLocalAsync(page, originalAlias, originalEnabled);
-        await AssertNativeAsync(profile.Name, profile.IsEnabled);
+        await RunWithRestorationAsync(async () => {
+            var suffix = Guid.NewGuid().ToString("N")[..8];
+            var firstAlias = "PP2C other first " + suffix;
+            await SaveLocalAsync(other, firstAlias, false);
+            await AssertNativeAsync(firstAlias, false);
+            await page.GetByTestId("providers-refresh").ClickAsync();
+            await Assertions.Expect(page.GetByTestId("shared-provider-import-alias")).ToHaveValueAsync(firstAlias);
+            await Assertions.Expect(page.GetByTestId("shared-provider-import-enabled")).Not.ToBeCheckedAsync();
+            var mine = "PP2C my edited alias " + suffix;
+            await page.GetByTestId("shared-provider-import-alias").FillAsync(mine);
+            var secondAlias = "PP2C other second " + suffix;
+            await SaveLocalAsync(other, secondAlias, true);
+            await AssertNativeAsync(secondAlias, true);
+            await page.GetByTestId("providers-refresh").ClickAsync();
+            await Assertions.Expect(page.GetByTestId("shared-provider-import-conflict")).ToBeVisibleAsync();
+            await Assertions.Expect(page.GetByTestId("shared-provider-import-alias")).ToHaveValueAsync(mine);
+            await Assertions.Expect(page.GetByTestId("shared-provider-import-enabled")).Not.ToBeCheckedAsync();
+            await Assertions.Expect(page.GetByTestId("shared-provider-import-save")).ToBeDisabledAsync();
+            await page.GetByTestId("shared-provider-import-alias").PressAsync("Enter");
+            await AssertNativeAsync(secondAlias, true);
+            await fixture.ScreenshotAsync("final-two-circuit-conflict");
+            await page.GetByTestId("shared-provider-import-keep-edits").ClickAsync();
+            await Assertions.Expect(page.GetByTestId("shared-provider-import-enabled")).ToBeCheckedAsync();
+            await SubmitLocalAsync(page);
+            await AssertNativeAsync(mine, true);
+        }, async () => {
+            await RestoreLocalAsync(fixture, profile.Id, originalAlias, originalEnabled);
+            await AssertNativeAsync(profile.Name, profile.IsEnabled);
+        });
         await fixture.EvidenceAsync("final-two-circuit-concurrency", new {
             profile.Id, CleanAdoptsOtherValues = true, DirtySaveRefused = true,
             ExplicitMergePreservesOtherEnabledChange = true, Restored = true
@@ -78,76 +81,75 @@ public sealed class SharedProviderFinalUiTests {
         var profile = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api),
             item => item.IsSourceManaged && item.Name == "PP2 Remote Ollama");
         var page = fixture.Page;
-        var source = await OpenSourceAsync(fixture);
+        var source = await OpenSourceAsync(fixture, page);
         var sourceId = Guid.Parse((await source.GetAttributeAsync("data-source-id"))!);
-        await source.GetByTestId("shared-provider-source-edit").ClickAsync();
-        var sourceEditor = page.GetByTestId("shared-provider-source-dialog");
-        await sourceEditor.GetByTestId("shared-provider-source-private").UncheckAsync();
-        var originalUri = await sourceEditor.GetByTestId("shared-provider-source-uri").InputValueAsync();
-        await sourceEditor.GetByTestId("shared-provider-source-save").ClickAsync();
-        await Assertions.Expect(sourceEditor.GetByTestId("shared-provider-source-editor-error")).ToBeVisibleAsync();
-        await Assertions.Expect(sourceEditor.GetByTestId("shared-provider-source-uri")).ToHaveValueAsync(originalUri);
-        await fixture.ScreenshotAsync("final-source-http-policy-refusal");
-        await sourceEditor.GetByTestId("shared-provider-source-cancel").ClickAsync();
-        await source.GetByTestId("shared-provider-source-edit").ClickAsync();
-        await Assertions.Expect(sourceEditor.GetByTestId("shared-provider-source-private")).ToBeCheckedAsync();
-        await Assertions.Expect(sourceEditor.GetByTestId("shared-provider-source-uri")).ToHaveValueAsync(originalUri);
-        await sourceEditor.GetByTestId("shared-provider-source-cancel").ClickAsync();
-        await source.GetByTestId("shared-provider-source-toggle").ClickAsync();
-        await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToHaveTextAsync("Enable");
-        await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToBeEnabledAsync();
-        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
-        await OpenSharingAsync(page, fixture.Settings.Clients[0], profile.Name);
-        var disabled = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
-        Assert.False(disabled.IsEnabled);
-        Assert.Equal("SourceDisabled", disabled.HealthStatus);
-        var marker = "PP2C_DISABLED_" + Guid.NewGuid().ToString("N");
-        using var refused = await fixture.Api.PostAsJsonAsync($"api/agents/providers/{profile.Id:D}/test-chat",
-            new ProviderTestChatRequest(profile.DefaultModel, "", [], marker));
-        Assert.False(refused.IsSuccessStatusCode);
-        var captures = await fixture.ReadCapturesAsync();
-        Assert.DoesNotContain(captures.GetProperty("requests").EnumerateArray(), item => item.GetProperty("body").GetString()!.Contains(marker, StringComparison.Ordinal));
-        await fixture.ScreenshotAsync("final-source-disabled");
-        source = await OpenSourceAsync(fixture);
-        Assert.Equal(sourceId.ToString("D"), await source.GetAttributeAsync("data-source-id"));
-        await source.GetByTestId("shared-provider-source-toggle").ClickAsync();
-        await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToHaveTextAsync("Disable");
-        await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToBeEnabledAsync();
-        await source.GetByTestId("shared-provider-source-sync").ClickAsync();
-        await page.GetByText("Source synchronized", new() { Exact = true }).WaitForAsync();
-        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
-        await OpenSharingAsync(page, fixture.Settings.Clients[0], profile.Name);
-        await page.GetByTestId("shared-provider-import-retire").ClickAsync();
-        await page.GetByTestId("shared-provider-confirmation-dialog").WaitForAsync();
-        await page.GetByTestId("shared-provider-confirmation-apply").ClickAsync();
-        await page.GetByTestId("shared-provider-confirmation-dialog").WaitForAsync(new() { State = WaitForSelectorState.Detached });
-        var retired = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
-        Assert.False(retired.IsEnabled);
-        source = await OpenSourceAsync(fixture);
-        await source.GetByTestId("shared-provider-source-discover").ClickAsync();
-        var catalog = page.GetByTestId("shared-provider-catalog-dialog");
-        var selection = catalog.Locator("label").Filter(new() { Has = page.GetByText(profile.Name, new() { Exact = true }) })
-            .GetByTestId("shared-provider-catalog-selection");
-        await Assertions.Expect(selection).Not.ToBeCheckedAsync();
-        await selection.CheckAsync();
-        await page.GetByTestId("shared-provider-catalog-apply").ClickAsync();
-        await catalog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
-        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
-        var restored = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
-        Assert.True(restored.IsEnabled);
-        Assert.Equal(profile.DefaultModel, restored.DefaultModel);
-        Assert.Equal(profile.ModelCatalog, restored.ModelCatalog);
-        await fixture.EvidenceAsync("final-source-lifecycle", new {
-            sourceId, ProviderId = profile.Id, DisabledDispatchStatus = (int)refused.StatusCode,
-            UpstreamCalledWhileDisabled = false, RetiredThenReimportedSameIdentity = true,
-            HttpWithoutPrivateNetworkPolicyRefused = true, RejectedSourceEditPreservedOriginal = true
-        });
+        Assert.True(profile.IsEnabled, "The shared fixture must begin with its imported provider enabled.");
+        await RunWithRestorationAsync(async () => {
+            await source.GetByTestId("shared-provider-source-edit").ClickAsync();
+            var sourceEditor = page.GetByTestId("shared-provider-source-dialog");
+            await sourceEditor.GetByTestId("shared-provider-source-private").UncheckAsync();
+            var originalUri = await sourceEditor.GetByTestId("shared-provider-source-uri").InputValueAsync();
+            await sourceEditor.GetByTestId("shared-provider-source-save").ClickAsync();
+            await Assertions.Expect(sourceEditor.GetByTestId("shared-provider-source-editor-error")).ToBeVisibleAsync();
+            await Assertions.Expect(sourceEditor.GetByTestId("shared-provider-source-uri")).ToHaveValueAsync(originalUri);
+            await fixture.ScreenshotAsync("final-source-http-policy-refusal");
+            await sourceEditor.GetByTestId("shared-provider-source-cancel").ClickAsync();
+            await source.GetByTestId("shared-provider-source-edit").ClickAsync();
+            await Assertions.Expect(sourceEditor.GetByTestId("shared-provider-source-private")).ToBeCheckedAsync();
+            await Assertions.Expect(sourceEditor.GetByTestId("shared-provider-source-uri")).ToHaveValueAsync(originalUri);
+            await sourceEditor.GetByTestId("shared-provider-source-cancel").ClickAsync();
+            await ToggleSourceAsync(page, source, enabled: false);
+            await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
+            await OpenSharingAsync(page, fixture.Settings.Clients[0], profile.Name);
+            var disabled = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
+            Assert.False(disabled.IsEnabled);
+            Assert.Equal("SourceDisabled", disabled.HealthStatus);
+            var marker = "PP2C_DISABLED_" + Guid.NewGuid().ToString("N");
+            using var refused = await fixture.Api.PostAsJsonAsync($"api/agents/providers/{profile.Id:D}/test-chat",
+                new ProviderTestChatRequest(profile.DefaultModel, "", [], marker));
+            Assert.False(refused.IsSuccessStatusCode);
+            var captures = await fixture.ReadCapturesAsync();
+            Assert.DoesNotContain(captures.GetProperty("requests").EnumerateArray(), item => item.GetProperty("body").GetString()!.Contains(marker, StringComparison.Ordinal));
+            await fixture.ScreenshotAsync("final-source-disabled");
+            source = await OpenSourceAsync(fixture, page);
+            Assert.Equal(sourceId.ToString("D"), await source.GetAttributeAsync("data-source-id"));
+            await ToggleSourceAsync(page, source, enabled: true);
+            await source.GetByTestId("shared-provider-source-sync").ClickAsync();
+            await page.GetByText("Source synchronized", new() { Exact = true }).WaitForAsync();
+            await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
+            await OpenSharingAsync(page, fixture.Settings.Clients[0], profile.Name);
+            await page.GetByTestId("shared-provider-import-retire").ClickAsync();
+            await page.GetByTestId("shared-provider-confirmation-dialog").WaitForAsync();
+            await page.GetByTestId("shared-provider-confirmation-apply").ClickAsync();
+            await page.GetByTestId("shared-provider-confirmation-dialog").WaitForAsync(new() { State = WaitForSelectorState.Detached });
+            var retired = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
+            Assert.False(retired.IsEnabled);
+            source = await OpenSourceAsync(fixture, page);
+            await source.GetByTestId("shared-provider-source-discover").ClickAsync();
+            var catalog = page.GetByTestId("shared-provider-catalog-dialog");
+            var selection = catalog.Locator("label").Filter(new() { Has = page.GetByText(profile.Name, new() { Exact = true }) })
+                .GetByTestId("shared-provider-catalog-selection");
+            await Assertions.Expect(selection).Not.ToBeCheckedAsync();
+            await selection.CheckAsync();
+            await page.GetByTestId("shared-provider-catalog-apply").ClickAsync();
+            await catalog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+            await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
+            var restored = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
+            Assert.True(restored.IsEnabled);
+            Assert.Equal(profile.DefaultModel, restored.DefaultModel);
+            Assert.Equal(profile.ModelCatalog, restored.ModelCatalog);
+            await fixture.EvidenceAsync("final-source-lifecycle", new {
+                sourceId, ProviderId = profile.Id, DisabledDispatchStatus = (int)refused.StatusCode,
+                UpstreamCalledWhileDisabled = false, RetiredThenReimportedSameIdentity = true,
+                HttpWithoutPrivateNetworkPolicyRefused = true, RejectedSourceEditPreservedOriginal = true
+            });
+        }, () => RestoreSourceAsync(fixture, sourceId, profile));
     }
 
-    private static async Task<ILocator> OpenSourceAsync(SharedProviderConsumerFixture fixture) {
-        await fixture.NavigateAsync("/agents?tab=providers");
-        await fixture.Page.GetByTestId("providers-connections").ClickAsync();
-        var source = fixture.Page.GetByTestId("shared-provider-source-card").Filter(new() { HasTextString = "PP2 native source" });
+    private static async Task<ILocator> OpenSourceAsync(SharedProviderConsumerFixture fixture, IPage page) {
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Address + "/agents?tab=providers");
+        await page.GetByTestId("providers-connections").ClickAsync();
+        var source = page.GetByTestId("shared-provider-source-card").Filter(new() { HasTextString = "PP2 native source" });
         await source.WaitForAsync();
         return source;
     }
@@ -161,7 +163,67 @@ public sealed class SharedProviderFinalUiTests {
     private static async Task SaveLocalAsync(IPage page, string alias, bool enabled) {
         await page.GetByTestId("shared-provider-import-alias").FillAsync(alias);
         await page.GetByTestId("shared-provider-import-enabled").SetCheckedAsync(enabled);
+        await SubmitLocalAsync(page);
+    }
+
+    private static async Task SubmitLocalAsync(IPage page) {
         await page.GetByTestId("shared-provider-import-save").ClickAsync();
+        await AcknowledgeAsync(page, "Imported provider updated");
         await Assertions.Expect(page.GetByTestId("shared-provider-import-save")).ToBeEnabledAsync();
+    }
+
+    private static async Task ToggleSourceAsync(IPage page, ILocator source, bool enabled) {
+        await source.GetByTestId("shared-provider-source-toggle").ClickAsync();
+        await AcknowledgeAsync(page, enabled ? "Source enabled" : "Source disabled");
+        await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToHaveTextAsync(enabled ? "Disable" : "Enable");
+        await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToBeEnabledAsync();
+    }
+
+    private static async Task AcknowledgeAsync(IPage page, string title) {
+        var notice = page.Locator(".rz-notification-stack > div").Filter(new() { Has = page.GetByText(title, new() { Exact = true }) });
+        await notice.WaitForAsync();
+        await notice.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+    }
+
+    private static async Task RestoreLocalAsync(SharedProviderConsumerFixture fixture, Guid providerId, string alias, bool enabled) {
+        var page = await fixture.OpenLocalOperatorPageAsync();
+        await using var context = page.Context;
+        var current = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == providerId);
+        await OpenSharingAsync(page, fixture.Address, current.Name);
+        await SaveLocalAsync(page, alias, enabled);
+    }
+
+    private static async Task RestoreSourceAsync(SharedProviderConsumerFixture fixture, Guid sourceId, ProviderProfile profile) {
+        var page = await fixture.OpenLocalOperatorPageAsync();
+        await using var context = page.Context;
+        var source = await OpenSourceAsync(fixture, page);
+        Assert.Equal(sourceId.ToString("D"), await source.GetAttributeAsync("data-source-id"));
+        if ((await source.GetByTestId("shared-provider-source-toggle").InnerTextAsync()).Trim() == "Enable") {
+            await ToggleSourceAsync(page, source, enabled: true);
+        }
+        await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToHaveTextAsync("Disable");
+        await source.GetByTestId("shared-provider-source-discover").ClickAsync();
+        var catalog = page.GetByTestId("shared-provider-catalog-dialog");
+        var selection = catalog.Locator("label").Filter(new() { Has = page.GetByText(profile.Name, new() { Exact = true }) })
+            .GetByTestId("shared-provider-catalog-selection");
+        await selection.WaitForAsync();
+        if (!await selection.IsCheckedAsync()) {
+            await selection.CheckAsync();
+            await page.GetByTestId("shared-provider-catalog-apply").ClickAsync();
+            await catalog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+            await AcknowledgeAsync(page, "Shared providers imported");
+        }
+        var restored = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
+        Assert.True(restored.IsEnabled);
+        Assert.Equal(profile.DefaultModel, restored.DefaultModel);
+        Assert.Equal(profile.ModelCatalog, restored.ModelCatalog);
+        await fixture.EvidenceAsync("final-source-restoration", new { sourceId, profile.Id, Restored = true });
+    }
+
+    private static async Task RunWithRestorationAsync(Func<Task> scenario, Func<Task> restore) {
+        var failures = new[] { await Record.ExceptionAsync(scenario), await Record.ExceptionAsync(restore) }.OfType<Exception>().ToArray();
+        if (failures.Length != 0) {
+            throw new AggregateException("Shared-provider scenario or fixture restoration failed.", failures);
+        }
     }
 }

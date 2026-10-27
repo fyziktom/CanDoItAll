@@ -83,7 +83,8 @@ internal static class OfflineMaintenanceCommandFixture {
             var stderr = await error;
             Assert.Equal(0, stdout.Discarded);
             Assert.Equal(0, stderr.Discarded);
-            Assert.True(child.ExitCode == expectedExitCode, $"Offline recovery {action} exited {child.ExitCode}; raw child output is suppressed.");
+            Assert.True(child.ExitCode == expectedExitCode,
+                $"Offline recovery {action} exited {child.ExitCode}; {DescribeOutcome(stdout.Text, stderr.Text)}; raw child output is suppressed.");
             Assert.DoesNotContain("Now listening on:", stdout.Text, StringComparison.Ordinal);
             Assert.DoesNotContain("Now listening on:", stderr.Text, StringComparison.Ordinal);
             Assert.True(blockedPort.Server.IsBound);
@@ -106,6 +107,35 @@ internal static class OfflineMaintenanceCommandFixture {
                 ParentProcessId = Environment.ProcessId, ChildProcessId = processId, ChildStartedUtc = processStarted,
                 ExitCode = exitCode, DatabaseProfileId = profileId, Root = root
             }));
+    }
+
+    private static string DescribeOutcome(string output, string error) {
+        string outcome;
+        try {
+            using var json = JsonDocument.Parse(output);
+            var root = json.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) {
+                return "Outcome=Unrecognized non-object JSON";
+            }
+            var status = root.TryGetProperty("status", out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+            outcome = status is "Observed" or "LegacyObserved" or "InstalledAwaitingRelease" or "Released" or "Refused" or "Unconfirmed"
+                ? status : "Unrecognized outcome";
+            if (root.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String &&
+                reason.GetString() == "CommandOrProfileUnavailable") {
+                outcome += "/CommandOrProfileUnavailable";
+            } else if (root.TryGetProperty("result", out var result) && result.ValueKind == JsonValueKind.Object &&
+                result.TryGetProperty("reason", out reason) && reason.ValueKind == JsonValueKind.String &&
+                Enum.TryParse<ProjectDeletionRecoveryRefusal>(reason.GetString(), out var refusal) && Enum.IsDefined(refusal)) {
+                outcome += "/" + refusal;
+            }
+        } catch (JsonException) {
+            outcome = "Unparseable outcome JSON";
+        }
+        string[] types = [nameof(OperationCanceledException), nameof(TaskCanceledException), nameof(TimeoutException),
+            nameof(NpgsqlException), nameof(PostgresException), nameof(InvalidOperationException), nameof(InvalidDataException),
+            nameof(AggregateException), nameof(JsonException)];
+        var recognized = types.Where(type => error.Contains(type, StringComparison.Ordinal));
+        return $"Outcome={outcome}; recognized failure types=[{string.Join(",", recognized)}]";
     }
 
     private static async Task<(string Text, long Discarded)> DrainRecoveryOutputAsync(StreamReader stream) {

@@ -23,8 +23,8 @@ public sealed partial class ProjectsOwnerPersistenceTests {
         await using var canonical = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         await using var projects = await application.Services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         await using var workbench = await application.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
-        AssertModel(canonical, projects, 6);
-        AssertModel(canonical, workbench, 15);
+        AssertModel(canonical, projects, 9);
+        AssertModel(canonical, workbench, 16);
         Assert.Throws<InvalidOperationException>(() => projects.Set<ProjectObjectRecord>().ToQueryString());
         Assert.Throws<InvalidOperationException>(() => workbench.Set<Project>().ToQueryString());
         var crmLink = Assert.IsAssignableFrom<IEntityType>(canonical.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(CrmAccountConnectionProjectLink)));

@@ -27,7 +27,10 @@ public sealed class FileSandboxWorkspaceProcessIndexCostTests(ITestOutputHelper 
         };
         var selected = Enumerable.Range(0, writers).Select(_ => Run(process)).ToArray();
         var history = Enumerable.Range(0, historyCount).Select(_ => Run(Guid.NewGuid())).ToArray();
-        await fixture.Store.UpdateExecutionAsync(state => state with { ExecutionRuns = [.. state.ExecutionRuns, .. selected, .. history] }, token);
+        var preparation = Stopwatch.StartNew();
+        await ProcessExecutionHistoryFixture.SeedBeforeActorsStartAsync(
+            new(fixture.WorkspaceRoot, fixture.StorageScope), [.. selected, .. history], token);
+        output.WriteLine($"History preparation: {history.Length} historical runs, {selected.Length} selected runs, {preparation.Elapsed.TotalMilliseconds:F1} ms before concurrent actors start.");
         var accepted = new int[writers];
         var stores = Enumerable.Range(0, writers).Select(_ => fixture.NewStore()).ToArray();
         async Task Write(int owner) {

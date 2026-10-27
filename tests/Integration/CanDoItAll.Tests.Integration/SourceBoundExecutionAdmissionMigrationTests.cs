@@ -188,8 +188,11 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         if (evidence == RetainedEvidence.ProcessLaunchPointer) {
             ((ProcessRuntimeStateEntity)row).LaunchAdmissionId = Guid.NewGuid();
         }
-        context.Add(row);
-        await context.SaveChangesAsync();
+        if (row is ProcessPreparedLaunchEntity preparation) {
+            await HistoricalProjectMigrationRows.InsertPreparedLaunchAsync(context, preparation);
+        } else {
+            await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(context, row);
+        }
         var current = await ReadEvidenceAsync(context);
         var currentMigrations = context.Database.GetMigrations().ToArray();
         await context.GetService<IMigrator>().MigrateAsync(CurrentMigration);
@@ -334,9 +337,10 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         """).ToArrayAsync();
 
     private static Task<string[]> ReadEvidenceAsync(AppDbContext context) => context.Database.SqlQueryRaw<string>("""
-        SELECT 'creation:' || to_jsonb(row)::text AS "Value" FROM "Projects_ProjectCreationReservations" row
+        SELECT 'creation:' || (to_jsonb(row) - 'NamespaceId')::text AS "Value" FROM "Projects_ProjectCreationReservations" row
         UNION ALL SELECT 'fire:' || to_jsonb(row)::text AS "Value" FROM "SchedulerPlanner_FireAdmissions" row
-        UNION ALL SELECT 'prepared:' || to_jsonb(row)::text AS "Value" FROM "process_prepared_launches" row
+        UNION ALL SELECT 'prepared:' || (to_jsonb(row) - ARRAY['AcceptedSourceVersion', 'AcceptedSourceHeaderJson', 'AcceptedSourceHeaderFingerprint'])::text AS "Value"
+            FROM "process_prepared_launches" row
         UNION ALL SELECT 'schedule:' || to_jsonb(row)::text AS "Value" FROM "SchedulerPlanner_Plans" row WHERE "StructureAuthorityJson" IS NOT NULL
         UNION ALL SELECT 'runtime:' || to_jsonb(row)::text AS "Value" FROM "process_runtime_states" row
             WHERE "LaunchAdmissionId" IS NOT NULL OR "ProjectAdmissionDatabaseProfileId" IS NOT NULL

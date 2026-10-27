@@ -4,6 +4,7 @@ using System.Data.Common;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -235,25 +236,25 @@ public sealed partial class ProjectDeletionIntegrationTests {
             var probe = new DeletionOwnerFault { LoseAcknowledgement = loseAck };
             var options = new DbContextOptionsBuilder<ProjectsDbContext>(provider.GetRequiredService<DbContextOptions<ProjectsDbContext>>())
                 .AddInterceptors(new DeletionOwnerSave(probe), new DeletionOwnerCommit(probe), new DeletionOwnerDisposal(probe)).Options;
-            var service = ActivatorUtilities.CreateInstance<ProjectsService>(provider, new DeletionOwnerFactory(options));
-            var failure = await Assert.ThrowsAnyAsync<Exception>(() => service.DeleteAsync(id));
+            var original = await ProjectLifecycleTestCommands.CaptureDeleteAsync(provider, id);
+            var writer = ActivatorUtilities.CreateInstance<ProjectLifecycleWriter>(provider, new DeletionOwnerFactory(options));
+            var operations = ActivatorUtilities.CreateInstance<CanDoItAll.Modules.Projects.Pages.ProjectNativeLifecycleOperations>(provider, writer);
+            var outcome = await operations.DispatchAsync(original);
             Assert.Equal(1, probe.Commits);
             Assert.Equal(1, probe.Disposals);
             if (loseAck) {
-                Assert.IsNotType<ProjectDeletionPartialCommitException>(failure);
-                var causes = Assert.IsType<AggregateException>(failure).Flatten().InnerExceptions;
-                Assert.Contains(causes, item => item is IOException);
-                Assert.Contains(causes, item => item is DbUpdateConcurrencyException);
+                var unconfirmed = Assert.IsType<ProjectLifecycleOutcome.Unconfirmed>(outcome);
+                Assert.Equal(ProjectLifecycleRecoveryReason.OwnerReleaseUnconfirmed, unconfirmed.Reason);
+                Assert.Equal(original, unconfirmed.Original);
             } else {
-                var committed = Assert.IsType<ProjectDeletionPartialCommitException>(failure);
-                Assert.IsType<DbUpdateConcurrencyException>(committed.InnerException);
-                var recovery = committed.Recovery;
-                Assert.Equal(id, recovery.ProjectId);
-                Assert.True(recovery.OwnerCompletionUnconfirmed);
+                var committed = Assert.IsType<ProjectLifecycleOutcome.Accepted>(outcome);
+                Assert.Equal(ProjectLifecycleCompletionIssue.OwnerReleaseUnconfirmed, committed.CompletionIssue);
+                var completion = Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(committed.Result.Acknowledgement).Completion;
+                Assert.Equal(id, completion.Original.Project.ProjectId);
                 var pending = await provider.GetRequiredService<ProjectsService>().ListPendingDeletionCleanupsAsync();
-                Assert.NotEmpty(recovery.Failures);
-                Assert.All(recovery.Failures, item => Assert.Contains(pending,
-                    row => row.ProjectId == id && row.ParticipantId == item.ParticipantId && row.RecoveryId == item.RecoveryId));
+                Assert.NotEmpty(completion.Obligations);
+                Assert.All(completion.Obligations, item => Assert.Contains(pending,
+                    row => row.ProjectId == id && row.ParticipantId == item.Participant && row.RecoveryId == item.RecoveryId));
             }
             await using var verify = await provider.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
             Assert.False(await verify.Set<Project>().AnyAsync(row => row.Id == id));
@@ -269,21 +270,21 @@ public sealed partial class ProjectDeletionIntegrationTests {
         var receipt = created.Value!;
         var releases = source.Releases;
         source.HoldRelease = true;
-        var compensation = ordinary.TryCompensateCreationAsync(receipt);
+        var compensation = ordinary.CompensateCreationAsync(receipt);
         try {
             await source.ReleaseStarted.Task.WaitAsync(TimeSpan.FromSeconds(15));
             Assert.False(compensation.IsCompleted);
             await using var verify = await provider.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
             Assert.False(await verify.Set<Project>().AnyAsync(row => row.Id == receipt.Project.ProjectId));
             source.ReleaseAllowed.TrySetResult();
-            var failure = await Assert.ThrowsAsync<ProjectDeletionPartialCommitException>(() => compensation);
-            Assert.True(failure.Recovery.OwnerCompletionUnconfirmed);
-            Assert.Equal(receipt.Project.ProjectId, failure.Recovery.ProjectId);
+            var committed = Assert.IsType<ProjectCreationCompensationOutcome.Committed>(await compensation);
+            Assert.Equal(ProjectLifecycleCompletionIssue.OwnerReleaseUnconfirmed, committed.CompletionIssue);
+            Assert.Equal(receipt.Project, committed.Completion.Original.Project);
             Assert.Equal(releases + 1, source.Releases);
-            Assert.NotEmpty(failure.Recovery.Failures);
+            Assert.NotEmpty(committed.Completion.Obligations);
             var pending = await ordinary.ListPendingDeletionCleanupsAsync();
-            Assert.All(failure.Recovery.Failures, item => Assert.Contains(pending,
-                row => row.ProjectId == receipt.Project.ProjectId && row.ParticipantId == item.ParticipantId && row.RecoveryId == item.RecoveryId));
+            Assert.All(committed.Completion.Obligations, item => Assert.Contains(pending,
+                row => row.ProjectId == receipt.Project.ProjectId && row.ParticipantId == item.Participant && row.RecoveryId == item.RecoveryId));
         } finally {
             source.ReleaseAllowed.TrySetResult();
             await DrainDeletionAsync(compensation);
@@ -468,6 +469,7 @@ public sealed partial class ProjectDeletionIntegrationTests {
         public TaskCompletionSource ReleaseStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource ReleaseAllowed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public IReadOnlyCollection<ProjectWriteAdmission> SourceProjects => [];
+        public ProjectDeletionSourceRecovery CaptureDeletionRecoverySource() => new ProjectDeletionSourceRecovery.NoExternalSourceLease();
         public Task<IProjectMutationSourceLease> AcquireAsync(ProjectMutationTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult<IProjectMutationSourceLease>(this);
         public Task RequireForMutationAsync(CancellationToken cancellationToken = default) {
@@ -477,6 +479,8 @@ public sealed partial class ProjectDeletionIntegrationTests {
             }
             return Task.CompletedTask;
         }
+        public Task RequireForDeletionCommitAsync(ProjectDeletionCommitTarget target, CancellationToken cancellationToken = default)
+            => RequireForMutationAsync(cancellationToken);
         public async ValueTask DisposeAsync() {
             Releases++;
             if (HoldRelease) {

@@ -123,8 +123,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
                 default:
                     throw new ArgumentOutOfRangeException(nameof(evidence));
             }
-            database.Add(row);
-            await database.SaveChangesAsync();
+            await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(database, row);
         });
 
     [Theory]
@@ -138,7 +137,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
             if (table == EvidenceTable.Cleanup) {
                 var row = Cleanup();
                 row.PayloadJson = malformed;
-                database.Add(row);
+                await HistoricalProjectMigrationRows.InsertCleanupAsync(database, row);
             } else {
                 var row = table == EvidenceTable.WorkflowLaunches ? Launch() : OriginRow(table, malformed);
                 if (row is WorkflowLaunchIdempotencyRecordEntity launch) {

@@ -20,7 +20,7 @@ public sealed class HrAgentCompositionTests
     public async Task Application_composition_seeds_identity_bound_HR_governance_agent_and_provider()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("hr-agent-composition");
-        var profile = environment.CreateInMemoryProfile("primary");
+        var profile = environment.CreatePostgreSqlProfile("primary");
         var configuration = TestApplicationBootstrap.BuildConfiguration(profile);
         var services = new ServiceCollection();
         TestApplicationBootstrap.ConfigureDefaultServices(

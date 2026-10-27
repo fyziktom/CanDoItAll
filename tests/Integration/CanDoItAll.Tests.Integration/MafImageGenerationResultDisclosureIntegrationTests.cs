@@ -251,7 +251,7 @@ public sealed class MafImageGenerationResultDisclosureIntegrationTests {
 
         internal async Task ReplaceSourceAsync() {
             var projects = Services.GetRequiredService<ProjectsService>();
-            await projects.DeleteAsync(Source.ProjectId);
+            await ProjectLifecycleTestCommands.DeleteAsync(Services, Source.ProjectId);
             Assert.True((await projects.CreateAsync(Source.ProjectId, new() { Name = "Unrelated replacement" })).IsSuccess);
             Source = (await Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(Source.ProjectId))!;
         }

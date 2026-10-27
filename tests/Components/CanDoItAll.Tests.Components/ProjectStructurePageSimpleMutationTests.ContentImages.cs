@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Data.Common;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
@@ -215,7 +216,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
                 return;
             case ImageTargetLoss.ProjectLifetime:
                 var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
-                await projects.DeleteAsync(request.ProjectId, expectedProjectAdmission: original.Authority.Project);
+                await ProjectLifecycleTestCommands.DeleteAsync(harness.Context.Services, request.ProjectId, expectedProjectAdmission: original.Authority.Project);
                 Assert.True((await projects.CreateAsync(request.ProjectId, new() { Name = "Replacement project with same public ID" })).IsSuccess);
                 break;
             case ImageTargetLoss.PlaceholderOccurrence:

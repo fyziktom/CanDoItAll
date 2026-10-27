@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Data.Common;
 using System.Security.Claims;
 using System.Text.Json;
@@ -76,7 +77,7 @@ public sealed class ProjectStructureSecretReferenceTests {
             if (afterCommit) {
                 await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
             }
-            await projects.DeleteAsync(target.ProjectId, expectedProjectAdmission: admission);
+            await ProjectLifecycleTestCommands.DeleteAsync(harness.Context.Services, target.ProjectId, expectedProjectAdmission: admission);
             Assert.True((await projects.CreateAsync(target.ProjectId, new() { Name = "Replacement root" })).IsSuccess);
         } finally {
             gate.Release.TrySetResult();

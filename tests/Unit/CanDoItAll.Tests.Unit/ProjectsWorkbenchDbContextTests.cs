@@ -14,7 +14,7 @@ public sealed class ProjectsWorkbenchDbContextTests {
         Assert.Equal(new[] {
             typeof(Project), typeof(ProjectPhase), typeof(ProjectOptionSelection), typeof(ProjectHierarchyLink),
             typeof(ProjectRetirementRecord), typeof(ProjectCreationReservationRecord),
-            typeof(ProjectDefinitionReceiptRecord)
+            typeof(ProjectDefinitionReceiptRecord), typeof(ProjectLifecycleReceiptRecord), typeof(ProjectDeletionCompletionRecord)
         }
             .OrderBy(type => type.Name), context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
         var revision = Assert.Single(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()), property => property.IsConcurrencyToken);
@@ -34,7 +34,7 @@ public sealed class ProjectsWorkbenchDbContextTests {
             "Workbench_ProjectStructureLeases", "Workbench_ProjectNodeBindings", "Workbench_ProjectNodeReferences",
             "Workbench_ProjectNodeLifecycleEvents", "Workbench_ProjectCrossModuleMutations",
             "Workbench_WorkAssignments", "Workbench_WorkflowAdmissions", "Workbench_WorkflowContributionReceipts",
-            "Workbench_ProcessAssetContributions", "Workbench_WorkAssignmentHistory"
+            "Workbench_ProcessAssetContributions", "Workbench_WorkAssignmentHistory", "Workbench_TaskPlanReceipts"
         }.Order(), context.Model.GetEntityTypes().Select(entity => entity.GetTableName()).Order());
         Assert.Equal(new[] {
             typeof(ProjectObjectRecord), typeof(ProjectObjectLinkRecord), typeof(ProjectWorkbenchViewStateRecord),
@@ -42,7 +42,7 @@ public sealed class ProjectsWorkbenchDbContextTests {
             typeof(ProjectStructureLeaseRecord), typeof(ProjectNodeBindingRecord), typeof(ProjectNodeReferenceRecord),
             typeof(ProjectNodeLifecycleEventRecord), typeof(ProjectCrossModuleMutationRecord),
             typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord), typeof(ProjectWorkAssignmentRecord),
-            typeof(ProjectProcessAssetContributionRecord), typeof(ProjectWorkAssignmentHistoryRecord)
+            typeof(ProjectProcessAssetContributionRecord), typeof(ProjectWorkAssignmentHistoryRecord), typeof(ProjectTaskPlanReceiptRecord)
         }.OrderBy(type => type.Name), context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
         foreach (var retainedType in new[] { typeof(ProjectProcessAssetContributionRecord), typeof(ProjectWorkAssignmentHistoryRecord) }) {
             var retained = context.Model.FindEntityType(retainedType)!;

@@ -14,6 +14,31 @@ public sealed class LocalWorkspaceProcessHostTestCollection
 public sealed class LocalWorkspaceProcessHostTests
 {
     [Fact]
+    public async Task Termination_cannot_report_success_while_the_root_process_is_still_running() {
+        EarlyEmptyOwnership? ownership = null;
+        var host = new LocalWorkspaceProcessHost((start, executable, directory) =>
+            new EarlyEmptyOwnershipStart(LocalWorkspaceProcessOwnershipStart.Prepare(start, executable, directory),
+                attached => ownership = attached));
+        var request = CreateSessionRequest(BuildWaitCommand(30)) with {
+            StandardIoMode = WorkspaceProcessStandardIoMode.Duplex
+        };
+        await using var session = await host.StartSessionAsync(request);
+        Assert.NotNull(ownership);
+        try {
+            var termination = session.TerminateAsync(WorkspaceProcessTerminationReason.CallerCanceled, "Test cancellation.");
+            Assert.True(ownership.TerminationRequested);
+            Assert.True(IsProcessRunning(session.Identity.ProcessId));
+            var result = await termination.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(result.ResidualProcessPossible,
+                $"Termination reported {result.TerminationReason} without confirming that the root process exited.");
+            Assert.Equal(WorkspaceProcessTerminationReason.TerminationFailed, result.TerminationReason);
+        } finally {
+            ownership.ReleaseTermination();
+            TryKillProcess(session.Identity.ProcessId);
+        }
+    }
+
+    [Fact]
     public async Task Attachment_failure_does_not_leave_the_started_process_running()
     {
         var childPidFilePath = CreateChildPidFilePath();
@@ -783,6 +808,40 @@ public sealed class LocalWorkspaceProcessHostTests
 
     private static string EscapeShellArgument(string value)
         => "'" + value.Replace("'", "'\"'\"'") + "'";
+
+    private sealed class EarlyEmptyOwnershipStart(
+        LocalWorkspaceProcessOwnershipStart inner,
+        Action<EarlyEmptyOwnership> attached) : LocalWorkspaceProcessOwnershipStart {
+        public override WorkspaceOwnedProcessBoundary Identity => inner.Identity;
+
+        public override ILocalWorkspaceProcessOwnership Attach(Process process) {
+            var ownership = new EarlyEmptyOwnership(inner.Attach(process));
+            attached(ownership);
+            return ownership;
+        }
+
+        public override Task<bool> AbortAsync(TimeSpan timeout) => inner.AbortAsync(timeout);
+
+        public override void Dispose() => inner.Dispose();
+    }
+
+    private sealed class EarlyEmptyOwnership(ILocalWorkspaceProcessOwnership inner) : ILocalWorkspaceProcessOwnership {
+        public WorkspaceOwnedProcessBoundary Identity => inner.Identity;
+        public bool TerminationRequested { get; private set; }
+
+        public bool RequestGracefulTermination(Process rootProcess) => false;
+
+        public bool ForceTerminate() {
+            TerminationRequested = true;
+            return true;
+        }
+
+        public Task<bool> WaitForEmptyAsync(TimeSpan timeout) => Task.FromResult(true);
+
+        public bool ReleaseTermination() => inner.ForceTerminate();
+
+        public void Dispose() => inner.Dispose();
+    }
 
     private sealed class ThrowingOwnershipStart(string childPidFilePath) : LocalWorkspaceProcessOwnershipStart
     {

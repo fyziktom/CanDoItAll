@@ -386,7 +386,9 @@ public sealed class ExecutionUpdatedCompatibilityIsolationTests
                 coordinator,
                 new FixedAgentExecutionProfileGenerationSource(
                     new DatabaseProfileGeneration(0)),
-                logger
+                logger,
+                null,
+                null
             ]);
     }
 

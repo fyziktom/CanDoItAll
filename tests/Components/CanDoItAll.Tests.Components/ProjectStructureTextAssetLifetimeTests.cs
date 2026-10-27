@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Text;
 using System.Text.Json;
 using System.Data.Common;
@@ -273,7 +274,7 @@ public sealed class ProjectStructureTextAssetLifetimeTests {
         var pending = dialogs.InvokeAsync(() => dialogs.Find("[data-testid='project-structure-text-asset-submit']").ClickAsync(new MouseEventArgs()));
         try {
             await upload.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
-            await projects.DeleteAsync(project, expectedProjectAdmission: originalAdmission);
+            await ProjectLifecycleTestCommands.DeleteAsync(harness.Context.Services, project, expectedProjectAdmission: originalAdmission);
             Assert.True((await projects.CreateAsync(project, new() { Name = "Replacement text owner" })).IsSuccess);
             var replacement = (await projects.GetAsync(project)).ExpectedProjectAdmission;
             Assert.NotEqual(originalAdmission, replacement);

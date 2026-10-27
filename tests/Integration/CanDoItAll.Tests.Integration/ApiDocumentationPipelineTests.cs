@@ -106,7 +106,7 @@ public sealed class ApiDocumentationPipelineTests(ApiDocumentationDocumentFixtur
 
         Assert.Contains("must always be present", Text(costBasis["description"]), StringComparison.Ordinal);
         Assert.Contains("sent back unchanged", Text(admission["description"]), StringComparison.Ordinal);
-        Assert.Contains("Owner-issued evidence", Text(fixture.Schema("ProjectWriteAdmission")["description"]), StringComparison.Ordinal);
+        Assert.Contains("Original database profile, project and lifetime", Text(fixture.Schema("ProjectWriteAdmission")["description"]), StringComparison.Ordinal);
         Assert.Contains("bit flags value", Text(fixture.Schema("PartyRecordScope")["description"]), StringComparison.Ordinal);
         Assert.Contains("camel-case string", Text(fixture.Schema("AgentProviderFailureCategory")["description"]), StringComparison.Ordinal);
 

@@ -16,6 +16,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class ResourceMetadataOwnerTests {
     [Fact]
     public async Task Independent_original_replacements_have_one_acceptance_and_one_exact_Search_projection() {

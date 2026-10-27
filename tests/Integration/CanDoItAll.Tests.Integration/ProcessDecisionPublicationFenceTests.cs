@@ -129,7 +129,16 @@ public sealed class ProcessDecisionPublicationFenceTests {
             _ => state with { Claims = state.Claims.Select(claim => claim with { Status = DispatchClaimStatus.Expired }).ToArray() }
         };
         var request = Request(state, null);
-        await new EfProcessRuntimeUnitOfWork(context).CommitAsync(request with { Mutation = request.Mutation with { State = changed with { UpdatedAtUtc = request.Mutation.State.UpdatedAtUtc } } });
+        if (changed.Status == ProcessRuntimeStatus.Cancelled) {
+            // Historical terminal roots can retain claims; current cancellation refuses to create that inconsistent state.
+            await context.RuntimeStates.Where(row => row.RunId == state.RunId.Value)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Status, ProcessRuntimeStatus.Cancelled));
+        } else {
+            var committed = await new EfProcessRuntimeUnitOfWork(context).CommitAsync(request with {
+                Mutation = request.Mutation with { State = changed with { UpdatedAtUtc = request.Mutation.State.UpdatedAtUtc } }
+            });
+            Assert.True(committed.Succeeded);
+        }
         await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => RequireAsync(scope.ServiceProvider, original));
     }
 

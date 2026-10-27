@@ -191,13 +191,19 @@ public sealed partial class AgentVoiceApiIntegrationTests {
     public async Task Voice_request_body_limits_apply_before_provider_dispatch(bool transcribe) {
         var voice = new VoiceHarness();
         await using var host = await CreateHostAsync(voice);
+        using var client = new HttpClient(new SocketsHttpHandler {
+            Expect100ContinueTimeout = Timeout.InfiniteTimeSpan
+        }) {
+            BaseAddress = host.Client.BaseAddress,
+            Timeout = host.Client.Timeout
+        };
         using HttpContent content = transcribe
             ? CreateAudioForm(new byte[26 * 1024 * 1024])
             : new StringContent(new string(' ', 66 * 1024) + "{\"text\":\"Synthetic speech\"}", Encoding.UTF8, "application/json");
 
         using var request = new HttpRequestMessage(HttpMethod.Post, transcribe ? TranscriptionsPath : SpeechPath) { Content = content };
         request.Headers.ExpectContinue = true;
-        using var response = await host.Client.SendAsync(request);
+        using var response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
         Assert.Equal(0, voice.CallCount);
     }

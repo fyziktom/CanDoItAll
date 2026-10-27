@@ -21,6 +21,7 @@ using static CanDoItAll.Tests.Integration.Processes.ProcessDecisionRunScopeFixtu
 namespace CanDoItAll.Tests.Integration;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectTaskPlanProcessHistoryTests {
     [Theory]
     [InlineData(false, false)]

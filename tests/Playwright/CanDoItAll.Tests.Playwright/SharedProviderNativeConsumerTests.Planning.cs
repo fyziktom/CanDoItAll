@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
@@ -19,6 +20,15 @@ public sealed partial class SharedProviderNativeConsumerTests {
     [Trait("Category", "ExternalSharedProviderUi")]
     public Task Final_image_WB1_operator_task_and_agent_files_keep_native_planning_and_exact_approvals() =>
         RunFileConsumerAsync(planning: true);
+
+    [Fact]
+    [Trait("Category", "ExternalSharedProviderUi")]
+    public async Task Final_image_calendar_List_export_and_Back_restore_the_native_view() {
+        await using var fixture = await SharedProviderConsumerFixture.StartAsync();
+        var projectId = await CreatePlanningProjectAsync(fixture, $"Calendar history {Guid.NewGuid():N}");
+        var task = await CreatePlanningTaskAsync(fixture, projectId);
+        await AssertPlanningConsumersAsync(fixture, projectId, task, PlanningTaskTitle);
+    }
 
     private static async Task<Guid> CreatePlanningProjectAsync(SharedProviderConsumerFixture fixture, string name) {
         await fixture.NavigateAsync("/projects");
@@ -121,15 +131,17 @@ public sealed partial class SharedProviderNativeConsumerTests {
     }
 
     private static async Task AssertPlanningConsumersAsync(SharedProviderConsumerFixture fixture, Guid projectId,
-        ProjectStructureNodeSummary original) {
+        ProjectStructureNodeSummary original, string expectedTitle = PlanningAgentTitle) {
         await fixture.NavigateAsync($"/projects/{projectId:D}/structure");
         var page = fixture.Page;
         await page.GetByRole(AriaRole.Tab, new() { Name = "Gantt", Exact = true }).ClickAsync();
-        await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = PlanningAgentTitle, Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = expectedTitle, Exact = true })).ToBeVisibleAsync();
         await fixture.ScreenshotAsync("wb1-agent-gantt");
         await fixture.NavigateAsync($"/projects/{projectId:D}/calendar");
         await page.GetByRole(AriaRole.Button, new() { Name = "List", Exact = true }).ClickAsync();
-        await Assertions.Expect(page.GetByRole(AriaRole.Row).Filter(new() { HasText = PlanningAgentTitle })).ToBeVisibleAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]view=list(?:&|$)"));
+        var calendarUrl = page.Url;
+        await Assertions.Expect(page.GetByRole(AriaRole.Row).Filter(new() { HasText = expectedTitle })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Row).Filter(new() { HasText = PlanningMeetingTitle })).ToBeVisibleAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Open downloads menu", Exact = true }).ClickAsync();
         var download = await page.RunAndWaitForDownloadAsync(() =>
@@ -137,13 +149,16 @@ public sealed partial class SharedProviderNativeConsumerTests {
         var path = Path.Combine(fixture.Settings.Evidence, "wb1-native-calendar.csv");
         await download.SaveAsAsync(path);
         var csv = await File.ReadAllTextAsync(path);
-        Assert.Contains(PlanningAgentTitle, csv, StringComparison.Ordinal);
+        Assert.Contains(expectedTitle, csv, StringComparison.Ordinal);
         Assert.Contains(PlanningMeetingTitle, csv, StringComparison.Ordinal);
-        Assert.DoesNotContain(PlanningTaskTitle, csv, StringComparison.Ordinal);
+        if (expectedTitle != PlanningTaskTitle) {
+            Assert.DoesNotContain(PlanningTaskTitle, csv, StringComparison.Ordinal);
+        }
         await fixture.ScreenshotAsync("wb1-agent-calendar");
         await fixture.NavigateAsync("/projects");
         await page.GoBackAsync();
-        await Assertions.Expect(page.GetByRole(AriaRole.Row).Filter(new() { HasText = PlanningAgentTitle })).ToBeVisibleAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(calendarUrl);
+        await Assertions.Expect(page.GetByRole(AriaRole.Row).Filter(new() { HasText = expectedTitle })).ToBeVisibleAsync();
         var final = Assert.Single((await TreeAsync(fixture, projectId, includeMetadata: true)).Nodes, node => node.Id == original.Id);
         Assert.Equal(original.MetadataJson, final.MetadataJson);
         Assert.Equal(original.StartUtc, final.StartUtc);

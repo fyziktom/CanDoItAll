@@ -85,6 +85,7 @@ public static class ApiServiceCollectionExtensions
             options.AddSchemaTransformer(WorkspaceSettingsOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(ProcessLaunchDecisionOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);
+            options.AddSchemaTransformer(OpenApiContractDescriptions.TransformSchemaAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
             options.AddOperationTransformer(
@@ -100,7 +101,7 @@ public static class ApiServiceCollectionExtensions
             options.AddOperationTransformer(OpenApiDuplicateParameters.TransformOperationAsync);
             options.AddDocumentTransformer(OpenApiDiscriminatorDescriptions.TransformDocumentAsync);
             options.AddDocumentTransformer(OpenApiAttributeDescriptions.TransformDocumentAsync);
-            options.AddDocumentTransformer(ProjectDefinitionOpenApiDescriptions.TransformDocumentAsync);
+            options.AddDocumentTransformer(OpenApiContractDescriptions.TransformDocumentAsync);
             options.AddDocumentTransformer(OpenApiDescriptionText.TransformDocumentAsync);
         });
         services.AddAuthorization(options =>

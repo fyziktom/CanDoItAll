@@ -49,9 +49,11 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
             });
         await using var sibling = await ProcessStepMaterialFixture.CreateAsync(mode, existingSql: fixture.Entry.Files.Sql,
             executorId: fixture.Entry.Files.Agent.Id, allowTaskPublication: true);
-        using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+        using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(5));
         var token = deadline.Token;
         var (siblingBinding, siblingRun, siblingState) = await StartSiblingAsync(fixture, sibling, token);
+        fixture.Entry.Wire.OnRequest = null;
+        fixture.Clock.Resume();
         var services = fixture.Services;
         var store = fixture.Entry.Files.Store;
         var layout = new FileSandboxWorkspaceStorageLayout(services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
@@ -63,7 +65,9 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
         };
         var selected = Enumerable.Range(0, writers).Select(_ => BackgroundRun()).ToArray();
         var history = Enumerable.Range(0, 2000).Select(_ => BackgroundRun()).ToArray();
-        await store.UpdateExecutionAsync(state => state with { ExecutionRuns = [.. state.ExecutionRuns, .. selected, .. history] }, token);
+        var preparation = Stopwatch.StartNew();
+        await ProcessExecutionHistoryFixture.SeedBeforeActorsStartAsync(layout, [.. selected, .. history], token);
+        output.WriteLine($"History preparation: {history.Length} historical runs, {selected.Length} selected runs, {preparation.Elapsed.TotalMilliseconds:F1} ms before concurrent actors start.");
         var original = await File.ReadAllBytesAsync(layout.RunPath(fixture.Waiting.Id), token);
         var key = Assert.Single(FileSandboxWorkspaceWriteSet.Run(null, fixture.Waiting with { ChatSessionId = null }, readsAgent: false).LockPaths(layout));
         IAsyncDisposable? blocker = await new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory())
@@ -114,6 +118,8 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
                 }
             }));
             allocated = GC.GetTotalAllocatedBytes(precise: true);
+            token.ThrowIfCancellationRequested();
+            deadline.CancelAfter(TimeSpan.FromMinutes(3));
             elapsed.Start();
             start.SetResult();
             while (!batch.IsCompleted) {
@@ -210,6 +216,12 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
     private static async Task<(ProcessDecisionChildMaterialBinding Binding, ExecutionRunRecord Run, ProcessRuntimeStateSnapshot State)>
         StartSiblingAsync(ProjectTaskPlanReviewFixture fixture, ProcessStepMaterialFixture sibling, CancellationToken token) {
         var (binding, request) = await ProjectTaskPlanReviewFixture.PrepareRequestAsync(fixture.Entry, sibling, token);
+        fixture.Clock.Freeze();
+        fixture.Entry.Wire.OnRequest = token => {
+            fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+            token.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        };
         var services = fixture.Services;
         var run = (await services.GetRequiredService<IAgentInheritedPlanningWorkspaceService>().ExecuteInheritedPlanningAsync(request, token)).Run;
         Assert.True(run.State == ExecutionState.WaitingOnTool, run.ResultSummary);

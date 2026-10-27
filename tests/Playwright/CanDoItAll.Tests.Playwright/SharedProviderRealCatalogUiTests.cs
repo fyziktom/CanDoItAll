@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using System.Text.RegularExpressions;
@@ -15,6 +16,8 @@ public sealed class SharedProviderRealCatalogUiTests {
     private const string ChatProvider = "UI Shared OpenAI Chat";
     private const string ImageProvider = "UI Shared OpenAI Image";
     private const string OllamaProvider = "UI Shared Ollama";
+    private const string DefaultChatModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
+    private const string AlternateChatModel = OpenAiModelIds.Gpt6Sol;
 
     [Fact]
     [Trait("Category", "ExternalRealSharedProviderUi")]
@@ -102,15 +105,15 @@ public sealed class SharedProviderRealCatalogUiTests {
         var development = JsonSerializer.Deserialize<OllamaDevelopmentProfile>(
             await File.ReadAllTextAsync(Required("CANDOITALL_REAL_OLLAMA_PROFILE")), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
         await SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(page, clientUrl, ChatProvider,
-            "gpt-4.1-mini", openAiModels, "gpt-5.4-mini", evidence, "real-openai", "REAL_OPENAI_CHAT_OK");
+            DefaultChatModel, openAiModels, AlternateChatModel, evidence, "real-openai", "REAL_OPENAI_CHAT_OK");
         await SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(page, clientUrl, ChatProvider,
-            "gpt-4.1-mini", openAiModels, OpenAiModelIds.Gpt6Astra, evidence, "real-astra", "REAL_ASTRA_CHAT_OK");
+            DefaultChatModel, openAiModels, OpenAiModelIds.Gpt6Astra, evidence, "real-astra", "REAL_ASTRA_CHAT_OK");
         await SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(page, clientUrl, OllamaProvider,
             development.DefaultModel, ollamaModels, "gemma3:4b", evidence, "real-ollama", "4",
             "What is two plus two? Reply using only the number.", new Regex("^(4|four)[.!]?$", RegexOptions.IgnoreCase));
         await File.WriteAllTextAsync(Path.Combine(evidence, "simple-chat-execution-result.json"), JsonSerializer.Serialize(new {
             StartedAtUtc = started, FinishedAtUtc = DateTimeOffset.UtcNow,
-            Models = new[] { "gpt-5.4-mini", OpenAiModelIds.Gpt6Astra, "gemma3:4b" }
+            Models = new[] { AlternateChatModel, OpenAiModelIds.Gpt6Astra, "gemma3:4b" }
         }));
     }
 
@@ -150,15 +153,7 @@ public sealed class SharedProviderRealCatalogUiTests {
         await page.GetByTestId("chat-approve-once-button").WaitForAsync(new() { Timeout = 90_000 });
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "real-image-approval.png"), FullPage = true });
         await page.GetByTestId("chat-approve-once-button").ClickAsync();
-        try {
-            await page.GetByTestId("chat-workspace-panel").GetByText("REAL_IMAGE_CREATED_OK", new() { Exact = true }).WaitForAsync(new() { Timeout = 180_000 });
-            await WaitForCompletedAgentRunAsync(page);
-        } catch {
-            await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "real-image-failure.png") });
-            await File.WriteAllTextAsync(Path.Combine(evidence, "real-image-failure.txt"),
-                await page.GetByTestId("chat-workspace-panel").InnerTextAsync());
-            throw;
-        }
+        await ExpectAgentAnswerAsync(page, "REAL_IMAGE_CREATED_OK", evidence, "real-image", timeoutMilliseconds: 180_000);
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "real-image-response.png"), FullPage = true });
         await File.WriteAllTextAsync(Path.Combine(evidence, "image-output-path.txt"), outputPath);
         await using var visualContext = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 480, Height = 320 } });
@@ -211,10 +206,10 @@ public sealed class SharedProviderRealCatalogUiTests {
         await page.GetByTestId("chat-workspace-panel").GetByText(prompt, new() { Exact = true }).WaitForAsync();
     }
 
-    private static async Task ExpectAgentAnswerAsync(IPage page, string answer, string evidence, string label) {
+    private static async Task ExpectAgentAnswerAsync(IPage page, string answer, string evidence, string label, float timeoutMilliseconds = 300_000) {
         try {
             var phase = page.GetByTestId("agent-execution-activity-phase");
-            await Assertions.Expect(phase).ToHaveTextAsync(new Regex("^(Completed|Failed)$"), new() { Timeout = 300_000 });
+            await Assertions.Expect(phase).ToHaveTextAsync(new Regex("^(Completed|Failed)$"), new() { Timeout = timeoutMilliseconds });
             await Assertions.Expect(phase).ToHaveTextAsync("Completed");
             await page.GetByTestId("chat-workspace-panel").GetByText(answer, new() { Exact = true }).WaitForAsync();
         } catch {
@@ -239,7 +234,8 @@ public sealed class SharedProviderRealCatalogUiTests {
         var allModels = inventory!.RootElement.GetProperty("data").EnumerateArray()
             .Select(model => model.GetProperty("id").GetString()!).Order(StringComparer.Ordinal).ToArray();
         var realModels = allModels.Where(OpenAiModelSuggestions.IsMainModel).ToArray();
-        Assert.Contains("gpt-4.1-mini", realModels);
+        Assert.Contains(DefaultChatModel, realModels);
+        Assert.Contains(AlternateChatModel, realModels);
         Assert.Contains(OpenAiModelIds.Gpt6Astra, realModels);
         Assert.Contains(OpenAiModelIds.GptImage25Flare, allModels);
         Assert.Contains(OpenAiModelIds.GptImage25Sunburst, allModels);
@@ -276,10 +272,10 @@ public sealed class SharedProviderRealCatalogUiTests {
             await Assertions.Expect(client.GetByTestId($"provider-pricing-cached-image-input-{row}")).ToHaveValueAsync(new Regex("^2(?:\\.0+)?$"));
         }
         await SharedProviderMetadataUiChecks.AssertAgentModelNamesAsync(client, clientUrl,
-            "UI Shared Multimedia Agent", "gpt-4.1-mini", evidence, mirroredChat, OpenAiModelIds.Gpt6Astra, "real-openai");
+            "UI Shared Multimedia Agent", DefaultChatModel, evidence, mirroredChat, OpenAiModelIds.Gpt6Astra, "real-openai");
         await File.WriteAllTextAsync(Path.Combine(evidence, "catalog-result.json"), JsonSerializer.Serialize(new {
             ChatModels = mirroredChat, ImageModels = mirroredImages,
-            Source = sourceUrl, Client = clientUrl, ProviderDefault = "gpt-4.1-mini",
+            Source = sourceUrl, Client = clientUrl, ProviderDefault = DefaultChatModel,
             SelectedNondefaultAgentModel = OpenAiModelIds.Gpt6Astra, PricesAndPrivateFlagMatch = true,
             ConfiguredThroughUi = true
         }));
@@ -288,31 +284,26 @@ public sealed class SharedProviderRealCatalogUiTests {
     private static async Task ConfigureChatAsync(IPage page, string url, IReadOnlyList<string> allModels, IReadOnlyList<string> realModels) {
         await SharedProviderMetadataUiChecks.OpenProviderAsync(page, url, ChatProvider);
         await page.GetByTestId("providers-base-url-input").FillAsync("https://api.openai.com/v1");
-        await page.GetByTestId("providers-model-input").FillAsync("gpt-4.1-mini");
+        await page.GetByTestId("providers-model-input").FillAsync(DefaultChatModel);
         await page.GetByTestId("providers-api-key-input").SelectOptionAsync(new SelectOptionValue { Label = OpenAiSecretName });
         await page.GetByTestId("provider-editor-tab-prices").ClickAsync();
         await ClearPricesAsync(page);
         await page.GetByTestId("provider-pricing-refresh-button").ClickAsync();
         await page.GetByText("Provider models loaded", new() { Exact = true }).WaitForAsync();
-        var rows = page.Locator("[data-testid^='provider-pricing-row-']");
-        var miniRow = 0;
-        while (miniRow < await rows.CountAsync() &&
-            await page.GetByTestId($"provider-pricing-model-{miniRow}").InputValueAsync() != "gpt-4.1-mini") {
-            miniRow++;
+        await WaitForPricingModelsAsync(page, DefaultChatModel);
+        var pricedModels = await page.Locator("[data-testid^='provider-pricing-model-']")
+            .EvaluateAllAsync<string[]>("elements => elements.map(element => element.value)");
+        var defaultRow = Array.IndexOf(pricedModels, DefaultChatModel);
+        Assert.True(defaultRow >= 0, $"The refreshed catalog must price {DefaultChatModel}.");
+        var price = Assert.Single(ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, DefaultChatModel),
+            candidate => candidate.Model == DefaultChatModel);
+        foreach (var (field, expected) in new[] {
+            ("input", price.InputPerMillionTokensUsd), ("cached", price.CachedInputPerMillionTokensUsd),
+            ("output", price.OutputPerMillionTokensUsd)
+        }) {
+            Assert.Equal(expected, decimal.Parse(await page.GetByTestId($"provider-pricing-{field}-{defaultRow}")
+                .InputValueAsync(), CultureInfo.InvariantCulture));
         }
-        if (miniRow == await rows.CountAsync()) {
-            await page.GetByTestId("provider-pricing-add-button").ClickAsync();
-        }
-        await page.GetByTestId($"provider-pricing-model-{miniRow}").FillAsync("gpt-4.1-mini");
-        await page.GetByTestId($"provider-pricing-input-{miniRow}").FillAsync("0.40");
-        await page.GetByTestId($"provider-pricing-cached-{miniRow}").FillAsync("0.10");
-        await page.GetByTestId($"provider-pricing-output-{miniRow}").FillAsync("1.60");
-        foreach (var field in new[] { "cache-write", "image-input", "cached-image-input", "long-threshold",
-            "long-input", "long-cached", "long-cache-write", "long-output" }) {
-            await page.GetByTestId($"provider-pricing-{field}-{miniRow}").FillAsync("");
-            await page.GetByTestId($"provider-pricing-{field}-{miniRow}").PressAsync("Tab");
-        }
-        await page.GetByTestId($"provider-pricing-output-{miniRow}").PressAsync("Tab");
 
         await page.GetByTestId("provider-editor-tab-runtime").ClickAsync();
         var loaded = (await page.GetByTestId("providers-suggested-models").InputValueAsync())
@@ -336,6 +327,7 @@ public sealed class SharedProviderRealCatalogUiTests {
         await ClearPricesAsync(page);
         await page.GetByTestId("provider-pricing-refresh-button").ClickAsync();
         await page.GetByText("Provider models loaded", new() { Exact = true }).WaitForAsync();
+        await WaitForPricingModelsAsync(page, OpenAiModelIds.GptImage25Flare, OpenAiModelIds.GptImage25Sunburst);
         var pricedRows = page.Locator("[data-testid^='provider-pricing-row-']");
         for (var index = await pricedRows.CountAsync() - 1; index >= 0; index--) {
             if (!imageModels.Contains(await page.GetByTestId($"provider-pricing-model-{index}").InputValueAsync(), StringComparer.Ordinal)) {
@@ -354,13 +346,23 @@ public sealed class SharedProviderRealCatalogUiTests {
         for (var index = await rows.CountAsync() - 1; index >= 0; index--) {
             await rows.Nth(index).GetByRole(AriaRole.Button, new() { Name = "Remove", Exact = true }).ClickAsync();
         }
+        await Assertions.Expect(rows).ToHaveCountAsync(0);
+    }
+
+    private static async Task WaitForPricingModelsAsync(IPage page, params string[] models) {
+        await using var readiness = await page.WaitForFunctionAsync("""
+            expected => {
+                const actual = Array.from(document.querySelectorAll("[data-testid^='provider-pricing-model-']"), input => input.value);
+                return expected.every(model => actual.includes(model));
+            }
+            """, models);
     }
 
     private static async Task<string> IssueTokenAsync(IPage page, string url, string scopes) {
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, $"{url}/settings?tab=api-access");
-        await Field(page, "Subject").FillAsync("real-provider-validation-client");
-        await Field(page, "Display name").FillAsync("Real provider validation");
-        await Field(page, "Lifetime minutes").FillAsync("10080");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token subject", Exact = true }).FillAsync("real-provider-validation-client");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token display name", Exact = true }).FillAsync("Real provider validation");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token lifetime minutes", Exact = true }).FillAsync("10080");
         await page.GetByTestId("api-token-scopes").FillAsync(scopes);
         await page.GetByTestId("api-token-scopes").PressAsync("Tab");
         await page.GetByRole(AriaRole.Button, new() { Name = "Create token", Exact = true }).ClickAsync();
@@ -396,9 +398,6 @@ public sealed class SharedProviderRealCatalogUiTests {
         await page.GetByText("Shared providers imported", new() { Exact = true }).WaitForAsync();
         await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
     }
-
-    private static ILocator Field(IPage page, string label) => page.Locator("label.cda-field-label")
-        .Filter(new() { HasTextString = label }).First.Locator("xpath=following-sibling::*[1]");
 
     private sealed record OllamaDevelopmentProfile(string DefaultModel, string[] Models,
         JsonElement[] Prices, OllamaDevelopmentParameters ModelParameters, int TimeoutSeconds);

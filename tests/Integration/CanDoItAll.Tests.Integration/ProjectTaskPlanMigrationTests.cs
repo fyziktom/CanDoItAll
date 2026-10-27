@@ -28,7 +28,7 @@ public sealed class ProjectTaskPlanMigrationTests {
             await using var context = fixture.Canonical();
             DatasetActivationBinding? original = null;
             if (active) {
-                original = await fixture.Coordinator(projectsOnly: true).EnsureReadyAsync(fixture.Profile);
+                original = await fixture.SeedHistoricalActivationAsync();
                 await SeedProjectsEvidenceAsync(context, fixture.Profile.Profile.Id, original);
             }
             var before = await ReadRetainedAsync(context, projectsOnly: true);
@@ -37,6 +37,7 @@ public sealed class ProjectTaskPlanMigrationTests {
             Assert.Equal(before, await ReadRetainedAsync(context, projectsOnly: true));
             Assert.Equal(originalFile, await fixture.ReadFileAsync());
             Assert.Empty(await context.Set<ProjectTaskPlanReceiptRecord>().ToArrayAsync());
+            await context.GetService<IMigrator>().MigrateAsync();
             if (original is null) {
                 Assert.Empty(await context.Set<DatasetLifecycleRecord>().ToArrayAsync());
                 Assert.Empty(await context.Set<FiniteOperationStateRecord>().ToArrayAsync());
@@ -62,7 +63,7 @@ public sealed class ProjectTaskPlanMigrationTests {
             var installed = await ReadRetainedAsync(context, projectsOnly: false);
             for (var restart = 0; restart < 2; restart++) {
                 await using var reopened = fixture.Canonical();
-                await UpgradeAsync(reopened);
+                await reopened.GetService<IMigrator>().MigrateAsync();
                 Assert.Equal(original, await fixture.Coordinator().EnsureReadyAsync(fixture.Profile));
                 Assert.Equal(installed, await ReadRetainedAsync(reopened, projectsOnly: false));
             }
@@ -73,7 +74,7 @@ public sealed class ProjectTaskPlanMigrationTests {
     public async Task Unsupported_predecessors_roll_back_and_older_or_incomplete_pool_sets_cannot_autoheal() {
         foreach (var corruption in Enum.GetValues<Corruption>()) {
             await using var fixture = await Fixture.CreateAsync();
-            var binding = await fixture.Coordinator(projectsOnly: true).EnsureReadyAsync(fixture.Profile);
+            var binding = await fixture.SeedHistoricalActivationAsync();
             await using var context = fixture.Canonical();
             await SeedProjectsEvidenceAsync(context, fixture.Profile.Profile.Id, binding);
             await CorruptAsync(context, binding, corruption);
@@ -95,9 +96,10 @@ public sealed class ProjectTaskPlanMigrationTests {
         }
 
         await using var valid = await Fixture.CreateAsync();
-        var original = await valid.Coordinator(projectsOnly: true).EnsureReadyAsync(valid.Profile);
+        var original = await valid.SeedHistoricalActivationAsync();
         await using var upgraded = valid.Canonical();
         await UpgradeAsync(upgraded);
+        await upgraded.GetService<IMigrator>().MigrateAsync();
         var intact = await ReadRetainedAsync(upgraded, projectsOnly: false);
         await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => valid.Coordinator(projectsOnly: true).EnsureReadyAsync(valid.Profile));
         Assert.Equal(intact, await ReadRetainedAsync(upgraded, projectsOnly: false));
@@ -118,7 +120,7 @@ public sealed class ProjectTaskPlanMigrationTests {
         await using var context = fixture.Canonical();
         var migration = await UpgradeAsync(context);
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(169, context.Model.GetEntityTypes().Count());
+        Assert.Equal(186, context.Model.GetEntityTypes().Count());
         await using var owner = fixture.Owner();
         Assert.Equal(16, owner.Model.GetEntityTypes().Count());
         var canonical = context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(ProjectTaskPlanReceiptRecord))!;
@@ -148,7 +150,7 @@ public sealed class ProjectTaskPlanMigrationTests {
                 (SELECT count(*) FROM pg_attribute WHERE attrelid = '"Workbench_TaskPlanReceipts"'::regclass AND atthasdef) +
                 (SELECT count(*) FROM pg_index WHERE indrelid = '"Workbench_TaskPlanReceipts"'::regclass AND NOT indisprimary))::integer AS "Value"
             """).SingleAsync());
-        var binding = await fixture.Coordinator().EnsureReadyAsync(fixture.Profile);
+        var binding = await fixture.SeedHistoricalActivationAsync(includeWorkbench: true);
         await SeedProjectsEvidenceAsync(context, fixture.Profile.Profile.Id, binding);
         await InsertReceiptAsync(context, binding.Namespace.Value);
         foreach (var invalid in Enum.GetValues<InvalidReceipt>()) {
@@ -316,6 +318,14 @@ public sealed class ProjectTaskPlanMigrationTests {
         }, DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString);
         internal AppDbContext Canonical() => new(lease.CreateAppDbContextOptions());
         internal WorkbenchDbContext Owner() => new(new DbContextOptionsBuilder<WorkbenchDbContext>().UseNpgsql(lease.ConnectionString).Options);
+
+        internal async Task<DatasetActivationBinding> SeedHistoricalActivationAsync(bool includeWorkbench = false) {
+            await using var context = Canonical();
+            FiniteOperationPoolId[] pools = includeWorkbench
+                ? [ProjectFiniteOperationPool.Pool, WorkbenchTaskPlanFiniteOperations.Pool]
+                : [ProjectFiniteOperationPool.Pool];
+            return await HistoricalDatasetActivation.SeedSharedRowsAsync(context, Files(), Profile.Profile.Id, SavedAt, pools);
+        }
 
         internal DatasetActivationCoordinator Coordinator(bool projectsOnly = false) {
             var registrations = new ServiceCollection();

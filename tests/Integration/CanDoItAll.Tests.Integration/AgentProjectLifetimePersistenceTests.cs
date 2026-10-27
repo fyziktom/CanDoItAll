@@ -63,7 +63,7 @@ public sealed class AgentProjectLifetimePersistenceTests {
             oldRequest.SourceKind, oldRequest.SourceId, "source", "view", 1, "original-source", DateTimeOffset.UtcNow);
         var revalidation = AgentExecutionAuthorityResolutionRequest.FromCaptured(oldReference, AgentExecutionGovernanceSnapshot.FromAuthority(original));
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-        var deletion = oldProjects.DeleteAsync(projectId, deadline.Token);
+        var deletion = ProjectLifecycleTestCommands.DeleteAsync(oldScope.ServiceProvider, projectId, deadline.Token);
         try {
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
             await using var newScope = application.Services.CreateAsyncScope();
@@ -97,7 +97,7 @@ public sealed class AgentProjectLifetimePersistenceTests {
             await deletion.WaitAsync(TimeSpan.FromSeconds(30));
             var access = await ReadAccessAsync(newWorkspace, agentId);
             AssertLifetimeGrant(access, newLifetime, allowAll);
-            await newProjects.DeleteAsync(projectId, deadline.Token);
+            await ProjectLifecycleTestCommands.DeleteAsync(newScope.ServiceProvider, projectId, deadline.Token);
             access = await ReadAccessAsync(newWorkspace, agentId);
             Assert.Empty(access.AllowedProjectIds);
             Assert.Empty(access.AllowedProjectLifetimes);
@@ -170,7 +170,7 @@ public sealed class AgentProjectLifetimePersistenceTests {
         Assert.Equal(0, await restartedWorkspace.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(
             AgentProjectStructureRevocationTarget.UnboundLegacy(lifetime.DatabaseProfileId, projectId)));
         Assert.Equal(lifetime, Assert.Single((await ReadAccessAsync(restartedWorkspace, agentId)).AllowedProjectLifetimes));
-        await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
         var records = await context.Set<AgentProjectStructureAccessRevocationRecord>().AsNoTracking().Where(record => record.ProjectId == projectId).ToArrayAsync();
         Assert.Equal(2, records.Length);
         Assert.Equal(JsonSerializer.Serialize(legacy), JsonSerializer.Serialize(Assert.Single(records, record => record.Id == legacy.Id)));
@@ -193,6 +193,9 @@ public sealed class AgentProjectLifetimePersistenceTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>(), "Atomic lifetime capture");
+        var project = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var binding = await services.GetRequiredService<DatasetActivationService>().ReadActiveBindingAsync(project.DatabaseProfileId);
+        var original = new ProjectDeletionPreparationContext(new(project.DatabaseProfileId, binding.Namespace, new(Guid.NewGuid())), project);
         var probe = new ConnectionProbe();
         var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>(services.GetRequiredService<DbContextOptions<ProjectsDbContext>>())
             .AddInterceptors(probe).Options;
@@ -208,7 +211,7 @@ public sealed class AgentProjectLifetimePersistenceTests {
             var connection = owner.Database.GetDbConnection();
             var transaction = owner.Database.CurrentTransaction!.GetDbTransaction();
             using (coordinator.Enter(owner)) {
-                var prepared = Assert.IsType<ProjectDeletionParticipantPreparation>(await participant.PrepareAsync(projectId));
+                var prepared = Assert.IsType<ProjectDeletionParticipantPreparation>(await participant.PrepareAsync(original));
                 recoveryId = prepared.RecoveryId;
                 Assert.Contains(probe.Commands, command => command.Table == "Projects_Projects");
                 Assert.Contains(probe.Commands, command => command.Table == "AgentFramework_ProjectAccessRevocations");

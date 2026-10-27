@@ -62,7 +62,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         await using var projects = await fixture.TargetServices.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         await using var workbench = await fixture.TargetServices.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
         Assert.Equal(9, projects.Model.GetEntityTypes().Count());
-        Assert.Equal(15, workbench.Model.GetEntityTypes().Count());
+        Assert.Equal(16, workbench.Model.GetEntityTypes().Count());
         foreach (var type in new[] { typeof(ProjectRetirementRecord), typeof(ProjectCreationReservationRecord), typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord) }) {
             var model = type == typeof(ProjectRetirementRecord) || type == typeof(ProjectCreationReservationRecord) ? projects.Model : workbench.Model;
             Assert.Equal("TEXT", model.FindEntityType(type)!.FindProperty(nameof(ProjectRetirementRecord.ImportedHistory))!.GetColumnType());
@@ -118,9 +118,11 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Project_import_preserves_unrelated_local_launches_and_terminal_runtime_admission_pointers(bool package) {
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Project_import_preserves_local_launches_and_refuses_retained_cancellation_recovery(bool package, bool includeCancellation) {
         await using var fixture = await TransferFixture.CreateAsync();
         var project = new Project { Name = "Local launches survive project import", CurrentPhase = "Execution" };
         await using (var source = await fixture.SourceContextAsync()) {
@@ -132,7 +134,10 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         var authority = await fixture.TargetServices.GetRequiredService<IProcessLaunchOperatorAuthoritySource>()
             .CaptureLocalAsync(null, ProcessLaunchOperatorSurface.UserInterface);
         foreach (var state in Enum.GetValues<ProcessLaunchContinuationState>()) {
-            foreach (var status in new[] { ProcessRuntimeStatus.Completed, ProcessRuntimeStatus.Failed, ProcessRuntimeStatus.Cancelled }) {
+            var statuses = includeCancellation
+                ? new[] { ProcessRuntimeStatus.Completed, ProcessRuntimeStatus.Failed, ProcessRuntimeStatus.Cancelled }
+                : [ProcessRuntimeStatus.Completed, ProcessRuntimeStatus.Failed];
+            foreach (var status in statuses) {
                 var preparation = ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid()));
                 var initial = preparation.InitialCommit;
                 var initialState = initial.Mutation.State with {
@@ -150,6 +155,10 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
                 var accepted = await unitOfWork.CommitAsync(ProcessPreparedLaunchFixture.Commit(saved));
                 Assert.True(accepted.Succeeded);
                 await CompleteRetainedProcessAsync(unitOfWork, saved, accepted.State, status);
+                if (status == ProcessRuntimeStatus.Cancelled) {
+                    using var recoveryDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                    await Processes.ProcessAdmissionCancellationRaceTests.CompleteRecoveryAsync(fixture.TargetServices, recoveryDeadline.Token);
+                }
                 var launch = await target.PreparedLaunches.SingleAsync(item => item.Id == saved.Preparation.AdmissionId.Value);
                 var runtime = await target.RuntimeStates.SingleAsync(item => item.RunId == launch.RunId);
                 Assert.NotNull(launch.AcceptedAtUtc);
@@ -171,14 +180,21 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
             var exported = await service.ExportAllAsync(new() { PackagePath = Path.Combine(fixture.Environment.RootPath, "local-process.cdaproj") });
             Assert.True(exported.IsSuccess, string.Join("; ", exported.Errors.Select(error => error.Message)));
             var imported = await service.ImportAllAsync(new() { PackagePath = exported.Value!.PackagePath, TargetProfileId = fixture.TargetProfile.Profile.Id });
-            Assert.True(imported.IsSuccess, string.Join("; ", imported.Errors.Select(error => error.Message)));
+            Assert.Equal(!includeCancellation, imported.IsSuccess);
+            if (includeCancellation) {
+                Assert.Contains(imported.Errors, error => error.Message.Contains("retained completed Process cancellation recovery", StringComparison.Ordinal));
+            }
         } else {
             var imported = await fixture.TransferAsync();
-            Assert.True(imported.Success, imported.Message);
+            Assert.Equal(!includeCancellation, imported.Success);
+            if (includeCancellation) {
+                Assert.Contains("retained completed Process cancellation recovery", imported.Message, StringComparison.Ordinal);
+                Assert.Equal(0, imported.RecordsCopied);
+            }
         }
         await fixture.RestartTargetAsync();
         await using var restarted = await fixture.TargetContextAsync();
-        Assert.Equal(project.Id, (await restarted.Set<Project>().SingleAsync()).Id);
+        Assert.Equal(includeCancellation ? [] : [project.Id], await restarted.Set<Project>().Select(row => row.Id).ToArrayAsync());
         Assert.Equal(originalLaunches, JsonSerializer.Serialize(await restarted.Set<ProcessPreparedLaunchEntity>().AsNoTracking().OrderBy(item => item.Id).ToArrayAsync()));
         Assert.Equal(originalStates, JsonSerializer.Serialize(await restarted.Set<ProcessRuntimeStateEntity>().AsNoTracking().OrderBy(item => item.RunId).ToArrayAsync()));
     }

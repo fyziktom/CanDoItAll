@@ -23,6 +23,7 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     [Fact]
     public async Task Source_Agent_authority_is_held_through_actual_Process_commit_and_is_distinct_from_assigned_executor() {

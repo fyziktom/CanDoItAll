@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Persistence;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed partial class AgentToolEffectJournalIntegrationTests {
     [Theory]
     [InlineData(false)]
