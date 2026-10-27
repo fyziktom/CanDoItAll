@@ -198,12 +198,28 @@ unfiltered verification, final static gates and fixture cleanup remain open.
 
 The native planning journey now waits for the List view's URL acknowledgement before
 exporting or navigating away, then requires Back to restore that exact URL and its rows.
-The diagnostic WB2 run exported the correct data but returned to Week. Ten browser
-rechecks of the retained fixture restored List; each immediate row check could precede
-the server's URL update. This is evidence of a missing test acknowledgement, not proof
-of a production state defect. The new assertions retain the same timeout and will fail
-at the missing acknowledgement if the owner rejects or resets the selected view. Both
-complete planning journeys still require verification with the rebuilt test assembly.
+The 13-case native consumer batch passes 11 cases; WB1 and WB2 export the correct data
+but fail the post-Back row check. Ten manual rechecks restore List, while their immediate
+row check precedes the server's URL update. A short native regression isolates the same
+sequence: it passes in 25 seconds with URL acknowledgement and reproduces the original
+failure in 30 seconds when that wait is removed. The proposed source is restored from
+its recorded hash and rebuilt before acceptance. The new assertions retain the same
+timeout and fail at a missing acknowledgement if the owner rejects or resets the view.
+The restored candidate fails at the new URL acknowledgement: the address remains Week
+after clicking List. Browser instrumentation identifies two creates for the same calendar
+surface during route canonicalization. A delayed selection callback from the duplicate
+initialization emits Week after the List intent and overwrites it. The assertion exposes
+this production race; waiting longer is not its repair.
+
+Components checkpoint `1938d114` serializes the calendar's create/update calls, acknowledges
+the exact surface sent to JavaScript and applies a newer queued surface afterward.
+Disposal waits for the pending create before releasing its controller. The existing
+parameterless scene-host acknowledgement retains its behavior for other consumers.
+CanvasLib and its test project build in standard Release with zero warnings and errors;
+all 11 selected contract tests pass, including three controlled initialization, update
+and disposal cases. The root pins this signed revision. Both complete planning journeys
+remain in the required unfiltered verification; fresh discovery confirms 297 browser
+cases. Refreshed application outputs and isolated fixture images still require validation.
 
 The repaired standard Release build passes all 31 graph-lifetime cases, all five live
 refresh/shutdown cases, all six Prompt Gallery renderer cases, and all 34 process-host
