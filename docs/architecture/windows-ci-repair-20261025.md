@@ -113,3 +113,57 @@ Local proof is retained under `.artifacts/ci-windows-repair-20261025`. The exist
 - The interrupted historical fixture's saved dataset namespace and maintenance identity matched its isolated database. That database was removed after all five owned processes exited and its sessions reached zero. Automatic approval review blocked exact removal of its remaining 73-file directory ending `798168bb00cc4074b37cdcfd4b6deb61`; the explicit retry question remains pending. Earlier recorded cleanup blockers also remain open.
 
 Closure requires rebuilt standard Release outputs, both unfiltered Windows solution runs, reviewed static-baseline changes, documentation gates and verification of temporary fixture cleanup. No complete-suite pass is claimed until those checks finish.
+
+## Browser follow-up and Windows process exit
+
+The unfiltered Windows Playwright run at `88de081f0` completed all 294 reported cases:
+269 passed and 25 failed. Six reported passes returned before executing their optional
+scenario. Five live-agent cases will run with the available real-provider prerequisites;
+the generated-app preview case is unavailable by the user's explicit decision. The
+external Cognitive Memory service case is also unavailable, independently of OpenAI and
+Ollama. Neither unavailable scenario counts as executed proof.
+
+The follow-up keeps the existing module boundaries and acceptance deadlines:
+
+- A canvas collapse carries its dispatch acknowledgement through the existing Components
+  bridge. A prior owner refresh cannot undo a newer local collapse; acknowledged owner
+  normalization, node removal and a different surface remain authoritative. The original
+  component regression fails before the repair and all 12 state-commit cases pass after
+  it. Nine runtime cases and the full asset verifier pass.
+- Clipboard selection is adopted with committed graph readback, so the delayed destination
+  state cannot discard newly pasted nodes. The corrected four-case baseline has two
+  failures for missing pasted nodes and two passes preserving a later deliberate selection.
+  It exercises both immediate selection and delayed state events from the real protocol.
+- Live Processes cancels its existing read and freshness lifetime when the application
+  stops, before DI disposal. A controlled pending-read baseline reproduces the shutdown
+  failure; the repair adds no polling or renderer dependency.
+- Public manifest assets short-circuit authentication after routing and HTTPS redirection.
+  API and managed-file routes keep their authorization pipeline. The browser regression
+  checks public asset bytes with an invalid token and protected-route rejection with both
+  missing and invalid tokens.
+- The native fixture oracle uses a single published-tool image instead of reading more
+  than a thousand assemblies through a Windows bind mount. Its execution deadline stays
+  60 seconds. Exact container ownership and cleanup are recorded even on timeout; the
+  packaging exception is documented in [Container Operations](../operations/containers.md).
+- The Prompt Gallery uses wrapping shared layout components. Browser fixtures wait for
+  actual interactive readiness, acknowledged focus and completed navigation; the existing
+  assertions and deadlines remain in place. Target-database inspection explicitly attaches
+  the already active dataset under its canonical runtime profile and checks the binding.
+- Windows process termination now waits for the root process as well as the ownership
+  boundary, sharing the existing termination budget. A diagnostic with an early-empty
+  ownership boundary fails against the old host and passes against the proposed host.
+  Normal production build and process-host tests still determine acceptance.
+
+The last provider-catalog timeout has not yet been explained. An unchanged-selection
+manual retry closes the dialog; the focused test now retains a failure trace around
+import without recording the preceding credential setup. No import assertion is relaxed.
+Final focused and unfiltered verification, static gates and fixture cleanup remain open.
+
+The repaired standard Release build passes all 31 graph-lifetime cases, all five live
+refresh/shutdown cases, all six Prompt Gallery renderer cases, and all 34 process-host
+and published-output cases. The shutdown test observes the pending request's cancellation
+directly; a host that is stopping does not owe another UI render. The Components change
+is signed and pushed at `fe61b70c` on **codex/canvas-node-drag-intent**, and CI pins that exact
+revision. All 17 static-tool tests and the 1,212-input rendering register pass. The initial
+post-repair portability scan passes without a baseline rewrite; final-source enforcement
+will run again after the CI revision update.

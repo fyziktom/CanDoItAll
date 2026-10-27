@@ -668,13 +668,18 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
 
     internal sealed class OwnerReadGate : DbCommandInterceptor {
         private string? table;
+        private Func<bool>? shouldBlock;
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public void ArmProjects() => table = "Projects_Projects";
+        public void ArmProjects(Func<bool>? when = null) {
+            table = "Projects_Projects";
+            shouldBlock = when;
+        }
         public void ArmHierarchy() => table = "Projects_ProjectHierarchyLinks";
         public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
             CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
-            if (table is { } target && eventData.Context is ProjectsDbContext && command.CommandText.Contains(target, StringComparison.Ordinal)) {
+            if (table is { } target && eventData.Context is ProjectsDbContext &&
+                command.CommandText.Contains(target, StringComparison.Ordinal) && (shouldBlock?.Invoke() ?? true)) {
                 table = null;
                 Entered.TrySetResult();
                 await Release.Task.WaitAsync(cancellationToken);

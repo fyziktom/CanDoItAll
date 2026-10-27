@@ -24,6 +24,7 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
     private readonly List<string> browserErrors = [];
     private readonly List<object> requestFailures = [];
     private readonly string traceId = Guid.NewGuid().ToString("N");
+    private const string OracleOwnershipLabel = "io.candoitall.consumer-oracle";
     private ResponsePlanState responsePlanState;
     private enum ResponsePlanState { None, Unconfirmed, Completed }
     public SharedProviderNativeDefaultsUiTests.Settings Settings { get; }
@@ -199,17 +200,57 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         foreach (var argument in arguments) {
             start.ArgumentList.Add(argument);
         }
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("The owned restart command did not start.");
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        var stderr = process.StandardError.ReadToEndAsync();
+        return await RunDockerCommandAsync(start, "Owned Docker command");
+    }
+
+    private static async Task<string> RunDockerCommandAsync(ProcessStartInfo start, string operation, string? input = null) {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-        await process.WaitForExitAsync(timeout.Token);
-        Assert.True(process.ExitCode == 0, $"The owned restart command failed: {await stderr}");
-        return await stdout;
+        using var process = Process.Start(start) ?? throw new InvalidOperationException($"{operation} did not start.");
+        var stdout = process.StandardOutput.ReadToEndAsync(timeout.Token);
+        var stderr = process.StandardError.ReadToEndAsync(timeout.Token);
+        Exception? failure = null;
+        try {
+            if (start.RedirectStandardInput) {
+                if (input is not null) {
+                    await process.StandardInput.WriteAsync(input.AsMemory(), timeout.Token);
+                }
+                process.StandardInput.Close();
+            }
+            await process.WaitForExitAsync(timeout.Token);
+            var output = await stdout;
+            var diagnostics = await stderr;
+            Assert.True(process.ExitCode == 0, $"{operation} failed with exit code {process.ExitCode}.");
+            Assert.True(diagnostics.Length < 16_384, $"Unexpected diagnostics from {operation}.");
+            return output;
+        } catch (OperationCanceledException exception) when (timeout.IsCancellationRequested) {
+            failure = new TimeoutException($"{operation} exceeded its 60-second deadline.", exception);
+            throw failure;
+        } catch (Exception exception) {
+            failure = exception;
+            throw;
+        } finally {
+            try {
+                if (!process.HasExited) {
+                    process.Kill(entireProcessTree: true);
+                    using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await process.WaitForExitAsync(cleanup.Token);
+                }
+            } catch (Exception cleanupFailure) when (failure is not null) {
+                throw new AggregateException(failure, cleanupFailure);
+            }
+        }
     }
 
     private async Task<JsonElement> RunOracleAsync(string service, string[] arguments, string? input = null) {
         var repository = TestRepositoryRoot.Find();
+        var ownershipId = Guid.NewGuid().ToString("N");
+        var containerName = "cditall-consumer-oracle-" + ownershipId;
+        var project = metadata.GetProperty("composeProjectName").GetString()!;
+        var operation = $"Native fixture oracle ({service}/{arguments[0]})";
+        await EvidenceAsync("oracle-owner-" + ownershipId, new {
+            Container = containerName, Project = project, Service = service, Command = arguments[0],
+            Label = OracleOwnershipLabel, Ownership = ownershipId, Status = "Prepared", StartedUtc = DateTimeOffset.UtcNow
+        });
         var start = new ProcessStartInfo("docker") {
             WorkingDirectory = repository,
             RedirectStandardOutput = true,
@@ -220,7 +261,7 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         };
         foreach (var argument in new[] { "--context", "default", "compose", "--ansi", "never", "--project-name", metadata.GetProperty("composeProjectName").GetString()!,
             "--env-file", ".env.shared-providers.e2e.example", "--file", "compose.shared-providers.e2e.yaml", "--profile", "orchestrator",
-            "run", "--rm", "--no-deps", "-T", service }.Concat(arguments)) {
+            "run", "--rm", "--no-deps", "--name", containerName, "--label", OracleOwnershipLabel + "=" + ownershipId, "-T", service }.Concat(arguments)) {
             start.ArgumentList.Add(argument);
         }
         foreach (var key in start.Environment.Keys.Where(key => key.StartsWith("COMPOSE_", StringComparison.Ordinal) || key.StartsWith("E2E_", StringComparison.Ordinal) || key.StartsWith("DOCKER_", StringComparison.Ordinal)).ToArray()) {
@@ -236,25 +277,52 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         start.Environment["E2E_RUN_MARKER"] = metadata.GetProperty("runMarker").GetString();
         start.Environment["E2E_APP_IMAGE"] = metadata.GetProperty("appImage").GetString();
         start.Environment["E2E_UPSTREAM_IMAGE"] = metadata.GetProperty("upstreamImage").GetString();
+        start.Environment["E2E_TOOL_IMAGE"] = metadata.GetProperty("toolImage").GetString();
         var prefix = metadata.GetProperty("ingressPrefix").GetString()!.Split('.');
         string[] networks = ["LOCAL_INGRESS", "APP_MESH", "CENTRAL_DB", "CLIENT_A_DB", "CLIENT_B_DB", "UPSTREAM_DATA", "UPSTREAM_CONTROL", "CLIENT_A_PERSONAL", "PERSONAL_CONTROL"];
         for (var index = 0; index < networks.Length; index++) {
             start.Environment[$"E2E_{networks[index]}_SUBNET"] = $"{prefix[0]}.{prefix[1]}.{int.Parse(prefix[2]) + index}.0/24";
         }
         start.Environment["E2E_LOCAL_INGRESS_GATEWAY"] = string.Join('.', prefix) + ".1";
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("The native fixture oracle did not start.");
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        var stderr = process.StandardError.ReadToEndAsync();
-        if (input is not null) {
-            await process.StandardInput.WriteAsync(input);
+        Exception? failure = null;
+        try {
+            var output = await RunDockerCommandAsync(start, operation, input);
+            var payload = output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Last();
+            return JsonSerializer.Deserialize<JsonElement>(payload, Json);
+        } catch (Exception exception) {
+            failure = exception;
+            throw;
+        } finally {
+            try {
+                await RemoveOwnedOracleAsync(containerName, ownershipId, project);
+                await EvidenceAsync("oracle-cleanup-" + ownershipId, new {
+                    Container = containerName, Status = "VerifiedAbsent", CompletedUtc = DateTimeOffset.UtcNow
+                });
+            } catch (Exception cleanupFailure) {
+                await EvidenceAsync("oracle-cleanup-" + ownershipId, new {
+                    Container = containerName, Status = "CleanupFailed", Failure = cleanupFailure.GetType().FullName
+                });
+                if (failure is not null) {
+                    throw new AggregateException(failure, cleanupFailure);
+                }
+                throw;
+            }
         }
-        process.StandardInput.Close();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-        await process.WaitForExitAsync(timeout.Token);
-        Assert.True(process.ExitCode == 0, $"The owned consumer oracle failed ({service}/{arguments[0]}). {await stdout}");
-        Assert.True((await stderr).Length < 16_384, "Unexpected fixture oracle diagnostics.");
-        var payload = (await stdout).Split('\n', StringSplitOptions.RemoveEmptyEntries).Last();
-        return JsonSerializer.Deserialize<JsonElement>(payload, Json);
+    }
+
+    private static async Task RemoveOwnedOracleAsync(string containerName, string ownershipId, string project) {
+        var row = (await DockerAsync("container", "ls", "--all", "--no-trunc", "--filter", "name=^/" + containerName + "$",
+            "--format", "{{.ID}}|{{.Label \"" + OracleOwnershipLabel + "\"}}|{{.Label \"com.docker.compose.project\"}}")).Trim();
+        if (row.Length == 0) {
+            return;
+        }
+        var fields = row.Split('|');
+        Assert.Equal(3, fields.Length);
+        Assert.Equal(ownershipId, fields[1]);
+        Assert.Equal(project, fields[2]);
+        await DockerAsync("container", "rm", "--force", fields[0]);
+        var remaining = await DockerAsync("container", "ls", "--all", "--filter", "name=^/" + containerName + "$", "--format", "{{.ID}}");
+        Assert.True(string.IsNullOrWhiteSpace(remaining), $"Owned oracle container {containerName} remains after cleanup.");
     }
 
     public async ValueTask DisposeAsync() {

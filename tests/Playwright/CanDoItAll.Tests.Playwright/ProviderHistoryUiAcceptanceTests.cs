@@ -300,6 +300,8 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await page.GetByTestId("agents-catalog-delete-confirm").ClickAsync();
         await confirmation.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await page.GetByText("Agent deleted", new() { Exact = true }).WaitForAsync();
+        await dialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await Assertions.Expect(page).Not.ToHaveURLAsync(new Regex("[?&]agentId="));
     }
 
     private static async Task OpenAgentCatalogAsync(IPage page, string baseUrl) {

@@ -81,7 +81,7 @@ x-e2e-tool-environment: &e2e-tool-environment
   SHARED_PROVIDERS_E2E_CLIENT_B_URI: http://client-b:8080
 
 x-e2e-tool-base: &e2e-tool-base
-  image: mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION:-10.0.10}
+  image: ${E2E_TOOL_IMAGE:?E2E_TOOL_IMAGE is required}
   profiles:
     - orchestrator
   working_dir: /runner
@@ -432,12 +432,6 @@ services:
         target: /instance
         bind:
           create_host_path: false
-      - type: bind
-        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-publish
-        target: /runner
-        read_only: true
-        bind:
-          create_host_path: false
     depends_on:
       artifact-permissions:
         condition: service_completed_successfully
@@ -477,12 +471,6 @@ services:
         target: /instance
         bind:
           create_host_path: false
-      - type: bind
-        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-publish
-        target: /runner
-        read_only: true
-        bind:
-          create_host_path: false
     depends_on:
       artifact-permissions:
         condition: service_completed_successfully
@@ -518,12 +506,6 @@ services:
       - type: bind
         source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/client-b/data
         target: /instance
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-publish
-        target: /runner
-        read_only: true
         bind:
           create_host_path: false
     depends_on:
@@ -566,12 +548,6 @@ services:
       - type: bind
         source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-state
         target: /e2e
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ${E2E_ARTIFACT_ROOT:-./.artifacts/shared-providers-e2e}/tool-publish
-        target: /runner
-        read_only: true
         bind:
           create_host_path: false
     depends_on:

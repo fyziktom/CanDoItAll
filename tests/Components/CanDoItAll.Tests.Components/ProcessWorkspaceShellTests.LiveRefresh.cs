@@ -11,6 +11,40 @@ namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed partial class ProcessWorkspaceShellTests {
     [Fact]
+    public async Task Host_shutdown_cancels_a_pending_live_read_before_services_are_disposed() {
+        var clock = new ManualTimeProvider(Now);
+        using var context = CreateContext(out var client, timeProvider: clock);
+        var lifetime = Assert.IsType<ProcessTestHostLifetime>(
+            context.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>());
+        var cut = context.Render<LiveProcessesDashboard>();
+        cut.WaitForElement("[data-testid='live-processes-tabs']");
+        cut.WaitForAssertion(() => Assert.False(((ILiveProcessesSession)cut.Instance).IsLoading));
+        var initial = client.Requests.Count;
+        client.DeferShellRequests = true;
+        clock.Advance(TimeSpan.FromSeconds(10));
+        cut.WaitForAssertion(() => {
+            Assert.Equal(initial + 1, client.Requests.Count);
+            Assert.True(((ILiveProcessesSession)cut.Instance).IsLoading);
+        });
+
+        lifetime.StopApplication();
+
+        Assert.True(client.LastShellCancellationToken.IsCancellationRequested);
+        clock.Advance(TimeSpan.FromMinutes(1));
+        await cut.InvokeAsync(() => { });
+        Assert.Equal(initial + 1, client.Requests.Count);
+    }
+
+    private sealed class ProcessTestHostLifetime : Microsoft.Extensions.Hosting.IHostApplicationLifetime, IDisposable {
+        private readonly CancellationTokenSource stopping = new();
+        public CancellationToken ApplicationStarted => CancellationToken.None;
+        public CancellationToken ApplicationStopping => stopping.Token;
+        public CancellationToken ApplicationStopped => CancellationToken.None;
+        public void StopApplication() => stopping.Cancel();
+        public void Dispose() => stopping.Dispose();
+    }
+
+    [Fact]
     public async Task Live_refresh_updates_the_open_run_dialog_when_execution_completes() {
         var clock = new ManualTimeProvider(Now);
         using var context = CreateContext(out var client, timeProvider: clock);

@@ -290,6 +290,7 @@ public sealed class SharedProviderRealCatalogUiTests {
         await ClearPricesAsync(page);
         await page.GetByTestId("provider-pricing-refresh-button").ClickAsync();
         await page.GetByText("Provider models loaded", new() { Exact = true }).WaitForAsync();
+        await WaitForPricingModelsAsync(page, DefaultChatModel);
         var pricedModels = await page.Locator("[data-testid^='provider-pricing-model-']")
             .EvaluateAllAsync<string[]>("elements => elements.map(element => element.value)");
         var defaultRow = Array.IndexOf(pricedModels, DefaultChatModel);
@@ -326,6 +327,7 @@ public sealed class SharedProviderRealCatalogUiTests {
         await ClearPricesAsync(page);
         await page.GetByTestId("provider-pricing-refresh-button").ClickAsync();
         await page.GetByText("Provider models loaded", new() { Exact = true }).WaitForAsync();
+        await WaitForPricingModelsAsync(page, OpenAiModelIds.GptImage25Flare, OpenAiModelIds.GptImage25Sunburst);
         var pricedRows = page.Locator("[data-testid^='provider-pricing-row-']");
         for (var index = await pricedRows.CountAsync() - 1; index >= 0; index--) {
             if (!imageModels.Contains(await page.GetByTestId($"provider-pricing-model-{index}").InputValueAsync(), StringComparer.Ordinal)) {
@@ -344,6 +346,16 @@ public sealed class SharedProviderRealCatalogUiTests {
         for (var index = await rows.CountAsync() - 1; index >= 0; index--) {
             await rows.Nth(index).GetByRole(AriaRole.Button, new() { Name = "Remove", Exact = true }).ClickAsync();
         }
+        await Assertions.Expect(rows).ToHaveCountAsync(0);
+    }
+
+    private static async Task WaitForPricingModelsAsync(IPage page, params string[] models) {
+        await using var readiness = await page.WaitForFunctionAsync("""
+            expected => {
+                const actual = Array.from(document.querySelectorAll("[data-testid^='provider-pricing-model-']"), input => input.value);
+                return expected.every(model => actual.includes(model));
+            }
+            """, models);
     }
 
     private static async Task<string> IssueTokenAsync(IPage page, string url, string scopes) {

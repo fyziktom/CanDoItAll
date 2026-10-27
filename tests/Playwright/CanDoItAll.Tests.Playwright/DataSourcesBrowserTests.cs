@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
@@ -76,6 +77,11 @@ public sealed class DataSourcesBrowserTests {
         await page.GetByTestId("database-profile-test-connection").ClickAsync();
         await Assertions.Expect(page.GetByTestId("database-profile-operation-message")).ToContainTextAsync("connection succeeded");
         await using var targetServices = host.BuildTargetServices();
+        var targetActivation = targetServices.GetRequiredService<DatasetActivationService>();
+        var storedTargetBinding = await targetActivation.ObserveActiveBindingAsync(profileB);
+        var targetRuntime = targetServices.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
+        var attachedTargetBinding = await targetServices.GetRequiredService<DatasetActivationCoordinator>().AttachAsync(targetRuntime);
+        Assert.Equal(storedTargetBinding.Record.Plan.Binding, attachedTargetBinding);
         await using var targetScope = targetServices.CreateAsyncScope();
         var targetWorkspace = targetScope.ServiceProvider.GetRequiredService<WorkspaceService>();
         Assert.Null((await targetWorkspace.GetSettingsAsync()).DefaultProviderProfileId);

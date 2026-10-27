@@ -273,11 +273,10 @@ public partial class ProjectStructurePage
             if (selectionRevision != insightsSelectionRevision) {
                 return;
             }
-            selectedNodeIds = outcome.NodeIds.ToList();
-            selectionRevision = insightsSelectionRevision;
             try {
-                await ReloadSurfaceAsync(canPublish: () => IsCurrentAction(opening.Context) && selectionRevision == insightsSelectionRevision &&
-                    (clipboardState is null || ReferenceEquals(clipboardState, capturedState)));
+                await ReloadSurfaceAsync(canPublish: () => IsCurrentAction(opening.Context) &&
+                    (selectionRevision == insightsSelectionRevision || selectedNodeIds.SequenceEqual(outcome.NodeIds, StringComparer.Ordinal)) &&
+                    (clipboardState is null || ReferenceEquals(clipboardState, capturedState)), preferredSelectionIds: outcome.NodeIds);
             } catch (Exception failure) {
                 RecordAuthoringOutcome(opening, outcome with { Failure = failure,
                     Message = $"{outcome.Message} Canvas readback failed. Reload the original project; do not repeat the paste." });

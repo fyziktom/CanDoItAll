@@ -337,7 +337,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
 
             using (ownership)
             {
-                return await ForceTerminateOwnershipAsync(ownership).ConfigureAwait(false);
+                return await ForceTerminateOwnershipAsync(ownership, process).ConfigureAwait(false);
             }
         }
     }
@@ -382,10 +382,10 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
     }
 
     private static async Task<WorkspaceProcessTerminationResult> ForceTerminateOwnershipAsync(
-        ILocalWorkspaceProcessOwnership ownership)
-    {
+        ILocalWorkspaceProcessOwnership ownership,
+        Process? rootProcess = null) {
         var terminationRequested = ownership.ForceTerminate();
-        var empty = await ownership.WaitForEmptyAsync(TerminationTimeout).ConfigureAwait(false);
+        var empty = await WaitForTerminationAsync(ownership, rootProcess, TerminationTimeout).ConfigureAwait(false);
         if (terminationRequested && empty)
         {
             return new WorkspaceProcessTerminationResult(
@@ -803,13 +803,29 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
     {
         if (terminationMode == WorkspaceProcessTerminationMode.GracefulThenForceTree &&
             ownership.RequestGracefulTermination(process) &&
-            await ownership.WaitForEmptyAsync(GracefulTerminationTimeout).ConfigureAwait(false))
+            await WaitForTerminationAsync(ownership, process, GracefulTerminationTimeout).ConfigureAwait(false))
         {
             return true;
         }
 
         return ownership.ForceTerminate() &&
-               await ownership.WaitForEmptyAsync(TerminationTimeout).ConfigureAwait(false);
+               await WaitForTerminationAsync(ownership, process, TerminationTimeout).ConfigureAwait(false);
+    }
+
+    private static async Task<bool> WaitForTerminationAsync(
+        ILocalWorkspaceProcessOwnership ownership,
+        Process? rootProcess,
+        TimeSpan timeout) {
+        var started = Stopwatch.GetTimestamp();
+        if (!await ownership.WaitForEmptyAsync(timeout).ConfigureAwait(false)) {
+            return false;
+        }
+        if (rootProcess is null || HasExited(rootProcess)) {
+            return true;
+        }
+        var remaining = timeout - Stopwatch.GetElapsedTime(started);
+        return remaining > TimeSpan.Zero &&
+               await WaitForExitAfterCancellationAsync(rootProcess, CancellationToken.None, remaining).ConfigureAwait(false);
     }
 
     internal static bool ProcessHasExited(Process process)

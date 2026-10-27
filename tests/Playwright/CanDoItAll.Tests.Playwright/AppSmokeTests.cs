@@ -2133,28 +2133,16 @@ public sealed partial class AppSmokeTests
         Assert.True(selected, $"Expected runtime selection bridge to select '{selector}'.");
     }
 
-    private static async Task SelectStructureOutlineNodeAsync(IPage page, string title)
-    {
+    private static async Task SelectStructureOutlineNodeAsync(IPage page, string title) {
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
-
         var outlineItem = page.GetByTestId("project-structure-object-index-window")
             .Locator(".cda-treeview__row")
-            .Filter(new LocatorFilterOptions
-            {
-                HasText = title
-            })
-            .First;
-
-        await outlineItem.WaitForAsync();
+            .Filter(new() { Has = page.GetByText(title, new() { Exact = true }) });
+        await Assertions.Expect(outlineItem).ToHaveCountAsync(1);
         await outlineItem.ClickAsync();
-        await page.WaitForFunctionAsync(
-            @"expectedTitle => {
-                const selectionWindow = document.querySelector('[data-testid=""project-structure-selection-window""]');
-                return !!selectionWindow && (selectionWindow.textContent || '').includes(expectedTitle);
-            }",
-            title);
+        await Assertions.Expect(page.GetByTestId("project-structure-selection-window")
+            .Locator(".cw-floating-window__title")).ToHaveTextAsync(title);
     }
-
     private static async Task FocusCanvasRootAsync(IPage page)
     {
         var button = page.GetByRole(AriaRole.Button, new() { Name = "Focus root", Exact = true });

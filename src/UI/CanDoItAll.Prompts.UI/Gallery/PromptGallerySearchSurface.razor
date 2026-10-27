@@ -1,12 +1,10 @@
 <Stack GapScale="LayoutGap.Medium"
        Class="prompt-gallery-search-list"
        data-testid="prompt-gallery-search-list">
-    @* The bar spans the list column: an auto-fit rail repeats once under fit-content sizing and would collapse otherwise. *@
-    <FilterBar ResultText="@ResultText" Class="w-full">
-        <Grid Gap="LayoutGap.Small"
+    <FilterBar ResultText="@ResultText" Class="w-full" data-testid="prompt-gallery-filter-bar">
+        <Cluster Gap="LayoutGap.Small"
               AlignItems="AlignItems.Center"
-              ColumnTemplate="@NarrowFilterColumnTemplate"
-              ColumnTemplateXl="@FilterColumnTemplate"
+              Wrap="FlexWrap.Wrap"
               Class="min-w-0 flex-1 prompt-gallery-search-list__rail"
               data-testid="prompt-gallery-filter-rail">
             <TextBox Value="@Filters.Text"
@@ -14,14 +12,14 @@
                      Placeholder="Search names, prompt text, or tags"
                      Immediate="true"
                      aria-label="Search prompt gallery"
-                     data-testid="prompt-gallery-search" />
+                     Style="min-width:0;flex:2 1 12rem" data-testid="prompt-gallery-search" />
             <InputSelect TValue="PromptGalleryItemKind?"
                          Value="@Filters.Kind"
                          ValueChanged="HandleKindChangedAsync"
                          ValueExpression="@(() => Filters.Kind)"
                          class="cda-input"
                          aria-label="Prompt kind"
-                         data-testid="prompt-gallery-kind-filter">
+                         style="min-width:0;flex:0.7 1 8rem" data-testid="prompt-gallery-kind-filter">
                 <option value="">All kinds</option>
                 @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
                 {
@@ -34,7 +32,7 @@
                          ValueExpression="@(() => Filters.Status)"
                          class="cda-input"
                          aria-label="Prompt status"
-                         data-testid="prompt-gallery-status-filter">
+                         style="min-width:0;flex:0.7 1 8rem" data-testid="prompt-gallery-status-filter">
                 <option value="">All statuses</option>
                 @foreach (var option in Enum.GetValues<PromptArtifactStatus>())
                 {
@@ -46,7 +44,7 @@
                        Suggestions="@Presentation.AvailableTags"
                        Placeholder="Filter by tags"
                        MaxTags="20"
-                       TestId="prompt-gallery-tag-filter"
+                       Style="min-width:0;flex:1.25 1 10rem" TestId="prompt-gallery-tag-filter"
                        InputTestId="prompt-gallery-tag-filter-input" />
             @if (!Compact)
             {
@@ -55,13 +53,13 @@
                          Placeholder="Any provider"
                          Immediate="true"
                          aria-label="Filter by supported provider"
-                         data-testid="prompt-gallery-provider-filter" />
+                         Style="min-width:0;flex:0.8 1 8rem" data-testid="prompt-gallery-provider-filter" />
                 <TextBox Value="@Filters.ModelFilter"
                          ValueChanged="HandleModelFilterChangedAsync"
                          Placeholder="Any model"
                          Immediate="true"
                          aria-label="Filter by supported model"
-                         data-testid="prompt-gallery-model-filter" />
+                         Style="min-width:0;flex:0.9 1 8rem" data-testid="prompt-gallery-model-filter" />
             }
             <label class="prompt-gallery-search-list__choice">
                 <CheckBox TValue="bool"
@@ -90,8 +88,8 @@
                     Click="ClearFiltersAsync"
                     aria-label="Clear prompt gallery filters"
                     title="Clear filters"
-                    data-testid="prompt-gallery-clear-filters" />
-        </Grid>
+                    Style="flex:0 0 auto" data-testid="prompt-gallery-clear-filters" />
+        </Cluster>
     </FilterBar>
 
     @if (Presentation.OffersActualChatModelFilter)
@@ -285,14 +283,6 @@
     private string ResultText => Presentation.IsLoading
         ? "Searching"
         : $"{Presentation.TotalCount:N0} matching item(s)";
-
-    // Desktop rail: fixed tracks for the inputs, intrinsic tracks for the checkbox labels and the clear action so they never wrap.
-    private string FilterColumnTemplate => Compact
-        ? "minmax(16rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(12rem,1.2fr) max-content max-content"
-        : "minmax(14rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(11rem,1.25fr) minmax(8rem,.8fr) minmax(8rem,.9fr) max-content max-content max-content";
-
-    // Constrained containers wrap the same controls into as many rows as needed instead of overflowing.
-    private const string NarrowFilterColumnTemplate = "repeat(auto-fit, minmax(11rem, 1fr))";
 
     private string PageText => Presentation.TotalPages == 0
         ? "No pages"

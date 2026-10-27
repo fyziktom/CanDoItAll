@@ -151,6 +151,27 @@ publisher data and credentials, or write stale client state. After migration,
 Read current files through the running container or the named volume. See
 [manual-client backup and rollback](backup-and-restore.md#manual-shared-provider-client).
 
+## Shared-provider test tool image
+
+The isolated shared-provider harness publishes its evidence tool once in standard
+`Release` and packages that output in
+[`CanDoItAll.SharedProviders.E2E/Dockerfile`](../../tools/SharedProviders/CanDoItAll.SharedProviders.E2E/Dockerfile).
+`Run-SharedProviderE2E.ps1` owns the build and records the image revision and source
+fingerprint alongside the application and deterministic upstream images. All four oracle
+roles use that same image; runtime data remains in the fixture's validated mounts.
+
+This is an intentional single-stage packaging exception: the input is the existing
+published tool, not source or an SDK build context. Running its many assemblies through a
+Windows host bind mount exceeded the oracle's unchanged 60-second deadline. The image
+runs as UID/GID 1654 and includes no credentials. Validate Compose mounts and all three
+image identities, execute the native consumers, and exercise timeout cleanup before
+closing a change to this harness.
+
+Each native browser oracle records a unique container name and ownership label before
+launch. On failure or timeout, it terminates and awaits the Docker client, removes only
+the matching owned container, and verifies absence. A cleanup failure remains a reported
+failure; it must not be treated as a successful oracle result.
+
 ## Workstation Web Host
 
 For a native macOS host with PostgreSQL in Podman, follow

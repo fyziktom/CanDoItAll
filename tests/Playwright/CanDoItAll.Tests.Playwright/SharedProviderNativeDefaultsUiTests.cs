@@ -121,7 +121,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
             var address = settings.Clients[index];
             clientTokens.Add(await IssueTokenAsync(page, address, shared: false));
             await SharedProviderTwoInstanceUiAcceptanceTests.CreateSecretAsync(page, address, SourceSecretName, sourceToken);
-            await ImportAsync(page, address, savedNative.Select(profile => profile.Name).ToArray(), settings.Resume);
+            await ImportAsync(page, address, savedNative.Select(profile => profile.Name).ToArray(), settings);
             using var clientApi = Api(address, clientTokens[index]);
             var imported = (await ProfilesAsync(clientApi)).Where(profile => profile.IsSourceManaged && savedNative.Any(source => source.Name == profile.Name)).ToArray();
             Assert.Equal(savedNative.Count, imported.Length);
@@ -297,8 +297,21 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         Assert.Empty(await client.GetByRole(AriaRole.Button, new() { Name = "Edit", Exact = true }).AllAsync());
     }
 
-    private static async Task ImportAsync(IPage page, string address, IReadOnlyList<string> names, bool resume) {
+    private static async Task ImportAsync(IPage page, string address, IReadOnlyList<string> names, Settings settings) {
         await NavigateAsync(page, address + "/agents?tab=providers");
+        await page.Context.Tracing.StartAsync(new() { Screenshots = true, Snapshots = true, Sources = true });
+        var completed = false;
+        try {
+            await ImportCatalogAsync(page, names, settings.Resume);
+            completed = true;
+        } finally {
+            await page.Context.Tracing.StopAsync(new() {
+                Path = completed ? null : Path.Combine(settings.Evidence, $"native-catalog-import-{Guid.NewGuid():N}.zip")
+            });
+        }
+    }
+
+    private static async Task ImportCatalogAsync(IPage page, IReadOnlyList<string> names, bool resume) {
         await page.GetByTestId("providers-connections").ClickAsync();
         var source = page.GetByTestId("shared-provider-source-card").Filter(new() { HasTextString = SourceName });
         await page.GetByTestId("shared-provider-source-add").WaitForAsync();

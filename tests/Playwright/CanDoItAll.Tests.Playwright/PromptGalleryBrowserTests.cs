@@ -17,8 +17,15 @@ public sealed class PromptGalleryBrowserTests
         () => {
             const rail = document.querySelector('[data-testid="prompt-gallery-filter-rail"]');
             const children = Array.from(rail.children);
-            // Resolved row tracks count the grid rows; child tops differ within one row because items are centered.
-            const rows = getComputedStyle(rail).gridTemplateRows.trim().split(/\s+/).filter(Boolean).length;
+            const rowCenters = [];
+            for (const child of children) {
+                const box = child.getBoundingClientRect();
+                const center = box.top + box.height / 2;
+                if (!rowCenters.some(existing => Math.abs(existing - center) <= 1)) {
+                    rowCenters.push(center);
+                }
+            }
+            const rows = rowCenters.length;
             const railBox = rail.getBoundingClientRect();
             const overflowing = children
                 .filter(child => {
@@ -27,7 +34,7 @@ public sealed class PromptGalleryBrowserTests
                 })
                 .map(child => child.getAttribute('data-testid') ?? child.tagName);
             return {
-                template: getComputedStyle(rail).gridTemplateColumns,
+                layout: `${getComputedStyle(rail).display}, ${rail.clientWidth}px available`,
                 rows,
                 railOverflow: rail.scrollWidth > rail.clientWidth + 1,
                 overflowing
@@ -307,18 +314,24 @@ public sealed class PromptGalleryBrowserTests
 
         var desktop = await ProbeRailAsync(page);
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "05-rail-1600.png") });
-        Assert.False(desktop.RailOverflow, $"Desktop rail overflows: {desktop.Template}");
+        Assert.False(desktop.RailOverflow, $"Desktop rail overflows: {desktop.Layout}");
         Assert.Empty(desktop.Overflowing);
         Assert.Equal(1, desktop.Rows);
 
-        // Below the xl breakpoint the rail wraps into an auto-fit grid instead of squeezing its controls.
         await page.SetViewportSizeAsync(1100, 900);
-        await page.WaitForTimeoutAsync(300);
         var constrained = await ProbeRailAsync(page);
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "06-rail-1100.png") });
-        Assert.False(constrained.RailOverflow, $"Constrained rail overflows: {constrained.Template}");
+        Assert.False(constrained.RailOverflow, $"Constrained rail overflows: {constrained.Layout}");
         Assert.Empty(constrained.Overflowing);
-        Assert.True(constrained.Rows > 1, $"Expected the constrained rail to wrap, template: {constrained.Template}");
+        Assert.True(constrained.Rows > 1, $"Expected the constrained rail to wrap: {constrained.Layout}");
+
+        await page.SetViewportSizeAsync(1600, 1000);
+        await page.GetByTestId("prompt-gallery-filter-bar").EvaluateAsync("bar => bar.style.maxWidth = '52rem'");
+        var contained = await ProbeRailAsync(page);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "07-rail-contained-1600.png") });
+        Assert.False(contained.RailOverflow, $"Desktop container overflows: {contained.Layout}");
+        Assert.Empty(contained.Overflowing);
+        Assert.True(contained.Rows > 1, $"Expected the rail to wrap within its desktop container: {contained.Layout}");
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.Empty(pageErrors);
@@ -448,11 +461,11 @@ public sealed class PromptGalleryBrowserTests
     {
         var probe = await page.EvaluateAsync<System.Text.Json.JsonElement>(RailOverflowProbe);
         return new RailProbe(
-            probe.GetProperty("template").GetString() ?? string.Empty,
+            probe.GetProperty("layout").GetString() ?? string.Empty,
             probe.GetProperty("rows").GetInt32(),
             probe.GetProperty("railOverflow").GetBoolean(),
             probe.GetProperty("overflowing").EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray());
     }
 
-    private sealed record RailProbe(string Template, int Rows, bool RailOverflow, string[] Overflowing);
+    private sealed record RailProbe(string Layout, int Rows, bool RailOverflow, string[] Overflowing);
 }

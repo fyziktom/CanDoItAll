@@ -23,7 +23,6 @@ public sealed class PromptGallerySearchSurfaceTests
             .Add(component => component.Intent, EventCallback.Factory.Create<PromptGallerySearchIntent>(this, intents.Add)));
 
         var rail = cut.Find("[data-testid='prompt-gallery-filter-rail']");
-        Assert.Contains("--cda-grid-columns:", rail.GetAttribute("style"), StringComparison.Ordinal);
         Assert.NotNull(rail.QuerySelector("[data-testid='prompt-gallery-search']"));
         Assert.NotNull(rail.QuerySelector("[data-testid='prompt-gallery-kind-filter']"));
         Assert.NotNull(rail.QuerySelector("[data-testid='prompt-gallery-status-filter']"));

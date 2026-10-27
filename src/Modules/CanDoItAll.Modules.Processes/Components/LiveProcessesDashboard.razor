@@ -25,6 +25,7 @@
 @inject TooltipService TooltipService
 @inject IJSRuntime JsRuntime
 @inject IDatabaseRuntimeState DatabaseRuntimeState
+@inject Microsoft.Extensions.Hosting.IHostApplicationLifetime ApplicationLifetime
 @inject TimeProvider TimeProvider
 @inject ILogger<LiveProcessesDashboard> Logger
 
@@ -134,6 +135,7 @@
     private ProcessAgentChatFreshnessLease? agentChatFreshnessLease;
     private bool isDisposed;
     private readonly CancellationTokenSource lifetimeCancellation = new();
+    private CancellationTokenRegistration applicationStopping;
     private static readonly TimeSpan LiveRefreshInterval = TimeSpan.FromSeconds(10);
 
     private LiveProcessesUrlState Route => url.State;
@@ -190,7 +192,7 @@
 
     private Task ExpireAgentChatPublicationAsync()
         => InvokeAsync(() => {
-            if (isDisposed) {
+            if (isDisposed || lifetimeCancellation.IsCancellationRequested) {
                 return;
             }
 
@@ -290,8 +292,13 @@
             _ => "neutral"
         };
 
-    protected override void OnInitialized()
-        => url = new(Navigation, LiveProcessesUrlCodec.Instance, NavigationHistory);
+    protected override void OnInitialized() {
+        url = new(Navigation, LiveProcessesUrlCodec.Instance, NavigationHistory);
+        applicationStopping = ApplicationLifetime.ApplicationStopping.Register(() => {
+            lifetimeCancellation.Cancel();
+            agentChatFreshnessLease?.Dispose();
+        });
+    }
 
     protected override async Task OnParametersSetAsync() {
         var path = UrlLocation.Split(Navigation.Uri).Path;
@@ -396,7 +403,7 @@
             using var timer = new PeriodicTimer(LiveRefreshInterval, TimeProvider);
             while (await timer.WaitForNextTickAsync(cancellationToken)) {
                 await InvokeAsync(async () => {
-                    if (isDisposed || isLoading || IsMockProjection || Route.Window != ProcessRuntimeHistoryWindow.LiveHour) {
+                    if (isDisposed || cancellationToken.IsCancellationRequested || isLoading || IsMockProjection || Route.Window != ProcessRuntimeHistoryWindow.LiveHour) {
                         return;
                     }
 
@@ -421,6 +428,9 @@
     }
 
     private async Task LoadAsync(bool forceRefresh) {
+        if (lifetimeCancellation.IsCancellationRequested) {
+            return;
+        }
         var generation = Interlocked.Increment(ref loadGeneration);
         var originScope = ResolveScope();
         var originProfileGeneration = DatabaseRuntimeState.GetSnapshot().Generation;
@@ -433,7 +443,7 @@
 
         try {
             var loadedShell = await LoadShellProjectionAsync(forceRefresh, route);
-            if (isDisposed || generation != Volatile.Read(ref loadGeneration)) {
+            if (isDisposed || lifetimeCancellation.IsCancellationRequested || generation != Volatile.Read(ref loadGeneration)) {
                 return;
             }
 
@@ -450,7 +460,7 @@
                 url.Navigate(Route with { Dialog = null, StepId = null }, UrlHistoryMode.Replace);
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
-            if (isDisposed || generation != Volatile.Read(ref loadGeneration)) {
+            if (isDisposed || lifetimeCancellation.IsCancellationRequested || generation != Volatile.Read(ref loadGeneration)) {
                 return;
             }
 
@@ -1236,6 +1246,7 @@
 
         isDisposed = true;
         Interlocked.Increment(ref loadGeneration);
+        applicationStopping.Dispose();
         lifetimeCancellation.Cancel();
         lifetimeCancellation.Dispose();
         agentChatFreshnessLease?.Dispose();
