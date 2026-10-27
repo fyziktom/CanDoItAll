@@ -19,6 +19,9 @@ namespace CanDoItAll.Tests.Integration.Processes;
 internal static class ProcessCancellationNativeHost {
     internal const string Route = "/_tests/native-cancellation";
     internal static Task<ApiTestHost> CreateAsync(ReadProbe? reads = null, bool enabled = true) => ApiTestHost.CreateAsync(true, services => {
+        services.Configure<ProcessRuntimeDispatchQueueOptions>(options => {
+            options.EnableRecovery = false;
+        });
         services.AddScoped<LocalOperatorAuthenticationStateProvider>();
         services.Replace(ServiceDescriptor.Scoped<IInteractiveAccessPrincipalProvider>(
             provider => provider.GetRequiredService<LocalOperatorAuthenticationStateProvider>()));
