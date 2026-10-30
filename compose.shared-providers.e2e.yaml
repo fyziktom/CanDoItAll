@@ -81,7 +81,7 @@ x-e2e-tool-environment: &e2e-tool-environment
   SHARED_PROVIDERS_E2E_CLIENT_B_URI: http://client-b:8080
 
 x-e2e-tool-base: &e2e-tool-base
-  image: ${E2E_TOOL_IMAGE:?E2E_TOOL_IMAGE is required}
+  image: mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION:-10.0.13}
   profiles:
     - orchestrator
   working_dir: /runner

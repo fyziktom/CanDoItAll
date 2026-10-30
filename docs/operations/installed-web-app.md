@@ -182,7 +182,7 @@ copy it out:
 ```powershell
 $databaseRoot = Join-Path $env:LOCALAPPDATA "CanDoItAll\WebApp\runtime\database"
 $manifest = Get-Content (Join-Path $databaseRoot "database-manifest.json") -Raw | ConvertFrom-Json
-$securePassword = Get-Content (Join-Path $databaseRoot $manifest.appPasswordFile) -Raw | ConvertTo-SecureString
+$securePassword = (Get-Content (Join-Path $databaseRoot $manifest.appPasswordFile) -Raw).Trim() | ConvertTo-SecureString
 $credential = [pscredential]::new($manifest.appUsername, $securePassword)
 $plainPassword = $null
 $pgPassLine = $null
@@ -229,7 +229,7 @@ application credential without printing it:
 ```powershell
 $databaseRoot = Join-Path $env:LOCALAPPDATA "CanDoItAll\WebApp\runtime\database"
 $manifest = Get-Content (Join-Path $databaseRoot "database-manifest.json") -Raw | ConvertFrom-Json
-$securePassword = Get-Content (Join-Path $databaseRoot $manifest.appPasswordFile) -Raw | ConvertTo-SecureString
+$securePassword = (Get-Content (Join-Path $databaseRoot $manifest.appPasswordFile) -Raw).Trim() | ConvertTo-SecureString
 $credential = [pscredential]::new($manifest.appUsername, $securePassword)
 $pgDump = Join-Path $databaseRoot (Join-Path $manifest.native.binPath "pg_dump.exe")
 $hadPgPassword = Test-Path Env:\PGPASSWORD

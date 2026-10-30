@@ -6126,7 +6126,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
       "path": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
-      "sha256_lf": "ccf01d57ad3ed8739cc0238111b7ad295692402a009d45e727397abb893f4f46",
+      "sha256_lf": "14beb9140517ab20817f57e10f91d47aca5198c41ac68e26b055a8d03f733c9e",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",

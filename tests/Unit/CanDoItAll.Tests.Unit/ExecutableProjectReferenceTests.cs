@@ -39,6 +39,18 @@ public sealed class ExecutableProjectReferenceTests
             string.Join("; ", violations));
     }
 
+    /// <summary>
+    /// The Windows installer publishes the web host self-contained. Without this opt-out the SDK rejects the
+    /// framework-dependent helpers above with NETSDK1150 and the installed app cannot be published.
+    /// </summary>
+    [Fact]
+    public void Self_contained_web_host_accepts_framework_dependent_helper_executables()
+    {
+        string webProject = Path.Combine(TestRepositoryRoot.Find(), "src", "App", "CanDoItAll.Web", "CanDoItAll.Web.csproj");
+
+        Assert.Equal("false", Property(XDocument.Load(webProject), "ValidateExecutableReferencesMatchSelfContained"), ignoreCase: true);
+    }
+
     private static IEnumerable<string> EnumerateProjects(string directory)
     {
         foreach (string project in Directory.EnumerateFiles(directory, "*.csproj"))

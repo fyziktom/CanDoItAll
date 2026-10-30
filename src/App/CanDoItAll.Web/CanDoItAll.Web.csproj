@@ -46,6 +46,10 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1573</NoWarn>
+    <!-- The Windows installer publishes this host self-contained. Helper executables such as
+         CanDoItAll.Tools.StaticHost stay one portable framework-dependent build that the host runs as
+         `dotnet helper.dll`, so the SDK must not reject them with NETSDK1150. -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
