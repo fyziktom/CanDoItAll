@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-27T06:43:50.325867+00:00",
+  "generated_utc": "2026-10-30T12:18:02.088861+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15713,
+  "allowance_count": 15719,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -84352,6 +84352,12 @@
     {
       "path": "tools/install/Install-CanDoItAllWebApp.ps1",
       "category": "absolute-path-field",
+      "source_fingerprint": "aacfd30d564ff84c92534bc4ed192d65c173206e83aed1bd2873a3abb7a63134",
+      "count": 1
+    },
+    {
+      "path": "tools/install/Install-CanDoItAllWebApp.ps1",
+      "category": "absolute-path-field",
       "source_fingerprint": "b4bc6a0c113eeeeb78c131a4e877a3870d28eccfff756a4281d225698b02449f",
       "count": 1
     },
@@ -84419,12 +84425,6 @@
       "path": "tools/install/Install-CanDoItAllWebApp.ps1",
       "category": "absolute-path-field",
       "source_fingerprint": "f66130e966ada8ebd08b765696d3b73eab23775a0e4f4da48904747a29b505bb",
-      "count": 1
-    },
-    {
-      "path": "tools/install/Install-CanDoItAllWebApp.ps1",
-      "category": "absolute-path-field",
-      "source_fingerprint": "fa9f4fe8042bba96073ada2aaa5cfc5de38b97ea952b3c0116ba2165e9b8139c",
       "count": 1
     },
     {
@@ -84531,14 +84531,14 @@
     },
     {
       "path": "tools/install/Install-CanDoItAllWebApp.ps1",
-      "category": "shell-elevation",
-      "source_fingerprint": "040c14be3549d24ba479b84f2f2fcea41a565d75aebb2753a41e4e171b813c74",
+      "category": "process-start",
+      "source_fingerprint": "3261ff5e5c025f6858725b6ddab12d712f097f0314ce7ec90fbad2bac2463c3d",
       "count": 1
     },
     {
       "path": "tools/install/Install-CanDoItAllWebApp.ps1",
       "category": "shell-elevation",
-      "source_fingerprint": "4e65f3915b02a5ccee85a1f638a4f63c0e67b329595021a4e2b89be4670d6d3e",
+      "source_fingerprint": "040c14be3549d24ba479b84f2f2fcea41a565d75aebb2753a41e4e171b813c74",
       "count": 1
     },
     {
@@ -84557,6 +84557,12 @@
       "path": "tools/install/Install-CanDoItAllWebApp.ps1",
       "category": "shell-elevation",
       "source_fingerprint": "74c03165f4e517c6226d215a96393f9e32c46fe336a3650f6e07352fd1a32fda",
+      "count": 1
+    },
+    {
+      "path": "tools/install/Install-CanDoItAllWebApp.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "794924714fa5de9991b9bb30065878773585e145d61a108851f0e66b95b3a81c",
       "count": 1
     },
     {
@@ -84586,7 +84592,19 @@
     {
       "path": "tools/install/Install-CanDoItAllWebApp.ps1",
       "category": "shell-elevation",
+      "source_fingerprint": "ce995fb1c3bfa180efc8189e23ab127362e37e2c03830fe7640c9add0d633ee6",
+      "count": 1
+    },
+    {
+      "path": "tools/install/Install-CanDoItAllWebApp.ps1",
+      "category": "shell-elevation",
       "source_fingerprint": "d410bae1d7ab84e8333baf0a1e9b11153eb016b4503f09e22cbba66e9472424a",
+      "count": 1
+    },
+    {
+      "path": "tools/install/Install-CanDoItAllWebApp.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "e3bac2c3de0f7c52f72f14fc1169ce65057f3eddc6bc37b44066af7ef78840b7",
       "count": 1
     },
     {
@@ -84623,6 +84641,12 @@
       "path": "tools/install/Install-CanDoItAllWebApp.ps1",
       "category": "windows-executable",
       "source_fingerprint": "5dc907fcb923c5e189db041108308fcd8406d80155b74124d3e25f41ea416096",
+      "count": 1
+    },
+    {
+      "path": "tools/install/Install-CanDoItAllWebApp.ps1",
+      "category": "windows-executable",
+      "source_fingerprint": "687d8c8f626ba023045eb3a8a34713081914f91e57847b625e8834c363c5d843",
       "count": 1
     },
     {
@@ -84904,6 +84928,12 @@
     {
       "path": "tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1",
       "category": "shell-elevation",
+      "source_fingerprint": "44bde8ce3bdd593ae7b34c3690a91b78a49491c60ac67f4381e700b9ddb9c9c4",
+      "count": 1
+    },
+    {
+      "path": "tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1",
+      "category": "shell-elevation",
       "source_fingerprint": "725454a7327a92b30eda90ea9a3dc9677e907d21a126308779de908eb60dd1fd",
       "count": 1
     },
@@ -84953,6 +84983,12 @@
       "path": "tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1",
       "category": "windows-executable",
       "source_fingerprint": "36c487a147cd0fbe2e41a50a4a324810ab1f73690343d33f14db4652343baee4",
+      "count": 1
+    },
+    {
+      "path": "tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1",
+      "category": "windows-executable",
+      "source_fingerprint": "618ce24a71bc84877fd430887e6f945b53ce9e6b06b3bb8dfed3c16cd437d397",
       "count": 1
     },
     {

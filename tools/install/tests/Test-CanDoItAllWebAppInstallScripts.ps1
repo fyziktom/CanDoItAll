@@ -308,6 +308,8 @@ try {
     if (-not $acquired) {
         throw "Timed out accepting the installer mutex."
     }
+    ConvertTo-SecureString -String "handoff-fixture" -AsPlainText -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $PSScriptRoot "security-module-ready.txt") -Value "Ready"
 }
 catch {
     $_ | Out-String | Set-Content -LiteralPath (Join-Path $PSScriptRoot "handoff-error.txt") -Encoding UTF8
@@ -354,6 +356,9 @@ finally {
     Assert-Condition `
         -Condition (-not $handoffMutexAcquired -and $handoffMigrationMayHaveStarted) `
         -Message "Launcher handoff did not atomically transfer the installer mutex."
+    Assert-Condition `
+        -Condition (Test-Path -LiteralPath (Join-Path $handoffTestRoot "security-module-ready.txt") -PathType Leaf) `
+        -Message "The Windows PowerShell launcher could not load its credential-protection module."
 }
 finally {
     if ($handoffMutexAcquired -and $null -ne $handoffMutex) {

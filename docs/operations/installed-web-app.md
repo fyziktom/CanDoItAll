@@ -28,6 +28,10 @@ Run the canonical installer from the repository root:
 The default install root is `%LOCALAPPDATA%\CanDoItAll\WebApp`. The legacy
 `tools\Install-CanDoItAllWebApp.ps1` path forwards to the canonical script.
 
+Installation can run from Windows PowerShell or PowerShell 7. Background startup uses
+Windows PowerShell with its own module discovery, so an inherited PowerShell 7 module
+path does not prevent it from reading the protected database credential.
+
 The web installer calls the database installer automatically. Run the database-only entry
 point when repairing or validating an existing installation:
 

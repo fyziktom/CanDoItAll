@@ -418,12 +418,16 @@ function Invoke-LauncherWithMutexHandoff {
         }
 
         $launcherArguments = Format-ShortcutArguments -Arguments $launcherArgumentList.ToArray()
-        $launcherProcess = Start-Process `
-            -FilePath $PowerShellPath `
-            -ArgumentList $launcherArguments `
-            -WorkingDirectory $WorkingDirectory `
-            -WindowStyle Hidden `
-            -PassThru
+        $launcherStartInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $launcherStartInfo.FileName = $PowerShellPath
+        $launcherStartInfo.Arguments = $launcherArguments
+        $launcherStartInfo.WorkingDirectory = $WorkingDirectory
+        $launcherStartInfo.UseShellExecute = $false
+        $launcherStartInfo.CreateNoWindow = $true
+        $launcherStartInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+        # Windows PowerShell must discover its own modules instead of inheriting PowerShell 7 modules.
+        $launcherStartInfo.EnvironmentVariables.Remove("PSModulePath")
+        $launcherProcess = [System.Diagnostics.Process]::Start($launcherStartInfo)
 
         $handoffDeadline = [DateTimeOffset]::UtcNow.AddSeconds(30)
         $launcherIsWaiting = $false
@@ -459,6 +463,9 @@ function Invoke-LauncherWithMutexHandoff {
             $null -ne $launcherProcess -and
             -not $launcherProcess.HasExited) {
             Stop-Process -Id $launcherProcess.Id -Force -ErrorAction SilentlyContinue
+        }
+        if ($null -ne $launcherProcess) {
+            $launcherProcess.Dispose()
         }
         if ($null -ne $launcherHandoffEvent) {
             $launcherHandoffEvent.Dispose()
