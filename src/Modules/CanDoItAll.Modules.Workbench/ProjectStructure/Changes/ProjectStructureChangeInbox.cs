@@ -85,6 +85,7 @@ public sealed class ProjectStructureChangeInbox {
     public void CompleteRefresh(ProjectStructureChangeCursor? through, string? message = null) {
         if (through?.StreamId == Cursor?.StreamId) {
             acknowledged = Math.Max(acknowledged, through?.Sequence ?? 0);
+            items.RemoveAll(item => item.Sequence <= acknowledged);
             if (refreshReplayLossRevision == replayLossRevision) {
                 replayLost = false;
             }

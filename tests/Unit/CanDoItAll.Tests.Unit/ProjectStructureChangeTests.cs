@@ -131,6 +131,19 @@ public sealed class ProjectStructureChangeTests {
     }
 
     [Fact]
+    public void Successful_refresh_removes_all_acknowledged_rows() {
+        var inbox = Inbox();
+        Publish("first");
+        Publish("second");
+        inbox.Receive(Read(inbox.Cursor), Guid.NewGuid());
+        Assert.Equal(2, inbox.Presentation.Items.Count);
+        Assert.True(inbox.BeginRefresh(out var through));
+        inbox.CompleteRefresh(through);
+        Assert.Empty(inbox.Presentation.Items);
+        Assert.False(inbox.NeedsRefresh);
+    }
+
+    [Fact]
     public void Changes_arriving_during_refresh_remain_pending_and_refresh_is_not_reentrant() {
         var inbox = Inbox();
         Publish("first");
@@ -141,9 +154,11 @@ public sealed class ProjectStructureChangeTests {
         inbox.Receive(Read(inbox.Cursor), Guid.NewGuid());
         inbox.CompleteRefresh(through);
         Assert.True(inbox.NeedsRefresh);
+        Assert.Equal(new[] { "during-refresh" }, Assert.Single(inbox.Presentation.Items).NodeIds);
         Assert.True(inbox.BeginRefresh(out through));
         inbox.CompleteRefresh(through);
         Assert.False(inbox.NeedsRefresh);
+        Assert.Empty(inbox.Presentation.Items);
     }
 
     [Fact]
@@ -155,6 +170,7 @@ public sealed class ProjectStructureChangeTests {
         Assert.True(inbox.BeginRefresh(out _));
         inbox.FailRefresh("Read failed");
         Assert.True(inbox.NeedsRefresh);
+        Assert.Single(inbox.Presentation.Items);
         Assert.False(inbox.IsBusy);
         inbox.Reset(new(profile, project, Guid.NewGuid()), Read().Cursor);
         Assert.NotEqual(original, inbox.ContextId);
@@ -186,6 +202,19 @@ public sealed class ProjectStructureChangeTests {
         inbox.CompleteRefresh(through);
         inbox.Receive(new(new(newStream, 1), [new(1, project, Guid.NewGuid(), "Editor C", DateTimeOffset.UtcNow,
             [new("new", "New process change", ProjectStructureChangeKind.Updated)])], false), actor.Id);
+        Assert.True(inbox.NeedsRefresh);
+    }
+
+    [Fact]
+    public void Refresh_from_a_previous_stream_preserves_new_stream_rows() {
+        var inbox = Inbox();
+        Publish("old");
+        inbox.Receive(Read(inbox.Cursor), Guid.NewGuid());
+        Assert.True(inbox.BeginRefresh(out var through));
+        inbox.Receive(new(new(Guid.NewGuid(), 1), [new(1, project, Guid.NewGuid(), "Editor C", DateTimeOffset.UtcNow,
+            [new("new", "New stream change", ProjectStructureChangeKind.Updated)])], true), actor.Id);
+        inbox.CompleteRefresh(through);
+        Assert.Equal(new[] { "new" }, Assert.Single(inbox.Presentation.Items).NodeIds);
         Assert.True(inbox.NeedsRefresh);
     }
 

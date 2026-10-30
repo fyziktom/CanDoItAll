@@ -129,7 +129,9 @@ node or relationship change. Own-session changes stay quiet. **Updates** reopens
 window, **Refresh structure** reads the current graph without document navigation, and
 choosing an item refreshes and selects its surviving changed nodes. Deleted or moved
 nodes are reported explicitly. Notifications preserve open editor drafts; an active
-composer retains its normal modal interaction boundary.
+composer retains its normal modal interaction boundary. A successful refresh removes
+the update rows it covers; updates received during that read remain pending. A failed
+refresh keeps its rows available for retry.
 
 External clients use the same bounded notification feed:
 
