@@ -44,6 +44,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectStructurePage> Logger
+@inject ProjectStructureChangeFeed ChangeFeed
 @inject IConversationShellCoordinator ConversationShellCoordinator
 @implements IAsyncDisposable
 
@@ -53,6 +54,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 }
 
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
+
+<ProjectStructureChangeObserver Inbox="@changeInbox" Admission="@(surface?.ProjectId == ProjectId ? surface.ExpectedProjectAdmission : null)"
+                                InitialCursor="@changeBaseline" ProjectIds="@(surface?.HierarchyAdmissions.Keys.ToArray() ?? [])"
+                                Changed="@(() => InvokeAsync(StateHasChanged))" />
 
 <ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
                                           ProjectName="@(surface?.ProjectName ?? "Requested project")"
@@ -65,6 +70,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                           RefreshRequested="HandleAgentExecutionCompletedAsync" />
 
 <StructureWorkspace @ref="workbenchRef" @key="StructureContextId" Presentation="@BuildStructurePresentation()" SelectedView="@structureViewIndex" Dispatch="HandleStructureIntentAsync" Dialogs="@BuildStructureDialogs()" DialogIntent="HandleStructureDialogIntentAsync">
+    <ToolbarSupplement>
+        <Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
+                aria-label="Structure updates" title="Show changes from other editors" data-testid="project-structure-changes-toggle"
+                Click="@(() => changeInbox.ToggleWindow())" />
+    </ToolbarSupplement>
     <Planning>
                 <ProjectStructureGanttPanel ProjectId="@ProjectId"
                                             Surface="@surface"
@@ -76,6 +86,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 <ProjectManagerSummaryPanel ProjectId="@ProjectId" ExpectedProjectAdmission="@surface?.ExpectedProjectAdmission" />
     </Insights>
     <SupportWindows>
+                        <StructureChangesWindow Presentation="@changeInbox.Presentation" Dispatch="HandleStructureChangesAsync" />
                         @if (ObjectIndexWindowState.IsVisible)
                         {
                             <ProjectStructureObjectIndexWindow WindowId="@ObjectIndexWindowKey"
@@ -359,6 +370,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     private UrlStateBinding<ProjectStructureUrlState> url = default!;
     private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? observedActor;
+    private readonly ProjectStructureChangeInbox changeInbox = new();
+    private ProjectStructureChangeCursor? changeBaseline;
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
     private StructureWorkspace? workbenchRef;
@@ -545,12 +558,13 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
 
         if (scopeChanged || actorChanged) {
+            changeBaseline = ChangeFeed.Read(InsightsAdmissions.DatabaseProfileId, [ProjectId]).Cursor;
             await ReloadSurfaceAsync();
         }
     }
 
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null,
-        Action? onPublished = null, IReadOnlyList<string>? preferredSelectionIds = null) {
+        Action? onPublished = null, IReadOnlyList<string>? preferredSelectionIds = null, bool preserveEditorDrafts = false) {
         IReadOnlyList<string> preferredSelection = preferredSelectionIds ??
             (string.IsNullOrWhiteSpace(preferredSelectionId) ? [] : [preferredSelectionId]);
         IReadOnlyList<string>? liveSelectionSnapshot = surface?.ProjectId == ProjectId
@@ -667,7 +681,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 }
             }
 
-            var nextQuickActionDialog = quickActionDialog is null
+            var nextQuickActionDialog = preserveEditorDrafts ? quickActionDialog : quickActionDialog is null
                 ? null
                 : reloadedSurface.Nodes.FirstOrDefault(node =>
                     string.Equals(node.Id, quickActionDialog.NodeId, StringComparison.Ordinal)) is { } dialogNode

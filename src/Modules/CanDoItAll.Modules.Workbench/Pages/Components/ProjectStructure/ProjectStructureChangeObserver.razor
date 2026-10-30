@@ -1,0 +1,87 @@
+@using CanDoItAll.Modules.Projects
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Logging
+@inject ProjectStructureChangeFeed Feed
+@inject ProjectStructureChangeSession Session
+@inject ILogger<ProjectStructureChangeObserver> Logger
+@implements IAsyncDisposable
+
+@code {
+    [Parameter, EditorRequired] public ProjectStructureChangeInbox Inbox { get; set; } = default!;
+    [Parameter] public ProjectWriteAdmission? Admission { get; set; }
+    [Parameter] public ProjectStructureChangeCursor? InitialCursor { get; set; }
+    [Parameter] public IReadOnlyCollection<Guid> ProjectIds { get; set; } = [];
+    [Parameter] public EventCallback Changed { get; set; }
+    [CascadingParameter] public Task<AuthenticationState>? Authentication { get; set; }
+
+    private CancellationTokenSource? lifetime;
+    private Task observation = Task.CompletedTask;
+    private Guid[] observedProjects = [];
+    private Task<AuthenticationState>? observedAuthentication;
+
+    protected override async Task OnParametersSetAsync() {
+        if (!RendererInfo.IsInteractive) {
+            return;
+        }
+        var projects = Admission is { } target ? ProjectIds.Append(target.ProjectId).Distinct().Order().ToArray() : [];
+        var identityChanged = Inbox.Admission != Admission || !ReferenceEquals(observedAuthentication, Authentication);
+        if (!identityChanged && observedProjects.SequenceEqual(projects)) {
+            return;
+        }
+        await StopAsync();
+        if (identityChanged) {
+            Inbox.Reset(Admission, InitialCursor);
+        }
+        observedProjects = projects;
+        observedAuthentication = Authentication;
+        if (Admission is not { } admission) {
+            return;
+        }
+        if (Authentication is not null) {
+            var actor = await Authentication;
+            Session.Actor = actor.User.Identity?.Name ?? "Another editor";
+        }
+        lifetime = new();
+        var contextId = Inbox.ContextId;
+        observation = ObserveAsync(admission, projects, contextId, lifetime.Token);
+    }
+
+    private async Task ObserveAsync(ProjectWriteAdmission admission, Guid[] projects, Guid contextId, CancellationToken cancellationToken) {
+        try {
+            while (!cancellationToken.IsCancellationRequested) {
+                var batch = Feed.Read(admission.DatabaseProfileId, projects, Inbox.Cursor);
+                await InvokeAsync(async () => {
+                    if (contextId != Inbox.ContextId || cancellationToken.IsCancellationRequested) {
+                        return;
+                    }
+                    Inbox.Receive(batch, Session.Id);
+                    if (batch.Changes.Count > 0 || batch.RequiresRefresh) {
+                        await Changed.InvokeAsync();
+                    }
+                });
+                await Feed.WaitAsync(batch.Cursor, cancellationToken);
+            }
+        } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Project structure change observation failed for project {ProjectId}.", admission.ProjectId);
+            await InvokeAsync(async () => {
+                if (contextId == Inbox.ContextId && !cancellationToken.IsCancellationRequested) {
+                    Inbox.FailRefresh("Live updates are unavailable. Refresh the structure or reopen the project to reconnect.");
+                    await Changed.InvokeAsync();
+                }
+            });
+        }
+    }
+
+    private async Task StopAsync() {
+        if (lifetime is null) {
+            return;
+        }
+        await lifetime.CancelAsync();
+        await observation;
+        lifetime.Dispose();
+        lifetime = null;
+    }
+
+    public ValueTask DisposeAsync() => new(StopAsync());
+}

@@ -12,6 +12,8 @@
                 <Button Text="Hierarchy" Click="@(() => scenario.OpenDialog(StructureScenario.HierarchyAction, "root"))" />
                 <Button Text="Conversion" Click="@(() => scenario.OpenDialog(StructureScenario.ConversionAction, "note"))" />
                 <Button Text="Transfer" Click="@(() => scenario.OpenDialog(StructureScenario.TransferAction, "root"))" />
+                <Button Text="Remote updates" Click="@(() => ShowChanges(false))" />
+                <Button Text="Update read failure" Click="@(() => ShowChanges(true))" />
                 <label>Outcome <select @bind="scenario.Outcome">
                     @foreach (var outcome in Enum.GetValues<StructureScenarioOutcome>()) { <option value="@outcome">@outcome</option> }
                 </select></label>
@@ -23,6 +25,7 @@
             SelectedView="scenario.View" Dispatch="DispatchAsync" Dialogs="scenario.Dialogs" DialogIntent="HandleDialogAsync">
             <Planning><EmptyState Title="Planning slot" Description="The production host composes its existing Planning renderer here." /></Planning>
             <Insights><EmptyState Title="Insights slot" Description="The production host composes its existing Insights renderer here." /></Insights>
+            <SupportWindows><StructureChangesWindow Presentation="changes" Dispatch="HandleChangesAsync" /></SupportWindows>
         </StructureWorkspace>
         @if (scenario.NestedOpening is not null) {
             <Dialog IsOpen="true" Title="Nested project editor return" TestId="structure-scenario-nested" OnClose="@(() => scenario.ReturnNestedProject())">
@@ -40,6 +43,28 @@
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
     private StructureScenario? scenario;
     private StructureWorkspace? workspace;
+    private StructureChangesPresentation changes = new(Guid.NewGuid(), new() { IsVisible = false }, [], false, false, null);
+
+    private void ShowChanges(bool failed) {
+        changes = new(Guid.NewGuid(), new() { IsVisible = true }, [
+            new(2, "Editor B", DateTimeOffset.UtcNow, "Two related nodes changed; choose this update to select both", ["note", "branch"]),
+            new(1, "Editor C", DateTimeOffset.UtcNow.AddMinutes(-2), "A long node title that wraps inside the floating updates window (changed)", ["root"])
+        ], true, false, failed ? "The read failed. The current structure is retained; refresh to try again." : null);
+    }
+
+    private async Task HandleChangesAsync(StructureChangesIntent intent) {
+        if (intent.ContextId != changes.ContextId) {
+            return;
+        }
+        if (intent is StructureChangesWindowIntent window) {
+            changes = changes with { Window = window.State };
+        } else if (intent is StructureChangesRefreshIntent refresh) {
+            changes = changes with { NeedsRefresh = false, Message = null };
+            if (refresh.Sequence is { } sequence && changes.Items.Single(item => item.Sequence == sequence) is { } item) {
+                await workspace!.SelectNodesAsync(item.NodeIds, item.NodeIds[0]);
+            }
+        }
+    }
 
     protected override void OnInitialized() => scenario = new(Name);
 

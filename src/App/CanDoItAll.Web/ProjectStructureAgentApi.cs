@@ -29,6 +29,7 @@ public static class ProjectStructureAgentApi
             .DisableAntiforgery();
         group.WithMetadata(ProjectStructureHttpResponseContract.Instance);
         group.ApplyApiAuthorization(endpoints, ApiAuthorizationPolicies.WriteProjectStructure);
+        group.MapProjectStructureChanges();
 
         group.MapGet("/node-catalog", GetNodeCatalogAsync)
             .Produces<ProjectStructureNodeCatalogResponse>()
@@ -4288,6 +4289,8 @@ public static class ProjectStructureAgentApi
         Func<T, Guid?>? projectIdSelector = null)
     {
         var agent = ResolveAgentContext(httpContext);
+        httpContext.RequestServices.GetRequiredService<ProjectStructureChangeSession>().Actor =
+            httpContext.User.Identity?.Name ?? agent.AgentName;
         var stopwatch = Stopwatch.StartNew();
 
         try

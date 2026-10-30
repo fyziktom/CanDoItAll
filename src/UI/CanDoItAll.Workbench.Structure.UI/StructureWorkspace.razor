@@ -72,6 +72,7 @@
                             <StatusBadge Tone="info" Text="@($"Nodes {view.Canvas.Nodes.Count}")" />
                             <StatusBadge Tone="neutral" Text="@($"Selection {view.SelectionCount}")" />
                         </div>
+                        @ToolbarSupplement
                     </ToolbarLeftContent>
                     <OverlayContent>
                         @if (view.ShowFeedback &&
@@ -136,6 +137,7 @@
     [Parameter] public RenderFragment? Planning { get; set; }
     [Parameter] public RenderFragment? Insights { get; set; }
     [Parameter] public RenderFragment? SupportWindows { get; set; }
+    [Parameter] public RenderFragment? ToolbarSupplement { get; set; }
     [Parameter] public StructureDialogsPresentation Dialogs { get; set; } = new();
     [Parameter] public EventCallback<StructureDialogIntent> DialogIntent { get; set; }
     [Parameter] public RenderFragment? DeferredDialogs { get; set; }

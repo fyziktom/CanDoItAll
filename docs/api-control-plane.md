@@ -122,6 +122,44 @@ Request history metadata, content and management use separate exact authorities:
 ownership, Light/Detailed privacy and retention. Opaque correlation references do not
 grant access.
 
+## Project Structure Live Updates
+
+The Structure canvas opens **Structure updates** when another editor session commits a
+node or relationship change. Own-session changes stay quiet. **Updates** reopens the
+window, **Refresh structure** reads the current graph without document navigation, and
+choosing an item refreshes and selects its surviving changed nodes. Deleted or moved
+nodes are reported explicitly. Notifications preserve open editor drafts; an active
+composer retains its normal modal interaction boundary.
+
+External clients use the same bounded notification feed:
+
+| Command | Behavior |
+| --- | --- |
+| `GET /api/project-structure/projects/{projectId}/changes` | Poll changes belonging to this exact project in the active database profile. Omit `after` for an empty initial page with a current cursor; `take` defaults to 100 and accepts 1–100. |
+| `GET /api/project-structure/projects/{projectId}/changes/stream` | Follow changes with SSE; `Last-Event-ID` or `after` resumes from a previous cursor. |
+
+The JSON response carries `cursor`, `changes`, and `requiresRefresh`. Encode `after` as
+the cursor's `streamId` GUID without hyphens, a colon, and its decimal `sequence`, for
+example `0123456789abcdef0123456789abcdef:42`. Save the returned cursor after processing
+the entire page. SSE uses the same token as its `id`; conflicting header/query cursors
+and malformed or repeated cursors return 400. Unknown projects return 404. Both routes
+use the existing Project Structure API authorization policy and require no write lease.
+
+SSE events are `project.structure.ready`, `project.structure.changed`,
+`project.structure.gap`, and `stream.heartbeat`, all carrying the polling response.
+The initial ready event can contain replayed changes. Idle heartbeats recheck the
+profile every 15 seconds; a profile switch emits a gap and closes the connection.
+Both transports expose node keys, labels, change kinds, editor session identities,
+actor labels, and UTC timestamps. Change kinds are JSON integers: Created=0,
+Updated=1, Deleted=2, RelationshipChanged=3.
+
+The feed retains the latest 512 committed batches in one Web process. View-state saves
+and projection reads do not publish notifications. It is a refresh feed rather than a
+durable audit history: restart, expired replay, or a future cursor sets
+`requiresRefresh`; refresh the authoritative structure and continue from the new cursor.
+For a hierarchy, monitor each relevant project; the Blazor observer monitors all loaded
+project admissions. Separate Web processes have separate feeds.
+
 ## Current Route Families
 
 The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs); Project Structure is registered from [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs).

@@ -3,6 +3,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using CanDoItAll.Workbench.Structure.UI;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -158,6 +159,52 @@ public partial class ProjectStructurePage
         StructureToolbarCommand.RetryCleanup => RetryPendingDeletionCleanupAsync(),
         _ => Task.CompletedTask
     };
+
+    private async Task HandleStructureChangesAsync(StructureChangesIntent intent) {
+        if (intent.ContextId != changeInbox.ContextId || surface is null || surface.ProjectId != ProjectId) {
+            return;
+        }
+        if (intent is StructureChangesWindowIntent window) {
+            changeInbox.SetWindow(window.State);
+            return;
+        }
+        if (intent is not StructureChangesRefreshIntent refresh || !changeInbox.BeginRefresh(out var through)) {
+            return;
+        }
+        var contextId = changeInbox.ContextId;
+        var context = CaptureActionContext();
+        var targets = changeInbox.GetNodeIds(refresh.Sequence);
+        var published = false;
+        try {
+            await ReloadSurfaceAsync(canPublish: () => contextId == changeInbox.ContextId && IsCurrentAction(context),
+                onPublished: () => published = true, preserveEditorDrafts: true);
+            if (!published || contextId != changeInbox.ContextId || !IsCurrentAction(context)) {
+                return;
+            }
+            var surviving = targets.Where(id => surface!.Nodes.Any(node => node.Id == id)).ToArray();
+            if (surviving.Length > 0) {
+                SelectStructureView(ProjectStructureView.Canvas);
+                await SelectInsightsAsync(CurrentInsights, surviving);
+                if (contextId == changeInbox.ContextId && workbenchRef is not null) {
+                    await workbenchRef.SelectNodesAsync(surviving, surviving[0]);
+                }
+            }
+            if (contextId == changeInbox.ContextId) {
+                changeInbox.CompleteRefresh(through, targets.Count > surviving.Length
+                    ? "The structure is refreshed. Some changed nodes were deleted or moved outside this project; surviving nodes are selected."
+                    : null);
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Remote-change refresh failed for project {ProjectId}.", context.Admission.ProjectId);
+            if (contextId == changeInbox.ContextId) {
+                changeInbox.FailRefresh("The structure could not be refreshed. Your current view is retained. Try Refresh structure again.");
+            }
+        } finally {
+            if (contextId == changeInbox.ContextId && changeInbox.IsBusy) {
+                changeInbox.FailRefresh("The workspace changed during refresh. Reopen the project before continuing.");
+            }
+        }
+    }
 
     private StructureDialogsPresentation BuildStructureDialogs() => new(
         projectHierarchyDialog is { } hierarchy ? new(hierarchy.OpeningId, hierarchy.Title, hierarchy.Copy, hierarchy.SubmitLabel,

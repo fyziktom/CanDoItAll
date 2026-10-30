@@ -13870,7 +13870,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
-      "sha256_lf": "5d35f6ad427df86d9c5e49afb3f6c106b15ecbd9145d679a1072a4fbc7d7a2dc",
+      "sha256_lf": "8ddbb9f425c73be16556924e344ea4c546bc32cbbf14fe560f2c9f7cb550110f",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureNodeCreatedWithFollowUpFailureException, CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -13885,7 +13885,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. Collaboration refresh checks the original inbox context and native admission, acknowledges only the pre-read cursor, and selects surviving node keys without document navigation."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
@@ -14410,7 +14410,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "b93c7586dca0de5342146a3266a9d628a769751ddf6641e0d25989f5f5329d04",
+      "sha256_lf": "810492db4698894f04a0fbb1cd4efe4df7f702ccc1526490b7e01468d21073ce",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14419,8 +14419,8 @@
       "caller": [
         "/projects/{ProjectId:guid}/structure"
       ],
-      "native_owner": "ProjectsService ProjectsService; IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge; ProjectWorkbenchService ProjectWorkbenchService; ProjectStructureSubprojectTransferCoordinator SubprojectTransferCoordinator; IProjectWorkbenchSeedService ProjectWorkbenchSeedService; IProjectStructureLocalFileOpener LocalFileOpener; IProjectStructureRuntimeLauncher RuntimeLauncher; DialogService DialogService; ProjectStructureFileActionCoordinator FileActionCoordinator; ProjectStructureKnownFileInteractionCoordinator KnownFileInteractionCoordinator; ProjectStructureLocalFileActionCoordinator LocalFileActionCoordinator; WorkspaceService WorkspaceService; IProviderRuntimeProfileSource ProviderRuntimeProfileSource; IProviderPromptExecutionService ProviderPromptExecutionService; NavigationManager Navigation; IJSRuntime JSRuntime; ILogger<ProjectStructurePage> Logger; IConversationShellCoordinator ConversationShellCoordinator",
-      "visual_owner": "CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog, CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow, CanDoItAll.Workbench.Operators.UI.Parties.PartyEditor, CanDoItAll.Workbench.Operators.UI.Secrets.SecretReferenceEditor, Insights, Planning, ProjectManagerSummaryPanel, ProjectModalHost, ProjectStructureAgentChatContextProvider, ProjectStructureCanvasDialogs, ProjectStructureCanvasHealthWindow, ProjectStructureDeferredSurface, ProjectStructureFileBrowserWindow, ProjectStructureGanttPanel, ProjectStructureObjectIndexWindow, ProjectStructureSignalsWindow, ProjectStructureSupportDialogs, StructureWorkspace",
+      "native_owner": "ProjectsService ProjectsService; IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge; ProjectWorkbenchService ProjectWorkbenchService; ProjectStructureSubprojectTransferCoordinator SubprojectTransferCoordinator; IProjectWorkbenchSeedService ProjectWorkbenchSeedService; IProjectStructureLocalFileOpener LocalFileOpener; IProjectStructureRuntimeLauncher RuntimeLauncher; DialogService DialogService; ProjectStructureFileActionCoordinator FileActionCoordinator; ProjectStructureKnownFileInteractionCoordinator KnownFileInteractionCoordinator; ProjectStructureLocalFileActionCoordinator LocalFileActionCoordinator; WorkspaceService WorkspaceService; IProviderRuntimeProfileSource ProviderRuntimeProfileSource; IProviderPromptExecutionService ProviderPromptExecutionService; NavigationManager Navigation; IJSRuntime JSRuntime; ILogger<ProjectStructurePage> Logger; IConversationShellCoordinator ConversationShellCoordinator; ProjectStructureChangeFeed ChangeFeed; page-owned ProjectStructureChangeInbox",
+      "visual_owner": "CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog, CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow, CanDoItAll.Workbench.Operators.UI.Parties.PartyEditor, CanDoItAll.Workbench.Operators.UI.Secrets.SecretReferenceEditor, Insights, Planning, ProjectManagerSummaryPanel, ProjectModalHost, ProjectStructureAgentChatContextProvider, ProjectStructureCanvasDialogs, ProjectStructureCanvasHealthWindow, ProjectStructureDeferredSurface, ProjectStructureFileBrowserWindow, ProjectStructureGanttPanel, ProjectStructureObjectIndexWindow, ProjectStructureSignalsWindow, ProjectStructureSupportDialogs, StructureWorkspace, StructureChangesWindow",
       "descendants": [
         "CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog",
         "CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow",
@@ -14439,12 +14439,15 @@
         "ProjectStructureObjectIndexWindow",
         "ProjectStructureSignalsWindow",
         "ProjectStructureSupportDialogs",
-        "StructureWorkspace"
+        "StructureWorkspace",
+        "ProjectStructureChangeObserver",
+        "StructureChangesWindow",
+        "ToolbarSupplement"
       ],
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route and effect host. Root creation reuses Projects native admission and durable pending sessions; the host owns original binding, lifecycle retirement, receipt checks and separate starter effects. The shared editor action slot exposes explicit Projects recovery navigation without storage or authority in the renderer. Existing hierarchy attachment remains a separate command. The existing readback boundary accepts an ordered multi-node preferred selection for clipboard publication. Existing single-node callers, admission and read-generation checks remain in place; no new state owner or module reference is added.",
+      "rationale": "Reviewed native route and effect host. Root creation reuses Projects native admission and durable pending sessions; the host owns original binding, lifecycle retirement, receipt checks and separate starter effects. The shared editor action slot exposes explicit Projects recovery navigation without storage or authority in the renderer. Existing hierarchy attachment remains a separate command. The existing readback boundary accepts an ordered multi-node preferred selection for clipboard publication. Existing single-node callers, admission and read-generation checks remain in place; no new state owner or module reference is added. Collaboration adds a native observer and context-bound inbox intents. Explicit refresh reuses admitted readback and ordered selection while retaining editor drafts; notification rendering stays in Structure.UI.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProjectStructurePage",
@@ -22548,7 +22551,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/StructureSpecimen.razor",
       "path": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/StructureSpecimen.razor",
-      "sha256_lf": "1853278c455b863a79e22e33f19eeb13bd13a1315b76c8f81babcc5ac8aceb26",
+      "sha256_lf": "4a4e7771a86b5f8777e83a8fead53bad302001e3cf446db89514d8047c155df6",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.Workbench.Structure.UiSandbox.Components.StructureSpecimen",
@@ -22558,17 +22561,18 @@
         "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/Structure.razor"
       ],
       "native_owner": "CanDoItAll.Workbench.Structure.UiSandbox",
-      "visual_owner": "Dialog, Insights, Planning, StructureWorkspace",
+      "visual_owner": "Dialog, Insights, Planning, StructureWorkspace, StructureChangesWindow",
       "descendants": [
         "Dialog",
         "Insights",
         "Planning",
-        "StructureWorkspace"
+        "StructureWorkspace",
+        "StructureChangesWindow"
       ],
       "assets": "CanDoItAll.Workbench.Structure.UiSandbox",
       "scenario": "CanDoItAll.Workbench.Structure.UiSandbox",
       "evidence": "CanDoItAll.Workbench.Structure.UiSandbox",
-      "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof."
+      "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof. Remote-update and failure scenarios render the production inbox, including a multi-node selection intent, without module services."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/_Imports.razor",
@@ -34377,7 +34381,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
       "path": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
-      "sha256_lf": "430aa089de8f6eb4897ad81dad79c1fe13d75c69abcc63b0d489a1c82edaf6a5",
+      "sha256_lf": "d516bd823026cc011f35eb1a586aa1f87f0afd0fd368da3a1f20635e73974585",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Structure.UI.StructureWorkspace",
@@ -34398,7 +34402,7 @@
       "assets": "CanDoItAll.Workbench.Structure.UI",
       "scenario": "CanDoItAll.Workbench.Structure.UI",
       "evidence": "CanDoItAll.Workbench.Structure.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects. A toolbar supplement slot composes the native Updates control; no feed or persistence dependency enters the renderer."
     },
     {
       "identity": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor.css",
@@ -35474,6 +35478,53 @@
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
       "rationale": "Shared Medium Dialog, Stack, TextBlock, Alert, SelectionListItem and Button render bounded summaries and typed intents. No CSS, new assets or owner service. Native tests cover actual composition."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureChangeObserver.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureChangeObserver.razor",
+      "sha256_lf": "b5156e759e61f5d79b65b427e5856559638362e858d4afc649d15a4efe849bf2",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure.ProjectStructureChangeObserver",
+      "project": "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor"
+      ],
+      "native_owner": "CanDoItAll.Modules.Workbench",
+      "visual_owner": "No rendering body",
+      "descendants": [],
+      "assets": "CanDoItAll.Modules.Workbench",
+      "scenario": "CanDoItAll.Modules.Workbench",
+      "evidence": "CanDoItAll.Modules.Workbench",
+      "rationale": "Headless native subscription owner. Cancels waits on disposal and scope changes, filters the current circuit session, and reports inbox state; renders no product UI."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureChangesWindow.razor",
+      "path": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureChangesWindow.razor",
+      "sha256_lf": "ed2df1cc46d57bbad1687a4dc7de9208aacd3e6337a7f2a5867696deb7e2b91b",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Workbench.Structure.UI.StructureChangesWindow",
+      "project": "src/UI/CanDoItAll.Workbench.Structure.UI/CanDoItAll.Workbench.Structure.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+        "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/StructureSpecimen.razor"
+      ],
+      "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
+      "visual_owner": "CanDoItAll.Workbench.Structure.UI",
+      "descendants": [
+        "CanvasFloatingWindow",
+        "Stack",
+        "Cluster",
+        "Button",
+        "TextBlock"
+      ],
+      "assets": "CanDoItAll.Workbench.Structure.UI",
+      "scenario": "CanDoItAll.Workbench.Structure.UI",
+      "evidence": "CanDoItAll.Workbench.Structure.UI",
+      "rationale": "Immutable update presentation and context-bound refresh/item/window intents. No subscription, persistence, admission or mutation authority in the renderer. Native multi-browser proof and dedicated leaf renderer tests cover the seam."
     }
   ],
   "evaluation_summary": {

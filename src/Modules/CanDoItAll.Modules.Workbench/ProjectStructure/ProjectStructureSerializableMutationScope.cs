@@ -8,6 +8,7 @@ internal sealed class ProjectStructureSerializableMutationScope : IAsyncDisposab
     private readonly ProjectProcessNativeMutationScope? processScope;
     private readonly ProjectAgentNativeMutationScope? agentScope;
     private readonly ProjectWorkflowMutationScope? workflowScope;
+    private ProjectStructureChangeCapture? changes;
 
     internal ProjectStructureSerializableMutationScope(ProjectWorkflowMutationScope workflowScope) => this.workflowScope = workflowScope;
     internal ProjectStructureSerializableMutationScope(SerializableMutationScope innerScope) => this.innerScope = innerScope;
@@ -16,8 +17,24 @@ internal sealed class ProjectStructureSerializableMutationScope : IAsyncDisposab
 
     internal const string ManagedStorageBindingScopeKey = "workbench:managed-storage-bindings";
 
-    public Task CommitAsync(CancellationToken cancellationToken) => workflowScope?.CommitAsync(cancellationToken) ?? agentScope?.CommitAsync(cancellationToken) ?? processScope?.CommitAsync(cancellationToken) ?? innerScope!.CommitAsync(cancellationToken);
-    public ValueTask DisposeAsync() => workflowScope?.DisposeAsync() ?? agentScope?.DisposeAsync() ?? processScope?.DisposeAsync() ?? innerScope!.DisposeAsync();
+    internal ProjectStructureSerializableMutationScope Observe(WorkbenchDbContext context, ProjectStructureChangeFeed? feed,
+        ProjectStructureChangeSession? session, Guid profileId) {
+        if (feed is not null && session is not null) {
+            changes = new(context, feed, session, profileId);
+        }
+        return this;
+    }
+
+    public async Task CommitAsync(CancellationToken cancellationToken) {
+        await (workflowScope?.CommitAsync(cancellationToken) ?? agentScope?.CommitAsync(cancellationToken) ??
+            processScope?.CommitAsync(cancellationToken) ?? innerScope!.CommitAsync(cancellationToken));
+        changes?.Publish();
+    }
+
+    public async ValueTask DisposeAsync() {
+        changes?.Dispose();
+        await (workflowScope?.DisposeAsync() ?? agentScope?.DisposeAsync() ?? processScope?.DisposeAsync() ?? innerScope!.DisposeAsync());
+    }
     internal bool RequiresTaskTargetGuard => agentScope?.RequiresTaskTargetGuard == true;
     internal void RequireNodeAuthority(IEnumerable<ProjectObjectRecord> nodes) => agentScope?.RequireNodeAuthority(nodes);
     public static string ForProject(Guid projectId) => ProjectMutationScopeKeys.ForProject(projectId);
@@ -31,7 +48,9 @@ public sealed class ProjectStructureMutationScopeFactory(
     CoordinatedDatabaseTransaction transactions,
     ProjectProcessExecutionMutationService? processMutations = null,
     ProjectAgentNativeMutationService? agentMutations = null,
-    ProjectWorkflowMutationService? workflowMutations = null) {
+    ProjectWorkflowMutationService? workflowMutations = null,
+    ProjectStructureChangeFeed? changeFeed = null,
+    ProjectStructureChangeSession? changeSession = null) {
     internal ProjectWriteAdmission BindSnapshot(ProjectRecordQueryItem project) => project.LifetimeId is { } lifetimeId
         ? new(admissions.DatabaseProfileId, project.Id, lifetimeId)
         : throw new InvalidOperationException("The project snapshot has no lifetime binding.");
@@ -89,18 +108,18 @@ public sealed class ProjectStructureMutationScopeFactory(
                 throw new ArgumentException("A Workflow native mutation cannot substitute another producer authority.");
             }
             var service = workflowMutations ?? throw new InvalidOperationException("Workflow native mutation authority is not installed.");
-            return new(await service.BeginAsync(context, scopeKeys, workflowAdmission, expectedAdmissions, cancellationToken));
+            return Observe(new(await service.BeginAsync(context, scopeKeys, workflowAdmission, expectedAdmissions, cancellationToken)), context);
         }
         if (processAdmission is not null) {
             if (agentAdmission is not null) {
                 throw new ArgumentException("A native mutation cannot mix Process source authority with ordinary Agent authority.");
             }
             var service = processMutations ?? throw new InvalidOperationException("Process native mutation authority is not installed.");
-            return new(await service.BeginAsync(context, scopeKeys, processAdmission, expectedAdmissions, cancellationToken));
+            return Observe(new(await service.BeginAsync(context, scopeKeys, processAdmission, expectedAdmissions, cancellationToken)), context);
         }
         if (agentAdmission is not null) {
             var service = agentMutations ?? throw new InvalidOperationException("Ordinary Agent native mutation authority is not installed.");
-            return new(await service.BeginAsync(context, scopeKeys, agentAdmission, expectedAdmissions, cancellationToken));
+            return Observe(new(await service.BeginAsync(context, scopeKeys, agentAdmission, expectedAdmissions, cancellationToken)), context);
         }
         var scope = new ProjectStructureSerializableMutationScope(
             await SerializableMutationScope.BeginAsync(context, scopeKeys, cancellationToken));
@@ -109,7 +128,7 @@ public sealed class ProjectStructureMutationScopeFactory(
                 using var coordination = transactions.Enter(context);
                 if (expectedAdmissions is not null) {
                     await admissions.RequireManyForMutationAsync(expectedAdmissions, cancellationToken);
-                    return scope;
+                    return Observe(scope, context);
                 }
                 var existing = await projects.GetManyForMutationAsync(projectIds, cancellationToken);
                 var missing = projectIds.Except(existing.Select(project => project.Id)).Select(id => (Guid?)id).FirstOrDefault();
@@ -118,12 +137,15 @@ public sealed class ProjectStructureMutationScopeFactory(
                         $"Project '{missing.Value:D}' does not exist and cannot accept project-structure mutations.");
                 }
             }
-            return scope;
+            return Observe(scope, context);
         } catch {
             await scope.DisposeAsync();
             throw;
         }
     }
+
+    private ProjectStructureSerializableMutationScope Observe(ProjectStructureSerializableMutationScope scope, WorkbenchDbContext context)
+        => scope.Observe(context, changeFeed, changeSession, admissions.DatabaseProfileId);
 
     private static Guid? TryParseProjectId(string scopeKey) {
         const string prefix = "project:";

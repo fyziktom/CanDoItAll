@@ -1,0 +1,48 @@
+@namespace CanDoItAll.Workbench.Structure.UI
+@{
+    var view = Presentation;
+    var dispatch = Dispatch;
+}
+@if (view.Window.IsVisible) {
+    <CanvasFloatingWindow WindowId="project-structure.changes" TestId="project-structure-changes-window"
+                          AriaLabel="Project structure updates" Kicker="Collaboration" Title="Structure updates"
+                          Summary="Changes from other editors" DefaultPlacement="top-left" DefaultWidth="420" DefaultHeight="350"
+                          MinWidth="340" MinHeight="230" MaxWidth="580" MaxHeight="650" State="view.Window"
+                          StateChanged="@(state => dispatch.InvokeAsync(new StructureChangesWindowIntent(view.ContextId, state)))">
+        <Stack Class="structure-changes" GapScale="LayoutGap.Small" FillHeight="true" AlignItems="AlignItems.Stretch">
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh structure" Icon="refresh" Size="ButtonSize.Small" IsBusy="view.IsBusy"
+                        data-testid="project-structure-changes-refresh"
+                        Click="@(() => dispatch.InvokeAsync(new StructureChangesRefreshIntent(view.ContextId)))" />
+                <TextBlock TextStyle="TextStyle.Note" Value="@(view.NeedsRefresh ? "Refresh needed" : "Up to date")" />
+            </Cluster>
+            @if (view.Message is not null) {
+                <TextBlock TextStyle="TextStyle.Note" Value="@view.Message" role="status" />
+            }
+            @if (view.Items.Count == 0) {
+                <TextBlock TextStyle="TextStyle.Body2" Value="Updates from other editors will appear here. Your own changes do not open this window." />
+            } else {
+                <TextBlock TextStyle="TextStyle.Note" Value="Choose an update to refresh and select its changed nodes." />
+                <Stack Class="structure-changes__list" GapScale="LayoutGap.Tiny" AlignItems="AlignItems.Stretch"
+                       Style="min-height:0;overflow-y:auto;flex:1" role="log" aria-label="Changes from other editors" aria-live="polite">
+                    @foreach (var item in view.Items) {
+                        <Button @key="item.Sequence" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Class="structure-changes__item"
+                                Style="width:100%;justify-content:flex-start;text-align:left;white-space:normal;overflow-wrap:anywhere;flex-shrink:0"
+                                Disabled="view.IsBusy" data-testid="@($"project-structure-change-{item.Sequence}")"
+                                Click="@(() => dispatch.InvokeAsync(new StructureChangesRefreshIntent(view.ContextId, item.Sequence)))">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@item.Summary" />
+                                <TextBlock TextStyle="TextStyle.Note" Value="@($"{item.Actor} · {item.OccurredAtUtc:HH:mm:ss} UTC")" />
+                            </Stack>
+                        </Button>
+                    }
+                </Stack>
+            }
+        </Stack>
+    </CanvasFloatingWindow>
+}
+
+@code {
+    [Parameter, EditorRequired] public StructureChangesPresentation Presentation { get; set; } = default!;
+    [Parameter] public EventCallback<StructureChangesIntent> Dispatch { get; set; }
+}

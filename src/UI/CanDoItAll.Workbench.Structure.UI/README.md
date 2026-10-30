@@ -5,6 +5,12 @@ accessibility mirror, generic composer and structural dialogs. It takes projecte
 presentation data and emits typed intents carrying a host context or dialog opening.
 It has no Workbench, Projects, persistence, runtime, or application reference.
 
+`StructureChangesWindow` renders a nonmodal update inbox from an immutable presentation.
+Its refresh, item-selection and geometry intents retain the original context identity.
+The native Workbench observer owns subscription lifetime, cursor, self-filtering and
+refresh acknowledgement. The Structure sandbox includes remote-update and read-failure
+scenarios using the same renderer, including a change affecting multiple nodes.
+
 The native host owns catalogs, dynamic options, original project admission, node
 expectations, graph writes, accepted outcomes and reconciliation. Composer opening
 notifications capture the native target before editing. Cancel retires that opening;
