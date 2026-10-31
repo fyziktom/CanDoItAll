@@ -1,0 +1,5 @@
+{
+  "status": "PASS",
+  "scope": "Synthetic census-tool fixture only; not the real repository",
+  "assertion_groups": 7
+}

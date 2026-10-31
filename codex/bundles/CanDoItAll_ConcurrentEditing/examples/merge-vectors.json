@@ -1,0 +1,232 @@
+{
+  "purpose": "Reference design examples. Scalar cases are executable by package validator; scenario cases require production C# owner/UI tests and are not executed here.",
+  "cases": [
+    {
+      "id": "V01",
+      "kind": "scalar",
+      "base": "a",
+      "local": "a",
+      "remote": "a",
+      "expected": {
+        "state": "Unchanged",
+        "value": "a"
+      }
+    },
+    {
+      "id": "V02",
+      "kind": "scalar",
+      "base": "a",
+      "local": "b",
+      "remote": "a",
+      "expected": {
+        "state": "LocalOnly",
+        "value": "b"
+      }
+    },
+    {
+      "id": "V03",
+      "kind": "scalar",
+      "base": "a",
+      "local": "a",
+      "remote": "b",
+      "expected": {
+        "state": "RemoteOnly",
+        "value": "b"
+      }
+    },
+    {
+      "id": "V04",
+      "kind": "scalar",
+      "base": "a",
+      "local": "b",
+      "remote": "b",
+      "expected": {
+        "state": "SameChange",
+        "value": "b"
+      }
+    },
+    {
+      "id": "V05",
+      "kind": "scalar",
+      "base": "a",
+      "local": "b",
+      "remote": "c",
+      "expected": {
+        "state": "Conflict"
+      }
+    },
+    {
+      "id": "V06",
+      "kind": "scalar",
+      "base": null,
+      "local": null,
+      "remote": "",
+      "expected": {
+        "state": "RemoteOnly",
+        "value": ""
+      }
+    },
+    {
+      "id": "V07",
+      "kind": "scalar",
+      "base": "",
+      "local": null,
+      "remote": "",
+      "expected": {
+        "state": "LocalOnly",
+        "value": null
+      }
+    },
+    {
+      "id": "V08",
+      "kind": "scalar",
+      "base": "a",
+      "local": null,
+      "remote": "",
+      "expected": {
+        "state": "Conflict"
+      }
+    },
+    {
+      "id": "V09",
+      "kind": "scalar",
+      "base": 1,
+      "local": 2,
+      "remote": 1,
+      "expected": {
+        "state": "LocalOnly",
+        "value": 2
+      }
+    },
+    {
+      "id": "V10",
+      "kind": "scalar",
+      "base": 1,
+      "local": 1,
+      "remote": 2,
+      "expected": {
+        "state": "RemoteOnly",
+        "value": 2
+      }
+    },
+    {
+      "id": "V11",
+      "kind": "scalar",
+      "base": false,
+      "local": true,
+      "remote": true,
+      "expected": {
+        "state": "SameChange",
+        "value": true
+      }
+    },
+    {
+      "id": "V12",
+      "kind": "scalar",
+      "base": 0,
+      "local": 0,
+      "remote": 0,
+      "expected": {
+        "state": "Unchanged",
+        "value": 0
+      }
+    },
+    {
+      "id": "V13",
+      "kind": "scalar",
+      "base": " a ",
+      "local": "a",
+      "remote": " a ",
+      "expected": {
+        "state": "LocalOnly",
+        "value": "a"
+      }
+    },
+    {
+      "id": "V14",
+      "kind": "scalar",
+      "base": "a\nb\n",
+      "local": "a\nb\n",
+      "remote": "a\nc\n",
+      "expected": {
+        "state": "RemoteOnly",
+        "value": "a\nc\n"
+      }
+    },
+    {
+      "id": "V15",
+      "kind": "scalar",
+      "base": "Žluťoučký",
+      "local": "Žluťoučký",
+      "remote": "Příliš",
+      "expected": {
+        "state": "RemoteOnly",
+        "value": "Příliš"
+      }
+    },
+    {
+      "id": "V16",
+      "kind": "scalar",
+      "base": null,
+      "local": 0,
+      "remote": 1,
+      "expected": {
+        "state": "Conflict"
+      }
+    },
+    {
+      "id": "V17",
+      "kind": "scenario",
+      "case": "Models: local adds provider/model X preferred; remote adds Y preferred",
+      "expected_behavior": "Group conflict: retain at most one preferred model, without inventing a requirement to choose one; retain both rows unless the user removes one."
+    },
+    {
+      "id": "V18",
+      "kind": "scenario",
+      "case": "Base row id=42; local deletes; remote edits its address",
+      "expected_behavior": "Delete/edit conflict; never match another row at the old array index."
+    },
+    {
+      "id": "V19",
+      "kind": "scenario",
+      "case": "Tags base={a,b}, local={b,c}, remote={a,b,d}",
+      "expected_behavior": "Merged membership={b,c,d}; no resurrection of a."
+    },
+    {
+      "id": "V20",
+      "kind": "scenario",
+      "case": "Raw numeric input=\"-\" while typed value is still 0.5; remote changes title",
+      "expected_behavior": "Keep invalid raw input and validation; merge title without substituting parsed 0.5 for raw draft."
+    },
+    {
+      "id": "V21",
+      "kind": "scenario",
+      "case": "Base B; submitted S; local edited after dispatch; accepted A; current read is already R2",
+      "expected_behavior": "A establishes own accepted baseline; later edits retained; R2 is foreign/current read, not own receipt."
+    },
+    {
+      "id": "V22",
+      "kind": "scenario",
+      "case": "Foreign archive then local content merge",
+      "expected_behavior": "No implicit restore; current lifecycle must be explicitly handled."
+    },
+    {
+      "id": "V23",
+      "kind": "scenario",
+      "case": "Merge applies M over R, then local undo restores pre-merge L",
+      "expected_behavior": "Expected remote authority stays R; dirty recomputed, no return to old B token."
+    },
+    {
+      "id": "V24",
+      "kind": "scenario",
+      "case": "Third writer commits after R read but before subsequent Save",
+      "expected_behavior": "Owner refuses stale expectation; preserve M and re-open review without force retry."
+    },
+    {
+      "id": "V25",
+      "kind": "scenario",
+      "case": "A newer coherent baseline R2 was already legitimately adopted; the delayed acknowledgement A for an older submission arrives later",
+      "expected_behavior": "Attach the exact historical accepted outcome without rolling the current baseline, native expectation, draft or view back to A. A current read alone must not be treated as proof of that old operation."
+    }
+  ]
+}

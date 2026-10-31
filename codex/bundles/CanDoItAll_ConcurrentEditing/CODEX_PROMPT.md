@@ -1,0 +1,9 @@
+Pracuj jako senior C#/.NET architekt v aktuálním pracovním stromu CanDoItAll. Přiložený balík je architektonické zadání, ne starý workflow bundle. Začni souborem `00_START_HERE.md`, poté přečti audit, architekturu, pilot, inventory a test/operations podklady. Nejprve porovnej skutečný HEAD a source sibling piny s uvedeným baseline. Zachovej předexistující změny, konfiguraci a data.
+
+Implementuj minimální udržitelný základ bezpečného concurrent editing: serverové original-state podmínky, cílené change hints, oddělení list refresh od editor draftu, typované B/L/R merge v existujícím floating okně a opravu skutečné native modal/notification layer. Respektuj existující accepted/unknown/receipt protokoly. Neměň moduly na závislé klienty jednoho univerzálního persistence/form frameworku.
+
+Nejprve proveď P0, P1 a P2, tedy společný základ a celý Prompt Gallery pilot včetně nested picker integrace. CodeAnalytics MCP použij pro aktuální mapování callerů a dotčených testů. Spouštěj cílené build/test lanes s potvrzeným discovery, ne full suite po každé změně. Ověř skutečný PostgreSQL owner, dva nezávislé browser contexts, výkon a pointer/focus chování native overlay. Všechny komentáře ve zdrojových kódech piš anglicky.
+
+**Po dokončení pilotu rebuildni a ověř správnou existující hlavní instanci na 5032, ponech ji běžet, předej uživateli checklist a ZASTAV SE ve stavu `AWAITING_USER_APPROVAL_PROMPT_GALLERY`. Nezačínej CRM, Projects ani jiné module adopce bez výslovného uživatelova schválení. Po každé ad hoc opravě pilotu se zastav znovu.**
+
+Jména nových typů, přesné souborové uspořádání a velikost commitů můžeš optimalizovat. Závazné jsou invarianty, měřitelná přijímací kritéria, dokumentované zachování stávajících garancí a stop-gate. Historické nálezy nejsou příkaz zopakovat již hotový refactor; opravuj jen skutečný aktuální stav. Evidence, aktuální scope a další schválený krok drž v jednom stručném progress dokumentu.
