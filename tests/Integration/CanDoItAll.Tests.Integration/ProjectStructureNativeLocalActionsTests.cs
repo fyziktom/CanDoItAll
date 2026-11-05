@@ -75,6 +75,7 @@ public sealed class ProjectStructureNativeLocalActionsTests {
         Directory.CreateDirectory(storageRoot);
         var configuredStorage = await catalog.SaveAsync(StorageCatalogSaveRequest.FromSnapshot(bootstrap) with {
             Id = Guid.NewGuid(),
+            ExpectedUpdatedAtUtc = null,
             Name = "Native launch source",
             IsSystemDefault = false,
             EndpointOrRoot = storageRoot

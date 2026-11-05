@@ -56,14 +56,14 @@ internal sealed class AuthorizedFileContentSource(
 
         IStorageDriver driver = drivers.Resolve(authorized.Storage.ProviderKind);
         var revisioned = driver as IStorageRevisionedContentDriver;
-        StorageContentRevision? revision = revisioned is null ? null
-            : await revisioned.GetRevisionAsync(authorized.Storage, authorized.Reference, cancellationToken);
         Stream stream = await driver.OpenReadAsync(authorized.Storage, authorized.Reference, cancellationToken);
         try
         {
             if (stream.CanSeek && stream.Length > _options.MaximumContentBytes) {
                 throw TooLarge();
             }
+            StorageContentRevision? revision = revisioned is null ? null
+                : await revisioned.GetRevisionAsync(authorized.Storage, authorized.Reference, cancellationToken);
             await PositionAsync(stream, request.Offset, cancellationToken);
             long maximumLength = Math.Min(
                 request.Length ?? _options.MaximumContentBytes,
@@ -85,6 +85,11 @@ internal sealed class AuthorizedFileContentSource(
                     if (revisioned is not null && revision != await revisioned.GetRevisionAsync(authorized.Storage, authorized.Reference, cancellationToken)) {
                         throw new FileAccessDeniedException(FileAccessFailureCode.SourceUnavailable,
                             "The file changed while it was being read. Reopen it to load a coherent revision.");
+                    }
+                    if (request.Offset == 0 && request.Length is null && revision is { IsContentHash: true } digest &&
+                        snapshot.TryGetBuffer(out var contents) && StorageContentRevision.ForContent(contents.AsSpan()) != digest) {
+                        throw new FileAccessDeniedException(FileAccessFailureCode.SourceUnavailable,
+                            "The opened bytes no longer match this file revision. Reopen the file before editing.");
                     }
                     await bounded.DisposeAsync();
                     var currentContext = await contextProvider.GetCurrentAsync(cancellationToken);

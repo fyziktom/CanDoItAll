@@ -159,7 +159,7 @@ public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRe
         ArgumentNullException.ThrowIfNull(reference);
         cancellationToken.ThrowIfCancellationRequested();
         string fullPath = pathPolicy.ResolveFullPath(storage, reference.Locator);
-        return Task.FromResult(CreateRevision(fullPath));
+        return ReadContentRevisionAsync(fullPath, cancellationToken);
     }
 
     public async Task<StorageRevisionedWriteResult> ReplaceAsync(
@@ -170,6 +170,7 @@ public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRe
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(request);
         string fullPath = pathPolicy.ResolveFullPath(storage, request.Reference.Locator);
+        var persistedRevision = StorageContentRevision.ForContent(request.Content);
         await durableFileWriter.WriteBytesAsync(
             pathPolicy.ResolveRootPath(storage),
             fullPath,
@@ -179,7 +180,7 @@ public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRe
                 if (request.AuthorizeCommit is not null) {
                     await request.AuthorizeCommit(token);
                 }
-                StorageContentRevision? actualRevision = CreateRevision(fullPath);
+                StorageContentRevision? actualRevision = await ReadContentRevisionAsync(fullPath, token);
                 if (request.ExpectedRevision is { } expected && expected != actualRevision)
                 {
                     throw new StorageContentConflictException(expected, actualRevision);
@@ -191,8 +192,6 @@ public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRe
                 }
             });
 
-        StorageContentRevision persistedRevision = CreateRevision(fullPath)
-            ?? throw new IOException("The storage object was not persisted.");
         StorageObjectReference persistedReference = request.Reference with
         {
             ContentLength = request.Content.LongLength
@@ -223,17 +222,16 @@ public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRe
     internal bool IsTrustedForLocalOpen(StorageDriverInput storage)
         => pathPolicy.IsTrustedForLocalOpen(storage);
 
-    private static StorageContentRevision? CreateRevision(string fullPath)
-    {
-        var file = new FileInfo(fullPath);
-        if (!file.Exists)
-        {
+    private static async Task<StorageContentRevision?> ReadContentRevisionAsync(string fullPath, CancellationToken cancellationToken) {
+        try {
+            await using var content = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete,
+                bufferSize: 64 * 1024, options: FileOptions.Asynchronous | FileOptions.SequentialScan);
+            return StorageContentRevision.FromDigest(await SHA256.HashDataAsync(content, cancellationToken));
+        } catch (FileNotFoundException) {
+            return null;
+        } catch (DirectoryNotFoundException) {
             return null;
         }
-
-        string state = FormattableString.Invariant($"{file.Length}:{file.LastWriteTimeUtc.Ticks}");
-        byte[] hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(state));
-        return new StorageContentRevision(Convert.ToHexStringLower(hash));
     }
 
     private static ValueTask EnsureAllocatedTargetRemainsAvailableAsync(
