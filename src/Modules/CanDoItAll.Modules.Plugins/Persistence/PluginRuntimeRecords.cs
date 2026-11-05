@@ -136,6 +136,7 @@ internal sealed class PluginCapabilityGrantRecordConfiguration : IEntityTypeConf
     {
         builder.ToTable("Plugins_CapabilityGrants");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
         builder.Property(item => item.PluginId).HasMaxLength(180).IsRequired();
         builder.Property(item => item.RecipeId).HasMaxLength(180).IsRequired();
         builder.Property(item => item.ScopeKind).HasMaxLength(40).IsRequired();
@@ -167,6 +168,7 @@ internal sealed class PluginConnectionRecordConfiguration : IEntityTypeConfigura
     {
         builder.ToTable("Plugins_Connections");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
         builder.Property(item => item.PluginId).HasMaxLength(180).IsRequired();
         builder.Property(item => item.ConnectionKey).HasMaxLength(180).IsRequired();
         builder.Property(item => item.DisplayName).HasMaxLength(240).IsRequired();
@@ -193,6 +195,7 @@ internal sealed class PluginOAuthConnectionRecordConfiguration : IEntityTypeConf
     {
         builder.ToTable("Plugins_OAuthConnections");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
         builder.Property(item => item.PluginId).HasMaxLength(180).IsRequired();
         builder.Property(item => item.ConnectionKey).HasMaxLength(180).IsRequired();
         builder.Property(item => item.ProviderKey).HasMaxLength(180).IsRequired();
@@ -217,6 +220,7 @@ internal sealed class PluginOAuthSessionRecordConfiguration : IEntityTypeConfigu
     {
         builder.ToTable("Plugins_OAuthSessions");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
         builder.Property(item => item.StateHash).HasMaxLength(128).IsRequired();
         builder.Property(item => item.PluginId).HasMaxLength(180).IsRequired();
         builder.Property(item => item.ConnectionKey).HasMaxLength(180).IsRequired();

@@ -92,7 +92,7 @@ internal static class PluginsApi
         plugins.MapPut("/{pluginId}/grants", UpdateGrantAsync)
             .WithName("UpdatePluginGrant")
             .Produces<PluginCapabilityGrantItem>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         plugins.MapGet("/{pluginId}/connections", ListConnectionsAsync)
             .WithName("ListPluginConnections")
@@ -102,7 +102,7 @@ internal static class PluginsApi
         plugins.MapPost("/{pluginId}/connections", SaveConnectionAsync)
             .WithName("SavePluginConnection")
             .Produces<PluginConnectionItem>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         plugins.MapGet("/{pluginId}/oauth/status", ListOAuthStatusesAsync)
             .WithName("ListPluginOAuthStatuses")
@@ -836,7 +836,7 @@ internal static class PluginsApi
             return ApiEndpointResults.BadRequest(exception.Message, "plugins.plugin-id-invalid");
         }
 
-        return ApiEndpointResults.FromResult(await action(id));
+        return ToPluginResult(await action(id));
     }
 
     private static async Task<IResult> ToApiResultAndRefreshWorkflowTemplatesAsync<T>(
@@ -863,7 +863,12 @@ internal static class PluginsApi
             await workflowExampleCatalogSeedService.EnsureSeededAsync(cancellationToken);
         }
 
-        return ApiEndpointResults.FromResult(result);
+        return ToPluginResult(result);
+    }
+
+    private static IResult ToPluginResult<T>(Result<T> result) {
+        var conflict = result.Errors.FirstOrDefault(error => error.Code is PluginWriteConflict.ConnectionChanged or PluginWriteConflict.GrantChanged);
+        return conflict is null ? ApiEndpointResults.FromResult(result) : ApiEndpointResults.Conflict(conflict.Message, conflict.Code);
     }
 
     private static Result<PluginId?> ResolveOptionalPluginId(string? pluginId)

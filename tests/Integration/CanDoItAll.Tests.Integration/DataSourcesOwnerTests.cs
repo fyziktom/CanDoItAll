@@ -36,10 +36,18 @@ public sealed class DataSourcesOwnerTests {
         using var intent = new ProfilePasswordIntent(string.Empty);
         var saved = await owner.SaveAsync(owner.Context, editor.Values with { DisplayName = "B renamed" }, intent);
         Assert.Equal(DataSourceOutcome.Confirmed, saved.Outcome);
+        Assert.NotEqual(editor.Values.ExpectedConfigurationRevision, saved.AcceptedConfigurationRevision);
+        using var stalePassword = new ProfilePasswordIntent(string.Empty);
+        Assert.Equal(DataSourceOutcome.Refused, (await owner.SaveAsync(owner.Context, editor.Values, stalePassword)).Outcome);
+        Assert.Equal(DataSourceOutcome.Refused, (await owner.ExecuteAsync(new(owner.Context, b.Value, DataSourceAction.Delete) {
+            ExpectedConfigurationRevision = editor.Values.ExpectedConfigurationRevision
+        })).Outcome);
         var stored = await profiles.GetEditorAsync(b.Value);
         Assert.True(stored.PostgresPassword == password);
         stored.PostgresPassword = string.Empty;
-        var removed = await owner.ExecuteAsync(new(owner.Context, b.Value, DataSourceAction.Delete));
+        var removed = await owner.ExecuteAsync(new(owner.Context, b.Value, DataSourceAction.Delete) {
+            ExpectedConfigurationRevision = saved.AcceptedConfigurationRevision
+        });
         Assert.Equal(DataSourceOutcome.Confirmed, removed.Outcome);
         Assert.True(await ExistsAsync(target.ConnectionString));
         var missing = await Assert.ThrowsAsync<DataSourcesException>(() => owner.ReadEditorAsync(b.Value, CancellationToken.None));

@@ -24,6 +24,7 @@ public sealed class MemoryProviderProfileEditorMapper
         return new MemoryProviderProfileEditorModel
         {
             InstanceId = profile.InstanceId.Value,
+            ExpectedProfile = profile.ConfigurationRevision is { } revision ? new(profile.InstanceId, revision) : null,
             DisplayName = profile.DisplayName,
             DriverKind = profile.DriverKind,
             IsEnabled = profile.IsEnabled,

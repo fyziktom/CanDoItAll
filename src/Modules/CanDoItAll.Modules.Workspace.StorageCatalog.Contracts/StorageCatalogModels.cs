@@ -22,13 +22,17 @@ public sealed record CatalogChoices(ImmutableArray<CatalogProviderChoice> Provid
     ImmutableArray<CatalogChoice<CatalogConnection>> Connections, ImmutableArray<CatalogChoice<CatalogPurpose>> Purposes,
     ImmutableArray<CatalogChoice<CatalogCapability>> Capabilities);
 public sealed record CatalogSecret(Guid Id, string Name, bool IsEnabled);
-public sealed record CatalogRoute(CatalogPurpose Purpose, Guid? StorageId, string Name, bool IsEnabled);
+public sealed record CatalogRoute(CatalogPurpose Purpose, Guid? StorageId, string Name, bool IsEnabled) {
+    public Guid RoutingRevision { get; init; }
+}
 public sealed record CatalogHealthFact(CatalogHealth Status, CatalogCapability Capabilities, DateTimeOffset? TestedAtUtc, string Message);
 public sealed record CatalogRow(Guid Id, string Name, CatalogProvider ProviderKind, CatalogConnection ConnectionMode,
     string EndpointOrRoot, int DisplayOrder, bool IsEnabled, bool IsSystemDefault, bool IsReadOnly, CatalogHealthFact Health);
 
 public sealed record CatalogEdit {
     public Guid? Id { get; init; }
+    public DateTimeOffset? ExpectedUpdatedAtUtc { get; init; }
+    public Guid ExpectedRoutingRevision { get; init; }
     public string Name { get; init; } = string.Empty;
     public CatalogProvider ProviderKind { get; init; }
     public CatalogConnection ConnectionMode { get; init; }
@@ -46,5 +50,6 @@ public sealed record CatalogEdit {
     public bool UseSsl { get; init; }
     public bool UsePassiveMode { get; init; }
     public ImmutableArray<CatalogPurpose> DefaultPurposes { get; init; } = [];
+    public ImmutableArray<CatalogPurpose> OriginalDefaultPurposes { get; init; } = [];
     public CatalogHealthFact Health { get; init; } = new(CatalogHealth.Unknown, CatalogCapability.None, null, string.Empty);
 }

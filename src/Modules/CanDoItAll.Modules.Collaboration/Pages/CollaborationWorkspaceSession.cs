@@ -19,6 +19,7 @@ public sealed class CollaborationWorkspaceSession(
     private bool routeDelivered;
     private CollaborationUrlState? lastRoute;
     private SelectionKind selectionKind;
+    private readonly Dictionary<Guid, CollaborationDraft<CollaborationReplyEditorModel>> retainedReplies = [];
 
     public CollaborationWorkspaceModel? Workspace { get; private set; }
     public CollaborationSection Section { get; private set; }
@@ -125,9 +126,12 @@ public sealed class CollaborationWorkspaceSession(
         ++readGeneration;
         readCancellation?.Cancel();
         readCancellation = null;
+        if (Target is { } previous && CollaborationReplyPolicy.MustRetain(Reply)) {
+            retainedReplies[previous.ThreadId] = Reply;
+        }
         selectionKind = kind;
         Target = threadId.HasValue ? new(threadId.Value) : null;
-        Reply = new(new());
+        Reply = threadId is { } id && retainedReplies.Remove(id, out var retained) ? retained : new(new());
         Workspace = null;
         ReadError = null;
         ReadState = CollaborationReadState.Loading;
@@ -210,7 +214,7 @@ public sealed class CollaborationWorkspaceSession(
             return;
         }
 
-        var request = CollaborationService.CreateManualThreadRequest(origin.Model);
+        var request = CollaborationService.CreateManualThreadRequest(origin.Model) with { SubmissionId = origin.SubmissionId };
         var selection = selectionGeneration;
         changed();
         Result<Guid> result;
@@ -260,13 +264,13 @@ public sealed class CollaborationWorkspaceSession(
             return;
         }
 
-        var request = CollaborationService.CreateLocalReplyRequest(target.ThreadId, origin.Model);
+        var request = CollaborationService.CreateLocalReplyRequest(target.ThreadId, origin.Model) with { SubmissionId = origin.SubmissionId };
         changed();
         Result result;
         try {
             result = await owner.AppendMessageAsync(request);
         } catch (Exception exception) {
-            if (IsCurrentTarget(target) && ReferenceEquals(Reply, origin)) {
+            if (IsRetainedReply(target.ThreadId, origin)) {
                 HandleUnknown(origin, exception, "reply", target.ThreadId);
             }
             return;
@@ -274,12 +278,17 @@ public sealed class CollaborationWorkspaceSession(
             origin.Complete(origin.OutcomeUnknown);
         }
 
-        if (!IsCurrentTarget(target) || !ReferenceEquals(Reply, origin)) {
+        if (!IsRetainedReply(target.ThreadId, origin)) {
             return;
         }
 
         if (result.IsFailure) {
             Reject(origin, result, "Unable to append the collaboration message.");
+            return;
+        }
+
+        if (Target?.ThreadId != target.ThreadId || !ReferenceEquals(Reply, origin)) {
+            retainedReplies.Remove(target.ThreadId);
             return;
         }
 
@@ -293,6 +302,10 @@ public sealed class CollaborationWorkspaceSession(
             changed();
         }
     }
+
+    private bool IsRetainedReply(Guid threadId, CollaborationDraft<CollaborationReplyEditorModel> origin)
+        => !disposed && (Target?.ThreadId == threadId && ReferenceEquals(Reply, origin) ||
+            ReferenceEquals(retainedReplies.GetValueOrDefault(threadId), origin));
 
     public async Task MarkReadAsync(CollaborationTarget target) {
         if (!IsCurrentTarget(target) || target.IsMarkingRead || target.OutcomeUnknown || Workspace?.SelectedThread is not { IsUnread: true }) {

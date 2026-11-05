@@ -195,11 +195,14 @@
                         </FormSection>
                     </StepsItem>
                 </Steps>
-                <p class="cda-body-muted" data-testid="storage-test-contract">@(Draft.Id.HasValue ? "Test saves this draft configuration and its health to the existing catalog row. It does not change routing." : "Test checks this draft without creating a catalog row.")</p>
+                <p class="cda-body-muted" data-testid="storage-test-contract">@(Draft.Id.HasValue ? "Test records health when the tested connection matches the saved configuration." : "Test checks this draft connection. Save creates the catalog entry.")</p>
 
                 <StickyActionFooter StatusLabel="Storage catalog"
                                     StatusTone="success">
                     <SecondaryActions>
+                        @if (Session.CanReopen) {
+                            <Button Text="Discard draft and reopen" ButtonStyle="ButtonStyle.Warning" Click="Session.ReopenAsync" data-testid="storage-reopen" />
+                        }
                         <Button Text="Clear"
                                 ButtonStyle="ButtonStyle.Light"
                                 Click="@(() => Session.New(Draft.ProviderKind))" />

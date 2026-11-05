@@ -1,11 +1,17 @@
 using System.Data.Common;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Integration.Persistence;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
@@ -14,6 +20,44 @@ public sealed class DatabaseTransferCommitOutcomeTests {
     private const long EntryGate = 724091824023;
 
     public enum FailurePoint { SourceCommit, TargetBeforeCommit, TargetAfterServerCommit, ConnectionClose }
+
+    [Fact]
+    public async Task Agent_catalog_transfer_requires_review_of_the_replacement_target() {
+        await using var environment = CanDoItAllTestEnvironment.Create("agent-catalog-transfer");
+        await using var services = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(environment);
+        var (source, sourceStore) = CreateCatalog("source");
+        var (target, targetStore) = CreateCatalog("target");
+        var now = DateTimeOffset.UtcNow;
+        var agent = new AgentDefinition(Guid.NewGuid(), "Reviewed agent", "Tester", string.Empty, string.Empty, AgentLifecycleStatus.Active,
+            null, "gpt-test", AgentWorkloadKind.Programming, AgentChatHistoryMode.FrameworkManaged, 0.1, false, false, "{}", false,
+            string.Empty, AgentPermissionsPolicy.Default, [], [], now, now);
+        await sourceStore.UpdateCatalogAsync(catalog => catalog with { Agents = [agent] });
+        var targetAgent = agent with { Id = Guid.NewGuid(), Name = "Target editor" };
+        await targetStore.UpdateCatalogAsync(catalog => catalog with { Agents = [targetAgent] });
+        var handler = new AiAgentsDatabaseTransferHandler(services.GetRequiredService<IWorkspacePathResolver>());
+        var request = new DatabaseTransferOperation(source, target, ReplaceExisting: true);
+        var first = await handler.PreviewAsync(request);
+        await targetStore.UpdateCatalogAsync(catalog => catalog with { Agents = [targetAgent with { Name = "New target edit" }] });
+        Assert.True((await handler.TransferAsync(WithPreview(first))).ReviewOutdated);
+        Assert.True((await handler.TransferAsync(request)).ReviewOutdated);
+        Assert.Equal("New target edit", Assert.Single((await targetStore.LoadCatalogAsync()).Agents, row => row.Id == targetAgent.Id).Name);
+        var fresh = await handler.PreviewAsync(request);
+        Assert.True((await handler.TransferAsync(WithPreview(fresh))).Success);
+        var transferred = (await targetStore.LoadCatalogAsync()).Agents;
+        Assert.Contains(transferred, row => row.Id == agent.Id);
+        Assert.DoesNotContain(transferred, row => row.Id == targetAgent.Id);
+
+        DatabaseTransferOperation WithPreview(DatabaseTransferItemPreview preview) => request with {
+            Observations = new Dictionary<string, DatabaseTransferObservation> { [handler.Descriptor.Key] = preview.Observation!.Value }
+        };
+
+        (ResolvedDatabaseProfile Profile, FileSandboxWorkspaceStore Store) CreateCatalog(string key) {
+            var workspaceRoot = Path.Combine(environment.RootPath, key);
+            var profile = new DatabaseProfileRecord { Storage = new() { WorkspaceRoot = workspaceRoot } };
+            return (new(profile, DatabaseProfileResolutionSource.ExplicitOverride, string.Empty),
+                new(workspaceRoot, WorkspaceScopeDescriptor.Organization(profile.Id.ToString("N"))));
+        }
+    }
 
     [Fact]
     public async Task Preflight_disposal_failure_occurs_before_any_handler_effect() {
@@ -205,7 +249,7 @@ public sealed class DatabaseTransferCommitOutcomeTests {
         public Task<Result<Guid>> SaveAsync(DatabaseProfileEditorModel model, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result> DeleteEditorAsync(Guid id, Guid? expectedConfigurationRevision, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result> RebindWorkspaceAsync(Guid id, string workspaceRoot, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result> RollbackWorkspacePathMigrationAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();

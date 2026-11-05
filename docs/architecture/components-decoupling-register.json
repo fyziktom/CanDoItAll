@@ -36371,7 +36371,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CatalogEditor.razor",
       "path": "src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CatalogEditor.razor",
-      "sha256_lf": "3e4e22d41101b62363334041c87f86c279400195c5d4dcffc8d74fad007cebbe",
+      "sha256_lf": "9dd10b1433deb8e1b58e012ecc82abbdfdf1774d4bf32ae0294cc39af458c173",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.StorageCatalog.UI.CatalogEditor",
@@ -36391,7 +36391,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CatalogReceipts.razor",
       "path": "src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CatalogReceipts.razor",
-      "sha256_lf": "262b3d340bb7deaac4fa4e1872bdabe0d716ae2a75a2216f9b903b21a7d99026",
+      "sha256_lf": "7d955a58c89183ffa8a065fd79b972f29f82f5e7395b56f86ee22a613ed53c1d",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.StorageCatalog.UI.CatalogReceipts",
@@ -36819,7 +36819,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretsSurface.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretsSurface.razor",
-      "sha256_lf": "f87cc01e0c7b36ae58ca9594263208e2eec8f784054fd19fef6ec65d17ca3896",
+      "sha256_lf": "6af94d825855981b0414870f5b54b7d9e85449b8e4294dab1be3c3cab1e6d516",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.UI.WorkspaceSecretsSurface",

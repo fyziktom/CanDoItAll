@@ -65,7 +65,7 @@ public sealed class MemoryProviderProfileEntity : IHasConcurrencyToken
             (MemoryProviderWorkspaceScope)WorkspaceScope,
             MemoryPersistenceJson.Deserialize<IReadOnlyList<string>>(SelectionTagsJson),
             new MemoryProviderProfilePolicy((MemoryProviderFallbackBehavior)FallbackBehavior),
-            MemoryPersistenceJson.Deserialize<MemoryProviderManifest>(ManifestJson));
+            MemoryPersistenceJson.Deserialize<MemoryProviderManifest>(ManifestJson)) { ConfigurationRevision = ConcurrencyToken };
     }
 }
 

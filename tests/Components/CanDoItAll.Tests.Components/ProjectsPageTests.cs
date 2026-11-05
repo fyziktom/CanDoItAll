@@ -1256,7 +1256,7 @@ public sealed class ProjectsPageTests
         public bool FailReads { get; set; }
 
         public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result> DeleteEditorAsync(Guid id, Guid? expectedConfigurationRevision, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<DatabaseProfileSummary>> ListAsync(
             CancellationToken cancellationToken = default)
             => FailReads

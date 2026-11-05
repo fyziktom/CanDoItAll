@@ -16,12 +16,11 @@ public sealed partial class CollaborationService
         var threads = await dbContext.Set<CollaborationThreadRecord>()
             .AsNoTracking()
             .ToListAsync(cancellationToken);
-        var messages = await dbContext.Set<CollaborationMessageRecord>()
+        var messageCounts = await dbContext.Set<CollaborationMessageRecord>()
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
-        var participants = await dbContext.Set<CollaborationParticipantRecord>()
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .GroupBy(message => message.ThreadId)
+            .Select(group => new { ThreadId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(item => item.ThreadId, item => item.Count, cancellationToken);
 
         inboxItems = inboxItems
             .OrderByDescending(item => item.UpdatedAtUtc)
@@ -30,10 +29,6 @@ public sealed partial class CollaborationService
         var inboxByThreadId = inboxItems
             .GroupBy(item => item.ThreadId)
             .ToDictionary(group => group.Key, group => group.First());
-        var messageCounts = messages
-            .GroupBy(item => item.ThreadId)
-            .ToDictionary(group => group.Key, group => group.Count());
-
         var threadSummaries = threads
             .OrderByDescending(item => item.LastActivityAtUtc)
             .Select(thread => new CollaborationThreadSummary(
@@ -63,9 +58,14 @@ public sealed partial class CollaborationService
         var effectiveThreadId = selectedThreadId
             ?? inboxSummaries.FirstOrDefault()?.ThreadId
             ?? threadSummaries.FirstOrDefault()?.ThreadId;
-        var selectedThread = effectiveThreadId.HasValue
-            ? BuildThreadDetail(effectiveThreadId.Value, threads, inboxByThreadId, messages, participants)
-            : null;
+        CollaborationThreadDetailModel? selectedThread = null;
+        if (effectiveThreadId is { } id && threads.Any(thread => thread.Id == id)) {
+            var messages = await dbContext.Set<CollaborationMessageRecord>().AsNoTracking()
+                .Where(message => message.ThreadId == id).ToListAsync(cancellationToken);
+            var participants = await dbContext.Set<CollaborationParticipantRecord>().AsNoTracking()
+                .Where(participant => participant.ThreadId == id).ToListAsync(cancellationToken);
+            selectedThread = BuildThreadDetail(id, threads, inboxByThreadId, messages, participants);
+        }
 
         return new CollaborationWorkspaceModel(
             inboxSummaries,
@@ -80,12 +80,11 @@ public sealed partial class CollaborationService
     public async Task<CollaborationShellState> GetShellStateAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var inboxItems = await dbContext.Set<CollaborationInboxItemRecord>()
+        return await dbContext.Set<CollaborationInboxItemRecord>()
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
-
-        return new CollaborationShellState(
-            inboxItems.Sum(item => item.UnreadCount),
-            inboxItems.Count(item => item.ItemKind == CollaborationInboxItemKind.Escalation && item.IsUnread));
+            .GroupBy(_ => 1)
+            .Select(group => new CollaborationShellState(group.Sum(item => item.UnreadCount),
+                group.Count(item => item.ItemKind == CollaborationInboxItemKind.Escalation && item.IsUnread)))
+            .SingleOrDefaultAsync(cancellationToken) ?? new(0, 0);
     }
 }

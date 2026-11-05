@@ -482,7 +482,7 @@ public sealed partial class ProjectStructureSecretReferenceTests {
             }
             return result;
         }
-        public Task<SettingsWriteResult<Guid>> DeleteAsync(Guid id, CancellationToken cancellationToken) => throw new InvalidOperationException("No automatic vault cleanup is authorized.");
+        public Task<SettingsWriteResult<Guid>> DeleteAsync(SecretMetadataCondition expected, CancellationToken cancellationToken) => throw new InvalidOperationException("No automatic vault cleanup is authorized.");
     }
 
     private sealed class RuntimeGeneration(ICanonicalRuntimeDatabase inner) : ICanonicalRuntimeDatabase {

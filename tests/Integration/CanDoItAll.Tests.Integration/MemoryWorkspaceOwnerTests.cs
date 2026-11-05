@@ -251,7 +251,7 @@ public sealed class MemoryWorkspaceOwnerTests {
             Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
             return new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
-        public async Task UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default) {
+        public async Task<MemoryProviderProfile> UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default) {
             if (write is { } held) {
                 write = null;
                 Entered.SetResult();
@@ -260,8 +260,9 @@ public sealed class MemoryWorkspaceOwnerTests {
             if (FailSecondDemo && profile.InstanceId.Value == MemoryDemoProviderIds.Programming) {
                 throw new InvalidOperationException("Synthetic second demo write fault.");
             }
-            await inner.UpsertAsync(profile, updatedAtUtc, cancellationToken);
+            var saved = await inner.UpsertAsync(profile, updatedAtUtc, cancellationToken);
             Writes++;
+            return saved;
         }
         public async Task<MemoryProviderProfile?> GetAsync(MemoryProviderInstanceId providerId, CancellationToken cancellationToken = default) {
             if (get is { } held) {

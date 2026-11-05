@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-05T16:51:37.550564+00:00",
+  "generated_utc": "2026-11-05T22:32:12.540557+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15785,
+  "allowance_count": 15792,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -6526,6 +6526,12 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/MemoryProviderApiContracts.cs",
       "category": "mcp",
+      "source_fingerprint": "15dee804fd0470a3b5d2af27f02214c65fce93bae206f2331e3b498af1a31f39",
+      "count": 2
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/MemoryProviderApiContracts.cs",
+      "category": "mcp",
       "source_fingerprint": "24a052046a87f9027e1e800aaecd2dabd06b5f96394e15537c632c02cbc93f57",
       "count": 1
     },
@@ -6576,12 +6582,6 @@
       "category": "mcp",
       "source_fingerprint": "777788da2a4470e3d28eb27ac5340e8fbd858e85004a3cc72995e34f449de135",
       "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/MemoryProviderApiContracts.cs",
-      "category": "mcp",
-      "source_fingerprint": "807778eaa39933d7da542d583f094431f17e6a3e95cabe83ca133d6bb033c178",
-      "count": 2
     },
     {
       "path": "src/App/CanDoItAll.Web/Api/MemoryProviderApiContracts.cs",
@@ -6700,6 +6700,12 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/MemoryProviderApiResponseMapper.cs",
       "category": "mcp",
+      "source_fingerprint": "97be4c8d6002de9781a4639cc984fa2244aae370d74df35e514720ca57b4b161",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/MemoryProviderApiResponseMapper.cs",
+      "category": "mcp",
       "source_fingerprint": "ce26ea999106cf07bc74f183d5e118b60fb6331360021d293585d4000ab674a8",
       "count": 1
     },
@@ -6713,12 +6719,6 @@
       "path": "src/App/CanDoItAll.Web/Api/MemoryProviderApiResponseMapper.cs",
       "category": "mcp",
       "source_fingerprint": "de17c18b9c7360f0cc7ee37070000692892a63c911ae86cf95b83b09a608d9e0",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/MemoryProviderApiResponseMapper.cs",
-      "category": "mcp",
-      "source_fingerprint": "e8eae7e6e3eca251541a360e9624415e4c6c04d29509e8f92b1dfe9903f1dc26",
       "count": 1
     },
     {
@@ -11104,6 +11104,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs",
       "category": "atomic-write",
+      "source_fingerprint": "0933cc4748a86cf144046d758c0c75b985bb8d94fa6d65f5982b981bc4ff5c47",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs",
+      "category": "atomic-write",
       "source_fingerprint": "c959c9111d8ecd4642a0d9e4c3ffb20bd690b2a219e9f5b352bda6b744966b84",
       "count": 1
     },
@@ -14207,6 +14213,42 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261104134958_ProtectWorkflowComponentObservations.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "e4181484dcd694ca77549b5067bdbdcff3c571696f2b06cc08b20b5e89f17643",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261105210207_ProtectSchedulerAndTestPlanRevisions.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "ab1e5ea31ae956108b49190ee7c318e1edb018cdddb0b13de237bbbbc62b0943",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261105210207_ProtectSchedulerAndTestPlanRevisions.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e41af5d46d7a64ce2b46ca5122649b75eef3f37ea283d613118e2ccad0ec2773",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261105210207_ProtectSchedulerAndTestPlanRevisions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "1d92e8ff92ca5d60cb976ec434ee78649a7197110d4648ea2a5b9b5767f015a2",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261105210207_ProtectSchedulerAndTestPlanRevisions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "a9235832498b9411da206333d250d47703c50e2ef04e2e840e422078d005df2a",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261105210207_ProtectSchedulerAndTestPlanRevisions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "c355a50366e4bf1c4166b244ab0b6f20152e10814f33688675b6fb4480dbd982",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261105210207_ProtectSchedulerAndTestPlanRevisions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "cd0e99a5907beac5096a0575dd80eb6af82f491f5a87d334b6803027db0f43e3",
       "count": 1
     },
     {
@@ -47482,13 +47524,13 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.Queries.cs",
       "category": "process-domain",
-      "source_fingerprint": "617fcd9b3d7aaddbf5aac45ca7304ef3bdddf531a8952b498eaaef4fd4755d76",
+      "source_fingerprint": "1d5c4e590d87cd2e808e79aa90fde95553501bfe538cc9a8842e3ddf5ffdab76",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.Queries.cs",
       "category": "process-domain",
-      "source_fingerprint": "95a018ea191bdbdd04b454955909990e63c968a9478901c2202acdb30ba5bbdf",
+      "source_fingerprint": "617fcd9b3d7aaddbf5aac45ca7304ef3bdddf531a8952b498eaaef4fd4755d76",
       "count": 1
     },
     {
@@ -49438,12 +49480,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
       "category": "case-policy",
-      "source_fingerprint": "4ab42d952b7eb56f94b1048d37048258a06c8b92d84a8728040c7ffcbf52d92a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
-      "category": "case-policy",
       "source_fingerprint": "4ce88cbfb1680d9b530ef59d03ff2051a635202c4c7d017a8640c891bcf10180",
       "count": 1
     },
@@ -49480,6 +49516,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
       "category": "case-policy",
+      "source_fingerprint": "cfa1ce10664bdaaa9876691ba89ce3409902c679910ff2be831b8e714dcfb5d2",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
+      "category": "case-policy",
       "source_fingerprint": "d3b280b480582130187b7a3bdd190b0ef532a97e9b92bf443ed0b3479eed1873",
       "count": 1
     },
@@ -49504,12 +49546,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
       "category": "secret-provider",
-      "source_fingerprint": "7b137fdf21bc8ead1f153e8186e1376973975c640604b104f073fe956286d8a8",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
-      "category": "secret-provider",
       "source_fingerprint": "8da0056fbf23e805996397f79f42b28f76433b123617e18f46125ace4ccc01a6",
       "count": 1
     },
@@ -49517,12 +49553,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
       "category": "secret-provider",
       "source_fingerprint": "9dd0a8b522ded536cc07f31eec18d89a15396577113174c588fdd68c8f9c37ee",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
-      "category": "secret-provider",
-      "source_fingerprint": "a795ac3bcc737a79a43dd584881e4f09ee17f6b49b57f3d9de4eb92cb5052dcb",
       "count": 1
     },
     {
@@ -49546,7 +49576,19 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
       "category": "secret-provider",
+      "source_fingerprint": "e863e8b6e0eae10789cf487faf43ec5f10dc4a38f5717cc9623909d556db5a23",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
+      "category": "secret-provider",
       "source_fingerprint": "f27e1234a346784c30710d6ac5ecacf3c3f5ccedc8d03fd5077bb4cdb772b376",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
+      "category": "secret-provider",
+      "source_fingerprint": "f58b0f5a31ffe0095bd2ba99e19453f634d5d8ebfa244a189270196d14779f82",
       "count": 1
     },
     {
@@ -59854,6 +59896,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
       "category": "secret-provider",
+      "source_fingerprint": "0ec13861b92600d29c9afc0cf0c6dbaef030de1008bcaec73365ba574475f5f1",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
+      "category": "secret-provider",
       "source_fingerprint": "3dad680c891787faf6dab58a7e5971478e14b4611b7c7f8b6e28591d7af0592c",
       "count": 1
     },
@@ -59867,12 +59915,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
       "category": "secret-provider",
       "source_fingerprint": "91e2e2063df7bd900209dbde48cff6582b963248f64e8cd215bc80cb184385e1",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
-      "category": "secret-provider",
-      "source_fingerprint": "b6ad140db78a9116b81a8204872321c6032e4891e2a340bcc62e95c56820d781",
       "count": 1
     },
     {
@@ -68164,7 +68206,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Database/WorkspaceDataSourcesOwner.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "466836cd7f9f812fc2750bee9848c7b23072b2c569d740d60189a2d6a93abf36",
+      "source_fingerprint": "4d2ca15d958ae9dd0b3761ee93017fd4b34a9793dd2400da641346cfedb0cda3",
       "count": 1
     },
     {
@@ -78742,6 +78784,12 @@
     {
       "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/ProfileDraft.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "085962557dceb633febf7785cc80ee577efa818a99de44ef1960da289a4ba026",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/ProfileDraft.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "b926af80e1e8c76f0125a1a2fb9fe9a665eca649a40da80f0aec28e3362722e9",
       "count": 1
     },
@@ -78749,12 +78797,6 @@
       "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/ProfileDraft.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "c9479345976b206b887595e390612bd4bdc6805729ae6337f268d6494bad6676",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/ProfileDraft.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "ede36ea18f229de7a5e54ad4f2646178528c3b4b78435d291f91869bed1999d6",
       "count": 1
     },
     {

@@ -35,6 +35,8 @@ public sealed class CatalogSession : IDisposable {
     public string Search { get; set; } = string.Empty;
     public string Notice { get; private set; } = string.Empty;
     public bool CanMutate => IsCurrent && Draft is { IsSystemDefault: false, Deleted: false } && !Ledger.Blocks(Context);
+    public bool CanReopen => Draft is { } draft && Receipts.FirstOrDefault(receipt => receipt.Origin == draft.Origin)?.Outcome?.Diagnostic
+        is CatalogDiagnostic.Changed or CatalogDiagnostic.RoutingChanged;
     public event Action? Changed;
     public event Action<CatalogSelection>? SelectionChanged;
     public IEnumerable<CatalogRow> Filtered => Catalog.Value.Where(row => string.IsNullOrWhiteSpace(Search) ||
@@ -45,7 +47,11 @@ public sealed class CatalogSession : IDisposable {
     public Task LoadAsync() => Task.WhenAll(RefreshCatalogAsync(), RefreshSecretsAsync(), RefreshRoutesAsync());
     public Task RefreshCatalogAsync() => Catalog.ReadAsync(owner.ReadCatalogAsync);
     public Task RefreshSecretsAsync() => Secrets.ReadAsync(owner.ReadSecretsAsync);
-    public Task RefreshRoutesAsync() => Routes.ReadAsync(owner.ReadRoutesAsync);
+    public Task RefreshRoutesAsync() => Routes.ReadAsync(owner.ReadRoutesAsync, routes => {
+        if (Draft is { Id: null } draft) {
+            draft.ObserveRoutingWhenUntouched(routes.FirstOrDefault()?.RoutingRevision ?? Guid.Empty);
+        }
+    });
 
     public void New(CatalogProvider provider) {
         if (!IsCurrent) {
@@ -59,15 +65,31 @@ public sealed class CatalogSession : IDisposable {
         }
         EditorRead.Invalidate();
         ChangeSelection(null, CatalogSelectionCause.Operator);
-        Draft = new(choice.Template);
+        Draft = new(choice.Template with { ExpectedRoutingRevision = Routes.Value.FirstOrDefault()?.RoutingRevision ?? Guid.Empty });
         Notify();
     }
 
-    public Task SelectAsync(Guid id) {
+    public Task SelectAsync(Guid id) => SelectAsync(id, reopen: false);
+
+    public async Task ReopenAsync() {
+        if (!CanReopen || Draft is not { } draft) {
+            return;
+        }
+        if (draft.Id is { } id) {
+            await SelectAsync(id, reopen: true);
+        } else {
+            await RefreshRoutesAsync();
+            if (ReferenceEquals(Draft, draft) && Routes.IsAvailable) {
+                New(draft.ProviderKind);
+            }
+        }
+    }
+
+    private Task SelectAsync(Guid id, bool reopen) {
         if (!IsCurrent) {
             return Task.CompletedTask;
         }
-        if (SelectedId == id && Draft is { Deleted: false } acquired && acquired.Id == id) {
+        if (!reopen && SelectedId == id && Draft is { Deleted: false } acquired && acquired.Id == id) {
             return Task.CompletedTask;
         }
         ChangeSelection(id, CatalogSelectionCause.Operator);
@@ -110,8 +132,9 @@ public sealed class CatalogSession : IDisposable {
             if (result.Write == CatalogWrite.Committed && result.CatalogId is { } id) {
                 if (effect == CatalogEffect.Delete) {
                     draft.MarkDeleted();
-                } else {
-                    draft.AcceptIdentity(id);
+                } else if (effect == CatalogEffect.Save) {
+                    draft.AcceptIdentity(id, result.AcceptedUpdatedAtUtc);
+                    draft.AcceptRouting(result.AcceptedRoutingRevision, captured);
                     ChangeSelection(id, CatalogSelectionCause.Owner);
                 }
             }
@@ -121,7 +144,7 @@ public sealed class CatalogSession : IDisposable {
         }
         Ledger.Notify(Context);
         if (result.Write == CatalogWrite.Committed) {
-            await ObserveAsync(receipt, effect == CatalogEffect.Delete ? null : draft, captured, revision);
+            await ObserveAsync(receipt, effect == CatalogEffect.Save ? draft : null, captured, revision);
         }
     }
 
@@ -143,7 +166,13 @@ public sealed class CatalogSession : IDisposable {
                     : "Original target is currently present. This observation does not settle an unknown acknowledgement or replay any effect."
                 : "No acknowledged create identity is available. Catalog observation cannot establish which row, if any, this operation created.";
             if (expectedMutation == mutationRevision && original is not null && captured is not null && observed is not null && ReferenceEquals(Draft, original)) {
-                original.Merge(observed, captured, receipt.Outcome!.Routing);
+                if (receipt.Outcome!.AcceptedUpdatedAtUtc is { } accepted && observed.ExpectedUpdatedAtUtc != accepted) {
+                    receipt.Observation = "The configuration was saved, and a newer configuration is present. Your draft is retained.";
+                } else {
+                    var routing = receipt.Outcome.AcceptedRoutingRevision is { } expected && observed.ExpectedRoutingRevision != expected
+                        ? CatalogRouting.NotAttempted : receipt.Outcome.Routing;
+                    original.Merge(observed, captured, routing);
+                }
             }
             await Task.WhenAll(RefreshCatalogAsync(), RefreshRoutesAsync());
         } catch (Exception) {

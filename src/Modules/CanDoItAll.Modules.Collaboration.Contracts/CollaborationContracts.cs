@@ -41,7 +41,9 @@ public sealed record CollaborationThreadCreateRequest(
     CollaborationParticipantKind ParticipantKind,
     string MessageBody,
     CollaborationMessageKind MessageKind,
-    bool MarkAsUnread = true);
+    bool MarkAsUnread = true) {
+    public Guid? SubmissionId { get; init; }
+}
 
 public sealed record CollaborationMessageWriteRequest(
     Guid ThreadId,
@@ -50,7 +52,9 @@ public sealed record CollaborationMessageWriteRequest(
     CollaborationMessageAuthorKind AuthorKind,
     string MessageBody,
     CollaborationMessageKind MessageKind,
-    bool MarkAsUnread = true);
+    bool MarkAsUnread = true) {
+    public Guid? SubmissionId { get; init; }
+}
 
 public sealed record CollaborationAutomationSignalRequest(
     string SourceKey,

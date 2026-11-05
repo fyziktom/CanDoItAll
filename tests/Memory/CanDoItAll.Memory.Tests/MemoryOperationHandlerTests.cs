@@ -483,7 +483,7 @@ public sealed class MemoryOperationHandlerTests
 
     private sealed class ThrowingMemoryProviderProfileStore : IMemoryProviderProfileStore
     {
-        public Task UpsertAsync(
+        public Task<MemoryProviderProfile> UpsertAsync(
             MemoryProviderProfile profile,
             DateTimeOffset updatedAtUtc,
             CancellationToken cancellationToken = default)

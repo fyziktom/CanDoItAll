@@ -5,6 +5,7 @@ namespace CanDoItAll.Workspace.DataSources.UI;
 
 public sealed class ProfileDraft {
     public Guid? Id { get; internal set; }
+    public Guid? ExpectedConfigurationRevision { get; internal set; }
     [Required] public string DisplayName { get; set; } = "PostgreSQL workspace";
     public string? WorkspaceRoot { get; set; }
     [Required] public string PostgresHost { get; set; } = "localhost";
@@ -18,10 +19,13 @@ public sealed class ProfileDraft {
     public bool HasPassword { get; internal set; }
 
     public ProfileValues Capture() => new(Id, DisplayName, WorkspaceRoot, PostgresHost, PostgresPort,
-        PostgresDatabaseName, PostgresUsername, PostgresAdminDatabaseName, PostgresTrustServerCertificate);
+        PostgresDatabaseName, PostgresUsername, PostgresAdminDatabaseName, PostgresTrustServerCertificate) {
+        ExpectedConfigurationRevision = ExpectedConfigurationRevision
+    };
 
     internal static ProfileDraft From(ProfileEditor editor) => new() {
-        Id = editor.Values.Id, DisplayName = editor.Values.DisplayName, WorkspaceRoot = editor.Values.WorkspaceRoot,
+        Id = editor.Values.Id, ExpectedConfigurationRevision = editor.Values.ExpectedConfigurationRevision,
+        DisplayName = editor.Values.DisplayName, WorkspaceRoot = editor.Values.WorkspaceRoot,
         PostgresHost = editor.Values.PostgresHost, PostgresPort = editor.Values.PostgresPort,
         PostgresDatabaseName = editor.Values.PostgresDatabaseName, PostgresUsername = editor.Values.PostgresUsername,
         PostgresAdminDatabaseName = editor.Values.PostgresAdminDatabaseName,

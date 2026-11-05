@@ -9,6 +9,7 @@ internal sealed class MemoryProviderProfileEntityConfiguration : IEntityTypeConf
     {
         builder.ToTable("Memory_ProviderProfiles");
         builder.HasKey(item => item.InstanceId);
+        builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
         builder.Property(item => item.InstanceId).HasMaxLength(180).IsRequired();
         builder.Property(item => item.DisplayName).HasMaxLength(240).IsRequired();
         builder.Property(item => item.SelectionTagsJson).HasColumnType("TEXT").IsRequired();

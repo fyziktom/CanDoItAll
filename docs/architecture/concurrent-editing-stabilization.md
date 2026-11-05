@@ -1,9 +1,8 @@
 # Concurrent editing stabilization
 
-This checkpoint freezes the approved rollout through the main Agent and Simple Chat
-editors. The [original rollout plan](../../codex/bundles/CanDoItAll_ConcurrentEditing/operations/02_ROLLOUT.md)
-remains the scope record. This checkpoint does not assert concurrency coverage across
-all application writers.
+This checkpoint records the verified changes and the remaining writer review. The
+[original rollout plan](../../codex/bundles/CanDoItAll_ConcurrentEditing/operations/02_ROLLOUT.md)
+defines the scope.
 
 | Scope | Disposition |
 | --- | --- |
@@ -11,8 +10,8 @@ all application writers.
 | R1 CRM / HR, R2 Projects and Workbench, R3 Workflow and Process authoring | Passed their recorded owner, editor, and browser checkpoints. See the [execution record](concurrent-editing-prompt-pilot.md). Project Structure retains its existing polling and SSE contracts and explicit graph refresh. |
 | R4 Agents, teams, capabilities, providers, Simple Chats, and Agent settings | The scoped owner and UI checkpoints pass. Configuration edits retain the original version and authority; the editor compares local values with saved information and commits only on a separate Save. Floating Agent chats retain each unsent composer through focus changes, hiding, and idle expiry. Stopping an active chat explicitly discards only that chat's local draft. |
 | R5 Scheduler, Resources, TestLab | Scheduler and Test Lab require the revision captured at opening. Scheduler groups recurrence and target/input for review. Test Lab compares fields and stable case, evidence, and run rows and preserves independently appended results. Applying choices updates the local form. Save is a separate action. Resource metadata continues to use the native revision and binding protocol. |
-| R6 Workspace, Security, Plugins, Memory, Collaboration | Pending. Includes administrative Agent catalog transfer, which still has a separate replacement path. |
-| R7 File editors and remaining mutable surfaces | Pending application-wide writer census and closure. |
+| R6 Workspace, Security, Plugins, Memory, Collaboration | The owner changes and remaining proof are listed below. |
+| R7 File editors and remaining mutable surfaces | Project Structure file content has byte-based revisions. Remaining mutable surfaces still need individual writer dispositions. |
 
 The Gantt tab now uses the Project Structure update inbox and the same bounded refresh
 acknowledgement as Canvas. Selecting an update in Gantt refreshes the schedule and
@@ -29,6 +28,39 @@ Scheduler source authority cases passed after the service retained its own accep
 revision in the caller's editor model. The Test Lab follow-up passed 33 unit cases and
 38 renderer cases. Scheduler and Test Lab reuse the shared comparison renderer. Their
 dependency guards allow the editing libraries and continue to reject owner assemblies.
+The main Test Lab UI also passed a Chromium and Firefox check. The stale Save kept the
+local draft, applying the comparison left the saved plan alone, and the next Save
+retained both the reviewed local fields and the other circuit's new case.
+
+## Workspace and configuration owners
+
+| Surface | Verified behavior and remaining proof |
+| --- | --- |
+| WS01, WS06–WS09 | Workspace Settings V1 and V2 share a conditional writer. API accounts use the original file version and a separate authentication revision. Token issue and revocation use narrow commands and an acknowledgement ledger. Provider history uses a policy version and separate retention confirmation. Dynamic renderer resolution checks its registered owner, trust level, and schema. These paths retain their native contracts. |
+| WS02–WS03 | Storage Save requires the observed configuration timestamp. If the draft changes default purposes, the transaction also checks the observed routing set and commits both changes together. The focused PostgreSQL cases cover rollback, foreign route insertion, and a competing deletion. Chromium and Firefox verified health-only Test, stale Save, retained local text, and explicit reopen. Placement recovery uses its existing exact operation and target identities. |
+| WS04–WS05 | Data Source configuration and reviewed deletion compare the original profile revision under the file owner's lock. Agent catalog transfer compares the reviewed source and target, and replacement of a populated target requires explicit approval. Activation, schema work, and restore still need the full lifecycle overlap proof in the bundle. |
+| SE01 | Secret metadata Save and deletion compare the observed version. The editor reads safe metadata and an explicit new value requests rotation. The existing vault stays the owner of secret material. |
+| PL01–PL02 | Grant replacements compare their original scope token. Connection replacements compare their original token and invalidate in-flight authorization on a connection settings change. Callback exchange claims a durable session before dispatch. The focused tests cover the saved grant, stale connections, and a pending callback after disconnect. Live provider refresh and package lifecycle overlap remain outside this checkpoint. |
+| ME01–ME02 | Provider replacement uses the original configuration revision across UI, API, and persistence. Runtime operations keep their existing identities. The query and retention overlap matrix remains open. |
+| CO01–CO02 | Thread creation and reply submission have stable IDs, duplicate submissions reuse the original effect, and unread changes serialize by thread. Drafts stay with their original selection. The full navigation-discard and bounded inbox review remains open. |
+
+Several R6 forms refuse stale saves and retain their drafts for review. Typed comparison
+is present in Scheduler and Test Lab. Wider R6 comparison coverage still needs its own
+editor and owner proof.
+
+## File editors and census
+
+Project Structure's editable known-file session uses the authorized storage save target
+and a SHA-256 content revision. The accepted receipt describes the submitted bytes.
+Project Files, Process Run Files, and the Project Structure browser preview use read-only
+known-file sessions. Chromium and Firefox edited the same text asset. The stale save
+retained the local text and the authorized readback matched the accepted bytes. The
+shared editor exposes a revisionless retry, which the Project Structure edit handle refuses.
+
+The bundle scanner checked 4,762 source files and found 1,457 heuristic candidates.
+The CodeAnalytics snapshot covered Infrastructure, Workspace, and the FileTools
+integration. The report is a discovery aid. An application-wide disposition of the
+remaining candidates is still open.
 
 Voice settings share the native workflow settings row and its version. Floating chat
 settings use their own original row observation and reject stale replacements even when

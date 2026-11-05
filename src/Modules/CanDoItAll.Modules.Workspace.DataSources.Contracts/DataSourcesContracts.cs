@@ -17,7 +17,9 @@ public sealed record ProfileSummary(Guid Id, string DisplayName, DataSourceProvi
     bool IsActive, bool IsRuntimeLocked, bool IsPendingRestartActivation, DateTimeOffset CreatedUtc, DateTimeOffset? LastUsedUtc);
 public sealed record ProfileValues(Guid? Id, string DisplayName, string? WorkspaceRoot, string PostgresHost,
     int PostgresPort, string PostgresDatabaseName, string PostgresUsername, string? PostgresAdminDatabaseName,
-    bool PostgresTrustServerCertificate);
+    bool PostgresTrustServerCertificate) {
+    public Guid? ExpectedConfigurationRevision { get; init; }
+}
 public sealed record ProfileEditor(ProfileValues Values, DataSourceProvider ProviderKind, bool IsRuntimeLocked, bool HasPassword);
 public sealed record SchemaHealth(Guid ProfileId, SchemaStatus Status, string Summary,
     IReadOnlyList<string> PendingMigrations, IReadOnlyList<string> SchemaIssues, bool CanApplySchema) {
@@ -29,13 +31,22 @@ public readonly record struct TransferGroupKey(string Value) {
 public sealed record TransferSource(Guid ProfileId, string DisplayName, string Descriptor);
 public sealed record TransferGroup(TransferGroupKey Key, string Label, string Description, bool IsSensitive);
 public sealed record TransferPreview(TransferGroup Descriptor, bool IsAvailable, string Summary, string? Warning,
-    int SourceRecordCount, int TargetRecordCount);
+    int SourceRecordCount, int TargetRecordCount) {
+    public TransferObservation? Observation { get; init; }
+}
+public readonly record struct TransferObservation(long SourceRevision, long TargetRevision);
 public sealed record TransferRequest(DataSourcesContext Context, Guid SourceProfileId, Guid TargetProfileId,
-    IReadOnlyList<TransferGroupKey> Groups, bool ReplaceExisting);
+    IReadOnlyList<TransferGroupKey> Groups, bool ReplaceExisting) {
+    public IReadOnlyDictionary<TransferGroupKey, TransferObservation> Observations { get; init; } = new Dictionary<TransferGroupKey, TransferObservation>();
+}
 public sealed record TransferGroupResult(TransferGroupKey Key, string Label, bool Success, string Message, int RecordsCopied);
-public sealed record DataSourceCommand(DataSourcesContext Context, Guid ProfileId, DataSourceAction Action);
+public sealed record DataSourceCommand(DataSourcesContext Context, Guid ProfileId, DataSourceAction Action) {
+    public Guid? ExpectedConfigurationRevision { get; init; }
+}
 public sealed record DataSourceResult(Guid ProfileId, DataSourceOutcome Outcome, string Message,
-    IReadOnlyList<TransferGroupResult>? Groups = null, bool RequiresRestart = false);
+    IReadOnlyList<TransferGroupResult>? Groups = null, bool RequiresRestart = false) {
+    public Guid? AcceptedConfigurationRevision { get; init; }
+}
 
 public sealed class ProfilePasswordIntent(string value) : IDisposable {
     private string? pending = value;

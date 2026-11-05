@@ -126,7 +126,10 @@ public sealed class DataSourceTransferSession(IDataSourcesOwner owner, DataSourc
             return;
         }
         var revision = selectionRevision;
-        var request = new TransferRequest(context, sourceId, Target.Id, selected.ToArray(), ReplaceExisting);
+        var request = new TransferRequest(context, sourceId, Target.Id, selected.ToArray(), ReplaceExisting) {
+            Observations = Items.Where(item => item.Observation.HasValue && selected.Contains(item.Descriptor.Key))
+                .ToDictionary(item => item.Descriptor.Key, item => item.Observation!.Value)
+        };
         var result = await operations.RunAsync(context, DataSourceAction.Transfer, Target.Id, sourceId, () => owner.TransferAsync(request));
         if (disposed || revision != selectionRevision || result is null) {
             return;

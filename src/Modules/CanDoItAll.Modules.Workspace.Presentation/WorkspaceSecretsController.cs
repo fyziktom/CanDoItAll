@@ -59,7 +59,8 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
     }
 
     public async Task SelectAsync(Guid id) {
-        if (disposed || !owner.IsCurrent || acquired && Draft.Model.Id == id) {
+        if (disposed || !owner.IsCurrent || acquired && Draft.Model.Id == id &&
+            !Receipts.Any(receipt => receipt.RecordId == id && receipt.Diagnostic == SettingsDiagnostic.Conflict)) {
             return;
         }
         var version = ++selection;
@@ -126,7 +127,7 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
         Notify();
         try {
             var result = delete
-                ? await owner.DeleteAsync(command.Id!.Value, lifetime.Token)
+                ? await owner.DeleteAsync(new(command.Id!.Value, command.ExpectedUpdatedAtUtc), lifetime.Token)
                 : await owner.SaveAsync(command, lifetime.Token);
             SettingsOperationLedger.Complete(receipt, result);
             if (result.State == SettingsWriteState.Refused) {
@@ -136,6 +137,7 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
             if (Current(draft)) {
                 if (!delete) {
                     draft.Model.Id = result.Value;
+                    draft.Model.ExpectedUpdatedAtUtc = command.ExpectedUpdatedAtUtc;
                 }
                 if (draft.Revision == revision) {
                     Reset(WorkspaceSelectionCause.Owner);

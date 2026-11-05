@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,18 @@ public sealed partial class CollaborationService
             return Result<Guid>.Failure(errors);
         }
 
+        var id = request.SubmissionId is { } submitted && submitted != Guid.Empty ? submitted : Guid.NewGuid();
+        var ownsCommit = dbContext.Database.CurrentTransaction is null;
+        await using var mutation = await EnterThreadMutationAsync(dbContext, id, cancellationToken);
+        if (request.SubmissionId.HasValue && await dbContext.Set<CollaborationThreadRecord>()
+            .AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, cancellationToken) is { } existing) {
+            var same = existing.Subject == request.Subject.Trim() && existing.ContextKind == request.ContextKind &&
+                existing.ContextId == request.ContextId && existing.ProjectId == request.ProjectId &&
+                await dbContext.Set<CollaborationMessageRecord>().AnyAsync(message => message.Id == id && message.ThreadId == id &&
+                    message.AuthorKey == request.ParticipantKey.Trim() && message.Body == request.MessageBody.Trim() && message.Kind == request.MessageKind, cancellationToken);
+            return same ? Result<Guid>.Success(id) : Result<Guid>.Failure(SubmissionChanged());
+        }
+
         var now = clock.GetUtcNow();
         logger.LogInformation(
             "Creating collaboration thread for context {ContextKind}/{ContextId}. Subject={Subject}.",
@@ -26,6 +39,7 @@ public sealed partial class CollaborationService
             request.Subject);
         var thread = new CollaborationThreadRecord
         {
+            Id = id,
             Subject = request.Subject.Trim(),
             ContextKind = request.ContextKind,
             ContextId = request.ContextId,
@@ -48,6 +62,7 @@ public sealed partial class CollaborationService
         };
         var message = new CollaborationMessageRecord
         {
+            Id = id,
             ThreadId = thread.Id,
             Kind = request.MessageKind,
             AuthorKind = ResolveAuthorKind(request.ParticipantKind),
@@ -75,11 +90,12 @@ public sealed partial class CollaborationService
         await dbContext.Set<CollaborationMessageRecord>().AddAsync(message, cancellationToken);
         await dbContext.Set<CollaborationInboxItemRecord>().AddAsync(inboxItem, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await CommitThreadMutationAsync(mutation, cancellationToken);
         logger.LogInformation(
             "Created collaboration thread {ThreadId}. Recording activity mirror next.",
             thread.Id);
 
-        if (dbContext.Database.CurrentTransaction is null)
+        if (ownsCommit)
         {
             await RecordActivitySafeAsync(
                 new ActivityWriteRequest(
@@ -121,6 +137,16 @@ public sealed partial class CollaborationService
             return Result.Failure(errors);
         }
 
+        var ownsCommit = dbContext.Database.CurrentTransaction is null;
+        await using var mutation = await EnterThreadMutationAsync(dbContext, request.ThreadId, cancellationToken);
+        var messageId = request.SubmissionId is { } submitted && submitted != Guid.Empty ? submitted : Guid.NewGuid();
+        if (request.SubmissionId.HasValue && await dbContext.Set<CollaborationMessageRecord>().AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == messageId, cancellationToken) is { } existing) {
+            return existing.ThreadId == request.ThreadId && existing.AuthorKey == request.AuthorKey.Trim() &&
+                existing.AuthorKind == request.AuthorKind && existing.Body == request.MessageBody.Trim() && existing.Kind == request.MessageKind
+                ? Result.Success() : Result.Failure(SubmissionChanged());
+        }
+
         var thread = await dbContext.Set<CollaborationThreadRecord>()
             .SingleOrDefaultAsync(item => item.Id == request.ThreadId, cancellationToken);
         if (thread is null)
@@ -158,6 +184,7 @@ public sealed partial class CollaborationService
         await dbContext.Set<CollaborationMessageRecord>().AddAsync(
             new CollaborationMessageRecord
             {
+                Id = messageId,
                 ThreadId = request.ThreadId,
                 Kind = request.MessageKind,
                 AuthorKind = request.AuthorKind,
@@ -185,11 +212,12 @@ public sealed partial class CollaborationService
             : 0;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await CommitThreadMutationAsync(mutation, cancellationToken);
         logger.LogInformation(
             "Appended collaboration message to thread {ThreadId}. Recording activity mirror next.",
             request.ThreadId);
 
-        if (dbContext.Database.CurrentTransaction is null)
+        if (ownsCommit)
         {
             await RecordActivitySafeAsync(
                 new ActivityWriteRequest(
@@ -202,7 +230,7 @@ public sealed partial class CollaborationService
                     ArtifactId: thread.Id,
                     Route: inboxItem.Route,
                     Actor: normalizedAuthorName,
-                    IdempotencyKey: $"collaboration-message:{thread.Id}:{now.ToUnixTimeMilliseconds()}"),
+                    IdempotencyKey: $"collaboration-message:{messageId:D}"),
                 cancellationToken);
         }
         else
@@ -223,6 +251,7 @@ public sealed partial class CollaborationService
     public async Task<Result> MarkThreadAsReadAsync(Guid threadId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await EnterThreadMutationAsync(dbContext, threadId, cancellationToken);
         var inboxItem = await dbContext.Set<CollaborationInboxItemRecord>()
             .SingleOrDefaultAsync(item => item.ThreadId == threadId, cancellationToken);
         if (inboxItem is null)
@@ -239,10 +268,30 @@ public sealed partial class CollaborationService
         inboxItem.UnreadCount = 0;
         inboxItem.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
+        await CommitThreadMutationAsync(mutation, cancellationToken);
 
         NotifyChanged();
         return Result.Success();
     }
+
+    private static async Task<SerializableMutationScope?> EnterThreadMutationAsync(CollaborationDbContext database, Guid threadId, CancellationToken token) {
+        var key = $"collaboration-thread:{threadId:D}";
+        if (database.Database.CurrentTransaction is null) {
+            return await SerializableMutationScope.BeginAsync(database, key, token);
+        }
+        await SerializableMutationScope.AcquireRelationalScopeLocksAsync(database, [key], token);
+        return null;
+    }
+
+    private static async Task CommitThreadMutationAsync(SerializableMutationScope? mutation, CancellationToken token) {
+        if (mutation is not null) {
+            await mutation.CommitAsync(token);
+            await mutation.DisposeAsync();
+        }
+    }
+
+    private static Error SubmissionChanged()
+        => Error.Failure("This submission identifier is already associated with a different message or thread.", "collaboration.submission-conflict");
 
     public Task<Result<Guid>> RecordAutomationSignalAsync(
         CollaborationAutomationSignalRequest request,

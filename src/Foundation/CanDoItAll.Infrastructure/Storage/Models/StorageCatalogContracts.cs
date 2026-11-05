@@ -58,7 +58,9 @@ public record StorageCatalogSnapshot {
 }
 
 public sealed record StorageCatalogSaveRequest {
+    public StorageDefaultRoutingWrite? DefaultRouting { get; init; }
     public Guid Id { get; init; } = Guid.NewGuid();
+    public DateTimeOffset? ExpectedUpdatedAtUtc { get; init; }
 
     public string Name { get; init; } = string.Empty;
 
@@ -101,6 +103,7 @@ public sealed record StorageCatalogSaveRequest {
         ArgumentNullException.ThrowIfNull(source);
         return new() {
             Id = source.Id,
+            ExpectedUpdatedAtUtc = source.UpdatedAtUtc,
             Name = source.Name,
             ProviderKind = source.ProviderKind,
             IsEnabled = source.IsEnabled,
@@ -117,6 +120,10 @@ public sealed record StorageCatalogSaveRequest {
         };
     }
 }
+
+public sealed record StorageDefaultRoutingWrite(Guid ExpectedRevision, IReadOnlyCollection<StorageUsagePurpose> Purposes);
+
+public sealed record StorageCatalogEditorSave(StorageCatalogSnapshot Catalog, Guid? RoutingRevision);
 
 public sealed record StorageRoutingRuleSnapshot {
     public Guid Id { get; init; } = Guid.NewGuid();

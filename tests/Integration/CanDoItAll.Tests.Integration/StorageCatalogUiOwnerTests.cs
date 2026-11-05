@@ -33,9 +33,11 @@ public sealed class StorageCatalogUiOwnerTests {
         var changed = acquired with { Name = "Renamed catalog", DefaultPurposes = [] };
         var updated = await owner.ExecuteAsync(Command(owner, changed), default);
         Assert.Equal(id, updated.CatalogId);
+        changed = changed with { ExpectedUpdatedAtUtc = updated.AcceptedUpdatedAtUtc };
         var tested = await owner.ExecuteAsync(Command(owner, changed, CatalogEffect.Test), default);
         Assert.Equal(CatalogDriver.Completed, tested.Driver);
         Assert.Equal(CatalogWrite.Committed, tested.Write);
+        Assert.Equal(changed.ExpectedUpdatedAtUtc, (await owner.ReadEditorAsync(id, default))!.ExpectedUpdatedAtUtc);
         Assert.Equal(CatalogHealth.Unavailable, tested.Health!.Status);
         Assert.True(Directory.Exists(draft.EndpointOrRoot));
         await using (var db = fixture.Factory.CreateDbContext()) {
@@ -59,25 +61,47 @@ public sealed class StorageCatalogUiOwnerTests {
     }
 
     [Theory]
-    [InlineData(FlushStage.BeforeRouting, 0)]
-    [InlineData(FlushStage.AfterFirstRouting, 1)]
-    public async Task Actual_per_purpose_failure_retains_catalog_id_and_possibly_partial_routing(FlushStage stage, int committedRules) {
+    [InlineData(FlushStage.BeforeRouting)]
+    [InlineData(FlushStage.AfterRoutingFlush)]
+    public async Task Routing_failure_rolls_back_the_catalog_and_all_route_changes(FlushStage stage) {
         await using var fixture = await OwnerFixture.CreateAsync();
         fixture.Fault.Stage = stage;
         var draft = fixture.Draft with { DefaultPurposes = [CatalogPurpose.ProjectAsset, CatalogPurpose.Evidence] };
         var result = await fixture.Owner.ExecuteAsync(Command(fixture.Owner, draft), default);
-        Assert.Equal(CatalogWrite.Committed, result.Write);
-        Assert.Equal(CatalogRouting.PossiblyPartial, result.Routing);
+        Assert.Equal(CatalogWrite.Unknown, result.Write);
+        Assert.Equal(CatalogRouting.Unknown, result.Routing);
         Assert.Equal(CatalogActivity.NotAttempted, result.Activity);
-        Assert.NotNull(result.CatalogId);
+        Assert.Null(result.CatalogId);
         await using var db = fixture.Factory.CreateDbContext();
-        Assert.Equal(result.CatalogId, (await db.Set<StorageCatalogRecord>().SingleAsync(row => !row.IsSystemDefault)).Id);
-        Assert.Equal(committedRules, await db.Set<StorageRoutingRule>().CountAsync(rule => rule.PreferredStorageId == result.CatalogId));
+        Assert.False(await db.Set<StorageCatalogRecord>().AnyAsync(row => !row.IsSystemDefault));
+        Assert.False(await db.Set<StorageRoutingRule>().AnyAsync(rule => rule.UsagePurpose != StorageUsagePurpose.Unknown));
         var writes = fixture.Fault.CatalogFlushes;
-        await fixture.Owner.ReadEditorAsync(result.CatalogId.Value, default);
         await fixture.Owner.ReadRoutesAsync(default);
         Assert.Equal(writes, fixture.Fault.CatalogFlushes);
         Assert.Equal(0, fixture.Activity.Calls);
+    }
+
+    [Fact]
+    public async Task Foreign_route_insert_refuses_stale_routing_without_saving_the_configuration() {
+        await using var fixture = await OwnerFixture.CreateAsync();
+        var owner = fixture.Owner;
+        var first = await owner.ExecuteAsync(Command(owner, fixture.Draft), default);
+        var original = (await owner.ReadEditorAsync(first.CatalogId!.Value, default))!;
+        var second = await owner.ExecuteAsync(Command(owner, fixture.Draft with {
+            Name = "Other target", DefaultPurposes = [CatalogPurpose.Evidence]
+        }), default);
+        Assert.Equal(CatalogRouting.Complete, second.Routing);
+        var refused = await owner.ExecuteAsync(Command(owner, original with {
+            Name = "Stale title", DefaultPurposes = [CatalogPurpose.ProjectAsset]
+        }), default);
+        Assert.Equal(CatalogDiagnostic.RoutingChanged, refused.Diagnostic);
+        Assert.Equal(CatalogWrite.NotAttempted, refused.Write);
+        var retained = (await owner.ReadEditorAsync(original.Id!.Value, default))!;
+        Assert.Equal(original.Name, retained.Name);
+        Assert.Equal(original.ExpectedUpdatedAtUtc, retained.ExpectedUpdatedAtUtc);
+        Assert.Empty(retained.DefaultPurposes);
+        Assert.Equal(second.CatalogId, Assert.Single((await owner.ReadRoutesAsync(default)).Where(route => route.IsEnabled)).StorageId);
+        Assert.Equal(CatalogWrite.Committed, (await owner.ExecuteAsync(Command(owner, original with { Name = "Independent title" }), default)).Write);
     }
 
     [Fact]
@@ -97,7 +121,7 @@ public sealed class StorageCatalogUiOwnerTests {
     [Fact]
     public async Task Lost_catalog_acknowledgement_remains_unknown_after_real_row_is_observed() {
         await using var fixture = await OwnerFixture.CreateAsync();
-        fixture.Fault.Stage = FlushStage.AfterCatalog;
+        fixture.Fault.Stage = FlushStage.AfterCatalogCommit;
         var result = await fixture.Owner.ExecuteAsync(Command(fixture.Owner, fixture.Draft), default);
         Assert.Equal(CatalogWrite.Unknown, result.Write);
         Assert.Null(result.CatalogId);
@@ -125,7 +149,8 @@ public sealed class StorageCatalogUiOwnerTests {
             fixture.Fault.Release.TrySetResult();
         }
         var result = await saving;
-        Assert.Equal(CatalogWrite.Unknown, result.Write);
+        Assert.Equal(CatalogWrite.NotAttempted, result.Write);
+        Assert.Equal(CatalogDiagnostic.Changed, result.Diagnostic);
         await using var verify = fixture.Factory.CreateDbContext();
         Assert.Empty(await verify.Set<StorageCatalogRecord>().Where(row => !row.IsSystemDefault).ToArrayAsync());
         Assert.Null(await fixture.Owner.ReadEditorAsync(acquired.Id!.Value, default));
@@ -134,7 +159,7 @@ public sealed class StorageCatalogUiOwnerTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Actual_private_filesystem_test_preserves_unsaved_vs_existing_contract(bool existing) {
+    public async Task Testing_a_different_path_never_saves_the_editor_configuration(bool existing) {
         await using var fixture = await OwnerFixture.CreateAsync();
         var draft = fixture.Draft;
         if (existing) {
@@ -152,19 +177,36 @@ public sealed class StorageCatalogUiOwnerTests {
         var result = await fixture.Owner.ExecuteAsync(Command(fixture.Owner, original, CatalogEffect.Test), default);
         Assert.Equal((CatalogHealth)legacyTest.HealthStatus, result.Health!.Status);
         Assert.Equal(CatalogDriver.Completed, result.Driver);
-        Assert.Equal(existing ? CatalogWrite.Committed : CatalogWrite.NotAttempted, result.Write);
+        Assert.Equal(CatalogWrite.NotAttempted, result.Write);
         Assert.Equal(CatalogHealth.Unavailable, result.Health!.Status);
         Assert.True(Directory.Exists(original.EndpointOrRoot));
         await using var db = fixture.Factory.CreateDbContext();
         var rows = await db.Set<StorageCatalogRecord>().Where(row => !row.IsSystemDefault).ToArrayAsync();
         if (existing) {
-            Assert.Equal(original.EndpointOrRoot, Assert.Single(rows).EndpointOrRoot);
+            Assert.Equal(draft.EndpointOrRoot, Assert.Single(rows).EndpointOrRoot);
             Assert.Equal(original.Id, rows[0].Id);
-            Assert.Equal(StorageHealthStatus.Unavailable, rows[0].HealthStatus);
+            Assert.Equal(StorageHealthStatus.Unknown, rows[0].HealthStatus);
         } else {
             Assert.Empty(rows);
         }
         Assert.Equal(1, fixture.Driver.Calls);
+    }
+
+    [Fact]
+    public async Task Health_probe_does_not_advance_the_configuration_and_stale_edit_and_delete_are_refused() {
+        await using var fixture = await OwnerFixture.CreateAsync();
+        var owner = fixture.Owner;
+        var created = await owner.ExecuteAsync(Command(owner, fixture.Draft), default);
+        var original = (await owner.ReadEditorAsync(created.CatalogId!.Value, default))!;
+        fixture.Driver.HealthOverride = StorageHealthStatus.Degraded;
+        Assert.Equal(CatalogWrite.Committed, (await owner.ExecuteAsync(Command(owner, original, CatalogEffect.Test), default)).Write);
+        Assert.Equal(CatalogWrite.Committed, (await owner.ExecuteAsync(Command(owner, original with { Name = "Remote title" }), default)).Write);
+        var refused = await owner.ExecuteAsync(Command(owner, original with { Name = "Stale title" }), default);
+        Assert.Equal(CatalogDiagnostic.Changed, refused.Diagnostic);
+        Assert.Equal(CatalogDiagnostic.Changed, (await owner.ExecuteAsync(Command(owner, original, CatalogEffect.Delete), default)).Diagnostic);
+        var current = (await owner.ReadEditorAsync(original.Id!.Value, default))!;
+        Assert.Equal("Remote title", current.Name);
+        Assert.Equal(CatalogHealth.Degraded, current.Health.Status);
     }
 
     [Theory]
@@ -286,7 +328,7 @@ public sealed class StorageCatalogUiOwnerTests {
         Assert.Equal(1, fixture.Driver.Calls);
     }
 
-    public enum FlushStage { None, BeforeRouting, AfterFirstRouting, AfterCatalog, HoldCatalog }
+    public enum FlushStage { None, BeforeRouting, AfterRoutingFlush, AfterCatalog, AfterCatalogCommit, HoldCatalog }
     private sealed class FlushFault : SaveChangesInterceptor {
         public FlushStage Stage { get; set; }
         public int CatalogFlushes { get; private set; }
@@ -294,6 +336,7 @@ public sealed class StorageCatalogUiOwnerTests {
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private bool catalog;
         private bool routing;
+        public bool CatalogCommitAcknowledgementLost => catalog && Stage == FlushStage.AfterCatalogCommit;
         public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default) {
             catalog = eventData.Context!.ChangeTracker.Entries<StorageCatalogRecord>().Any(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted && !entry.Entity.IsSystemDefault);
             routing = eventData.Context.ChangeTracker.Entries<StorageRoutingRule>().Any(entry => entry.State is EntityState.Added or EntityState.Modified && entry.Entity.UsagePurpose != StorageUsagePurpose.Unknown);
@@ -310,11 +353,16 @@ public sealed class StorageCatalogUiOwnerTests {
             if (catalog) {
                 CatalogFlushes++;
             }
-            if ((catalog && Stage == FlushStage.AfterCatalog) || (routing && Stage == FlushStage.AfterFirstRouting)) {
+            if ((catalog && Stage == FlushStage.AfterCatalog) || (routing && Stage == FlushStage.AfterRoutingFlush)) {
                 throw new InvalidOperationException("Private acknowledgement lost after database flush.");
             }
             return ValueTask.FromResult(result);
         }
+    }
+    private sealed class CommitFault(FlushFault fault) : DbTransactionInterceptor {
+        public override Task TransactionCommittedAsync(System.Data.Common.DbTransaction transaction, TransactionEndEventData eventData,
+            CancellationToken cancellationToken = default) => fault.CatalogCommitAcknowledgementLost
+                ? Task.FromException(new InvalidOperationException("Private acknowledgement lost after transaction commit.")) : Task.CompletedTask;
     }
     private sealed class ThrowingLogger : Microsoft.Extensions.Logging.ILogger<StorageCatalogCommands> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -389,7 +437,8 @@ public sealed class StorageCatalogUiOwnerTests {
             fixture.Application = await TestApplication.CreateAsync(new() { TestEnvironment = fixture.Environment, ActiveProfile = fixture.Profile });
             fixture.Scope = fixture.Application.Services.CreateAsyncScope();
             var services = fixture.Scope.ServiceProvider;
-            var options = new DbContextOptionsBuilder<StorageDbContext>(services.GetRequiredService<DbContextOptions<StorageDbContext>>()).AddInterceptors(fixture.Fault).Options;
+            var options = new DbContextOptionsBuilder<StorageDbContext>(services.GetRequiredService<DbContextOptions<StorageDbContext>>())
+                .AddInterceptors(fixture.Fault, new CommitFault(fixture.Fault)).Options;
             fixture.Factory = new(options);
             var catalog = new StorageCatalogService(fixture.Factory, services.GetRequiredService<IWorkspacePathResolver>(), services.GetRequiredService<IClock>(), options, services.GetRequiredService<CoordinatedDatabaseTransaction>());
             fixture.Activity = new(services.GetRequiredService<IActivityStream>());

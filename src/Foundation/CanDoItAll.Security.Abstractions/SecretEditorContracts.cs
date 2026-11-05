@@ -11,8 +11,11 @@ public enum SecretKind {
 
 public sealed record SecretListItem(Guid Id, string Name, SecretKind Kind, string Scope, DateTimeOffset UpdatedAtUtc);
 
+public readonly record struct SecretMetadataCondition(Guid SecretId, DateTimeOffset? UpdatedAtUtc);
+
 public sealed class SecretEditorModel {
     public Guid? Id { get; set; }
+    public DateTimeOffset? ExpectedUpdatedAtUtc { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -29,7 +32,7 @@ public sealed class SecretEditorModel {
 
 public static class SecretEditorSnapshots {
     public static SecretEditorModel Copy(this SecretEditorModel value) => new() {
-        Id = value.Id, Name = value.Name, Kind = value.Kind, SecretValue = value.SecretValue,
+        Id = value.Id, ExpectedUpdatedAtUtc = value.ExpectedUpdatedAtUtc, Name = value.Name, Kind = value.Kind, SecretValue = value.SecretValue,
         Scope = value.Scope, RotationNote = value.RotationNote, MetadataJson = value.MetadataJson
     };
 }
@@ -46,3 +49,6 @@ public sealed class SecretMutationUnknownException(Guid secretId)
     : Exception("Secret metadata outcome is unknown. The staged payload has been retained.") {
     public Guid SecretId { get; } = secretId;
 }
+
+public sealed class SecretMetadataConflictException()
+    : InvalidOperationException("The secret changed after it was opened. Review the saved metadata before trying again.");

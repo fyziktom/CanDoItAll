@@ -16,7 +16,7 @@ public sealed class CatalogStateTests {
         await session.SelectAsync(CatalogScenarioData.FileSystemId);
         owner.HoldNextRead = true;
         var first = session.MutateAsync(firstEffect);
-        await owner.Entered.Task;
+        await owner.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await session.MutateAsync(CatalogEffect.Test);
         var latest = session.Draft!.Health;
         Assert.Equal(CatalogHealth.Healthy, latest.Status);

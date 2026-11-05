@@ -174,7 +174,8 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
         }
     }
 
-    public async Task<SettingsWriteResult<Guid>> DeleteAsync(Guid id, CancellationToken cancellationToken) {
+    public async Task<SettingsWriteResult<Guid>> DeleteAsync(SecretMetadataCondition expected, CancellationToken cancellationToken) {
+        var id = expected.SecretId;
         var fault = await EnterAsync(WorkspaceOperation.SecretDelete);
         if (fault == WorkspaceFault.Refused) {
             return new(SettingsWriteState.Refused, id, SettingsDiagnostic.ReferenceBlocked);

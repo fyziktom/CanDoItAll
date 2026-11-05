@@ -37,21 +37,24 @@ internal static class StorageCatalogProjection {
     internal static CatalogEdit Editor(StorageCatalogEditorSnapshot editor, IReadOnlyList<StorageRoutingRuleSnapshot> rules) {
         var row = editor.Catalog;
         var config = editor.Configuration;
+        var purposes = rules.Where(rule => rule.IsEnabled && rule.ScopeKind == StorageRoutingScopeKind.Workspace &&
+            rule.PreferredStorageId == row.Id && WorkspaceStorageDefaults.TrackedPurposes.Contains(rule.UsagePurpose))
+            .Select(rule => (CatalogPurpose)rule.UsagePurpose).Distinct().ToImmutableArray();
         return new() {
-            Id = row.Id, Name = row.Name, ProviderKind = (CatalogProvider)row.ProviderKind, ConnectionMode = (CatalogConnection)row.ConnectionMode,
+            Id = row.Id, ExpectedUpdatedAtUtc = row.UpdatedAtUtc, Name = row.Name, ProviderKind = (CatalogProvider)row.ProviderKind, ConnectionMode = (CatalogConnection)row.ConnectionMode,
+            ExpectedRoutingRevision = StorageWorkspaceDefaults.Observe(rules), OriginalDefaultPurposes = purposes,
             EndpointOrRoot = row.EndpointOrRoot, CredentialSecretId = row.CredentialSecretId, IsEnabled = row.IsEnabled,
             IsSystemDefault = row.IsSystemDefault, IsReadOnly = row.IsReadOnly, DisplayOrder = row.DisplayOrder,
             GatewayBaseUrl = config.GatewayBaseUrl, Port = config.Port, PinOnUpload = config.PinOnUpload,
             Username = config.Username, BasePath = config.BasePath, UseSsl = config.UseSsl, UsePassiveMode = config.UsePassiveMode,
             Health = Health(row.HealthStatus, row.CapabilityMask, row.LastTestedAtUtc),
-            DefaultPurposes = [.. rules.Where(rule => rule.IsEnabled && rule.ScopeKind == StorageRoutingScopeKind.Workspace &&
-                rule.PreferredStorageId == row.Id && WorkspaceStorageDefaults.TrackedPurposes.Contains(rule.UsagePurpose))
-                .Select(rule => (CatalogPurpose)rule.UsagePurpose).Distinct()]
+            DefaultPurposes = purposes
         };
     }
 
     internal static StorageCatalogSaveRequest Request(CatalogEdit draft, bool test) => new() {
         Id = draft.Id ?? Guid.NewGuid(), Name = string.IsNullOrWhiteSpace(draft.Name) && test ? $"Storage {draft.ProviderKind}" : draft.Name.Trim(),
+        ExpectedUpdatedAtUtc = draft.ExpectedUpdatedAtUtc,
         ProviderKind = (StorageProviderKind)draft.ProviderKind,
         ConnectionMode = WorkspaceStoragePolicy.ResolveConnectionMode((StorageProviderKind)draft.ProviderKind, (StorageConnectionMode)draft.ConnectionMode),
         EndpointOrRoot = draft.EndpointOrRoot.Trim(), CredentialSecretId = draft.CredentialSecretId,

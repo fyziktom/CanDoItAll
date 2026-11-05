@@ -85,7 +85,7 @@ internal sealed class MemoryProviderApiService(
                     request.Mcp.ContextQueryTool,
                     request.Mcp.OperationStatusTool));
         var snapshot = await profileConfigurationService
-            .SaveAsync(parsedProviderId, configuration, cancellationToken)
+            .SaveAsync(parsedProviderId, configuration, request.ExpectedRevision, cancellationToken)
             .ConfigureAwait(false);
         return MemoryProviderApiResponseMapper.MapProfile(snapshot);
     }

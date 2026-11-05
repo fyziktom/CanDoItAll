@@ -58,7 +58,7 @@ public sealed class AgentMemoryReadLifetimeTests : AgentMemorySettingsPanelTestB
         }
         public Task<MemoryProviderProfile?> GetAsync(MemoryProviderInstanceId id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
-        public Task UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
+        public Task<MemoryProviderProfile> UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Forms;
 namespace CanDoItAll.Collaboration.UI;
 
 public sealed class CollaborationDraft<T>(T model) where T : class {
+    public Guid SubmissionId { get; } = Guid.NewGuid();
     public T Model { get; } = model;
     public EditContext Context { get; } = new(model);
     public bool IsSaving { get; private set; }

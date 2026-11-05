@@ -66,7 +66,7 @@ public sealed class PluginConnectionEditorState {
         }
         var filtered = State.Clone();
         filtered.KeepOnly(Descriptor.SettingsSchema.Fields.Select(field => field.Key));
-        Submission = new(Origin, new(ConnectionId, ConnectionKey, DisplayName.Trim(), filtered.ToJson(), IsEnabled),
+        Submission = new(Origin, new(ConnectionId, ConnectionKey, DisplayName.Trim(), filtered.ToJson(), IsEnabled) { ExpectedConcurrencyToken = ConcurrencyToken },
             DisplayName, IsEnabled, Copy(State.Values));
         return Submission;
     }

@@ -29,7 +29,7 @@ internal static class MemoryProvidersApi
         providers.MapPut("/{providerId}", UpsertMemoryProviderAsync)
             .WithName("UpsertMemoryProvider")
             .Produces<MemoryProviderProfileApiResponse>(StatusCodes.Status200OK)
-            .ProducesApiErrors(StatusCodes.Status400BadRequest)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
             .ApplyApiAuthorization(group, ApiAuthorizationPolicies.WriteMemoryProviders);
 
         providers.MapPost("/{providerId}/queries", QueryMemoryProviderAsync)
@@ -337,6 +337,9 @@ internal static class MemoryProvidersApi
         catch (MemoryProviderProfileConfigurationException exception)
         {
             return ApiEndpointResults.BadRequest(exception.Message, "memory-provider.request-invalid");
+        }
+        catch (CanDoItAll.Memory.Application.MemoryProviderProfileConflictException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, "memory-provider.configuration-conflict");
         }
         catch (MemoryProviderApiIdentityException exception)
         {

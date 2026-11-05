@@ -433,8 +433,9 @@ public sealed class PluginCatalogIntegrationTests
 
         Assert.True((await catalogService.InstallAsync(manifest.Plugin.Id, new(Enable: true, Actor: "integration-test"))).IsSuccess);
         var settings = scope.ServiceProvider.GetRequiredService<PluginSettingsService>();
-        Assert.True((await settings.UpdateGrantAsync(manifest.Plugin.Id,
-            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Granted), "integration-test")).IsSuccess);
+        var granted = await settings.UpdateGrantAsync(manifest.Plugin.Id,
+            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Granted), "integration-test");
+        Assert.True(granted.IsSuccess);
         var node = CreateSimulationExecutorNode("fixture", executor);
         var definition = CreateSingleExecutorSimulationWorkflow(node) with {
             Name = "Actual inert package invocation", Description = "Registered package executor with the real grant and observer."
@@ -449,7 +450,9 @@ public sealed class PluginCatalogIntegrationTests
                 .ListAsync(new(PluginLogStreamKind.Runtime, manifest.Plugin.Id)), item => item.OperationKind == PluginLogOperationKind.ExecutorCompleted);
         }
         Assert.True((await settings.UpdateGrantAsync(manifest.Plugin.Id,
-            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Denied), "integration-test")).IsSuccess);
+            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Denied) {
+                ExpectedConcurrencyToken = granted.Value!.ConcurrencyToken
+            }, "integration-test")).IsSuccess);
         await using var deniedScope = services.CreateAsyncScope();
         Assert.False(deniedScope.ServiceProvider.GetRequiredService<PluginGrantEvaluator>()
             .Evaluate(manifest.Plugin.Id, PluginCapabilityKind.WorkflowExecutor).Allowed);

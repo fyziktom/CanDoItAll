@@ -285,6 +285,7 @@ The provider API is a thin adapter over provider-neutral Memory application serv
 It does not expose provider-native administration or persistence.
 
 - List, read, and save provider profiles through `/api/memory-providers`.
+- For replacement, copy the `configurationRevision` from the profile read into `expectedRevision` on `PUT /api/memory-providers/{providerId}`. A stale or missing revision on an existing profile returns HTTP 409. Omit the revision when creating a profile.
 - Dispatch context queries to one explicitly selected provider.
 - Read operation status only through the original API caller's ownership scope.
 - Use OpenAPI for the exact methods and request/response contracts.
@@ -294,6 +295,10 @@ remains unpublished work in progress in its standalone repository and can be use
 through the explicitly configured native-remote provider adapter.
 
 See [Memory providers](memory-providers/README.md) for the current boundary.
+
+## Plugin grants and connections
+
+Grant and connection reads return a `concurrencyToken`. Send it as `expectedConcurrencyToken` when replacing a grant with `PUT /api/plugins/{pluginId}/grants` or an existing connection with `POST /api/plugins/{pluginId}/connections`. An absent grant or connection can be created without a token. HTTP 409 means the original state changed. Read and review the current values before submitting another write.
 
 ## HTTP APIs Versus Runtime Tools
 

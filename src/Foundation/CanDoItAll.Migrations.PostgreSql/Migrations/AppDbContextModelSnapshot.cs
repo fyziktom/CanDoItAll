@@ -1510,6 +1510,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -1843,6 +1844,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(180)");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
@@ -5521,6 +5523,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("integer");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
@@ -5586,6 +5589,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<string>("ConnectionKey")
@@ -5782,6 +5786,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(320)");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ConnectionId")
@@ -5860,6 +5865,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ConnectionId")
@@ -7153,6 +7159,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");

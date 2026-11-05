@@ -4,10 +4,10 @@ namespace CanDoItAll.Modules.Workspace.StorageCatalog.Contracts;
 
 public enum CatalogEffect { Save, Test, Delete }
 public enum CatalogWrite { NotAttempted, Committed, Unknown }
-public enum CatalogRouting { NotAttempted, Complete, PossiblyPartial }
+public enum CatalogRouting { NotAttempted, Complete, PossiblyPartial, Unknown }
 public enum CatalogActivity { NotAttempted, Complete, Failed }
 public enum CatalogDriver { NotAttempted, Completed, Unknown }
-public enum CatalogDiagnostic { None, Invalid, Missing, Protected, Retired, ReadUnavailable, CredentialDenied, DriverMissing, DriverFailed, PersistenceFailed, RoutingFailed, ActivityFailed }
+public enum CatalogDiagnostic { None, Invalid, Missing, Protected, Retired, ReadUnavailable, CredentialDenied, DriverMissing, DriverFailed, PersistenceFailed, RoutingFailed, ActivityFailed, Changed, RoutingChanged }
 
 public sealed record CatalogCommand(Guid OperationId, Guid Origin, CatalogContext Context, CatalogEffect Effect, CatalogEdit Draft);
 public sealed record CatalogOutcome {
@@ -17,6 +17,8 @@ public sealed record CatalogOutcome {
     public CatalogActivity Activity { get; init; }
     public CatalogDriver Driver { get; init; }
     public CatalogHealthFact? Health { get; init; }
+    public DateTimeOffset? AcceptedUpdatedAtUtc { get; init; }
+    public Guid? AcceptedRoutingRevision { get; init; }
     public CatalogDiagnostic Diagnostic { get; init; }
     public bool DiagnosticsUnavailable { get; init; }
     public bool IsUnknown => Write == CatalogWrite.Unknown || Driver == CatalogDriver.Unknown;

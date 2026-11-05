@@ -205,7 +205,7 @@ public sealed class AgentEditorSessionTests {
 
     internal sealed class EmptyMemoryProfiles : IMemoryProviderProfileStore {
         public int Reads { get; private set; }
-        public Task UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
+        public Task<MemoryProviderProfile> UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Editor rendering must not write a memory profile.");
         public Task<MemoryProviderProfile?> GetAsync(MemoryProviderInstanceId providerId, CancellationToken cancellationToken = default)
             => Task.FromResult<MemoryProviderProfile?>(null);

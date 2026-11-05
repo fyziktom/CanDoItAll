@@ -75,11 +75,11 @@ public abstract class AgentMemorySettingsPanelTestBase
 
     protected sealed class TestProfileStore(params MemoryProviderProfile[] profiles) : IMemoryProviderProfileStore
     {
-        public Task UpsertAsync(
+        public Task<MemoryProviderProfile> UpsertAsync(
             MemoryProviderProfile profile,
             DateTimeOffset updatedAtUtc,
             CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+            Task.FromResult(profile);
 
         public Task<MemoryProviderProfile?> GetAsync(
             MemoryProviderInstanceId providerId,
@@ -92,11 +92,11 @@ public abstract class AgentMemorySettingsPanelTestBase
 
     protected sealed class ThrowingProfileStore : IMemoryProviderProfileStore
     {
-        public Task UpsertAsync(
+        public Task<MemoryProviderProfile> UpsertAsync(
             MemoryProviderProfile profile,
             DateTimeOffset updatedAtUtc,
             CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+            Task.FromResult(profile);
 
         public Task<MemoryProviderProfile?> GetAsync(
             MemoryProviderInstanceId providerId,

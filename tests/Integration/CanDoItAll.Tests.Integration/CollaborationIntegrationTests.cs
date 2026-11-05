@@ -11,6 +11,28 @@ namespace CanDoItAll.Tests.Integration.Runtime;
 public sealed class CollaborationIntegrationTests
 {
     [Fact]
+    public async Task Concurrent_appends_preserve_each_message_and_a_replay_keeps_the_same_identity() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var start = CollaborationService.CreateManualThreadRequest(new() { Subject = "Concurrent thread", MessageBody = "First message" })
+            with { SubmissionId = Guid.NewGuid() };
+        var thread = await owner.CreateThreadAsync(start);
+        Assert.True(thread.IsSuccess);
+        Assert.Equal(thread.Value, (await owner.CreateThreadAsync(start)).Value);
+        var first = CollaborationService.CreateLocalReplyRequest(thread.Value, new() { MessageBody = "Reply one" })
+            with { SubmissionId = Guid.NewGuid(), MarkAsUnread = true };
+        var second = first with { SubmissionId = Guid.NewGuid(), MessageBody = "Reply two" };
+
+        Assert.All(await Task.WhenAll(owner.AppendMessageAsync(first), owner.AppendMessageAsync(second)), result => Assert.True(result.IsSuccess));
+        Assert.True((await owner.AppendMessageAsync(first)).IsSuccess);
+        Assert.True((await owner.AppendMessageAsync(first with { MessageBody = "Different intent" })).IsFailure);
+        var state = await owner.GetWorkspaceAsync(thread.Value);
+        Assert.Equal(3, state.SelectedThread!.Messages.Count);
+        Assert.Equal(3, Assert.Single(state.InboxItems).UnreadCount);
+    }
+
+    [Fact]
     public async Task Throwing_observer_cannot_hide_committed_writes_or_skip_remaining_observers() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();

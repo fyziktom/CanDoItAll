@@ -48,9 +48,15 @@ public sealed partial class WorkspaceService
         var storage = editor.Catalog;
         var configuration = editor.Configuration;
         var rules = await storageCatalogService.ListRulesAsync(cancellationToken);
+        var purposes = rules.Where(rule => rule.IsEnabled && rule.ScopeKind == StorageRoutingScopeKind.Workspace &&
+                rule.PreferredStorageId == storage.Id && WorkspaceStorageDefaults.TrackedPurposes.Contains(rule.UsagePurpose))
+            .Select(rule => rule.UsagePurpose).Distinct().OrderBy(WorkspaceStorageDefaults.ResolveTrackedPurposeOrder).ToArray();
         return new StorageCatalogEditorModel
         {
             Id = storage.Id,
+            ExpectedUpdatedAtUtc = storage.UpdatedAtUtc,
+            ExpectedRoutingRevision = StorageWorkspaceDefaults.Observe(rules),
+            OriginalDefaultPurposes = purposes,
             Name = storage.Name,
             ProviderKind = storage.ProviderKind,
             ConnectionMode = storage.ConnectionMode,
@@ -71,16 +77,7 @@ public sealed partial class WorkspaceService
             BasePath = configuration.BasePath,
             UseSsl = configuration.UseSsl,
             UsePassiveMode = configuration.UsePassiveMode,
-            DefaultPurposes = rules
-                .Where(rule =>
-                    rule.IsEnabled &&
-                    rule.ScopeKind == StorageRoutingScopeKind.Workspace &&
-                    rule.PreferredStorageId == storage.Id &&
-                    WorkspaceStorageDefaults.TrackedPurposes.Contains(rule.UsagePurpose))
-                .Select(rule => rule.UsagePurpose)
-                .Distinct()
-                .OrderBy(WorkspaceStorageDefaults.ResolveTrackedPurposeOrder)
-                .ToList()
+            DefaultPurposes = [.. purposes]
         };
     }
 
@@ -114,6 +111,9 @@ public sealed partial class WorkspaceService
         var record = new StorageCatalogSaveRequest
         {
             Id = model.Id ?? Guid.NewGuid(),
+            ExpectedUpdatedAtUtc = model.ExpectedUpdatedAtUtc,
+            DefaultRouting = model.DefaultPurposes.ToHashSet().SetEquals(model.OriginalDefaultPurposes) ? null :
+                new(model.ExpectedRoutingRevision, model.DefaultPurposes),
             Name = model.Name.Trim(),
             ProviderKind = model.ProviderKind,
             ConnectionMode = WorkspaceStoragePolicy.ResolveConnectionMode(model.ProviderKind, model.ConnectionMode),
@@ -140,7 +140,7 @@ public sealed partial class WorkspaceService
         };
 
         var saved = await storageCatalogService.SaveAsync(record, cancellationToken);
-        await storageCatalogService.ApplyDefaultPurposesAsync(saved.Id, model.DefaultPurposes, cancellationToken);
+        model.ExpectedUpdatedAtUtc = saved.UpdatedAtUtc;
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "storage",
             model.Id.HasValue ? "update" : "create",
@@ -217,28 +217,6 @@ public sealed partial class WorkspaceService
         model.LastTestedAtUtc = result.TestedAtUtc;
         model.LastHealthMessage = result.Message;
 
-        if (model.Id.HasValue)
-        {
-            await storageCatalogService.SaveAsync(new StorageCatalogSaveRequest
-            {
-                Id = model.Id.Value,
-                Name = record.Name,
-                ProviderKind = record.ProviderKind,
-                ConnectionMode = record.ConnectionMode,
-                EndpointOrRoot = record.EndpointOrRoot,
-                CredentialSecretId = record.CredentialSecretId,
-                IsEnabled = record.IsEnabled,
-                IsSystemDefault = record.IsSystemDefault,
-                IsReadOnly = record.IsReadOnly,
-                DisplayOrder = record.DisplayOrder,
-                CapabilityMask = result.CapabilityMask,
-                HealthStatus = result.HealthStatus,
-                LastTestedAtUtc = result.TestedAtUtc,
-                LastHealthMessage = result.Message,
-                Configuration = request.Configuration
-            }, cancellationToken);
-        }
-
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "storage",
             "health-check",
@@ -279,6 +257,7 @@ public sealed partial class WorkspaceService
     {
         var storages = await storageCatalogService.ListAsync(cancellationToken);
         var rules = await storageCatalogService.ListRulesAsync(cancellationToken);
+        var revision = StorageWorkspaceDefaults.Observe(rules);
         return WorkspaceStorageDefaults.TrackedPurposes
             .Select(purpose =>
             {
@@ -294,7 +273,7 @@ public sealed partial class WorkspaceService
                     rule?.PreferredStorageId,
                     storageName,
                     rule?.IsEnabled == true,
-                    rule?.Reason ?? string.Empty);
+                    rule?.Reason ?? string.Empty) { RoutingRevision = revision };
             })
             .ToList();
     }
