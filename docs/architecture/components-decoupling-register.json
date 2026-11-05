@@ -13865,7 +13865,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor",
-      "sha256_lf": "ddd5907ea34961bbddfb9d379379bee1124140d534866d356e978507b0e0ec7d",
+      "sha256_lf": "e8c2d7f6cb179f7955fcdec9c0413aed3c4caf82f9665315fdfd9cb74d6e73b9",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureGanttPanel",
@@ -13888,7 +13888,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs",
-      "sha256_lf": "4f75d0e3a03b9b9067337491ad263fa082b1c6a04e6624d72f6c6e9ac8811572",
+      "sha256_lf": "831b86a1250df8dad0a9f12da5a4a2a0fde265dc9a1e81150c152d9b3b0173cf",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureGanttPanel",
@@ -14253,7 +14253,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
-      "sha256_lf": "a2df62394724ff7ceed02de0e07f6f305284659f2cf10f5dc4c16f5cec3ef69d",
+      "sha256_lf": "0dde4e210c4db808805ffe3ed27a4116c25bd0b953f05934e8d66789ed7720ea",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureNodeCreatedWithFollowUpFailureException, CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14807,7 +14807,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "1e4ceb0d55b40f405029af8f369bca06aea334cf278f4343d4eef1a7a94239dd",
+      "sha256_lf": "b30abac241701ba2da8e4f12bc0e1d43fef5cefe50ce1c0a05b8993c83f96f93",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -35378,7 +35378,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/Gantt/PlanningGanttSurface.razor",
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/Gantt/PlanningGanttSurface.razor",
-      "sha256_lf": "167d8ab8a598b926b887dab46d70f6bc0e2db20daa0d46d9738a2492854e1c77",
+      "sha256_lf": "a66415b6037c444ffb16098dd4fbc7e76be856e25934385099b3cd572b027671",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Planning.UI.PlanningGanttSurface",
@@ -35401,7 +35401,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/Gantt/PlanningGanttSurface.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/Gantt/PlanningGanttSurface.razor.css",
-      "sha256_lf": "82278e15bd1e4b8c90dabfe49db5458c239254d6619c26dd06089f838944b3a6",
+      "sha256_lf": "5448123c77da812d9fce50c3b85d4a58c14cdfa6de283d743f5cc4286469b4e1",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -35888,7 +35888,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureChangesWindow.razor",
       "path": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureChangesWindow.razor",
-      "sha256_lf": "ed2df1cc46d57bbad1687a4dc7de9208aacd3e6337a7f2a5867696deb7e2b91b",
+      "sha256_lf": "96e99041955514ff05ee2069a7fd1b21be23c33044fa59f56802e0cca7c8b062",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Structure.UI.StructureChangesWindow",

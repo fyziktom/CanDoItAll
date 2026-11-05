@@ -86,6 +86,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     [Parameter]
     public EventCallback OpenAgentCatalog { get; set; }
 
+    [Parameter] public RenderFragment? ToolbarSupplement { get; set; }
+    [Parameter] public RenderFragment? OverlayContent { get; set; }
+    [Parameter] public IReadOnlyList<GanttTaskId> ChangedTaskIds { get; set; } = [];
+
     /// <summary>
     /// Publishes the bounded visible Gantt observation whenever the projection
     /// state changes. The observation is model context only; it never grants
@@ -125,6 +129,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         CanMutate = CanMutate,
         LoadError = loadError,
         Tasks = projection?.Tasks ?? [],
+        SelectedTaskIds = projection?.Tasks.Where(task => ChangedTaskIds.Contains(task.Id)).Select(task => task.Id).ToHashSet() ?? [],
         Dependencies = projection?.Dependencies ?? [],
         ProjectionOnlyTaskIds = projection?.ProjectionOnlyTaskIds ?? new HashSet<GanttTaskId>(),
         Warnings = NonScheduleWarnings.Select(issue => issue.Message).ToArray(),

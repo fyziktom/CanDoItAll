@@ -1,6 +1,8 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Components.Gantt;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -22,6 +24,7 @@ public partial class ProjectStructurePage
     private ProjectStructureActionContext? structureContext;
     private string? structureLoadError;
     private ProjectStructureAuthoringOpening? textAssetOpening;
+    private (Guid ContextId, IReadOnlyList<GanttTaskId> Tasks) ganttChangeSelection = (Guid.Empty, []);
 
     private Guid StructureContextId {
         get {
@@ -188,6 +191,7 @@ public partial class ProjectStructurePage
         var contextId = changeInbox.ContextId;
         var context = CaptureActionContext();
         var targets = changeInbox.GetNodeIds(refresh.Sequence);
+        var requestedView = structureViewIndex;
         var published = false;
         try {
             await ReloadSurfaceAsync(canPublish: () => contextId == changeInbox.ContextId && IsCurrentAction(context),
@@ -196,17 +200,25 @@ public partial class ProjectStructurePage
                 return;
             }
             var surviving = ProjectStructureChangeInbox.ResolveNodeIds(targets, surface!.Nodes);
-            if (surviving.Count > 0) {
-                SelectStructureView(ProjectStructureView.Canvas);
+            var message = targets.Count > surviving.Count
+                ? "The structure is refreshed. Some changed nodes were deleted or moved outside this project."
+                : null;
+            if (refresh.Sequence.HasValue && requestedView == GanttViewIndex && IsGanttViewVisible) {
+                var survivingIds = surviving.ToHashSet(StringComparer.Ordinal);
+                var tasks = surface.Nodes.Where(node => survivingIds.Contains(node.Id) && ProjectStructureGanttProjectionAdapter.IsCanonicalTask(node))
+                    .Select(node => new GanttTaskId(node.Id)).ToArray();
+                ganttChangeSelection = (contextId, tasks);
+                if (surviving.Count > tasks.Length) {
+                    message ??= "The structure is refreshed. Gantt selection includes only changed tasks on the schedule.";
+                }
+            } else if (surviving.Count > 0 && requestedView == CanvasViewIndex && structureViewIndex == CanvasViewIndex) {
                 await SelectInsightsAsync(CurrentInsights, surviving);
-                if (contextId == changeInbox.ContextId && workbenchRef is not null) {
+                if (contextId == changeInbox.ContextId && structureViewIndex == CanvasViewIndex && workbenchRef is not null) {
                     await workbenchRef.SelectNodesAsync(surviving, surviving[0]);
                 }
             }
             if (contextId == changeInbox.ContextId) {
-                changeInbox.CompleteRefresh(through, targets.Count > surviving.Count
-                    ? "The structure is refreshed. Some changed nodes were deleted or moved outside this project; surviving nodes are selected."
-                    : null);
+                changeInbox.CompleteRefresh(through, message);
             }
         } catch (Exception exception) {
             Logger.LogWarning(exception, "Remote-change refresh failed for project {ProjectId}.", context.Admission.ProjectId);

@@ -75,12 +75,17 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                           ContextAccessState="@agentChatContextAccessState"
                                           RefreshRequested="HandleAgentExecutionCompletedAsync" />
 
+@{
+    RenderFragment updatesToggle = @<Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
+                                             aria-label="Structure updates" title="Show changes from other editors" data-testid="project-structure-changes-toggle"
+                                             Click="@(() => changeInbox.ToggleWindow())" />;
+}
 <StructureWorkspace @ref="workbenchRef" @key="StructureContextId" Presentation="@BuildStructurePresentation()" SelectedView="@structureViewIndex" Dispatch="HandleStructureIntentAsync" ConfirmComposerClose="ConfirmComposerCloseAsync" Dialogs="@BuildStructureDialogs()" DialogIntent="HandleStructureDialogIntentAsync"
                     EditorMessage="@(composerOpening?.Session is { ShowComparison: false } editorStatus ? editorStatus.Message : null)">
     <ToolbarSupplement>
-        <Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
-                aria-label="Structure updates" title="Show changes from other editors" data-testid="project-structure-changes-toggle"
-                Click="@(() => changeInbox.ToggleWindow())" />
+        @if (structureViewIndex == CanvasViewIndex) {
+            @updatesToggle
+        }
     </ToolbarSupplement>
     <EditorActions>
         @if (composerOpening?.Session is { CanUndo: true } nodeEditor) {
@@ -93,13 +98,28 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                             Surface="@surface"
                                             OpenAgentCatalog="ToggleAgentWindowAsync"
                                             ReadAuthoritativeProject="@(authorizeRead => ReloadSurfaceAsync(canPublish: () => !deferredCompletionCts.IsCancellationRequested, onPublished: StateHasChanged, authorizeRead: authorizeRead))"
-                                            ObservationChanged="HandleGanttObservationChanged" />
+                                            ObservationChanged="HandleGanttObservationChanged"
+                                            ChangedTaskIds="@(ganttChangeSelection.ContextId == changeInbox.ContextId ? ganttChangeSelection.Tasks : [])">
+                    <ToolbarSupplement>
+                        @if (IsGanttViewVisible) {
+                            @updatesToggle
+                        }
+                    </ToolbarSupplement>
+                    <OverlayContent>
+                        @if (IsGanttViewVisible) {
+                            <StructureChangesWindow Presentation="@changeInbox.Presentation" Dispatch="HandleStructureChangesAsync"
+                                                    ContainerSelector="[data-cda-overlay-container]" DefaultPlacement="top-right" />
+                        }
+                    </OverlayContent>
+                </ProjectStructureGanttPanel>
     </Planning>
     <Insights>
                 <ProjectManagerSummaryPanel ProjectId="@ProjectId" ExpectedProjectAdmission="@surface?.ExpectedProjectAdmission" />
     </Insights>
     <SupportWindows>
-                        <StructureChangesWindow Presentation="@changeInbox.Presentation" Dispatch="HandleStructureChangesAsync" />
+                        @if (structureViewIndex == CanvasViewIndex) {
+                            <StructureChangesWindow Presentation="@changeInbox.Presentation" Dispatch="HandleStructureChangesAsync" />
+                        }
                         @if (ObjectIndexWindowState.IsVisible)
                         {
                             <ProjectStructureObjectIndexWindow WindowId="@ObjectIndexWindowKey"

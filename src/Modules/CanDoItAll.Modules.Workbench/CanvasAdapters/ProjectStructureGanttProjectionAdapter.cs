@@ -613,7 +613,7 @@ public sealed class ProjectStructureGanttProjectionAdapter
         }
     }
 
-    private static bool IsCanonicalTask(ProjectStructureNode node)
+    internal static bool IsCanonicalTask(ProjectStructureNode node)
     {
         return node.ObjectType == ProjectObjectType.WorkItem &&
             string.Equals(node.ObjectSubtype, TaskSubtype, StringComparison.OrdinalIgnoreCase) &&

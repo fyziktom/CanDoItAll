@@ -4,6 +4,7 @@
     var agentsCallback = OpenAgentCatalog;
 }
 <PlanningGanttSurface Presentation="@BuildPresentation()" DependencyIdFactory="CreateDependencyId"
+                      ToolbarSupplement="@ToolbarSupplement" OverlayContent="@OverlayContent"
                       TitleChanged="@(intent => AcceptAsync(intent.Origin, () => ApplyTitleAsync(intent.Value)))"
                       ScheduleChanged="@(intent => AcceptAsync(intent.Origin, () => ApplyScheduleAsync(intent.Value)))"
                       DependencyChanged="@(intent => AcceptAsync(intent.Origin, () => ApplyDependencyAsync(intent.Value)))"

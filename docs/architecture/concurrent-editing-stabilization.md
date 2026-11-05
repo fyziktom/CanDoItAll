@@ -14,6 +14,14 @@ all application writers.
 | R6 Workspace, Security, Plugins, Memory, Collaboration | Pending. Includes administrative Agent catalog transfer, which still has a separate replacement path. |
 | R7 File editors and remaining mutable surfaces | Pending application-wide writer census and closure. |
 
+The Gantt tab now uses the Project Structure update inbox and the same bounded refresh
+acknowledgement as Canvas. Selecting an update in Gantt refreshes the schedule and
+highlights its surviving tasks. Chromium 149 and Firefox 140 ran separate circuits on
+an isolated PostgreSQL fixture. A task creation and inline title edits delivered notices
+in both directions. The checks covered local edit suppression, in-place refresh, removal
+of refreshed rows, one window across tab switches, and clearance below the Gantt toolbar.
+The Windows Debug Web build and ten Gantt renderer cases passed.
+
 Voice settings share the native workflow settings row and its version. Floating chat
 settings use their own original row observation and reject stale replacements even when
 a hint is missed. Opening access remains bound to the original actor and dataset. The
