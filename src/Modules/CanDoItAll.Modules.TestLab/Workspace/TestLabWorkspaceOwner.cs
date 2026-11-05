@@ -38,9 +38,9 @@ public sealed class TestLabWorkspaceOwner(
         } catch (ProjectWriteAdmissionRejectedException) {
             return new(TestLabWriteOutcome.Refused, null, "The selected project admission is no longer valid. Select a current project explicitly before saving.");
         } catch (TestPlanBindingChangedException exception) {
-            return new(TestLabWriteOutcome.Refused, null, exception.Message);
+            return new(TestLabWriteOutcome.Conflict, null, exception.Message);
         } catch (TestPlanContentConflictException exception) {
-            return new(TestLabWriteOutcome.Refused, null, exception.Message);
+            return new(TestLabWriteOutcome.Conflict, null, exception.Message);
         } catch (Exception exception) {
             logger.LogError("TestLab write outcome is unknown. PlanId={PlanId} ProjectId={ProjectId} FailureType={FailureType}",
                 submission.Id, submission.ProjectId, exception.GetType().Name);

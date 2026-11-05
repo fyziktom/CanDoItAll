@@ -9,20 +9,44 @@ public sealed class TestLabDraft {
     private readonly Dictionary<TestRunEditorModel, string> timestamps = new(ReferenceEqualityComparer.Instance);
     private readonly ValidationMessageStore validation;
     public TestPlanEditorModel Model { get; }
+    public TestPlanEditorModel Baseline { get; private set; }
     public EditContext Context { get; }
     public long TargetVersion { get; private set; }
+    public long Revision { get; private set; }
+    public TestLabPlanComparison? Comparison { get; set; }
+    public bool IsComparing { get; set; }
     public TestLabSubmission? Pending { get; private set; }
     public TestLabSubmission? LastCommitted { get; set; }
     public TestLabSubmission? UncertainSubmission { get; private set; }
     public TestLabSaveState SaveState { get; set; }
     public string Message { get; set; } = "Ready";
-    public bool CanSave => Pending is null && SaveState != TestLabSaveState.Unknown;
+    public bool CanSave => Pending is null && SaveState is not (TestLabSaveState.Unknown or TestLabSaveState.Conflict);
 
     public TestLabDraft(TestPlanEditorModel model) {
         Model = model;
+        Baseline = TestLabSubmission.Clone(model);
         Context = new(model);
         validation = new(Context);
         Context.OnValidationRequested += (_, _) => Validate();
+        Context.OnFieldChanged += (_, _) => Edited();
+    }
+
+    public void Edited() => Revision++;
+    public void AcceptBaseline(TestPlanEditorModel model) => Baseline = TestLabSubmission.Clone(model);
+
+    public bool ApplyComparison(TestLabPlanComparison comparison) {
+        if (!ReferenceEquals(Comparison, comparison) || comparison.Revision != Revision || !comparison.IsResolved) {
+            return false;
+        }
+        comparison.Apply(Model);
+        AcceptBaseline(comparison.Current);
+        Comparison = null;
+        TargetVersion++;
+        Revision++;
+        SaveState = TestLabSaveState.Ready;
+        Message = "Choices applied to your draft. Save separately when ready.";
+        Validate();
+        return true;
     }
 
     public void ChangeProject(Guid? id, ProjectWriteAdmission? admission) {
@@ -31,7 +55,7 @@ public sealed class TestLabDraft {
         Model.ExpectedProjectAdmission = admission;
         Pending = null;
         LastCommitted = null;
-        if (SaveState != TestLabSaveState.Unknown) {
+        if (SaveState is not (TestLabSaveState.Unknown or TestLabSaveState.Conflict)) {
             UncertainSubmission = null;
             SaveState = TestLabSaveState.Ready;
             Message = "Project changed; review and save this draft.";

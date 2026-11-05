@@ -2,7 +2,7 @@ using CanDoItAll.TestLab.UI;
 
 namespace CanDoItAll.Modules.TestLab;
 
-public enum TestLabWriteOutcome { Refused, Committed, CommittedWithWarning, Unknown }
+public enum TestLabWriteOutcome { Refused, Committed, CommittedWithWarning, Unknown, Conflict }
 public sealed record TestLabWriteResult(TestLabWriteOutcome Outcome, Guid? PlanId, string Message);
 
 public interface ITestLabWorkspaceOwner {

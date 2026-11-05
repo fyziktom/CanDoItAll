@@ -89,6 +89,21 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         return Task.CompletedTask;
     }
 
+    public Task CompareChangesAsync(TestLabDraft origin) {
+        if (ReferenceEquals(State.Draft, origin) && origin.Model.Id is { } id && Store.Read(id) is { } saved) {
+            origin.Comparison = new(origin, saved);
+            Changed();
+        }
+        return Task.CompletedTask;
+    }
+
+    public async Task ApplyComparisonAsync(TestLabDraft origin, TestLabPlanComparison comparison) {
+        if (ReferenceEquals(State.Draft, origin) && origin.ApplyComparison(comparison)) {
+            Changed();
+            await LoadReferencesAsync(origin);
+        }
+    }
+
     public Task NewAsync() {
         if (!disposed) {
             RetireReads();

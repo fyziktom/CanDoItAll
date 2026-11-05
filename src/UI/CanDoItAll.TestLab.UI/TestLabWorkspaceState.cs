@@ -5,7 +5,7 @@ namespace CanDoItAll.TestLab.UI;
 
 public enum TestLabSection { Overview, Cases, Evidence, Runs }
 public enum TestLabReadState { NotLoaded, Loading, Ready, Empty, Missing, Unavailable, Stale }
-public enum TestLabSaveState { Ready, Pending, Refused, Saved, SavedWithWarning, Unknown }
+public enum TestLabSaveState { Ready, Pending, Refused, Saved, SavedWithWarning, Unknown, Conflict }
 
 public sealed record TestLabProjectOption(Guid Id, string Name, ProjectWriteAdmission Admission);
 public sealed record TestLabPartyOption(Guid PartyId, string DisplayName);
@@ -26,6 +26,8 @@ public interface ITestLabWorkspaceView {
     Task ChangeProjectAsync(TestLabDraft origin, Guid? projectId, long? targetVersion = null);
     Task ChangePartyAsync(TestLabDraft origin, Guid? partyId, long? targetVersion = null);
     Task SaveAsync(TestLabDraft origin, long? targetVersion = null);
+    Task CompareChangesAsync(TestLabDraft origin);
+    Task ApplyComparisonAsync(TestLabDraft origin, TestLabPlanComparison comparison);
     Task RetryAsync();
 }
 

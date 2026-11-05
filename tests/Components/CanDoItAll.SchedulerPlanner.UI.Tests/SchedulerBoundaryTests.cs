@@ -68,5 +68,9 @@ public sealed class SchedulerPlannerBoundaryTests {
     }
 
     private static bool Framework(string name) => name is "mscorlib" or "netstandard" or "Microsoft.AspNetCore" || name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal) || name == "Microsoft.JSInterop";
-    private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.SchedulerPlanner.UI" or "CanDoItAll.SchedulerPlanner.UiSandbox" or "CanDoItAll.Modules.SchedulerPlanner.Contracts" or "CanDoItAll.Modules.SchedulerPlanner.Presentation" or "CanDoItAll.AgentFramework.Models" or "CanDoItAll.AgentFramework.Capabilities.Abstractions" or "CanDoItAll.Memory.Abstractions" or "CanDoItAll.Infrastructure.Abstractions" or "CanDoItAll.AgentFramework.ProviderHistory.Abstractions" or "CanDoItAll.SharedKernel" or "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common" or "CanDoItAll.Components.CanvasLib" or "CanDoItAll.Components.OverlayLib";
+    private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.SchedulerPlanner.UI" or "CanDoItAll.SchedulerPlanner.UiSandbox" or
+        "CanDoItAll.Modules.SchedulerPlanner.Contracts" or "CanDoItAll.Modules.SchedulerPlanner.Presentation" or "CanDoItAll.AgentFramework.Models" or
+        "CanDoItAll.AgentFramework.Capabilities.Abstractions" or "CanDoItAll.Memory.Abstractions" or "CanDoItAll.Infrastructure.Abstractions" or
+        "CanDoItAll.AgentFramework.ProviderHistory.Abstractions" or "CanDoItAll.SharedKernel" or "CanDoItAll.Editing" or "CanDoItAll.Editing.UI" or
+        "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common" or "CanDoItAll.Components.CanvasLib" or "CanDoItAll.Components.OverlayLib";
 }

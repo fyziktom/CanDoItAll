@@ -1,3 +1,6 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+
 @{
     var origin = View.State.Draft;
     var editor = origin?.Model ?? empty;
@@ -123,6 +126,35 @@
             <DetailContent>
                 <p role="status" data-testid="testlab-editor-state">@EditorStatus</p>
                 @if (origin is not null) {
+                @if (origin.SaveState == TestLabSaveState.Conflict) {
+                    <Button Text="Compare changes" ButtonStyle="ButtonStyle.Light" IsBusy="@origin.IsComparing"
+                            Click="@(() => View.CompareChangesAsync(origin))" data-testid="testlab-compare-changes" />
+                }
+                @if (origin.Comparison is { } comparison) {
+                    <SurfaceCard Soft="true" data-testid="testlab-plan-comparison">
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock Value="Review the current plan and apply your choices to the draft. Save separately when ready." />
+                            <Stack GapScale="LayoutGap.Small" Style="max-height:28rem;overflow:auto">
+                                <MergeFieldView Label="Title" Field="@comparison.Title" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+                                <MergeFieldView Label="Phase" Field="@comparison.Phase" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+                                <MergeFieldView Label="Coverage" Field="@comparison.Coverage" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+                                <MergeFieldView Label="Playwright specification" Field="@comparison.Spec" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+                                <MergeFieldView Label="Project and responsible party" Field="@comparison.Project" Format="FormatProject" ShowUnchanged="false" Changed="StateHasChanged" />
+                                @foreach (var row in comparison.Cases.Where(row => row.Field.LocalChanged || row.Field.CurrentChanged)) {
+                                    <MergeFieldView @key="(TestLabSection.Cases, row.Key)" Label="Test case" Field="@row.Field" Format="FormatCase" ShowUnchanged="false" Changed="StateHasChanged" />
+                                }
+                                @foreach (var row in comparison.Evidence.Where(row => row.Field.LocalChanged || row.Field.CurrentChanged)) {
+                                    <MergeFieldView @key="(TestLabSection.Evidence, row.Key)" Label="Evidence" Field="@row.Field" Format="FormatEvidence" ShowUnchanged="false" Changed="StateHasChanged" />
+                                }
+                                @foreach (var row in comparison.Runs.Where(row => row.Field.LocalChanged || row.Field.CurrentChanged)) {
+                                    <MergeFieldView @key="(TestLabSection.Runs, row.Key)" Label="Recorded result" Field="@row.Field" Format="FormatRun" ShowUnchanged="false" Changed="StateHasChanged" />
+                                }
+                            </Stack>
+                            <Button Text="Apply choices to form" Disabled="@(!comparison.IsResolved || comparison.Revision != origin.Revision)"
+                                    Click="@(() => View.ApplyComparisonAsync(origin, comparison))" data-testid="testlab-apply-comparison" />
+                        </Stack>
+                    </SurfaceCard>
+                }
                 <EditForm @key="origin" EditContext="origin.Context" OnValidSubmit="@(() => View.SaveAsync(origin, originVersion))">
                     <fieldset disabled="@(!Interactive)" class="min-w-0 border-0 p-0 m-0">
                     <ValidationSummary />
@@ -318,8 +350,20 @@
     private void Edit(TestLabDraft origin, long version, Action edit) {
         if (ReferenceEquals(View.State.Draft, origin) && origin.TargetVersion == version) {
             edit();
+            origin.Edited();
         }
     }
+    private string FormatProject(TestLabPlanComparison.ProjectValue value) {
+        var project = View.State.Projects.FirstOrDefault(item => item.Id == value.Id)?.Name ?? value.Id?.ToString("D") ?? "Global plan";
+        var party = View.State.Parties.FirstOrDefault(item => item.PartyId == value.PartyId)?.DisplayName ?? value.PartyId?.ToString("D") ?? "No responsible party";
+        return $"{project}\n{party}";
+    }
+    private static string FormatCase(MergeEntry<TestLabPlanComparison.CaseValue> entry)
+        => entry.Value is { } value ? $"{value.Name} · {value.Status}\n{value.Feature}\n{value.Notes}" : "Absent";
+    private static string FormatEvidence(MergeEntry<TestLabPlanComparison.EvidenceValue> entry)
+        => entry.Value is { } value ? $"{value.Label} · {value.Kind}\n{value.Path}\n{value.Notes}" : "Absent";
+    private static string FormatRun(MergeEntry<TestLabPlanComparison.RunValue> entry)
+        => entry.Value is { } value ? $"{value.Runner} · {value.Result}\n{value.RawTime ?? value.ExecutedAt.ToString("O")}\n{value.Summary}" : "Absent";
     private static string ResolveStatusTone(TestCaseStatus? status) => status switch {
         TestCaseStatus.Passed => "success",
         TestCaseStatus.Failed => "danger",

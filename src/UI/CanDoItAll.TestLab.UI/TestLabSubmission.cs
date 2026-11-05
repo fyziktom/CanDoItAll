@@ -42,6 +42,7 @@ public sealed class TestLabSubmission {
         foreach (var row in runs.Where(row => row.IsPresent(draft.Model.Runs))) {
             row.Origin.Id = row.Submitted.Id;
         }
+        draft.AcceptBaseline(Model);
     }
 
     public void Reconcile(TestLabDraft draft, TestPlanEditorModel accepted) {
@@ -118,6 +119,11 @@ public sealed class TestLabSubmission {
                 row.Origin.Summary = saved.Summary;
             }
         }
+        var submittedRuns = Model.Runs.Select(row => row.Id).ToHashSet();
+        live.Runs.AddRange(accepted.Runs.Where(row => !submittedRuns.Contains(row.Id) && live.Runs.All(existing => existing.Id != row.Id))
+            .Select(row => new TestRunEditorModel { Id = row.Id, ExecutedAtUtc = row.ExecutedAtUtc, Runner = row.Runner, Result = row.Result, Summary = row.Summary }));
+        live.OriginalRuns = accepted.OriginalRuns;
+        draft.AcceptBaseline(accepted);
     }
 
     private sealed record Row<T>(T Origin, T Baseline, T Submitted) where T : class, ITestPlanChildEditor {

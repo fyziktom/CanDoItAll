@@ -34039,7 +34039,7 @@
     {
       "identity": "src/UI/CanDoItAll.TestLab.UI/CanDoItAll.TestLab.UI.csproj",
       "path": "src/UI/CanDoItAll.TestLab.UI/CanDoItAll.TestLab.UI.csproj",
-      "sha256_lf": "e38c006ffbf12a827fcc21f89a25e5906501e144013ee857d1a47c9bf4b81e45",
+      "sha256_lf": "9937916abdbe153af28bf553921229dfca786640c037790afc1cc711221b90e3",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -34059,7 +34059,7 @@
     {
       "identity": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
-      "sha256_lf": "390f56fc58d5777fd7562b2baa128db338bbdba3c5f401579d8764d8eb3488d9",
+      "sha256_lf": "60f206cd4e9a3e3e813e081b47adc7aee277a499dec1261be7a63ce2c375ee62",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.TestLab.UI.TestLabWorkspaceSurface",

@@ -10,6 +10,37 @@ namespace CanDoItAll.Tests.Unit.TestLab;
 
 public sealed class TestLabSessionTests {
     [Fact]
+    public void Comparison_preserves_unfinished_timestamp_and_accepts_disjoint_current_rows() {
+        var planId = Guid.NewGuid();
+        var profileId = Guid.NewGuid();
+        var draft = new TestLabDraft(new() {
+            Id = planId, ExpectedPlan = new(profileId, planId, Guid.NewGuid()), Title = "Original title",
+            Runs = [new() { Id = Guid.NewGuid(), Runner = "Fixture runner" }]
+        });
+        var run = Assert.Single(draft.Model.Runs);
+        draft.InputTimestamp(run, "2026-11-");
+        draft.Model.Title = "My title";
+        draft.Edited();
+        var current = TestLabSubmission.Clone(draft.Baseline);
+        current.ExpectedPlan = new(profileId, planId, Guid.NewGuid());
+        current.Title = "Current title";
+        current.Cases.Add(new() { Id = Guid.NewGuid(), Name = "Case added by another editor" });
+        var comparison = new TestLabPlanComparison(draft, current);
+        draft.Comparison = comparison;
+
+        Assert.False(comparison.IsResolved);
+        Assert.False(draft.ApplyComparison(comparison));
+        comparison.Title.UseLocal();
+        Assert.True(draft.ApplyComparison(comparison));
+        Assert.Equal(current.ExpectedPlan, draft.Model.ExpectedPlan);
+        Assert.Equal("My title", draft.Model.Title);
+        Assert.Equal("Case added by another editor", Assert.Single(draft.Model.Cases).Name);
+        Assert.Same(run, Assert.Single(draft.Model.Runs));
+        Assert.Equal("2026-11-", draft.Timestamp(run));
+        Assert.Null(draft.BeginSave());
+    }
+
+    [Fact]
     public void Extracted_contracts_preserve_defaults_identity_and_json_shape() {
         Assert.Equal("CanDoItAll.Modules.TestLab.Contracts", typeof(TestPlanEditorModel).Assembly.GetName().Name);
         Assert.Equal([0, 1, 2, 3, 4], Enum.GetValues<TestCaseStatus>().Select(value => (int)value));
