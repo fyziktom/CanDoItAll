@@ -62,6 +62,8 @@ The CodeAnalytics snapshot covered Infrastructure, Workspace, and the FileTools
 integration. The report is a discovery aid. An application-wide disposition of the
 remaining candidates is still open.
 
+## Earlier Agent and chat checkpoint
+
 Voice settings share the native workflow settings row and its version. Floating chat
 settings use their own original row observation and reject stale replacements even when
 a hint is missed. Opening access remains bound to the original actor and dataset. The
@@ -92,8 +94,24 @@ a separate delivery check. The Windows Debug Web build and both Release solution
 builds passed, as did portability baseline enforcement, rendering review and exact
 path checks for 1,344 project and solution references.
 
-The ordinary instance on port 5032 was restarted from these Release outputs. Its
-original database selection and configuration hashes were retained, and the served
-dialog, notification, input, and canvas assets match the reviewed sources. A Chromium
-check opened and cancelled a settings comparison against the ordinary database without
-submitting a write.
+The earlier R4 release verified the served dialog, notification, input, and canvas
+assets. A Chromium check opened and cancelled a settings comparison against the
+ordinary database.
+
+## Current Windows validation and port 5032
+
+The current Windows Debug and Release Web builds passed. The main UI component lane
+passed 68 cases. The focused renderer and unit checks included 38 Test Lab renderer
+cases, 33 Test Lab unit cases, 42 Storage renderer cases, and the Scheduler renderer
+and dependency checks. Six native HTTP cases passed for Project Structure polling and
+SSE, including replay and rollback. The final affected reruns passed the Agent catalog
+transfer, authorized file content, storage routing, and native Windows file-open cases.
+The portability baseline passed final enforcement with 15,792 reviewed findings.
+Rendering and documentation checks passed. Hosted CI still needs a result for this tip.
+
+The ordinary instance restarted from the Windows Release build on 5032. The runtime
+reported ready, Test Lab returned HTTP 200, and the original database selection and
+configuration fingerprints matched. Browser writes used the isolated fixture, whose
+Web process, browser sessions, PostgreSQL container, runtime directory, and native probe
+were released after validation. Execution policy blocked removal of duplicate local
+scan files and one test diagnostic. The local resource record lists the retained files.
