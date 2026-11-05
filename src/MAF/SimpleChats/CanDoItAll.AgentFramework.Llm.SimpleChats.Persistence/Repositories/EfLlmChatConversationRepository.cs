@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
@@ -20,11 +21,11 @@ public sealed class EfLlmChatConversationRepository(SimpleChatsDbContext dbConte
         return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
     }
 
-    public Task CreateAsync(LlmChatConversation conversation, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(LlmChatConversation conversation, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(conversation);
+        await LlmChatWriteAdmission.RequireCreateAsync(conversation.Id.Value, cancellationToken, LlmChatWriteResource.ConversationMetadata);
         dbContext.Add(LlmChatPersistenceMapper.ToRow(conversation));
-        return Task.CompletedTask;
     }
 
     public async Task ReplaceAsync(
@@ -34,6 +35,7 @@ public sealed class EfLlmChatConversationRepository(SimpleChatsDbContext dbConte
     {
         ArgumentNullException.ThrowIfNull(conversation);
         ArgumentOutOfRangeException.ThrowIfNegative(expectedConcurrencyToken);
+        await LlmChatWriteAdmission.RequireTargetAsync(conversation.Id.Value, cancellationToken, LlmChatWriteResource.ConversationMetadata);
         var affected = await dbContext.Set<LlmChatConversationRow>()
             .Where(row => row.Id == conversation.Id.Value && row.ConcurrencyToken == expectedConcurrencyToken)
             .ExecuteUpdateAsync(setters => setters

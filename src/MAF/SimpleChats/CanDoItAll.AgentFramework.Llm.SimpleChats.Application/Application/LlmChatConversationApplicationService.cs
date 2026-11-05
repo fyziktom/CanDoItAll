@@ -14,13 +14,15 @@ public sealed class LlmChatConversationApplicationService(
     ILlmChatTurnStateRepository turnStateRepository,
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatConversationEngine conversationEngine,
-    TimeProvider timeProvider) : ILlmChatConversationApplicationService
+    TimeProvider timeProvider,
+    IEnumerable<ILlmChatConversationCommitObserver>? observers = null) : ILlmChatConversationApplicationService
 {
     public async Task<Result<LlmChatConversationDetails>> CreateAsync(
         CreateLlmChatConversationCommand command,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        await LlmChatWriteAdmission.RequireTargetAsync(null, cancellationToken, LlmChatWriteResource.ConversationMetadata);
         try
         {
             return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
@@ -66,6 +68,7 @@ public sealed class LlmChatConversationApplicationService(
                     revision,
                     title,
                     transactionCancellationToken).ConfigureAwait(false);
+                NotifyAfterCommit(id.Value, lifecycle: true);
                 return Result<LlmChatConversationDetails>.Success(new LlmChatConversationDetails(
                     conversation,
                     definition.Name,
@@ -77,6 +80,9 @@ public sealed class LlmChatConversationApplicationService(
         {
             return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.InvalidRequest(exception.Message));
         }
+        catch (Exception exception) when (LlmChatOperationFailureCodes.TryMap(exception, out var code)) {
+            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.OperationFailure(code));
+        }
     }
 
     public async Task<Result<LlmChatConversationDetails>> RenameAsync(
@@ -84,6 +90,7 @@ public sealed class LlmChatConversationApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        await LlmChatWriteAdmission.RequireTargetAsync(command.ConversationId.Value, cancellationToken, LlmChatWriteResource.ConversationMetadata);
         var current = await conversationRepository.TryGetAsync(command.ConversationId, cancellationToken)
             .ConfigureAwait(false);
         if (current is null)
@@ -127,12 +134,16 @@ public sealed class LlmChatConversationApplicationService(
                     title,
                     command.ExpectedTranscriptRevision,
                     transactionCancellationToken).ConfigureAwait(false);
+                NotifyAfterCommit(current.Id.Value, lifecycle: false);
                 return await BuildDetailsAsync(updated, transcript, transactionCancellationToken).ConfigureAwait(false);
             }, cancellationToken).ConfigureAwait(false);
         }
         catch (ArgumentException exception)
         {
             return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.InvalidRequest(exception.Message));
+        }
+        catch (Exception exception) when (LlmChatOperationFailureCodes.TryMap(exception, out var code)) {
+            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.OperationFailure(code));
         }
         catch (LlmChatPersistenceConcurrencyException exception)
             when (exception.Resource is LlmChatConcurrencyResource.Conversation)
@@ -146,6 +157,7 @@ public sealed class LlmChatConversationApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        await LlmChatWriteAdmission.RequireTargetAsync(command.ConversationId.Value, cancellationToken, LlmChatWriteResource.ConversationMetadata);
         return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
         {
             var turnState = await turnStateRepository.LockAsync(
@@ -202,8 +214,15 @@ public sealed class LlmChatConversationApplicationService(
                 archived,
                 command.ExpectedConcurrencyToken,
                 transactionCancellationToken).ConfigureAwait(false);
+            NotifyAfterCommit(current.Id.Value, lifecycle: true);
             return await BuildDetailsAsync(archived, transcript, transactionCancellationToken).ConfigureAwait(false);
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private void NotifyAfterCommit(Guid id, bool lifecycle) {
+        foreach (var observer in observers ?? []) {
+            unitOfWork.RegisterPostCommit(() => observer.Committed(id, lifecycle));
+        }
     }
 
     public async Task<Result<LlmChatConversationDetails>> GetAsync(

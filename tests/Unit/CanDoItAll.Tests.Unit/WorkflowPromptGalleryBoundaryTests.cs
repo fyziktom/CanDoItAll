@@ -1,9 +1,13 @@
+using CanDoItAll.Tests.Support;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.Pages.Authoring;
+using CanDoItAll.Modules.Prompts.Components;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +24,115 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Prompt_binding_assigns_a_diagnostic_identity_before_dispatch_and_never_replays_unknown(bool committed) {
+        var factory = CreateWorkflowFactory("prompt-binding-original");
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
+        var provider = CreateProvider();
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery,
+            new TestProviderProfileRegistry(provider), new ProviderProfileService());
+        var legacy = CreateLegacyComponent();
+        var source = await catalog.SaveComponentAsync(new(null, legacy.Name, provider.Id, provider.DefaultModel,
+            legacy.Modality, legacy.ModelSettings, legacy.Instructions, legacy.InputShape, legacy.ResultShape, legacy.Permissions));
+        var library = new LostBindingAcknowledgement(catalog, committed);
+        var owner = new WorkflowPromptBindingOwner(gallery, library, NullLogger.Instance,
+            WorkflowObservationTestSupport.Create(), static (_, _) => ValueTask.CompletedTask);
+        var selection = new PromptGallerySelection(source.PromptArtifactId!.Value, source.PromptVersionId!.Value, 1,
+            source.Name, "Fixture", PromptGalleryItemKind.FullPrompt, source.Instructions, [], [], new());
+        var request = new WorkflowPromptBindingRequest(selection, Assert.Single(await catalog.ListProviderOptionsAsync()), source.Model, null);
+
+        var outcome = Assert.IsType<WorkflowPromptBindingOutcome.Unknown>(await owner.BindAsync(request, CancellationToken.None));
+        Assert.NotNull(library.SubmittedId);
+        Assert.NotEqual(Guid.Empty, library.SubmittedId.Value.Value);
+        Assert.Equal(library.SubmittedId, outcome.ComponentId);
+        Assert.Equal(outcome, Assert.IsType<WorkflowPromptBindingOutcome.Unknown>(await owner.BindAsync(request, CancellationToken.None)));
+        Assert.Equal(1, library.Saves);
+        Assert.Empty(owner.Accepted);
+        var stored = (await catalog.ListComponentsAsync()).Where(component => component.Id != source.Id).ToArray();
+        if (committed) {
+            Assert.Equal(library.SubmittedId, Assert.Single(stored).Id);
+        } else {
+            Assert.Empty(stored);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Prompt_binding_carries_the_original_editor_access_into_the_native_writer(bool revokeAtDispatch) {
+        var factory = CreateWorkflowFactory("prompt-binding-access");
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
+        var provider = CreateProvider();
+        var changes = WorkflowObservationTestSupport.Create();
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery,
+            new TestProviderProfileRegistry(provider), new ProviderProfileService(), changes);
+        var legacy = CreateLegacyComponent();
+        var source = await catalog.SaveComponentAsync(new(null, legacy.Name, provider.Id, provider.DefaultModel,
+            legacy.Modality, legacy.ModelSettings, legacy.Instructions, legacy.InputShape, legacy.ResultShape, legacy.Permissions));
+        var allowed = revokeAtDispatch;
+        var library = new LostBindingAcknowledgement(catalog, committed: true) { BeforeSave = () => allowed = false };
+        var owner = new WorkflowPromptBindingOwner(gallery, library, NullLogger.Instance, changes,
+            (_, _) => allowed ? ValueTask.CompletedTask : ValueTask.FromException(new UnauthorizedAccessException()));
+        var selection = new PromptGallerySelection(source.PromptArtifactId!.Value, source.PromptVersionId!.Value, 1,
+            source.Name, "Fixture", PromptGalleryItemKind.FullPrompt, source.Instructions, [], [], new());
+        var request = new WorkflowPromptBindingRequest(selection, Assert.Single(await catalog.ListProviderOptionsAsync()), source.Model, null);
+
+        Assert.IsType<WorkflowPromptBindingOutcome.Rejected>(await owner.BindAsync(request, CancellationToken.None));
+        Assert.Equal(revokeAtDispatch ? 1 : 0, library.Saves);
+        Assert.Equal(source.Id, Assert.Single(await catalog.ListComponentsAsync()).Id);
+        Assert.Empty(owner.Accepted);
+    }
+
+    [Fact]
+    public async Task Known_component_refusal_does_not_turn_into_an_unknown_binding_or_block_an_explicit_retry() {
+        var factory = CreateWorkflowFactory("prompt-binding-conflict");
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
+        var provider = CreateProvider();
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery,
+            new TestProviderProfileRegistry(provider), new ProviderProfileService());
+        var legacy = CreateLegacyComponent();
+        var source = await catalog.SaveComponentAsync(new(null, legacy.Name, provider.Id, provider.DefaultModel,
+            legacy.Modality, legacy.ModelSettings, legacy.Instructions, legacy.InputShape, legacy.ResultShape, legacy.Permissions));
+        var library = new LostBindingAcknowledgement(catalog, committed: false) {
+            BeforeSave = () => throw new WorkflowComponentConcurrencyException(source.Id)
+        };
+        var owner = new WorkflowPromptBindingOwner(gallery, library, NullLogger.Instance,
+            WorkflowObservationTestSupport.Create(), static (_, _) => ValueTask.CompletedTask);
+        var selection = new PromptGallerySelection(source.PromptArtifactId!.Value, source.PromptVersionId!.Value, 1,
+            source.Name, "Fixture", PromptGalleryItemKind.FullPrompt, source.Instructions, [], [], new());
+        var request = new WorkflowPromptBindingRequest(selection, Assert.Single(await catalog.ListProviderOptionsAsync()), source.Model, null);
+
+        Assert.IsType<WorkflowPromptBindingOutcome.Rejected>(await owner.BindAsync(request, CancellationToken.None));
+        Assert.IsType<WorkflowPromptBindingOutcome.Rejected>(await owner.BindAsync(request, CancellationToken.None));
+        Assert.Equal(2, library.Saves);
+        Assert.Equal(source.Id, Assert.Single(await catalog.ListComponentsAsync()).Id);
+    }
+
+    private sealed class LostBindingAcknowledgement(IWorkflowComponentLibraryService inner, bool committed) : IWorkflowComponentLibraryService {
+        public WorkflowComponentId? SubmittedId { get; private set; }
+        public int Saves { get; private set; }
+        public Action? BeforeSave { get; init; }
+        public Task<IReadOnlyList<WorkflowProviderOption>> ListProviderOptionsAsync(CancellationToken cancellationToken = default)
+            => inner.ListProviderOptionsAsync(cancellationToken);
+        public Task<IReadOnlyList<LlmCallComponent>> ListComponentsAsync(CancellationToken cancellationToken = default)
+            => inner.ListComponentsAsync(cancellationToken);
+        public Task<LlmCallComponent?> GetComponentAsync(WorkflowComponentId id, CancellationToken cancellationToken = default)
+            => inner.GetComponentAsync(id, cancellationToken);
+        public Task DeleteComponentAsync(WorkflowComponentDeleteRequest request, CancellationToken cancellationToken = default)
+            => inner.DeleteComponentAsync(request, cancellationToken);
+        public async Task<LlmCallComponent> SaveComponentAsync(LlmCallComponentSaveRequest request, CancellationToken cancellationToken = default) {
+            SubmittedId = request.Id;
+            Saves++;
+            BeforeSave?.Invoke();
+            if (committed) {
+                await inner.SaveComponentAsync(request, cancellationToken);
+            }
+            throw new IOException("Synthetic component acknowledgement failure");
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Component_model_upgrade_updates_only_its_implicitly_owned_prompt(bool explicitBinding) {
         var factory = CreateWorkflowFactory(nameof(Component_model_upgrade_updates_only_its_implicitly_owned_prompt));
         var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
@@ -28,13 +141,13 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             SuggestedModels = [provider.DefaultModel, OpenAiModelIds.Gpt6Luna],
             ModelPrices = ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(provider.Kind, OpenAiModelIds.Gpt6Luna, provider.ModelPrices)
         };
-        var catalog = new PersistentWorkflowCatalogService(factory, new WorkflowDefinitionValidator(), gallery, gallery,
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery,
             new TestProviderProfileRegistry(provider), new ProviderProfileService());
         var legacy = CreateLegacyComponent();
         var request = new LlmCallComponentSaveRequest(null, legacy.Name, provider.Id, provider.DefaultModel,
             legacy.Modality, legacy.ModelSettings, legacy.Instructions, legacy.InputShape, legacy.ResultShape, legacy.Permissions);
         var original = await catalog.SaveComponentAsync(request);
-        var upgrade = request with { Id = original.Id, Model = OpenAiModelIds.Gpt6Luna,
+        var upgrade = request with { Id = original.Id, ExpectedRevision = original.Revision, Model = OpenAiModelIds.Gpt6Luna,
             PromptArtifactId = explicitBinding ? original.PromptArtifactId : null };
 
         if (explicitBinding) {
@@ -61,11 +174,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         var promptVersionId = Guid.NewGuid();
         var promptGallery = new IncompatiblePromptGallery(promptArtifactId, promptVersionId);
         var provider = CreateProvider();
-        var catalog = new PersistentWorkflowCatalogService(
-            factory,
-            new WorkflowDefinitionValidator(),
-            promptGallery,
-            new UnusedPromptGalleryImporter(),
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), promptGallery, PromptGalleryTestSupport.CreateService(factory.Prompts),
             new TestProviderProfileRegistry(provider),
             new ProviderProfileService());
         var request = new LlmCallComponentSaveRequest(
@@ -98,7 +207,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     }
 
     [Fact]
-    public async Task Workflow_publication_rejects_an_intervening_gallery_writer()
+    public async Task Foreign_prompt_binding_requires_an_immutable_version_and_cannot_update_the_foreign_draft()
     {
         var factory = CreateWorkflowFactory("publication-concurrency");
         var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
@@ -117,17 +226,9 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             SupportedConsumers: [PromptGalleryConsumer.Workflow]));
         Assert.True(initialSave.IsSuccess);
         var promptId = initialSave.Value.PromptArtifactId;
-        Assert.True((await gallery.CreateVersionAsync(
-            promptId,
-            new PromptVersionCreateRequest(
-                "Initial publication",
-                initialSave.Value.UpdatedAtUtc))).IsSuccess);
-        var concurrentGallery = new InterveningWritePromptGallery(gallery);
-        var catalog = new PersistentWorkflowCatalogService(
-            factory,
-            new WorkflowDefinitionValidator(),
-            concurrentGallery,
-            gallery,
+        var version = await gallery.CreateVersionAsync(promptId, new("Initial publication", initialSave.Value.UpdatedAtUtc));
+        Assert.True(version.IsSuccess);
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery,
             new TestProviderProfileRegistry(provider),
             new ProviderProfileService());
         var legacyComponent = CreateLegacyComponent();
@@ -149,13 +250,19 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             catalog.SaveComponentAsync(request));
 
-        Assert.Contains("concurrency-conflict", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("explicit immutable version", exception.Message, StringComparison.Ordinal);
+        await using (var dbContext = factory.CreateDbContext()) {
+            Assert.Empty(await dbContext.Set<WorkflowComponentRecord>().ToListAsync());
+        }
+        var bound = await catalog.SaveComponentAsync(request with { PromptVersionId = version.Value!.PromptVersionId });
+        Assert.Equal("Initial published content.", bound.Instructions);
+        await Assert.ThrowsAsync<WorkflowComponentConcurrencyException>(() => catalog.SaveComponentAsync(request with {
+            Id = bound.Id, ExpectedRevision = bound.Revision, PromptArtifactId = null, Instructions = "Unrelated replacement"
+        }));
         var current = Assert.IsType<PromptGalleryItemDetails>((await gallery.GetItemAsync(promptId)).Value);
-        Assert.Equal("Concurrent writer content.", current.DraftContent);
-        Assert.Equal(PromptArtifactStatus.Draft, current.Status);
+        Assert.Equal("Initial published content.", current.DraftContent);
+        Assert.Equal(PromptArtifactStatus.Final, current.Status);
         Assert.Single(current.Versions);
-        await using var dbContext = factory.CreateDbContext();
-        Assert.Empty(await dbContext.Set<WorkflowComponentRecord>().ToListAsync());
     }
 
     [Fact]
@@ -163,14 +270,11 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     {
         var factory = CreateWorkflowFactory("legacy-migration");
         var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
-        var catalog = new PersistentWorkflowCatalogService(
-            factory,
-            new WorkflowDefinitionValidator(),
-            gallery,
-            gallery);
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery);
         var providerProfileId = Guid.NewGuid();
         var component = CreateLegacyComponent() with { ProviderProfileId = providerProfileId };
         var definition = CreateLegacyDefinition(component.Id);
+        var originalDefinitionJson = JsonSerializer.Serialize(definition, JsonOptions);
         await using (var arrangeContext = factory.CreateDbContext())
         {
             var definitionRecord = WorkflowDefinitionRecord.FromDefinition(definition, revision: 1);
@@ -178,6 +282,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             arrangeContext.Add(new WorkflowComponentRecord
             {
                 Id = component.Id.Value,
+                Revision = Guid.NewGuid(),
                 Name = component.Name,
                 ProviderProfileId = component.ProviderProfileId,
                 Model = component.Model,
@@ -199,12 +304,14 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         var migration = new WorkflowPromptGalleryMigrationService(
             catalog,
             factory,
+            factory.Changes,
             NullLogger<WorkflowPromptGalleryMigrationService>.Instance);
 
         await migration.EnsureMigratedAsync();
 
         string migratedComponentJson;
         string migratedDefinitionJson;
+        Guid migratedVersionId;
         await using (var assertContext = factory.CreateDbContext())
         {
             var componentRecord = await assertContext.Set<WorkflowComponentRecord>().SingleAsync();
@@ -215,7 +322,13 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             Assert.DoesNotContain(component.Instructions, componentRecord.ComponentJson, StringComparison.Ordinal);
             migratedComponentJson = componentRecord.ComponentJson;
 
-            var definitionRecord = await assertContext.Set<WorkflowDefinitionRecord>().SingleAsync();
+            var originalRecord = await assertContext.Set<WorkflowDefinitionRecord>().SingleAsync(record => record.VersionId == definition.VersionId.Value);
+            Assert.Equal(originalDefinitionJson, originalRecord.DefinitionJson);
+            Assert.Equal(definition.UpdatedAtUtc, originalRecord.UpdatedAtUtc);
+            migratedVersionId = (await assertContext.Set<WorkflowDefinitionHeadRecord>().SingleAsync()).VersionId;
+            Assert.NotEqual(definition.VersionId.Value, migratedVersionId);
+            Assert.Equal(2, await assertContext.Set<WorkflowDefinitionRecord>().CountAsync());
+            var definitionRecord = await assertContext.Set<WorkflowDefinitionRecord>().SingleAsync(record => record.VersionId == migratedVersionId);
             Assert.Equal(3, definitionRecord.InstructionSnapshotSchemaVersion);
             migratedDefinitionJson = definitionRecord.DefinitionJson;
             var migratedDefinition = JsonSerializer.Deserialize<WorkflowDefinition>(
@@ -246,9 +359,12 @@ public sealed class WorkflowPromptGalleryBoundaryTests
 
         await using var idempotencyContext = factory.CreateDbContext();
         var persistedComponent = await idempotencyContext.Set<WorkflowComponentRecord>().SingleAsync();
-        var persistedDefinition = await idempotencyContext.Set<WorkflowDefinitionRecord>().SingleAsync();
+        var persistedDefinition = await idempotencyContext.Set<WorkflowDefinitionRecord>().SingleAsync(record => record.VersionId == migratedVersionId);
         Assert.Equal(migratedComponentJson, persistedComponent.ComponentJson);
         Assert.Equal(migratedDefinitionJson, persistedDefinition.DefinitionJson);
+        Assert.Equal(2, await idempotencyContext.Set<WorkflowDefinitionRecord>().CountAsync());
+        Assert.Equal(originalDefinitionJson, (await idempotencyContext.Set<WorkflowDefinitionRecord>()
+            .SingleAsync(record => record.VersionId == definition.VersionId.Value)).DefinitionJson);
         await using var idempotencyPrompts = factory.Prompts.CreateDbContext();
         Assert.Single(await idempotencyPrompts.Set<PromptArtifact>().ToArrayAsync());
         Assert.Single(await idempotencyPrompts.Set<PromptVersion>().ToArrayAsync());
@@ -275,6 +391,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         var migration = new WorkflowPromptGalleryMigrationService(
             componentLibrary,
             factory,
+            factory.Changes,
             logger);
 
         await migration.EnsureMigratedAsync();
@@ -308,11 +425,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     {
         var factory = CreateWorkflowFactory("missing-version");
         var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
-        var catalog = new PersistentWorkflowCatalogService(
-            factory,
-            new WorkflowDefinitionValidator(),
-            gallery,
-            gallery);
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery);
         var promptVersionId = Guid.NewGuid();
         var component = CreateLegacyComponent() with
         {
@@ -337,11 +450,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     {
         var factory = CreateWorkflowFactory("archived-after-save");
         var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
-        var catalog = new PersistentWorkflowCatalogService(
-            factory,
-            new WorkflowDefinitionValidator(),
-            gallery,
-            gallery);
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery);
         var legacyComponent = CreateLegacyComponent();
         var component = await catalog.SaveComponentAsync(new LlmCallComponentSaveRequest(
             Id: null,
@@ -376,11 +485,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         var factory = CreateWorkflowFactory("node-provider-model-override");
         var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
         var provider = CreateProvider();
-        var catalog = new PersistentWorkflowCatalogService(
-            factory,
-            new WorkflowDefinitionValidator(),
-            gallery,
-            gallery,
+        var catalog = factory.CreateCatalog(new WorkflowDefinitionValidator(), gallery, gallery,
             new TestProviderProfileRegistry(provider),
             new ProviderProfileService());
         var legacyComponent = CreateLegacyComponent();
@@ -456,6 +561,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         var migration = new WorkflowPromptGalleryMigrationService(
             new ThrowingWorkflowComponentLibrary(),
             factory,
+            factory.Changes,
             NullLogger<WorkflowPromptGalleryMigrationService>.Instance);
 
         await migration.EnsureMigratedAsync();
@@ -467,12 +573,21 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         var store = new InMemoryDatabaseRoot();
         var options = new DbContextOptionsBuilder<WorkflowDbContext>().UseInMemoryDatabase(databaseName, store).Options;
         var promptOptions = new DbContextOptionsBuilder<PromptsDbContext>().UseInMemoryDatabase(databaseName, store).Options;
-        return new(options, new PromptGalleryTestSupport.TestDbContextFactory(promptOptions));
+        return new(options, new PromptGalleryTestSupport.TestDbContextFactory(promptOptions), databaseName);
     }
 
     private sealed class WorkflowTestDbContextFactory(DbContextOptions<WorkflowDbContext> options,
-        IDbContextFactory<PromptsDbContext> prompts) : IDbContextFactory<WorkflowDbContext> {
+        IDbContextFactory<PromptsDbContext> prompts, string databaseName) : IDbContextFactory<WorkflowDbContext> {
         public IDbContextFactory<PromptsDbContext> Prompts { get; } = prompts;
+        public WorkflowChanges Changes { get; } = WorkflowObservationTestSupport.Create();
+        public PersistentWorkflowCatalogService CreateCatalog(IWorkflowDefinitionValidator validator,
+            IPromptGalleryService reader, PromptsService owner, IProviderProfileRegistry? providers = null,
+            IProviderProfileService? providerService = null, WorkflowChanges? changes = null) {
+            var mutation = PromptGalleryTestSupport.CreateMutations(Prompts, owner, databaseName);
+            return new(changes ?? Changes, this, validator, reader, mutation.Mutations, mutation.Transactions,
+                providers, providerService);
+        }
+
         public WorkflowDbContext CreateDbContext() => new(options);
         public Task<WorkflowDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(CreateDbContext());
@@ -765,106 +880,6 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         private static NotSupportedException Unused() => new("This test dependency member is not used.");
     }
 
-    private sealed class InterveningWritePromptGallery(IPromptGalleryService inner) : IPromptGalleryService
-    {
-        public Task<PromptGalleryPage<PromptGallerySearchItem>> SearchAsync(
-            PromptGalleryQuery query,
-            CancellationToken cancellationToken = default)
-            => inner.SearchAsync(query, cancellationToken);
-
-        public Task<Result<PromptGalleryItemDetails>> GetItemAsync(
-            Guid promptArtifactId,
-            CancellationToken cancellationToken = default)
-            => inner.GetItemAsync(promptArtifactId, cancellationToken);
-
-        public async Task<Result<PromptDraftSaveReceipt>> SaveDraftAsync(
-            PromptGalleryDraft draft,
-            CancellationToken cancellationToken = default)
-        {
-            var workflowSave = await inner.SaveDraftAsync(draft, cancellationToken);
-            if (workflowSave.IsFailure)
-            {
-                return workflowSave;
-            }
-
-            var concurrentSave = await inner.SaveDraftAsync(
-                draft with
-                {
-                    Content = "Concurrent writer content.",
-                    ExpectedUpdatedAtUtc = workflowSave.Value.UpdatedAtUtc
-                },
-                cancellationToken);
-            Assert.True(concurrentSave.IsSuccess);
-            return workflowSave;
-        }
-
-        public Task<Result<PromptVersionSnapshot>> CreateVersionAsync(
-            Guid promptArtifactId,
-            PromptVersionCreateRequest request,
-            CancellationToken cancellationToken = default)
-            => inner.CreateVersionAsync(promptArtifactId, request, cancellationToken);
-
-        public Task<Result<PromptVersionSnapshot>> GetVersionSnapshotAsync(
-            Guid promptVersionId,
-            CancellationToken cancellationToken = default)
-            => inner.GetVersionSnapshotAsync(promptVersionId, cancellationToken);
-
-        public Task<Result<PromptVersionSnapshot>> GetVersionSnapshotAsync(
-            Guid promptArtifactId,
-            int versionNumber,
-            CancellationToken cancellationToken = default)
-            => inner.GetVersionSnapshotAsync(promptArtifactId, versionNumber, cancellationToken);
-
-        public Task<Result<IReadOnlyList<PromptVersionSnapshot>>> GetVersionSnapshotsAsync(
-            IReadOnlyCollection<Guid> promptVersionIds,
-            CancellationToken cancellationToken = default)
-            => inner.GetVersionSnapshotsAsync(promptVersionIds, cancellationToken);
-
-        public Task<Result<IReadOnlyDictionary<Guid, PromptGalleryCompatibilitySnapshot>>> GetCompatibilitySnapshotsAsync(
-            IReadOnlyCollection<Guid> promptArtifactIds,
-            CancellationToken cancellationToken = default)
-            => inner.GetCompatibilitySnapshotsAsync(promptArtifactIds, cancellationToken);
-
-        public Task<Result> ArchiveAsync(
-            Guid promptArtifactId,
-            bool archived,
-            CancellationToken cancellationToken = default)
-            => inner.ArchiveAsync(promptArtifactId, archived, cancellationToken);
-
-        public Task<Result> SetFavoriteAsync(
-            Guid promptArtifactId,
-            bool favorite,
-            CancellationToken cancellationToken = default)
-            => inner.SetFavoriteAsync(promptArtifactId, favorite, cancellationToken);
-
-        public Task<Result<PromptCompatibilityResult>> EvaluateCompatibilityAsync(
-            Guid promptArtifactId,
-            PromptGalleryConsumerContext context,
-            CancellationToken cancellationToken = default)
-            => inner.EvaluateCompatibilityAsync(promptArtifactId, context, cancellationToken);
-
-        public Task<Result> SetWarningSuppressionAsync(
-            Guid promptArtifactId,
-            PromptGalleryConsumer consumer,
-            PromptCompatibilityIssueCode issueCode,
-            bool suppressed,
-            CancellationToken cancellationToken = default)
-            => inner.SetWarningSuppressionAsync(
-                promptArtifactId,
-                consumer,
-                issueCode,
-                suppressed,
-                cancellationToken);
-    }
-
-    private sealed class UnusedPromptGalleryImporter : IPromptGalleryImportService
-    {
-        public Task<Result<PromptVersionSnapshot>> ImportVersionAsync(
-            PromptGalleryImportRequest request,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException("This test does not import a Gallery prompt.");
-    }
-
     private sealed class ThrowingWorkflowComponentLibrary : IWorkflowComponentLibraryService
     {
         public Task<IReadOnlyList<WorkflowProviderOption>> ListProviderOptionsAsync(
@@ -886,7 +901,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             => throw Unused();
 
         public Task DeleteComponentAsync(
-            WorkflowComponentId componentId,
+            WorkflowComponentDeleteRequest request,
             CancellationToken cancellationToken = default)
             => throw Unused();
 
@@ -921,7 +936,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             => throw Unused();
 
         public Task DeleteComponentAsync(
-            WorkflowComponentId componentId,
+            WorkflowComponentDeleteRequest request,
             CancellationToken cancellationToken = default)
             => throw Unused();
 

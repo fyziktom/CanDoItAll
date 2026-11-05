@@ -399,7 +399,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
     {
         public ValueTask<FileToolsBrowseSession> CreateAsync(
             FileToolsSemanticScope scope,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             var provider = new StaticFileBrowserProvider(scope.Id.Value);
             return ValueTask.FromResult(new FileToolsBrowseSession(
@@ -496,7 +497,9 @@ public sealed class ProjectStructureFileBrowserWindowTests
     {
         public ValueTask<FileToolsKnownFileSession> CreateAsync(
             FileToolsKnownFileRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null,
+            Func<CancellationToken, ValueTask>? authorizeWrite = null)
             => ValueTask.FromException<FileToolsKnownFileSession>(new InvalidOperationException("Unexpected session."));
     }
 
@@ -504,7 +507,9 @@ public sealed class ProjectStructureFileBrowserWindowTests
     {
         public ValueTask<FileToolsKnownFileSession> CreateAsync(
             FileToolsKnownFileRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null,
+            Func<CancellationToken, ValueTask>? authorizeWrite = null)
             => ValueTask.FromResult(new FileToolsKnownFileSession(
                 request.File,
                 new StaticContentSource(),
@@ -516,7 +521,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         public TaskCompletionSource Finish { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public FileReference? OriginalFile { get; private set; }
 
-        public async ValueTask<FileToolsKnownFileSession> CreateAsync(FileToolsKnownFileRequest request, CancellationToken cancellationToken = default) {
+        public async ValueTask<FileToolsKnownFileSession> CreateAsync(FileToolsKnownFileRequest request, CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null, Func<CancellationToken, ValueTask>? authorizeWrite = null) {
             if (OriginalFile is null) {
                 OriginalFile = request.File;
                 Entered.SetResult();
@@ -563,7 +569,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
             FileToolsSemanticScope scope,
             FileBrowserItemKey itemKey,
             FileToolsLocalFileAction action,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             LaunchCount++;
@@ -573,7 +580,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
             FileToolsSemanticScope scope,
             FileBrowserItemKey itemKey,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => ValueTask.FromException<IFileToolsDownloadLease>(
                 new InvalidOperationException("Unexpected download authorization."));
     }

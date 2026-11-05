@@ -293,6 +293,7 @@ public sealed class CrmHrOpportunityJourneyTests
         var profile = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crmService.GetAccountProfileAsync(accountId))!.Original,
             RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer,
             CommercialNotes = "Synthetic account of the opportunity journey.",
             LastChangedBy = "playwright-tests"

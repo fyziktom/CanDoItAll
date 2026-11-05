@@ -63,6 +63,11 @@ public sealed class CrmHrDirectorySandboxView(CrmHrSandboxPartyStore partyStore)
 
     public List<PartyRelationshipEditorModel> Relationships { get; private set; } = [];
 
+    public Task HandleRelationshipsChangedAsync(IReadOnlyList<PartyRelationshipEditorModel> rows) {
+        RelationshipValues.Adopt(Relationships, rows);
+        return Task.CompletedTask;
+    }
+
     public IReadOnlyList<PartyDuplicateCandidateModel> DuplicateCandidates { get; private set; } = [];
 
     public PartyProjectAssignmentPage ProjectAssignmentsPage { get; private set; } = PartyProjectAssignmentPage.Empty();
@@ -71,7 +76,8 @@ public sealed class CrmHrDirectorySandboxView(CrmHrSandboxPartyStore partyStore)
 
     public bool IsEditorDialogOpen { get; private set; }
 
-    public bool IsMergeDialogOpen { get; private set; }
+    public bool IsMergeDialogOpen => Merge.IsOpen;
+    public PartyMergePresentation Merge { get; private set; } = new(0, PartyMergePhase.Closed, null, null);
 
     public bool IsImportExportDialogOpen { get; private set; }
 
@@ -115,7 +121,7 @@ public sealed class CrmHrDirectorySandboxView(CrmHrSandboxPartyStore partyStore)
     {
         scenario = next;
         IntentLog = "No intent yet.";
-        IsMergeDialogOpen = false;
+        Merge = new(Merge.Opening + 1, PartyMergePhase.Closed, null, null);
         MergeCandidate = null;
         IsImportExportDialogOpen = false;
         PartyActivityFailureMessage = null;
@@ -259,9 +265,11 @@ public sealed class CrmHrDirectorySandboxView(CrmHrSandboxPartyStore partyStore)
 
     public Task HandleImportAppliedAsync()
     {
-        IsImportExportDialogOpen = false;
         Log("Import applied");
         return Task.CompletedTask;
+    }
+
+    public void HandleImportStatusChanged(PartyImportStatus status) {
     }
 
     public void OpenImportExportDialog()
@@ -353,16 +361,27 @@ public sealed class CrmHrDirectorySandboxView(CrmHrSandboxPartyStore partyStore)
         Log(removed ? $"Remove confidential note: {note.Category}" : "Remove confidential note: already removed");
     }
 
-    public void OpenMergeDialog(PartyDuplicateCandidateModel candidate)
-    {
+    public Task OpenMergeDialogAsync(PartyDuplicateCandidateModel candidate) {
         MergeCandidate = candidate;
-        IsMergeDialogOpen = true;
+        var retained = new PartyMergePartyModel(Editor.Id ?? Guid.Empty, Editor.DisplayName, Editor.PartyType, Editor.LifecycleStatus, Editor.IsSensitive);
+        var duplicate = new PartyMergePartyModel(candidate.Id, candidate.DisplayName, candidate.PartyType, candidate.LifecycleStatus, false);
+        Merge = new(Merge.Opening + 1, PartyMergePhase.Ready,
+            new(retained, duplicate, new(Guid.Empty, 0, retained.Id, duplicate.Id, [], [], [], [], new([]))), null);
         Log($"Open merge dialog: {candidate.DisplayName}");
+        return Task.CompletedTask;
+    }
+
+    public Task RefreshMergePreviewAsync() {
+        Log("Refresh local merge preview");
+        return Task.CompletedTask;
+    }
+
+    public void HandleMergeNoteStatusChanged(PartyMergeNoteStatus status) {
     }
 
     public Task HandleMergeCloseAsync()
     {
-        IsMergeDialogOpen = false;
+        Merge = new(Merge.Opening + 1, PartyMergePhase.Closed, null, null);
         MergeCandidate = null;
         Log("Close merge dialog");
         return Task.CompletedTask;
@@ -378,8 +397,7 @@ public sealed class CrmHrDirectorySandboxView(CrmHrSandboxPartyStore partyStore)
             Log($"Merge confirmed: {candidate.DisplayName} into {Editor.DisplayName} ({reason})");
         }
 
-        IsMergeDialogOpen = false;
-        MergeCandidate = null;
+        Merge = Merge with { Phase = PartyMergePhase.Accepted, Message = "The local scenario merge was accepted." };
         return Task.CompletedTask;
     }
 

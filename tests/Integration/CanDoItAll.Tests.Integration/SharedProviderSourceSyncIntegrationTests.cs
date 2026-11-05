@@ -33,6 +33,50 @@ public sealed class SharedProviderSourceSyncIntegrationTests
     private static readonly SharedProviderPublicationId SecondaryPublicationId = new(
         Guid.Parse("33333333-3333-4333-8333-333333333333"));
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Synchronization_cannot_reactivate_a_peer_retired_import_from_an_old_selection(bool duringFetch) {
+        await using var harness = await SourceSyncHarness.CreateAsync("sp-sync-original-selection");
+        var source = await harness.CreateSourceAsync();
+        var catalog = CreateCatalog();
+        harness.Http.EnqueueCatalog(catalog);
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        var before = await harness.LoadStateAsync(source.Id);
+        var original = await harness.Sync.ObserveAsync(source.Id);
+        async Task RetireAsync() {
+            await using var db = harness.Factory.CreateDbContext();
+            var import = await db.Set<SharedProviderImport>().SingleAsync();
+            SharedProviderImportTransitions.Retire(import, Now);
+            await db.SaveChangesAsync();
+        }
+        if (duringFetch) {
+            harness.Http.Enqueue(async (_, _) => {
+                await RetireAsync();
+                return ScriptedCatalogHttpHandler.CreateCatalogResponse(catalog);
+            });
+        } else {
+            await RetireAsync();
+            harness.Http.EnqueueCatalog(catalog);
+        }
+
+        await Assert.ThrowsAsync<SharedProviderConcurrencyException>(() => harness.Sync.SynchronizeAsync(
+            source.Id, original, PublicationSet(PrimaryPublicationId)));
+
+        var current = await harness.LoadStateAsync(source.Id);
+        Assert.Equal(before.Source.ConcurrencyToken, current.Source.ConcurrencyToken);
+        Assert.Equal(SharedProviderSelectionState.Retired, Assert.Single(current.Imports).SelectionState);
+        Assert.Equal(duringFetch ? 2 : 1, harness.Http.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Synchronization_without_an_original_is_rejected_before_credentials_or_remote_requests() {
+        await using var harness = await SourceSyncHarness.CreateAsync("sp-sync-missing-original");
+        var source = await harness.CreateSourceAsync();
+        await Assert.ThrowsAsync<SharedProviderConcurrencyException>(() => harness.Sync.SynchronizeAsync(source.Id, PublicationSet()));
+        Assert.Empty(harness.Http.Requests);
+    }
+
     [Fact]
     public async Task Source_crud_and_connection_test_use_real_postgresql_secret_and_http_services()
     {
@@ -49,7 +93,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
             source.Id,
             created.ConcurrencyToken,
             isEnabled: false);
-        var disabledSync = await harness.Sync.SynchronizeAsync(
+        var disabledSync = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
         Assert.Equal(SharedProviderSourceOperationOutcome.SourceDisabled, disabledSync.Outcome);
@@ -60,7 +104,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
             isEnabled: true);
         var catalog = CreateCatalog();
         harness.Http.EnqueueCatalog(catalog);
-        var reenabledSync = await harness.Sync.SynchronizeAsync(
+        var reenabledSync = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet());
         Assert.Equal(SharedProviderSourceOperationOutcome.Succeeded, reenabledSync.Outcome);
@@ -151,12 +195,12 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var catalog = CreateCatalog();
         harness.Http.EnqueueCatalog(catalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var before = await harness.LoadStateAsync(source.Id);
         harness.Observer.Clear();
         harness.Http.EnqueueNotModified(EntityTag(catalog));
 
-        var result = await harness.Sync.SynchronizeAsync(
+        var result = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -181,7 +225,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var catalog = CreateCatalog(sourceInstanceId: PrimaryInstanceId);
         harness.Http.EnqueueCatalog(catalog);
 
-        var result = await harness.Sync.SynchronizeAsync(
+        var result = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -199,13 +243,13 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var trustedCatalog = CreateCatalog(sourceInstanceId: PrimaryInstanceId);
         harness.Http.EnqueueCatalog(trustedCatalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var before = await harness.LoadStateAsync(source.Id);
         harness.Http.EnqueueCatalog(CreateCatalog(
             displayName: "Forged replacement",
             sourceInstanceId: ReplacementInstanceId));
 
-        var result = await harness.Sync.SynchronizeAsync(
+        var result = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -228,20 +272,20 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var trustedCatalog = CreateCatalog(sourceInstanceId: PrimaryInstanceId);
         harness.Http.EnqueueCatalog(trustedCatalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var original = await harness.LoadStateAsync(source.Id);
         var replacementCatalog = CreateCatalog(
             displayName: "Replacement source provider",
             sourceInstanceId: ReplacementInstanceId);
         harness.Http.EnqueueCatalog(replacementCatalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var mismatched = await harness.Sources.GetAsync(source.Id);
 
         await harness.Sources.ResetTrustedIdentityAsync(
             source.Id,
             mismatched.ConcurrencyToken);
         harness.Http.EnqueueCatalog(replacementCatalog);
-        var result = await harness.Sync.SynchronizeAsync(
+        var result = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -261,7 +305,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var catalog = CreateCatalogWithTwoPublications();
         harness.Http.EnqueueCatalog(catalog);
 
-        var result = await harness.Sync.SynchronizeAsync(
+        var result = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId, SecondaryPublicationId));
 
@@ -283,7 +327,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var secondaryImport = imports.Single(importItem =>
             importItem.RemotePublicationId == SecondaryPublicationId);
         harness.Http.EnqueueCatalog(catalog);
-        var replacement = await harness.Sync.SynchronizeAsync(
+        var replacement = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -305,11 +349,11 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var catalog = CreateCatalog();
         harness.Http.EnqueueCatalog(catalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var before = await harness.LoadStateAsync(source.Id);
         harness.Http.EnqueueCatalog(catalog);
 
-        var result = await harness.Sync.SynchronizeAsync(
+        var result = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -328,7 +372,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var originalCatalog = CreateCatalog(displayName: "Remote original");
         harness.Http.EnqueueCatalog(originalCatalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var before = await harness.LoadStateAsync(source.Id);
         await using (var editContext = harness.Factory.CreateDbContext())
         {
@@ -349,7 +393,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
                 SharedProviderCapability.VisionInput
             ]);
         harness.Http.EnqueueCatalog(updatedCatalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
 
         var after = await harness.LoadStateAsync(source.Id);
         Assert.Equal(before.Imports.Single().Id, after.Imports.Single().Id);
@@ -373,11 +417,11 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var catalog = CreateCatalog();
         harness.Http.EnqueueCatalog(catalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var baseline = await harness.LoadStateAsync(source.Id);
 
         harness.Http.EnqueueTransportFailure();
-        var transport = await harness.Sync.SynchronizeAsync(
+        var transport = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
         await AssertNonDestructiveFailureAsync(
@@ -389,7 +433,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
             SharedProviderAvailabilityState.SourceOffline);
 
         harness.Http.EnqueueStatus(HttpStatusCode.Unauthorized, "credential rejected");
-        var authorization = await harness.Sync.SynchronizeAsync(
+        var authorization = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
         await AssertNonDestructiveFailureAsync(
@@ -401,7 +445,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
             SharedProviderAvailabilityState.AuthorizationFailed);
 
         harness.Http.EnqueueStatus(HttpStatusCode.NotFound, "catalog route missing");
-        var missingCatalogRoute = await harness.Sync.SynchronizeAsync(
+        var missingCatalogRoute = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
         await AssertNonDestructiveFailureAsync(
@@ -413,7 +457,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
             SharedProviderAvailabilityState.IncompatibleContract);
 
         harness.Http.EnqueueInvalidCatalog(EntityTag(catalog));
-        var schema = await harness.Sync.SynchronizeAsync(
+        var schema = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
         await AssertNonDestructiveFailureAsync(
@@ -426,7 +470,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
 
         harness.Observer.Clear();
         harness.Http.EnqueueCatalog(catalog);
-        var directRecovery = await harness.Sync.SynchronizeAsync(
+        var directRecovery = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
         var directlyRecovered = await harness.LoadStateAsync(source.Id);
@@ -439,7 +483,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         Assert.Single(harness.Observer.SavedProviderIds);
 
         harness.Http.EnqueueTransportFailure();
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         harness.Http.EnqueueCatalog(catalog);
         var connectionTest = await harness.Sync.TestAsync(source.Id);
         var afterConnectionTest = await harness.LoadStateAsync(source.Id);
@@ -451,7 +495,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
 
         harness.Observer.Clear();
         harness.Http.EnqueueCatalog(catalog);
-        var recoveryAfterTest = await harness.Sync.SynchronizeAsync(
+        var recoveryAfterTest = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
         var recoveredAfterTest = await harness.LoadStateAsync(source.Id);
@@ -470,11 +514,11 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var catalog = CreateCatalog();
         harness.Http.EnqueueCatalog(catalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var identity = await harness.LoadStateAsync(source.Id);
 
         harness.Http.EnqueueStatus(HttpStatusCode.ServiceUnavailable, "temporary outage");
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var afterOutage = await harness.LoadStateAsync(source.Id);
         Assert.Equal(identity.Imports.Single().Id, afterOutage.Imports.Single().Id);
         Assert.NotEqual(
@@ -482,7 +526,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
             afterOutage.Imports.Single().AvailabilityState);
 
         harness.Http.EnqueueCatalog(CreateEmptyCatalog());
-        var authoritative = await harness.Sync.SynchronizeAsync(
+        var authoritative = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -500,13 +544,13 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var catalog = CreateCatalog();
         harness.Http.EnqueueCatalog(catalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var original = await harness.LoadStateAsync(source.Id);
         harness.Http.EnqueueCatalog(CreateEmptyCatalog());
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         harness.Http.EnqueueCatalog(catalog);
 
-        var result = await harness.Sync.SynchronizeAsync(
+        var result = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -525,7 +569,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         var catalog = CreateCatalogWithTwoPublications();
         harness.Http.EnqueueCatalog(catalog);
-        await harness.Sync.SynchronizeAsync(
+        await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId, SecondaryPublicationId));
         await using (var editContext = harness.Factory.CreateDbContext())
@@ -589,16 +633,16 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var catalog = CreateCatalog();
         harness.Http.EnqueueCatalog(catalog);
 
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
 
         Assert.Single(harness.Observer.SavedProviderIds);
         Assert.True(harness.Observer.AllObservedProfilesWereCommitted);
         harness.Observer.Clear();
         harness.Http.EnqueueCatalog(catalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         Assert.Empty(harness.Observer.SavedProviderIds);
         harness.Http.EnqueueNotModified(EntityTag(catalog));
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         Assert.Empty(harness.Observer.SavedProviderIds);
     }
 
@@ -609,13 +653,13 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync(token: SourceToken);
         var catalog = CreateCatalog();
         harness.Http.EnqueueCatalog(catalog);
-        await harness.Sync.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
+        await harness.SynchronizeAsync(source.Id, PublicationSet(PrimaryPublicationId));
         var accessContext = new AccessContextReference(AccessContextValue);
         var hostileBody = $"credential={SourceToken}; context={AccessContextValue}; endpoint={PrivateUpstreamValue}";
         harness.Http.EnqueueStatus(HttpStatusCode.Unauthorized, hostileBody);
         harness.AccessContext.Current = accessContext;
 
-        var result = await harness.Sync.SynchronizeAsync(
+        var result = await harness.SynchronizeAsync(
             source.Id,
             PublicationSet(PrimaryPublicationId));
 
@@ -787,6 +831,12 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         public SharedProviderSourceService Sources { get; }
 
         public SharedProviderSourceSyncService Sync { get; }
+
+        public async Task<SharedProviderSourceOperationResult> SynchronizeAsync(Guid sourceId,
+            IReadOnlySet<SharedProviderPublicationId> selection) {
+            var original = await Sync.ObserveAsync(sourceId);
+            return await Sync.SynchronizeAsync(sourceId, original, selection);
+        }
 
         public static async Task<SourceSyncHarness> CreateAsync(string key)
         {
@@ -978,11 +1028,11 @@ public sealed class SharedProviderSourceSyncIntegrationTests
             return await script(captured, cancellationToken);
         }
 
-        private void Enqueue(
+        public void Enqueue(
             Func<CapturedCatalogRequest, CancellationToken, Task<HttpResponseMessage>> script)
             => scripts.Enqueue(script);
 
-        private static HttpResponseMessage CreateCatalogResponse(
+        public static HttpResponseMessage CreateCatalogResponse(
             SharedProviderCatalogDocument catalog)
         {
             var response = new HttpResponseMessage(HttpStatusCode.OK)

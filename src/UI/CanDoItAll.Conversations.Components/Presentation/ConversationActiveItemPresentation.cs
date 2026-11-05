@@ -4,7 +4,8 @@ public sealed record ConversationActiveItemPresentation(
     ConversationPresentationKey Key,
     string DisplayName,
     IReadOnlyList<PresentationBadge> Badges,
-    IReadOnlyList<ConversationActionPresentation> Actions)
+    IReadOnlyList<ConversationActionPresentation> Actions,
+    long Version = 0)
 {
     private IReadOnlyList<PresentationBadge> badges =
         PresentationCollection.Snapshot(Badges, nameof(Badges));

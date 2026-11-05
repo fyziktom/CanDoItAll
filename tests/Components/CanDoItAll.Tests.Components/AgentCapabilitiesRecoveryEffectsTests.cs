@@ -26,7 +26,7 @@ public sealed class AgentCapabilitiesRecoveryEffectsTests {
         var cut = fixture.Render(agent.Id);
         var operation = cut.Find("[data-testid='agents-capability-verify']").ClickAsync();
         Assert.Equal(1, fixture.Workspace.VerifyCalls);
-        await cut.InvokeAsync(cut.Instance.Dispose);
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
         Assert.True(token.IsCancellationRequested);
         var callbacks = 0;
         using var registration = token.Register(() => callbacks++);
@@ -207,6 +207,7 @@ public sealed class AgentCapabilitiesRecoveryEffectsTests {
             captured = token;
             return pending.Task;
         };
+        fixture.Context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var details = fixture.Context.Render<CapabilityDetailsDialog>(p => p.Add(x => x.CapabilityId, fixture.Capability.Id)
             .Add(x => x.OwnerCancellationToken, owner.Token));
         owner.Cancel();

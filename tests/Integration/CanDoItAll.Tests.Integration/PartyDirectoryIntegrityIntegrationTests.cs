@@ -34,7 +34,7 @@ public sealed class PartyDirectoryIntegrityIntegrationTests
                     Notes = "Preserve this relationship"
                 }
             ],
-            "integration-tests");
+            "integration-tests", original: new([]));
         Assert.True(initialResult.IsSuccess);
 
         var result = await managementService.SaveRelationshipsAsync(
@@ -47,7 +47,7 @@ public sealed class PartyDirectoryIntegrityIntegrationTests
                     IsOutgoing = true
                 }
             ],
-            "integration-tests");
+            "integration-tests", original: PartyRelationshipObservation.FromRows(initialResult.Value!.Accepted));
 
         Assert.True(result.IsFailure);
         Assert.Contains(result.Errors, error => error.Code == RelationshipPartyNotFoundErrorCode);
@@ -80,7 +80,7 @@ public sealed class PartyDirectoryIntegrityIntegrationTests
                     Notes = "Existing identity"
                 }
             ],
-            "integration-tests");
+            "integration-tests", original: new([]));
         Assert.True(initialResult.IsSuccess);
 
         var result = await managementService.SaveRelationshipsAsync(
@@ -101,7 +101,7 @@ public sealed class PartyDirectoryIntegrityIntegrationTests
                     Notes = "Second duplicate"
                 }
             ],
-            "integration-tests");
+            "integration-tests", original: PartyRelationshipObservation.FromRows(initialResult.Value!.Accepted));
 
         Assert.True(result.IsFailure);
         Assert.Contains(result.Errors, error => error.Code == RelationshipDuplicateErrorCode);
@@ -149,15 +149,19 @@ public sealed class PartyDirectoryIntegrityIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var missingPartyId = Guid.NewGuid();
-
-        var result = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
-        {
-            Id = missingPartyId,
-            PartyType = PartyType.Person,
-            LifecycleStatus = PartyLifecycleStatus.Active,
-            DisplayName = "Must not be created"
+        var created = await partyDirectoryService.SavePartyAsync(new PartyEditorModel {
+            PartyType = PartyType.Person, DisplayName = "Observed party removed by the fixture"
         });
+        Assert.True(created.IsSuccess);
+        var missingPartyId = created.Value;
+        var submitted = (await partyDirectoryService.GetPartyAsync(missingPartyId))!;
+        await using (var fixture = await dbContextFactory.CreateDbContextAsync()) {
+            fixture.Remove(await fixture.Set<Party>().SingleAsync(row => row.Id == missingPartyId));
+            await fixture.SaveChangesAsync();
+        }
+        submitted.DisplayName = "Must not be created";
+
+        var result = await partyDirectoryService.SavePartyAsync(submitted);
 
         Assert.True(result.IsFailure);
         Assert.Contains(result.Errors, error => error.Code == PartyNotFoundErrorCode);
@@ -184,18 +188,14 @@ public sealed class PartyDirectoryIntegrityIntegrationTests
                     isPrimary: true)
             ]);
 
-        var result = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
-        {
-            Id = partyId,
-            PartyType = PartyType.Person,
-            LifecycleStatus = PartyLifecycleStatus.Active,
-            DisplayName = "Mutated display name",
-            ContactPoints =
+        var submitted = (await partyDirectoryService.GetPartyAsync(partyId))!;
+        submitted.DisplayName = "Mutated display name";
+        submitted.ContactPoints =
             [
                 CreateContact(Guid.NewGuid(), PartyContactType.Email, "first@example.test", isPrimary: true),
                 CreateContact(Guid.NewGuid(), PartyContactType.Email, "second@example.test", isPrimary: true)
-            ]
-        });
+            ];
+        var result = await partyDirectoryService.SavePartyAsync(submitted);
 
         Assert.True(result.IsFailure);
         Assert.Contains(result.Errors, error => error.Code == MultiplePrimaryContactsErrorCode);
@@ -304,7 +304,7 @@ public sealed class PartyDirectoryIntegrityIntegrationTests
             retainedPartyId,
             mergedPartyId,
             "integration-tests",
-            "Integrity merge");
+            "Integrity merge", original: (await managementService.PreviewMergeAsync(retainedPartyId, mergedPartyId)).Value!.Original);
 
         Assert.True(result.IsSuccess);
         await using var verificationContext = await dbContextFactory.CreateDbContextAsync();

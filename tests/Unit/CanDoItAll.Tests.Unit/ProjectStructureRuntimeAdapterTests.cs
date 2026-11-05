@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit.Projects;
 
-public sealed class ProjectStructureRuntimeAdapterTests
+public sealed partial class ProjectStructureRuntimeAdapterTests
 {
     [Fact]
     public async Task Direct_adapter_registers_exact_typed_plan_with_the_Workbench_lifecycle_owner()

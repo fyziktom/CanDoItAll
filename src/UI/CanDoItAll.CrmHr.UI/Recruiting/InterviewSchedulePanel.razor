@@ -1,35 +1,36 @@
+@implements IDisposable
+@using CanDoItAll.Editing
+
 <FormSection Title="Interviews and feedback"
              Description="Schedule interview steps with explicit owners, store structured feedback, and keep hiring decisions on the same candidate record.">
-    @if (Draft.ApplicationId == Guid.Empty)
-    {
+    @if (Draft.ApplicationId == Guid.Empty) {
         <EmptyState Eyebrow="No candidate selected"
                     Title="Choose or create an application first"
                     Description="Interview scheduling becomes available after the recruitment application has been created." />
     }
-    else
-    {
+    else {
         <Grid Gap="LayoutGap.Large" ColumnsLg="2">
             <SurfaceCard>
+                <EditForm EditContext="context" OnValidSubmit="SubmitAsync" data-testid="crmhr-recruiting-interview-form">
+                <ValidationSummary />
                 <p class="cda-eyebrow">Schedule step</p>
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Interview details</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Interview type">
-                        <InputSelect @bind-Value="Draft.InterviewType"
+                        <InputSelect @bind-Value="Draft.InterviewType" @bind-Value:after="@(() => ReportAsync(RecruitmentInterviewField.Type))"
                                      class="cda-input"
                                      data-testid="crmhr-recruiting-interview-type">
-                            @foreach (var interviewType in Enum.GetValues<RecruitmentInterviewType>())
-                            {
+                            @foreach (var interviewType in Enum.GetValues<RecruitmentInterviewType>()) {
                                 <option value="@interviewType">@interviewType</option>
                             }
                         </InputSelect>
                     </FormField>
                     <FormField Text="Outcome">
-                        <InputSelect @bind-Value="Draft.Outcome"
+                        <InputSelect @bind-Value="Draft.Outcome" @bind-Value:after="@(() => ReportAsync(RecruitmentInterviewField.Outcome))"
                                      class="cda-input"
                                      data-testid="crmhr-recruiting-interview-outcome">
-                            @foreach (var outcome in Enum.GetValues<RecruitmentInterviewOutcome>())
-                            {
+                            @foreach (var outcome in Enum.GetValues<RecruitmentInterviewOutcome>()) {
                                 <option value="@outcome">@outcome</option>
                             }
                         </InputSelect>
@@ -38,23 +39,20 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Scheduled">
-                        <input type="datetime-local"
-                               value="@ScheduledAtLocalValue"
-                               @onchange="OnScheduledAtChanged"
-                               class="cda-input"
-                               data-testid="crmhr-recruiting-interview-scheduled" />
+                        <NativeValueInput TValue="DateTime?" DateType="InputDateType.DateTimeLocal" DisplayName="Interview schedule" @bind-Value="Draft.ScheduledAtLocal"
+                            class="cda-input" data-testid="crmhr-recruiting-interview-scheduled" PendingChanged="@(pending => ReportAsync(RecruitmentInterviewField.Schedule, pending))" />
                     </FormField>
                     <PartyPicker Label="Interviewer"
                                  TestIdPrefix="crmhr-recruiting-interviewer"
                                  AllowedScope="PartyRecordScope.People"
                                  InitialScope="PartyRecordScope.People"
                                  SelectedPartyId="@Draft.InterviewerPartyId"
-                                 SelectedPartyIdChanged="SetInterviewerPartyAsync" />
+                                 SelectedPartyIdChanged="SetInterviewerPartyAsync" PendingChanged="@(pending => ReportAsync(RecruitmentInterviewField.Interviewer, pending))" />
                 </Grid>
 
                 <div class="mt-4">
                     <FormField Text="Recommendation">
-                        <InputText @bind-Value="Draft.Recommendation"
+                        <NativeValueInput TValue="string" @bind-Value="Draft.Recommendation" PendingChanged="@(_ => TextAsync(RecruitmentInterviewField.Recommendation))"
                                    class="cda-input"
                                    data-testid="crmhr-recruiting-interview-recommendation" />
                     </FormField>
@@ -62,7 +60,7 @@
 
                 <div class="mt-4">
                     <FormField Text="Feedback">
-                        <InputTextArea @bind-Value="Draft.Feedback"
+                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Feedback" PendingChanged="@(_ => TextAsync(RecruitmentInterviewField.Feedback))"
                                        class="cda-input cda-input--textarea min-h-[8rem]"
                                        data-testid="crmhr-recruiting-interview-feedback" />
                     </FormField>
@@ -70,32 +68,30 @@
 
                 <Cluster Gap="LayoutGap.Small" Class="mt-4">
                     <Button Text="Save interview"
-                            Click="SaveInterview"
+                            Type="submit" Disabled="@SaveDisabled"
                             data-testid="crmhr-recruiting-interview-save-button" />
                     <Button Text="Reset"
                             ButtonStyle="ButtonStyle.Light"
-                            Click="ResetInterview"
+                            Click="ResetInterview" Disabled="@WritesDisabled"
                             data-testid="crmhr-recruiting-interview-reset-button" />
                 </Cluster>
+                </EditForm>
             </SurfaceCard>
 
             <SurfaceCard Soft="true">
                 <p class="cda-eyebrow">Interview log</p>
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">@Interviews.Count interview(s)</h3>
 
-                @if (Interviews.Count == 0)
-                {
+                @if (Interviews.Count == 0) {
                     <div class="mt-4">
                         <EmptyState Eyebrow="No interviews yet"
                                     Title="Schedule the first interview"
                                     Description="Interview records appear here with interviewer, outcome, and structured feedback." />
                     </div>
                 }
-                else
-                {
+                else {
                     <Stack GapScale="LayoutGap.Medium" Class="mt-4">
-                        @foreach (var item in Interviews)
-                        {
+                        @foreach (var item in Interviews) {
                             <PanelCard data-testid="crmhr-recruiting-interview-item">
                                 <Split Gap="LayoutGap.Medium"
                                        AlignItems="AlignItems.Start"
@@ -103,12 +99,10 @@
                                     <div class="min-w-0 space-y-1">
                                         <p class="text-base font-semibold text-slate-950">@item.InterviewType</p>
                                         <p class="text-sm text-slate-600">@BuildMeta(item)</p>
-                                        @if (!string.IsNullOrWhiteSpace(item.Recommendation))
-                                        {
+                                        @if (!string.IsNullOrWhiteSpace(item.Recommendation)) {
                                             <p class="text-sm text-slate-700">Recommendation: @item.Recommendation</p>
                                         }
-                                        @if (!string.IsNullOrWhiteSpace(item.Feedback))
-                                        {
+                                        @if (!string.IsNullOrWhiteSpace(item.Feedback)) {
                                             <p class="text-sm leading-6 text-slate-600">@item.Feedback</p>
                                         }
                                     </div>
@@ -118,7 +112,7 @@
                                         <Button Text="Delete"
                                                 ButtonStyle="ButtonStyle.Danger"
                                                 Size="ButtonSize.Small"
-                                                Click="@(() => DeleteInterview.InvokeAsync(item.Id))"
+                                                Click="@(() => DeleteInterview.InvokeAsync(item))" Disabled="@WritesDisabled"
                                                 data-testid="crmhr-recruiting-interview-delete-button" />
                                     </Cluster>
                                 </Split>
@@ -132,6 +126,39 @@
 </FormSection>
 
 @code {
+    private bool disposed;
+    private EditContext context = default!;
+    private readonly HashSet<RecruitmentInterviewField> pending = [];
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public bool WritesDisabled { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentInterviewField>> InputChanged { get; set; }
+    protected override void OnInitialized() => context = new(Draft);
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(context.Model, Draft)) {
+            throw new InvalidOperationException("A different interview draft requires a new form lifetime.");
+        }
+    }
+    public Task SubmitAsync() => disposed || SaveDisabled || pending.Count > 0 || !context.Validate() ? Task.CompletedTask : SaveInterview.InvokeAsync();
+    private Task TextAsync(RecruitmentInterviewField field) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+
+        return ReportAsync(field);
+    }
+    private Task ReportAsync(RecruitmentInterviewField field, bool incomplete = false) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (incomplete) {
+            pending.Add(field);
+        } else {
+            pending.Remove(field);
+        }
+        return InputChanged.InvokeAsync(new(field, incomplete));
+    }
+    public void Dispose() => disposed = true;
+
     [Parameter]
     public RecruitmentInterviewEditorModel Draft { get; set; } = new();
 
@@ -145,46 +172,31 @@
     public EventCallback ResetInterview { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> DeleteInterview { get; set; }
+    public EventCallback<RecruitmentInterviewItemModel> DeleteInterview { get; set; }
 
-    private Task SetInterviewerPartyAsync(Guid? partyId)
-    {
+    private Task SetInterviewerPartyAsync(Guid? partyId) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
         Draft.InterviewerPartyId = partyId;
-        return Task.CompletedTask;
+        context.NotifyFieldChanged(new(Draft, nameof(Draft.InterviewerPartyId)));
+        return InputChanged.InvokeAsync(new(RecruitmentInterviewField.Interviewer, pending.Contains(RecruitmentInterviewField.Interviewer)));
     }
 
-    private string ScheduledAtLocalValue
-    {
-        get => Draft.ScheduledAtLocal?.ToString("yyyy-MM-ddTHH:mm") ?? string.Empty;
-    }
-
-    private void OnScheduledAtChanged(ChangeEventArgs args)
-    {
-        var value = args.Value?.ToString();
-        Draft.ScheduledAtLocal = string.IsNullOrWhiteSpace(value)
-            ? null
-            : DateTime.Parse(value);
-    }
-
-    private static string BuildMeta(RecruitmentInterviewItemModel item)
-    {
-        var parts = new List<string>
-        {
+    private static string BuildMeta(RecruitmentInterviewItemModel item) {
+        var parts = new List<string> {
             item.ScheduledAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
         };
 
-        if (!string.IsNullOrWhiteSpace(item.InterviewerName))
-        {
+        if (!string.IsNullOrWhiteSpace(item.InterviewerName)) {
             parts.Add(item.InterviewerName);
         }
 
         return string.Join(" / ", parts);
     }
 
-    private static string ResolveOutcomeTone(RecruitmentInterviewOutcome outcome)
-    {
-        return outcome switch
-        {
+    private static string ResolveOutcomeTone(RecruitmentInterviewOutcome outcome) {
+        return outcome switch {
             RecruitmentInterviewOutcome.StrongYes => "success",
             RecruitmentInterviewOutcome.Yes => "primary",
             RecruitmentInterviewOutcome.Mixed => "warning",

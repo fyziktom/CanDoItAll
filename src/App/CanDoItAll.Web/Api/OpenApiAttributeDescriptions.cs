@@ -30,10 +30,22 @@ internal static class OpenApiAttributeDescriptions {
                 continue;
             }
             foreach (var property in typeInfo.Properties) {
+                if (!properties.TryGetValue(property.Name, out var propertySchema)) {
+                    continue;
+                }
+                var description = property.AttributeProvider?.GetCustomAttributes(typeof(DescriptionAttribute), inherit: true)
+                    .OfType<DescriptionAttribute>().SingleOrDefault()?.Description;
+                if (description is not null) {
+                    if (propertySchema is OpenApiSchemaReference) {
+                        propertySchema = new OpenApiSchema { Description = description, AllOf = [propertySchema] };
+                        properties[property.Name] = propertySchema;
+                    } else {
+                        propertySchema.Description = description;
+                    }
+                }
                 var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
                 var enumType = propertyType.GenericTypeArguments is [var itemType] ? itemType : propertyType;
-                if (enumType?.IsEnum != true || enumType.GetCustomAttribute<DescriptionAttribute>() is null ||
-                    !properties.TryGetValue(property.Name, out var propertySchema)) {
+                if (enumType?.IsEnum != true || enumType.GetCustomAttribute<DescriptionAttribute>() is null) {
                     continue;
                 }
                 propertySchema.Description = WithEnumValues(propertySchema.Description, enumType);

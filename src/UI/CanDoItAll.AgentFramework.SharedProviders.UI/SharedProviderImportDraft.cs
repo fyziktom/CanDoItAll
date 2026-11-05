@@ -1,5 +1,6 @@
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.AspNetCore.Components.Forms;
+using CanDoItAll.Editing;
 
 namespace CanDoItAll.AgentFramework.SharedProviders.UI;
 
@@ -34,6 +35,13 @@ public sealed class SharedProviderImportDraft {
     public SharedProviderImportBaseline Latest { get; private set; }
     public bool HasConflict { get; private set; }
     public bool IsDirty => Settings != Baseline.Settings;
+    public bool NeedsCurrentRead { get; private set; }
+    public SharedProviderImportComparison? Comparison { get; private set; }
+    public void Invalidate() {
+        HasConflict = true;
+        NeedsCurrentRead = true;
+        Comparison?.Invalidate();
+    }
     private SharedProviderLocalSettings Settings => new(localAlias, isEnabled);
 
     public string LocalAlias {
@@ -41,6 +49,7 @@ public sealed class SharedProviderImportDraft {
         set {
             localAlias = value;
             aliasRevision++;
+            Comparison?.Invalidate();
             Context.NotifyFieldChanged(new(this, nameof(LocalAlias)));
         }
     }
@@ -50,6 +59,7 @@ public sealed class SharedProviderImportDraft {
         set {
             isEnabled = value;
             enabledRevision++;
+            Comparison?.Invalidate();
             Context.NotifyFieldChanged(new(this, nameof(IsEnabled)));
         }
     }
@@ -62,6 +72,8 @@ public sealed class SharedProviderImportDraft {
     public void Reconcile(SharedProviderImportBaseline latest) {
         EnsureIdentity(latest);
         Latest = latest;
+        NeedsCurrentRead = false;
+        Comparison?.Invalidate();
         if (!IsDirty) {
             Adopt(latest);
         } else if (latest.Settings == Baseline.Settings) {
@@ -88,24 +100,26 @@ public sealed class SharedProviderImportDraft {
         Baseline = accepted;
         Latest = accepted;
         HasConflict = false;
+        NeedsCurrentRead = false;
+        Comparison = null;
     }
 
-    public void ResolveConflict(SharedProviderImportBaseline reviewed, bool keepEdits) {
-        if (!HasConflict || Latest != reviewed) {
-            return;
+    public void Compare() {
+        if (HasConflict && !NeedsCurrentRead) {
+            Comparison = new(Baseline, Settings, Latest);
         }
-        if (!keepEdits) {
-            Adopt(reviewed);
-            return;
+    }
+
+    public bool ApplyComparison() {
+        if (NeedsCurrentRead || Comparison is not { CanApply: true } review || review.Current != Latest) {
+            return false;
         }
-        if (localAlias == Baseline.Settings.LocalAlias) {
-            localAlias = reviewed.Settings.LocalAlias;
-        }
-        if (isEnabled == Baseline.Settings.IsEnabled) {
-            isEnabled = reviewed.Settings.IsEnabled;
-        }
-        Baseline = reviewed;
+        localAlias = review.Incomplete ? localAlias : review.Alias.Result;
+        isEnabled = review.Enabled.Result;
+        Baseline = review.Current;
         HasConflict = false;
+        Comparison = null;
+        return true;
     }
 
     private void Adopt(SharedProviderImportBaseline accepted) {
@@ -113,6 +127,8 @@ public sealed class SharedProviderImportDraft {
         isEnabled = accepted.Settings.IsEnabled;
         Baseline = accepted;
         HasConflict = false;
+        NeedsCurrentRead = false;
+        Comparison = null;
         Context.MarkAsUnmodified();
         validation.Clear();
         Context.NotifyValidationStateChanged();
@@ -132,4 +148,16 @@ public sealed class SharedProviderImportDraft {
         }
         Context.NotifyValidationStateChanged();
     }
+}
+
+public sealed class SharedProviderImportComparison(SharedProviderImportBaseline original, SharedProviderLocalSettings local,
+    SharedProviderImportBaseline current) {
+    public SharedProviderImportBaseline Current { get; } = current;
+    public MergeField<string> Alias { get; } = new(original.Settings.LocalAlias, local.LocalAlias, current.Settings.LocalAlias, StringComparer.Ordinal);
+    public MergeField<bool> Enabled { get; } = new(original.Settings.IsEnabled, local.IsEnabled, current.Settings.IsEnabled);
+    public bool Incomplete { get; } = string.IsNullOrWhiteSpace(local.LocalAlias);
+    public bool KeepIncomplete { get; set; }
+    public bool IsStale { get; private set; }
+    public bool CanApply => !IsStale && (Incomplete ? KeepIncomplete : Alias.IsResolved) && Enabled.IsResolved;
+    public void Invalidate() => IsStale = true;
 }

@@ -14,6 +14,25 @@ public sealed class ProjectStructureChangeTests {
     private readonly ProjectStructureChangeSession actor = new() { Actor = "Editor B" };
 
     [Fact]
+    public void Changed_Project_identity_resolves_actual_root_child_and_parent_projection_keys_only() {
+        var target = Guid.NewGuid();
+        var unrelated = Guid.NewGuid();
+        var template = new ProjectStructureNode("", null, ProjectObjectType.ProjectRoot, "", "Project", "", "", "", "", "", null,
+            "", "", "", 0, 0, new("rect", "", "", "Project"), [], "", 0, "", "", "", [], 0);
+        var nodes = new[] {
+            template with { Id = $"project:{target:D}", ProjectRole = ProjectStructureProjectRole.ActiveProject },
+            template with { Id = $"project-child:{target:D}", ProjectRole = ProjectStructureProjectRole.Subproject, RelatedProjectId = target },
+            template with { Id = $"project-related-parent:{target:D}", ProjectRole = ProjectStructureProjectRole.ParentProject, RelatedProjectId = target },
+            template with { Id = $"project-child:{unrelated:D}", ProjectRole = ProjectStructureProjectRole.Subproject, RelatedProjectId = unrelated },
+            template with { Id = "custom:unrelated", ProjectRole = ProjectStructureProjectRole.None, RelatedProjectId = target }
+        };
+
+        var selected = ProjectStructureChangeInbox.ResolveNodeIds([$"project:{target:D}", "deleted:missing"], nodes);
+
+        Assert.Equal(nodes.Take(3).Select(node => node.Id), selected);
+    }
+
+    [Fact]
     public async Task Capture_publishes_only_after_commit_and_coalesces_saved_node_changes() {
         await using var context = Context();
         var cursor = Read().Cursor;

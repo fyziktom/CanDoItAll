@@ -36,7 +36,10 @@ public sealed class ProjectTaskDialogLifetimeTests {
         await host.InvokeAsync(() => submitted.InvokeAsync());
         Assert.Equal(1, count);
         var second = Open(context, !general, () => Task.FromResult(PlanningTaskSaveResult.Accepted));
-        await host.InvokeAsync(() => cancel.InvokeAsync());
+        var cancelling = host.InvokeAsync(() => cancel.InvokeAsync());
+        host.WaitForElement("[data-testid='planning-task-dirty-close']");
+        await host.InvokeAsync(() => host.Find("[data-testid='planning-task-dirty-discard']").ClickAsync(new()));
+        await cancelling;
         Assert.Null(await first.WaitAsync(TimeSpan.FromSeconds(2)));
         Assert.False(second.IsCompleted);
         release.SetResult(new(PlanningTaskSaveStatus.Committed, "Original task saved", ["original-task"], [], []));

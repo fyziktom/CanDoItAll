@@ -1,35 +1,38 @@
+@implements IDisposable
+@using CanDoItAll.Editing
+
 <FormSection Title="Development, lifecycle tasks, and support"
              Description="Keep assessment training, onboarding, and offboarding work owned, due-dated, and visible with manager, buddy, and mentor assignments.">
-    @if (SupportDraft.PartyId == Guid.Empty)
-    {
+    @if (SupportDraft.PartyId == Guid.Empty) {
         <EmptyState Eyebrow="No candidate selected"
                     Title="Choose or create an application first"
                     Description="Support assignments and lifecycle tasks become available after the recruitment application has been created." />
     }
-    else
-    {
+    else {
         <Grid Gap="LayoutGap.Large" ColumnsLg="2">
             <SurfaceCard>
+                <EditForm @key="SupportDraft" EditContext="supportContext" OnValidSubmit="SubmitSupportAsync" data-testid="crmhr-recruiting-support-form">
+                <ValidationSummary />
                 <p class="cda-eyebrow">Support network</p>
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Manager, buddy, and mentor</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                     <PartyPicker Label="Manager"
-                                 TestIdPrefix="crmhr-recruiting-support-manager"
+                                 TestIdPrefix="crmhr-recruiting-support-manager" PendingChanged="@(pending => SupportInputAsync(RecruitmentSupportField.Manager, pending))"
                                  AllowedScope="PartyRecordScope.People"
                                  InitialScope="PartyRecordScope.People"
                                  ExcludedPartyId="@SupportDraft.PartyId"
                                  SelectedPartyId="@SupportDraft.ManagerPartyId"
                                  SelectedPartyIdChanged="SetManagerPartyAsync" />
                     <PartyPicker Label="Buddy"
-                                 TestIdPrefix="crmhr-recruiting-support-buddy"
+                                 TestIdPrefix="crmhr-recruiting-support-buddy" PendingChanged="@(pending => SupportInputAsync(RecruitmentSupportField.Buddy, pending))"
                                  AllowedScope="PartyRecordScope.People"
                                  InitialScope="PartyRecordScope.People"
                                  ExcludedPartyId="@SupportDraft.PartyId"
                                  SelectedPartyId="@SupportDraft.BuddyPartyId"
                                  SelectedPartyIdChanged="SetBuddyPartyAsync" />
                     <PartyPicker Label="Mentor"
-                                 TestIdPrefix="crmhr-recruiting-support-mentor"
+                                 TestIdPrefix="crmhr-recruiting-support-mentor" PendingChanged="@(pending => SupportInputAsync(RecruitmentSupportField.Mentor, pending))"
                                  AllowedScope="PartyRecordScope.People"
                                  InitialScope="PartyRecordScope.People"
                                  ExcludedPartyId="@SupportDraft.PartyId"
@@ -39,7 +42,7 @@
 
                 <Cluster Gap="LayoutGap.Small" Class="mt-4">
                     <Button Text="Save support roles"
-                            Click="SaveSupportAssignments"
+                            Type="submit" Disabled="@SupportSaveDisabled"
                             data-testid="crmhr-recruiting-support-save-button" />
                 </Cluster>
 
@@ -54,29 +57,30 @@
                                      Text="@BuildSupportBadge("Mentor", CurrentAssignments.MentorName)" />
                     </Cluster>
                 </div>
+                </EditForm>
             </SurfaceCard>
 
             <SurfaceCard Soft="true">
+                <EditForm @key="TaskDraft" EditContext="taskContext" OnValidSubmit="SubmitTaskAsync" data-testid="crmhr-recruiting-task-form">
+                <ValidationSummary />
                 <p class="cda-eyebrow">Checklist item</p>
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Training or lifecycle task</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Task kind">
-                        <InputSelect @bind-Value="TaskDraft.TaskKind"
+                        <InputSelect @bind-Value="TaskDraft.TaskKind" @bind-Value:after="@(() => TaskInputAsync(RecruitmentTaskField.Kind))"
                                      class="cda-input"
                                      data-testid="crmhr-recruiting-task-kind">
-                            @foreach (var taskKind in Enum.GetValues<LifecycleTaskKind>())
-                            {
+                            @foreach (var taskKind in Enum.GetValues<LifecycleTaskKind>()) {
                                 <option value="@taskKind">@taskKind</option>
                             }
                         </InputSelect>
                     </FormField>
                     <FormField Text="Status">
-                        <InputSelect @bind-Value="TaskDraft.Status"
+                        <InputSelect @bind-Value="TaskDraft.Status" @bind-Value:after="@(() => TaskInputAsync(RecruitmentTaskField.Status))"
                                      class="cda-input"
                                      data-testid="crmhr-recruiting-task-status">
-                            @foreach (var status in Enum.GetValues<LifecycleTaskStatus>())
-                            {
+                            @foreach (var status in Enum.GetValues<LifecycleTaskStatus>()) {
                                 <option value="@status">@status</option>
                             }
                         </InputSelect>
@@ -85,12 +89,12 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Title">
-                        <InputText @bind-Value="TaskDraft.Title"
+                        <NativeValueInput TValue="string" @bind-Value="TaskDraft.Title" PendingChanged="@(_ => TaskTextAsync(RecruitmentTaskField.Title))"
                                    class="cda-input"
                                    data-testid="crmhr-recruiting-task-title" />
                     </FormField>
                     <PartyPicker Label="Owner"
-                                 TestIdPrefix="crmhr-recruiting-task-owner"
+                                 TestIdPrefix="crmhr-recruiting-task-owner" PendingChanged="@(pending => TaskInputAsync(RecruitmentTaskField.Owner, pending))"
                                  AllowedScope="PartyRecordScope.People"
                                  InitialScope="PartyRecordScope.People"
                                  ExcludedPartyId="@SupportDraft.PartyId"
@@ -100,19 +104,20 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Due date">
-                        <InputDate @bind-Value="TaskDraft.DueDate"
+                        <NativeValueInput TValue="DateOnly?" DisplayName="Task due date" @bind-Value="TaskDraft.DueDate" PendingChanged="@(pending => TaskInputAsync(RecruitmentTaskField.DueDate, pending))"
                                    class="cda-input"
                                    data-testid="crmhr-recruiting-task-due-date" />
                     </FormField>
                     <ProjectPicker Label="Related project"
                                    TestIdPrefix="crmhr-recruiting-task-project"
                                    SelectedProjectId="@TaskDraft.RelatedProjectId"
-                                   SelectedProjectIdChanged="SetRelatedProjectAsync" />
+                                   SelectedProjectIdChanged="SetRelatedProjectAsync" DatabaseProfileId="DatabaseProfileId"
+                                   SelectedAdmission="TaskDraft.RelatedProjectAdmission" SelectedAdmissionChanged="SetRelatedAdmissionAsync" PendingChanged="@(pending => TaskInputAsync(RecruitmentTaskField.Project, pending))" />
                 </Grid>
 
                 <div class="mt-4">
                     <FormField Text="Notes">
-                        <InputTextArea @bind-Value="TaskDraft.Notes"
+                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="TaskDraft.Notes" PendingChanged="@(_ => TaskTextAsync(RecruitmentTaskField.Notes))"
                                        class="cda-input cda-input--textarea min-h-[7rem]"
                                        data-testid="crmhr-recruiting-task-notes" />
                     </FormField>
@@ -120,13 +125,14 @@
 
                 <Cluster Gap="LayoutGap.Small" Class="mt-4">
                     <Button Text="Save task"
-                            Click="SaveTask"
+                            Type="submit" Disabled="@TaskSaveDisabled"
                             data-testid="crmhr-recruiting-task-save-button" />
                     <Button Text="Reset"
                             ButtonStyle="ButtonStyle.Light"
-                            Click="ResetTask"
+                            Click="ResetTask" Disabled="@WritesDisabled"
                             data-testid="crmhr-recruiting-task-reset-button" />
                 </Cluster>
+                </EditForm>
             </SurfaceCard>
         </Grid>
 
@@ -134,19 +140,16 @@
             <p class="cda-eyebrow">Lifecycle board</p>
             <h3 class="mt-1 text-lg font-semibold text-slate-950">@Tasks.Count task(s)</h3>
 
-            @if (Tasks.Count == 0)
-            {
+            @if (Tasks.Count == 0) {
                 <div class="mt-4">
                     <EmptyState Eyebrow="No development tasks"
                                 Title="Create the first task"
                                 Description="Assessment training, equipment, access, onboarding, and offboarding follow-up appear here with ownership and due dates." />
                 </div>
             }
-            else
-            {
+            else {
                 <Stack GapScale="LayoutGap.Medium" Class="mt-4">
-                    @foreach (var item in Tasks)
-                    {
+                    @foreach (var item in Tasks) {
                         <PanelCard data-testid="crmhr-recruiting-task-item">
                             <Split Gap="LayoutGap.Medium"
                                    AlignItems="AlignItems.Start"
@@ -154,8 +157,7 @@
                                 <div class="min-w-0 space-y-1">
                                     <p class="text-base font-semibold text-slate-950">@item.Title</p>
                                     <p class="text-sm text-slate-600">@BuildTaskMeta(item)</p>
-                                    @if (!string.IsNullOrWhiteSpace(item.Notes))
-                                    {
+                                    @if (!string.IsNullOrWhiteSpace(item.Notes)) {
                                         <p class="text-sm leading-6 text-slate-600">@item.Notes</p>
                                     }
                                 </div>
@@ -165,7 +167,7 @@
                                     <Button Text="Delete"
                                             ButtonStyle="ButtonStyle.Danger"
                                             Size="ButtonSize.Small"
-                                            Click="@(() => DeleteTask.InvokeAsync(item.Id))"
+                                            Click="@(() => DeleteTask.InvokeAsync(item))" Disabled="@WritesDisabled"
                                             data-testid="crmhr-recruiting-task-delete-button" />
                                 </Cluster>
                             </Split>
@@ -178,6 +180,71 @@
 </FormSection>
 
 @code {
+    private bool disposed;
+    private EditContext supportContext = default!;
+    private EditContext taskContext = default!;
+    private readonly HashSet<RecruitmentSupportField> supportPending = [];
+    private readonly HashSet<RecruitmentTaskField> taskPending = [];
+    [Parameter] public Guid DatabaseProfileId { get; set; }
+    [Parameter] public bool SupportSaveDisabled { get; set; }
+    [Parameter] public bool TaskSaveDisabled { get; set; }
+    [Parameter] public bool WritesDisabled { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentSupportField>> SupportInputChanged { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentTaskField>> TaskInputChanged { get; set; }
+    protected override void OnInitialized() {
+        supportContext = new(SupportDraft);
+        taskContext = new(TaskDraft);
+    }
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(supportContext.Model, SupportDraft)) {
+            supportContext = new(SupportDraft);
+            supportPending.Clear();
+        }
+        if (!ReferenceEquals(taskContext.Model, TaskDraft)) {
+            taskContext = new(TaskDraft);
+            taskPending.Clear();
+        }
+    }
+    public Task SubmitTaskAsync() => disposed || TaskSaveDisabled || taskPending.Count > 0 || !taskContext.Validate() ? Task.CompletedTask : SaveTask.InvokeAsync();
+    public Task SubmitSupportAsync() => disposed || SupportSaveDisabled || supportPending.Count > 0 || !supportContext.Validate() ? Task.CompletedTask : SaveSupportAssignments.InvokeAsync();
+    private Task TaskTextAsync(RecruitmentTaskField field) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+
+        return TaskInputAsync(field);
+    }
+    private Task TaskInputAsync(RecruitmentTaskField field, bool incomplete = false) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (incomplete) {
+            taskPending.Add(field);
+        } else {
+            taskPending.Remove(field);
+        }
+        return TaskInputChanged.InvokeAsync(new(field, incomplete));
+    }
+    private Task SupportInputAsync(RecruitmentSupportField field, bool incomplete = false) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (incomplete) {
+            supportPending.Add(field);
+        } else {
+            supportPending.Remove(field);
+        }
+        return SupportInputChanged.InvokeAsync(new(field, incomplete));
+    }
+    private Task SetRelatedAdmissionAsync(ProjectWriteAdmission? admission) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        TaskDraft.RelatedProjectAdmission = admission;
+        return TaskInputChanged.InvokeAsync(new(RecruitmentTaskField.Project, taskPending.Contains(RecruitmentTaskField.Project)));
+    }
+    public void Dispose() => disposed = true;
+
     [Parameter]
     public RecruitmentSupportAssignmentsEditorModel SupportDraft { get; set; } = new();
 
@@ -200,79 +267,86 @@
     public EventCallback ResetTask { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> DeleteTask { get; set; }
+    public EventCallback<LifecycleTaskItemModel> DeleteTask { get; set; }
 
-    private Task SetManagerPartyAsync(Guid? partyId)
-    {
-        SupportDraft.ManagerPartyId = partyId;
-        return Task.CompletedTask;
+    private Task SetManagerPartyAsync(Guid? id) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        SupportDraft.ManagerPartyId = id;
+        supportContext.NotifyFieldChanged(new(SupportDraft, nameof(SupportDraft.ManagerPartyId)));
+        return SupportInputChanged.InvokeAsync(new(RecruitmentSupportField.Manager, supportPending.Contains(RecruitmentSupportField.Manager)));
     }
 
-    private Task SetBuddyPartyAsync(Guid? partyId)
-    {
-        SupportDraft.BuddyPartyId = partyId;
-        return Task.CompletedTask;
+    private Task SetBuddyPartyAsync(Guid? id) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        SupportDraft.BuddyPartyId = id;
+        supportContext.NotifyFieldChanged(new(SupportDraft, nameof(SupportDraft.BuddyPartyId)));
+        return SupportInputChanged.InvokeAsync(new(RecruitmentSupportField.Buddy, supportPending.Contains(RecruitmentSupportField.Buddy)));
     }
 
-    private Task SetMentorPartyAsync(Guid? partyId)
-    {
-        SupportDraft.MentorPartyId = partyId;
-        return Task.CompletedTask;
+    private Task SetMentorPartyAsync(Guid? id) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        SupportDraft.MentorPartyId = id;
+        supportContext.NotifyFieldChanged(new(SupportDraft, nameof(SupportDraft.MentorPartyId)));
+        return SupportInputChanged.InvokeAsync(new(RecruitmentSupportField.Mentor, supportPending.Contains(RecruitmentSupportField.Mentor)));
     }
 
-    private Task SetTaskOwnerPartyAsync(Guid? partyId)
-    {
-        TaskDraft.OwnerPartyId = partyId;
-        return Task.CompletedTask;
+    private Task SetTaskOwnerPartyAsync(Guid? id) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        TaskDraft.OwnerPartyId = id;
+        taskContext.NotifyFieldChanged(new(TaskDraft, nameof(TaskDraft.OwnerPartyId)));
+        return TaskInputChanged.InvokeAsync(new(RecruitmentTaskField.Owner, taskPending.Contains(RecruitmentTaskField.Owner)));
     }
 
-    private Task SetRelatedProjectAsync(Guid? projectId)
-    {
-        TaskDraft.RelatedProjectId = projectId;
-        return Task.CompletedTask;
+    private Task SetRelatedProjectAsync(Guid? id) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        TaskDraft.RelatedProjectId = id;
+        TaskDraft.RelatedProjectAdmission = null;
+        taskContext.NotifyFieldChanged(new(TaskDraft, nameof(TaskDraft.RelatedProjectId)));
+        return TaskInputChanged.InvokeAsync(new(RecruitmentTaskField.Project, taskPending.Contains(RecruitmentTaskField.Project)));
     }
 
-    private static string BuildSupportBadge(string label, string value)
-    {
+    private static string BuildSupportBadge(string label, string value) {
         return string.IsNullOrWhiteSpace(value)
             ? $"{label}: Unassigned"
             : $"{label}: {value}";
     }
 
-    private static string BuildTaskMeta(LifecycleTaskItemModel item)
-    {
-        var parts = new List<string>
-        {
+    private static string BuildTaskMeta(LifecycleTaskItemModel item) {
+        var parts = new List<string> {
             item.TaskKind.ToString()
         };
 
-        if (!string.IsNullOrWhiteSpace(item.OwnerName))
-        {
+        if (!string.IsNullOrWhiteSpace(item.OwnerName)) {
             parts.Add(item.OwnerName);
         }
 
-        if (item.DueDate.HasValue)
-        {
+        if (item.DueDate.HasValue) {
             parts.Add(item.DueDate.Value.ToString("yyyy-MM-dd"));
         }
 
-        if (!string.IsNullOrWhiteSpace(item.RelatedProjectName))
-        {
+        if (!string.IsNullOrWhiteSpace(item.RelatedProjectName)) {
             parts.Add(item.RelatedProjectName);
         }
 
         return string.Join(" / ", parts);
     }
 
-    private static string ResolveTaskTone(LifecycleTaskItemModel item)
-    {
-        if (item.IsOverdue)
-        {
+    private static string ResolveTaskTone(LifecycleTaskItemModel item) {
+        if (item.IsOverdue) {
             return "danger";
         }
 
-        return item.Status switch
-        {
+        return item.Status switch {
             LifecycleTaskStatus.Completed => "success",
             LifecycleTaskStatus.InProgress => "primary",
             LifecycleTaskStatus.Cancelled => "base",

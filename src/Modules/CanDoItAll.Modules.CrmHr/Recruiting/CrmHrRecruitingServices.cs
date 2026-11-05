@@ -9,18 +9,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.CrmHr;
 
-public sealed partial class RecruitingService(
+public sealed class RecruitingService(
     IDbContextFactory<CrmHrDbContext> dbContextFactory,
-    PartyDirectoryService partyDirectoryService,
-    HrService hrService,
     IProjectRecordQueryService projectRecordQueryService,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService,
-    IAgentRecruitingEvidenceService recruitingEvidenceService)
+    PartyRelationshipService relationships,
+    RecruitmentApplicationEditingService applications, RecruitmentInterviewEditingService interviews, RecruitmentLifecycleEditingService lifecycle,
+    RecruitmentConversionService conversion)
 {
     private const string RecruitmentApplicationEntityType = "RecruitmentApplication";
-    private const string SupportBuddyLabel = "Buddy";
-    private const string SupportMentorLabel = "Mentor";
 
     public async Task<RecruitmentApplicationPage> SearchRecruitmentApplicationsAsync(
         RecruitmentApplicationQuery query,
@@ -142,6 +139,8 @@ public sealed partial class RecruitingService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var snapshot = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, cancellationToken) : null;
         var resolvedApplicationId = applicationId;
         if (!resolvedApplicationId.HasValue && partyId.HasValue)
         {
@@ -242,6 +241,7 @@ public sealed partial class RecruitingService(
             .OrderByDescending(item => item.IsPrimary)
             .Select(item => new RecruitmentContactValue(item.PartyId, item.ContactType, item.Value, item.IsPrimary))
             .ToListAsync(cancellationToken);
+        var candidateParty = await dbContext.Set<Party>().AsNoTracking().SingleOrDefaultAsync(row => row.Id == application.PartyId, cancellationToken);
         var workloadProfile = await dbContext.Set<WorkforceProfile>()
             .SingleOrDefaultAsync(item => item.PartyId == application.PartyId, cancellationToken);
         var stageHistory = await LoadStageHistoryAsync(dbContext, application.Id, cancellationToken);
@@ -298,7 +298,7 @@ public sealed partial class RecruitingService(
                 ResolvePartyDisplayName(partyMap, item.InterviewerPartyId),
                 item.Outcome,
                 item.Recommendation,
-                item.Feedback)).ToList(),
+                item.Feedback) { Original = RecruitmentEditValues.Interview(item) }).ToList(),
             tasks
                 .OrderBy(item => item.TaskKind)
                 .ThenBy(item => item.DueDateUtc ?? DateTimeOffset.MaxValue)
@@ -320,583 +320,49 @@ public sealed partial class RecruitingService(
                     item.DueDateUtc.HasValue &&
                     item.Status is not LifecycleTaskStatus.Completed &&
                     item.Status is not LifecycleTaskStatus.Cancelled &&
-                    item.DueDateUtc.Value.Date < DateTimeOffset.UtcNow.Date))
+                    item.DueDateUtc.Value.Date < DateTimeOffset.UtcNow.Date) { Original = RecruitmentEditValues.Task(item) })
                 .ToList(),
             supportAssignments,
-            CreateConversionEditor(application, supportAssignments, workloadProfile));
+            CreateConversionEditor(application, supportAssignments, workloadProfile, candidateParty));
     }
 
-    public async Task<Result<Guid>> SaveRecruitmentApplicationAsync(
-        RecruitmentApplicationEditorModel model,
-        CancellationToken cancellationToken = default)
-    {
+    public Task<Result<Guid>> SaveRecruitmentApplicationAsync(RecruitmentApplicationEditorModel model, CancellationToken cancellationToken = default,
+        Action<RecruitmentSaveReceipt<RecruitmentApplicationEditorModel>>? onCommitted = null) =>
+        applications.SaveRecruitmentApplicationAsync(model, cancellationToken, onCommitted);
+
+    public Task<Result<Guid>> SaveRecruitmentInterviewAsync(RecruitmentInterviewEditorModel model, CancellationToken cancellationToken = default,
+        Action<RecruitmentSaveReceipt<RecruitmentInterviewEditorModel>>? onCommitted = null) =>
+        interviews.SaveRecruitmentInterviewAsync(model, cancellationToken, onCommitted);
+
+    public Task<Result> DeleteRecruitmentInterviewAsync(Guid id, CancellationToken cancellationToken = default,
+        RecruitmentInterviewObservation? original = null, Action<RecruitmentDeleteReceipt>? onCommitted = null) =>
+        interviews.DeleteRecruitmentInterviewAsync(id, cancellationToken, original, onCommitted);
+
+    public Task<Result<Guid>> SaveLifecycleTaskAsync(LifecycleTaskEditorModel model, CancellationToken cancellationToken = default,
+        Action<RecruitmentSaveReceipt<LifecycleTaskEditorModel>>? onCommitted = null) =>
+        lifecycle.SaveLifecycleTaskAsync(model, cancellationToken, onCommitted);
+
+    public Task<Result> DeleteLifecycleTaskAsync(Guid id, CancellationToken cancellationToken = default,
+        LifecycleTaskObservation? original = null, Action<RecruitmentDeleteReceipt>? onCommitted = null) =>
+        lifecycle.DeleteLifecycleTaskAsync(id, cancellationToken, original, onCommitted);
+
+    public async Task<Result<PartyRelationshipSaveReceipt>> SaveSupportAssignmentsAsync(
+        RecruitmentSupportAssignmentsEditorModel model, CancellationToken cancellationToken = default,
+        Action<PartyRelationshipSaveReceipt>? onCommitted = null) {
         ArgumentNullException.ThrowIfNull(model);
-
-        if (string.IsNullOrWhiteSpace(model.DesiredRole))
-        {
-            return Result<Guid>.Failure(Error.Validation("Desired role is required.", "crmhr.recruiting.role-required"));
+        model = model.Snapshot();
+        var result = await relationships.ReplaceSupportAsync(model, cancellationToken, onCommitted);
+        if (result.IsFailure) {
+            return result;
         }
-
-        var normalizedActor = NormalizeActor(model.LastChangedBy);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var partyIdResult = await ResolveCandidatePartyIdAsync(dbContext, model, cancellationToken);
-        if (!partyIdResult.IsSuccess)
-        {
-            return Result<Guid>.Failure(partyIdResult.Errors.ToArray());
-        }
-
-        var partyId = partyIdResult.Value;
-        var validationError = await ValidateApplicationPartiesAsync(dbContext, model, partyId, cancellationToken);
-        if (validationError is not null)
-        {
-            return Result<Guid>.Failure(validationError);
-        }
-
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<RecruitmentApplication>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
-        var isNew = entity is null;
-        var previousStage = entity?.Stage;
-
-        if (entity is null)
-        {
-            entity = new RecruitmentApplication
-            {
-                PartyId = partyId,
-                CreatedAtUtc = DateTimeOffset.UtcNow
-            };
-            dbContext.Set<RecruitmentApplication>().Add(entity);
-        }
-
-        entity.PartyId = partyId;
-        entity.TargetUnitPartyId = model.TargetUnitPartyId;
-        entity.RecruiterPartyId = model.RecruiterPartyId;
-        entity.HiringManagerPartyId = model.HiringManagerPartyId;
-        entity.DesiredRole = model.DesiredRole.Trim();
-        entity.Source = model.Source.Trim();
-        entity.Stage = model.Stage;
-        entity.AvailableFromUtc = ToUtcDate(model.AvailableFrom);
-        entity.Decision = model.Decision;
-        entity.Notes = model.Notes.Trim();
-        entity.UpdatedAtUtc = DateTimeOffset.UtcNow;
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        var candidateName = await LoadPartyDisplayNameAsync(dbContext, partyId, cancellationToken);
-        if (isNew)
-        {
-            await AppendAuditEntryAsync(
-                dbContext,
-                entity.Id,
-                "RecruitmentCreated",
-                $"Created recruitment pipeline for {candidateName}",
-                BuildStageAuditDetail(null, entity.Stage, model.StageNotes),
-                normalizedActor,
-                cancellationToken);
-        }
-        else if (previousStage.HasValue && previousStage.Value != entity.Stage)
-        {
-            await AppendAuditEntryAsync(
-                dbContext,
-                entity.Id,
-                "RecruitmentStageChanged",
-                $"Moved {candidateName} to {entity.Stage}",
-                BuildStageAuditDetail(previousStage.Value, entity.Stage, model.StageNotes),
-                normalizedActor,
-                cancellationToken);
-        }
-
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                isNew ? "RecruitmentCreated" : "RecruitmentUpdated",
-                isNew ? $"Created candidate {candidateName}" : $"Updated candidate {candidateName}",
-                $"{entity.DesiredRole} / {entity.Stage}",
-                ArtifactKind: RecruitmentApplicationEntityType,
-                ArtifactId: entity.Id,
-                Route: BuildRecruitingRoute(entity.Id),
-                Actor: normalizedActor),
-            cancellationToken);
-        await UpsertRecruitmentApplicationSearchDocumentAsync(entity.Id, cancellationToken);
-
-        return Result<Guid>.Success(entity.Id);
+        await activityStream.RecordAsync(new ActivityWriteRequest("CRM / HR", "RecruitmentSupportAssignmentsSaved",
+            "Saved candidate support assignments", ArtifactKind: nameof(PartyRelationship), ArtifactId: model.PartyId,
+            Route: RecruitmentEditValues.PartyRoute(model.PartyId), Actor: RecruitmentEditValues.Actor(model.LastChangedBy)), cancellationToken);
+        return result;
     }
 
-    public async Task<Result<Guid>> SaveRecruitmentInterviewAsync(
-        RecruitmentInterviewEditorModel model,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-
-        if (model.ApplicationId == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose a recruitment application first.", "crmhr.recruiting.interview.application-required"));
-        }
-
-        if (!model.ScheduledAtLocal.HasValue)
-        {
-            return Result<Guid>.Failure(Error.Validation("Interview schedule is required.", "crmhr.recruiting.interview.schedule-required"));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var application = await dbContext.Set<RecruitmentApplication>()
-            .SingleOrDefaultAsync(item => item.Id == model.ApplicationId, cancellationToken);
-        if (application is null)
-        {
-            return Result<Guid>.Failure(Error.Validation("The recruitment application was not found.", "crmhr.recruiting.interview.application-not-found"));
-        }
-
-        if (model.InterviewerPartyId.HasValue)
-        {
-            var interviewerError = await ValidatePeopleOnlyPartyAsync(
-                dbContext,
-                model.InterviewerPartyId.Value,
-                "Interviewer must reference an existing person.",
-                "crmhr.recruiting.interview.interviewer-invalid",
-                cancellationToken);
-            if (interviewerError is not null)
-            {
-                return Result<Guid>.Failure(interviewerError);
-            }
-        }
-
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<RecruitmentInterview>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
-        if (entity is null)
-        {
-            entity = new RecruitmentInterview
-            {
-                ApplicationId = model.ApplicationId
-            };
-            dbContext.Set<RecruitmentInterview>().Add(entity);
-        }
-
-        entity.ApplicationId = model.ApplicationId;
-        entity.ScheduledAtUtc = ToUtcDateTimeOffset(model.ScheduledAtLocal.Value);
-        entity.InterviewType = model.InterviewType;
-        entity.InterviewerPartyId = model.InterviewerPartyId;
-        entity.Outcome = model.Outcome;
-        entity.Feedback = model.Feedback.Trim();
-        entity.Recommendation = model.Recommendation.Trim();
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                "RecruitmentInterviewSaved",
-                $"Saved {model.InterviewType} interview",
-                entity.Outcome.ToString(),
-                ArtifactKind: nameof(RecruitmentInterview),
-                ArtifactId: entity.Id,
-                Route: BuildRecruitingRoute(model.ApplicationId)),
-            cancellationToken);
-
-        return Result<Guid>.Success(entity.Id);
-    }
-
-    public async Task DeleteRecruitmentInterviewAsync(Guid interviewId, CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await dbContext.Set<RecruitmentInterview>()
-            .SingleOrDefaultAsync(item => item.Id == interviewId, cancellationToken);
-        if (entity is null)
-        {
-            return;
-        }
-
-        var applicationId = entity.ApplicationId;
-        dbContext.Set<RecruitmentInterview>().Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                "RecruitmentInterviewDeleted",
-                "Deleted recruitment interview",
-                ArtifactKind: nameof(RecruitmentInterview),
-                ArtifactId: interviewId,
-                Route: BuildRecruitingRoute(applicationId)),
-            cancellationToken);
-    }
-
-    public async Task<Result<Guid>> SaveLifecycleTaskAsync(
-        LifecycleTaskEditorModel model,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-
-        if (model.PartyId == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose a candidate first.", "crmhr.recruiting.task.party-required"));
-        }
-
-        if (string.IsNullOrWhiteSpace(model.Title))
-        {
-            return Result<Guid>.Failure(Error.Validation("Task title is required.", "crmhr.recruiting.task.title-required"));
-        }
-
-        if (!model.OwnerPartyId.HasValue)
-        {
-            return Result<Guid>.Failure(Error.Validation("Task owner is required.", "crmhr.recruiting.task.owner-required"));
-        }
-
-        if (!model.DueDate.HasValue)
-        {
-            return Result<Guid>.Failure(Error.Validation("Task due date is required.", "crmhr.recruiting.task.due-date-required"));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var partyExists = await dbContext.Set<Party>().AnyAsync(item => item.Id == model.PartyId, cancellationToken);
-        if (!partyExists)
-        {
-            return Result<Guid>.Failure(Error.Validation("The selected candidate was not found.", "crmhr.recruiting.task.party-not-found"));
-        }
-
-        var ownerError = await ValidatePeopleOnlyPartyAsync(
-            dbContext,
-            model.OwnerPartyId.Value,
-            "Task owner must reference an existing person.",
-            "crmhr.recruiting.task.owner-invalid",
-            cancellationToken);
-        if (ownerError is not null)
-        {
-            return Result<Guid>.Failure(ownerError);
-        }
-
-        if (model.RelatedProjectId.HasValue)
-        {
-            var projectExists = model.RelatedProjectId.Value != Guid.Empty &&
-                await projectRecordQueryService.GetAsync(model.RelatedProjectId.Value, cancellationToken) is not null;
-            if (!projectExists)
-            {
-                return Result<Guid>.Failure(Error.Validation("The related project was not found.", "crmhr.recruiting.task.project-not-found"));
-            }
-        }
-
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<OnboardingTask>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
-        if (entity is null)
-        {
-            entity = new OnboardingTask
-            {
-                PartyId = model.PartyId
-            };
-            dbContext.Set<OnboardingTask>().Add(entity);
-        }
-
-        entity.PartyId = model.PartyId;
-        entity.TaskKind = model.TaskKind;
-        entity.Title = model.Title.Trim();
-        entity.OwnerPartyId = model.OwnerPartyId;
-        entity.DueDateUtc = ToUtcDate(model.DueDate);
-        entity.Status = model.Status;
-        entity.RelatedProjectId = model.RelatedProjectId;
-        entity.Notes = model.Notes.Trim();
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                "RecruitmentLifecycleTaskSaved",
-                $"Saved {model.TaskKind} task {entity.Title}",
-                entity.Status.ToString(),
-                ProjectId: entity.RelatedProjectId,
-                ArtifactKind: nameof(OnboardingTask),
-                ArtifactId: entity.Id,
-                Route: BuildRecruitingRouteForParty(model.PartyId)),
-            cancellationToken);
-
-        return Result<Guid>.Success(entity.Id);
-    }
-
-    public async Task DeleteLifecycleTaskAsync(Guid taskId, CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await dbContext.Set<OnboardingTask>()
-            .SingleOrDefaultAsync(item => item.Id == taskId, cancellationToken);
-        if (entity is null)
-        {
-            return;
-        }
-
-        var partyId = entity.PartyId;
-        dbContext.Set<OnboardingTask>().Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                "RecruitmentLifecycleTaskDeleted",
-                "Deleted lifecycle task",
-                ArtifactKind: nameof(OnboardingTask),
-                ArtifactId: taskId,
-                Route: BuildRecruitingRouteForParty(partyId)),
-            cancellationToken);
-    }
-
-    public async Task<Result> SaveSupportAssignmentsAsync(
-        RecruitmentSupportAssignmentsEditorModel model,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-
-        if (model.PartyId == Guid.Empty)
-        {
-            return Result.Failure(Error.Validation("Choose a candidate first.", "crmhr.recruiting.support.party-required"));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var partyExists = await dbContext.Set<Party>().AnyAsync(item => item.Id == model.PartyId, cancellationToken);
-        if (!partyExists)
-        {
-            return Result.Failure(Error.Validation("The selected candidate was not found.", "crmhr.recruiting.support.party-not-found"));
-        }
-
-        foreach (var assignment in new[]
-        {
-            (model.ManagerPartyId, "Manager must reference an existing person.", "crmhr.recruiting.support.manager-invalid"),
-            (model.BuddyPartyId, "Buddy must reference an existing person.", "crmhr.recruiting.support.buddy-invalid"),
-            (model.MentorPartyId, "Mentor must reference an existing person.", "crmhr.recruiting.support.mentor-invalid")
-        })
-        {
-            if (!assignment.Item1.HasValue)
-            {
-                continue;
-            }
-
-            if (assignment.Item1.Value == model.PartyId)
-            {
-                return Result.Failure(Error.Validation("Candidate support assignments cannot reference the same party.", "crmhr.recruiting.support.self-reference"));
-            }
-
-            var validationError = await ValidatePeopleOnlyPartyAsync(
-                dbContext,
-                assignment.Item1.Value,
-                assignment.Item2,
-                assignment.Item3,
-                cancellationToken);
-            if (validationError is not null)
-            {
-                return Result.Failure(validationError);
-            }
-        }
-
-        var managedByRelationships = await dbContext.Set<PartyRelationship>()
-            .Where(item => item.SourcePartyId == model.PartyId && item.RelationshipKind == PartyRelationshipKind.ManagedBy)
-            .ToListAsync(cancellationToken);
-        var supportRelationships = await dbContext.Set<PartyRelationship>()
-            .Where(item => item.TargetPartyId == model.PartyId &&
-                           item.RelationshipKind == PartyRelationshipKind.Supports &&
-                           (item.Notes == SupportBuddyLabel || item.Notes == SupportMentorLabel))
-            .ToListAsync(cancellationToken);
-
-        dbContext.Set<PartyRelationship>().RemoveRange(managedByRelationships);
-        dbContext.Set<PartyRelationship>().RemoveRange(supportRelationships);
-
-        if (model.ManagerPartyId.HasValue)
-        {
-            dbContext.Set<PartyRelationship>().Add(new PartyRelationship
-            {
-                SourcePartyId = model.PartyId,
-                TargetPartyId = model.ManagerPartyId.Value,
-                RelationshipKind = PartyRelationshipKind.ManagedBy,
-                IsPrimary = true,
-                Notes = "Recruiting support manager"
-            });
-        }
-
-        if (model.BuddyPartyId.HasValue)
-        {
-            dbContext.Set<PartyRelationship>().Add(new PartyRelationship
-            {
-                SourcePartyId = model.BuddyPartyId.Value,
-                TargetPartyId = model.PartyId,
-                RelationshipKind = PartyRelationshipKind.Supports,
-                IsPrimary = true,
-                Notes = SupportBuddyLabel
-            });
-        }
-
-        if (model.MentorPartyId.HasValue)
-        {
-            dbContext.Set<PartyRelationship>().Add(new PartyRelationship
-            {
-                SourcePartyId = model.MentorPartyId.Value,
-                TargetPartyId = model.PartyId,
-                RelationshipKind = PartyRelationshipKind.Supports,
-                IsPrimary = true,
-                Notes = SupportMentorLabel
-            });
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                "RecruitmentSupportAssignmentsSaved",
-                "Saved candidate support assignments",
-                ArtifactKind: nameof(PartyRelationship),
-                ArtifactId: model.PartyId,
-                Route: BuildRecruitingRouteForParty(model.PartyId),
-                Actor: NormalizeActor(model.LastChangedBy)),
-            cancellationToken);
-
-        return Result.Success();
-    }
-
-    public async Task<Result<Guid>> ConvertCandidateAsync(
-        RecruitmentConversionEditorModel model,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-
-        if (model.ApplicationId == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose a recruitment application first.", "crmhr.recruiting.convert.application-required"));
-        }
-
-        await using var validationContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var application = await validationContext.Set<RecruitmentApplication>()
-            .SingleOrDefaultAsync(item => item.Id == model.ApplicationId, cancellationToken);
-        if (application is null)
-        {
-            return Result<Guid>.Failure(Error.Validation("The recruitment application was not found.", "crmhr.recruiting.convert.application-not-found"));
-        }
-
-        var conversionEligibilityError = RecruitmentConversionPolicy.Evaluate(
-            application.Stage,
-            application.Decision);
-        if (conversionEligibilityError is not null)
-        {
-            return Result<Guid>.Failure(conversionEligibilityError);
-        }
-
-        var candidate = await validationContext.Set<Party>()
-            .SingleOrDefaultAsync(item => item.Id == application.PartyId, cancellationToken);
-        if (candidate is null)
-        {
-            return Result<Guid>.Failure(Error.Validation("The candidate party was not found.", "crmhr.recruiting.convert.party-not-found"));
-        }
-
-        if (candidate.PartyType == PartyType.AiAgent)
-        {
-            var technicalAgentId = await validationContext.Set<AiResourceBinding>()
-                .AsNoTracking()
-                .Where(binding =>
-                    binding.PartyId == candidate.Id &&
-                    binding.BindingStatus == AiResourceBindingStatus.Bound)
-                .Select(binding => binding.TechnicalAgentId)
-                .SingleOrDefaultAsync(cancellationToken);
-            AgentRecruitingCandidateReadiness? readiness = null;
-            if (technicalAgentId.HasValue)
-            {
-                try
-                {
-                    readiness = await recruitingEvidenceService.GetCandidateReadinessAsync(
-                        technicalAgentId.Value,
-                        application.Id,
-                        cancellationToken);
-                }
-                catch (AgentRecruitingEvidenceException exception)
-                {
-                    return Result<Guid>.Failure(
-                        Error.Validation(
-                            $"Technical assessment readiness could not be verified: {exception.Message}",
-                            RecruitmentConversionPolicy.AssessmentNotReadyErrorCode));
-                }
-            }
-
-            var assessmentEligibilityError = RecruitmentConversionPolicy.Evaluate(
-                application.Stage,
-                application.Decision,
-                assessmentRequired: true,
-                assessmentReady: readiness?.ReadyForProduction == true);
-            if (assessmentEligibilityError is not null)
-            {
-                return Result<Guid>.Failure(assessmentEligibilityError);
-            }
-        }
-
-        var supportAssignments = await LoadSupportAssignmentsAsync(validationContext, candidate.Id, cancellationToken);
-        var workforceResult = await hrService.SaveWorkforceProfileAsync(new WorkforceProfileEditorModel
-        {
-            PartyId = candidate.Id,
-            WorkforceKind = model.WorkforceKind,
-            JobTitle = string.IsNullOrWhiteSpace(model.JobTitle) ? application.DesiredRole : model.JobTitle,
-            Discipline = model.Discipline,
-            Seniority = model.Seniority,
-            HomeUnitPartyId = model.HomeUnitPartyId ?? application.TargetUnitPartyId,
-            ManagerPartyId = model.ManagerPartyId ?? supportAssignments.ManagerPartyId ?? application.HiringManagerPartyId,
-            StartDate = model.StartDate,
-            Location = model.Location,
-            TimeZone = model.TimeZone,
-            CapacityHoursPerWeek = model.CapacityHoursPerWeek <= 0m ? 40m : model.CapacityHoursPerWeek,
-            Status = string.IsNullOrWhiteSpace(model.Status) ? "Active" : model.Status.Trim(),
-            Notes = model.Notes,
-            LastChangedBy = model.LastChangedBy
-        }, cancellationToken);
-        if (!workforceResult.IsSuccess)
-        {
-            return Result<Guid>.Failure(workforceResult.Errors.ToArray());
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var refreshedApplication = await dbContext.Set<RecruitmentApplication>()
-            .SingleAsync(item => item.Id == model.ApplicationId, cancellationToken);
-        var refreshedParty = await dbContext.Set<Party>()
-            .SingleAsync(item => item.Id == candidate.Id, cancellationToken);
-
-        var previousStage = refreshedApplication.Stage;
-        refreshedApplication.Stage = RecruitmentStage.Hired;
-        refreshedApplication.Decision = RecruitmentDecision.Approved;
-        refreshedApplication.UpdatedAtUtc = DateTimeOffset.UtcNow;
-        refreshedParty.LifecycleStatus = PartyLifecycleStatus.Active;
-        refreshedParty.LastChangedBy = NormalizeActor(model.LastChangedBy);
-        refreshedParty.UpdatedAtUtc = DateTimeOffset.UtcNow;
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        if (previousStage != RecruitmentStage.Hired)
-        {
-            await AppendAuditEntryAsync(
-                dbContext,
-                refreshedApplication.Id,
-                "RecruitmentStageChanged",
-                $"Moved {refreshedParty.DisplayName} to {RecruitmentStage.Hired}",
-                BuildStageAuditDetail(previousStage, RecruitmentStage.Hired, "Converted to workforce profile."),
-                NormalizeActor(model.LastChangedBy),
-                cancellationToken);
-        }
-
-        await AppendAuditEntryAsync(
-            dbContext,
-            refreshedApplication.Id,
-            "RecruitmentConverted",
-            $"Converted {refreshedParty.DisplayName} to workforce",
-            JsonSerializer.Serialize(new
-            {
-                WorkforceKind = model.WorkforceKind.ToString(),
-                JobTitle = string.IsNullOrWhiteSpace(model.JobTitle) ? application.DesiredRole : model.JobTitle
-            }),
-            NormalizeActor(model.LastChangedBy),
-            cancellationToken);
-
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                "RecruitmentConverted",
-                $"Converted {refreshedParty.DisplayName} to workforce",
-                model.WorkforceKind.ToString(),
-                ArtifactKind: RecruitmentApplicationEntityType,
-                ArtifactId: refreshedApplication.Id,
-                Route: BuildRecruitingRoute(refreshedApplication.Id),
-                Actor: NormalizeActor(model.LastChangedBy)),
-            cancellationToken);
-        await UpsertRecruitmentApplicationSearchDocumentAsync(refreshedApplication.Id, cancellationToken);
-
-        return Result<Guid>.Success(candidate.Id);
-    }
+    public Task<Result<Guid>> ConvertCandidateAsync(RecruitmentConversionEditorModel model, CancellationToken cancellationToken = default,
+        Action<RecruitmentConversionReceipt>? onCommitted = null) => conversion.ConvertCandidateAsync(model, cancellationToken, onCommitted);
 
     private static RecruitmentApplicationEditorModel CreateEmptyApplicationEditor()
     {
@@ -926,6 +392,7 @@ public sealed partial class RecruitingService(
         return new RecruitmentApplicationEditorModel
         {
             Id = application.Id,
+            Original = RecruitmentEditValues.Application(application),
             PartyId = application.PartyId,
             CandidateName = ResolvePartyDisplayName(partyMap, application.PartyId),
             CandidateEmail = ResolvePrimaryContactValue(contacts, PartyContactType.Email),
@@ -945,11 +412,13 @@ public sealed partial class RecruitingService(
     private static RecruitmentConversionEditorModel CreateConversionEditor(
         RecruitmentApplication application,
         RecruitmentSupportAssignmentsModel supportAssignments,
-        WorkforceProfile? workforceProfile)
+        WorkforceProfile? workforceProfile, Party? candidateParty)
     {
         return new RecruitmentConversionEditorModel
         {
             ApplicationId = application.Id,
+            Original = candidateParty is null ? null : new(RecruitmentEditValues.Application(application),
+                WorkforceEditValues.Profile(candidateParty.Id, candidateParty.PartyType, workforceProfile), candidateParty.LifecycleStatus, candidateParty.UpdatedAtUtc),
             WorkforceKind = workforceProfile?.WorkforceKind ?? WorkforceKind.Employee,
             JobTitle = workforceProfile?.JobTitle ?? application.DesiredRole,
             Discipline = workforceProfile?.Discipline ?? string.Empty,
@@ -965,226 +434,13 @@ public sealed partial class RecruitingService(
         };
     }
 
-    private async Task<Result<Guid>> ResolveCandidatePartyIdAsync(
-        CrmHrDbContext dbContext,
-        RecruitmentApplicationEditorModel model,
-        CancellationToken cancellationToken)
-    {
-        if (model.PartyId.HasValue)
-        {
-            var candidateError = await ValidateRecruitmentCandidatePartyAsync(
-                dbContext,
-                model.PartyId.Value,
-                cancellationToken);
-            return candidateError is null
-                ? Result<Guid>.Success(model.PartyId.Value)
-                : Result<Guid>.Failure(candidateError);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.CandidateName))
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose an existing candidate or provide a new candidate name.", "crmhr.recruiting.candidate-required"));
-        }
-
-        var savePartyResult = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
-        {
-            PartyType = PartyType.Person,
-            LifecycleStatus = PartyLifecycleStatus.Candidate,
-            DisplayName = model.CandidateName.Trim(),
-            Summary = model.CandidateSummary.Trim(),
-            LastChangedBy = NormalizeActor(model.LastChangedBy),
-            Roles =
-            [
-                new PartyRoleAssignmentEditorModel
-                {
-                    RoleKind = PartyRoleKind.Candidate,
-                    Title = "Candidate",
-                    IsPrimary = true
-                }
-            ],
-            ContactPoints = BuildCandidateContacts(model)
-        }, cancellationToken);
-
-        return savePartyResult.IsSuccess
-            ? Result<Guid>.Success(savePartyResult.Value)
-            : Result<Guid>.Failure(savePartyResult.Errors.ToArray());
-    }
-
-    private static List<PartyContactPointEditorModel> BuildCandidateContacts(RecruitmentApplicationEditorModel model)
-    {
-        var contacts = new List<PartyContactPointEditorModel>();
-        if (!string.IsNullOrWhiteSpace(model.CandidateEmail))
-        {
-            var email = model.CandidateEmail.Trim();
-            contacts.Add(new PartyContactPointEditorModel
-            {
-                ContactType = PartyContactType.Email,
-                Label = "Primary email",
-                Value = email,
-                NormalizedValue = email.ToLowerInvariant(),
-                IsPrimary = true,
-                IsPublic = true
-            });
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.CandidatePhone))
-        {
-            contacts.Add(new PartyContactPointEditorModel
-            {
-                ContactType = PartyContactType.Phone,
-                Label = "Primary phone",
-                Value = model.CandidatePhone.Trim(),
-                NormalizedValue = model.CandidatePhone.Trim(),
-                IsPrimary = string.IsNullOrWhiteSpace(model.CandidateEmail),
-                IsPublic = true
-            });
-        }
-
-        return contacts;
-    }
-
-    private async Task<Error?> ValidateApplicationPartiesAsync(
-        CrmHrDbContext dbContext,
-        RecruitmentApplicationEditorModel model,
-        Guid candidatePartyId,
-        CancellationToken cancellationToken)
-    {
-        if (model.RecruiterPartyId.HasValue)
-        {
-            var recruiterError = await ValidatePeopleOnlyPartyAsync(
-                dbContext,
-                model.RecruiterPartyId.Value,
-                "Recruiter must reference an existing person.",
-                "crmhr.recruiting.recruiter-invalid",
-                cancellationToken);
-            if (recruiterError is not null)
-            {
-                return recruiterError;
-            }
-        }
-
-        if (model.HiringManagerPartyId.HasValue)
-        {
-            if (model.HiringManagerPartyId.Value == candidatePartyId)
-            {
-                return Error.Validation("Candidate cannot be the hiring manager.", "crmhr.recruiting.hiring-manager-self");
-            }
-
-            var hiringManagerError = await ValidatePeopleOnlyPartyAsync(
-                dbContext,
-                model.HiringManagerPartyId.Value,
-                "Hiring manager must reference an existing person.",
-                "crmhr.recruiting.hiring-manager-invalid",
-                cancellationToken);
-            if (hiringManagerError is not null)
-            {
-                return hiringManagerError;
-            }
-        }
-
-        if (model.TargetUnitPartyId.HasValue)
-        {
-            var targetUnit = await dbContext.Set<Party>()
-                .Select(item => new
-                {
-                    item.Id,
-                    item.PartyType
-                })
-                .SingleOrDefaultAsync(item => item.Id == model.TargetUnitPartyId.Value, cancellationToken);
-            if (targetUnit is null ||
-                (targetUnit.PartyType != PartyType.Organization && targetUnit.PartyType != PartyType.OrganizationUnit))
-            {
-                return Error.Validation("Target unit must reference an existing organization or organization unit.", "crmhr.recruiting.target-unit-invalid");
-            }
-        }
-
-        return null;
-    }
-
-    private static async Task<Error?> ValidateRecruitmentCandidatePartyAsync(
-        CrmHrDbContext dbContext,
-        Guid partyId,
-        CancellationToken cancellationToken)
-    {
-        var party = await dbContext.Set<Party>()
-            .AsNoTracking()
-            .Where(item => item.Id == partyId)
-            .Select(item => new
-            {
-                item.PartyType
-            })
-            .SingleOrDefaultAsync(cancellationToken);
-        return party is null || party.PartyType is not PartyType.Person and not PartyType.AiAgent
-            ? Error.Validation(
-                "Candidate must reference an existing person or AI agent.",
-                "crmhr.recruiting.candidate-invalid")
-            : null;
-    }
-
-    private static async Task<Error?> ValidatePeopleOnlyPartyAsync(
-        CrmHrDbContext dbContext,
-        Guid partyId,
-        string message,
-        string code,
-        CancellationToken cancellationToken)
-    {
-        var party = await dbContext.Set<Party>()
-            .AsNoTracking()
-            .Select(item => new
-            {
-                item.Id,
-                item.PartyType
-            })
-            .SingleOrDefaultAsync(item => item.Id == partyId, cancellationToken);
-        return party is null || party.PartyType != PartyType.Person
-            ? Error.Validation(message, code)
-            : null;
-    }
-
     private sealed record RecruitmentCandidateBindingProjection(
         Guid? TechnicalAgentId,
         AiResourceBindingStatus BindingStatus);
 
     private async Task<RecruitmentSupportAssignmentsModel> LoadSupportAssignmentsAsync(
-        CrmHrDbContext dbContext,
-        Guid partyId,
-        CancellationToken cancellationToken)
-    {
-        var relationships = await dbContext.Set<PartyRelationship>()
-            .Where(item => (item.SourcePartyId == partyId && item.RelationshipKind == PartyRelationshipKind.ManagedBy) ||
-                           (item.TargetPartyId == partyId &&
-                            item.RelationshipKind == PartyRelationshipKind.Supports &&
-                            (item.Notes == SupportBuddyLabel || item.Notes == SupportMentorLabel)))
-            .ToListAsync(cancellationToken);
-        if (relationships.Count == 0)
-        {
-            return new RecruitmentSupportAssignmentsModel(partyId, null, string.Empty, null, string.Empty, null, string.Empty);
-        }
-
-        var relatedPartyIds = relationships
-            .SelectMany(item => new[] { item.SourcePartyId, item.TargetPartyId })
-            .Where(item => item != partyId)
-            .Distinct()
-            .ToList();
-        var partyNames = relatedPartyIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : await dbContext.Set<Party>()
-                .Where(item => relatedPartyIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
-
-        var manager = relationships.FirstOrDefault(item => item.RelationshipKind == PartyRelationshipKind.ManagedBy);
-        var buddy = relationships.FirstOrDefault(item => item.RelationshipKind == PartyRelationshipKind.Supports && item.Notes == SupportBuddyLabel);
-        var mentor = relationships.FirstOrDefault(item => item.RelationshipKind == PartyRelationshipKind.Supports && item.Notes == SupportMentorLabel);
-
-        return new RecruitmentSupportAssignmentsModel(
-            partyId,
-            manager?.TargetPartyId,
-            manager is null ? string.Empty : partyNames.GetValueOrDefault(manager.TargetPartyId) ?? string.Empty,
-            buddy?.SourcePartyId,
-            buddy is null ? string.Empty : partyNames.GetValueOrDefault(buddy.SourcePartyId) ?? string.Empty,
-            mentor?.SourcePartyId,
-            mentor is null ? string.Empty : partyNames.GetValueOrDefault(mentor.SourcePartyId) ?? string.Empty);
-    }
+        CrmHrDbContext dbContext, Guid partyId, CancellationToken cancellationToken) =>
+        RecruitmentSupportRelationshipPolicy.ToModel(partyId, await PartyRelationshipService.ReadAsync(dbContext, partyId, cancellationToken, supportOnly: true));
 
     private async Task<IReadOnlyList<RecruitmentStageHistoryItemModel>> LoadStageHistoryAsync(
         CrmHrDbContext dbContext,
@@ -1260,38 +516,6 @@ public sealed partial class RecruitingService(
         }
     }
 
-    private async Task AppendAuditEntryAsync(
-        CrmHrDbContext dbContext,
-        Guid applicationId,
-        string action,
-        string summary,
-        string detailJson,
-        string actor,
-        CancellationToken cancellationToken)
-    {
-        await dbContext.Set<CrmHrAuditEntry>().AddAsync(new CrmHrAuditEntry
-        {
-            EntityType = RecruitmentApplicationEntityType,
-            EntityId = applicationId,
-            Action = action,
-            Summary = summary.Trim(),
-            DetailJson = string.IsNullOrWhiteSpace(detailJson) ? "{}" : detailJson,
-            Actor = actor,
-            CreatedAtUtc = DateTimeOffset.UtcNow
-        }, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private static string BuildStageAuditDetail(RecruitmentStage? previousStage, RecruitmentStage stage, string notes)
-    {
-        return JsonSerializer.Serialize(new
-        {
-            PreviousStage = previousStage?.ToString(),
-            Stage = stage.ToString(),
-            Notes = notes?.Trim() ?? string.Empty
-        });
-    }
-
     private static string ResolvePartyDisplayName(IReadOnlyDictionary<Guid, PartyOptionModel> partyMap, Guid? partyId)
     {
         return partyId.HasValue && partyMap.TryGetValue(partyId.Value, out var party)
@@ -1312,21 +536,6 @@ public sealed partial class RecruitingService(
         }
     }
 
-    private static string NormalizeActor(string? actor)
-    {
-        return string.IsNullOrWhiteSpace(actor) ? "crm-hr-ui" : actor.Trim();
-    }
-
-    private static string BuildRecruitingRoute(Guid applicationId)
-    {
-        return $"/crm-hr/recruiting?applicationId={applicationId:D}";
-    }
-
-    private static string BuildRecruitingRouteForParty(Guid partyId)
-    {
-        return $"/crm-hr/recruiting?partyId={partyId:D}";
-    }
-
     private static DateTimeOffset? ToUtcDate(DateOnly? value)
     {
         return value.HasValue
@@ -1339,24 +548,6 @@ public sealed partial class RecruitingService(
         return value.HasValue
             ? DateOnly.FromDateTime(value.Value.UtcDateTime)
             : null;
-    }
-
-    private static DateTimeOffset ToUtcDateTimeOffset(DateTime value)
-    {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => new DateTimeOffset(value),
-            DateTimeKind.Local => new DateTimeOffset(value).ToUniversalTime(),
-            _ => new DateTimeOffset(value, TimeZoneInfo.Local.GetUtcOffset(value)).ToUniversalTime()
-        };
-    }
-
-    private async Task<string> LoadPartyDisplayNameAsync(CrmHrDbContext dbContext, Guid partyId, CancellationToken cancellationToken)
-    {
-        return await dbContext.Set<Party>()
-            .Where(item => item.Id == partyId)
-            .Select(item => item.DisplayName)
-            .SingleAsync(cancellationToken);
     }
 
     private async Task<string> LoadCandidateSummaryAsync(CrmHrDbContext dbContext, Guid partyId, CancellationToken cancellationToken)

@@ -1,6 +1,8 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components.Presentation;
+using CanDoItAll.Conversations.Components;
+using CanDoItAll.Components.OverlayLib;
 using CanDoItAll.Conversations.Shell;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,6 +11,55 @@ namespace CanDoItAll.Tests.Components.Conversations;
 
 public sealed class ConversationShellHostTests
 {
+    [Fact]
+    public async Task Focusing_a_minimized_window_reveals_its_guard_without_replacing_the_editor_or_geometry() {
+        var chat = RecordingContributor.Create("simple-chats", ConversationParticipantKind.Chat, "chat:beta", "Chat Beta",
+            "chat-action", windowId: "chat-window", keepContentMounted: true);
+        using var context = CreateContext(chat);
+        var coordinator = context.Services.GetRequiredService<IConversationShellCoordinator>();
+        var cut = context.Render<ConversationShellHost>();
+        coordinator.FocusWindow("simple-chats", "chat-window");
+        cut.WaitForElement("[data-testid='simple-chats-focused-window']");
+        var content = cut.FindComponents<EmptyState>().Single(component => component.Instance.Title == "Chat Beta").Instance;
+        var window = cut.FindComponent<ConversationFloatingWindow>();
+        await cut.InvokeAsync(() => window.Instance.StateChanged.InvokeAsync(new OverlayWindowState {
+            IsVisible = true, IsMinimized = true, Left = 30, Top = 40, Width = 740, Height = 640
+        }));
+        Assert.True(window.Instance.State.IsMinimized);
+
+        coordinator.FocusWindow("simple-chats", "chat-window");
+
+        cut.WaitForAssertion(() => Assert.False(window.Instance.State.IsMinimized));
+        Assert.Same(content, cut.FindComponents<EmptyState>().Single(component => component.Instance.Title == "Chat Beta").Instance);
+        Assert.Equal(30, window.Instance.State.Left);
+        Assert.Equal(40, window.Instance.State.Top);
+        Assert.Equal(740, window.Instance.State.Width);
+        Assert.Equal(640, window.Instance.State.Height);
+    }
+
+    [Fact]
+    public void Retained_window_keeps_the_same_content_when_hidden_or_another_source_gets_focus() {
+        var chat = RecordingContributor.Create("simple-chats", ConversationParticipantKind.Chat, "chat:beta", "Chat Beta",
+            "chat-action", windowId: "chat-window", keepContentMounted: true);
+        var agent = RecordingContributor.Create("agents", ConversationParticipantKind.Agent, "agent:alpha", "Agent Alpha",
+            "agent-action", windowId: "agent-window");
+        using var context = CreateContext(chat, agent);
+        var coordinator = context.Services.GetRequiredService<IConversationShellCoordinator>();
+        var cut = context.Render<ConversationShellHost>();
+        coordinator.FocusWindow("simple-chats", "chat-window");
+        cut.WaitForElement("[data-testid='simple-chats-focused-window']");
+        var content = cut.FindComponents<EmptyState>().Single(component => component.Instance.Title == "Chat Beta").Instance;
+
+        coordinator.ClearFocusedWindow("simple-chats", "chat-window");
+        cut.WaitForAssertion(() => Assert.Same(content,
+            cut.FindComponents<EmptyState>().Single(component => component.Instance.Title == "Chat Beta").Instance));
+        Assert.True(cut.Find("[data-testid='simple-chats-focused-window']").ParentElement!.HasAttribute("hidden"));
+        coordinator.FocusWindow("agents", "agent-window");
+
+        cut.WaitForAssertion(() => Assert.Same(content,
+            cut.FindComponents<EmptyState>().Single(component => component.Instance.Title == "Chat Beta").Instance));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -235,7 +286,8 @@ public sealed class ConversationShellHostTests
             string displayName,
             string actionTestId,
             string? failureMessage = null,
-            string? windowId = null)
+            string? windowId = null,
+            bool keepContentMounted = false)
         {
             var participant = new ConversationParticipantPresentation(
                 new(participantKey),
@@ -272,7 +324,7 @@ public sealed class ConversationShellHostTests
                         {
                             [nameof(EmptyState.Title)] = displayName,
                             [nameof(EmptyState.Description)] = "Focused conversation content"
-                        })
+                        }, keepContentMounted: keepContentMounted)
                 ];
             return new(
                 sourceId,

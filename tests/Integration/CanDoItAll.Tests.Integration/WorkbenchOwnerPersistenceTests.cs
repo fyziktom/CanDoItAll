@@ -271,6 +271,12 @@ public sealed class WorkbenchOwnerPersistenceTests {
         public Guid PromptId;
     }
     private sealed class ObservedPromptMutation(IPromptGalleryMutationService inner, IServiceProvider services, CompletionObservation observation) : IPromptGalleryMutationService {
+        public Task<Result<PromptVersionPreparation>> StageUpdateAndVersionAsync(PromptGalleryDraft draft, PromptImportVersionRequest version, CancellationToken cancellationToken = default)
+            => inner.StageUpdateAndVersionAsync(draft, version, cancellationToken);
+        public Task<Result<PromptVersionPreparation>> StageCreateImportedVersionAsync(PromptGalleryImportRequest request, CancellationToken cancellationToken = default)
+            => inner.StageCreateImportedVersionAsync(request, cancellationToken);
+        public Task CompleteVersionAsync(PromptVersionPreparation preparation, CancellationToken cancellationToken = default)
+            => inner.CompleteVersionAsync(preparation, cancellationToken);
         public Task<Result<PromptDraftCreationPreparation>> StageCreateDraftAsync(PromptGalleryDraft draft, CancellationToken cancellationToken = default) => inner.StageCreateDraftAsync(draft, cancellationToken);
         public async Task CompleteDraftCreationAsync(PromptDraftCreationPreparation preparation, CancellationToken cancellationToken = default) {
             var projectId = preparation.ProjectId!.Value;

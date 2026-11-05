@@ -38,7 +38,7 @@ public sealed class CrmHrHomePresentationMapperTests
 
         Assert.Equal(["Zed", "Dana Reyes"], overview.DirectoryPreview.Select(item => item.DisplayName));
         Assert.Null(overview.DirectoryPreview[0].Summary);
-        Assert.Equal("Operational summary that must not reach the sensitive card", overview.DirectoryPreview[1].Summary);
+        Assert.Null(overview.DirectoryPreview[1].Summary);
         Assert.True(overview.DirectoryPreview[1].IsSensitive);
         Assert.Equal("Person", overview.DirectoryPreview[1].TypeLabel);
         Assert.Equal("Active", overview.DirectoryPreview[1].LifecycleLabel);

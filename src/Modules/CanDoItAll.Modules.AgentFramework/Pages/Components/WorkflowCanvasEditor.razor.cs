@@ -12,6 +12,7 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 public partial class WorkflowCanvasEditor : IDisposable {
     [Inject] public IWorkflowCatalogService CatalogService { get; set; } = default!;
+    [Inject] public WorkflowChanges Changes { get; set; } = default!;
     [Inject] public IWorkflowExecutorCatalog ExecutorCatalog { get; set; } = default!;
     [Inject] public IWorkflowRuntimeBackendCatalog RuntimeBackendCatalog { get; set; } = default!;
     [Inject] public IWorkflowComponentLibraryService ComponentLibrary { get; set; } = default!;
@@ -22,11 +23,17 @@ public partial class WorkflowCanvasEditor : IDisposable {
     [Inject] public IPromptGalleryService PromptGallery { get; set; } = default!;
     [Inject] public ILogger<WorkflowCanvasEditor> Logger { get; set; } = default!;
     [Parameter] public WorkflowDefinition? Definition { get; set; }
+    [Parameter] public WorkflowHeadObservation? HeadObservation { get; set; }
+    [Parameter, EditorRequired] public Func<bool, CancellationToken, ValueTask> Authorize { get; set; }
+        = static (_, _) => ValueTask.FromException(new UnauthorizedAccessException("Native workflow editing access is unavailable."));
     [Parameter] public IReadOnlyList<LlmCallComponent> Components { get; set; } = [];
     [Parameter] public IReadOnlyList<WorkflowProviderOption> ProviderOptions { get; set; } = [];
+    [Parameter] public bool LibraryRefreshRequired { get; set; }
+    [Parameter] public EventCallback LibraryRefreshRequested { get; set; }
     [Parameter] public CancellationToken OwnerToken { get; set; }
     [Parameter] public EventCallback NewDraftRequested { get; set; }
     [Parameter] public EventCallback<WorkflowDefinition> DefinitionSaved { get; set; }
+    [Parameter] public EventCallback<WorkflowDefinition> DefinitionPulled { get; set; }
     [Parameter] public EventCallback<WorkflowRunSnapshot> PreviewRunCompleted { get; set; }
     [Parameter] public EventCallback ComponentLibraryChanged { get; set; }
     [Parameter] public EventCallback<WorkflowAgentChatNodeSelection?> SelectedNodeChanged { get; set; }
@@ -43,8 +50,8 @@ public partial class WorkflowCanvasEditor : IDisposable {
 
     protected override async Task OnInitializedAsync() {
         lifetime = CancellationTokenSource.CreateLinkedTokenSource(OwnerToken);
-        DocumentOwner = new(CatalogService, Logger);
-        BindingOwner = new(PromptGallery, ComponentLibrary, Logger);
+        DocumentOwner = new(CatalogService, Logger, Changes, Authorize);
+        BindingOwner = new(PromptGallery, ComponentLibrary, Logger, Changes, Authorize);
         PreviewOwner = new(TestRunner, StructureAuthority, ProjectStructureGateway, ExecutorCatalog, Logger);
         try {
             var result = await SecretService.ListForPickerAsync();

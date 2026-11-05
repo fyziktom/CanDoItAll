@@ -1,0 +1,55 @@
+namespace CanDoItAll.Modules.CrmHr;
+
+public static class CrmHrEditingErrorCodes {
+    public const string WorkforceOriginalRequired = "crmhr.workforce.original-required";
+    public const string WorkforceConflict = "crmhr.workforce.conflict";
+    public const string WorkforceIdentityInvalid = "crmhr.workforce.identity-invalid";
+    public const string WorkforcePartyTypeConflict = "crmhr.workforce.party-type-conflict";
+    public const string SkillOriginalRequired = "crmhr.skills.original-required";
+    public const string SkillConflict = "crmhr.skills.conflict";
+    public const string SkillIdentityInvalid = "crmhr.skills.identity-invalid";
+    public const string CapacityOriginalRequired = "crmhr.capacity.original-required";
+    public const string CapacityConflict = "crmhr.capacity.conflict";
+    public const string CapacityIdentityInvalid = "crmhr.capacity.identity-invalid";
+
+    public const string PartyOriginalRequired = "crmhr.party.original-required";
+    public const string PartyConflict = "crmhr.party.concurrency-conflict";
+    public const string PartyChildIdentityInvalid = "crmhr.party.child-identity-invalid";
+    public const string PartyMergeOriginalRequired = "crmhr.party.merge-original-required";
+    public const string PartyMergeConflict = "crmhr.party.merge-conflict";
+    public const string PartyMergeScopeLimit = "crmhr.party.merge-scope-limit";
+    public const string PartyMergeTechnicalOwner = "crmhr.party.merge-technical-owner";
+    public const string PartyMergeAccountConnection = "crmhr.party.merge-account-connection";
+    public const string PartyImportConflict = "crmhr.party.import-conflict";
+    public const string PartyImportIntentInvalid = "crmhr.party.import-intent-invalid";
+    public const string PartyAffiliationTypeConflict = "crmhr.party.affiliation-type-conflict";
+    public const string AccountOriginalRequired = "crmhr.crm.account-original-required";
+    public const string AccountConflict = "crmhr.crm.account-concurrency-conflict";
+    public const string PartyOutcomeUnknown = "crmhr.party.outcome-unknown";
+    public const string AccountOutcomeUnknown = "crmhr.crm.account-outcome-unknown";
+    public const string EditingAccessDenied = "crmhr.editing.access-denied";
+    public const string AffiliationConflict = "crmhr.affiliation.concurrency-conflict";
+    public const string AffiliationPersistenceConflict = "crmhr.affiliation.persistence-conflict";
+    public const string AffiliationOutcomeUnknown = "crmhr.affiliation.outcome-unknown";
+    public const string RelationshipOriginalRequired = "crmhr.party.relationship-original-required";
+    public const string RelationshipConflict = "crmhr.party.relationship-concurrency-conflict";
+    public const string RelationshipIdentityInvalid = "crmhr.party.relationship-identity-invalid";
+    public const string RelationshipOutcomeUnknown = "crmhr.party.relationship-outcome-unknown";
+    public const string RelationshipSupportTypeConflict = "crmhr.party.relationship-support-type-conflict";
+    public const string OpportunityPartyTypeConflict = "crmhr.crm.opportunity-party-type-conflict";
+    public const string OpportunityConflict = "crmhr.crm.opportunity-concurrency-conflict";
+    public const string OpportunityOutcomeUnknown = "crmhr.crm.opportunity-outcome-unknown";
+    public const string OpportunityChildIdentityInvalid = "crmhr.crm.opportunity-child-identity-invalid";
+    public const string OpportunityProjectOriginalRequired = "crmhr.crm.opportunity-project-observation-required";
+    public const string OpportunityProjectStale = "crmhr.crm.opportunity-project-stale";
+    public const string OpportunityStageNoteWithoutTransition = "crmhr.crm.opportunity-stage-note-without-transition";
+    public const string OpportunityConversionBasisRequired = "crmhr.crm.opportunity-conversion-project-basis-required";
+    public const string OpportunityConversionConflict = "crmhr.crm.opportunity-conversion-concurrency-conflict";
+    public const string ConnectionOriginalRequired = "crmhr.crm.connection-original-required";
+    public const string ConnectionConflict = "crmhr.crm.connection-concurrency-conflict";
+    public const string ConnectionIdentityInvalid = "crmhr.crm.connection-identity-invalid";
+    public const string ConnectionProjectOriginalRequired = "crmhr.crm.connection-project-original-required";
+    public const string AccountPartyTypeConflict = "crmhr.crm.account-party-type-conflict";
+    public const string InteractionInputInvalid = "crmhr.crm.interaction-input-invalid";
+    public const string InteractionReferenceInvalid = "crmhr.crm.interaction-reference-invalid";
+}

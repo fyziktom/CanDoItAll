@@ -17,14 +17,17 @@ internal sealed class AuthorizedFileContentSource(
     private readonly FileAccessHandleOptions _options = ValidateOptions(options.Value);
     private FileReference? _boundFile;
     private FileAccessOperation _operation = FileAccessOperation.View;
+    private Func<CancellationToken, ValueTask>? _authorizeRead;
 
     public AuthorizedFileContentSource For(
         FileReference file,
-        FileAccessOperation operation = FileAccessOperation.View)
+        FileAccessOperation operation = FileAccessOperation.View,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
         => new(coordinator, contextProvider, drivers, options, logger)
         {
             _boundFile = file,
-            _operation = operation
+            _operation = operation,
+            _authorizeRead = authorizeRead
         };
 
     public async ValueTask<FileContentLease> OpenReadAsync(
@@ -32,6 +35,9 @@ internal sealed class AuthorizedFileContentSource(
         CancellationToken cancellationToken = default)
     {
         EnsureBoundFile(request.File);
+        if (_authorizeRead is not null) {
+            await _authorizeRead(cancellationToken);
+        }
         if (request.Offset > _options.MaximumContentBytes)
         {
             throw TooLarge();
@@ -49,26 +55,60 @@ internal sealed class AuthorizedFileContentSource(
         }
 
         IStorageDriver driver = drivers.Resolve(authorized.Storage.ProviderKind);
+        var revisioned = driver as IStorageRevisionedContentDriver;
+        StorageContentRevision? revision = revisioned is null ? null
+            : await revisioned.GetRevisionAsync(authorized.Storage, authorized.Reference, cancellationToken);
         Stream stream = await driver.OpenReadAsync(authorized.Storage, authorized.Reference, cancellationToken);
         try
         {
+            if (stream.CanSeek && stream.Length > _options.MaximumContentBytes) {
+                throw TooLarge();
+            }
             await PositionAsync(stream, request.Offset, cancellationToken);
             long maximumLength = Math.Min(
                 request.Length ?? _options.MaximumContentBytes,
                 _options.MaximumContentBytes);
             var bounded = new LengthLimitedReadStream(stream, maximumLength);
-            StorageContentRevision? revision = driver is IStorageRevisionedContentDriver revisioned
-                ? await revisioned.GetRevisionAsync(authorized.Storage, authorized.Reference, cancellationToken)
-                : null;
+            Stream content = bounded;
+            long? length = ResolveLength(authorized.Reference.ContentLength, request.Offset, maximumLength);
+            if (revisioned is not null || _authorizeRead is not null) {
+                var snapshot = new MemoryStream();
+                try {
+                    await bounded.CopyToAsync(snapshot, cancellationToken);
+                    if (_authorizeRead is not null) {
+                        await _authorizeRead(cancellationToken);
+                    }
+                    if (snapshot.Length == _options.MaximumContentBytes &&
+                        await stream.ReadAsync(new byte[1], cancellationToken) > 0) {
+                        throw TooLarge();
+                    }
+                    if (revisioned is not null && revision != await revisioned.GetRevisionAsync(authorized.Storage, authorized.Reference, cancellationToken)) {
+                        throw new FileAccessDeniedException(FileAccessFailureCode.SourceUnavailable,
+                            "The file changed while it was being read. Reopen it to load a coherent revision.");
+                    }
+                    await bounded.DisposeAsync();
+                    var currentContext = await contextProvider.GetCurrentAsync(cancellationToken);
+                    await coordinator.ResolveAsync(request.File, currentContext, _operation, cancellationToken);
+                    if (_authorizeRead is not null) {
+                        await _authorizeRead(cancellationToken);
+                    }
+                    snapshot.Position = 0;
+                    content = snapshot;
+                    length = snapshot.Length;
+                } catch {
+                    await snapshot.DisposeAsync();
+                    throw;
+                }
+            }
             logger.LogInformation(
                 "Authorized file content opened. Handle={HandleHash} Actor={ActorHash} CorrelationId={CorrelationId}.",
                 FileAccessLogIdentity.Hash(request.File.Value),
                 FileAccessLogIdentity.Hash(context.ActorId.Value),
                 context.CorrelationId.Value);
             return new FileContentLease(
-                bounded,
+                content,
                 authorized.Reference.ContentType,
-                ResolveLength(authorized.Reference.ContentLength, request.Offset, maximumLength),
+                length,
                 revision is { } value ? new FileContentRevision(value.Value) : null);
         }
         catch

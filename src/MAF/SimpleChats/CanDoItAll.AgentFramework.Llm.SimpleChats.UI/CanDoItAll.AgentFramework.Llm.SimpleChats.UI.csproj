@@ -8,5 +8,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="../../../UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
+    <ProjectReference Include="../../../UI/CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
   </ItemGroup>
 </Project>

@@ -8,7 +8,7 @@ using System.Collections.Concurrent;
 
 namespace CanDoItAll.Tests.Unit.Storage;
 
-public sealed class FileAccessAuthorizationTests
+public sealed partial class FileAccessAuthorizationTests
 {
     [Fact]
     public async Task HandleResolve_rechecks_current_semantic_binding()
@@ -621,6 +621,8 @@ public sealed class FileAccessAuthorizationTests
         public byte[] Content { get; private set; } = "initial-content"u8.ToArray();
 
         public string Revision { get; private set; } = "r1";
+        public bool ReplaceAfterReadOpened { get; set; }
+        public Action? AfterReadOpened { get; set; }
 
         public FakeSaveOutcome SaveOutcome { get; set; }
 
@@ -643,7 +645,18 @@ public sealed class FileAccessAuthorizationTests
             CancellationToken cancellationToken = default)
         {
             OpenReadCalls++;
-            return Task.FromResult<Stream>(new MemoryStream(Content, writable: false));
+            Stream stream = new MemoryStream(Content, writable: false);
+            if (ReplaceAfterReadOpened) {
+                ReplaceAfterReadOpened = false;
+                SetPeerContent("peer-content"u8.ToArray());
+            }
+            AfterReadOpened?.Invoke();
+            return Task.FromResult(stream);
+        }
+
+        public void SetPeerContent(byte[] content) {
+            Content = content;
+            Revision = "r2";
         }
 
         public Task<StorageContentRevision?> GetRevisionAsync(
@@ -652,20 +665,22 @@ public sealed class FileAccessAuthorizationTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<StorageContentRevision?>(new StorageContentRevision(Revision));
 
-        public Task<StorageRevisionedWriteResult> ReplaceAsync(
+        public async Task<StorageRevisionedWriteResult> ReplaceAsync(
             StorageDriverInput storage,
             StorageRevisionedWriteRequest request,
             CancellationToken cancellationToken = default)
         {
+            if (request.AuthorizeCommit is not null) {
+                await request.AuthorizeCommit(cancellationToken);
+            }
             ReplaceCalls++;
-            return SaveOutcome switch
-            {
+            return await (SaveOutcome switch {
                 FakeSaveOutcome.Conflict => Task.FromException<StorageRevisionedWriteResult>(
                     new StorageContentConflictException(request.ExpectedRevision, new StorageContentRevision("external"))),
                 FakeSaveOutcome.Failure => Task.FromException<StorageRevisionedWriteResult>(new IOException("storage failed")),
                 FakeSaveOutcome.Cancelled => WaitForCancellationAsync(cancellationToken),
                 _ => Persist(request)
-            };
+            });
         }
 
         public void ResetEffectCalls()

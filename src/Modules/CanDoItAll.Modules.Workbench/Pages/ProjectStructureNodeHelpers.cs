@@ -29,22 +29,7 @@ internal static class ProjectStructureNodeHelpers
     public static bool IsCanvasStatusMutable(ProjectStructureNode node)
         => node.Id.StartsWith("custom:", StringComparison.Ordinal);
 
-    public static string BuildSimpleNoteTitle(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return "New note";
-        }
-
-        var normalized = text
-            .Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault();
-        normalized = string.IsNullOrWhiteSpace(normalized)
-            ? text.Trim()
-            : normalized.Trim();
-        return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
-    }
+    public static string BuildSimpleNoteTitle(string? text) => ProjectStructureNodeEditor.BuildSimpleNoteTitle(text);
 
     public static string ResolveProgressLabel(ProjectStructureNode node)
         => node.ProgressPercent > 0 || string.Equals(node.ProgressMode, "progress", StringComparison.OrdinalIgnoreCase)

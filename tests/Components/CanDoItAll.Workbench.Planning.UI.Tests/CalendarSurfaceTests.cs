@@ -43,7 +43,8 @@ public sealed class CalendarSurfaceTests {
                     continue;
                 }
                 Assert.True(reference.Name.StartsWith("CanDoItAll.Components.", StringComparison.Ordinal) || reference.Name is
-                    "CanDoItAll.AppComponents.RecordBrowsing" or "CanDoItAll.Modules.Workbench.Planning.Contracts", reference.Name);
+                    "CanDoItAll.AppComponents.RecordBrowsing" or "CanDoItAll.Modules.Workbench.Planning.Contracts" or
+                    "CanDoItAll.Editing" or "CanDoItAll.Editing.UI", reference.Name);
                 pending.Enqueue(Assembly.Load(reference));
             }
         }

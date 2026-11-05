@@ -1,4 +1,5 @@
 @inject IPartyRecordQueryService PartyRecordQueryService
+@using CanDoItAll.Editing.UI
 
 <PagedRecordBrowser TKey="Guid"
                     TFilter="PartyRecordScope"
@@ -10,6 +11,7 @@
                     LoadFailed="@LoadFailed"
                     Query="@Query"
                     QueryChanged="@QueryChanged"
+                    RefreshVersion="@RefreshVersion"
                     PageSize="@PageSize"
                     ResultsScrollMode="@ResultsScrollMode"
                     GridMode="@GridMode"
@@ -26,6 +28,8 @@
                     DataTestId="@DataTestId" />
 
 @code {
+    [CascadingParameter] public EditingReadAdmission? ReadAdmission { get; set; }
+    [Parameter] public long RefreshVersion { get; set; }
     private IReadOnlyList<PagedRecordFilterOption<PartyRecordScope>> scopeOptions = [];
     private PartyRecordScope? configuredAllowedScope;
     private PartyRecordScope? configuredInitialScope;
@@ -100,6 +104,9 @@
         PagedRecordRequest<PartyRecordScope> request,
         CancellationToken cancellationToken)
     {
+        if (ReadAdmission is not null) {
+            await ReadAdmission.AuthorizeAsync(cancellationToken);
+        }
         var scope = PartyRecordPresentation.ConstrainScope(request.Filter, AllowedScope);
         var result = await PartyRecordQueryService.SearchAsync(
             new PartyRecordQuery(
@@ -112,6 +119,10 @@
                 IncludeArchived,
                 Population),
             cancellationToken);
+
+        if (ReadAdmission is not null) {
+            await ReadAdmission.AuthorizeAsync(cancellationToken);
+        }
 
         var options = result.Items
             .Select(PartyRecordPresentation.ToOption)

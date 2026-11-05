@@ -18,6 +18,24 @@
                                 </Cluster>
                             </Split>
 
+                            <FormField Text="Search workflows">
+                                <TextBox Value="@Presentation.Search" ValueChanged="SearchAsync"
+                                         Placeholder="Name or description" Disabled="Presentation.IsBusy"
+                                         data-testid="workflows-catalog-search" />
+                            </FormField>
+                            <Cluster Gap="LayoutGap.Small">
+                                <Button Icon="chevron_left" aria-label="Previous workflow page"
+                                        Click="@(() => PageAsync(-1))" Disabled="@(Presentation.IsBusy || !Presentation.Page.HasPrevious)"
+                                        data-testid="workflows-catalog-previous" />
+                                <TextBlock Value="@Presentation.Page.Text" data-testid="workflows-catalog-page" />
+                                <Button Icon="chevron_right" aria-label="Next workflow page"
+                                        Click="@(() => PageAsync(1))" Disabled="@(Presentation.IsBusy || !Presentation.Page.HasNext)"
+                                        data-testid="workflows-catalog-next" />
+                            </Cluster>
+                            @if (Presentation.ReadError.Length > 0) {
+                                <Alert AlertStyle="AlertStyle.Warning" data-testid="workflows-catalog-read-error">@Presentation.ReadError</Alert>
+                            }
+
                             @if (Presentation.DefinitionCount == 0) {
                                 <EmptyState Eyebrow="No workflows"
                                             Title="Create a starter workflow"
@@ -120,4 +138,6 @@
     private Task ToggleTreeAsync(string key) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.ToggleTree, TreeKey: new(key)));
     private Task OpenTemplatesAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.OpenTemplates));
     private Task PublishAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.Publish, Presentation.Definition?.Id));
+    private Task SearchAsync(string text) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.CatalogSearch, Text: text));
+    private Task PageAsync(int delta) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.CatalogPage, Delta: delta));
 }

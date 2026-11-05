@@ -118,6 +118,30 @@ public sealed class DataSourcesOwnerTests {
     }
 
     [Fact]
+    public async Task Schema_health_observes_system_row_versions_and_still_refuses_a_missing_user_column() {
+        await using var environment = CanDoItAllTestEnvironment.Create("data-sources-system-columns");
+        await using var services = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(environment);
+        var profiles = services.GetRequiredService<IDatabaseProfileService>();
+        var saved = await profiles.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            environment.CreatePostgreSqlProfile("schema-health"), "Schema health"));
+        Assert.True(saved.IsSuccess);
+        var profile = services.GetRequiredService<IDatabaseProfileRuntimeAccessor>().ResolveProfile(saved.Value);
+        await services.GetRequiredService<IAppDatabaseBootstrapper>().EnsureProfileReadyAsync(profile);
+        await using var scope = services.CreateAsyncScope();
+        var owner = Owner(scope.ServiceProvider);
+        var current = await owner.ReadSchemaAsync(saved.Value, CancellationToken.None);
+        Assert.True(current.Status == SchemaStatus.Current, string.Join(Environment.NewLine, current.SchemaIssues));
+        Assert.Empty(current.PendingMigrations);
+        Assert.Empty(current.SchemaIssues);
+
+        await using var database = await services.GetRequiredService<IProfileAppDbContextFactory>().CreateDbContextForProfileAsync(profile);
+        await database.Database.ExecuteSqlRawAsync("""ALTER TABLE "CrmHr_PartyRelationships" DROP COLUMN "Notes";""");
+        var missing = await owner.ReadSchemaAsync(saved.Value, CancellationToken.None);
+        Assert.Equal(SchemaStatus.NeedsMigration, missing.Status);
+        Assert.Contains("Missing column public.CrmHr_PartyRelationships.Notes", missing.SchemaIssues);
+    }
+
+    [Fact]
     public async Task Source_revoked_after_preview_refuses_the_original_closed_transfer_without_target_progress() {
         await using var environment = CanDoItAllTestEnvironment.Create("data-sources-revoked");
         await using var services = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(environment);
@@ -148,7 +172,10 @@ public sealed class DataSourcesOwnerTests {
         var original = session.Transfer!;
         var key = new TransferGroupKey(scope.ServiceProvider.GetServices<IDatabaseTransferHandler>().OfType<WorkspaceDefaultProviderDatabaseTransferHandler>().Single().Descriptor.Key);
         original.Select(key, true);
-        Assert.True(original.CanTransfer);
+        Assert.True(original.CanTransfer,
+            $"Transfer prerequisites: sourceIsA={original.SourceId == a.Value}; sourceSchema={original.SourceHealth?.Status}; " +
+            $"targetSchema={original.TargetHealth?.Status}; dispatch={ledger.CanDispatch}; selected={original.IsSelected(key)}; " +
+            $"available={original.Items.Any(item => item.Descriptor.Key == key && item.IsAvailable)}; message={original.Message}");
         var pending = original.TransferAsync();
         await held.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
         try {

@@ -102,13 +102,19 @@ public partial class ProjectStructurePage
                 await TrackAuthoringOperationAsync(HandleContextActionAsync(context.Request));
                 break;
             case StructureComposerOpenedIntent opened:
-                CaptureComposer(opened.Opening);
+                await CaptureComposerAsync(opened.Opening);
                 break;
             case StructureComposerClosedIntent closed:
                 composerOpenings.Remove(closed.OpeningId);
                 if (composerOpening?.Ownership.Id == closed.OpeningId) {
+                    if (composerOpening.Session is { } session) {
+                        await session.DisposeAsync();
+                    }
                     composerOpening = null;
                 }
+                break;
+            case StructureComposerComparisonIntent comparison:
+                await CompareComposerAsync(comparison.Draft);
                 break;
             case StructureCreateIntent create:
                 await HandleCreateActionAsync(create.Request);
@@ -160,6 +166,14 @@ public partial class ProjectStructurePage
         _ => Task.CompletedTask
     };
 
+    private Task HandleStructureInboxChangedAsync() {
+        if (composerOpening?.Session is { } session) {
+            session.ObserveHint(changeInbox.LatestFor(session.Baseline.Id));
+        }
+        TaskEditingSessions.ObserveHints(surface?.ExpectedProjectAdmission, changeInbox.LatestFor);
+        return InvokeAsync(StateHasChanged);
+    }
+
     private async Task HandleStructureChangesAsync(StructureChangesIntent intent) {
         if (intent.ContextId != changeInbox.ContextId || surface is null || surface.ProjectId != ProjectId) {
             return;
@@ -181,8 +195,8 @@ public partial class ProjectStructurePage
             if (!published || contextId != changeInbox.ContextId || !IsCurrentAction(context)) {
                 return;
             }
-            var surviving = targets.Where(id => surface!.Nodes.Any(node => node.Id == id)).ToArray();
-            if (surviving.Length > 0) {
+            var surviving = ProjectStructureChangeInbox.ResolveNodeIds(targets, surface!.Nodes);
+            if (surviving.Count > 0) {
                 SelectStructureView(ProjectStructureView.Canvas);
                 await SelectInsightsAsync(CurrentInsights, surviving);
                 if (contextId == changeInbox.ContextId && workbenchRef is not null) {
@@ -190,7 +204,7 @@ public partial class ProjectStructurePage
                 }
             }
             if (contextId == changeInbox.ContextId) {
-                changeInbox.CompleteRefresh(through, targets.Count > surviving.Length
+                changeInbox.CompleteRefresh(through, targets.Count > surviving.Count
                     ? "The structure is refreshed. Some changed nodes were deleted or moved outside this project; surviving nodes are selected."
                     : null);
             }
@@ -255,6 +269,7 @@ public partial class ProjectStructurePage
 
     [Inject]
     private ProjectStructureCanvasTaskDialogCoordinator CanvasTaskDialogCoordinator { get; set; } = default!;
+    [Inject] private ProjectStructureTaskEditingSessions TaskEditingSessions { get; set; } = default!;
 
     [Inject]
     private ProjectStructureTextAssetCreationCoordinator TextAssetCreationCoordinator { get; set; } = default!;
@@ -376,7 +391,7 @@ public partial class ProjectStructurePage
         try {
             cancellationToken.ThrowIfCancellationRequested();
             invoked = true;
-            return await CreateObjectAsync(definition, createRequest, request => request with {
+            return await CreateObjectAsync(context, definition, createRequest, request => request with {
                 Media = media,
                 ExpectedProjectAdmission = context.Admission,
                 ExpectedParticipants = context.Surface.Nodes.Where(node => node.Id == opening.Node.Id || node.Id == createRequest.ParentNodeId).ToArray()
@@ -385,7 +400,7 @@ public partial class ProjectStructurePage
                 outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = node,
                     Message = $"{node.Title} was created ({node.Id})." };
                 RecordAuthoringOutcome(opening, outcome);
-            }, context.Surface, context.NavigationRevision, () => IsCurrentAuthoring(opening, textAssetOpening));
+            }, () => IsCurrentAuthoring(opening, textAssetOpening));
         } catch (Exception exception) {
             opening.RequiresObservation = outcome.Node is not null || invoked && !IsKnownGraphRejection(exception) &&
                 exception is not (ProjectAssetCreationException or ProjectAssetContentValidationException);
@@ -413,8 +428,8 @@ public partial class ProjectStructurePage
         var owner = CreateProjectStructureUiAgentContext() with { ExpectedProjectAdmission = openedSurface.ExpectedProjectAdmission };
         ProjectAssignmentAdmission.Require(openedSurface.ProjectId, owner.ExpectedProjectAdmission);
         return new(openedSurface.ProjectId, BuildNodeOptions(ProjectObjectType.Repository),
-            (request, configure) => CreateCanvasTaskNodeAsync(action, request, configure),
-            taskId => IsCurrentAction(action) ? ReloadSurfaceAsync(taskId) : Task.CompletedTask, owner) {
+            (request, configure, authorizeCommit) => CreateCanvasTaskNodeAsync(action, request, configure, authorizeCommit),
+            (taskId, authorizeRead) => ReloadSurfaceAsync(taskId, canPublish: () => IsCurrentAction(action), authorizeRead: authorizeRead), owner) {
             IsCurrent = () => IsCurrentAction(action)
         };
     }
@@ -422,7 +437,8 @@ public partial class ProjectStructurePage
     private async Task<ProjectStructureNode?> CreateCanvasTaskNodeAsync(
         ProjectStructureActionContext action,
         CanvasWorkbenchCreateActionRequest createRequest,
-        Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest> configureRequest)
+        Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest> configureRequest,
+        Func<CancellationToken, ValueTask> authorizeCommit)
     {
         if (!ProjectStructureCanvasCatalog.TryResolveCreateDefinition(
                 ProjectStructureCanvasCatalog.WorkTaskActionId,
@@ -437,9 +453,9 @@ public partial class ProjectStructurePage
         }
         ProjectStructureNode? committed = null;
         try {
-            return await CreateObjectAsync(definition, createRequest, configureRequest,
+            return await CreateObjectAsync(action, definition, createRequest, configureRequest,
                 cancellationToken: CancellationToken.None, onNodeCommitted: node => committed = node,
-                capturedSurface: action.Surface, capturedNavigationRevision: action.NavigationRevision);
+                authorizeCommit: authorizeCommit);
         } catch (Exception failure) when (committed is not null) {
             throw new ProjectStructureNodeCreatedWithFollowUpFailureException(committed, failure);
         }

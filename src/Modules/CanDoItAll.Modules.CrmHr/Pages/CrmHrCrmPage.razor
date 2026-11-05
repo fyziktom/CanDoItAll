@@ -1,6 +1,17 @@
 @using static CanDoItAll.CrmHr.UI.Crm.CrmHrCrmWorkspacePresentation
 @page "/crm-hr/crm"
-@implements IDisposable
+@implements IAsyncDisposable
+@using CanDoItAll.Editing
+@using CanDoItAll.Infrastructure.Editing
+@inject CrmHrChanges Changes
+@inject EditingChangeFeed ChangeFeed
+@inject IEditingUiAccess EditingAccess
+@inject ILogger<EditingObservation> ObservationLog
+@inject ILogger<AccountProfileEditor> ProfileLog
+@inject ICrmOpportunityEditorService OpportunityOwner
+@inject ILogger<OpportunityEditingSession> OpportunityLog
+@inject ICrmOpportunityConversionService ConversionOwner
+@inject ILogger<OpportunityConversionSession> ConversionLog
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
@@ -9,6 +20,7 @@
 @inject CrmService CrmService
 @inject ProjectWriteAdmissionService ProjectWriteAdmissions
 @inject IPartyRecordQueryService PartyRecordQueryService
+@inject IProjectRecordQueryService ConnectionProjectQuery
 @inject IAgentChatLauncher AgentChatLauncher
 @inject NavigationManager Navigation
 @inject IAppNavigationHistory History
@@ -25,7 +37,62 @@
                              ContextAccessState="@agentChatContextAccessState"
                              RefreshRequested="HandleAgentChatRefreshRequestedAsync" />
 
-<CrmHrCrmWorkspaceSurface View="this">
+@{
+    var opportunityOpening = opportunityEditing.Opening;
+    var conversionOpening = opportunityConversion.Opening;
+    var journalOpening = interactionAppend.Opening;
+    var connectionOpening = connections.Opening;
+}
+<CrmHrLiveCatalog Owner="EditingOwner.CrmHrParty" Ignore="accountEditing.IsOwn" Changed="RefreshAccountCatalog">
+<CrmHrLiveCatalog Owner="EditingOwner.CrmOpportunity" Changed="@(() => opportunityPipelineRefreshVersion++)">
+<CrmHrCrmWorkspaceSurface View="this" CatalogRefreshVersion="@accountCatalogVersion" DirtyChanged="MarkAccountInput" ProfileInputChanged="ProfileInputChanged"
+    OpportunityOpening="opportunityOpening" OpportunityInputChanged="@(input => OpportunityInputChanged(opportunityOpening, input))" OpportunityPickerChanged="@(pending => OpportunityPickerChanged(opportunityOpening, pending))"
+    OpportunityProjectSelected="@(id => opportunityEditing.SelectProjectAsync(id, opportunityOpening))"
+    ConversionOpening="opportunityConversion.Opening" ConversionSaveDisabled="@(!conversionEditing.CanSave)"
+    ConversionBasis="opportunityConversion.Basis"
+    ConversionInputChanged="@(() => opportunityConversion.Input(conversionOpening))"
+    ConversionPickerChanged="@(pending => opportunityConversion.Picker(conversionOpening, pending))"
+    ConversionProjectSelected="@(selection => ObserveConversionProjectAsync(selection.ProjectId, conversionOpening))"
+    OpportunitySaveDisabled="@(opportunityEditing.ReadingReview || opportunityEditing.State.IsSaving || opportunityEditing.State.IsUnknown || opportunityEditing.State.IsOutdated || opportunityEditing.State.Missing || opportunityEditing.State.Review is not null)"
+    ConnectionsInputChanged="@(input => ConnectionInputChanged(connectionOpening, input))" ConnectionsPickerChanged="@(pending => SetConnectionsProjectPicker(connectionOpening, pending))"
+    ConnectionsProjectSelected="@(selection => SelectConnectionProjectsAsync(connectionOpening, selection))"
+    ConnectionsValidationMessage="@connections.ValidationMessage" ConnectionsMessage="@connectionsMessage" ConnectionsSaveDisabled="@(!connections.CanSubmit)"
+    ConnectionsMessageStyle="@(connections.IsOutdated || connections.IsUnknown ? AlertStyle.Warning : AlertStyle.Info)"
+    InteractionInputChanged="@(() => JournalInputChanged(journalOpening))" InteractionMessage="@interactionMessage"
+    InteractionSaveDisabled="@(!interactionAppend.CanSubmit)"
+    InteractionOutcomeUnknown="interactionAppend.IsUnknown"
+    ProfileSaveDisabled="@(accountEditing.ReadingReview || accountEditing.State.IsSaving || accountEditing.State.IsUnknown || accountEditing.State.IsOutdated || accountEditing.State.Review is not null)">
+    <ProfileEditing>
+        <AccountProfileEditing State="@accountEditing.State" Message="@accountEditing.Message" ReadingReview="@accountEditing.ReadingReview"
+            ReviewRequested="accountEditing.ReviewAsync" ApplyRequested="ApplyProfileReview" UndoRequested="UndoProfileMerge" Cancelled="CancelProfileReview" Changed="StateHasChanged" />
+    </ProfileEditing>
+    <ConnectionsEditing>
+        <ConnectionEditing State="connections" PartyNames="connectionPartyLabels" ProjectNames="connectionProjectLabels"
+            ReviewRequested="ReviewConnectionsAsync" ApplyRequested="ApplyConnectionsReviewAsync" UndoRequested="connections.Undo"
+            Cancelled="CancelConnectionsReview" Changed="StateHasChanged" />
+    </ConnectionsEditing>
+    <OpportunityEditing>
+        <OpportunityEditing State="opportunityEditing.State" Message="@opportunityEditing.Message" ReadingReview="opportunityEditing.ReadingReview"
+            PartyNames="opportunityEditing.PartyNames" ProjectNames="opportunityEditing.ProjectNames"
+            ReviewRequested="opportunityEditing.ReviewAsync" ApplyRequested="opportunityEditing.ApplyReview" UndoRequested="opportunityEditing.Undo"
+            Cancelled="opportunityEditing.CancelReview" Changed="StateHasChanged" />
+    </OpportunityEditing>
+    <ConversionEditing>
+        <OpportunityConversionEditing State="opportunityConversion" Reading="conversionEditing.Reading" Message="@conversionEditing.Message" RecoveryProject="conversionEditing.RecoveryProject"
+            ReviewRequested="conversionEditing.ReviewAsync" ApplyRequested="conversionEditing.ApplyReviewAsync"
+            Cancelled="CancelConversionReview" />
+    </ConversionEditing>
+    <EditorOverlays>
+        <CrmHrEditorLeaveGuard @ref="accountLeaveGuard" TestIdPrefix="crmhr-account" HasLocalChanges="HasAccountChanges" IsSameEditorRoute="IsSameAccountRoute"
+            InputRevision="@accountInputRevision" HasInput="@hasAccountInput" IsBusy="@(() => AccountMutationInFlight)" Unknown="@(accountEditing.State.IsUnknown || opportunityEditing.State.IsUnknown || opportunityConversion.IsUnknown || interactionAppend.IsUnknown || connections.IsUnknown)" />
+        <CrmHrEditorLeaveGuard @ref="opportunityLeaveGuard" TestIdPrefix="crmhr-opportunity" HasLocalChanges="@(() => opportunityEditing.State.IsDirty || opportunityEditing.State.Review is not null)"
+            IsSameEditorRoute="IsSameOpportunityRoute" Opening="opportunityEditing.Opening" InputRevision="opportunityEditing.State.InputRevision" HasInput="@(opportunityEditing.State.IsDirty)"
+            IsBusy="@(() => opportunityEditing.State.IsSaving)" Unknown="opportunityEditing.State.IsUnknown" />
+        <CrmHrEditorLeaveGuard @ref="conversionLeaveGuard" TestIdPrefix="crmhr-conversion"
+            HasLocalChanges="@(() => opportunityConversion.HasChanges || opportunityConversion.Review is not null)" IsSameEditorRoute="IsSameOpportunityRoute"
+            Opening="opportunityConversion.Opening" InputRevision="opportunityConversion.InputRevision" HasInput="@(opportunityConversion.HasChanges)"
+            IsBusy="@(() => opportunityConversion.IsSaving || opportunityConversion.PickerPending)" Unknown="opportunityConversion.IsUnknown" />
+    </EditorOverlays>
     <SecondaryNavigation>
         <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Crm" />
     </SecondaryNavigation>
@@ -47,6 +114,8 @@
                              DataTestId="crmhr-account-activity" />
     </ActivityTimeline>
 </CrmHrCrmWorkspaceSurface>
+</CrmHrLiveCatalog>
+</CrmHrLiveCatalog>
 
 @code {
     // The database profile that project admissions captured on this page are bound to.
@@ -81,17 +150,37 @@
 
     private UrlStateBinding<CrmUrlState> url = default!;
     private readonly Dictionary<Guid, string> connectionPartyLabels = [];
+    private readonly Dictionary<Guid, string> connectionProjectLabels = [];
+    private CancellationTokenSource? connectionReviewRead;
     private CrmAccountWorkspaceModel? selectedAccount;
     private CrmInteractionDetailModel? selectedInteraction;
     private CrmOpportunityDetailModel? selectedOpportunity;
     // The linked project of the selected opportunity, bound to the incarnation the same load observed.
     private ProjectWriteAdmission? selectedOpportunityProjectAdmission;
     private CrmHrActivityHistorySession accountActivity = default!;
-    private CrmAccountProfileEditorModel profileEditor = new();
-    private List<CrmAccountConnectionEditorModel> connectedRecordEditors = [];
-    private CrmInteractionEditorModel interactionEditor = CreateInteractionEditor();
-    private CrmOpportunityEditorModel opportunityEditor = new();
-    private CrmOpportunityConversionEditorModel opportunityConversionEditor = new();
+    private AccountProfileEditor accountEditing = default!;
+    private CrmAccountRecordsObservation accountRecords = default!;
+    private bool accountActivityOutdated;
+    private CrmAccountProfileEditorModel profileEditor => accountEditing.Draft;
+    private CrmHrEditorLeaveGuard? accountLeaveGuard;
+    private long accountInputRevision;
+    private bool hasAccountInput;
+    private long accountCatalogVersion;
+    private readonly ConnectionReconciliation connections = new();
+    private List<CrmAccountConnectionEditorModel> connectedRecordEditors => connections.Draft;
+    private string? connectionsMessage;
+    private readonly Dictionary<Guid, Guid> connectionProjectReads = [];
+    private bool connectionProjectPickerOpen;
+    private readonly InteractionAppendState interactionAppend = new();
+    private CrmInteractionEditorModel interactionEditor => interactionAppend.Draft;
+    private string? interactionMessage;
+    private OpportunityEditingSession opportunityEditing = default!;
+    private CrmHrEditorLeaveGuard? opportunityLeaveGuard;
+    private CrmOpportunityEditorModel opportunityEditor => opportunityEditing.Draft;
+    private OpportunityConversionSession conversionEditing = default!;
+    private OpportunityConversionState opportunityConversion => conversionEditing.State;
+    private CrmOpportunityConversionEditorModel opportunityConversionEditor => opportunityConversion.Draft;
+    private CrmHrEditorLeaveGuard? conversionLeaveGuard;
     private CrmAgentChatAccountContext? agentChatAccountContext;
     private CrmAgentChatOpportunityContext? agentChatOpportunityContext;
     private CrmAgentChatInteractionContext? agentChatInteractionContext;
@@ -104,21 +193,18 @@
     private readonly CrmQueryLoadGeneration queryLoadGeneration = new();
     private CrmQueryLoadStamp? activeQueryLoadStamp;
     private readonly CrmHrMutationGate mutationGate = new();
-    private readonly CrmHrDraftReconciler drafts = new();
-    private const string ProfileDraft = "profile";
-    private const string ConnectionsDraft = "connections";
-    private const string InteractionDraft = "interaction";
     private CancellationTokenSource? queryLoadCancellation;
     private long transientStateGeneration;
     private string? message;
     private long opportunityPipelineRefreshVersion;
     private bool isOpportunityBusy;
+    private bool stageOutcomeUnknown;
     private bool isOpportunityCreateDialogOpen;
     private bool isOpportunityDetailDialogOpen;
     private bool isOpportunityEditDialogOpen;
     private bool isOpportunityConversionDialogOpen;
     private bool isAccountDialogOpen;
-    private bool isOpportunityConversionBusy;
+    private bool isOpportunityConversionBusy => opportunityConversion.IsSaving;
     private bool isInteractive;
     private bool isDisposed;
 
@@ -157,6 +243,57 @@
 
     protected override void OnInitialized()
     {
+        conversionEditing = new(ConversionOwner, Changes, ChangeFeed, EditingAccess, ObservationLog, ConversionLog) {
+            Dispatch = work => InvokeAsync(work),
+            Changed = () => {
+                if (isOpportunityConversionDialogOpen && conversionEditing.Message is not null) {
+                    message = conversionEditing.Message;
+                }
+                StateHasChanged();
+            },
+            Retired = () => isOpportunityConversionDialogOpen = false,
+            Notice = notice => {
+                message = notice.Message;
+                if (notice.Kind == OpportunityConversionNoticeKind.Error) {
+                    NotificationService.Error(notice.Title, notice.Message);
+                } else {
+                    NotificationService.Warning(notice.Title, notice.Message);
+                }
+            }
+        };
+        accountEditing = new(CrmService, Changes, ChangeFeed, EditingAccess, ObservationLog, ProfileLog) {
+            Dispatch = work => InvokeAsync(work),
+            Changed = StateHasChanged,
+            Retired = () => {
+                ClearAccountSelection();
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                NotifyError("CRM editing access changed", "Reopen this account with current access.");
+            },
+            Notice = () => NotificationService.Warning("Account changed", "Another editor changed this account. Your draft is retained; review the saved profile before saving.")
+        };
+        opportunityEditing = new(OpportunityOwner, ProjectWriteAdmissions.CaptureAsync, Changes, ChangeFeed, EditingAccess, ObservationLog, OpportunityLog) {
+            Dispatch = work => InvokeAsync(work), Changed = StateHasChanged,
+            Retired = () => {
+                isOpportunityCreateDialogOpen = false;
+                isOpportunityEditDialogOpen = false;
+                NotifyError("Opportunity access changed", "Reopen the opportunity with current access.");
+            },
+            Notice = () => NotificationService.Warning("Opportunity changed", "Your draft is retained. Review the saved changes before saving.")
+        };
+        accountRecords = new(Changes, ChangeFeed, EditingAccess, ObservationLog) {
+            Dispatch = work => InvokeAsync(work), Changed = StateHasChanged,
+            ConnectionsChanged = () => {
+                if (connections.AccountPartyId == accountRecords.AccountId) {
+                    connections.Hint();
+                }
+            },
+            ActivityChanged = RefreshObservedAccountActivityAsync,
+            Retired = () => {
+                ClearAccountSelection();
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                NotifyError("Account records access changed", "Reopen this account with current access.");
+            }
+        };
         url = new UrlStateBinding<CrmUrlState>(Navigation, CrmUrlCodec.Instance, History, typeof(CrmHrCrmPage));
         accountActivity = new CrmHrActivityHistorySession(
             (query, cancellationToken) => CrmService.SearchAccountActivityAsync(query, cancellationToken),
@@ -227,6 +364,7 @@
                 await InvokeAsync(StateHasChanged);
             }
 
+            await accountEditing.AuthorizeCatalogReadAsync(loadCancellation.Token);
             var accountCountTask = CrmService.CountAccountsAsync(loadCancellation.Token);
             var routeResolutionTask = CrmService.ResolveRouteSelectionAsync(
                 requestedAccountId,
@@ -253,11 +391,14 @@
 
             var targetId = routeResolution.AccountPartyId;
             CrmAccountWorkspaceModel? account = null;
+            AccountProfileRead? profileRead = null;
+            long? recordsRevision = null;
             if (targetId.HasValue)
             {
-                account = await CrmService.GetAccountWorkspaceAsync(
-                    targetId.Value,
-                    loadCancellation.Token);
+                var read = await ReadAccountWorkspaceAsync(targetId.Value, loadCancellation.Token);
+                profileRead = read.Profile;
+                recordsRevision = read.ConnectionsRevision;
+                account = profileRead.Workspace;
                 if (!IsCurrentQueryLoad(loadGeneration))
                 {
                     return;
@@ -266,6 +407,10 @@
 
             if (account is null)
             {
+                if (targetId.HasValue && selectedAccount?.AccountPartyId == targetId) {
+                    accountEditing.Missing();
+                    return;
+                }
                 ClearAccountSelection();
                 message = null;
                 agentChatContextAccessState = route.HasAccountContext
@@ -303,12 +448,13 @@
 
             ApplyLoadedAccount(
                 account,
+                profileRead!,
                 opportunity,
                 interaction,
                 clearMessage: true,
                 requestedOpportunityId,
                 preferredOpportunityId,
-                requestedInteractionId);
+                requestedInteractionId, connectionsRevision: recordsRevision);
             isAccountDialogOpen = true;
             if (url.State.Section == CrmSection.Interactions)
             {
@@ -326,6 +472,12 @@
             {
                 NotifyRouteRecordUnavailable();
             }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ClearAccountSelection();
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            NotifyError("CRM access required", "Open this account with current CRM editing access.");
         }
         catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
         {
@@ -351,9 +503,10 @@
     {
         if (resetTransientState)
         {
+            opportunityEditing.Clear();
             Interlocked.Increment(ref transientStateGeneration);
             isOpportunityBusy = false;
-            isOpportunityConversionBusy = false;
+            conversionEditing.Clear();
             isOpportunityCreateDialogOpen = false;
             isOpportunityDetailDialogOpen = false;
             isOpportunityEditDialogOpen = false;
@@ -394,13 +547,14 @@
 
     private void ApplyLoadedAccount(
         CrmAccountWorkspaceModel account,
+        AccountProfileRead profileRead,
         LoadedOpportunity? opportunity,
         CrmInteractionDetailModel? interaction,
         bool clearMessage,
         Guid? requestedOpportunityId,
         Guid? preferredOpportunityId,
         Guid? requestedInteractionId,
-        CrmAccountEditor committed = CrmAccountEditor.None)
+        long? connectionsRevision = null)
     {
         InvalidateAccountActivity();
         // A reload of the account already on screen (an opportunity or interaction selected in the route, another
@@ -410,61 +564,35 @@
         selectedOpportunity = opportunity?.Detail;
         selectedOpportunityProjectAdmission = opportunity?.LinkedProjectAdmission;
         selectedInteraction = interaction;
-        profileEditor = drafts.Reconcile(
-            ProfileDraft,
-            profileEditor,
-            () => new CrmAccountProfileEditorModel
-            {
-                Id = account.Profile.Id,
-                AccountPartyId = account.Profile.AccountPartyId,
-                RelationshipStage = account.Profile.RelationshipStage,
-                CommercialNotes = account.Profile.CommercialNotes,
-                ConstraintNotes = account.Profile.ConstraintNotes,
-                TimingRiskNotes = account.Profile.TimingRiskNotes,
-                LastChangedBy = account.Profile.LastChangedBy
-            },
-            accountChanged,
-            committed.HasFlag(CrmAccountEditor.Profile));
-        var previousConnections = connectedRecordEditors;
-        // Rows are paired by the directory record and role the owner keeps unique per account, so a row this commit
-        // created adopts the connection identity the owner assigned even when the operator kept editing the list.
-        connectedRecordEditors = drafts.ReconcileList(
-            ConnectionsDraft,
-            connectedRecordEditors,
-            () => account.ConnectedRecords
-                .Select(item => new CrmAccountConnectionEditorModel
-                {
-                    Id = item.Id,
-                    RelatedPartyId = item.RelatedPartyId,
-                    Role = item.Role,
-                    IsPrimary = item.IsPrimary,
-                    Notes = item.Notes,
-                    ProjectIds = item.Projects.Select(project => project.Id).ToList()
-                })
-                .ToList(),
-            accountChanged,
-            committed.HasFlag(CrmAccountEditor.Connections),
-            nameof(CrmAccountConnectionEditorModel.RelatedPartyId),
-            nameof(CrmAccountConnectionEditorModel.Role));
-        if (!ReferenceEquals(previousConnections, connectedRecordEditors))
-        {
-            // A kept connection draft still names the parties the operator picked for it and its open picker row.
+        accountEditing.Observe(profileRead);
+        connections.Observe(account);
+        if (connectionsRevision.HasValue && connectionsRevision != accountRecords.ConnectionRevision) {
+            connections.Hint();
+        }
+        if (accountChanged) {
+            connectionReviewRead?.Cancel();
             connectionPartyLabels.Clear();
+            connectionProjectLabels.Clear();
             connectionPartyPickerIndex = null;
+            connectionProjectReads.Clear();
+            connectionProjectPickerOpen = false;
+            connectionsMessage = null;
         }
 
         foreach (var connection in account.ConnectedRecords)
         {
             connectionPartyLabels[connection.RelatedPartyId] =
                 $"{connection.DisplayName} ({connection.PartyType})";
+            foreach (var project in connection.Projects) {
+                connectionProjectLabels[project.Id] = project.Name;
+            }
         }
 
         ApplyContextSelection(
             requestedOpportunityId,
             preferredOpportunityId,
             requestedInteractionId,
-            accountChanged,
-            committed.HasFlag(CrmAccountEditor.Interaction));
+            accountChanged);
 
         if (clearMessage)
         {
@@ -475,8 +603,7 @@
     private async Task<bool> ReloadSelectedAccountAsync(
         CrmPageActionStamp action,
         bool clearMessage,
-        Guid? preferredOpportunityId = null,
-        CrmAccountEditor committed = CrmAccountEditor.None)
+        Guid? preferredOpportunityId = null)
     {
         if (!IsCurrentCrmAction(action))
         {
@@ -493,9 +620,9 @@
         supersededLoad?.Cancel();
         try
         {
-            var account = await CrmService.GetAccountWorkspaceAsync(
-                action.AccountId,
-                loadCancellation.Token);
+            var recordsRead = await ReadAccountWorkspaceAsync(action.AccountId, loadCancellation.Token);
+            var profileRead = recordsRead.Profile;
+            var account = profileRead.Workspace;
             if (!IsCurrentAccountRefresh(loadGeneration, action))
             {
                 return false;
@@ -504,7 +631,7 @@
             committedQueryKey = queryKey;
             if (account is null)
             {
-                ClearAccountSelection();
+                accountEditing.Missing();
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
                 return false;
             }
@@ -534,13 +661,14 @@
 
             ApplyLoadedAccount(
                 account,
+                profileRead,
                 opportunity,
                 interaction,
                 clearMessage,
                 action.RouteOpportunityId,
                 preferredOpportunityId ?? action.SelectedOpportunityId,
                 action.RouteInteractionId,
-                committed);
+                recordsRead.ConnectionsRevision);
             if (url.State.Section == CrmSection.Interactions)
             {
                 await EnsureAccountActivityLoadedAsync();
@@ -554,6 +682,13 @@
                 ? AgentChatContextAccessState.Ready
                 : AgentChatContextAccessState.Failed;
             return requestedSelectionFound;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ClearAccountSelection();
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            NotifyError("CRM access required", "Reopen this account with current CRM editing access.");
+            return false;
         }
         catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
         {
@@ -652,10 +787,29 @@
 
     // The account activity lane: the session owns the read, the accepted page, the busy gate and the fencing of
     // late outcomes; this page decides when the lane is asked for the selected account and renders its failure.
-    private Task EnsureAccountActivityLoadedAsync()
-        => selectedAccount is { } account
-            ? accountActivity.EnsureLoadedAsync(account.AccountPartyId)
-            : Task.CompletedTask;
+    private async Task EnsureAccountActivityLoadedAsync() {
+        if (selectedAccount is not { } account) {
+            return;
+        }
+        await accountActivity.EnsureLoadedAsync(account.AccountPartyId);
+        if (accountActivityOutdated && accountActivity.Target == account.AccountPartyId) {
+            accountActivityOutdated = false;
+            await accountActivity.RefreshAsync();
+        }
+    }
+
+    private async Task RefreshObservedAccountActivityAsync() {
+        accountActivityOutdated = true;
+        if (selectedAccount is { } account && accountRecords.AccountId == account.AccountPartyId && url.State.Section == CrmSection.Interactions) {
+            await EnsureAccountActivityLoadedAsync();
+        }
+    }
+
+    private async Task<(AccountProfileRead Profile, long ConnectionsRevision)> ReadAccountWorkspaceAsync(Guid accountId, CancellationToken cancellationToken) {
+        await accountRecords.OpenAsync(accountId, cancellationToken);
+        var revision = accountRecords.ConnectionRevision;
+        return (await accountEditing.ReadWorkspaceAsync(accountId, cancellationToken), revision);
+    }
 
     private Task HandleAccountActivityPageRequestedAsync(int pageIndex)
         => selectedAccount is { } account && accountActivity.Target == account.AccountPartyId
@@ -678,14 +832,23 @@
         selectedOpportunityProjectAdmission = null;
         selectedInteraction = null;
         // Closing the record discards its drafts: the next record, or the same one reopened, starts from the owner.
-        drafts.Reset();
-        profileEditor = new();
-        connectedRecordEditors = [];
+        accountEditing.Clear();
+        accountRecords.Clear();
+        accountActivityOutdated = false;
+        hasAccountInput = false;
+        connections.Clear();
+        connectionReviewRead?.Cancel();
+        connectionsMessage = null;
+        connectionProjectReads.Clear();
+        connectionProjectPickerOpen = false;
         connectionPartyLabels.Clear();
+        connectionProjectLabels.Clear();
         connectionPartyPickerIndex = null;
-        interactionEditor = CreateInteractionEditor();
-        opportunityEditor = new();
-        opportunityConversionEditor = new();
+        interactionAppend.Open(Guid.Empty, CreateInteractionEditor());
+        interactionMessage = null;
+        opportunityEditing.Clear();
+        stageOutcomeUnknown = false;
+        conversionEditing.Clear();
         selectedOpportunityId = null;
         selectedInteractionId = null;
         isOpportunityCreateDialogOpen = false;
@@ -706,6 +869,10 @@
             return;
         }
 
+        if (!await RequestAccountLeaveAsync()) {
+            return;
+        }
+
         InvalidateCurrentQueryForNavigation(closeAccount: true);
         url.OpenOverlay(url.State.WithoutRecord() with { AccountId = accountPartyId });
         await LoadRouteAsync(url.State);
@@ -713,7 +880,7 @@
 
     private async Task CloseAccountDialogAsync()
     {
-        if (!isAccountDialogOpen)
+        if (!isAccountDialogOpen || !await RequestAccountLeaveAsync())
         {
             return;
         }
@@ -755,6 +922,7 @@
         }
 
         profileEditor.RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer;
+        ProfileInputChanged(AccountProfileField.RelationshipStage);
         await SaveAccountProfileAsync(action);
     }
 
@@ -777,31 +945,36 @@
             return;
         }
 
-        var result = await CrmService.SaveAccountProfileAsync(
-            drafts.Submit(ProfileDraft, profileEditor, static editor => editor.Snapshot()));
+        var result = await accountEditing.SaveAsync();
         if (result.IsFailure)
         {
-            // Nothing was written: the draft stays exactly as the operator left it and owns all of its fields again.
-            drafts.Retire(ProfileDraft);
             if (IsCurrentCrmAction(action))
             {
-                NotifyError("CRM account save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+                NotifyError(accountEditing.State.IsUnknown ? "CRM profile save outcome unknown" : "CRM account save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
             }
 
             return;
         }
 
-        if (!await ReloadSelectedAccountAsync(action, clearMessage: false, committed: CrmAccountEditor.Profile))
+        if (!await ReloadSelectedAccountAsync(action, clearMessage: false))
         {
             return;
         }
 
-        NotifySuccess("CRM account saved", "CRM account profile saved.");
+        hasAccountInput = HasAccountChanges();
+        accountCatalogVersion++;
+        if (accountEditing.Message is { } warning) {
+            NotificationService.Warning("CRM account saved", warning);
+        } else {
+            NotifySuccess("CRM account saved", "CRM account profile saved.");
+        }
     }
 
     private void AddConnectedRecord()
     {
-        connectedRecordEditors.Add(new CrmAccountConnectionEditorModel());
+        var row = new CrmAccountConnectionEditorModel { Id = Guid.NewGuid() };
+        connectedRecordEditors.Add(row);
+        connections.Input(new(row.Id.Value, ConnectionField.Party));
         StateHasChanged();
     }
 
@@ -812,7 +985,9 @@
             return;
         }
 
+        var removed = connectedRecordEditors[index];
         connectedRecordEditors.RemoveAt(index);
+        connectionProjectReads.Remove(removed.Id!.Value);
         if (connectionPartyPickerIndex == index)
         {
             connectionPartyPickerIndex = null;
@@ -821,7 +996,7 @@
         {
             connectionPartyPickerIndex--;
         }
-
+        UpdateConnectionsPicker();
         StateHasChanged();
     }
 
@@ -833,11 +1008,13 @@
         }
 
         connectionPartyPickerIndex = index;
+        UpdateConnectionsPicker();
     }
 
     private Task CloseConnectionPartyPickerAsync()
     {
         connectionPartyPickerIndex = null;
+        UpdateConnectionsPicker();
         return Task.CompletedTask;
     }
 
@@ -857,11 +1034,13 @@
             return;
         }
 
+        var row = connectedRecordEditors[index];
+        var opening = connections.Opening;
         var party = await PartyRecordQueryService.GetAsync(partyId);
         if (!IsCurrentCrmAction(action) ||
             connectionPartyPickerIndex != index ||
             index < 0 ||
-            index >= connectedRecordEditors.Count)
+            index >= connectedRecordEditors.Count || opening != connections.Opening || !ReferenceEquals(row, connectedRecordEditors[index]))
         {
             return;
         }
@@ -869,6 +1048,7 @@
         if (party is null)
         {
             connectionPartyPickerIndex = null;
+            UpdateConnectionsPicker();
             NotifyError(
                 "Directory record unavailable",
                 "The selected party no longer exists or is archived.");
@@ -876,8 +1056,10 @@
         }
 
         connectedRecordEditors[index].RelatedPartyId = party.Id;
+        connections.Input(new(row.Id!.Value, ConnectionField.Party));
         connectionPartyLabels[party.Id] = $"{party.DisplayName} ({party.PartyType})";
         connectionPartyPickerIndex = null;
+        UpdateConnectionsPicker();
     }
 
     private void ClearConnectionParty(int index)
@@ -888,9 +1070,10 @@
         }
 
         connectedRecordEditors[index].RelatedPartyId = Guid.Empty;
+        connections.Input(new(connectedRecordEditors[index].Id!.Value, ConnectionField.Party));
     }
 
-    private void UpdateConnectedRecordProjects(
+    private async Task UpdateConnectedRecordProjects(
         int index,
         IReadOnlyList<Guid> projectIds)
     {
@@ -899,10 +1082,135 @@
             return;
         }
 
-        connectedRecordEditors[index].ProjectIds = projectIds
-            .Where(projectId => projectId != Guid.Empty)
-            .Distinct()
-            .ToList();
+        var row = connectedRecordEditors[index];
+        var id = row.Id ?? throw new InvalidOperationException("A project selection requires a stable connection row.");
+        var opening = connections.Opening;
+        var request = Guid.NewGuid();
+        row.ProjectIds = projectIds.Where(projectId => projectId != Guid.Empty).Distinct().ToList();
+        row.ProjectAdmissions = row.ProjectAdmissions.Where(binding => row.ProjectIds.Contains(binding.Key)).ToDictionary();
+        connections.Input(new(id, ConnectionField.Projects));
+        connectionProjectReads[id] = request;
+        UpdateConnectionsPicker();
+        try {
+            foreach (var projectId in row.ProjectIds.ToArray()) {
+                if (row.ProjectAdmissions.ContainsKey(projectId)) {
+                    continue;
+                }
+                var project = await ConnectionProjectQuery.GetAsync(projectId);
+                if (project?.LifetimeId is not Guid lifetime) {
+                    throw new InvalidOperationException("The selected project is unavailable. Choose its current record.");
+                }
+                if (opening != connections.Opening || connectionProjectReads.GetValueOrDefault(id) != request || !connectedRecordEditors.Contains(row)) {
+                    return;
+                }
+                row.ProjectAdmissions[projectId] = new(ProjectWriteAdmissions.DatabaseProfileId, projectId, lifetime);
+                connectionProjectLabels[projectId] = project.Name;
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Connection project selection failed for {AccountId} and row {ConnectionId}.", connections.AccountPartyId, id);
+            if (opening == connections.Opening && connectionProjectReads.GetValueOrDefault(id) == request) {
+                connectionsMessage = "The selected project could not be observed. Its selection is retained; choose a current record before saving.";
+                NotifyError("Connection project unavailable", connectionsMessage);
+            }
+        } finally {
+            if (opening == connections.Opening && connectionProjectReads.GetValueOrDefault(id) == request) {
+                connectionProjectReads.Remove(id);
+                UpdateConnectionsPicker();
+            }
+        }
+    }
+
+    private void ConnectionInputChanged(long opening, ConnectionFieldInput input) {
+        if (opening == connections.Opening && connectedRecordEditors.Contains(input.Row) && input.Row.Id is Guid id) {
+            connections.Input(new(id, input.Field));
+        }
+    }
+
+    private void JournalInputChanged(long opening) {
+        if (opening == interactionAppend.Opening) {
+            interactionAppend.Input();
+        }
+    }
+
+    private Task SelectConnectionProjectsAsync(long opening, ConnectionProjectSelection selection) {
+        var index = connectedRecordEditors.IndexOf(selection.Row);
+        return opening == connections.Opening && index >= 0
+            ? UpdateConnectedRecordProjects(index, selection.ProjectIds) : Task.CompletedTask;
+    }
+
+    private void SetConnectionsProjectPicker(long opening, bool pending) {
+        if (opening != connections.Opening) {
+            return;
+        }
+        connectionProjectPickerOpen = pending;
+        UpdateConnectionsPicker();
+    }
+
+    private void UpdateConnectionsPicker() => connections.Picker(connectionProjectPickerOpen || connectionPartyPickerIndex.HasValue || connectionProjectReads.Count > 0);
+
+    private async Task ReviewConnectionsAsync() {
+        if (!TryCaptureCrmAction(out var action) || connections.Reading || connections.IsSaving || connections.PickerPending) {
+            return;
+        }
+        var opening = connections.Opening;
+        var hint = connections.HintRevision;
+        var input = connections.InputRevision;
+        using var pending = new CancellationTokenSource();
+        connectionReviewRead?.Cancel();
+        connectionReviewRead = pending;
+        connections.ReadingReview(true);
+        try {
+            var read = await accountEditing.ReadWorkspaceAsync(action.AccountId, pending.Token);
+            if (!IsCurrentCrmAction(action) || opening != connections.Opening || pending.IsCancellationRequested) {
+                return;
+            }
+            if (read.Workspace is not { } current) {
+                connections.Hint();
+                connectionsMessage = "The account is unavailable. Your connections are retained and cannot recreate it.";
+                return;
+            }
+            connections.SetReview(current, hint, input);
+            foreach (var row in current.ConnectedRecords) {
+                connectionPartyLabels[row.RelatedPartyId] = $"{row.DisplayName} ({row.PartyType})";
+                foreach (var project in row.Projects) {
+                    connectionProjectLabels[project.Id] = project.Name;
+                }
+            }
+        } catch (OperationCanceledException) when (pending.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Connection review failed for {AccountId}.", action.AccountId);
+            if (opening == connections.Opening && !connections.IsUnknown) {
+                connectionsMessage = "Current connections could not be read. Your draft, original and previous comparison are retained; refresh before applying.";
+            }
+        } finally {
+            if (ReferenceEquals(connectionReviewRead, pending)) {
+                connectionReviewRead = null;
+                if (opening == connections.Opening) {
+                    connections.ReadingReview(false);
+                }
+            }
+        }
+    }
+
+    private async Task ApplyConnectionsReviewAsync() {
+        var opening = connections.Opening;
+        try {
+            await accountEditing.AuthorizeWriteAsync(connections.AccountPartyId, default);
+            if (opening == connections.Opening && connections.ApplyReview()) {
+                connectionsMessage = "The comparison was applied locally. Save connected records remains a separate command.";
+                MarkAccountInput();
+            }
+        } catch (UnauthorizedAccessException) {
+            if (opening == connections.Opening) {
+                connections.Hint();
+                connectionsMessage = "Current account access is required before applying the comparison. Your draft is retained.";
+            }
+        }
+    }
+
+    private void CancelConnectionsReview() {
+        connectionReviewRead?.Cancel();
+        connections.CancelReview();
     }
 
     private string ResolveConnectionPartyLabel(Guid partyId)
@@ -918,7 +1226,7 @@
 
     private async Task SaveConnectedRecordsAsync()
     {
-        if (!TryCaptureCrmAction(out var action))
+        if (!TryCaptureCrmAction(out var action) || !connections.CanSubmit)
         {
             return;
         }
@@ -929,37 +1237,67 @@
             return;
         }
 
-        var result = await CrmService.SaveConnectedRecordsAsync(
-            action.AccountId,
-            drafts.Submit(
-                ConnectionsDraft,
-                connectedRecordEditors,
-                static rows => rows.Select(connection => connection.Snapshot()).ToList()),
-            profileEditor.LastChangedBy);
-        if (result.IsFailure)
-        {
-            drafts.Retire(ConnectionsDraft);
-            if (IsCurrentCrmAction(action))
-            {
-                NotifyError(
-                    "Connected records save failed",
-                    string.Join(" ", result.Errors.Select(error => error.Message)));
+        var submitted = connections.Begin();
+        if (submitted is null) {
+            return;
+        }
+        connectionsMessage = null;
+        var ownerStarted = false;
+        try {
+            await accountEditing.AuthorizeWriteAsync(action.AccountId, default);
+            if (!IsCurrentCrmAction(action)) {
+                return;
             }
-
-            return;
+            using var authority = Changes.EnterUiWrite(token => accountEditing.AuthorizeWriteAsync(action.AccountId, token));
+            using var origin = accountRecords.EnterWrite(action.AccountId);
+            ownerStarted = true;
+            var result = await CrmService.SaveConnectedRecordsAsync(action.AccountId, submitted.Rows, accountEditing.Actor,
+                original: submitted.Original, onCommitted: receipt => connections.Accept(submitted, receipt));
+            if (!IsCurrentCrmAction(action) || !connections.IsCurrent(submitted)) {
+                return;
+            }
+            if (result.IsFailure) {
+                if (result.Errors.Any(error => error.Code == CrmHrEditingErrorCodes.ConnectionConflict)) {
+                    connections.Hint();
+                }
+                connectionsMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+                NotifyError("Connected records not saved", connectionsMessage);
+                return;
+            }
+            if (connections.Accepted is null) {
+                throw new InvalidOperationException("The connection owner returned success without its committed receipt.");
+            }
+            connectionsMessage = connections.IsDirty ? "Connected records saved. Later input is retained." : "Connected records saved.";
+            if (!await ReloadSelectedAccountAsync(action, clearMessage: false) && connections.IsCurrent(submitted)) {
+                connectionsMessage = "The connections committed, but the account could not be refreshed. The accepted write will not be repeated.";
+            }
+        } catch (ProjectWriteAdmissionRejectedException) {
+            if (connections.IsCurrent(submitted)) {
+                connections.Hint();
+                connectionsMessage = "A selected project changed after it was chosen. Review its current lifetime before saving.";
+                NotifyError("Connected records not saved", connectionsMessage);
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Connection replacement continuation failed for {AccountId}; accepted {Accepted}.", action.AccountId, connections.Accepted is not null);
+            if (IsCurrentCrmAction(action) && connections.IsCurrent(submitted)) {
+                if (ownerStarted && connections.Accepted is null) {
+                    connections.Unknown(submitted);
+                    connectionsMessage = "The connected-record save outcome is unknown. Its submission and your draft are retained; resubmission is blocked.";
+                } else {
+                    connectionsMessage = connections.Accepted is not null
+                        ? "The connections committed. Follow-up failed; the accepted write will not be repeated."
+                        : "Current account access is required. Your connected records are retained.";
+                }
+                NotifyError("Connected records require attention", connectionsMessage);
+            }
+        } finally {
+            connections.Complete(submitted);
         }
-
-        if (!await ReloadSelectedAccountAsync(action, clearMessage: false, committed: CrmAccountEditor.Connections))
-        {
-            return;
-        }
-
-        NotifySuccess("Connected records saved", "Company connections and related projects saved.");
     }
 
     private async Task SaveInteractionAsync()
     {
-        if (!TryCaptureCrmAction(out var action))
+        if (!TryCaptureCrmAction(out var action) || !interactionAppend.CanSubmit)
         {
             return;
         }
@@ -970,34 +1308,55 @@
             return;
         }
 
-        var result = await CrmService.AddInteractionAsync(
-            action.AccountId,
-            drafts.Submit(InteractionDraft, interactionEditor, static editor => editor.Snapshot()),
-            profileEditor.LastChangedBy);
-        if (result.IsFailure)
-        {
-            drafts.Retire(InteractionDraft);
-            if (IsCurrentCrmAction(action))
-            {
-                NotifyError("Interaction save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+        var submitted = interactionAppend.Begin();
+        if (submitted is null) {
+            return;
+        }
+        interactionMessage = null;
+        var ownerStarted = false;
+        try {
+            await accountEditing.AuthorizeWriteAsync(action.AccountId, default);
+            if (!IsCurrentCrmAction(action)) {
+                return;
             }
-
-            return;
+            using var authority = Changes.EnterUiWrite(token => accountEditing.AuthorizeWriteAsync(action.AccountId, token));
+            using var origin = accountRecords.EnterWrite(action.AccountId);
+            ownerStarted = true;
+            var result = await CrmService.AddInteractionAsync(action.AccountId, submitted.Model, accountEditing.Actor,
+                onCommitted: receipt => interactionAppend.Accept(submitted, receipt));
+            if (!IsCurrentCrmAction(action) || !interactionAppend.IsCurrent(submitted)) {
+                return;
+            }
+            if (result.IsFailure) {
+                interactionMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+                NotifyError("Interaction not saved", interactionMessage);
+                return;
+            }
+            if (interactionAppend.Accepted is null) {
+                throw new InvalidOperationException("The interaction owner returned success without its committed receipt.");
+            }
+            interactionMessage = "Interaction saved. Later input is retained for a separate new journal entry.";
+            if (await ReloadSelectedAccountAsync(action, clearMessage: false)) {
+                NotifySuccess("Interaction saved", "CRM interaction saved.");
+            } else if (interactionAppend.IsCurrent(submitted)) {
+                interactionMessage = "The interaction committed, but the account could not be refreshed. The accepted entry will not be logged again.";
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Interaction append continuation failed for {AccountId}; accepted {Accepted}.", action.AccountId, interactionAppend.Accepted is not null);
+            if (IsCurrentCrmAction(action) && interactionAppend.IsCurrent(submitted)) {
+                if (ownerStarted && interactionAppend.Accepted is null) {
+                    interactionAppend.Unknown(submitted);
+                    interactionMessage = "The interaction append outcome is unknown. Its submission and your draft are retained; resubmission is blocked.";
+                } else {
+                    interactionMessage = interactionAppend.Accepted is not null
+                        ? "The interaction committed. Follow-up failed; the accepted entry will not be logged again."
+                        : "Current account access is required. Your interaction draft is retained.";
+                }
+                NotifyError("Interaction requires attention", interactionMessage);
+            }
+        } finally {
+            interactionAppend.Complete(submitted);
         }
-
-        // The create editor starts over once the owner accepted it, unless the operator already typed the next
-        // interaction into it while the write was in flight; that draft is theirs and survives the read-back whole.
-        var interactionStartsOver = !drafts.ChangedAfterSubmission(InteractionDraft, interactionEditor);
-        drafts.Retire(InteractionDraft);
-        if (!await ReloadSelectedAccountAsync(
-                action,
-                clearMessage: false,
-                committed: interactionStartsOver ? CrmAccountEditor.Interaction : CrmAccountEditor.None))
-        {
-            return;
-        }
-
-        NotifySuccess("Interaction saved", "CRM interaction saved.");
     }
 
     // An opportunity opens over its account as a new history entry; Back closes it again and keeps the account on the
@@ -1014,115 +1373,123 @@
         await LoadRouteAsync(url.State);
     }
 
-    private async Task SaveOpportunityAsync(CrmOpportunityEditorModel model)
-    {
-        if (!TryCaptureCrmAction(out var action))
-        {
+    private async Task SaveOpportunityAsync(CrmOpportunityEditorModel model) {
+        if (!ReferenceEquals(model, opportunityEditing.Draft) || !TryCaptureCrmAction(out var action)) {
             return;
         }
-
         using var admission = mutationGate.TryEnter(action.LoadStamp.Generation);
-        if (admission is null)
-        {
+        if (admission is null) {
             return;
         }
-
         var transientGeneration = Interlocked.Increment(ref transientStateGeneration);
+        var inputRevision = opportunityEditing.State.InputRevision;
         isOpportunityBusy = true;
-        try
-        {
-            var editor = OpportunityEditorDrafts.Clone(model);
-            editor.AccountPartyId = action.AccountId;
-            editor.RelationshipStage = profileEditor.RelationshipStage.ToString();
-            editor.LastChangedBy = profileEditor.LastChangedBy;
-
-            var result = await CrmService.SaveOpportunityAsync(editor);
-            if (result.IsFailure)
-            {
-                if (IsCurrentCrmAction(action))
-                {
-                    NotifyError(
-                        "Opportunity save failed",
-                        string.Join(" ", result.Errors.Select(error => error.Message)),
-                        keepDialogMessage: true);
-                }
-
+        try {
+            var result = await opportunityEditing.SaveAsync();
+            if (!IsCurrentCrmAction(action)) {
                 return;
             }
-
-            if (url.State.OpportunityId != result.Value)
-            {
+            if (result.IsFailure) {
+                NotifyError("Opportunity save failed", opportunityEditing.Message ?? string.Join(" ", result.Errors.Select(error => error.Message)), keepDialogMessage: true);
+                return;
+            }
+            opportunityPipelineRefreshVersion++;
+            if (opportunityEditing.State.IsDirty || opportunityEditing.State.IsOutdated || opportunityEditing.State.InputRevision != inputRevision || opportunityEditing.Message is not null) {
+                NotifySuccess("Opportunity saved", "The submission was saved. Your editor remains open with its later input and current save information.");
+                return;
+            }
+            isOpportunityCreateDialogOpen = false;
+            isOpportunityEditDialogOpen = false;
+            opportunityEditing.Clear();
+            if (url.State.OpportunityId != result.Value) {
                 await OpenCommittedOpportunityAsync(action, result.Value);
                 return;
             }
-
-            if (!await ReloadSelectedAccountAsync(
-                    action,
-                    clearMessage: false,
-                    preferredOpportunityId: result.Value))
-            {
+            if (!await ReloadSelectedAccountAsync(action, clearMessage: false, preferredOpportunityId: result.Value)) {
                 return;
             }
-
-            opportunityPipelineRefreshVersion++;
-            isOpportunityCreateDialogOpen = false;
-            isOpportunityEditDialogOpen = false;
             isOpportunityDetailDialogOpen = true;
             NotifySuccess("Opportunity saved", "Opportunity saved.");
-        }
-        finally
-        {
-            if (transientGeneration == Volatile.Read(ref transientStateGeneration))
-            {
+        } finally {
+            if (transientGeneration == Volatile.Read(ref transientStateGeneration)) {
                 isOpportunityBusy = false;
             }
         }
     }
 
-    private async Task AdvanceOpportunityStageAsync(Guid opportunityId)
-    {
-        if (!TryCaptureCrmAction(out var action))
-        {
+    private async Task AdvanceOpportunityStageAsync(CrmOpportunityStageAdvance intent) {
+        if (!TryCaptureCrmAction(out var action) || intent.AccountPartyId != action.AccountId || isOpportunityBusy || stageOutcomeUnknown) {
             return;
         }
-
-        var opportunity = await CrmService.GetOpportunityAsync(opportunityId);
-        if (!IsCurrentCrmAction(action) ||
-            opportunity is null ||
-            opportunity.AccountPartyId != action.AccountId)
-        {
+        using var admission = mutationGate.TryEnter(action.LoadStamp.Generation);
+        if (admission is null) {
             return;
         }
-
-        var editor = OpportunityEditorDrafts.FromDetail(opportunity);
-        editor.Stage = ResolveNextOpportunityStage(opportunity.Stage);
-        editor.StageNotes = $"Advanced from {opportunity.Stage} to {editor.Stage}.";
-        await SaveOpportunityAsync(editor);
+        using var grant = await EditingAccess.OpenAsync(new(Changes.Scope, EditingOwner.CrmOpportunity, intent.OpportunityId), default);
+        await EditingAccess.ValidateAsync(grant, write: true, default);
+        if (!IsCurrentCrmAction(action)) {
+            return;
+        }
+        isOpportunityBusy = true;
+        CrmOpportunityStageReceipt? accepted = null;
+        using var authority = Changes.EnterUiWrite(token => EditingAccess.ValidateAsync(grant, write: true, token));
+        try {
+            var result = await CrmService.AdvanceOpportunityStageAsync(intent, grant.Actor, onCommitted: receipt => accepted = receipt);
+            if (!IsCurrentCrmAction(action)) {
+                return;
+            }
+            if (result.IsFailure) {
+                NotifyError("Stage advance refused", string.Join(" ", result.Errors.Select(error => error.Message)));
+            } else {
+                NotifySuccess("Stage advanced", "Opportunity stage saved.");
+            }
+            opportunityPipelineRefreshVersion++;
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Opportunity stage continuation failed for {OpportunityId}; accepted {Accepted}.", intent.OpportunityId, accepted is not null);
+            if (IsCurrentCrmAction(action)) {
+                stageOutcomeUnknown = accepted is null;
+                NotifyError("Stage advance", accepted is null ? "The stage outcome is unknown. Further stage commands are blocked until this workspace is reopened and observed." : "The stage was saved; a follow-up failed.");
+                opportunityPipelineRefreshVersion++;
+            }
+        } finally {
+            if (IsCurrentCrmAction(action)) {
+                isOpportunityBusy = false;
+            }
+        }
     }
 
-    private void OpenOpportunityCreateDialog()
-    {
-        if (selectedAccount is null)
-        {
+    private async Task OpenOpportunityCreateDialog() {
+        if (selectedAccount is null || !TryCaptureCrmAction(out var action)) {
             return;
         }
-
-        opportunityEditor = new CrmOpportunityEditorModel
-        {
-            AccountPartyId = selectedAccount.AccountPartyId,
-            RelationshipStage = profileEditor.RelationshipStage.ToString()
-        };
+        if (!await opportunityEditing.OpenAsync(new() {
+            AccountPartyId = selectedAccount.AccountPartyId, RelationshipStage = profileEditor.RelationshipStage.ToString()
+        })) {
+            return;
+        }
+        if (!IsCurrentCrmAction(action)) {
+            return;
+        }
         message = null;
         isOpportunityDetailDialogOpen = false;
         isOpportunityEditDialogOpen = false;
         isOpportunityCreateDialogOpen = true;
+        StateHasChanged();
     }
 
-    private Task CloseOpportunityCreateDialogAsync()
-    {
+    private async Task CloseOpportunityCreateDialogAsync() {
+        if (!await RequestOpportunityLeaveAsync()) {
+            return;
+        }
+        var savedId = opportunityEditing.Draft.Id;
+        var canRefresh = TryCaptureCrmAction(out var action);
         isOpportunityCreateDialogOpen = false;
+        opportunityEditing.Clear();
         message = null;
-        return Task.CompletedTask;
+        StateHasChanged();
+        if (savedId is Guid id && canRefresh) {
+            await OpenCommittedOpportunityAsync(action, id);
+        }
     }
 
     // Closing the opportunity returns to its account: Back when the opportunity was opened here, otherwise the location
@@ -1180,149 +1547,126 @@
         NotifySuccess("Opportunity saved", "Opportunity saved.");
     }
 
-    private void OpenOpportunityEditDialog()
-    {
-        if (SelectedOpportunity is null)
-        {
+    private async Task OpenOpportunityEditDialog() {
+        if (SelectedOpportunity is not { } selected || !TryCaptureCrmAction(out var action)) {
             return;
         }
-
+        if (!await opportunityEditing.OpenAsync(OpportunityEditorDrafts.FromDetail(selected))) {
+            return;
+        }
+        if (!IsCurrentCrmAction(action)) {
+            return;
+        }
         message = null;
         isOpportunityDetailDialogOpen = false;
         isOpportunityEditDialogOpen = true;
+        StateHasChanged();
     }
 
-    private Task CloseOpportunityEditDialogAsync()
-    {
+    private async Task CloseOpportunityEditDialogAsync() {
+        if (!await RequestOpportunityLeaveAsync()) {
+            return;
+        }
+        var target = SelectedOpportunity?.Id;
+        var canRefresh = TryCaptureCrmAction(out var action);
         isOpportunityEditDialogOpen = false;
         isOpportunityDetailDialogOpen = SelectedOpportunity is not null;
+        opportunityEditing.Clear();
         message = null;
-        return Task.CompletedTask;
+        StateHasChanged();
+        if (target is Guid id && canRefresh) {
+            var opening = opportunityEditing.Opening;
+            try {
+                await ReloadSelectedAccountAsync(action, clearMessage: false, preferredOpportunityId: id);
+            } catch (Exception exception) when (exception is not OperationCanceledException) {
+                Logger.LogWarning(exception, "Opportunity detail refresh failed after editor close for {OpportunityId}.", id);
+                if (opening == opportunityEditing.Opening && SelectedOpportunity?.Id == id) {
+                    NotifyWarning("Detail refresh failed", "The editor closed, but current opportunity detail could not be read. Reopen it to retry.");
+                }
+            }
+        }
     }
 
-    private Task OpenConversionDialogAsync()
-    {
-        if (SelectedOpportunity is not { } selectedOpportunity)
-        {
-            NotifyWarning("Opportunity conversion unavailable", "Choose a won opportunity before converting it to a project.");
-            return Task.CompletedTask;
+    private async Task OpenConversionDialogAsync() {
+        if (isOpportunityConversionDialogOpen || !TryCaptureCrmAction(out var action) || SelectedOpportunity is not { } opportunity) {
+            return;
         }
-
-        if (selectedOpportunity.Stage != OpportunityStage.Won)
-        {
+        if (opportunity.Stage != OpportunityStage.Won) {
             NotifyWarning("Opportunity conversion unavailable", "Only won opportunities can be converted into projects.");
-            return Task.CompletedTask;
+            return;
         }
-
-        opportunityConversionEditor = CreateOpportunityConversionEditor(selectedOpportunity, selectedOpportunityProjectAdmission);
         message = null;
         isOpportunityDetailDialogOpen = false;
         isOpportunityConversionDialogOpen = true;
-        return Task.CompletedTask;
+        await conversionEditing.OpenAsync(opportunity, CreateOpportunityConversionEditor(opportunity, selectedOpportunityProjectAdmission));
+        if (!IsCurrentCrmAction(action)) {
+            return;
+        }
     }
 
-    private Task CloseOpportunityConversionDialogAsync()
-    {
+    private async Task ObserveConversionProjectAsync(Guid projectId, long opening) {
+        if (opening == opportunityConversion.Opening && opportunityConversionEditor.ExistingProjectId == projectId &&
+            opportunityConversionEditor.ExpectedProjectAdmission is { } project) {
+            await conversionEditing.ObserveProjectAsync(project);
+        }
+    }
+
+    private async Task CloseOpportunityConversionDialogAsync() {
+        conversionEditing.CancelRead();
+        if (conversionLeaveGuard is not null && !await conversionLeaveGuard.RequestLeaveAsync()) {
+            return;
+        }
+        var known = opportunityConversion.Accepted;
         isOpportunityConversionDialogOpen = false;
         isOpportunityDetailDialogOpen = SelectedOpportunity is not null;
         message = null;
-        return Task.CompletedTask;
+        conversionEditing.Clear();
+        if (known is not null && TryCaptureCrmAction(out var action)) {
+            await ReloadSelectedAccountAsync(action, clearMessage: false, preferredOpportunityId: known.OpportunityId);
+        }
     }
 
-    private async Task SaveOpportunityConversionAsync(CrmOpportunityConversionEditorModel model)
-    {
-        if (!TryCaptureCrmAction(out var action) ||
-            SelectedOpportunity is not { } selectedOpportunity)
-        {
+    private async Task SaveOpportunityConversionAsync(CrmOpportunityConversionEditorModel model) {
+        if (!isOpportunityConversionDialogOpen || !conversionEditing.CanSave || !TryCaptureCrmAction(out var action) ||
+            SelectedOpportunity is not { } opportunity || model.OpportunityId != opportunity.Id) {
             return;
         }
-
-        if (model.LinkExistingProject &&
-            (model.ExistingProjectId is not { } existingProjectId ||
-             model.ExpectedProjectAdmission?.ProjectId != existingProjectId))
-        {
-            NotifyError(
-                "Opportunity conversion not saved",
-                "Choose the project to link in the project picker before converting.",
-                keepDialogMessage: true);
+        if (model.LinkExistingProject && (model.ExistingProjectId is not { } projectId || model.ExpectedProjectAdmission?.ProjectId != projectId)) {
+            conversionEditing.RefuseSubmission("Choose the project to link in the project picker before converting.");
             return;
         }
-
-        var transientGeneration = Interlocked.Increment(ref transientStateGeneration);
         using var admission = mutationGate.TryEnter(action.LoadStamp.Generation);
-        if (admission is null)
-        {
+        if (admission is null) {
             return;
         }
-
-        isOpportunityConversionBusy = true;
-        try
-        {
-            var editor = CloneOpportunityConversionEditor(model);
-            editor.OpportunityId = selectedOpportunity.Id;
-            editor.LastChangedBy = profileEditor.LastChangedBy;
-
-            var result = await CrmService.ConvertOpportunityToProjectAsync(editor);
-            if (result.IsFailure)
-            {
-                if (IsCurrentCrmAction(action))
-                {
-                    NotifyError("Opportunity conversion failed", string.Join(" ", result.Errors.Select(error => error.Message)), keepDialogMessage: true);
-                }
-
-                return;
-            }
-
-            var conversion = result.Value;
-            if (conversion is null)
-            {
-                if (IsCurrentCrmAction(action))
-                {
-                    NotifyError("Opportunity conversion failed", "The opportunity conversion completed without a result payload.", keepDialogMessage: true);
-                }
-
-                return;
-            }
-
-            if (!await ReloadSelectedAccountAsync(
-                    action,
-                    clearMessage: false,
-                    preferredOpportunityId: conversion.OpportunityId))
-            {
-                return;
-            }
-
-            opportunityPipelineRefreshVersion++;
-            isOpportunityConversionDialogOpen = false;
-            isOpportunityDetailDialogOpen = true;
-            var conversionMessage = conversion.CreatedNewProject
-                ? "Opportunity converted into a new project."
-                : "Opportunity linked to the selected project.";
-            NotifySuccess("Opportunity converted", conversionMessage);
+        message = null;
+        var submission = await conversionEditing.SaveAsync(model);
+        if (submission is null || !IsCurrentCrmAction(action) || !opportunityConversion.IsCurrent(submission) ||
+            opportunityConversion.Accepted is not { } converted) {
+            return;
         }
-        catch (CrmOpportunityConversionRequiresObservationException exception) {
-            if (IsCurrentCrmAction(action)) {
-                NotifyError("Opportunity conversion requires review", exception.Message, keepDialogMessage: true);
-            }
+        opportunityPipelineRefreshVersion++;
+        selectedOpportunity = opportunity with {
+            LinkedProjectId = converted.ProjectId, LinkedProjectName = converted.ProjectName,
+            LinkedProjectAdmission = converted.ProjectAdmission,
+            UpdatedAtUtc = converted.OpportunityUpdatedAtUtc ?? throw new InvalidOperationException("The conversion has no committed opportunity observation.")
+        };
+        selectedOpportunityProjectAdmission = converted.ProjectAdmission;
+        if (opportunityConversion.HasLaterInput(submission)) {
+            NotifySuccess("Opportunity converted", "The submitted conversion committed. Your later input is retained; this completed command cannot be submitted again.");
+            return;
         }
-        catch (ProjectWriteAdmissionRejectedException)
-        {
-            // Nothing was written: the linked project was retired or recreated after it was chosen.
-            if (IsCurrentCrmAction(action))
-            {
-                NotifyError(
-                    "Opportunity conversion not saved",
-                    "The selected project changed after it was chosen. Choose the project again before converting.",
-                    keepDialogMessage: true);
-            }
+        isOpportunityConversionDialogOpen = false;
+        isOpportunityDetailDialogOpen = true;
+        if (await ReloadSelectedAccountAsync(action, clearMessage: false, preferredOpportunityId: converted.OpportunityId)) {
+            NotifySuccess("Opportunity converted", converted.CreatedNewProject ? "Opportunity converted into a new project." : "Opportunity linked to the selected project.");
         }
-        finally
-        {
-            if (transientGeneration == Volatile.Read(ref transientStateGeneration))
-            {
-                isOpportunityConversionBusy = false;
-            }
-        }
+    }
+
+    private void CancelConversionReview() {
+        conversionEditing.CancelRead();
+        opportunityConversion.CancelReview();
+        StateHasChanged();
     }
 
     private Task HandleOpportunityPipelineLoadFailedAsync(Exception exception)
@@ -1360,22 +1704,6 @@
         return Task.CompletedTask;
     }
 
-    private void ToggleInteractionParticipant(Guid partyId, ChangeEventArgs args)
-    {
-        var isSelected = bool.TryParse(args.Value?.ToString(), out var parsed) && parsed;
-        if (isSelected)
-        {
-            if (!interactionEditor.ParticipantPartyIds.Contains(partyId))
-            {
-                interactionEditor.ParticipantPartyIds.Add(partyId);
-            }
-
-            return;
-        }
-
-        interactionEditor.ParticipantPartyIds.Remove(partyId);
-    }
-
     private void NotifySuccess(string summary, string detail)
     {
         message = detail;
@@ -1402,8 +1730,7 @@
         Guid? requestedOpportunityId,
         Guid? preferredOpportunityId,
         Guid? requestedInteractionId,
-        bool accountChanged,
-        bool interactionCommitted)
+        bool accountChanged)
     {
         if (selectedAccount is null)
         {
@@ -1411,9 +1738,10 @@
             selectedOpportunityProjectAdmission = null;
             selectedOpportunityId = null;
             selectedInteractionId = null;
-            opportunityEditor = new();
-            interactionEditor = drafts.Replace(InteractionDraft, CreateInteractionEditor());
-            opportunityConversionEditor = new();
+            opportunityEditing.Clear();
+            interactionAppend.Open(Guid.Empty, CreateInteractionEditor());
+            interactionMessage = null;
+            conversionEditing.Clear();
             isOpportunityCreateDialogOpen = false;
             isOpportunityDetailDialogOpen = false;
             isOpportunityEditDialogOpen = false;
@@ -1437,24 +1765,31 @@
         }
 
         selectedOpportunityId = targetOpportunityId;
-        opportunityEditor = SelectedOpportunity is null
+        var initialOpportunity = SelectedOpportunity is null
             ? new CrmOpportunityEditorModel
             {
                 AccountPartyId = selectedAccount.AccountPartyId,
                 RelationshipStage = selectedAccount.Profile.RelationshipStage.ToString()
             }
             : OpportunityEditorDrafts.FromDetail(SelectedOpportunity);
+        if (!isOpportunityCreateDialogOpen && !isOpportunityEditDialogOpen) {
+            opportunityEditing.State.Reset(initialOpportunity);
+        }
         // The new-interaction draft shows its related opportunity as a field: it follows the selection until the
         // operator chooses one, and a draft the operator started keeps its text either way.
-        interactionEditor = drafts.Reconcile(
-            InteractionDraft,
-            interactionEditor,
-            () => CreateInteractionEditor(selectedOpportunityId ?? SelectedInteraction?.RelatedOpportunityId),
-            accountChanged,
-            interactionCommitted);
-        opportunityConversionEditor = CreateOpportunityConversionEditor(SelectedOpportunity, selectedOpportunityProjectAdmission);
+        if (accountChanged) {
+            interactionAppend.Open(selectedAccount.AccountPartyId,
+                CreateInteractionEditor(selectedOpportunityId ?? SelectedInteraction?.RelatedOpportunityId));
+            interactionMessage = null;
+        } else {
+            interactionAppend.SetOpportunityContext(selectedOpportunityId ?? SelectedInteraction?.RelatedOpportunityId);
+        }
+        if (!isOpportunityConversionDialogOpen) {
+            conversionEditing.Clear();
+            opportunityConversion.Open(CreateOpportunityConversionEditor(SelectedOpportunity, selectedOpportunityProjectAdmission));
+        }
         isOpportunityDetailDialogOpen =
-            requestedOpportunityId.HasValue &&
+            !isOpportunityCreateDialogOpen && !isOpportunityEditDialogOpen && requestedOpportunityId.HasValue &&
             SelectedOpportunity is not null;
         UpdateAgentChatContext();
     }
@@ -1516,7 +1851,7 @@
         Interlocked.Exchange(ref queryLoadCancellation, null)?.Cancel();
         Interlocked.Increment(ref transientStateGeneration);
         isOpportunityBusy = false;
-        isOpportunityConversionBusy = false;
+        conversionEditing.Clear();
         isOpportunityCreateDialogOpen = false;
         isOpportunityDetailDialogOpen = false;
         isOpportunityEditDialogOpen = false;
@@ -1563,18 +1898,6 @@
             "The selected account was refreshed after the agent run completed.");
     }
 
-    private static OpportunityStage ResolveNextOpportunityStage(OpportunityStage stage)
-    {
-        return stage switch
-        {
-            OpportunityStage.Identified => OpportunityStage.Qualified,
-            OpportunityStage.Qualified => OpportunityStage.Proposal,
-            OpportunityStage.Proposal => OpportunityStage.Negotiation,
-            OpportunityStage.Negotiation => OpportunityStage.Won,
-            _ => stage
-        };
-    }
-
     private static CrmOpportunityConversionEditorModel CreateOpportunityConversionEditor(
         CrmOpportunityDetailModel? opportunity,
         ProjectWriteAdmission? capturedLinkedProjectAdmission)
@@ -1609,40 +1932,12 @@
     // An opportunity read together with the admission of its linked project, observed by the same load.
     private sealed record LoadedOpportunity(CrmOpportunityDetailModel Detail, ProjectWriteAdmission? LinkedProjectAdmission);
 
-    // The inline editors of the account record; a reload names the one whose commit caused it.
-    [Flags]
-    private enum CrmAccountEditor
-    {
-        None = 0,
-        Profile = 1,
-        Connections = 2,
-        Interaction = 4
-    }
-
     private static CrmInteractionEditorModel CreateInteractionEditor(Guid? relatedOpportunityId = null)
     {
         return new CrmInteractionEditorModel
         {
             OccurredOn = DateOnly.FromDateTime(DateTime.UtcNow),
             RelatedOpportunityId = relatedOpportunityId
-        };
-    }
-
-    private static CrmOpportunityConversionEditorModel CloneOpportunityConversionEditor(
-        CrmOpportunityConversionEditorModel source)
-    {
-        return new CrmOpportunityConversionEditorModel
-        {
-            OpportunityId = source.OpportunityId,
-            ExpectedUpdatedAtUtc = source.ExpectedUpdatedAtUtc,
-            LinkExistingProject = source.LinkExistingProject,
-            ExistingProjectId = source.ExistingProjectId,
-            ExpectedProjectAdmission = source.ExpectedProjectAdmission,
-            ProjectName = source.ProjectName,
-            ProjectDescription = source.ProjectDescription,
-            ProjectObjective = source.ProjectObjective,
-            CurrentPhase = source.CurrentPhase,
-            LastChangedBy = source.LastChangedBy
         };
     }
 
@@ -1655,7 +1950,80 @@
         Guid? SelectedOpportunityId,
         Guid? SelectedInteractionId);
 
-    public void Dispose()
+    private bool AccountMutationInFlight => accountEditing.State.IsSaving || opportunityEditing.State.IsSaving || interactionAppend.IsSaving || connections.IsSaving || connections.PickerPending ||
+        activeQueryLoadStamp is { } stamp && mutationGate.IsInFlight(stamp.Generation);
+
+    private void ProfileInputChanged(AccountProfileField field) {
+        accountEditing.State.InputChanged(field);
+        MarkAccountInput();
+    }
+
+    private void MarkAccountInput() {
+        hasAccountInput = true;
+        accountInputRevision++;
+    }
+
+    private bool HasAccountChanges() => accountEditing.State.IsDirty(profileEditor) || accountEditing.State.Review is not null ||
+        connections.IsDirty || interactionAppend.IsDirty ||
+        isOpportunityCreateDialogOpen || isOpportunityEditDialogOpen || isOpportunityConversionDialogOpen;
+
+    private Task<bool> RequestAccountLeaveAsync() {
+        if (!HasAccountChanges() && !AccountMutationInFlight && !accountEditing.State.IsUnknown && !opportunityEditing.State.IsUnknown && !interactionAppend.IsUnknown && !connections.IsUnknown) {
+            return Task.FromResult(true);
+        }
+        return (accountLeaveGuard ?? throw new InvalidOperationException("An active dirty account requires its leave guard.")).RequestLeaveAsync();
+    }
+
+    private bool IsSameAccountRoute(string target) {
+        var destination = Navigation.ToAbsoluteUri(target);
+        return destination.AbsolutePath == new Uri(Navigation.Uri).AbsolutePath &&
+            CrmUrlCodec.Instance.Read(destination.AbsoluteUri).AccountId == url.State.AccountId;
+    }
+
+    private Task<bool> RequestOpportunityLeaveAsync() =>
+        (opportunityLeaveGuard ?? throw new InvalidOperationException("The opportunity leave guard is unavailable.")).RequestLeaveAsync();
+
+    private bool IsSameOpportunityRoute(string target) {
+        if (!isOpportunityCreateDialogOpen && !isOpportunityEditDialogOpen) {
+            return true;
+        }
+        var destination = Navigation.ToAbsoluteUri(target);
+        var state = CrmUrlCodec.Instance.Read(destination.AbsoluteUri);
+        return destination.AbsolutePath == new Uri(Navigation.Uri).AbsolutePath && state.AccountId == url.State.AccountId && state.OpportunityId == url.State.OpportunityId;
+    }
+
+    private void OpportunityInputChanged(long opening, OpportunityInput input) {
+        if (opening != opportunityEditing.Opening) {
+            return;
+        }
+        opportunityEditing.InputChanged(input);
+        MarkAccountInput();
+    }
+
+    private void OpportunityPickerChanged(long opening, bool pending) {
+        if (opening != opportunityEditing.Opening) {
+            return;
+        }
+        opportunityEditing.State.ReportPicker(pending);
+        MarkAccountInput();
+    }
+
+    private void ApplyProfileReview() {
+        if (accountEditing.ReadingReview || !accountEditing.State.Apply(profileEditor)) {
+            NotifyError("Comparison changed", "Refresh the comparison before applying it.");
+        }
+        MarkAccountInput();
+    }
+
+    private void UndoProfileMerge() {
+        accountEditing.State.Undo(profileEditor);
+        MarkAccountInput();
+    }
+
+    private void CancelProfileReview() => accountEditing.CancelReview();
+    private void RefreshAccountCatalog() => accountCatalogVersion++;
+
+    public async ValueTask DisposeAsync()
     {
         if (isDisposed)
         {
@@ -1663,10 +2031,15 @@
         }
 
         isDisposed = true;
+        connectionReviewRead?.Cancel();
         queryLoadGeneration.Invalidate();
         activeQueryLoadStamp = null;
         Interlocked.Increment(ref transientStateGeneration);
         Interlocked.Exchange(ref queryLoadCancellation, null)?.Cancel();
         accountActivity.Dispose();
+        await accountEditing.DisposeAsync();
+        await accountRecords.DisposeAsync();
+        await opportunityEditing.DisposeAsync();
+        await conversionEditing.DisposeAsync();
     }
 }

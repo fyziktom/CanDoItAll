@@ -1,4 +1,6 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
+using Microsoft.AspNetCore.Components;
 using CanDoItAll.Workspace.ApiAccess.UI;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Workspace.ApiAccess;
@@ -26,8 +28,9 @@ public sealed class ApiTokenAdministrationTests {
     }
 
     [Fact]
-    public void TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply() {
+    public async Task TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply() {
         using var context = new BunitContext();
+        context.Services.AddCanDoItAllBaseLib();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         string? confirmed = null;
         var closed = false;
@@ -38,15 +41,17 @@ public sealed class ApiTokenAdministrationTests {
             .Add(component => component.OnClose, () => closed = true));
 
         Assert.Equal(ApiScopeCatalog.All.Count(scope => scope.MachineSelectable), cut.FindAll("[data-testid='api-scope-option']").Count);
-        cut.FindAll("button").Single(button => button.TextContent == "Clear").Click();
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent == "Clear").ClickAsync());
         Assert.True(cut.Find("[data-testid='api-scopes-confirm']").HasAttribute("disabled"));
-        cut.Find($"input[value='{ApiAccessScopeNames.ReadSharedProviderCatalog}']").Change(true);
-        cut.Find($"input[value='{ApiAccessScopeNames.InvokeSharedProviders}']").Change(true);
-        cut.Find("[data-testid='api-scopes-confirm']").Click();
+        await cut.InvokeAsync(() => cut.Find($"input[value='{ApiAccessScopeNames.ReadSharedProviderCatalog}']")
+            .ChangeAsync(new ChangeEventArgs { Value = true }));
+        await cut.InvokeAsync(() => cut.Find($"input[value='{ApiAccessScopeNames.InvokeSharedProviders}']")
+            .ChangeAsync(new ChangeEventArgs { Value = true }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='api-scopes-confirm']").ClickAsync());
         Assert.Equal($"{ApiAccessScopeNames.ReadSharedProviderCatalog} {ApiAccessScopeNames.InvokeSharedProviders}", confirmed);
 
         confirmed = null;
-        cut.FindAll("button").Single(button => button.TextContent == "Cancel").Click();
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent == "Cancel").ClickAsync());
         Assert.True(closed);
         Assert.Null(confirmed);
     }

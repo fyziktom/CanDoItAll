@@ -9,6 +9,7 @@ public sealed class ProviderEditorDraft {
     private readonly ValidationMessageStore validation;
     private IReadOnlyList<string> synchronizedModels;
     private string suggestedModelsText;
+    private string pendingTag = string.Empty;
 
     private ProviderEditorDraft(EditContext context) {
         Context = context;
@@ -27,6 +28,13 @@ public sealed class ProviderEditorDraft {
 
     public ProviderProfileEditorModel Model { get; }
     public EditContext Context { get; }
+    public string PendingTag {
+        get => pendingTag;
+        set {
+            pendingTag = value;
+            Notify(nameof(PendingTag));
+        }
+    }
     public static ProviderEditorDraft For(EditContext context) {
         if (!context.Properties.TryGetValue(typeof(ProviderEditorDraft), out var value)) {
             value = new ProviderEditorDraft(context);
@@ -93,28 +101,6 @@ public sealed class ProviderEditorDraft {
         Context.NotifyValidationStateChanged();
     }
 
-    public static ProviderProfileEditorModel Copy(ProviderProfileEditorModel source) => new() {
-        Id = source.Id,
-        ExpectedConcurrencyToken = source.ExpectedConcurrencyToken,
-        Name = source.Name,
-        Kind = source.Kind,
-        BaseUrl = source.BaseUrl,
-        ApiKeyEnvironmentVariable = source.ApiKeyEnvironmentVariable,
-        DefaultModel = source.DefaultModel,
-        Transport = source.Transport,
-        Purpose = source.Purpose,
-        IsEnabled = source.IsEnabled,
-        SupportsStreaming = source.SupportsStreaming,
-        SupportsTools = source.SupportsTools,
-        PreferFrameworkManagedChatHistory = source.PreferFrameworkManagedChatHistory,
-        SupportsBackgroundResponses = source.SupportsBackgroundResponses,
-        ConfigurationJson = source.ConfigurationJson,
-        Notes = source.Notes,
-        IsPrivateProvider = source.IsPrivateProvider,
-        SuggestedModels = source.SuggestedModels.ToList(),
-        ModelPrices = ProviderPricingDefaults.ToEditorModels(ProviderPricingDefaults.FromEditorModels(source.ModelPrices)),
-        Tags = source.Tags.ToList(),
-        ModelThinkingEffortCapabilities = source.ModelThinkingEffortCapabilities?.Select(capability => capability with { AllowedEfforts = capability.AllowedEfforts.ToArray() }).ToList()
-    };
+    public static ProviderProfileEditorModel Copy(ProviderProfileEditorModel source) => ProviderEditorModelSnapshot.Copy(source);
 
 }

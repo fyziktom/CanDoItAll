@@ -42,10 +42,13 @@ public partial class ProjectStructurePage {
         var parentId = request is null ? null : ProjectStructurePlacementPolicy.ResolveParentNodeId(original, request);
         var participants = context.Surface.Nodes.Where(node => node.Id == original.Id || node.Id == parentId).ToArray();
         CloseSecretReferenceDialog();
+        await DisposeRetiredNodeSessionsAsync();
+        var access = ObserveActionAccess();
         ProjectSecretReferenceSession? opening = null;
         opening = new(context.Admission, original, edited is not null, SecretsOwner, ProjectWorkbenchService,
             () => ReferenceEquals(secretSession, opening) && IsCurrentAction(context), () => HasOriginalContentAuthority(context),
-            async (secret, input, onCommitted) => {
+            access, (write, token) => AuthorizeActionAsync(context, access, write, token),
+            async (secret, input, onCommitted, authorizeCommit) => {
                 var purpose = string.IsNullOrWhiteSpace(input.Purpose) ? "Project structure reference" : input.Purpose.Trim();
                 var note = input.Note.Trim();
                 if (edited is not null) {
@@ -55,24 +58,25 @@ public partial class ProjectStructurePage {
                         new(secret.Name, note, purpose, edited.StartUtc, edited.EndUtc,
                             ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(edited.MetadataJson, metadata), edited.DurationSeconds, edited.NodeReferences) {
                             ExpectedProjectAdmission = context.Admission, ExpectedNode = edited
-                        }) ?? throw new ProjectStructureEditConflictException();
+                        }, authorizeCommit: authorizeCommit) ?? throw new ProjectStructureEditConflictException();
                     onCommitted(updated);
                     return updated;
                 }
                 var submitted = request! with { Title = secret.Name, Subtitle = note, Notes = purpose,
                     InputValues = [new() { Key = "secretId", Value = secret.Id.ToString("D") }, new() { Key = "secretName", Value = secret.Name }] };
-                return await CreateObjectAsync(definition!, submitted,
+                return await CreateObjectAsync(context, definition!, submitted,
                     configureRequest: prepared => prepared with { ExpectedProjectAdmission = context.Admission, ExpectedParticipants = participants },
-                    onNodeCommitted: onCommitted, capturedSurface: context.Surface, capturedNavigationRevision: context.NavigationRevision,
-                    canPublish: () => opening!.IsCurrent) ?? throw new ProjectStructureEditConflictException();
-            }, node => ReloadSurfaceAsync(node.Id, () => opening!.IsCurrent), receipt => {
+                    onNodeCommitted: onCommitted,
+                    canPublish: () => opening!.IsCurrent,
+                    authorizeCommit: authorizeCommit) ?? throw new ProjectStructureEditConflictException();
+            }, (node, authorizeRead) => ReloadSurfaceAsync(node.Id, () => opening!.IsCurrent, authorizeRead: authorizeRead), receipt => {
                 secretOutcomes.Enqueue(receipt);
                 while (secretOutcomes.Count > 16) {
                     secretOutcomes.Dequeue();
                 }
                 Logger.LogInformation("Secret reference opening {OpeningId}, original project {ProjectId}, phase {Phase}: secret {SecretId}, node {NodeId}.",
                     opening!.State.OpeningId, context.Admission.ProjectId, receipt.Phase, receipt.SecretId, receipt.NodeId);
-                if (HasOriginalContentAuthority(context)) {
+                if (IsCurrentAction(context) && HasOriginalContentAuthority(context)) {
                     var message = receipt.Phase == SecretReferencePhase.VaultCommitted
                         ? $"Secret {receipt.SecretId:D} was created; completion of its original project reference is pending. {receipt.Message}"
                         : receipt.Message;
@@ -92,14 +96,18 @@ public partial class ProjectStructurePage {
 
     private void CloseSecretReferenceDialog(ProjectSecretReferenceSession opening) {
         opening.Retire();
+        if (!retiredAuthoringSessions.Contains(opening)) {
+            retiredAuthoringSessions.Add(opening);
+        }
         if (ReferenceEquals(secretSession, opening)) {
             secretSession = null;
         }
     }
 
     private void CloseSecretReferenceDialog() {
-        secretSession?.Retire();
-        secretSession = null;
+        if (secretSession is { } opening) {
+            CloseSecretReferenceDialog(opening);
+        }
     }
 
     private static bool IsSecretReferenceCreateRequest(CanvasWorkbenchCreateActionRequest request)

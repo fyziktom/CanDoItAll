@@ -1,6 +1,5 @@
 @{
     var draft = Draft;
-    var reviewed = draft.Latest;
     var save = Save;
 }
 <EditForm EditContext="draft.Context" OnSubmit="@(() => SaveAsync(draft, save))">
@@ -30,15 +29,29 @@
 
         @if (draft.HasConflict) {
             <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-import-conflict">
-                Another operator changed the local settings. Your edits are retained. Saved alias: @reviewed.Settings.LocalAlias;
-                enabled: @(reviewed.Settings.IsEnabled ? "yes" : "no"). Review before saving.
-                <Cluster Gap="LayoutGap.Small">
-                    <Button Text="Use saved settings" ButtonStyle="ButtonStyle.Light" Disabled="@IsBusy"
-                            Click="@(() => ResolveConflict(draft, reviewed, false))" data-testid="shared-provider-import-use-saved" />
-                    <Button Text="Keep my edited fields" Disabled="@IsBusy"
-                            Click="@(() => ResolveConflict(draft, reviewed, true))" data-testid="shared-provider-import-keep-edits" />
-                </Cluster>
+                Another operator changed this provider. Your edits are retained. Read its current sharing state, compare, then Save separately.
+                <Button Text="Compare local settings" ButtonStyle="ButtonStyle.Light" Disabled="@(ReviewBlocked || draft.NeedsCurrentRead)"
+                        Click="draft.Compare" data-testid="shared-provider-import-compare" />
             </Alert>
+        }
+        @if (draft.Comparison is { } review) {
+            <Stack GapScale="LayoutGap.Small" data-testid="shared-provider-import-comparison">
+                <TextBlock Value="Review original, my draft and current settings. Applying this review only changes your local draft." />
+                @if (review.IsStale) {
+                    <Alert AlertStyle="AlertStyle.Warning">Your draft or this provider changed. Compare again.</Alert>
+                }
+                @if (review.Incomplete) {
+                    <FormField Text="Keep my unfinished local alias">
+                        <CheckBox TValue="bool" Value="review.KeepIncomplete" ValueChanged="@(value => review.KeepIncomplete = value)" />
+                    </FormField>
+                }
+                <CanDoItAll.Editing.UI.MergeFieldView TValue="string" Label="Local alias" Field="review.Alias" Format="@(value => value)"
+                    HasPendingInput="review.Incomplete" Changed="StateHasChanged" TestId="shared-provider-import-review-alias" />
+                <CanDoItAll.Editing.UI.MergeFieldView TValue="bool" Label="Enabled locally" Field="review.Enabled" Format="@(value => value ? "Enabled" : "Disabled")"
+                    Changed="StateHasChanged" TestId="shared-provider-import-review-enabled" />
+                <Button Text="Apply review locally" Disabled="@(ReviewBlocked || !review.CanApply)" Click="ApplyReviewAsync"
+                        data-testid="shared-provider-import-review-apply" />
+            </Stack>
         }
 
         <FactTable>
@@ -77,6 +90,7 @@
 
     [Parameter]
     public bool IsBusy { get; set; }
+    [Parameter] public bool ReviewBlocked { get; set; }
 
     [Parameter]
     public EventCallback<SharedProviderImportSubmission> Save { get; set; }
@@ -87,15 +101,17 @@
     [Parameter, EditorRequired]
     public SharedProviderImportDraft Draft { get; set; } = default!;
 
+    [Parameter] public EventCallback DraftChanged { get; set; }
+
+    private async Task ApplyReviewAsync() {
+        if (!ReviewBlocked && Draft.ApplyComparison()) {
+            await DraftChanged.InvokeAsync();
+        }
+    }
+
     private Task SaveAsync(SharedProviderImportDraft draft, EventCallback<SharedProviderImportSubmission> save) =>
         !IsBusy && ReferenceEquals(draft, Draft) && !draft.HasConflict && draft.Context.Validate()
             ? save.InvokeAsync(draft.Capture()) : Task.CompletedTask;
-
-    private void ResolveConflict(SharedProviderImportDraft draft, SharedProviderImportBaseline reviewed, bool keepEdits) {
-        if (!IsBusy && ReferenceEquals(draft, Draft)) {
-            draft.ResolveConflict(reviewed, keepEdits);
-        }
-    }
 
     private static string ResolveAvailabilityTone(SharedProviderImportAvailability state) => state switch
     {

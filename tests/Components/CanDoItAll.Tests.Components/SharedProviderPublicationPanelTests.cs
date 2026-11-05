@@ -100,7 +100,7 @@ public sealed class SharedProviderPublicationPanelTests
                 isPublished,
                 Guid.NewGuid()),
             eligibility,
-            Import: null);
+            Import: null) { ProviderConcurrencyToken = Guid.NewGuid() };
     }
 }
 
@@ -127,6 +127,7 @@ internal sealed class RecordingSharedProviderManagementService(
         Guid providerProfileId,
         SharedProviderPublicationAction action,
         Guid? expectedConcurrencyToken,
+        Guid expectedProviderConcurrencyToken,
         CancellationToken cancellationToken = default)
     {
         PublicationWrites++;

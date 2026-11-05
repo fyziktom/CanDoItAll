@@ -65,7 +65,7 @@ public sealed class CrmHrWorkforceSandboxView(CrmHrSandboxPartyStore partyStore)
 
     public string? WorkforceHistoryFailureMessage { get; private set; }
 
-    public DeliveryUnitQuickCreateModel DeliveryUnitEditor { get; private set; } = new();
+    public CanDoItAll.CrmHr.UI.Parties.PartyEditorViewModel DeliveryUnitEditor { get; private set; } = new();
 
     public SkillDefinitionEditorModel SkillDefinitionEditor { get; private set; } = new();
 
@@ -128,7 +128,7 @@ public sealed class CrmHrWorkforceSandboxView(CrmHrSandboxPartyStore partyStore)
         IntentLog = "No intent yet.";
         IsDeliveryUnitDialogOpen = false;
         IsDeliveryUnitSaving = false;
-        DeliveryUnitEditor = new DeliveryUnitQuickCreateModel();
+        DeliveryUnitEditor = new CanDoItAll.CrmHr.UI.Parties.PartyEditorViewModel();
         IsProfileCreationRequested = false;
         CapacityWorkspaceError = "";
         WorkforceHistoryFailureMessage = null;
@@ -154,11 +154,13 @@ public sealed class CrmHrWorkforceSandboxView(CrmHrSandboxPartyStore partyStore)
                 break;
             case CrmHrWorkforceWorkspaceSandboxScenario.Loading:
                 OpenWorkspace(CrmHrSandboxData.ElenaWard, tabIndex: 3);
+                CapacityWorkspace = null;
                 IsCapacityWorkspaceLoading = true;
                 WorkforceHistoryPresentation = CrmHrActivityPresentation.Loading();
                 break;
             case CrmHrWorkforceWorkspaceSandboxScenario.Failed:
                 OpenWorkspace(CrmHrSandboxData.ElenaWard, tabIndex: 3);
+                CapacityWorkspace = null;
                 CapacityWorkspaceError = "The allocation workspace could not be loaded.";
                 WorkforceHistoryFailureMessage = "The workforce history could not be loaded.";
                 break;
@@ -171,7 +173,7 @@ public sealed class CrmHrWorkforceSandboxView(CrmHrSandboxPartyStore partyStore)
             case CrmHrWorkforceWorkspaceSandboxScenario.Busy:
                 IsRecordDialogOpen = false;
                 SelectedWorkspace = null;
-                DeliveryUnitEditor = new DeliveryUnitQuickCreateModel { Name = "Cascade Deployment Unit", ExternalCode = "UNIT-CDU" };
+                DeliveryUnitEditor = new CanDoItAll.CrmHr.UI.Parties.PartyEditorViewModel { DisplayName = "Cascade Deployment Unit", ExternalCode = "UNIT-CDU" };
                 IsDeliveryUnitDialogOpen = true;
                 IsDeliveryUnitSaving = true;
                 break;
@@ -261,7 +263,7 @@ public sealed class CrmHrWorkforceSandboxView(CrmHrSandboxPartyStore partyStore)
 
     public void OpenDeliveryUnitDialog()
     {
-        DeliveryUnitEditor = new DeliveryUnitQuickCreateModel();
+        DeliveryUnitEditor = new CanDoItAll.CrmHr.UI.Parties.PartyEditorViewModel();
         IsDeliveryUnitDialogOpen = true;
         Log("Open delivery unit dialog");
     }
@@ -374,13 +376,13 @@ public sealed class CrmHrWorkforceSandboxView(CrmHrSandboxPartyStore partyStore)
     public Task CreateDeliveryUnitAsync()
     {
         var id = CrmHrWorkspaceSandboxIds.Id($"delivery-unit-{Guid.NewGuid():N}");
-        partyStore.Upsert(new CrmHrSandboxPartyRecord(id, DeliveryUnitEditor.Name, PartyType.OrganizationUnit,
+        partyStore.Upsert(new CrmHrSandboxPartyRecord(id, DeliveryUnitEditor.DisplayName, PartyType.OrganizationUnit,
             PartyLifecycleStatus.Active, DeliveryUnitEditor.ExternalCode, DeliveryUnitEditor.Summary, [], false, "", "",
             WorkforceRecordClassification.DeliveryUnit, "", "", "", "", "", null, 0m, null, null, DateTimeOffset.UtcNow));
         WorkforceBrowserVersion++;
         IsDeliveryUnitDialogOpen = false;
         IsDeliveryUnitSaving = false;
-        Log($"Create delivery unit: {DeliveryUnitEditor.Name}");
+        Log($"Create delivery unit: {DeliveryUnitEditor.DisplayName}");
         return Task.CompletedTask;
     }
 

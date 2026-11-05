@@ -6,11 +6,14 @@ using CanDoItAll.Components.Gantt;
 using CanDoItAll.Components.Mermaid;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +23,27 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureGanttPanelTests
 {
+    private static IRenderedComponent<GanttChart> WaitForChart(IRenderedComponent<ProjectStructureGanttPanel> cut) {
+        cut.WaitForAssertion(() => {
+            var presentation = cut.FindComponent<PlanningGanttSurface>().Instance.Presentation;
+            Assert.False(presentation.IsLoading);
+            Assert.True(presentation.HasProjection);
+            Assert.Null(presentation.LoadError);
+        });
+        return cut.FindComponent<GanttChart>();
+    }
+
+    private static Func<Func<CancellationToken, ValueTask>, Task> GuardRead(Action read) => GuardRead(() => {
+        read();
+        return Task.CompletedTask;
+    });
+
+    private static Func<Func<CancellationToken, ValueTask>, Task> GuardRead(Func<Task> read) => async authorize => {
+        await authorize(CancellationToken.None);
+        await read();
+        await authorize(CancellationToken.None);
+    };
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -34,8 +58,8 @@ public sealed class ProjectStructureGanttPanelTests
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, originalId)
             .Add(component => component.Surface, CreateSurface(context, originalId, node))
-            .Add(component => component.MutationCommitted, () => callbacks++));
-        var queued = cut.FindComponent<GanttChart>().Instance.TaskTitleChangeRequested;
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => callbacks++)));
+        var queued = WaitForChart(cut).Instance.TaskTitleChangeRequested;
         await cut.InvokeAsync(() => cut.Render(parameters => parameters
             .Add(component => component.ProjectId, successorId)
             .Add(component => component.Surface, CreateSurface(context, successorId, node))));
@@ -44,6 +68,7 @@ public sealed class ProjectStructureGanttPanelTests
                 .Add(component => component.ProjectId, originalId)
                 .Add(component => component.Surface, CreateSurface(context, originalId, node))));
         }
+        WaitForChart(cut);
         await cut.InvokeAsync(() => queued.InvokeAsync(new(new(node.Id), node.Title, "Obsolete input")));
         Assert.Equal(0, callbacks);
         await using var read = await context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
@@ -56,18 +81,21 @@ public sealed class ProjectStructureGanttPanelTests
         var pending = new TaskCompletionSource<IReadOnlyList<ProjectPartyAssignmentDetail>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var bridge = new StubProjectPartyIntegrationBridge([], null, pending);
         using var context = CreateContext(bridge);
-        var first = new ProjectWriteAdmission(Guid.NewGuid(), projectId, Guid.NewGuid());
-        var second = new ProjectWriteAdmission(first.DatabaseProfileId, projectId, Guid.NewGuid());
+        await SeedProjectTaskAsync(context, projectId, CreateTask("task-a", "Original"));
+        var first = context.Services.GetRequiredService<GanttFixtureAdmissions>().Values[projectId];
         var publishedLifetimes = new List<Guid?>();
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, CreateTask("task-a", "Original")) with { ExpectedProjectAdmission = first })
             .Add(component => component.ObservationChanged, observation => publishedLifetimes.Add(observation?.ObservedProjectLifetime?.LifetimeId)));
+        WaitForChart(cut);
         var refresh = cut.InvokeAsync(() => cut.Render(parameters => parameters
             .Add(component => component.Surface, CreateSurface(context, projectId, CreateTask("task-a", "Late original")) with { ExpectedProjectAdmission = first })));
         await bridge.RefreshRequested.WaitAsync(TimeSpan.FromSeconds(2));
         await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
         using var replacementContext = CreateContext([]);
+        await SeedProjectTaskAsync(replacementContext, projectId, CreateTask("task-b", "Successor"));
+        var second = replacementContext.Services.GetRequiredService<GanttFixtureAdmissions>().Values[projectId];
         var replacement = replacementContext.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(replacementContext, projectId, CreateTask("task-b", "Successor")) with { ExpectedProjectAdmission = second })
@@ -83,7 +111,7 @@ public sealed class ProjectStructureGanttPanelTests
     private static readonly DateTimeOffset Baseline = new(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public void Mermaid_export_previews_and_downloads_only_the_gantt_projection_tasks()
+    public async Task Mermaid_export_previews_and_downloads_only_the_gantt_projection_tasks()
     {
         using var context = CreateContext([]);
         var projectId = Guid.NewGuid();
@@ -108,6 +136,7 @@ public sealed class ProjectStructureGanttPanelTests
             ProjectObjectLinkKind.DependsOn,
             true,
             Guid.NewGuid());
+        await SeedProjectTaskAsync(context, projectId, predecessor);
         var surface = CreateSurface(
             context,
             projectId,
@@ -117,8 +146,9 @@ public sealed class ProjectStructureGanttPanelTests
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, surface)
-            .Add(component => component.MutationCommitted, () => { }));
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
 
+        WaitForChart(cut);
         cut.Find("[data-testid='project-structure-gantt-export-mermaid']").Click();
 
         var source = cut.FindComponent<MermaidDiagram>().Instance.Source;
@@ -138,7 +168,7 @@ public sealed class ProjectStructureGanttPanelTests
     }
 
     [Fact]
-    public void Mermaid_export_is_disabled_without_canonical_tasks()
+    public async Task Mermaid_export_is_disabled_without_canonical_tasks()
     {
         using var context = CreateContext([]);
         var projectId = Guid.NewGuid();
@@ -147,52 +177,57 @@ public sealed class ProjectStructureGanttPanelTests
             ObjectType = ProjectObjectType.Note,
             ObjectSubtype = "note"
         };
+        await SeedProjectTaskAsync(context, projectId, note);
 
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, note))
-            .Add(component => component.MutationCommitted, () => { }));
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
 
+        WaitForChart(cut);
         Assert.True(cut.Find("[data-testid='project-structure-gantt-export-mermaid']").HasAttribute("disabled"));
         Assert.Empty(cut.FindAll("[data-testid='project-structure-gantt-mermaid-dialog']"));
     }
 
     [Fact]
-    public void Mermaid_preview_closes_when_project_parameters_become_invalid()
+    public async Task Mermaid_preview_closes_when_project_parameters_become_invalid()
     {
         using var context = CreateContext([]);
         var projectId = Guid.NewGuid();
+        await SeedProjectTaskAsync(context, projectId, CreateTask("task-a", "Task"));
         var surface = CreateSurface(context, projectId, CreateTask("task-a", "Task"));
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, surface)
-            .Add(component => component.MutationCommitted, () => { }));
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
 
+        WaitForChart(cut);
         cut.Find("[data-testid='project-structure-gantt-export-mermaid']").Click();
         Assert.NotEmpty(cut.FindAll("[data-testid='project-structure-gantt-mermaid-dialog']"));
 
         cut.Render(parameters => parameters
             .Add(component => component.ProjectId, Guid.Empty)
             .Add(component => component.Surface, surface)
-            .Add(component => component.MutationCommitted, () => { }));
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
 
         Assert.Empty(cut.FindAll("[data-testid='project-structure-gantt-mermaid-dialog']"));
     }
 
     [Fact]
-    public void Projection_only_task_allows_schedule_edits_and_loads_assignments()
+    public async Task Projection_only_task_allows_schedule_edits_and_loads_assignments()
     {
         var projectId = Guid.NewGuid();
         using var context = CreateContext(
             [CreateAssignment(projectId, "task-a", "Grace Hopper")]);
+        await SeedProjectTaskAsync(context, projectId, CreateTask("task-a", "Projected task"));
         var surface = CreateSurface(context, projectId, CreateTask("task-a", "Projected task"));
 
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, surface)
-            .Add(component => component.MutationCommitted, () => { }));
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
 
-        var chart = cut.FindComponent<GanttChart>();
+        var chart = WaitForChart(cut);
         var task = Assert.Single(chart.Instance.Tasks);
         Assert.Equal(new GanttAssignment(GanttAssignmentKind.Person, "Grace Hopper"), Assert.Single(task.Assignments));
         Assert.NotNull(chart.Instance.ProjectionOnlySelector);
@@ -274,12 +309,12 @@ public sealed class ProjectStructureGanttPanelTests
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, taskNode))
-            .Add(component => component.MutationCommitted, async () =>
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(async () =>
             {
                 reloadStarted.TrySetResult(true);
                 await releaseReload.Task;
-            }));
-        var chart = cut.FindComponent<GanttChart>();
+            })));
+        var chart = WaitForChart(cut);
         var renderedTask = Assert.Single(chart.Instance.Tasks);
         var proposedEnd = renderedTask.End.AddHours(3);
         var request = new GanttTaskScheduleChangeRequest(
@@ -337,8 +372,8 @@ public sealed class ProjectStructureGanttPanelTests
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, taskNode))
-            .Add(component => component.MutationCommitted, () => committedCount++));
-        var chart = cut.FindComponent<GanttChart>();
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => committedCount++)));
+        var chart = WaitForChart(cut);
         var renderedTask = Assert.Single(chart.Instance.Tasks);
         var request = new GanttTaskScheduleChangeRequest(
             renderedTask.Id,
@@ -379,9 +414,9 @@ public sealed class ProjectStructureGanttPanelTests
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, taskNode))
             .Add(
-                component => component.MutationCommitted,
-                () => Task.FromException(new InvalidOperationException("Reload failed."))));
-        var chart = cut.FindComponent<GanttChart>();
+                component => component.ReadAuthoritativeProject,
+                GuardRead(() => Task.FromException(new InvalidOperationException("Reload failed.")))));
+        var chart = WaitForChart(cut);
         var renderedTask = Assert.Single(chart.Instance.Tasks);
         var proposedEnd = renderedTask.End.AddHours(3);
         var request = new GanttTaskScheduleChangeRequest(
@@ -405,18 +440,19 @@ public sealed class ProjectStructureGanttPanelTests
     }
 
     [Fact]
-    public void Assignment_load_failure_blocks_chart_with_safe_explicit_error()
+    public async Task Assignment_load_failure_blocks_chart_with_safe_explicit_error()
     {
         using var context = CreateContext([], new InvalidOperationException("private connection detail"));
         var projectId = Guid.NewGuid();
+        await SeedProjectTaskAsync(context, projectId, CreateTask("task-a", "Task"));
 
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, CreateTask("task-a", "Task")))
-            .Add(component => component.MutationCommitted, () => { }));
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
 
+        var alert = cut.WaitForElement("[data-testid='project-structure-gantt-load-error']");
         Assert.Empty(cut.FindComponents<GanttChart>());
-        var alert = cut.Find("[data-testid='project-structure-gantt-load-error']");
         Assert.Contains("could not be loaded", alert.TextContent, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("private connection detail", cut.Markup, StringComparison.Ordinal);
     }
@@ -431,7 +467,7 @@ public sealed class ProjectStructureGanttPanelTests
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, taskNode)));
-        var chart = cut.FindComponent<GanttChart>();
+        var chart = WaitForChart(cut);
         var task = Assert.Single(chart.Instance.Tasks);
 
         await cut.InvokeAsync(() => chart.Instance.TaskTitleChangeRequested.InvokeAsync(
@@ -453,16 +489,17 @@ public sealed class ProjectStructureGanttPanelTests
             TaskCreationOptions.RunContinuationsAsynchronously);
         var bridge = new StubProjectPartyIntegrationBridge([], null, refreshAssignments);
         using var context = CreateContext(bridge);
+        await SeedProjectTaskAsync(context, projectId, CreateTask("task-a", "Before refresh"));
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, CreateTask("task-a", "Before refresh")))
-            .Add(component => component.MutationCommitted, () => { }));
-        var originalChart = cut.FindComponent<GanttChart>().Instance;
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
+        var originalChart = WaitForChart(cut).Instance;
 
         var refreshTask = cut.InvokeAsync(() => cut.Render(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, CreateTask("task-a", "After refresh")))
-            .Add(component => component.MutationCommitted, () => { })));
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { }))));
         await bridge.RefreshRequested.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.Same(originalChart, cut.FindComponent<GanttChart>().Instance);
@@ -511,12 +548,12 @@ public sealed class ProjectStructureGanttPanelTests
             ProgressPercent = 40,
             MetadataJson = metadata
         };
-        await SeedProjectTaskAsync(context, projectId, task);
+        task = await SeedProjectTaskAsync(context, projectId, task);
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, task))
-            .Add(component => component.MutationCommitted, () => { }));
-        var chart = cut.FindComponent<GanttChart>();
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
+        var chart = WaitForChart(cut);
 
         var openTask = cut.InvokeAsync(() => chart.Instance.TaskDoubleClicked.InvokeAsync(new GanttTaskId(task.Id)));
 
@@ -551,12 +588,12 @@ public sealed class ProjectStructureGanttPanelTests
         using var context = CreateContext([agent, primaryPerson]);
         var dialogHost = context.Render<DialogHost>();
         var task = CreateTask("task-a", "Customer acceptance");
-        await SeedProjectTaskAsync(context, projectId, task);
+        task = await SeedProjectTaskAsync(context, projectId, task);
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, task))
-            .Add(component => component.MutationCommitted, () => { }));
-        var chart = cut.FindComponent<GanttChart>();
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
+        var chart = WaitForChart(cut);
         var projectedTask = Assert.Single(chart.Instance.Tasks);
         Assert.Equal(2, projectedTask.Assignments.Count);
 
@@ -583,7 +620,7 @@ public sealed class ProjectStructureGanttPanelTests
     }
 
     [Fact]
-    public async Task Missing_displayed_project_admission_rejects_a_title_edit_before_persistence() {
+    public async Task Missing_displayed_project_admission_refuses_private_projection_and_prevents_title_persistence() {
         using var context = CreateContext([]);
         var projectId = Guid.NewGuid();
         var node = CreateTask("task-a", "Original");
@@ -593,18 +630,16 @@ public sealed class ProjectStructureGanttPanelTests
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, surface)
-            .Add(component => component.MutationCommitted, () => committed++));
-        var chart = cut.FindComponent<GanttChart>();
-        await cut.InvokeAsync(() => chart.Instance.TaskTitleChangeRequested.InvokeAsync(new(new(node.Id), node.Title, "Must not be written")));
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => committed++)));
+        cut.WaitForElement("[data-testid='project-structure-gantt-load-error']");
+        Assert.Empty(cut.FindComponents<GanttChart>());
         Assert.Equal(0, committed);
-        var notification = Assert.Single(context.Services.GetRequiredService<NotificationService>().Messages);
-        Assert.Equal("Refresh project schedule", notification.Summary);
         await using var read = await context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         Assert.Equal(node.Title, (await read.Set<ProjectObjectRecord>().SingleAsync(row => row.ProjectId == projectId && row.NodeKey == node.Id)).Title);
     }
 
     [Fact]
-    public async Task Title_edit_keeps_its_displayed_project_admission_when_selection_changes_during_await() {
+    public async Task Title_edit_cannot_write_or_retarget_after_its_displayed_opening_retires_before_SQL() {
         var pause = new GanttMutationPause();
         using var context = CreateContext(new StubProjectPartyIntegrationBridge([], null), pause);
         var originalId = Guid.NewGuid();
@@ -616,21 +651,21 @@ public sealed class ProjectStructureGanttPanelTests
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, originalId)
             .Add(component => component.Surface, CreateSurface(context, originalId, original))
-            .Add(component => component.MutationCommitted, () => { }));
-        var chart = cut.FindComponent<GanttChart>();
+            .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { })));
+        var chart = WaitForChart(cut);
         var edit = cut.InvokeAsync(() => chart.Instance.TaskTitleChangeRequested.InvokeAsync(new(new(original.Id), original.Title, "Changed original")));
         await pause.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
         try {
             await cut.InvokeAsync(() => cut.Render(parameters => parameters
                 .Add(component => component.ProjectId, nextId)
                 .Add(component => component.Surface, CreateSurface(context, nextId, next))
-                .Add(component => component.MutationCommitted, () => { })));
+                .Add(component => component.ReadAuthoritativeProject, GuardRead(() => { }))));
         } finally {
             pause.Release.TrySetResult();
         }
         await edit.WaitAsync(TimeSpan.FromSeconds(5));
         await using var read = await context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-        Assert.Equal("Changed original", (await read.Set<ProjectObjectRecord>().SingleAsync(row => row.ProjectId == originalId)).Title);
+        Assert.Equal(original.Title, (await read.Set<ProjectObjectRecord>().SingleAsync(row => row.ProjectId == originalId)).Title);
         Assert.Equal(next.Title, (await read.Set<ProjectObjectRecord>().SingleAsync(row => row.ProjectId == nextId)).Title);
     }
 
@@ -646,6 +681,7 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddLogging();
         context.Services.AddSingleton<NotificationService>();
         context.Services.AddSingleton<IProjectPartyIntegrationBridge>(bridge);
+        context.Services.AddSingleton(bridge);
         context.Services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
         var (workbenchService, dbContextFactory, clock, owners) = CreateWorkbenchService();
         context.Services.AddSingleton(dbContextFactory);
@@ -667,10 +703,15 @@ public sealed class ProjectStructureGanttPanelTests
             owners.Transactions,
             owners.Projects,
             owners.Admissions,
+            new ProjectAssignmentChanges(new CanDoItAll.Infrastructure.Editing.EditingChangeFeed(),
+                new(CanDoItAll.Editing.EditingScopeKind.Dataset, owners.Admissions.DatabaseProfileId), new()),
             bridge,
             new ProjectWorkAssignmentQueryService(owners.WorkbenchFactory),
+            new ProjectWorkAssignmentStructureChanges(owners.WorkbenchOptions, owners.Transactions,
+                owners.Admissions, new ProjectStructureChangeFeed(), new ProjectStructureChangeSession()),
             new ProjectStructureWorkItemAssignmentRevisionService(
-                clock, owners.WorkbenchOptions, owners.Transactions, owners.Admissions));
+                clock, owners.WorkbenchOptions, owners.Transactions, owners.Admissions),
+            NullLogger<ProjectWorkAssignmentService>.Instance);
         var assigneeService = new ProjectStructureWorkItemAssigneeService(
             bridge,
             workbenchService,
@@ -722,10 +763,17 @@ public sealed class ProjectStructureGanttPanelTests
             taskPricingCommitService,
             NullLogger<ProjectStructureTaskResourceAttachmentService>.Instance);
         context.Services.AddSingleton(taskResourceAttachmentService);
+        var editingChanges = new EditingChangeFeed();
+        var taskEditing = new ProjectStructureTaskEditingSessions(
+            new(owners.WorkbenchFactory, owners.Transactions, owners.Admissions, bridge, new()), editingChanges,
+            new EditingUiTestAccess(), new ProjectChanges(editingChanges,
+                new(EditingScopeKind.Dataset, owners.Admissions.DatabaseProfileId), new(), []), NullLogger<EditingObservation>.Instance, owners.Admissions);
+        context.Services.AddSingleton(taskEditing);
         context.Services.AddScoped(serviceProvider => new ProjectStructureGanttTaskEditCoordinator(
             taskResourceService,
             taskResourceCostService,
             taskDetailsService,
+            taskEditing,
             taskResourceAttachmentService,
             serviceProvider.GetRequiredService<DialogService>(),
             serviceProvider.GetRequiredService<NotificationService>(),
@@ -734,7 +782,7 @@ public sealed class ProjectStructureGanttPanelTests
         return context;
     }
 
-    private static async Task SeedProjectTaskAsync(
+    private static async Task<ProjectStructureNode> SeedProjectTaskAsync(
         BunitContext context,
         Guid projectId,
         ProjectStructureNode taskNode)
@@ -742,15 +790,16 @@ public sealed class ProjectStructureGanttPanelTests
         await using var database = await context.Services
             .GetRequiredService<IDbContextFactory<AppDbContext>>()
             .CreateDbContextAsync();
-        database.Set<Project>().Add(new Project
+        var project = new Project
         {
             Id = projectId,
             Name = "Gantt panel test",
             Slug = $"gantt-panel-{projectId:N}",
             CreatedAtUtc = Baseline,
             UpdatedAtUtc = Baseline
-        });
-        database.Set<ProjectObjectRecord>().Add(new ProjectObjectRecord
+        };
+        database.Set<Project>().Add(project);
+        var record = new ProjectObjectRecord
         {
             Id = Guid.NewGuid(),
             ProjectId = projectId,
@@ -758,19 +807,35 @@ public sealed class ProjectStructureGanttPanelTests
             ObjectType = ProjectObjectType.WorkItem,
             ObjectSubtype = "task",
             Title = taskNode.Title,
-            Status = "Draft",
-            MetadataJson = "{}",
+            ParentNodeKey = taskNode.ParentId ?? string.Empty,
+            Subtitle = taskNode.Subtitle,
+            Notes = taskNode.Notes,
+            Status = taskNode.Status,
+            ProgressMode = taskNode.ProgressMode,
+            ProgressPercent = taskNode.ProgressPercent,
+            MetadataJson = taskNode.MetadataJson,
             MarkersJson = "[]",
             StartUtc = taskNode.StartUtc,
             EndUtc = taskNode.EndUtc,
             DurationSeconds = taskNode.DurationSeconds,
             CreatedAtUtc = Baseline,
             UpdatedAtUtc = Baseline
-        });
+        };
+        database.Set<ProjectObjectRecord>().Add(record);
+        foreach (var assignment in context.Services.GetRequiredService<StubProjectPartyIntegrationBridge>().FixtureAssignments
+            .Where(assignment => assignment.ProjectId == projectId && assignment.NodeKey == taskNode.Id)) {
+            database.Set<ProjectWorkAssignmentRecord>().Add(new() {
+                Id = assignment.Id, ProjectId = projectId, ProjectLifetimeId = project.LifetimeId, PartyId = assignment.PartyId,
+                PartyOrganizationAffiliationId = assignment.PartyAffiliationId, NodeKey = assignment.NodeKey, IsPrimary = assignment.IsPrimary,
+                AllocationPercent = assignment.AllocationPercent, StartsAtUtc = assignment.StartsAtUtc, EndsAtUtc = assignment.EndsAtUtc,
+                Source = assignment.Source, Notes = assignment.Notes
+            });
+        }
         await database.SaveChangesAsync();
         var owners = context.Services.GetRequiredService<WorkbenchOwnerInMemoryFixture>();
         var snapshot = Assert.IsType<ProjectRecordQueryItem>(await owners.Projects.GetAsync(projectId));
         context.Services.GetRequiredService<GanttFixtureAdmissions>().Values[projectId] = owners.MutationScopes.BindSnapshot(snapshot);
+        return taskNode with { RecordId = record.Id, ProjectId = projectId };
     }
 
     private static (
@@ -898,6 +963,7 @@ public sealed class ProjectStructureGanttPanelTests
         private int assignmentRequestCount;
 
         public Task RefreshRequested => refreshRequested.Task;
+        public IReadOnlyList<ProjectPartyAssignmentDetail> FixtureAssignments => assignments;
 
         public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
             Guid projectId,
@@ -956,7 +1022,9 @@ public sealed class ProjectStructureGanttPanelTests
 
         public Task<IReadOnlyDictionary<Guid, ProjectWorkAssignmentPartyFact>> ReadForMutationAsync(
             IReadOnlyCollection<Guid> partyIds, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException("This Gantt projection fixture does not configure party mutations.");
+            => Task.FromResult<IReadOnlyDictionary<Guid, ProjectWorkAssignmentPartyFact>>(assignments.Where(assignment => partyIds.Contains(assignment.PartyId))
+                .DistinctBy(assignment => assignment.PartyId).ToDictionary(assignment => assignment.PartyId,
+                    assignment => new ProjectWorkAssignmentPartyFact(assignment.PartyId, assignment.PartyType, assignment.PartyDisplayName)));
 
         public Task<Error?> ValidateAffiliationsForMutationAsync(
             IReadOnlyCollection<ProjectWorkAssignmentAffiliationRequirement> requirements,
@@ -966,9 +1034,12 @@ public sealed class ProjectStructureGanttPanelTests
         public Task<Guid?> FindParticipationProjectForMutationAsync(Guid assignmentId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("This Gantt projection fixture does not configure party mutations.");
 
+        public Task<ProjectAssignmentObservation?> ReadParticipationForMutationAsync(Guid assignmentId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("This Gantt projection fixture does not configure participation mutations.");
+
         public Task<Result<Guid>> SaveAssignmentAsync(
             ProjectPartyAssignmentUpsertRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, Action<ProjectAssignmentSaveReceipt>? onCommitted = null)
             => throw new NotSupportedException();
 
         public Task<Result> ReplaceNodeAssignmentsAsync(
@@ -977,13 +1048,15 @@ public sealed class ProjectStructureGanttPanelTests
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
             CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
             => throw new NotSupportedException();
 
         public Task DeleteAssignmentAsync(
             Guid assignmentId,
             CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null)
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+            Action<ProjectAssignmentDeleteReceipt>? onCommitted = null)
             => throw new NotSupportedException();
 
         public Task DeleteAssignmentsForNodesAsync(
@@ -1011,7 +1084,9 @@ public sealed class ProjectStructureGanttPanelTests
 
         public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
             ProjectPartyQuickCreateRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => throw new NotSupportedException();
     }
 

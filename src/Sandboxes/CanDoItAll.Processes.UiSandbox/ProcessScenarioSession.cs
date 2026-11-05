@@ -20,6 +20,29 @@ public sealed class ProcessScenarioSession : IProcessWorkspaceSession, ILiveProc
     public ProcessWorkspaceShellProjection? Shell => CurrentShell;
     public ProcessDefinitionCatalogProjection DefinitionCatalog => CurrentShell.DefinitionCatalog;
     public ProcessDefinitionDraft DefinitionDraft { get; private set; } = new();
+    public ProcessDefinitionComparison? DefinitionComparison { get; private set; }
+    public string? DefinitionComparisonError { get; private set; }
+    public Task CompareDefinitionAsync() => Change(() => {
+        DefinitionComparison = DefinitionDraft.Compare(DefinitionCatalog.SelectedEditor!);
+        DefinitionComparisonError = null;
+    });
+    public Task ApplyDefinitionComparisonAsync() => Change(() => {
+        if (DefinitionComparison is not { } comparison) {
+            return;
+        }
+        try {
+            DefinitionDraft.Apply(comparison, DefinitionCatalog.SelectedEditor!);
+            DefinitionComparison = null;
+            DefinitionComparisonError = null;
+        } catch (InvalidOperationException exception) {
+            DefinitionComparisonError = exception.Message;
+        }
+    });
+    public void CancelDefinitionComparison() {
+        DefinitionComparison = null;
+        DefinitionComparisonError = null;
+        Changed?.Invoke();
+    }
     public ProcessRoleEditorState RoleEditorState { get; private set; } = new();
     public ProcessStepEditorState StepEditorState { get; private set; } = new();
     public ProcessTemplateBrowserState TemplateBrowserState { get; private set; } = new();
@@ -323,6 +346,8 @@ public sealed class ProcessScenarioSession : IProcessWorkspaceSession, ILiveProc
         Scope = Scope.Kind == ProcessWorkspaceScopeKind.Global ? ProcessWorkspaceShellScope.ForProject(ProcessScenarioData.ProjectSubprocessProjectId) : ProcessWorkspaceShellScope.Global;
         editors.Clear();
         DefinitionDraft = new();
+        DefinitionComparison = null;
+        DefinitionComparisonError = null;
         RoleEditorState = new();
         StepEditorState = new();
         TemplateBrowserState = new();

@@ -1,13 +1,16 @@
 @using System.Collections.Immutable
 @using CanDoItAll.AgentFramework.Llm.SimpleChats.UI
 @using Microsoft.Extensions.Logging
+@using Microsoft.AspNetCore.Components.Routing
 @inject ILlmChatDefinitionUiGateway Definitions
 @inject ILlmChatProviderUiGateway Providers
 @inject ILlmChatUiAuthorizationFacade Authorization
 @inject ILogger<LlmChatDefinitionEditorSession> Logger
-@implements IDisposable
+@inject ILlmChatDefinitionEditorAccess EditorAccess
+@implements IAsyncDisposable
 
 @if (session is not null) {
+    <NavigationLock ConfirmExternalNavigation="@session.HasUnfinishedDraft" OnBeforeInternalNavigation="GuardNavigation" />
     <LlmChatDefinitionEditorSurface Presentation="@session.Presentation" Intent="HandleIntentAsync" BundledAvatars="@BundledAvatars">
         <AvatarActions Context="avatar">
             <AvatarPicker @key="session.Presentation.Generation"
@@ -32,13 +35,19 @@
     private bool disposed;
 
     protected override void OnInitialized() {
-        session = new(Definitions, Providers, Authorization, Logger);
+        session = new(Definitions, Providers, Authorization, Logger, EditorAccess, work => InvokeAsync(work));
         session.Changed += OnChanged;
     }
     protected override Task OnParametersSetAsync() => session!.SetTargetAsync(DefinitionId);
     private void OnChanged() {
         if (!disposed) {
             StateHasChanged();
+        }
+    }
+    private void GuardNavigation(LocationChangingContext context) {
+        if (session is { HasUnfinishedDraft: true }) {
+            context.PreventNavigation();
+            session.Cancel(session.Presentation.Generation);
         }
     }
     private async Task HandleIntentAsync(DefinitionEditorIntent intent) {
@@ -51,6 +60,24 @@
             }
             return;
         }
+        if (intent.Action == DefinitionEditorAction.ConfirmDiscard) {
+            if (session.Cancel(intent.Generation, discardConfirmed: true)) {
+                await Cancelled.InvokeAsync();
+            }
+            return;
+        }
+        if (intent.Action == DefinitionEditorAction.DraftChanged) {
+            session.UpdateDraft(intent);
+            return;
+        }
+        if (intent.Action == DefinitionEditorAction.ApplyComparison) {
+            session.ApplyComparison(intent.Generation, intent.AcknowledgeUnconfirmed);
+            return;
+        }
+        if (intent.Action == DefinitionEditorAction.UndoComparison) {
+            session.UndoComparison(intent.Generation);
+            return;
+        }
         if (intent.Action == DefinitionEditorAction.Reload) {
             await session.ReloadAsync(intent.Generation);
             return;
@@ -61,8 +88,10 @@
             await Saved.InvokeAsync(saved);
         }
     }
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
         disposed = true;
-        session?.Dispose();
+        if (session is not null) {
+            await session.DisposeAsync();
+        }
     }
 }

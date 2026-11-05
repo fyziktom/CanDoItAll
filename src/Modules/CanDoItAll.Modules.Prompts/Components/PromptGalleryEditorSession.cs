@@ -13,109 +13,6 @@ public enum PromptGalleryEditorCommitKind
 // Reports a persisted change together with the identity the owner should adopt.
 public sealed record PromptGalleryEditorCommit(Guid ItemId, PromptGalleryEditorCommitKind Kind);
 
-// One supported provider/model declaration in the persistence owner's normalized form. The fields stay separate so
-// two declarations can only compare equal when provider, model and preference each match; a joined string would let
-// a delimiter inside a provider or model name make different declarations indistinguishable.
-public readonly record struct PromptGalleryModelKey(string Provider, string Model, bool IsPreferred)
-{
-    public static PromptGalleryModelKey From(PromptProviderModel model)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-        return new PromptGalleryModelKey(model.Provider.Trim().ToUpperInvariant(), model.Model.Trim().ToUpperInvariant(), model.IsPreferred);
-    }
-}
-
-// Normalized editable content of one persisted revision. Two revisions with matching content differ only by
-// non-editable commands (archive, restore, finalize), so their token can be adopted without a lost update.
-public sealed record PromptGalleryPersistedContent(
-    string Title,
-    string Summary,
-    PromptGalleryItemKind Kind,
-    string Phase,
-    string Content,
-    IReadOnlyList<string> TagKeys,
-    IReadOnlyList<PromptGalleryModelKey> ModelKeys,
-    IReadOnlyList<PromptGalleryConsumer> Consumers,
-    PromptModelRecommendations Recommendations)
-{
-    public static PromptGalleryPersistedContent FromDetails(PromptGalleryItemDetails item)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-        return Create(
-            item.Title,
-            item.Summary,
-            item.Kind,
-            item.Phase,
-            item.DraftContent,
-            item.Tags,
-            item.SupportedModels,
-            item.SupportedConsumers,
-            item.Recommendations);
-    }
-
-    public static PromptGalleryPersistedContent FromSubmission(PromptGalleryEditorSubmission submission)
-    {
-        ArgumentNullException.ThrowIfNull(submission);
-        return Create(
-            submission.Title,
-            submission.Summary,
-            submission.Kind,
-            submission.Phase,
-            submission.Content,
-            submission.Tags,
-            submission.SupportedModels,
-            submission.SupportedConsumers,
-            submission.Recommendations);
-    }
-
-    public bool Matches(PromptGalleryPersistedContent other)
-    {
-        ArgumentNullException.ThrowIfNull(other);
-        return string.Equals(Title, other.Title, StringComparison.Ordinal) &&
-               string.Equals(Summary, other.Summary, StringComparison.Ordinal) &&
-               Kind == other.Kind &&
-               string.Equals(Phase, other.Phase, StringComparison.Ordinal) &&
-               string.Equals(Content, other.Content, StringComparison.Ordinal) &&
-               TagKeys.SequenceEqual(other.TagKeys, StringComparer.Ordinal) &&
-               ModelKeys.SequenceEqual(other.ModelKeys) &&
-               Consumers.SequenceEqual(other.Consumers) &&
-               Recommendations.Temperature == other.Recommendations.Temperature &&
-               Recommendations.MaxOutputTokens == other.Recommendations.MaxOutputTokens &&
-               Recommendations.TopP == other.Recommendations.TopP;
-    }
-
-    // Mirrors the persistence normalization: trimmed scalars, case-insensitive distinct tags and provider/model pairs.
-    private static PromptGalleryPersistedContent Create(
-        string title,
-        string summary,
-        PromptGalleryItemKind kind,
-        string phase,
-        string content,
-        IReadOnlyList<string> tags,
-        IReadOnlyList<PromptProviderModel> models,
-        IReadOnlyList<PromptGalleryConsumer> consumers,
-        PromptModelRecommendations recommendations)
-        => new(
-            title.Trim(),
-            summary.Trim(),
-            kind,
-            phase.Trim(),
-            content,
-            tags.Select(tag => tag.Trim().ToUpperInvariant())
-                .Where(tag => tag.Length > 0)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(tag => tag, StringComparer.Ordinal)
-                .ToArray(),
-            models.Select(PromptGalleryModelKey.From)
-                .Distinct()
-                .OrderBy(key => key.Provider, StringComparer.Ordinal)
-                .ThenBy(key => key.Model, StringComparer.Ordinal)
-                .ThenBy(key => key.IsPreferred)
-                .ToArray(),
-            consumers.Distinct().OrderBy(consumer => consumer).ToArray(),
-            recommendations);
-}
-
 // Owns one editor instance: the editing target, reads, draft/version/archive writes, identity adoption and busy coordination.
 public sealed class PromptGalleryEditorSession : IAsyncDisposable
 {
@@ -127,7 +24,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
     private const string RefreshFailureWarning =
         "The saved item could not be re-read. Versions and status may be stale until the editor is reopened.";
     private const string ExternalChangeMessage =
-        "This item was changed elsewhere after your draft was loaded. Saving will be rejected until you reload the latest content; reloading discards your unsaved edits.";
+        "This item was changed elsewhere after your draft was loaded. Review the current saved revision and combine it with your draft before saving.";
     private const string ConcurrencyConflictCode = "prompts.gallery.concurrency-conflict";
 
     private readonly IPromptGalleryService gallery;
@@ -149,6 +46,140 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
     private string? warning;
     private string? externalChange;
     private bool disposed;
+    private bool outcomeUnknown;
+    private bool accessRetired;
+    private long hintRevision;
+    private long reviewRead;
+    private PromptGalleryEditorSource? baselineSource;
+    public PromptGalleryEditorReview? Review { get; private set; }
+    private PromptGalleryEditorReview? retainedReview;
+    public bool IsReviewing { get; private set; }
+    public Func<bool, CancellationToken, ValueTask>? Authorize { get; set; }
+    public Func<PromptGalleryEditorSubmission, Task>? Acknowledged { get; set; }
+    public bool CanLeave => !isBusy && !outcomeUnknown;
+
+    public async Task ObserveAsync(bool requiresReview) {
+        if (disposed || !requiresReview) {
+            return;
+        }
+        hintRevision++;
+        externalChange = ExternalChangeMessage;
+        await PublishSafelyAsync(generation);
+    }
+
+    public async Task RetireAccessAsync() {
+        accessRetired = true;
+        retainedReview = null;
+        Review = null;
+        IsReviewing = false;
+        externalChange = "Gallery access changed. Your draft is retained. Reopen with current access before continuing.";
+        await PublishSafelyAsync(generation);
+    }
+
+    public async Task ReadReviewAsync(PromptGalleryDraftCapture local) {
+        if (disposed || isBusy || outcomeUnknown || accessRetired || !target.HasValue || baselineSource is null) {
+            return;
+        }
+        var currentGeneration = generation;
+        var read = ++reviewRead;
+        var beforeRead = hintRevision;
+        var previous = Review ?? retainedReview;
+        var comparisonBase = previous is null ? baselineSource : PromptGalleryEditorSource.FromDetails(previous.Fields.Current);
+        var originalLocal = previous?.OriginalLocal ?? local;
+        var candidate = previous?.Fields.CaptureCandidate() ?? local;
+        IsReviewing = true;
+        Review = null;
+        warning = null;
+        await PublishSafelyAsync(currentGeneration);
+        try {
+            await DemandAsync(write: false);
+            var result = await gallery.GetItemAsync(target.Value, lifetime.Token);
+            if (!IsCurrent(currentGeneration) || read != reviewRead || !IsReviewing) {
+                return;
+            }
+            if (!result.IsSuccess || result.Value is not { } remote) {
+                warning = "The current item is unavailable. Your draft is retained; retry the read or cancel review.";
+            } else if (remote.ProjectId != projectId || remote.CollectionId != collectionId) {
+                warning = "The item's project or collection changed. Your draft is retained; reopen the item in its current context.";
+            } else {
+                Review = new(currentGeneration, beforeRead, new(comparisonBase, candidate, remote), originalLocal);
+                retainedReview = Review;
+            }
+        } catch (OperationCanceledException) when (lifetime.IsCancellationRequested) {
+            return;
+        } catch (UnauthorizedAccessException) {
+            await RetireAccessAsync();
+        } catch (Exception) {
+            warning = "The current revision could not be read. Your draft is retained; retry the read.";
+        }
+        await PublishSafelyAsync(currentGeneration);
+    }
+
+    public bool IsReviewCurrent => Review is { } review && review.Generation == generation && review.HintRevision == hintRevision &&
+        !accessRetired && !outcomeUnknown && !review.Fields.Current.IsArchived;
+
+    public async Task<bool> ApplyReviewAsync(PromptGalleryEditorReview expected, long draftRevision, Action<PromptGalleryDraftCapture> patch) {
+        if (!ReferenceEquals(Review, expected) || !IsReviewCurrent || expected.Fields.Local.Revision != draftRevision || !expected.Fields.CanApply) {
+            return false;
+        }
+        await DemandAsync(write: false);
+        if (!ReferenceEquals(Review, expected) || !IsReviewCurrent || expected.Fields.Local.Revision != draftRevision) {
+            return false;
+        }
+        patch(expected.Fields.Result());
+        AdoptBaseline(expected.Fields.Current);
+        AdoptStatus(expected.Fields.Current);
+        retainedReview = null;
+        Review = null;
+        IsReviewing = false;
+        await PublishSafelyAsync(generation);
+        return true;
+    }
+
+    public Task CancelReviewAsync() {
+        reviewRead++;
+        retainedReview = null;
+        Review = null;
+        IsReviewing = false;
+        return PublishSafelyAsync(generation);
+    }
+
+    public async Task RestoreReviewedAsync() {
+        if (Review is not { } review || !review.Fields.Current.IsArchived || review.Generation != generation ||
+            review.HintRevision != hintRevision || isBusy || outcomeUnknown || accessRetired) {
+            return;
+        }
+        var current = generation;
+        var restored = false;
+        isBusy = true;
+        await PublishSafelyAsync(current);
+        try {
+            await DemandAsync(write: true);
+            var result = await gallery.ArchiveAsync(review.Fields.Current.Id, false, lifetime.Token);
+            if (!IsCurrent(current)) {
+                return;
+            }
+            restored = result.IsSuccess;
+            if (!restored) {
+                warning = PromptGalleryNotices.DescribeErrors(result.Errors, "The item could not be restored.");
+            }
+        } catch (UnauthorizedAccessException) {
+            await RetireAccessAsync();
+        } catch (Exception) {
+            outcomeUnknown = true;
+            warning = "The restore request has an unknown result. Your draft is retained; do not repeat the command.";
+        } finally {
+            if (IsCurrent(current)) {
+                isBusy = false;
+                await PublishSafelyAsync(current);
+            }
+        }
+        if (restored && IsCurrent(current)) {
+            await ReadReviewAsync(review.Fields.Local);
+        }
+    }
+
+    private ValueTask DemandAsync(bool write) => Authorize?.Invoke(write, lifetime.Token) ?? ValueTask.CompletedTask;
 
     public PromptGalleryEditorSession(IPromptGalleryService gallery)
     {
@@ -183,6 +214,13 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         }
 
         var current = ++generation;
+        retainedReview = null;
+        Review = null;
+        IsReviewing = false;
+        reviewRead++;
+        outcomeUnknown = false;
+        accessRetired = false;
+        hintRevision = 0;
         isBusy = false;
         warning = null;
         failureMessage = null;
@@ -237,7 +275,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
     // Reloads the current target from the server. In the Ready phase this is the explicit "discard my draft" decision.
     private Task RetryAsync(long requested)
     {
-        if (!IsCurrent(requested) || isBusy || !target.HasValue)
+        if (!IsCurrent(requested) || isBusy || outcomeUnknown || accessRetired || IsReviewing || !target.HasValue)
         {
             return Task.CompletedTask;
         }
@@ -256,8 +294,10 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         source = null;
         ResetMetadata();
         await PublishSafelyAsync(current);
+        var beforeRead = hintRevision;
         try
         {
+            await DemandAsync(write: false);
             var result = await gallery.GetItemAsync(itemId, lifetime.Token);
             if (!IsCurrent(current))
             {
@@ -276,6 +316,9 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
                 AdoptBaseline(item);
                 source = PromptGalleryEditorSource.FromDetails(item);
                 phase = PromptGalleryEditorPhase.Ready;
+                if (hintRevision != beforeRead) {
+                    externalChange = ExternalChangeMessage;
+                }
             }
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
@@ -303,8 +346,12 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
     private async Task SaveAsync(long requested, PromptGalleryEditorSubmission submission, bool finalize)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        if (!IsCurrent(requested) || isBusy || phase is PromptGalleryEditorPhase.Loading or PromptGalleryEditorPhase.Failed)
-        {
+        if (!IsCurrent(requested) || isBusy || phase is PromptGalleryEditorPhase.Loading or PromptGalleryEditorPhase.Failed) {
+            return;
+        }
+        if (!Presentation.CanWrite) {
+            await NotifySafelyAsync(generation, PromptGalleryNoticeSeverity.Warning, "Prompt draft was not saved",
+                isArchived ? "Restore this archived item explicitly before saving." : externalChange ?? warning ?? "This editor cannot save in its current state.");
             return;
         }
 
@@ -328,6 +375,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
             }
 
             AcceptSaveReceipt(receipt.Value, submission);
+            await (Acknowledged?.Invoke(submission) ?? Task.CompletedTask);
             await PublishSafelyAsync(current);
             if (!finalize)
             {
@@ -373,6 +421,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         PromptDraftSaveReceipt receipt;
         try
         {
+            await DemandAsync(write: true);
             var saved = await gallery.SaveDraftAsync(draft, lifetime.Token);
             if (!IsCurrent(current))
             {
@@ -400,11 +449,16 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         {
             return null;
         }
+        catch (UnauthorizedAccessException) {
+            await RetireAccessAsync();
+            return null;
+        }
         catch (Exception exception)
         {
             if (IsCurrent(current))
             {
                 // Unknown persistence outcome: keep the draft and identity untouched and never replay the write automatically.
+                outcomeUnknown = true;
                 warning = UnknownSaveOutcomeWarning;
                 await NotifySafelyAsync(current, PromptGalleryNoticeSeverity.Error, "Prompt draft save failed", exception.Message);
             }
@@ -420,6 +474,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
     {
         try
         {
+            await DemandAsync(write: true);
             var version = await gallery.CreateVersionAsync(
                 receipt.PromptArtifactId,
                 new PromptVersionCreateRequest("Ready for reuse", ExpectedUpdatedAtUtc: receipt.UpdatedAtUtc),
@@ -451,10 +506,15 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         {
             return false;
         }
+        catch (UnauthorizedAccessException) {
+            await RetireAccessAsync();
+            return false;
+        }
         catch (Exception exception)
         {
             if (IsCurrent(current))
             {
+                outcomeUnknown = true;
                 warning = UnknownVersionOutcomeWarning;
                 await NotifySafelyAsync(current, PromptGalleryNoticeSeverity.Error, "Final version request failed", exception.Message);
             }
@@ -465,7 +525,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
 
     private async Task ToggleArchiveAsync(long requested)
     {
-        if (!IsCurrent(requested) || isBusy || !target.HasValue || phase != PromptGalleryEditorPhase.Ready)
+        if (!IsCurrent(requested) || isBusy || outcomeUnknown || accessRetired || IsReviewing || !target.HasValue || phase != PromptGalleryEditorPhase.Ready)
         {
             return;
         }
@@ -483,6 +543,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
 
         try
         {
+            await DemandAsync(write: true);
             var result = await gallery.ArchiveAsync(itemId, archive, lifetime.Token);
             if (!IsCurrent(current))
             {
@@ -515,10 +576,16 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
         {
         }
+        catch (UnauthorizedAccessException) {
+            await RetireAccessAsync();
+
+        }
         catch (Exception exception)
         {
             if (IsCurrent(current))
             {
+                outcomeUnknown = true;
+                warning = "The archive request has an unknown result. Your draft is retained; do not repeat the command.";
                 await NotifySafelyAsync(current, PromptGalleryNoticeSeverity.Error, "Archive state change failed", exception.Message);
             }
         }
@@ -534,7 +601,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
 
     private async Task SetWarningSuppressionAsync(long requested, PromptWarningSuppression preference, bool suppressed)
     {
-        if (!IsCurrent(requested) || isBusy || !target.HasValue || phase != PromptGalleryEditorPhase.Ready)
+        if (!IsCurrent(requested) || isBusy || outcomeUnknown || accessRetired || IsReviewing || !target.HasValue || phase != PromptGalleryEditorPhase.Ready)
         {
             return;
         }
@@ -550,6 +617,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
 
         try
         {
+            await DemandAsync(write: true);
             var result = await gallery.SetWarningSuppressionAsync(
                 itemId,
                 preference.Consumer,
@@ -578,6 +646,10 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
         {
         }
+        catch (UnauthorizedAccessException) {
+            await RetireAccessAsync();
+
+        }
         catch (Exception exception)
         {
             if (IsCurrent(current))
@@ -605,6 +677,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
 
         try
         {
+            await DemandAsync(write: false);
             var result = await gallery.GetItemAsync(target.Value, lifetime.Token);
             if (!IsCurrent(current))
             {
@@ -634,6 +707,10 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
     private void Reconcile(PromptGalleryItemDetails item, DateTimeOffset? ownToken)
     {
         AdoptStatus(item);
+        if (item.ProjectId != projectId || item.CollectionId != collectionId) {
+            externalChange = "The item's project or collection changed. Your draft is retained; reopen in the current context.";
+            return;
+        }
         var content = PromptGalleryPersistedContent.FromDetails(item);
         if (ownToken.HasValue && item.UpdatedAtUtc == ownToken.Value)
         {
@@ -669,6 +746,8 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         target = receipt.PromptArtifactId;
         baselineToken = receipt.UpdatedAtUtc;
         baselineContent = PromptGalleryPersistedContent.FromSubmission(submission);
+        baselineSource = new(submission.Title.Trim(), submission.Summary.Trim(), submission.Kind, submission.Phase.Trim(), submission.Content,
+            [.. submission.Tags], [.. submission.SupportedModels], [.. submission.SupportedConsumers], submission.Recommendations);
         isArchived = false;
         phase = PromptGalleryEditorPhase.Ready;
         externalChange = null;
@@ -681,6 +760,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         collectionId = item.CollectionId;
         baselineToken = item.UpdatedAtUtc;
         baselineContent = content ?? PromptGalleryPersistedContent.FromDetails(item);
+        baselineSource = PromptGalleryEditorSource.FromDetails(item);
         externalChange = null;
     }
 
@@ -697,6 +777,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         collectionId = null;
         baselineToken = null;
         baselineContent = null;
+        baselineSource = null;
         isArchived = false;
         versions = [];
         warningSuppressions = [];
@@ -732,7 +813,7 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
             isBusy,
             failureMessage,
             warning,
-            externalChange);
+            externalChange, outcomeUnknown, IsReviewing, accessRetired);
 
     // Presentation effects are never allowed to change what is known about persistence.
     private async Task PublishSafelyAsync(long current)

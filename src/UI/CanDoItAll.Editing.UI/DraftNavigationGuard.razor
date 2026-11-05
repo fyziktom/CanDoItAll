@@ -1,0 +1,44 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navigation
+
+<NavigationLock ConfirmExternalNavigation="@MustRetain" OnBeforeInternalNavigation="BeforeNavigation" />
+@if (target is not null) {
+    <Dialog IsOpen="true" Title="@($"Keep your {EditorName} draft")" Size="ModalSize.Compact" DenseChrome="true" OnClose="KeepEditing" TestId="draft-navigation-guard">
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock Value="@(IsBusy ? "Wait for the current operation to finish." : OutcomeUnknown ? "Review the unconfirmed save outcome before leaving this editor." : "This editor has unsaved input. Leaving discards the local draft.")" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Keep editing" Click="KeepEditing" />
+                <Button Text="Discard draft and continue" ButtonStyle="ButtonStyle.Danger" Disabled="@(IsBusy || OutcomeUnknown)" Click="Leave" />
+            </Cluster>
+        </Stack>
+    </Dialog>
+}
+
+@code {
+    [Parameter] public string EditorName { get; set; } = "editor";
+    [Parameter] public bool MustRetain { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public bool OutcomeUnknown { get; set; }
+    private string? target;
+    private bool leaving;
+    private Task BeforeNavigation(LocationChangingContext context) {
+        if (!leaving && MustRetain) {
+            context.PreventNavigation();
+            target = context.TargetLocation;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+    private void KeepEditing() => target = null;
+    private void Leave() {
+        if (IsBusy || OutcomeUnknown || target is null) {
+            return;
+        }
+        leaving = true;
+        Navigation.NavigateTo(target);
+    }
+}

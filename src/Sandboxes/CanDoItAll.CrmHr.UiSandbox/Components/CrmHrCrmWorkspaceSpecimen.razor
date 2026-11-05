@@ -33,7 +33,16 @@
 </header>
 
 <main class="@FrameClass" data-testid="crmhr-sandbox-frame" data-scenario="@CrmHrCrmWorkspaceSandboxContext.Token(context.Scenario)">
-    <CrmHrCrmWorkspaceSurface View="@view">
+    <CrmHrCrmWorkspaceSurface View="@view" OpportunityProjectSelected="view.SelectOpportunityProjectAsync"
+        ConversionBasis="view.ConversionState.Basis" ConversionOpening="view.ConversionState.Opening"
+        ConversionSaveDisabled="@(!view.ConversionState.CanSubmit)"
+        ConversionInputChanged="@(() => view.ConversionState.Input(view.ConversionState.Opening))"
+        ConversionPickerChanged="@(pending => view.ConversionState.Picker(view.ConversionState.Opening, pending))"
+        ConversionProjectSelected="@(_ => view.ObserveScenarioConversionProjectAsync())">
+        <ConversionEditing>
+            <OpportunityConversionEditing State="view.ConversionState" Message="@view.Message"
+                ReviewRequested="view.ReviewConversionBasisAsync" ApplyRequested="view.ApplyConversionBasisAsync" Cancelled="view.CancelConversionReviewAsync" />
+        </ConversionEditing>
         <SecondaryNavigation>
             @* Host-only navigation: the real CRM / HR area tabs navigate; this sandbox only logs the destination. *@
             <CrmHrAreaTabs SelectedArea="CrmHrWorkspaceArea.Crm" AreaSelected="HandleAreaSelected" />

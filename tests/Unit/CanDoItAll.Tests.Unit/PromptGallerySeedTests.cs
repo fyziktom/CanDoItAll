@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Prompts;
+using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -46,7 +47,8 @@ public sealed class PromptGallerySeedTests
             new PromptGallerySeedLoader(),
             new PromptGalleryTestSupport.FixedClock(),
             PromptGalleryTestSupport.CreateDisabledProjectionCoordinator(factory),
-            NullLogger<PromptGallerySeedImporter>.Instance);
+            NullLogger<PromptGallerySeedImporter>.Instance,
+            PromptGalleryObservationTestSupport.Create());
 
         var first = await importer.ImportAsync();
         var second = await importer.ImportAsync();
@@ -113,7 +115,8 @@ public sealed class PromptGallerySeedTests
             new PromptGallerySeedLoader(),
             new PromptGalleryTestSupport.FixedClock(),
             new PromptGalleryProjectionCoordinator(factory, driver),
-            NullLogger<PromptGallerySeedImporter>.Instance);
+            NullLogger<PromptGallerySeedImporter>.Instance,
+            PromptGalleryObservationTestSupport.Create());
 
         var result = await importer.ImportAsync();
 
@@ -132,7 +135,8 @@ public sealed class PromptGallerySeedTests
             new PromptGallerySeedLoader(),
             new PromptGalleryTestSupport.FixedClock(),
             new PromptGalleryProjectionCoordinator(factory, new RecordingProjectionDriver(throwOnRebuild: true)),
-            NullLogger<PromptGallerySeedImporter>.Instance);
+            NullLogger<PromptGallerySeedImporter>.Instance,
+            PromptGalleryObservationTestSupport.Create());
 
         var result = await importer.ImportAsync();
 

@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
@@ -34,6 +35,9 @@ public sealed class EfLlmChatOperationRepository(SimpleChatsDbContext dbContext)
             .AsNoTracking()
             .SingleOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+        if (row is not null) {
+            await LlmChatWriteAdmission.RequireTargetAsync(row.ConversationId, cancellationToken, LlmChatWriteResource.ConversationOperation);
+        }
         return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
     }
 
@@ -42,6 +46,7 @@ public sealed class EfLlmChatOperationRepository(SimpleChatsDbContext dbContext)
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
+        await LlmChatWriteAdmission.RequireTargetAsync(operation.ConversationId.Value, cancellationToken, LlmChatWriteResource.ConversationOperation);
         var inserted = await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "LlmChats_Operations"
                 ("Id", "ConversationId", "Kind", "RequestFingerprint", "ExpectedTranscriptRevision",
@@ -80,6 +85,7 @@ public sealed class EfLlmChatOperationRepository(SimpleChatsDbContext dbContext)
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
+        await LlmChatWriteAdmission.RequireTargetAsync(operation.ConversationId.Value, cancellationToken, LlmChatWriteResource.ConversationOperation);
         var affected = await dbContext.Set<LlmChatOperationRow>()
             .Where(row => row.Id == operation.Id.Value && row.ConcurrencyToken == expectedConcurrencyToken)
             .ExecuteUpdateAsync(setters => setters
@@ -116,6 +122,7 @@ public sealed class EfLlmChatOperationRepository(SimpleChatsDbContext dbContext)
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
+        await LlmChatWriteAdmission.RequireTargetAsync(operation.ConversationId.Value, cancellationToken, LlmChatWriteResource.ConversationOperation);
         if (operation.Id != executionLease.OperationId)
         {
             throw new ArgumentException("The execution lease does not identify the operation being replaced.", nameof(executionLease));

@@ -1,0 +1,60 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using Microsoft.AspNetCore.Components
+@typeparam TValue
+
+@if (HasPendingInput || ShowUnchanged || Field.LocalChanged || Field.CurrentChanged) {
+<SurfaceCard Soft="true" data-testid="@TestId">
+    <Stack GapScale="LayoutGap.Small">
+        <Cluster JustifyContent="JustifyContent.SpaceBetween">
+            <TextBlock Value="@Label" />
+            <TextBlock Value="@(HasPendingInput ? "Incomplete input" : Field.IsResolved ? Field.Choice == MergeChoice.Automatic ? "Combined automatically" : "Choice made" : "Choose a result")" />
+        </Cluster>
+        <Grid ColumnsXl="3" Gap="LayoutGap.Small">
+            <FormField Text="Original"><pre class="merge-field-value">@Format(Field.Original)</pre></FormField>
+            <FormField Text="My draft">
+                @if (HasPendingInput) {
+                    <TextBlock Value="Your unfinished entry stays in the editor." />
+                } else {
+                    <pre class="merge-field-value">@Format(Field.Local)</pre>
+                }
+            </FormField>
+            <FormField Text="Current saved"><pre class="merge-field-value">@Format(Field.Current)</pre></FormField>
+        </Grid>
+        @if (!HasPendingInput) {
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Use my draft" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="UseLocal" />
+                <Button Text="Use current" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="UseCurrent" />
+            </Cluster>
+            @if (ResultEditor is not null) {
+                <FormField Text="Result">@ResultEditor(Field.IsResolved ? Field.Result : Field.Local)</FormField>
+            } else if (Field.IsResolved) {
+                <FormField Text="Result"><pre class="merge-field-value">@Format(Field.Result)</pre></FormField>
+            }
+        } else {
+            <SmallText Text="Keep your unfinished entry using the confirmation above, or cancel this comparison to correct it first." />
+        }
+    </Stack>
+</SurfaceCard>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public MergeField<TValue> Field { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<TValue, string> Format { get; set; } = default!;
+    [Parameter] public RenderFragment<TValue>? ResultEditor { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public bool HasPendingInput { get; set; }
+    [Parameter] public bool ShowUnchanged { get; set; } = true;
+    [Parameter] public string? TestId { get; set; }
+
+    private async Task UseLocal() {
+        Field.UseLocal();
+        await Changed.InvokeAsync();
+    }
+    private async Task UseCurrent() {
+        Field.UseCurrent();
+        await Changed.InvokeAsync();
+    }
+}

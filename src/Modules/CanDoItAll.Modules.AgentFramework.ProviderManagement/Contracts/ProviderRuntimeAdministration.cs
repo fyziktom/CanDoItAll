@@ -18,9 +18,15 @@ public interface IProviderRuntimeAdministrationService
         RuntimeProviderProfileEditorModel model,
         CancellationToken cancellationToken = default);
 
+    Task<RuntimeProviderProfileEditorModel> SaveProviderEditorAsync(RuntimeProviderProfileEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider administration owner does not return an exact accepted configuration.");
+
     Task DeleteProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken = default);
+
+    Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider administration owner does not support conditional deletion.");
 
     Task<ProviderHealthResult> TestProviderAsync(
         Guid providerId,

@@ -26,7 +26,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructureSecretReferenceTests {
+public sealed partial class ProjectStructureSecretReferenceTests {
     public enum OriginalChange { Parent, Kind, Metadata }
 
     [Theory]
@@ -327,7 +327,7 @@ public sealed class ProjectStructureSecretReferenceTests {
             }
             await host.InvokeAsync(() => host.Render(parameters => parameters.Add(component => component.Value, actor)
                 .AddChildContent<ProjectStructurePage>(child => child.Add(component => component.ProjectId, target.ProjectId))));
-            Assert.True(original.IsRetired);
+            cut.WaitForAssertion(() => Assert.True(original.IsRetired));
             Assert.Empty(original.Draft.Create.SecretValue);
         } finally {
             gate.Release.TrySetResult();
@@ -432,6 +432,9 @@ public sealed class ProjectStructureSecretReferenceTests {
         public IWorkspaceSecretsOwner? Inner { get; set; }
         public int PlaintextReads { get; private set; }
         public int Saves { get; private set; }
+        public int MetadataReads { get; private set; }
+        public Action? AfterMetadataRead { get; set; }
+        public Action? AfterVaultSave { get; set; }
         public Guid? Accepted { get; private set; }
         public SettingsWriteState? AcceptedState { get; private set; }
         public bool FailReadAfterSave { get; set; }
@@ -444,12 +447,14 @@ public sealed class ProjectStructureSecretReferenceTests {
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool IsCurrent => Inner!.IsCurrent;
         public async Task<IReadOnlyList<SecretListItem>> ListAsync(CancellationToken cancellationToken) {
+            MetadataReads++;
             if (FailReadAfterSave && Accepted.HasValue) {
                 throw new IOException("Owned metadata read fault");
             }
             var hold = HoldNextRead;
             HoldNextRead = false;
             var items = await Inner!.ListAsync(cancellationToken);
+            AfterMetadataRead?.Invoke();
             if (hold) {
                 ReadEntered.TrySetResult();
                 await ReadRelease.Task;
@@ -470,6 +475,7 @@ public sealed class ProjectStructureSecretReferenceTests {
                 Accepted = result.Value;
                 AcceptedState = result.State;
             }
+            AfterVaultSave?.Invoke();
             if (HoldAfterSave) {
                 Entered.TrySetResult();
                 await Release.Task.WaitAsync(cancellationToken);

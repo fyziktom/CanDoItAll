@@ -175,8 +175,10 @@ public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRe
             fullPath,
             request.Content,
             cancellationToken: cancellationToken,
-            beforeCommit: _ =>
-            {
+            beforeCommit: async token => {
+                if (request.AuthorizeCommit is not null) {
+                    await request.AuthorizeCommit(token);
+                }
                 StorageContentRevision? actualRevision = CreateRevision(fullPath);
                 if (request.ExpectedRevision is { } expected && expected != actualRevision)
                 {
@@ -187,8 +189,6 @@ public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRe
                 {
                     throw new StorageContentConflictException(null, actualRevision);
                 }
-
-                return ValueTask.CompletedTask;
             });
 
         StorageContentRevision persistedRevision = CreateRevision(fullPath)

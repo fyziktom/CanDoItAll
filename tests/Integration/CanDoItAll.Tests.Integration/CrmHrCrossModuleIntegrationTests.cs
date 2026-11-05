@@ -108,6 +108,7 @@ public sealed class CrmHrCrossModuleIntegrationTests
         var convertResult = await recruitingService.ConvertCandidateAsync(new RecruitmentConversionEditorModel
         {
             ApplicationId = applicationId,
+            Original = (await recruitingService.GetRecruitmentWorkspaceAsync(applicationId)).Conversion.Original,
             WorkforceKind = WorkforceKind.Employee,
             JobTitle = "Senior Platform Engineer",
             Discipline = "Platform",

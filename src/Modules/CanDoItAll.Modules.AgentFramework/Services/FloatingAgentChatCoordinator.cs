@@ -165,6 +165,11 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         return activeChatRegistry.KeepActive(handleId);
     }
 
+    public void SetDraftPending(AgentChatHandleId handleId, bool pending) {
+        ThrowIfDisposed();
+        activeChatRegistry.SetDraftPending(handleId, pending);
+    }
+
     public void Stop(AgentChatHandleId handleId)
     {
         ThrowIfDisposed();

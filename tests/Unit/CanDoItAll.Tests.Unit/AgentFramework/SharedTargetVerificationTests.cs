@@ -6,10 +6,10 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class SharedTargetVerificationTests {
     [Theory]
-    [InlineData(true, true, SharedProviderTargetVerificationDisposition.Satisfied)]
-    [InlineData(true, false, SharedProviderTargetVerificationDisposition.StillUnconfirmed)]
-    [InlineData(false, false, SharedProviderTargetVerificationDisposition.Satisfied)]
-    [InlineData(false, true, SharedProviderTargetVerificationDisposition.StillUnconfirmed)]
+    [InlineData(true, true, SharedProviderTargetVerificationDisposition.CurrentMatchesIntent)]
+    [InlineData(true, false, SharedProviderTargetVerificationDisposition.DifferentCurrent)]
+    [InlineData(false, false, SharedProviderTargetVerificationDisposition.CurrentMatchesIntent)]
+    [InlineData(false, true, SharedProviderTargetVerificationDisposition.DifferentCurrent)]
     public void Publication_verification_requires_exact_postcondition(bool publish, bool currentPublished,
         SharedProviderTargetVerificationDisposition expected) {
         var before = Local(!publish);
@@ -24,15 +24,14 @@ public sealed class SharedTargetVerificationTests {
     [InlineData(SharedProviderTargetMutationKind.Unpublish)]
     [InlineData(SharedProviderTargetMutationKind.ImportedSettings)]
     [InlineData(SharedProviderTargetMutationKind.Retirement)]
-    public void Exact_before_state_allows_deliberate_retry_without_replay(SharedProviderTargetMutationKind kind) {
+    public void Current_before_state_is_an_observation_without_a_historical_outcome(SharedProviderTargetMutationKind kind) {
         var before = kind is SharedProviderTargetMutationKind.Publish or SharedProviderTargetMutationKind.Unpublish
             ? Local(kind == SharedProviderTargetMutationKind.Unpublish) : Imported();
         var request = before.Import is { } import ? new SharedProviderImportedProfileUpdateRequest(import.ImportId,
             import.ProviderProfileId, "Requested alias", false, import.ImportConcurrencyToken, import.ProviderConcurrencyToken) : null;
         var attempt = Attempt(before, kind, request);
         var result = SharedProviderTargetVerification.Evaluate(attempt, before);
-        Assert.Equal(SharedProviderTargetVerificationDisposition.NotApplied, result.Disposition);
-        Assert.Null(result.Change);
+        Assert.Equal(SharedProviderTargetVerificationDisposition.CurrentMatchesBefore, result.Disposition);
     }
 
     [Fact]
@@ -40,7 +39,7 @@ public sealed class SharedTargetVerificationTests {
         var before = Local(false) with { Publication = null };
         var attempt = Attempt(before, SharedProviderTargetMutationKind.Publish);
         var current = Local(true) with { ProviderProfileId = before.ProviderProfileId };
-        Assert.Equal(SharedProviderTargetVerificationDisposition.Satisfied,
+        Assert.Equal(SharedProviderTargetVerificationDisposition.CurrentMatchesIntent,
             SharedProviderTargetVerification.Evaluate(attempt, current).Disposition);
     }
 
@@ -57,7 +56,7 @@ public sealed class SharedTargetVerificationTests {
         var current = before with { Import = import with {
             LocalAlias = alias, IsEnabled = enabled, ImportConcurrencyToken = Guid.NewGuid(), ProviderConcurrencyToken = Guid.NewGuid() } };
         var result = SharedProviderTargetVerification.Evaluate(attempt, current);
-        Assert.Equal(satisfied ? SharedProviderTargetVerificationDisposition.Satisfied : SharedProviderTargetVerificationDisposition.StillUnconfirmed,
+        Assert.Equal(satisfied ? SharedProviderTargetVerificationDisposition.CurrentMatchesIntent : SharedProviderTargetVerificationDisposition.DifferentCurrent,
             result.Disposition);
         Assert.Equal("Requested alias", Assert.IsType<SharedProviderTargetPostcondition.ImportedSettings>(attempt.Intended).LocalAlias);
     }
@@ -74,11 +73,8 @@ public sealed class SharedTargetVerificationTests {
             SelectionState = retired ? SharedProviderSelectionState.Retired : SharedProviderSelectionState.Selected,
             ImportConcurrencyToken = Guid.NewGuid(), ProviderConcurrencyToken = Guid.NewGuid() } };
         var result = SharedProviderTargetVerification.Evaluate(attempt, current);
-        Assert.Equal(correctId && retired ? SharedProviderTargetVerificationDisposition.Satisfied
-            : SharedProviderTargetVerificationDisposition.StillUnconfirmed, result.Disposition);
-        if (correctId && retired) {
-            Assert.Contains(before.ProviderProfileId, result.Change!.RetiredProviderProfileIds);
-        }
+        Assert.Equal(correctId && retired ? SharedProviderTargetVerificationDisposition.CurrentMatchesIntent
+            : SharedProviderTargetVerificationDisposition.DifferentCurrent, result.Disposition);
     }
 
     [Fact]
@@ -88,9 +84,9 @@ public sealed class SharedTargetVerificationTests {
         var differentProvider = before with { ProviderProfileId = Guid.NewGuid() };
         var differentPublication = before with { Publication = before.Publication! with {
             Id = Guid.NewGuid(), IsPublished = true, ConcurrencyToken = Guid.NewGuid() } };
-        Assert.Equal(SharedProviderTargetVerificationDisposition.StillUnconfirmed,
+        Assert.Equal(SharedProviderTargetVerificationDisposition.DifferentCurrent,
             SharedProviderTargetVerification.Evaluate(attempt, differentProvider).Disposition);
-        Assert.Equal(SharedProviderTargetVerificationDisposition.StillUnconfirmed,
+        Assert.Equal(SharedProviderTargetVerificationDisposition.DifferentCurrent,
             SharedProviderTargetVerification.Evaluate(attempt, differentPublication).Disposition);
     }
 
@@ -98,8 +94,7 @@ public sealed class SharedTargetVerificationTests {
     public void Already_satisfied_before_state_requires_no_semantic_delivery() {
         var before = Local(true);
         var result = SharedProviderTargetVerification.Evaluate(Attempt(before, SharedProviderTargetMutationKind.Publish), before);
-        Assert.Equal(SharedProviderTargetVerificationDisposition.Satisfied, result.Disposition);
-        Assert.Null(result.Change);
+        Assert.Equal(SharedProviderTargetVerificationDisposition.CurrentMatchesIntent, result.Disposition);
     }
 
     internal static SharedProviderProfileSharingSnapshot Local(bool published) => new(Guid.NewGuid(),

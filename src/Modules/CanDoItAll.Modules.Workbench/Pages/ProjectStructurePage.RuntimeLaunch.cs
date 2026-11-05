@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Infrastructure.Editing;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -32,7 +33,12 @@ public partial class ProjectStructurePage {
         if (!pendingRuntimeLaunches.Add(key)) {
             return;
         }
+        var access = ObserveActionAccess();
+        var transferred = false;
+        ProjectStructureRuntimeLaunchResult? acceptedResult = null;
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
             var resolution = RuntimeLauncher.Resolve(node);
             if (resolution.Plan is not { } plan) {
                 RecordRuntimeOutcome(context, new(false, resolution.Message));
@@ -40,7 +46,8 @@ public partial class ProjectStructurePage {
             }
             var launch = new ProjectRuntimeLaunchSession(context.Admission, node, plan, mode,
                 () => IsCurrentAction(context) && HasOriginalContentAuthority(context) && insightsSelectionRevision == selection,
-                ProjectWorkbenchService, RuntimeLauncher);
+                ProjectWorkbenchService, RuntimeLauncher,
+                token => AuthorizeActionAsync(context, access, write: false, token));
             var approval = ProjectStructureRuntimeLaunchApproval.NotGranted;
             if (launch.Plan.RequiresApproval) {
                 var confirmed = await DialogService.OpenAsync<ProjectStructureRuntimeLaunchApprovalDialog>(
@@ -60,17 +67,25 @@ public partial class ProjectStructurePage {
                 approval = ProjectStructureRuntimeLaunchApproval.OperatorConfirmed;
             }
             var result = await launch.LaunchAsync(approval, deferredCompletionCts.Token);
+            acceptedResult = result;
             RecordRuntimeOutcome(context, result);
             if (result.IsSuccess && result.Identity is { } accepted && mode == ProjectStructureRuntimeLaunchMode.Direct &&
                 IsCurrentAction(context) && HasOriginalContentAuthority(context) && insightsSelectionRevision == selection &&
                 TryResolveRuntimePreviewLink(node, out var link)) {
-                RuntimeObservation = TrackAuthoringOperationAsync(OpenRuntimePreviewWhenServingAsync(context, node, accepted, link, selection));
+                await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
+                transferred = true;
+                RuntimeObservation = TrackAuthoringOperationAsync(OpenRuntimePreviewWhenServingAsync(context, node, accepted, link, selection, access));
             }
         } catch (Exception failure) {
             Logger.LogWarning(failure, "Runtime launch observation failed for original project {ProjectId}, lifetime {LifetimeId}, node {NodeId}.",
                 context.Admission.ProjectId, context.Admission.LifetimeId, node.Id);
-            RecordRuntimeOutcome(context, new(false, "No launch result was confirmed. Inspect the original runtime before repeating the action."));
+            if (acceptedResult is null) {
+                RecordRuntimeOutcome(context, new(false, "No launch result was confirmed. Inspect the original runtime before repeating the action."));
+            }
         } finally {
+            if (!transferred) {
+                await access.DisposeAsync();
+            }
             pendingRuntimeLaunches.Remove(key);
             await RenderAuthoringOutcomeAsync();
         }
@@ -104,14 +119,17 @@ public partial class ProjectStructurePage {
             return new(false, "This exact owned session is already being stopped.") { Identity = expected };
         }
         try {
-            await InsightsAdmissions.RequireCurrentAsync(context.Admission, deferredCompletionCts.Token);
+            await using var access = ObserveActionAccess();
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
             if (!IsCurrentAction(context) || !HasOriginalContentAuthority(context)) {
                 return new(false, "The original runtime authority changed before Stop.") { Identity = expected };
             }
             if (runtimePreviewWait?.Identity == expected) {
                 CancelRuntimePreviewWait();
             }
-            var result = await RuntimeLauncher.StopAsync(node.Id, expected, deferredCompletionCts.Token);
+            var result = await RuntimeLauncher.StopAsync(node.Id, expected, deferredCompletionCts.Token,
+                token => AuthorizeActionAsync(context, access, write: false, token));
             RecordRuntimeOutcome(context, result);
             return result;
         } catch (Exception failure) {
@@ -141,7 +159,7 @@ public partial class ProjectStructurePage {
     }
 
     private async Task OpenRuntimePreviewWhenServingAsync(ProjectStructureActionContext context, ProjectStructureNode node,
-        WorkspaceOwnedProcessIdentity identity, ProjectStructureWebLink link, long selection) {
+        WorkspaceOwnedProcessIdentity identity, ProjectStructureWebLink link, long selection, EditingObservation access) {
         CancelRuntimePreviewWait();
         var wait = new RuntimePreviewObservation(context, node, identity, link.Uri, selection,
             CancellationTokenSource.CreateLinkedTokenSource(deferredCompletionCts.Token));
@@ -151,9 +169,15 @@ public partial class ProjectStructurePage {
             await RenderAuthoringOutcomeAsync();
         }
         try {
+            await AuthorizeActionAsync(context, access, write: false, wait.Cancellation.Token);
             var readiness = await RuntimeReadinessProbe.WaitUntilServingAsync(RuntimeLauncher, node.Id, identity,
                 link.Uri, RuntimePreviewReadinessTimeout, wait.Cancellation.Token);
-            await InvokeAsync(() => {
+            await AuthorizeActionAsync(context, access, write: false, wait.Cancellation.Token);
+            await InvokeAsync(async () => {
+                if (!IsCurrentRuntimeObservation(wait)) {
+                    return;
+                }
+                await AuthorizeActionAsync(context, access, write: false, wait.Cancellation.Token);
                 if (!IsCurrentRuntimeObservation(wait)) {
                     return;
                 }
@@ -177,6 +201,7 @@ public partial class ProjectStructurePage {
                 runtimePreviewWait = null;
             }
             wait.Cancellation.Dispose();
+            await access.DisposeAsync();
         }
     }
 

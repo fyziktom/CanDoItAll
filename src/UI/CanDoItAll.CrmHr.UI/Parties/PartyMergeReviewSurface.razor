@@ -1,0 +1,82 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+
+<Stack GapScale="LayoutGap.Medium" data-testid="crmhr-party-review">
+    <Alert AlertStyle="AlertStyle.Info">
+        <TextBlock Value="Compare your original record, local draft, and current saved record. Apply changes the draft; Save remains a separate action." />
+    </Alert>
+    @if (Stale) {
+        <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-party-review-stale">
+            <TextBlock Value="The saved record changed again. Refresh this comparison before applying. Your choices are retained." />
+        </Alert>
+    }
+    <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+    @foreach (var row in Review.Strings) {
+        <MergeFieldView TValue="string" Label="@row.Label" Field="@row.Field" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
+            <ResultEditor Context="value">
+                @if (row.Multiline) {
+                    <TextArea Value="@value" Rows="3" Immediate="true" ValueChanged="@(text => SetTextAsync(row.Field, text))" aria-label="@($"Merged {row.Label}")" />
+                } else {
+                    <TextBox Value="@value" Immediate="true" ValueChanged="@(text => SetTextAsync(row.Field, text))" aria-label="@($"Merged {row.Label}")" />
+                }
+            </ResultEditor>
+        </MergeFieldView>
+    }
+    <MergeFieldView TValue="PartyType" Label="Party type" Field="@Review.PartyType" Format="@(value => value.ToString())" ShowUnchanged="@showUnchanged" Changed="Changed" />
+    <MergeFieldView TValue="PartyLifecycleStatus" Label="Lifecycle" Field="@Review.LifecycleStatus" Format="@(value => value.ToString())" ShowUnchanged="@showUnchanged" Changed="Changed" />
+    <MergeFieldView TValue="bool" Label="Sensitive" Field="@Review.IsSensitive" Format="@(value => value ? "Sensitive" : "Ordinary")" ShowUnchanged="@showUnchanged" Changed="Changed" />
+    <MergeFieldView TValue="IReadOnlyList<string>" Label="Tags" Field="@Review.Tags" Format="@(values => string.Join(", ", values))" ShowUnchanged="@showUnchanged" Changed="Changed" />
+    <PartyMergeRows TRow="PartyRoleAssignmentEditorModel" Title="Roles" Rows="@Review.Roles" WholeCollection="@Review.LargeRoles" Format="FormatRole" ShowUnchanged="@showUnchanged" Changed="Changed">
+        <ResultActions Context="row">
+            @if (row.Field.IsResolved && row.Field.Result is { Exists: true, Value: { } value }) {
+                <FormField Text="Primary role in the result">
+                    <CheckBox TValue="bool" Value="@value.IsPrimary" ValueChanged="@(primary => SetPrimaryAsync(row.Field, value, primary))" aria-label="@($"Primary role {value.RoleKind} {value.Title}")" />
+                </FormField>
+            }
+        </ResultActions>
+    </PartyMergeRows>
+    <PartyMergeRows TRow="PartyContactPointEditorModel" Title="Contacts" Rows="@Review.Contacts" WholeCollection="@Review.LargeContacts" Format="FormatContact" ShowUnchanged="@showUnchanged" Changed="Changed">
+        <ResultActions Context="row">
+            @if (row.Field.IsResolved && row.Field.Result is { Exists: true, Value: { } value }) {
+                <FormField Text="Primary contact in the result">
+                    <CheckBox TValue="bool" Value="@value.IsPrimary" ValueChanged="@(primary => SetPrimaryAsync(row.Field, value, primary))" aria-label="@($"Primary contact {value.Value}")" />
+                </FormField>
+            }
+        </ResultActions>
+    </PartyMergeRows>
+    <PartyMergeRows TRow="PartyAddressEditorModel" Title="Addresses" Rows="@Review.Addresses" WholeCollection="@Review.LargeAddresses" Format="FormatAddress" ShowUnchanged="@showUnchanged" Changed="Changed" />
+    <PartyMergeRows TRow="PartyConfidentialNoteEditorModel" Title="Confidential notes" Rows="@Review.ConfidentialNotes" WholeCollection="@Review.LargeConfidentialNotes" Format="FormatNote" ShowUnchanged="@showUnchanged" Changed="Changed" />
+    @if (Review.GroupError is { } error) {
+        <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@error" /></Alert>
+    }
+</Stack>
+
+@code {
+    private bool showUnchanged;
+    [Parameter, EditorRequired] public PartyMergeReview Review { get; set; } = default!;
+    [Parameter] public bool Stale { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private async Task SetTextAsync(MergeField<string> field, string? value) {
+        field.SetResult(value ?? string.Empty);
+        await Changed.InvokeAsync();
+    }
+    private async Task SetPrimaryAsync(MergeField<MergeEntry<PartyRoleAssignmentEditorModel>> field, PartyRoleAssignmentEditorModel value, bool primary) {
+        var result = value.Snapshot();
+        result.IsPrimary = primary;
+        field.SetResult(MergeEntry<PartyRoleAssignmentEditorModel>.Present(result));
+        await Changed.InvokeAsync();
+    }
+    private async Task SetPrimaryAsync(MergeField<MergeEntry<PartyContactPointEditorModel>> field, PartyContactPointEditorModel value, bool primary) {
+        var result = value.Snapshot();
+        result.IsPrimary = primary;
+        field.SetResult(MergeEntry<PartyContactPointEditorModel>.Present(result));
+        await Changed.InvokeAsync();
+    }
+    private static string FormatRole(PartyRoleAssignmentEditorModel row) =>
+        $"{row.RoleKind}: {row.Title}\nPrimary: {row.IsPrimary}; {row.ValidFromUtc:u} – {row.ValidToUtc:u}\n{row.Notes}";
+    private static string FormatContact(PartyContactPointEditorModel row) =>
+        $"{row.ContactType}: {row.Label}\n{row.Value}\nNormalized: {row.NormalizedValue}; primary: {row.IsPrimary}; public: {row.IsPublic}\nTags: {string.Join(", ", row.Tags)}\n{row.Notes}";
+    private static string FormatAddress(PartyAddressEditorModel row) =>
+        $"{row.AddressType}; primary: {row.IsPrimary}\n{row.Line1}\n{row.Line2}\n{row.City}, {row.Region}, {row.PostalCode}, {row.CountryCode}\n{row.Notes}";
+    private static string FormatNote(PartyConfidentialNoteEditorModel row) => $"{row.Category}\n{row.NoteText}";
+}

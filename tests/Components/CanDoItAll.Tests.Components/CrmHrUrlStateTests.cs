@@ -144,7 +144,13 @@ public sealed class CrmHrUrlStateTests {
 
         await cut.InvokeAsync(view.OpenOpportunityCreateDialog);
         Assert.True(view.IsOpportunityCreateDialogOpen);
-        await cut.InvokeAsync(() => view.SaveOpportunityAsync(CreateOpportunity(accountId, ownerId, "Opportunity created over it")));
+        var createDraft = view.OpportunityEditor;
+        createDraft.Title = "Opportunity created over it";
+        createDraft.OwnerPartyId = ownerId;
+        createDraft.Stage = OpportunityStage.Qualified;
+        createDraft.OpportunitySource = OpportunitySource.Direct;
+        createDraft.ProbabilityPercent = 40;
+        await cut.InvokeAsync(() => view.SaveOpportunityAsync(createDraft));
 
         // The created opportunity is shown, never the one the location named before.
         cut.WaitForAssertion(() => {
@@ -234,6 +240,7 @@ public sealed class CrmHrUrlStateTests {
         var accountId = await CreatePartyAsync(parties, displayName, PartyRoleKind.Customer, PartyType.Organization, PartyLifecycleStatus.Prospect);
         var profile = await crm.SaveAccountProfileAsync(new CrmAccountProfileEditorModel {
             AccountPartyId = accountId,
+            Original = (await crm.GetAccountWorkspaceAsync(accountId))!.Profile.Original,
             RelationshipStage = CrmAccountRelationshipStage.Prospect,
             CommercialNotes = $"{displayName} notes",
             LastChangedBy = "component-tests"

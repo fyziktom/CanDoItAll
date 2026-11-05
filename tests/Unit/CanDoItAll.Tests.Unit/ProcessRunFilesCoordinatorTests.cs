@@ -84,7 +84,8 @@ public sealed class ProcessRunFilesCoordinatorTests
 
         public ValueTask<FileToolsBrowseSession> CreateAsync(
             FileToolsSemanticScope scope,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             createCalls++;
             return ValueTask.FromResult(new FileToolsBrowseSession(
@@ -160,7 +161,9 @@ public sealed class ProcessRunFilesCoordinatorTests
     {
         public ValueTask<FileToolsKnownFileSession> CreateAsync(
             FileToolsKnownFileRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null,
+            Func<CancellationToken, ValueTask>? authorizeWrite = null)
             => ValueTask.FromException<FileToolsKnownFileSession>(new InvalidOperationException("Unexpected session."));
     }
 

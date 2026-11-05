@@ -5,11 +5,11 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 public sealed record CapabilityDetailsDialogResult(Guid CapabilityId);
 
-public partial class CapabilityDetailsDialog : IDisposable {
+public partial class CapabilityDetailsDialog : IAsyncDisposable {
     [Parameter] public Guid CapabilityId { get; set; }
     [Parameter] public IReadOnlyList<string> TagSuggestions { get; set; } = [];
     [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
     private NativeCapabilityAuthoringHost? host;
 
-    public void Dispose() => host?.Dispose();
+    public ValueTask DisposeAsync() => host?.DisposeAsync() ?? ValueTask.CompletedTask;
 }

@@ -23,6 +23,7 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
             ModelDisplayNames = new Dictionary<string, string> { ["shared-model"] = "Shared reasoning model" }
         };
     private readonly AgentEditorOrigin origin = new(Guid.NewGuid());
+    private string pendingTagInput = string.Empty;
     private readonly EditContext context = new(new AgentEditorModel {
         Name = name, RoleTitle = "Technical reviewer", Summary = "Žluťoučký 東京 — synthetic editor data",
         Instructions = "Review only the supplied fixture. Do not call external services.",
@@ -71,6 +72,7 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
         CanDelete = Draft.Id.HasValue,
         Delete = EventCallback.Factory.Create(receiver, () => ConfirmDeleteRequested?.Invoke() ?? Task.CompletedTask),
         Tags = Draft.Tags.Where(tag => tag != "Favorite").ToArray(), TagSuggestions = ["Fixture", "Review", "東京"],
+        PendingTagInput = pendingTagInput,
         AreProvidersLoaded = scenario != AgentEditorScenario.ProviderFailure,
         ProviderLoadError = scenario == AgentEditorScenario.ProviderFailure ? "Injected provider catalog failure." : null,
         RuntimeProviders = scenario == AgentEditorScenario.ProviderFailure ? [] : providers,
@@ -127,6 +129,9 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
                 break;
             case AgentEditorCoreIntent.Tags value:
                 Draft.Tags = value.Value.Concat(["Favorite"]).Distinct().ToList();
+                break;
+            case AgentEditorCoreIntent.PendingTags value:
+                pendingTagInput = value.Value;
                 break;
             case AgentEditorCoreIntent.RuntimeProvider value:
                 providerKey = value.Value;

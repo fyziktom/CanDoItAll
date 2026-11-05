@@ -21,6 +21,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
     ProjectStructureTaskResourceService taskResourceService,
     ProjectStructureTaskResourceCostService taskResourceCostService,
     ProjectStructureTaskDetailsService taskDetailsService,
+    ProjectStructureTaskEditingSessions editingSessions,
     ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
     DialogService dialogService,
     NotificationService notificationService,
@@ -30,7 +31,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
     public async Task OpenAsync(
         ProjectStructureGanttTaskEditContext context,
         GanttTaskId taskId,
-        Func<Task> reloadAuthoritativeProject,
+        Func<Func<CancellationToken, ValueTask>, Task> reloadAuthoritativeProject,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -50,64 +51,39 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             return;
         }
 
-        ProjectTaskEstimate estimate;
-        ProjectTaskExecutionSnapshot execution;
-        ProjectTaskExpectedCostBasis? expectedCostBasis;
-        long directAssignmentRevision;
-        ProjectStructureTaskAssigneeSelectionResult assigneeResolution;
-        try
-        {
-            var workItem = ProjectObjectMetadataSerializer.Parse(taskNode.MetadataJson).WorkItem;
-            estimate = ReadEstimate(workItem);
-            execution = ReadExecution(workItem);
-            expectedCostBasis = workItem?.ExpectedCostBasis;
-            directAssignmentRevision =
-                workItem?.DirectAssignmentRevision ?? 0;
-            assigneeResolution = ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
-                context.Assignments,
-                taskId.Value);
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or ProjectStructureTaskDetailsException)
-        {
+        var options = new ProjectStructureGanttProjectionOptions(projectedTask.Start, TimeSpan.FromHours(8),
+            context.Projection.Tasks.Select(task => task.Id.Value).ToArray());
+        await using var editing = editingSessions.Create(admission, taskNode, context.IsCurrent, currencyFormatter.CurrencyCode, options);
+        try {
+            await editing.OpenAsync(cancellationToken);
+        } catch (Exception failure) when (failure is InvalidOperationException or UnauthorizedAccessException or FormatException) {
             if (context.IsCurrent()) {
-                notificationService.Error("Task details unavailable", exception.Message);
+                notificationService.Error("Task details unavailable", "The original Task, current dependencies and Structure access could not be verified. Refresh before reopening.");
             }
-            logger.LogWarning(
-                "Could not prepare Gantt task details for project {ProjectId}, task {TaskId}; failure type {FailureType}.",
-                Mask(context.ProjectId),
-                Mask(taskId.Value),
-                exception.GetType().Name);
+            logger.LogWarning("Could not open Gantt Task comparison authority; failure type {FailureType}.", failure.GetType().Name);
             return;
         }
-
+        var assigneeResolution = editing.Baseline.Assignees;
+        await editing.AuthorizeReadAsync(cancellationToken);
         var (resourceOptions, resourceWarnings) = await LoadResourceOptionsAsync(
             context,
             assigneeResolution,
             cancellationToken);
+        await editing.AuthorizeReadAsync(cancellationToken);
         if (!context.IsCurrent()) {
             return;
         }
-        var editModel = new ProjectStructureGanttTaskEditModel(
-            taskId,
-            taskNode.Title,
-            projectedTask.Start,
-            projectedTask.End,
-            taskNode.ProgressPercent,
-            estimate,
-            assigneeResolution.Representative,
-            context.Projection.IsProjectionOnly(projectedTask),
-            assigneeResolution.CanChangeDirectAssignee,
-            execution,
-            expectedCostBasis,
-            directAssignmentRevision);
-        var session = new ProjectTaskDialogSession(context.IsCurrent, reloadAuthoritativeProject, logger, [taskId.Value]);
+        var editModel = ProjectStructureTaskForm.GanttModel(editing.Baseline);
+        var session = new ProjectTaskDialogSession(context.IsCurrent, () => reloadAuthoritativeProject(editing.AuthorizeReadAsync), logger, [taskId.Value]);
+        editing.CanAccept = () => session.CanAcceptComparison;
+        editing.Accepted = session.AcceptComparison;
         await dialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
             "Edit project task",
             new Dictionary<string, object?>
             {
                 [nameof(ProjectStructureGanttTaskDialog.EditSubmitted)] =
                     new Func<ProjectStructureTaskEditDialogResult, Task<PlanningTaskSaveResult>>(draft =>
-                        session.SubmitAsync(() => SaveAsync(context, editModel, draft, session))),
+                        session.SubmitAsync(() => SaveAsync(context, editing, draft, session))),
                 [nameof(ProjectStructureGanttTaskDialog.Readback)] = new Func<Task<PlanningTaskSaveResult>>(session.ReadbackAsync),
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = context.ProjectId,
                 [nameof(ProjectStructureGanttTaskDialog.QuoteContext)] = new ProjectTaskQuoteContext(
@@ -118,11 +94,12 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = projectedTask.End,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultCurrencyCode)] = currencyFormatter.CurrencyCode,
                 [nameof(ProjectStructureGanttTaskDialog.EditModel)] = editModel,
+                [nameof(ProjectStructureGanttTaskDialog.ComparisonOwner)] = editing,
                 [nameof(ProjectStructureGanttTaskDialog.ResourceOptions)] = resourceOptions,
                 [nameof(ProjectStructureGanttTaskDialog.ResourceWarnings)] = resourceWarnings,
                 [nameof(ProjectStructureGanttTaskDialog.QuoteResolver)] =
                     new Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>(
-                        taskResourceCostService.GetQuoteAsync)
+                        (request, token) => editing.ReadPrivateAsync(current => taskResourceCostService.GetQuoteAsync(request, current), token))
             },
             new DialogOptions
             {
@@ -139,7 +116,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
     }
 
     private async Task SaveAsync(ProjectStructureGanttTaskEditContext context,
-        ProjectStructureGanttTaskEditModel current, ProjectStructureTaskEditDialogResult proposed, ProjectTaskDialogSession session) {
+        ProjectStructureTaskEditingSession editing, ProjectStructureTaskEditDialogResult proposed, ProjectTaskDialogSession session) {
+        await editing.AuthorizeWriteAsync(CancellationToken.None);
+        var current = ProjectStructureTaskForm.GanttModel(editing.Baseline);
         if (proposed.TaskId != current.TaskId) {
             session.Reject("The task submission does not belong to this editor.");
             return;
@@ -154,7 +133,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                 return;
             }
             try {
-                scheduleChange = GanttSchedulePlanner.PlanInterval(context.Projection.Tasks, context.Projection.Dependencies,
+                scheduleChange = GanttSchedulePlanner.PlanInterval(editing.Baseline.Schedule!.Tasks, editing.Baseline.Schedule.Dependencies,
                     current.TaskId, proposed.StartUtc, proposed.EndUtc, minimumTaskDuration: TimeSpan.FromMinutes(15));
             } catch (Exception failure) when (failure is GanttScheduleException or ArgumentOutOfRangeException) {
                 session.Reject("The proposed schedule is invalid. Review the interval and dependencies.");
@@ -172,11 +151,11 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             current.ExpectedCostBasis, current.DirectAssignmentRevision) {
             ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission, MutationOwner = context.MutationOwner
         };
-        var update = await taskDetailsService.UpdateWithPricingAsync(context.ProjectId, request, CancellationToken.None);
+        var update = await taskDetailsService.UpdateWithPricingAsync(context.ProjectId, request, CancellationToken.None, editing.AuthorizeWriteAsync, editing.Baseline.Task.RecordId);
         session.TaskCommitted(update.Mutation.AffectedTaskIds.Select(id => id.Value).ToArray(), update.Pricing, proposed.AssigneeChanged);
         if (proposed.ResourceToAttach is not null && context.IsCurrent()) {
             var attachment = await taskResourceAttachmentService.AttachAfterTransitionAsync(context.ProjectId, current.TaskId.Value,
-                proposed.ResourceToAttach, currentExecution, proposed.Execution ?? currentExecution, context.MutationOwner, CancellationToken.None);
+                proposed.ResourceToAttach, currentExecution, proposed.Execution ?? currentExecution, context.MutationOwner, CancellationToken.None, editing.AuthorizeWriteAsync);
             session.AttachmentCommitted(attachment);
         } else if (proposed.ResourceToAttach is not null) {
             throw new InvalidOperationException("The task committed, but the original view retired before attachment began.");
@@ -216,30 +195,6 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                 ["Task resources could not be loaded. Existing task details can still be saved without changing the assignee."]);
         }
     }
-
-    private static ProjectTaskEstimate ReadEstimate(ProjectWorkItemMetadata? workItem)
-    {
-        return workItem is null
-            ? ProjectTaskEstimate.Empty()
-            : ProjectTaskEstimatePolicy.ValidateAndNormalize(new ProjectTaskEstimate(
-                workItem.ExpectedEffortHours,
-                workItem.ExpectedEffortUnit,
-                workItem.ExpectedCostAmount,
-                workItem.ExpectedCostCurrencyCode));
-    }
-
-    private static ProjectTaskExecutionSnapshot ReadExecution(ProjectWorkItemMetadata? workItem)
-        => workItem is null
-            ? ProjectTaskExecutionSnapshot.Unknown
-            : new ProjectTaskExecutionSnapshot(
-                workItem.ExecutionState,
-                workItem.ActualStartedAtUtc,
-                workItem.ActualEndedAtUtc);
-
-    private static string BuildPricingSummary(ProjectStructureTaskEstimateRefreshResult? pricing)
-        => pricing is null
-            ? string.Empty
-            : ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(pricing);
 
     private static string Mask(Guid value)
     {

@@ -44,6 +44,7 @@ public sealed class CapabilityVerificationRaceIntegrationTests {
 internal sealed class CapabilityFileFixture : IDisposable {
     private readonly DirectoryInfo directory = Directory.CreateTempSubdirectory("candoitall-capability-proof-");
     public FileSandboxWorkspaceStore Store { get; }
+    public AgentExecutionActivityWorkspaceIdentity Identity { get; } = AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(WorkspaceScopeDescriptor.Sandbox);
     public CapabilityStoreProbe StoreProbe { get; }
     public string RootPath => directory.FullName;
     public AgentFrameworkWorkspaceCatalogService Catalog { get; }
@@ -60,7 +61,7 @@ internal sealed class CapabilityFileFixture : IDisposable {
         StoreProbe = (CapabilityStoreProbe)(object)instrumented;
         StoreProbe.Inner = Store;
         var profiles = new ProviderProfileService();
-        var registry = new WorkspaceBackedProviderProfileRegistry(instrumented, profiles);
+        var registry = new WorkspaceBackedProviderProfileRegistry(instrumented, profiles, Identity);
         Verification = new(instrumented, Proof, registry);
         Catalog = new(instrumented, DispatchProxy.Create<IAgentPackageService, UnusedCapabilityDependency>(), Proof,
             profiles, DispatchProxy.Create<IProviderDiagnosticsService, UnusedCapabilityDependency>(), registry, registry);

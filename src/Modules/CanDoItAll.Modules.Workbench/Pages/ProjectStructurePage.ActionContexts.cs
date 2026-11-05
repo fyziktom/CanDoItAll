@@ -2,6 +2,8 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -50,8 +52,88 @@ public partial class ProjectStructurePage {
     }
 
     private static bool IsKnownGraphRejection(Exception failure)
-        => failure is ArgumentException or InvalidDataException or ProjectWriteAdmissionRejectedException or
+        => failure is ArgumentException or InvalidDataException or UnauthorizedAccessException or ProjectWriteAdmissionRejectedException or
             ProjectStructureClipboardMutationInputException or ProjectStructureEditConflictException;
+
+    private EditingObservation ObserveActionAccess()
+        => new(ProjectCreateChanges, ProjectCreateUiAccess,
+            new(ProjectCreateProjectChanges.Scope, EditingOwner.ProjectStructure), ProjectCreateObservationLogger);
+
+    private async ValueTask AuthorizeActionAsync(ProjectStructureActionContext context, EditingObservation access,
+        bool write, CancellationToken cancellationToken) {
+        if (!IsCurrentAction(context)) {
+            throw new UnauthorizedAccessException("The original Structure action is no longer current.");
+        }
+        await access.AuthorizeAsync(write, cancellationToken);
+        await InsightsAdmissions.RequireCurrentAsync(context.Admission, cancellationToken);
+        if (!IsCurrentAction(context)) {
+            throw new UnauthorizedAccessException("The original Structure action changed while access was checked.");
+        }
+    }
+
+    private void RecordCurrentAuthoringOutcome(ProjectStructureAuthoringOpening opening, ProjectStructureAuthoringOutcome outcome) {
+        var current = IsCurrentAction(opening.Context);
+        RecordAuthoringOutcome(opening, outcome, publish: current);
+        if (current && outcome.Failure is not null) {
+            var title = outcome.Kind switch {
+                ProjectStructureAuthoringResultKind.Rejected => "Structure changes not saved",
+                ProjectStructureAuthoringResultKind.Unconfirmed => "Structure outcome unconfirmed",
+                _ => "Structure changes saved; refresh required"
+            };
+            NotificationService.Warning(title, outcome.Message);
+        }
+    }
+
+    private async Task ApplyCanvasNodeChangesAsync(ProjectStructureActionContext context, IReadOnlyCollection<string> targets,
+        Func<Func<CancellationToken, ValueTask>, Task<IReadOnlyList<ProjectStructureNode>>> write) {
+        if (context.Surface.Nodes.FirstOrDefault(node => targets.Contains(node.Id)) is not { } first) {
+            return;
+        }
+        var opening = new ProjectStructureAuthoringOpening(context, first);
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            ProjectStructureAuthoringOperation.EditNode, ProjectStructureAuthoringResultKind.Rejected,
+            "The Structure changes were not saved. Refresh the original project before trying again.") { SourceNodeId = first.Id };
+        await using var access = ObserveActionAccess();
+        IReadOnlyList<ProjectStructureNode> changed;
+        try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
+            changed = await write(token => AuthorizeActionAsync(context, access, write: true, token));
+        } catch (Exception failure) when (failure is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException or ProjectStructureEditConflictException) {
+            RecordCurrentAuthoringOutcome(opening, outcome with { Failure = failure });
+            return;
+        } catch (Exception failure) {
+            RecordCurrentAuthoringOutcome(opening, outcome with { Kind = ProjectStructureAuthoringResultKind.Unconfirmed, Failure = failure,
+                Message = "The Structure change is unconfirmed. Observe the original project before repeating it." });
+            return;
+        }
+        outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
+            NodeIds = changed.Select(node => node.Id).ToArray(), Message = $"Updated {changed.Count} original node(s)." };
+        RecordCurrentAuthoringOutcome(opening, outcome);
+        if (!IsCurrentAction(context)) {
+            return;
+        }
+        try {
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
+            await ApplySurfaceNodeUpdatesAsync(changed);
+        } catch (Exception failure) {
+            RecordCurrentAuthoringOutcome(opening, outcome with { Kind = ProjectStructureAuthoringResultKind.PartialCommit, Failure = failure,
+                Message = "The Structure changes were saved, but the view could not refresh. Reload the view; do not repeat the write." });
+        }
+    }
+
+    private void ReportCanvasPreferenceFailure(ProjectStructureActionContext context, Exception failure) {
+        Logger.LogWarning("Structure preference for original project {ProjectId}, lifetime {LifetimeId}; failure type {FailureType}.",
+            context.Admission.ProjectId.ToString("N")[..8], context.Admission.LifetimeId.ToString("N")[..8], failure.GetType().Name);
+        if (!IsCurrentAction(context)) {
+            return;
+        }
+        var rejected = failure is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException;
+        var message = rejected ? "The canvas preferences were not saved because access changed. Refresh the original project before trying again."
+            : "The canvas preference result is unconfirmed. Reload the original project before repeating it.";
+        ReportActionResult(context, message, "warn");
+        NotificationService.Warning(rejected ? "Structure changes not saved" : "Structure outcome unconfirmed", message);
+    }
 
     private void ChangeAuthoringDialog(ProjectStructureAuthoringOpening? receiver,
         ProjectStructureAuthoringOpening? current, Action action) {
@@ -74,8 +156,9 @@ public partial class ProjectStructurePage {
             authoringOutcomes.Dequeue();
         }
         if (outcome.Failure is { } failure) {
-            Logger.LogWarning(failure, "Structure {Operation} for project {ProjectId}, lifetime {LifetimeId}, opening {OpeningId}, submission {SubmissionId}: {Outcome}.",
-                outcome.Operation, outcome.Project.ProjectId, outcome.Project.LifetimeId, outcome.OpeningId, outcome.SubmissionId, outcome.Kind);
+            Logger.LogWarning("Structure {Operation} for project {ProjectId}, lifetime {LifetimeId}, opening {OpeningId}, submission {SubmissionId}: {Outcome}; failure type {FailureType}.",
+                outcome.Operation, outcome.Project.ProjectId.ToString("N")[..8], outcome.Project.LifetimeId.ToString("N")[..8],
+                outcome.OpeningId, outcome.SubmissionId, outcome.Kind, failure.GetType().Name);
         }
         if (publish && !deferredCompletionCts.IsCancellationRequested && ReferenceEquals(opening.Context.Actor, InsightsAuthentication) &&
             surface?.ExpectedProjectAdmission?.DatabaseProfileId == outcome.Project.DatabaseProfileId) {
@@ -88,6 +171,9 @@ public partial class ProjectStructurePage {
         => deferredCompletionCts.IsCancellationRequested ? Task.CompletedTask : InvokeAsync(StateHasChanged);
 
     private void RetireInactiveAuthoring() {
+        if (fileBrowserContext is { } files && !IsCurrentAction(files)) {
+            RetireFileBrowserOpening();
+        }
         if (workflowAddOpening is { } workflowAdd && !IsCurrentAction(workflowAdd.Context)) {
             CloseWorkflowAddDialog();
         }
@@ -108,8 +194,7 @@ public partial class ProjectStructurePage {
             CloseSecretReferenceDialog();
         }
         if (partySession is { IsCurrent: false }) {
-            partySession.Retire();
-            partySession = null;
+            RetirePartySession();
         }
         if (mermaidOpening is { } mermaid && !IsCurrentAction(mermaid.Context)) {
             CloseMermaidViewer();
@@ -124,9 +209,11 @@ public partial class ProjectStructurePage {
             textAssetOpening = null;
         }
         foreach (var retired in composerOpenings.Where(entry => !IsCurrentAction(entry.Value.Ownership.Context)).Select(entry => entry.Key).ToArray()) {
+            RetireNodeSession(composerOpenings[retired].Session);
             composerOpenings.Remove(retired);
         }
         if (composerOpening is { } composer && !IsCurrentAction(composer.Ownership.Context)) {
+            RetireNodeSession(composer.Session);
             composerOpening = null;
         }
         if (hierarchyOpening is { } hierarchy && !IsCurrentAction(hierarchy.Context)) {

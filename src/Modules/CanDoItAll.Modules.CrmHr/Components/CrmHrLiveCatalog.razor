@@ -1,0 +1,106 @@
+@implements IAsyncDisposable
+@using CanDoItAll.Editing
+@using CanDoItAll.Infrastructure.Editing
+@using CanDoItAll.Editing.UI
+@inject CrmHrChanges Changes
+@inject EditingChangeFeed Feed
+@inject IEditingUiAccess Access
+@inject ILogger<EditingObservation> ObserverLog
+@inject ILogger<CrmHrLiveCatalog> Logger
+
+@if (ready) {
+    <CascadingValue Value="@readAdmission" IsFixed="true">@ChildContent</CascadingValue>
+} else if (failed) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-catalog-access-unavailable">
+        <TextBlock Value="Current CRM access is required. Reopen this workspace with current access." />
+    </Alert>
+}
+
+@code {
+    private readonly CancellationTokenSource lifetime = new();
+    private EditingObservation? observation;
+    private EditingReadAdmission? readAdmission;
+    private Task? refresh;
+    private bool ready;
+    private bool failed;
+    private bool pending;
+    private bool running;
+    private bool disposed;
+    [Parameter, EditorRequired] public EditingOwner Owner { get; set; }
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public EventCallback<EditingChangeBatch> Observed { get; set; }
+    [Parameter] public Func<EditingChange, bool>? Ignore { get; set; }
+
+    protected override async Task OnInitializedAsync() {
+        observation = new(Feed, Access, new(Changes.Scope, Owner), ObserverLog);
+        readAdmission = new(token => observation.AuthorizeAsync(write: false, token));
+        try {
+            await observation.StartAsync(batch => InvokeAsync(async () => {
+                if (!disposed && (batch.RequiresResync || batch.Changes.Any(change => Ignore?.Invoke(change) != true))) {
+                    await Observed.InvokeAsync(batch);
+                    if (!disposed && !failed) {
+                        RequestRefresh();
+                    }
+                }
+            }), () => InvokeAsync(Retire), catalog: true);
+            ready = !disposed;
+        } catch (UnauthorizedAccessException) {
+            Retire();
+        }
+    }
+
+    private void RequestRefresh() {
+        pending = true;
+        if (!running) {
+            running = true;
+            refresh = RefreshAsync();
+        }
+    }
+
+    private async Task RefreshAsync() {
+        try {
+            while (pending && !lifetime.IsCancellationRequested) {
+                await Task.Delay(TimeSpan.FromMilliseconds(150), lifetime.Token);
+                pending = false;
+                await observation!.AuthorizeAsync(write: false, lifetime.Token);
+                if (ready && !disposed) {
+                    await Changed.InvokeAsync();
+                }
+            }
+        } catch (OperationCanceledException) when (lifetime.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning("CRM catalog observation retired after {FailureType}; owner {Owner}.", exception.GetType().Name, Owner);
+            Retire();
+        } finally {
+            running = false;
+            if (pending && !disposed && ready) {
+                RequestRefresh();
+            }
+        }
+    }
+
+    private void Retire() {
+        ready = false;
+        failed = true;
+        pending = false;
+        if (!disposed) {
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        lifetime.Cancel();
+        if (observation is not null) {
+            await observation.DisposeAsync();
+        }
+        if (refresh is not null) {
+            await refresh;
+        }
+        lifetime.Dispose();
+    }
+}

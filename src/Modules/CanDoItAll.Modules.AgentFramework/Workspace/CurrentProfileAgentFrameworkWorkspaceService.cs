@@ -173,13 +173,26 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     }
 
     public async Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
-    {
-        var agentId = await ResolveService().SaveAgentAsync(model, cancellationToken);
+        => (await SaveAgentDefinitionAsync(model, cancellationToken)).Id;
+
+    public async Task<AgentDefinition> SaveAgentDefinitionAsync(AgentEditorModel model, CancellationToken cancellationToken = default) {
+        AgentDefinition accepted;
+        Exception? publicationWarning = null;
+        try {
+            accepted = await ResolveService().SaveAgentDefinitionAsync(model, cancellationToken);
+        } catch (AgentCatalogCommittedException<AgentDefinition> exception) {
+            accepted = exception.Accepted;
+            publicationWarning = exception;
+        }
         await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(
             cancellationToken,
-            exception => new AgentDirectoryProjectionSynchronizationException(agentId, exception));
+            exception => new AgentDirectoryProjectionSynchronizationException(accepted.Id,
+                publicationWarning is null ? exception : new AggregateException(publicationWarning, exception), acceptedDefinition: accepted));
+        if (publicationWarning is not null) {
+            throw new AgentDirectoryProjectionSynchronizationException(accepted.Id, publicationWarning, acceptedDefinition: accepted);
+        }
 
-        return agentId;
+        return accepted;
     }
 
     public async Task GrantAgentProjectStructureAccessAsync(
@@ -273,6 +286,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().ListAgentTeamsAsync(cancellationToken);
     }
 
+    public async Task DeleteAgentAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default) {
+        await ResolveService().DeleteAgentAsync(agentId, expectedUpdatedAtUtc, cancellationToken);
+        await RefreshDirectoryProjectionAfterCommittedAgentDeletionAsync(agentId, cancellationToken);
+    }
+
     public Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default)
     {
         return ResolveService().GetAgentTeamEditorAsync(teamId, cancellationToken);
@@ -296,20 +314,39 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().DeleteAgentTeamAsync(teamId, cancellationToken);
     }
 
-    public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
-    {
-        var cloneId = await ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
-            exception => new AgentDirectoryProjectionSynchronizationException(cloneId, exception));
-        return cloneId;
-    }
+    public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => ResolveService().UpdateAgentTeamMembersAsync(teamId, agentIds, expectedUpdatedAtUtc, cancellationToken);
 
-    public async Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
-    {
-        var templateId = await ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
+    public Task DeleteAgentTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => ResolveService().DeleteAgentTeamAsync(teamId, expectedUpdatedAtUtc, cancellationToken);
+
+    public Task<AgentTeamDefinition> EnsureAgentTeamMemberAsync(Guid teamId, DateTimeOffset expectedCreatedAtUtc, Guid agentId,
+        CancellationToken cancellationToken = default)
+        => ResolveService().EnsureAgentTeamMemberAsync(teamId, expectedCreatedAtUtc, agentId, cancellationToken);
+
+    public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
+        => CompleteAgentCopyAsync(() => ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken), cancellationToken);
+
+    public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
+        => CompleteAgentCopyAsync(() => ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken), cancellationToken);
+
+    private async Task<Guid> CompleteAgentCopyAsync(Func<Task<Guid>> copy, CancellationToken cancellationToken) {
+        Guid id;
+        Exception? publicationWarning = null;
+        try {
+            id = await copy();
+        } catch (AgentCatalogCommittedException<Guid> exception) {
+            id = exception.Accepted;
+            publicationWarning = exception;
+        }
         await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
-            exception => new AgentDirectoryProjectionSynchronizationException(templateId, exception));
-        return templateId;
+            exception => new AgentDirectoryProjectionSynchronizationException(id,
+                publicationWarning is null ? exception : new AggregateException(publicationWarning, exception)));
+        if (publicationWarning is not null) {
+            throw new AgentDirectoryProjectionSynchronizationException(id, publicationWarning);
+        }
+        return id;
     }
 
     public Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
@@ -417,6 +454,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
     }
 
+    public async Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default) {
+        await ResolveService().DeleteProviderAsync(providerId, expectedConcurrencyToken, cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+    }
+
     public async Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
     {
         var result = await ResolveService().TestProviderAsync(providerId, cancellationToken);
@@ -458,6 +500,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     {
         return ResolveService().DeleteCapabilityAsync(capabilityId, cancellationToken);
     }
+
+    public Task DeleteCapabilityAsync(Guid capabilityId, string expectedFingerprint, CancellationToken cancellationToken = default)
+        => ResolveService().DeleteCapabilityAsync(capabilityId, expectedFingerprint, cancellationToken);
 
     public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
         IAgentFrameworkWorkspaceService workspace;

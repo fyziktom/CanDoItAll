@@ -22,7 +22,7 @@ public sealed record CapabilityAuthoringSubmission(
 }
 
 public abstract record CapabilityAuthoringSaveOutcome {
-    public sealed record Accepted(CapabilityAuthoringSubmission Definition) : CapabilityAuthoringSaveOutcome;
+    public sealed record Accepted(CapabilityAuthoringSubmission Definition, string? Warning = null) : CapabilityAuthoringSaveOutcome;
     public sealed record Rejected(bool IsConflict) : CapabilityAuthoringSaveOutcome;
     public sealed record Unknown : CapabilityAuthoringSaveOutcome;
 }
@@ -36,3 +36,5 @@ public sealed record CapabilityAuthoringOperations(
 
 public enum CapabilityAuthoringMode { Wizard, Details }
 public enum CapabilitySkillInputMode { FilePath, Inline, Upload, Registered }
+
+public sealed class CapabilitySetupNotStartedException() : InvalidOperationException("Setup was refused before dispatch. Review current access and the saved capability.");

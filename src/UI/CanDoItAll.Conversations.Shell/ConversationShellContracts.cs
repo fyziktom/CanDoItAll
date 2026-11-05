@@ -66,7 +66,8 @@ public sealed record ConversationShellWindowDescriptor
         double minWidth = 520,
         double minHeight = 420,
         double maxWidth = 1100,
-        double maxHeight = 920)
+        double maxHeight = 920,
+        bool keepContentMounted = false)
     {
         ArgumentNullException.ThrowIfNull(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(testId);
@@ -97,6 +98,7 @@ public sealed record ConversationShellWindowDescriptor
         MinHeight = minHeight;
         MaxWidth = maxWidth;
         MaxHeight = maxHeight;
+        KeepContentMounted = keepContentMounted;
     }
 
     public ConversationShellWindowKey Key { get; }
@@ -130,6 +132,7 @@ public sealed record ConversationShellWindowDescriptor
     public double MaxWidth { get; }
 
     public double MaxHeight { get; }
+    public bool KeepContentMounted { get; }
 }
 
 public sealed record ConversationShellContributorSnapshot(
@@ -137,7 +140,9 @@ public sealed record ConversationShellContributorSnapshot(
     IReadOnlyList<ConversationShellActiveItem> Active,
     IReadOnlyList<ConversationShellWindowDescriptor> Windows,
     IReadOnlyList<PresentationBadge> StatusBadges,
-    string? FailureMessage = null)
+    string? FailureMessage = null,
+    Func<CancellationToken, Task>? Refresh = null,
+    bool UpdatesAvailable = false)
 {
     public static ConversationShellContributorSnapshot Empty { get; } = new([], [], [], []);
 }
@@ -171,7 +176,8 @@ public sealed record ConversationShellState(
     bool IsCatalogVisible,
     ConversationCatalogKindFilter KindFilter,
     ConversationCatalogLifecycle Lifecycle,
-    ConversationShellWindowKey? FocusedWindow);
+    ConversationShellWindowKey? FocusedWindow,
+    long FocusGeneration = 0);
 
 public interface IConversationShellLauncher
 {

@@ -56,6 +56,7 @@ public sealed class ProviderBoundaryTests {
     private static bool Allowed(string name) => Framework(name) || name is
         "CanDoItAll.AgentFramework.Providers.UI" or "CanDoItAll.AgentFramework.Providers.UiSandbox" or
         "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common" or "CanDoItAll.AgentFramework.Models" or
+        "CanDoItAll.Editing" or "CanDoItAll.Editing.UI" or
         "CanDoItAll.AgentFramework.Capabilities.Abstractions" or "CanDoItAll.Memory.Abstractions" or
         "CanDoItAll.AgentFramework.ProviderHistory.Abstractions" or "CanDoItAll.Infrastructure.Abstractions" or "CanDoItAll.SharedKernel";
 

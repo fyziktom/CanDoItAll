@@ -45,6 +45,17 @@ Create new migrations through the normal EF workflow and append them after the b
 Do not edit an applied migration. Back up authoritative data before applying schema
 changes.
 
+## Workflow catalog metadata
+
+`20261104001801_AddWorkflowCatalogMetadata` adds six derived metadata columns to workflow
+versions and backfills them from each original `DefinitionJson`. Missing or null metadata
+uses the existing empty-string convention. No graph JSON, version/head identity, revision,
+timestamp, run or prompt binding is rewritten. Invalid JSON fails the migration explicitly.
+The catalog can then read metadata without fetching graphs. New versions populate both
+representations in their existing atomic append. Downgrade removes only the derived
+columns; the original JSON remains available for a later upgrade. Native validation covers
+empty and retained databases, reopen, exact original row preservation and downgrade.
+
 ## Process authoring activation and rollback
 
 `20261009124700_AddProcessAuthoring` appends three owner tables: scoped definition heads,

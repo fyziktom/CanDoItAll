@@ -3,7 +3,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Projects.Pages;
 
-public sealed record ProjectNativeEditorAcquisition(ProjectEditorModel Model, ProjectPendingScope Scope);
+public sealed record ProjectNativeEditorAcquisition(ProjectEditorModel Model, ProjectPendingScope Scope, ProjectDefinitionSnapshot? Original = null);
 
 public sealed class ProjectNativeDefinitionOperations(
     ProjectsService projects,
@@ -20,18 +20,20 @@ public sealed class ProjectNativeDefinitionOperations(
     public async Task<ProjectNativeEditorAcquisition> AcquireEditorAsync(Guid? projectId, CancellationToken cancellationToken = default) {
         var before = await GetContextAsync(cancellationToken);
         ProjectEditorModel model;
+        ProjectDefinitionSnapshot? original = null;
         if (projectId is { } id) {
             var definition = await definitions.ReadAsync(id, cancellationToken);
             if (definition.IsFailure) {
                 throw new InvalidOperationException("The requested project definition is unavailable.");
             }
-            model = ProjectEditorDraft.CreateModel(definition.Value!);
+            original = definition.Value!;
+            model = ProjectEditorDraft.CreateModel(original);
         } else {
             model = await projects.GetAsync(null, cancellationToken);
         }
         var after = await GetContextAsync(cancellationToken);
         RequireScope(Scope(before), after);
-        return new(model, Scope(before));
+        return new(model, Scope(before), original);
     }
 
     public async Task<Result<ProjectDefinitionSnapshot>> ReadCurrentAsync(Guid projectId, ProjectPendingScope original,

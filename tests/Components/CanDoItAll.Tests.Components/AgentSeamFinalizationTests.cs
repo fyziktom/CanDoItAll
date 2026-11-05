@@ -86,7 +86,7 @@ public sealed class AgentSeamFinalizationTests {
         if (replaceSession) {
             editor.Render(parameters => parameters.Add(component => component.AgentId, Guid.NewGuid()));
         } else {
-            await editor.InvokeAsync(editor.Instance.Dispose);
+            await editor.InvokeAsync(() => editor.Instance.DisposeAsync().AsTask());
         }
 
         try {

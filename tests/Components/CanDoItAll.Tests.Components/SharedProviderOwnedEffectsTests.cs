@@ -44,7 +44,7 @@ public sealed class SharedProviderOwnedEffectsTests {
         await cut.WaitForElement("[data-testid='shared-provider-source-sync']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-connections-close']").ClickAsync();
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
-        Assert.Equal(raw, ((AngleSharp.Html.Dom.IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
+        Assert.Equal(raw, cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
         Assert.Equal("Unsaved notes", ((Editor)context.Model).Notes);
         Assert.Equal("Unsaved name", ((Editor)context.Model).Name);
         Assert.Equal(count, reads.EditorReads);
@@ -165,7 +165,7 @@ public sealed class SharedProviderOwnedEffectsTests {
             }
             if (method?.Name == nameof(ISharedProviderManagementService.SetPublicationAsync)) {
                 WrittenId = (Guid)args![0]!;
-                Token = (CancellationToken)args[3]!;
+                Token = (CancellationToken)args[^1]!;
                 return Pending.Task;
             }
             throw new InvalidOperationException("Unexpected sharing call.");

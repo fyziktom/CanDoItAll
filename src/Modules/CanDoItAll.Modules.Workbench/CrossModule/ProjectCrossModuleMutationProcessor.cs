@@ -93,18 +93,19 @@ public sealed class ProjectCrossModuleMutationProcessor(
 
     internal async Task<ProjectCrossModuleMutationProcessingResult?> ProcessWithPayloadAsync(
         Guid mutationId,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         var processingLock = ResolveProcessingLock(mutationId);
         await processingLock.WaitAsync(cancellationToken);
-        try
-        {
+        try {
+            if (authorizeCommit is not null) {
+                await authorizeCommit(cancellationToken);
+            }
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             var current = await dbContext.Set<ProjectCrossModuleMutationRecord>()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.Id == mutationId, cancellationToken);
-            if (current is null)
-            {
+            if (current is null) {
                 return null;
             }
 
@@ -113,20 +114,20 @@ public sealed class ProjectCrossModuleMutationProcessor(
                     ProjectWorkbenchDeletionPayload.Read(current), cancellationToken);
             }
 
-            if (current.Status == ProjectCrossModuleMutationStatus.Completed)
-            {
+            if (current.Status == ProjectCrossModuleMutationStatus.Completed) {
                 return new(current.Status, current.PayloadJson);
             }
 
             if (current.ApprovalState is ProjectCrossModuleMutationApprovalState.Pending or
-                ProjectCrossModuleMutationApprovalState.Rejected)
-            {
+                ProjectCrossModuleMutationApprovalState.Rejected) {
                 return new(current.Status, current.PayloadJson);
             }
 
+            if (authorizeCommit is not null) {
+                await authorizeCommit(cancellationToken);
+            }
             var claimToken = $"processing:{Guid.NewGuid():N}";
-            if (!await TryClaimAsync(dbContext, mutationId, claimToken, cancellationToken))
-            {
+            if (!await TryClaimAsync(dbContext, mutationId, claimToken, cancellationToken)) {
                 var observed = await dbContext.Set<ProjectCrossModuleMutationRecord>()
                     .AsNoTracking()
                     .Where(item => item.Id == mutationId)
@@ -152,13 +153,15 @@ public sealed class ProjectCrossModuleMutationProcessor(
                 claimToken,
                 heartbeatStop.Token,
                 processingCancellation);
-            try
-            {
+            try {
+                if (authorizeCommit is not null) {
+                    await authorizeCommit(processingCancellation.Token);
+                }
                 await ExecuteCommittedMutationAsync(
                     dbContext,
                     mutation,
                     claimToken,
-                    processingCancellation.Token);
+                    processingCancellation.Token, authorizeCommit);
                 await StopHeartbeatAsync(heartbeatStop, heartbeatTask, suppressFailure: false);
                 var completedStatus = await CompleteClaimAsync(
                     dbContext,
@@ -166,9 +169,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
                     claimToken,
                     cancellationToken);
                 return new(completedStatus, mutation.PayloadJson);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
+            } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
                 await StopHeartbeatAsync(heartbeatStop, heartbeatTask, suppressFailure: true);
                 logger.LogWarning(
                     "Durable Workbench mutation {MutationId} processing was canceled.",
@@ -181,16 +182,13 @@ public sealed class ProjectCrossModuleMutationProcessor(
                     claimToken,
                     "Durable reconciliation was canceled before completion.",
                     failureTimeout.Token);
-                if (!failedByOwner)
-                {
+                if (!failedByOwner) {
                     _ = await LoadProcessingResultAsync(
                         mutationId,
                         failureTimeout.Token);
                 }
                 throw;
-            }
-            catch (Exception exception)
-            {
+            } catch (Exception exception) {
                 await StopHeartbeatAsync(heartbeatStop, heartbeatTask, suppressFailure: true);
                 logger.LogWarning(
                     "Durable Workbench mutation {MutationId} failed with {FailureType}.",
@@ -204,8 +202,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
                     claimToken,
                     $"Durable reconciliation failed ({exception.GetType().Name}). Retry is required.",
                     failureTimeout.Token);
-                if (failedByOwner)
-                {
+                if (failedByOwner) {
                     return new(
                         ProjectCrossModuleMutationStatus.Failed,
                         mutation.PayloadJson);
@@ -218,9 +215,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
                            ProjectCrossModuleMutationStatus.Failed,
                            mutation.PayloadJson);
             }
-        }
-        finally
-        {
+        } finally {
             processingLock.Release();
         }
     }
@@ -229,15 +224,13 @@ public sealed class ProjectCrossModuleMutationProcessor(
         WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var now = await ProjectCrossModuleMutationTimeSource.GetUtcNowAsync(
             dbContext,
             clock,
             cancellationToken);
         var staleBefore = now - processingOptions.LeaseDuration;
-        if (dbContext.Database.IsRelational())
-        {
+        if (dbContext.Database.IsRelational()) {
             var affected = await dbContext.Set<ProjectCrossModuleMutationRecord>()
                 .Where(record =>
                     record.Id == mutationId &&
@@ -265,8 +258,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
             mutation.Status == ProjectCrossModuleMutationStatus.Processing &&
             (!mutation.LastAttemptAtUtc.HasValue ||
              mutation.LastAttemptAtUtc < staleBefore);
-        if (!claimable)
-        {
+        if (!claimable) {
             return false;
         }
 
@@ -284,8 +276,8 @@ public sealed class ProjectCrossModuleMutationProcessor(
         WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit) {
         return mutation.MutationKind switch
         {
             ProjectCrossModuleMutationKind.DeleteSubtree => DeleteSubtreeAsync(
@@ -293,7 +285,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
                 mutation,
                 claimToken,
                 Deserialize<DeleteSubtreeMutationPayload>(mutation.PayloadJson),
-                cancellationToken),
+                cancellationToken, authorizeCommit),
             ProjectCrossModuleMutationKind.DeleteProject => DeleteProjectAsync(
                 dbContext,
                 mutation,
@@ -318,8 +310,8 @@ public sealed class ProjectCrossModuleMutationProcessor(
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         DeleteSubtreeMutationPayload payload,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit) {
         await DeleteAssignmentsAsync(mutation.ProjectId, payload.DeletedNodeKeys, cancellationToken, RequireSource(payload.SourceReference, mutation.ProjectId));
         await DeleteStorageObjectsAsync(
             dbContext,
@@ -332,7 +324,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
             outcomes => JsonSerializer.Serialize(
                 payload with { ManagedStorageOutcomes = outcomes },
                 JsonOptions),
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     private async Task DeleteProjectAsync(
@@ -388,12 +380,11 @@ public sealed class ProjectCrossModuleMutationProcessor(
         IReadOnlyCollection<ProjectManagedStorageDeletionCandidate> candidates,
         IReadOnlyCollection<ProjectManagedStorageDeletionOutcome> persistedOutcomes,
         Func<IReadOnlyList<ProjectManagedStorageDeletionOutcome>, string> serializePayload,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         var undefinedOutcome = persistedOutcomes.FirstOrDefault(outcome =>
             !Enum.IsDefined(outcome.Kind));
-        if (undefinedOutcome is not null)
-        {
+        if (undefinedOutcome is not null) {
             throw new InvalidDataException(
                 $"Durable managed-storage outcome kind '{undefinedOutcome.Kind}' is not supported.");
         }
@@ -407,16 +398,17 @@ public sealed class ProjectCrossModuleMutationProcessor(
             .ToHashSet();
         foreach (var candidate in candidates
                      .GroupBy(item => ProjectManagedStorageObjectKey.FromReference(item.Reference))
-                     .Select(group => group.First()))
-        {
+                     .Select(group => group.First())) {
             var reference = candidate.Reference;
             var key = ProjectManagedStorageObjectKey.FromReference(reference);
-            if (completedKeys.Contains(key))
-            {
+            if (completedKeys.Contains(key)) {
                 continue;
             }
 
             await RenewClaimAsync(dbContext, mutation.Id, claimToken, cancellationToken);
+            if (authorizeCommit is not null) {
+                await authorizeCommit(cancellationToken);
+            }
             var outcome = (await managedStorageDeletionService.DeleteAsync(
                 [candidate],
                 cancellationToken)).Single();

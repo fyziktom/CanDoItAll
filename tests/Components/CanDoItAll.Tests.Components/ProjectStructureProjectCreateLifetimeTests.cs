@@ -1,4 +1,5 @@
 using CanDoItAll.Workbench.Structure.UI;
+using System.Data.Common;
 using Bunit;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
@@ -44,6 +45,7 @@ public sealed class ProjectStructureProjectCreateLifetimeTests {
         ProjectEditorDraft? successor = null;
         try {
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            Assert.Equal("Original created project", (await projects.GetAsync(gate.CreatedProjectId)).Name);
             await page.InvokeAsync(() => editor.Close.InvokeAsync());
             await page.InvokeAsync(() => page.Find("[data-testid='project-structure-hierarchy-project-select']").Change(neighbor.ToString("D")));
             if (reopen) {
@@ -81,21 +83,20 @@ public sealed class ProjectStructureProjectCreateLifetimeTests {
         }
     }
 
-    private sealed class CreationGate : SaveChangesInterceptor {
+    private sealed class CreationGate : DbTransactionInterceptor {
         public bool Armed { get; set; }
         public Guid CreatedProjectId { get; private set; }
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
-            InterceptionResult<int> result, CancellationToken cancellationToken = default) {
+        public override async Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData,
+            CancellationToken cancellationToken = default) {
             if (Armed && eventData.Context?.ChangeTracker.Entries<Project>().FirstOrDefault(entry =>
-                    entry.State == EntityState.Added && entry.Entity.Name == "Original created project") is { } added) {
+                    entry.Entity.Name == "Original created project") is { } added) {
                 Armed = false;
                 CreatedProjectId = added.Entity.Id;
                 Entered.TrySetResult();
                 await Release.Task.WaitAsync(cancellationToken);
             }
-            return result;
         }
     }
 }

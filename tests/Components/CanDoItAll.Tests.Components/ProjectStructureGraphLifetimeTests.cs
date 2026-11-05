@@ -393,7 +393,7 @@ public sealed class ProjectStructureGraphLifetimeTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Accepted_movement_retains_original_positions_after_navigation(bool loseReply) {
-        var gate = new ProjectStructureHierarchyLifetimeTests.OwnerWriteGate { LoseCommitReply = loseReply };
+        var gate = new ProjectStructureHierarchyLifetimeTests.OwnerWriteGate { LoseCommitReply = loseReply, HoldAfterCommit = true };
         await using var harness = await ProjectStructureHierarchyLifetimeTests.CreateHarnessAsync(gate);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
@@ -512,24 +512,25 @@ public sealed class ProjectStructureGraphLifetimeTests {
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource SecondCommit { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData data,
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData data,
             InterceptionResult<int> result, CancellationToken cancellationToken = default) {
             if (Armed && data.Context is { } context && context.ChangeTracker.Entries<ProjectWorkbenchViewStateRecord>()
                 .Any(entry => entry.State is EntityState.Added or EntityState.Modified)) {
                 stateContexts.Add(context);
-                if (Interlocked.Increment(ref written) == 1) {
-                    Entered.TrySetResult();
-                    await Release.Task.WaitAsync(cancellationToken);
-                }
             }
-            return result;
+            return ValueTask.FromResult(result);
         }
 
-        public Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData data, CancellationToken cancellationToken = default) {
-            if (data.Context is { } context && stateContexts.Remove(context) && Interlocked.Increment(ref committed) == 2) {
-                SecondCommit.TrySetResult();
+        public async Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData data, CancellationToken cancellationToken = default) {
+            if (data.Context is { } context && stateContexts.Remove(context)) {
+                if (Interlocked.Increment(ref written) == 1) {
+                    Entered.TrySetResult();
+                    await Release.Task;
+                }
+                if (Interlocked.Increment(ref committed) == 2) {
+                    SecondCommit.TrySetResult();
+                }
             }
-            return Task.CompletedTask;
         }
     }
 

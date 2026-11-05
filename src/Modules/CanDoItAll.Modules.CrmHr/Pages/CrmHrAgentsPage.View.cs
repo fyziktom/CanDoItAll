@@ -24,6 +24,10 @@ public partial class CrmHrAgentsPage : ICrmHrAgentsWorkspaceView
     AiAgentWorkspaceModel? ICrmHrAgentsWorkspaceView.SelectedWorkspace => selectedWorkspace;
     bool ICrmHrAgentsWorkspaceView.IsWorkspaceLoading => isWorkspaceLoading;
     bool ICrmHrAgentsWorkspaceView.IsRecordDialogOpen => isRecordDialogOpen;
+    bool ICrmHrAgentsWorkspaceView.IsRecordOutdated => recordOutdated;
+    long ICrmHrAgentsWorkspaceView.CatalogRefreshVersion => catalogRefreshVersion;
+    void ICrmHrAgentsWorkspaceView.RefreshCatalog() => RefreshCatalog();
+    Task ICrmHrAgentsWorkspaceView.RefreshRecordAsync() => RefreshRecordAsync();
     CrmHrAgentRecordSection ICrmHrAgentsWorkspaceView.RecordSection => RecordSection;
     PagedRecordSelection<Guid>? ICrmHrAgentsWorkspaceView.AgentSelection => AgentSelection;
     PagedRecordQueryState<AiAgentValidationFilter>? ICrmHrAgentsWorkspaceView.CatalogQuery => CatalogQuery;

@@ -152,7 +152,7 @@ public sealed class WorkflowExampleCatalogSeedService(
     private async Task EnsureWorkflowSettingsAsync(CancellationToken cancellationToken)
     {
         var current = await settingsService.GetSettingsAsync(cancellationToken);
-        if (current != WorkflowSettings.Default)
+        if (current.UpdatedAtUtc is not null)
         {
             return;
         }
@@ -220,7 +220,9 @@ public sealed class WorkflowExampleCatalogSeedService(
                     CanAskOtherAgents = false,
                     CanEscalateToHuman = false,
                     RequiresApprovalForExternalCalls = false
-                }),
+                }) {
+                    ExpectedRevision = current?.Revision
+                },
             cancellationToken);
 
         if (current is null)

@@ -22,13 +22,14 @@
     <Button Text="@(Result is null ? "Cancel" : "Close")" Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Base"
             data-testid="@($"{TestIdPrefix}-cancel")" Click="Cancelled" />
     <Button Text="@(IsEditMode ? "Save task" : "Create task")" Icon="@(IsEditMode ? "save" : "add_task")"
-            ButtonStyle="ButtonStyle.Info" Disabled="@(IsBusy || Result is { CanRetry: false })"
+            ButtonStyle="ButtonStyle.Info" Disabled="@(IsBusy || SubmitBlocked || Result is { CanRetry: false })"
             data-testid="@($"{TestIdPrefix}-submit")" Click="Submitted" />
 </Cluster>
 
 @code {
     [Parameter] public PlanningTaskSaveResult? Result { get; set; }
     [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public bool SubmitBlocked { get; set; }
     [Parameter] public bool IsEditMode { get; set; }
     [Parameter] public string TestIdPrefix { get; set; } = string.Empty;
     [Parameter] public EventCallback Submitted { get; set; }

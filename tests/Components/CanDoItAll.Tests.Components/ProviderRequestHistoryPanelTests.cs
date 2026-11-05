@@ -231,7 +231,7 @@ public sealed class ProviderRequestHistoryPanelTests {
     }
 
     [Fact]
-    public void Content_is_separately_requested_and_untrusted_text_is_encoded() {
+    public async Task Content_is_separately_requested_and_untrusted_text_is_encoded() {
         var backend = new ProviderHistoryUiFixture();
         backend.Entry = backend.Entry with {
             Usage = new(HistoryUsageState.Partial, 10, 5, CachedInputTokens: 0),
@@ -239,8 +239,9 @@ public sealed class ProviderRequestHistoryPanelTests {
         };
         using var context = CreateHostContext(backend);
         var cut = context.Render<ProviderRequestHistoryPanel>(p => p.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized()));
-        cut.Find("[data-testid='history-search-form']").Submit();
-        cut.WaitForElement("[data-testid='history-details']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='history-search-form']").SubmitAsync());
+        cut.WaitForElement("[data-testid='history-details']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='history-details']").ClickAsync());
         cut.WaitForElement("[data-testid='history-load-content']");
         Assert.Equal(1, backend.MetadataReads);
         Assert.Empty(backend.ContentReads);
@@ -251,12 +252,12 @@ public sealed class ProviderRequestHistoryPanelTests {
         Assert.Contains("Images: Unavailable", metadata);
         Assert.Contains("Type: erp.company-project", metadata);
         Assert.Contains("Value: company-project-42", metadata);
-        cut.Find("[data-testid='history-load-content']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='history-load-content']").ClickAsync());
         cut.WaitForElement("[data-testid='history-content-text']");
         Assert.Single(backend.ContentReads);
         Assert.Empty(cut.FindAll("script"));
-        Assert.Contains("<script>untrusted()</script>", cut.Find("textarea").TextContent);
-        cut.Find("[data-testid='history-detail-close']").Click();
+        Assert.Contains("<script>untrusted()</script>", cut.Find("textarea").GetAttribute("value"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='history-detail-close']").ClickAsync());
         Assert.Empty(cut.FindAll("[data-testid='history-detail-dialog']"));
     }
 

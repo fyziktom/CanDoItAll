@@ -12,5 +12,6 @@
     <ProjectReference Include="../../MAF/Common/CanDoItAll.AgentFramework.Usage/CanDoItAll.AgentFramework.Usage.csproj" />
     <ProjectReference Include="../../MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="../CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
   </ItemGroup>
 </Project>

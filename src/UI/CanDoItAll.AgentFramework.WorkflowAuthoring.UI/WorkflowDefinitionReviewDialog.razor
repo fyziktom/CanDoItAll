@@ -1,0 +1,72 @@
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+
+<Dialog IsOpen="true" Title="Review workflow changes" Size="ModalSize.Wide" DenseChrome="true"
+        Subtitle="Compare the original version, your draft and the current saved workflow. Apply updates the draft; Save is a separate action."
+        ShowCloseButton="true" OnClose="Cancel" TestId="workflow-definition-review-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Small">
+            @if (StaleMessage.Length > 0) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="workflow-definition-review-stale">@StaleMessage</Alert>
+            }
+            @if (Review.HasRawGraphInput) {
+                <Alert AlertStyle="AlertStyle.Warning">Your graph has unfinished or pending configuration input. Use my draft retains those entries. Use current replaces the whole graph and its local inputs.</Alert>
+            }
+            <MergeFieldView TValue="string" Label="Name" Field="Review.Name" Format="Identity" Changed="Changed" TestId="workflow-definition-review-name">
+                <ResultEditor Context="value">
+                    <TextBox Value="@value" ValueChanged="SetNameAsync" data-testid="workflow-definition-review-result-name" />
+                </ResultEditor>
+            </MergeFieldView>
+            <MergeFieldView TValue="string" Label="Description" Field="Review.Description" Format="Identity" Changed="Changed" TestId="workflow-definition-review-description">
+                <ResultEditor Context="value">
+                    <TextArea Value="@value" ValueChanged="SetDescriptionAsync" Rows="6" data-testid="workflow-definition-review-result-description" />
+                </ResultEditor>
+            </MergeFieldView>
+            <MergeFieldView TValue="WorkflowLifecycleStatus" Label="Lifecycle status" Field="Review.Status"
+                            Format="@(value => value.ToString())" Changed="Changed" ShowUnchanged="false" TestId="workflow-definition-review-status" />
+            <MergeFieldView TValue="WorkflowRuntimePolicy" Label="Runtime policy" Field="Review.RuntimePolicy"
+                            Format="FormatPolicy" Changed="Changed" ShowUnchanged="false" TestId="workflow-definition-review-policy" />
+            <MergeFieldView TValue="WorkflowGraph" Label="Whole graph" Field="Review.Graph" Format="Review.FormatGraph"
+                            Changed="Changed" ShowUnchanged="Review.HasRawGraphInput" TestId="workflow-definition-review-graph" />
+            <SmallText Text="The graph choice includes all nodes, routes, ports and stored settings, including values not shown in this summary. Graph topology is reviewed as one document." />
+            @if (Previous is { } previous) {
+                <FormSection Title="Previous comparison retained for copying">
+                    <FormField Text="Previous name result"><TextBox Value="@(previous.Name.IsResolved ? previous.Name.Result : previous.Name.Local)" ReadOnly="true" /></FormField>
+                    <FormField Text="Previous description result"><TextArea Value="@(previous.Description.IsResolved ? previous.Description.Result : previous.Description.Local)" ReadOnly="true" Rows="4" /></FormField>
+                </FormSection>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+            <Button Text="Check again" ButtonStyle="ButtonStyle.Light" Click="Refresh" Disabled="Busy" data-testid="workflow-definition-review-refresh" />
+            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="workflow-definition-review-cancel" />
+            <Button Text="Apply to draft" Click="Apply" Disabled="@(!CanApply || Busy)" data-testid="workflow-definition-review-apply" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public WorkflowDefinitionReview Review { get; set; } = default!;
+    [Parameter] public WorkflowDefinitionReview? Previous { get; set; }
+    [Parameter] public bool CanApply { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string StaleMessage { get; set; } = string.Empty;
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback Apply { get; set; }
+    private static string Identity(string value) => value;
+    private async Task SetNameAsync(string value) {
+        Review.Name.SetResult(value);
+        await Changed.InvokeAsync();
+    }
+    private async Task SetDescriptionAsync(string value) {
+        Review.Description.SetResult(value);
+        await Changed.InvokeAsync();
+    }
+    private static string FormatPolicy(WorkflowRuntimePolicy policy)
+        => $"Backend: {policy.PreferredBackend}\nPreview: {policy.AllowInProcessPreviewRuns}\nDurable production: {policy.RequireDurableProductionRuns}\nStatus endpoint: {policy.ExposeAzureFunctionsStatusEndpoint}\nMCP endpoint: {policy.ExposeAzureFunctionsMcpTool}";
+}

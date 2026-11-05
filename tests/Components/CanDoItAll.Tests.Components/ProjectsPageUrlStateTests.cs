@@ -30,7 +30,7 @@ public sealed class ProjectsPageUrlStateTests {
         Assert.Equal(entries + 1, fixture.Navigation.History.Count);
         Assert.False(fixture.Navigation.History.First().Options.ReplaceHistoryEntry);
 
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        await ProjectsPageTestActions.CloseEditorAsync(cut);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='projects-detail-modal']")));
         Assert.Equal(1, fixture.Back.Calls);
@@ -56,7 +56,7 @@ public sealed class ProjectsPageUrlStateTests {
         Assert.Equal($"/projects?projectId={id:D}&q=Deep", fixture.Location);
         Assert.Equal(entries, fixture.Navigation.History.Count);
 
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        await ProjectsPageTestActions.CloseEditorAsync(cut);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='projects-detail-modal']")));
         Assert.Equal(0, fixture.Back.Calls);

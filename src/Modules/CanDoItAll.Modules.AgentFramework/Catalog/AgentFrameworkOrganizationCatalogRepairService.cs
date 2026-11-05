@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using ProviderProfileConcurrencyException = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfileConcurrencyException;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
 
@@ -15,7 +16,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     IAiTechnicalAgentProjectionStore projections,
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IProviderProfileService providerProfileService,
-    IAgentCatalogMutationPolicy catalogMutationPolicy) : IAgentFrameworkOrganizationCatalogRepairService
+    IAgentCatalogMutationPolicy catalogMutationPolicy,
+    AgentConfigurationChanges configurationChanges) : IAgentFrameworkOrganizationCatalogRepairService
 {
     private const string CrmHrRuntimeAgentTemplateKeyPrefix = "crmhr-ai-resource-";
 
@@ -95,6 +97,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             foreach (var legacyAgent in agentsToImport)
             {
                 var editor = AgentEditorModel.FromDefinition(legacyAgent);
+                editor.ExpectedUpdatedAtUtc = null;
                 if (editor.ProviderProfileId.HasValue &&
                     providerIdMap.TryGetValue(editor.ProviderProfileId.Value, out var mappedProviderId))
                 {
@@ -139,7 +142,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         var store = new FileSandboxWorkspaceStore(
             workspaceFactory.GetWorkspaceRoot(),
             workspaceFactory.GetOrganizationScope(),
-            catalogMutationPolicy);
+            catalogMutationPolicy,
+            configurationChanges.Publisher(configurationChanges.Scope));
         var repairedOpenAiProviderConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
             openAiProvider.ConfigurationJson,
             "service-managed");
@@ -158,28 +162,24 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
 
         var providersById = providers.ToDictionary(provider => provider.Id);
         var agents = await currentWorkspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
-        var updatedAtUtc = DateTimeOffset.UtcNow;
-        var repairedAgentsById = agents
-            .Where(agent => RequiresOpenAiAssignmentRepair(agent, providersById))
-            .Where(agent => !AgentManagedSeedCustomizationMetadata.HasCustomization(agent.ConfigurationJson))
-            .Select(agent => CreateRepairedOpenAiAgent(agent, openAiProvider, updatedAtUtc))
-            .Where(repairedAgent => agents.Any(agent =>
-                agent.Id == repairedAgent.Id &&
-                !Equals(agent, repairedAgent)))
-            .ToDictionary(agent => agent.Id);
-        if (repairedAgentsById.Count == 0)
-        {
+        if (!agents.Any(agent => RequiresOpenAiAssignmentRepair(agent, providersById) &&
+            !AgentManagedSeedCustomizationMetadata.HasCustomization(agent.ConfigurationJson))) {
             return;
         }
 
-        await store.UpdateCatalogAsync(catalog => catalog with
-        {
-            Agents = catalog.Agents
-                .Select(agent => repairedAgentsById.TryGetValue(agent.Id, out var repairedAgent)
-                    ? repairedAgent
-                    : agent)
-                .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList()
+        await store.UpdateCatalogAsync(catalog => {
+            var currentProvider = SelectManagedSeedOpenAiProvider(catalog.Providers)
+                ?? throw new InvalidOperationException("The managed provider changed before assignment repair. Reload the catalog before repairing it.");
+            var currentProviders = catalog.Providers.ToDictionary(provider => provider.Id);
+            var updatedAtUtc = DateTimeOffset.UtcNow;
+            return catalog with {
+                Agents = catalog.Agents
+                    .Select(agent => RequiresOpenAiAssignmentRepair(agent, currentProviders) &&
+                        !AgentManagedSeedCustomizationMetadata.HasCustomization(agent.ConfigurationJson)
+                        ? CreateRepairedOpenAiAgent(agent, currentProvider, updatedAtUtc) : agent)
+                    .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            };
         }, cancellationToken);
     }
 
@@ -188,36 +188,39 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         ProviderProfile openAiProvider,
         CancellationToken cancellationToken)
     {
-        var updatedProvider = openAiProvider with
-        {
-            Name = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
-            DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
-            Transport = ProviderTransportKind.Responses,
-            PreferFrameworkManagedChatHistory = false,
-            SupportsBackgroundResponses = true,
-            ConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
-                openAiProvider.ConfigurationJson,
-                "service-managed"),
-            SuggestedModels = ManagedSeedProviderFallbacks.OpenAiSuggestedModels
-                .Concat(openAiProvider.SuggestedModels)
-                .Where(OpenAiModelSuggestions.IsMainModel)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList(),
-            ModelPrices = ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(
-                openAiProvider.Kind,
-                ManagedSeedProviderFallbacks.OpenAiDefaultModel,
-                openAiProvider.ModelPrices)
-        };
-
-        await store.UpdateCatalogAsync(catalog => catalog with
-        {
-            Providers = catalog.Providers
-                .Select(provider => provider.Id == openAiProvider.Id ? updatedProvider : provider)
-                .OrderBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList()
+        var saved = await store.UpdateCatalogAsync(catalog => {
+            var current = catalog.Providers.SingleOrDefault(provider => provider.Id == openAiProvider.Id);
+            if (current is null || !IsManagedSeedOpenAiProvider(current)) {
+                throw new ProviderProfileConcurrencyException(openAiProvider.Id);
+            }
+            var updatedProvider = current with {
+                Name = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
+                DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+                Transport = ProviderTransportKind.Responses,
+                PreferFrameworkManagedChatHistory = false,
+                SupportsBackgroundResponses = true,
+                ConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
+                    current.ConfigurationJson,
+                    "service-managed"),
+                SuggestedModels = ManagedSeedProviderFallbacks.OpenAiSuggestedModels
+                    .Concat(current.SuggestedModels)
+                    .Where(OpenAiModelSuggestions.IsMainModel)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                ModelPrices = ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(
+                    current.Kind,
+                    ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+                    current.ModelPrices)
+            };
+            return catalog with {
+                Providers = catalog.Providers
+                    .Select(provider => provider.Id == current.Id ? updatedProvider : provider)
+                    .OrderBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            };
         }, cancellationToken);
 
-        return updatedProvider;
+        return saved.Providers.Single(provider => provider.Id == openAiProvider.Id);
     }
 
     private static bool RequiresManagedOpenAiProviderRepair(ProviderProfile provider)
@@ -382,8 +385,11 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                         StringComparison.Ordinal));
             if (currentProvider is null)
             {
+                var editor = ProviderProfileEditorModel.FromDefinition(legacyProvider);
+                editor.Id = null;
+                editor.ExpectedConcurrencyToken = null;
                 var importedProviderId = await currentWorkspace.SaveProviderAsync(
-                    ProviderProfileEditorModel.FromDefinition(legacyProvider),
+                    editor,
                     cancellationToken);
                 currentProvider = (await currentWorkspace.ListProvidersAsync(cancellationToken))
                     .First(item => item.Id == importedProviderId);
@@ -431,8 +437,14 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                         StringComparison.Ordinal));
             if (currentCapability is null)
             {
+                if (legacyCapability.IsBuiltIn) {
+                    throw new InvalidOperationException("An installed legacy capability must be provisioned by its current catalog owner before importing its agent.");
+                }
+                var editor = CapabilityEditorModel.FromDefinition(legacyCapability);
+                editor.Id = null;
+                editor.ExpectedFingerprint = null;
                 var importedCapabilityId = await currentWorkspace.SaveCapabilityAsync(
-                    CapabilityEditorModel.FromDefinition(legacyCapability),
+                    editor,
                     cancellationToken);
                 currentCapability = (await currentWorkspace.ListCapabilitiesAsync(cancellationToken))
                     .First(item => item.Id == importedCapabilityId);

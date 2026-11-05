@@ -2,6 +2,7 @@ using System.Reflection;
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
@@ -11,6 +12,46 @@ using ProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentVoiceSettingsOwnershipTests {
+    [Fact]
+    public void Prerender_does_not_publish_editable_fields_or_start_voice_reads() {
+        using var context = Context(out var voice);
+        context.SetRendererInfo(new("Static", isInteractive: false));
+        var cut = context.Render<AgentVoiceSettingsPanel>();
+        Assert.Equal(0, voice.Reads);
+        Assert.Empty(cut.FindAll("[data-testid='agents-voice-sample-text']"));
+        Assert.Contains("Loading", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_settings_conflict_retains_the_draft_and_original_without_starting_sample_audio(bool play) {
+        using var context = Context(out var voice);
+        voice.RefuseSettings = true;
+        var cut = context.Render<AgentVoiceSettingsPanel>();
+        var original = voice.Revision;
+        cut.Find("[data-testid='agents-voice-sample-text']").Change("Retained unsaved voice sample");
+        await cut.Find(play ? "[data-testid='agents-voice-play-sample']" : "[data-testid='agents-voice-save']").ClickAsync();
+        Assert.Equal(1, voice.Saves);
+        Assert.Equal(0, voice.Samples);
+        Assert.Equal(original, voice.Submission!.UpdatedAtUtc);
+        Assert.Equal("Retained unsaved voice sample", voice.Submission.SampleText);
+        Assert.Equal("Retained unsaved voice sample", cut.Find("[data-testid='agents-voice-sample-text']").GetAttribute("value"));
+        Assert.Contains("your local draft is retained", cut.Find("[data-testid='agents-voice-settings-conflict']").TextContent, StringComparison.Ordinal);
+        Assert.True(cut.Find("[data-testid='agents-voice-save']").HasAttribute("disabled"));
+        Assert.True(cut.Find("[data-testid='agents-voice-play-sample']").HasAttribute("disabled"));
+        voice.Revision = original.AddTicks(10);
+        await cut.Find("[data-testid='agents-voice-compare']").ClickAsync();
+        Assert.Equal("Retained unsaved voice sample", cut.Find("[data-testid='agents-voice-sample-text']").GetAttribute("value"));
+        foreach (var button in cut.FindAll("button").Where(button => button.TextContent.Trim() == "Use current").ToArray()) {
+            await button.ClickAsync();
+        }
+        await cut.Find("[data-testid='settings-review-apply']").ClickAsync();
+        Assert.Equal(AgentVoiceDefaults.SampleText, cut.Find("[data-testid='agents-voice-sample-text']").GetAttribute("value"));
+        Assert.Empty(cut.FindAll("[data-testid='agents-voice-settings-conflict']"));
+        Assert.Equal(1, voice.Saves);
+    }
+
     [Fact]
     public async Task Two_settings_views_use_distinct_playback_owners_and_dispose_only_their_own_media() {
         using var context = Context(out var voice);
@@ -60,9 +101,11 @@ public sealed class AgentVoiceSettingsOwnershipTests {
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSettingsOpeningFixture();
         voice = new();
         context.Services.AddSingleton<IAgentVoiceService>(voice);
         context.Services.AddSingleton(DispatchProxy.Create<IProviderRuntimeAdministrationService, Providers>());
+        context.SetRendererInfo(new("Server", isInteractive: true));
         return context;
     }
 
@@ -79,9 +122,22 @@ public sealed class AgentVoiceSettingsOwnershipTests {
         public CancellationToken SampleToken { get; private set; }
         public int Saves { get; private set; }
         public int Samples { get; private set; }
-        public Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default) => Task.FromResult(AgentVoiceSettings.Default);
+        public int Reads { get; private set; }
+        public bool RefuseSettings { get; set; }
+        public DateTimeOffset Revision { get; set; } = DateTimeOffset.UtcNow;
+        public AgentVoiceSettings? Submission { get; private set; }
+        public Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default) {
+            Reads++;
+            var settings = AgentVoiceSettings.Default;
+            settings.UpdatedAtUtc = Revision;
+            return Task.FromResult(settings);
+        }
         public Task<AgentVoiceSettings> SaveSettingsAsync(AgentVoiceSettings settings, CancellationToken cancellationToken = default) {
             Saves++;
+            Submission = settings;
+            if (RefuseSettings) {
+                throw new WorkflowSettingsConcurrencyException();
+            }
             return Task.FromResult(settings);
         }
         public Task<AgentVoiceSynthesisResult> SynthesizeSampleAsync(string? sampleText = null, CancellationToken cancellationToken = default) {

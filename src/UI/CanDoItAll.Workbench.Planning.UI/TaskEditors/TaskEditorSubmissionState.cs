@@ -7,6 +7,14 @@ internal sealed class TaskEditorSubmissionState : IDisposable {
     public bool IsBusy { get; private set; }
     public PlanningTaskSaveResult? Result { get; private set; }
     public bool CanSubmit => !disposed && !IsBusy && (Result is null || Result.CanRetry);
+    public bool CanAcceptComparison => !disposed && !IsBusy && (Result is null || Result is { Status: PlanningTaskSaveStatus.Rejected, Phases.Count: 0 });
+
+    public void AcceptComparison() {
+        if (!CanAcceptComparison) {
+            throw new InvalidOperationException("An unconfirmed or committed Task operation cannot be rearmed by a comparison.");
+        }
+        Result = null;
+    }
 
     public Task SaveAsync(Func<Task<PlanningTaskSaveResult>> save, ILogger logger)
         => CanSubmit ? RunAsync(save, logger) : Task.CompletedTask;

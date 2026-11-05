@@ -14,8 +14,8 @@ public sealed class ProjectWorkbenchLifecycleService(
         Guid projectId,
         string nodeKey,
         ProjectObjectReclassificationRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ArgumentNullException.ThrowIfNull(request);
 
         if (request.ExpectedState is { } originalState) {
@@ -184,7 +184,7 @@ public sealed class ProjectWorkbenchLifecycleService(
                 now,
                 cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
 }

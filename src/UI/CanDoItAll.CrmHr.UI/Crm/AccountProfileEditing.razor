@@ -1,0 +1,60 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+
+@if (State.IsOutdated || State.IsUnknown || Message is not null) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-account-freshness">
+        <TextBlock Value="@(Message ?? (State.IsUnknown ? "The profile save outcome is unknown. Its submission and your later draft are retained; resubmission is blocked." : "The saved account changed. Review the current profile before saving your draft."))" />
+        <Button Text="Review saved changes" ButtonStyle="ButtonStyle.Light" Disabled="@(ReadingReview || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-account-review-open" />
+    </Alert>
+}
+@if (State.CanUndo) {
+    <Button Text="Undo merge edits" Disabled="@(State.IsSaving || State.IsUnknown)" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" data-testid="crmhr-account-merge-undo" />
+}
+<Dialog IsOpen="@(State.Review is not null)" Title="Review account profile changes" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-account-review-dialog">
+    <ChildContent>
+        @if (State.Review is { } review) {
+            <Stack GapScale="LayoutGap.Medium" data-testid="crmhr-account-review">
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Compare the original profile, your draft and the current saved profile. Apply changes your draft; Save remains a separate action." /></Alert>
+                @if (State.ReviewIsStale) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-account-review-stale"><TextBlock Value="The profile changed again. Refresh this comparison before applying. Your choices are retained." /></Alert>
+                }
+                <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+                <MergeFieldView TValue="CrmAccountRelationshipStage" Label="Relationship stage" Field="@review.Stage" Format="@(value => value.ToString())" ShowUnchanged="@showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Commercial notes" Field="@review.Commercial" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
+                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Commercial, text))" aria-label="Merged commercial notes" /></ResultEditor>
+                </MergeFieldView>
+                <MergeFieldView TValue="string" Label="Constraints" Field="@review.Constraints" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
+                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Constraints, text))" aria-label="Merged constraints" /></ResultEditor>
+                </MergeFieldView>
+                <MergeFieldView TValue="string" Label="Timing risks" Field="@review.Timing" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
+                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Timing, text))" aria-label="Merged timing risks" /></ResultEditor>
+                </MergeFieldView>
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" Disabled="@ReadingReview" ButtonStyle="ButtonStyle.Light" Click="ReviewRequested" data-testid="crmhr-account-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(ReadingReview || State.Review?.CanApply != true || State.ReviewIsStale || State.IsUnknown || State.IsSaving)" Click="ApplyRequested" data-testid="crmhr-account-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private bool showUnchanged;
+    [Parameter, EditorRequired] public AccountProfileReconciliation State { get; set; } = default!;
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool ReadingReview { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+    [Parameter] public EventCallback UndoRequested { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    private async Task SetTextAsync(MergeField<string> field, string? value) {
+        field.SetResult(value ?? string.Empty);
+        await Changed.InvokeAsync();
+    }
+}

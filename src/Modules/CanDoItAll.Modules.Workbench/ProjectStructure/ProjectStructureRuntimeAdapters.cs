@@ -95,7 +95,7 @@ internal interface IProjectStructureRuntimeExecutionAdapter
         => Task.FromResult<ProjectStructureRuntimeExitRecord?>(null);
 
     Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, Func<CancellationToken, ValueTask>? authorizeStop = null)
         => Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "Expected-session stop is unavailable."));
 
     ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId);
@@ -141,8 +141,8 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
         => sessionRegistry.WaitForExitAsync(nodeId, expected, timeout, cancellationToken);
 
     public Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
-        CancellationToken cancellationToken)
-        => sessionRegistry.StopSessionAsync(nodeId, expected, cancellationToken);
+        CancellationToken cancellationToken, Func<CancellationToken, ValueTask>? authorizeStop = null)
+        => sessionRegistry.StopSessionAsync(nodeId, expected, cancellationToken, authorizeStop);
 
     public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => sessionRegistry.GetLastExit(nodeId);
 
@@ -202,7 +202,7 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
                     OutputLimitCharacters,
                     OutputLimitCharacters,
                     StderrCaptureMode: WorkspaceProcessTextCaptureMode.Tail),
-                cancellationToken, plan.Owner).ConfigureAwait(false);
+                cancellationToken, plan.Owner, plan.AuthorizeLaunch).ConfigureAwait(false);
             if (!start.IsSuccess || start.Identity is null)
             {
                 return new(false, start.Message);

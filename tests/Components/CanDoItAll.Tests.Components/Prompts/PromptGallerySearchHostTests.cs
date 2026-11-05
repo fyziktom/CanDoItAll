@@ -108,12 +108,11 @@ public sealed class PromptGallerySearchHostTests
         cut.WaitForAssertion(() => Assert.Single(pending));
 
         cut.Find("[data-testid='prompt-gallery-kind-filter']").Change("Part");
-        cut.WaitForAssertion(() => Assert.Equal(2, pending.Count));
+        Assert.Single(pending);
         var stale = pending.Dequeue();
-        var current = pending.Dequeue();
-
         await cut.InvokeAsync(() => stale.SetException(new IOException("Late failure.")));
-        await cut.InvokeAsync(() => Task.CompletedTask);
+        cut.WaitForAssertion(() => Assert.Equal(2, gallery.Queries.Count));
+        var current = pending.Dequeue();
 
         Assert.Empty(notifications.Messages);
         Assert.Contains("Searching reusable prompts", cut.Markup, StringComparison.Ordinal);
@@ -150,13 +149,12 @@ public sealed class PromptGallerySearchHostTests
             .Add(component => component.Model, "gpt-5.4")
             .Add(component => component.Compact, true));
 
+        Assert.Single(gallery.Queries);
+        var stale = pending.Dequeue();
+        await cut.InvokeAsync(() => stale.SetResult(ScriptedPromptGalleryService.Page(gallery.Queries[0], [ScriptedPromptGalleryService.Item(title: "Stale")])));
         cut.WaitForAssertion(() => Assert.Equal(2, gallery.Queries.Count));
         Assert.Equal("gpt-5.4", gallery.Queries[1].Model);
-        var stale = pending.Dequeue();
         var current = pending.Dequeue();
-
-        await cut.InvokeAsync(() => stale.SetResult(ScriptedPromptGalleryService.Page(gallery.Queries[0], [ScriptedPromptGalleryService.Item(title: "Stale")])));
-        await cut.InvokeAsync(() => Task.CompletedTask);
         Assert.DoesNotContain("Stale", cut.Markup, StringComparison.Ordinal);
 
         await cut.InvokeAsync(() => current.SetResult(ScriptedPromptGalleryService.Page(gallery.Queries[1], [ScriptedPromptGalleryService.Item(title: "Current")])));
@@ -188,6 +186,7 @@ public sealed class PromptGallerySearchHostTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IPromptGalleryService>(gallery);
+        CanDoItAll.Tests.Support.PromptGalleryUiTestAccess.Register(context.Services);
         return context;
     }
 }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Infrastructure;
@@ -15,6 +16,11 @@ public static class LlmChatsUiComposition
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddSimpleChatsComponents();
+        services.AddScoped<WebLlmChatEditorAccess>();
+        services.AddScoped<ILlmChatDefinitionEditorAccess>(provider => provider.GetRequiredService<WebLlmChatEditorAccess>());
+        services.AddScoped<ILlmChatConversationEditorAccess>(provider => provider.GetRequiredService<WebLlmChatEditorAccess>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ILlmChatDefinitionCommitObserver, WebLlmChatDefinitionCommitObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ILlmChatConversationCommitObserver, WebLlmChatConversationCommitObserver>());
         services.AddCascadingAuthenticationState();
         services.TryAddScoped<ILlmChatUiPolicyEvaluator, WebLlmChatUiPolicyEvaluator>();
         return services;

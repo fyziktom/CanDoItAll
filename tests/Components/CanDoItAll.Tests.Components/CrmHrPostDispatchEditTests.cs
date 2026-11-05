@@ -99,7 +99,8 @@ public sealed class CrmHrPostDispatchEditTests
         // dispatch; the row started afterwards is the operator's next record and the owner has never seen it.
         Assert.Equal(committedConnection.Id, view.ConnectedRecordEditors[0].Id);
         Assert.Equal("typed after the save was dispatched", view.ConnectedRecordEditors[0].Notes);
-        Assert.Null(view.ConnectedRecordEditors[1].Id);
+        Assert.NotNull(view.ConnectedRecordEditors[1].Id);
+        Assert.DoesNotContain(committed.ConnectedRecords, row => row.Id == view.ConnectedRecordEditors[1].Id);
         Assert.Equal("started after the save", view.ConnectedRecordEditors[1].Notes);
 
         await cut.InvokeAsync(view.SaveConnectedRecordsAsync);
@@ -128,7 +129,7 @@ public sealed class CrmHrPostDispatchEditTests
         var draft = view.Editor;
         draft.Summary = "submitted summary";
 
-        control.HoldWriteIn(nameof(PartyDirectoryService.SavePartyAsync));
+        control.HoldWriteIn(nameof(PartyDirectoryService.SavePartyWithReceiptAsync));
         var save = cut.InvokeAsync(view.SaveAsync);
         await control.HoldReached.WaitAsync(TimeSpan.FromSeconds(30));
         draft.Summary = "typed after the save was dispatched";
@@ -192,7 +193,7 @@ public sealed class CrmHrPostDispatchEditTests
 
         var afterSecond = await hr.GetWorkforceProfileWorkspaceAsync(partyId);
         Assert.Equal(2, afterSecond!.Skills.Count);
-        Assert.NotSame(skillDraft, view.SkillEditor);
+        Assert.Same(skillDraft, view.SkillEditor);
         Assert.Equal(Guid.Empty, view.SkillEditor.SkillId);
     }
 

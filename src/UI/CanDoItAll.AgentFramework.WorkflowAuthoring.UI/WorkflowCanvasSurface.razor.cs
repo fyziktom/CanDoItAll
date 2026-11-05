@@ -30,12 +30,16 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
     private static readonly JsonSerializerOptions IndentedExecutorJsonOptions = CreateExecutorJsonOptions(writeIndented: true);
 
     [Parameter, EditorRequired] public WorkflowDocumentOperations DocumentOperations { get; set; } = default!;
+    [Parameter] public WorkflowHeadObservation? HeadObservation { get; set; }
+    [Parameter] public EventCallback<WorkflowDefinition> DefinitionPulled { get; set; }
     [Parameter, EditorRequired] public WorkflowPreviewOperations PreviewOperations { get; set; } = default!;
     [Parameter, EditorRequired] public Func<WorkflowPromptBindingRequest, CancellationToken, Task<WorkflowPromptBindingOutcome>> BindPrompt { get; set; } = default!;
     [Parameter] public IReadOnlyList<WorkflowExecutorDescriptor> Executors { get; set; } = [];
     [Parameter] public IReadOnlyList<WorkflowRuntimeBackendDescriptor> Backends { get; set; } = [];
     [Parameter] public IReadOnlyList<WorkflowSecretOption> Secrets { get; set; } = [];
     [Parameter] public string SecretLoadError { get; set; } = string.Empty;
+    [Parameter] public bool LibraryRefreshRequired { get; set; }
+    [Parameter] public EventCallback LibraryRefreshRequested { get; set; }
     [Parameter] public CancellationToken OwnerToken { get; set; }
     [Parameter] public RenderFragment<WorkflowPromptPickerContext>? PromptPicker { get; set; }
     [Parameter] public RenderFragment<WorkflowExecutorSettingsContext>? SettingsRenderer { get; set; }
@@ -70,13 +74,26 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
     public EventCallback<WorkflowCanvasNodeSelection?> SelectedNodeChanged { get; set; }
 
     private bool disposed;
+    private bool editingAccessRetired;
+    private readonly WorkflowCurrentReviewState currentReview = new();
+    private WorkflowHeadObservation? reviewHeadHint;
+    private bool reviewReadFailed;
+    private bool HasCurrentHeadChange => HeadObservation is { } observed && observed.Id == document.DefinitionId && observed.VersionId != document.VersionId;
+    private string ReviewStaleMessage => editingAccessRetired ? "Workflow editing access changed. Reopen this workspace with current access before applying changes."
+        : saveUnknown ? "The save outcome is unknown. This comparison cannot enable another save. Inspect the native catalog before resolving the original operation."
+        : reviewReadFailed ? "The current workflow could not be read. Your previous comparison and draft are retained. Check again before applying."
+        : currentReview.Review is { } review && (review.Revision != revision || review.Original.VersionId != document.VersionId)
+            ? "Your draft changed after this comparison opened. Check again; your draft and comparison results are retained."
+        : currentReview.Review is { } current && HeadObservation != reviewHeadHint && HeadObservation is { } hint &&
+            hint.Id == current.Current.Id && hint.VersionId != current.Current.VersionId
+            ? "Another workflow update arrived. Check again before applying this comparison."
+        : string.Empty;
     private bool saveUnknown;
     private bool bindingUnknown;
     private bool previewUnknown;
-    private long revision;
+    private long revision => document.EditRevision;
     private long? validationRevision;
     private long? previewRevision;
-    private string observedDraft = string.Empty;
     private readonly List<LlmCallComponent> acceptedBindings = [];
     public WorkflowDefinition? AcceptedDefinition { get; private set; }
     public WorkflowRunId? AcceptedPreviewRunId { get; private set; }
@@ -224,14 +241,13 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
         document = Definition is null
             ? WorkflowCanvasDefinitionMapper.CreateDraft(componentOptions)
             : WorkflowCanvasDefinitionMapper.FromDefinition(Definition, componentOptions);
+        currentReview.Clear();
         loadedDefinitionKey = incomingKey;
         saveUnknown = false;
         bindingUnknown = false;
         previewUnknown = false;
-        revision = 0;
         validationRevision = null;
         previewRevision = null;
-        observedDraft = DraftSignature();
         detailsNode = null;
         isNodeDetailsDialogOpen = false;
         selectedNodeId = document.StartNodeId.Value;
@@ -292,6 +308,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
             return;
         }
         document = WorkflowCanvasDefinitionMapper.CreateDraft(componentOptions);
+        currentReview.Clear();
         loadedDefinitionKey = "draft";
         isBusy = false;
         isTesting = false;
@@ -425,7 +442,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
 
     private async Task<LlmCallComponent?> CreatePromptGalleryBindingAsync(
         PromptGallerySelection selection, WorkflowCanvasNodeDraft? node) {
-        if (!IsCurrent || isBusy || bindingUnknown || node is not null && (!document.Nodes.Contains(node) || !ReferenceEquals(node, SelectedNode))) {
+        if (!IsCurrent || editingAccessRetired || isBusy || bindingUnknown || node is not null && (!document.Nodes.Contains(node) || !ReferenceEquals(node, SelectedNode))) {
             return null;
         }
         var occurrence = document;
@@ -450,14 +467,21 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
                     errorMessage = "The component was saved. Its original node changed; select the saved component to bind it.";
                     return null;
                 }
-                NotificationService.Success("Gallery prompt bound", "The accepted component pins this Prompt revision.");
+                if (accepted.Component.RefreshRequired) {
+                    errorMessage = "The component was saved. Refresh the library to check its latest details; do not create it again.";
+                    NotificationService.Warning("Component saved; refresh needed", errorMessage);
+                } else {
+                    NotificationService.Success("Gallery prompt bound", "The accepted component pins this Prompt revision.");
+                }
                 return accepted.Component;
             }
             if (Owns(occurrence)) {
                 bindingUnknown = outcome is WorkflowPromptBindingOutcome.Unknown;
-                errorMessage = outcome is WorkflowPromptBindingOutcome.Rejected rejected
-                    ? rejected.Message
-                    : "The component save outcome is unknown. Inspect the native library before another binding attempt.";
+                errorMessage = outcome switch {
+                    WorkflowPromptBindingOutcome.Rejected rejected => rejected.Message,
+                    WorkflowPromptBindingOutcome.Unknown unknown => $"The component save outcome is unknown. Inspect component {unknown.ComponentId.Value:D} in the native library before another binding attempt. Do not repeat this creation.",
+                    _ => throw new InvalidOperationException("Unrecognized Prompt binding outcome.")
+                };
                 NotificationService.Warning("Prompt binding needs attention", errorMessage);
             }
         } catch (Exception error) {
@@ -712,7 +736,9 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
         var bridge = ResolveRemovalBridge(node, incomingEdges, outgoingEdges);
 
         document.Nodes.Remove(node);
-        document.Edges.RemoveAll(edge => edge.SourceNodeId == node.Id || edge.TargetNodeId == node.Id);
+        foreach (var edge in document.Edges.Where(edge => edge.SourceNodeId == node.Id || edge.TargetNodeId == node.Id).ToArray()) {
+            document.Edges.Remove(edge);
+        }
         if (bridge is { } bridgeEdge &&
             !document.Edges.Any(edge => edge.SourceNodeId == bridgeEdge.SourceNodeId && edge.TargetNodeId == bridgeEdge.TargetNodeId))
         {
@@ -830,20 +856,96 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
 
     private async Task ValidateAsync()
     {
-        if (!IsCurrent || HasInvalidDraftFields()) {
+        if (!IsCurrent || editingAccessRetired || HasInvalidDraftFields()) {
             return;
         }
         await ValidateCurrentDefinitionAsync();
     }
 
-    private async Task SaveAsync() {
-        if (!IsCurrent || isBusy || saveUnknown || HasInvalidDraftFields()) {
+    private async Task CheckCurrentAsync() {
+        if (!IsCurrent || editingAccessRetired || isBusy || currentReview.IsReading || DocumentOperations.ReadCurrent is not { } read) {
             return;
         }
         var occurrence = document;
-        var submitted = WorkflowCanvasDefinitionMapper.ToDefinition(document);
-        var submittedNodes = document.Nodes.ToDictionary(node => node.Id);
-        var submittedRevision = revision;
+        var hint = HeadObservation;
+        var previous = currentReview.Review;
+        errorMessage = string.Empty;
+        try {
+            await currentReview.ReadAsync(occurrence, read, () => Owns(occurrence), OwnerToken);
+            if (!Owns(occurrence)) {
+                return;
+            }
+            if (currentReview.Review is not null && !ReferenceEquals(previous, currentReview.Review)) {
+                reviewHeadHint = hint;
+                reviewReadFailed = false;
+            }
+            errorMessage = currentReview.Message;
+        } catch (OperationCanceledException) when (!Owns(occurrence) || OwnerToken.IsCancellationRequested) {
+        } catch (UnauthorizedAccessException) {
+            if (Owns(occurrence)) {
+                editingAccessRetired = true;
+                errorMessage = "Workflow editing access changed. Your draft is retained; reopen this workspace with current access.";
+            }
+        } catch (Exception error) {
+            if (Owns(occurrence)) {
+                reviewReadFailed = true;
+                errorMessage = "The current workflow could not be read. Your draft is retained.";
+                Logger.LogWarning("Current workflow read unavailable for {WorkflowId}/{OriginalVersionId}: {FailureType}",
+                    occurrence.DefinitionId, occurrence.VersionId, error.GetType().Name);
+            }
+        }
+    }
+
+    private Task CloseCurrentReviewAsync() {
+        currentReview.Close();
+        return Task.CompletedTask;
+    }
+
+    private Task CurrentReviewChangedAsync() {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyCurrentReviewAsync() {
+        if (!IsCurrent || editingAccessRetired || saveUnknown || ReviewStaleMessage.Length > 0 || !currentReview.CanApply(document)) {
+            return;
+        }
+        var occurrence = document;
+        var current = currentReview.Apply(document);
+        if (!document.Nodes.Any(node => node.Id.Value == selectedNodeId)) {
+            selectedNodeId = document.StartNodeId.Value;
+        }
+        canvasUiState.SelectedNodeIds = string.IsNullOrEmpty(selectedNodeId) ? [] : [selectedNodeId];
+        if (detailsNode is not null && !document.Nodes.Contains(detailsNode)) {
+            detailsNode = null;
+            isNodeDetailsDialogOpen = false;
+        }
+        validationRevision = null;
+        previewRevision = null;
+        validationIssues = [];
+        testResult = null;
+        errorMessage = "Current changes applied to your draft. Review and save when ready.";
+        SyncEdgeDefaults();
+        await NotifySelectedNodeChangedAsync();
+        try {
+            await DefinitionPulled.InvokeAsync(current);
+        } catch (Exception error) {
+            if (Owns(occurrence)) {
+                errorMessage = "Current changes applied. Catalog refresh is unavailable; your draft is retained.";
+                Logger.LogWarning("Workflow catalog callback unavailable after current adoption {WorkflowId}/{VersionId}: {FailureType}",
+                    current.Id, current.VersionId, error.GetType().Name);
+            }
+        }
+    }
+
+    private async Task SaveAsync() {
+        if (!IsCurrent || editingAccessRetired || isBusy || saveUnknown || currentReview.IsReading || currentReview.Review is not null || currentReview.IsDeleted || HasInvalidDraftFields()) {
+            return;
+        }
+        var occurrence = document;
+        var submission = WorkflowCanvasSubmission.Capture(document);
+        var submitted = submission.Definition;
+        var submittedRevision = submission.Revision;
         isBusy = true;
         errorMessage = string.Empty;
         try {
@@ -858,8 +960,9 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
                 if (!Owns(occurrence)) {
                     return;
                 }
-                WorkflowDocumentAcceptance.Merge(document, submitted, submittedNodes, accepted.Definition, revision != submittedRevision);
-                errorMessage = revision == submittedRevision ? string.Empty : "Workflow saved. Later edits remain unsaved.";
+                var hasLaterEdits = revision != submittedRevision;
+                WorkflowDocumentAcceptance.Merge(document, submission, accepted.Definition);
+                errorMessage = hasLaterEdits ? "Workflow saved. Later edits remain unsaved." : string.Empty;
                 NotificationService.Success("Workflow saved", accepted.Definition.Name);
                 try {
                     await DefinitionSaved.InvokeAsync(accepted.Definition);
@@ -874,8 +977,11 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
             }
             if (Owns(occurrence)) {
                 saveUnknown = outcome is WorkflowDefinitionSaveOutcome.Unknown;
+                editingAccessRetired = outcome is WorkflowDefinitionSaveOutcome.Rejected { Reason: WorkflowSaveRejection.Access };
                 errorMessage = outcome is WorkflowDefinitionSaveOutcome.Rejected { Reason: WorkflowSaveRejection.Conflict }
                     ? "The saved workflow changed. Your draft is retained; reopen the exact current version to resolve the conflict."
+                    : outcome is WorkflowDefinitionSaveOutcome.Rejected { Reason: WorkflowSaveRejection.Access }
+                        ? "Workflow editing access changed. Your draft is retained; reopen this workspace with current access."
                     : saveUnknown ? "The save outcome is unknown. Inspect the native catalog before another save attempt."
                     : "The owner rejected this save without committing it. Review the workflow configuration.";
                 NotificationService.Warning("Workflow save needs attention", errorMessage);
@@ -895,7 +1001,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
 
     private async Task RunPreviewAsync()
     {
-        if (!IsCurrent || isBusy || isTesting || previewUnknown || HasInvalidDraftFields())
+        if (!IsCurrent || editingAccessRetired || isBusy || isTesting || previewUnknown || HasInvalidDraftFields())
         {
             return;
         }
@@ -974,7 +1080,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
 
     private async Task StartPreviewFromInputDialogAsync()
     {
-        if (!IsCurrent || isBusy || previewUnknown || previewInputDefinition is null)
+        if (!IsCurrent || editingAccessRetired || isBusy || previewUnknown || previewInputDefinition is null)
         {
             return;
         }
@@ -1011,7 +1117,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
 
     private async Task RunPreviewCoreAsync(WorkflowDefinition definition, string inputJson,
         WorkflowPreviewSimulationPlan simulationPlan, long submittedRevision) {
-        if (!IsCurrent || isBusy || previewUnknown) {
+        if (!IsCurrent || editingAccessRetired || isBusy || previewUnknown) {
             return;
         }
         var occurrence = document;
@@ -1484,6 +1590,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
             return;
         }
         node.RawInputs[field] = raw;
+        node.Changes.Touch(field == WorkflowNodeInputField.AgentId ? WorkflowDraftField.AgentId : WorkflowDraftField.SubworkflowId);
         if (raw.Length > 0 && !Guid.TryParse(raw, out _)) {
             node.InvalidInputs.Add(field);
             return;
@@ -1502,6 +1609,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
             return;
         }
         node.RawInputs[input.Field] = input.Value;
+        node.Changes.Touch(WorkflowDraftField.ExecutionPolicy);
         if (!int.TryParse(input.Value, out var value)) {
             node.InvalidInputs.Add(input.Field);
             return;
@@ -2020,7 +2128,9 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
         CanvasWorkbenchCreateActionRequest request)
     {
         var end = document.Nodes.FirstOrDefault(node => node.Kind == WorkflowNodeKind.End);
-        document.Edges.RemoveAll(edge => edge.SourceNodeId == decisionNode.Id && edge.TargetNodeId == end?.Id);
+        foreach (var edge in document.Edges.Where(edge => edge.SourceNodeId == decisionNode.Id && edge.TargetNodeId == end?.Id).ToArray()) {
+            document.Edges.Remove(edge);
+        }
 
         var branchSpecs = BuildDecisionBranchSpecs(decisionKind, request);
         for (var index = 0; index < branchSpecs.Count; index++)
@@ -2289,6 +2399,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
             return;
         }
         node.PendingConfiguration = state;
+        node.Changes.Touch(WorkflowDraftField.ExecutorSettings);
         try {
             node.ExecutorSettingsJson = WorkflowExecutorConfigurationMapper.MergeState(node.ExecutorSettingsJson, schema, state);
             node.SettingsError = string.Empty;
@@ -3203,27 +3314,10 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
             return;
         }
         var pending = callback.InvokeAsync(argument);
-        TrackDraftChange();
         StateHasChanged();
         await pending;
         if (IsCurrent) {
-            TrackDraftChange();
             StateHasChanged();
-        }
-    }
-
-    private string DraftSignature() {
-        var snapshot = WorkflowCanvasDefinitionMapper.ToDefinition(document);
-        return JsonSerializer.Serialize(new { snapshot.Name, snapshot.Description, snapshot.Status,
-            snapshot.Graph, snapshot.RuntimePolicy, snapshot.InputParameters,
-            RawSettings = document.Nodes.Select(node => new { node.Id, node.SettingsError, node.PendingConfiguration?.Values, node.RawInputs }) });
-    }
-
-    private void TrackDraftChange() {
-        var current = DraftSignature();
-        if (!string.Equals(current, observedDraft, StringComparison.Ordinal)) {
-            observedDraft = current;
-            revision++;
         }
     }
 

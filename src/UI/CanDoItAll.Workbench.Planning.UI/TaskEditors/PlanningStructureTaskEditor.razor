@@ -7,11 +7,15 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
 
+<PlanningTaskLeaveGuard @ref="leaveGuard" ReadCurrent="ReadCloseRequest" />
 <Stack GapScale="LayoutGap.Large"
        AlignItems="AlignItems.Stretch"
        Class="project-structure-task-create-dialog"
        data-testid="project-structure-task-create-content">
-    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch" inert="@(submissionState.IsBusy ? string.Empty : null)">
+    <PlanningTaskComparison @ref="comparison" Owner="ComparisonOwner" ReadInput="CaptureInput" OriginalInput="initialInput"
+                            ApplyLocal="ApplyComparison" ResourceOptions="ResourceOptions" IsSaving="submissionState.IsBusy"
+                            CanAccept="submissionState.CanAcceptComparison" Changed="ComparisonChanged" />
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch" inert="@(submissionState.IsBusy || comparison?.BlocksInput == true ? string.Empty : null)">
     @if (ResourceWarnings.Count > 0)
     {
         <Alert AlertStyle="AlertStyle.Warning"
@@ -21,7 +25,7 @@
     }
 
     @if (IsEditMode &&
-        !CanChangeDirectAssignee &&
+        !CanEditDirectAssignee &&
         ResourceWarnings.Count == 0)
     {
         <Alert AlertStyle="AlertStyle.Warning"
@@ -56,7 +60,7 @@
                    value="@dueText"
                    aria-label="Task due date in UTC"
                    data-testid="project-structure-task-create-due"
-                   @onchange="HandleDueChanged" />
+                   @oninput="HandleDueChanged" @onchange="HandleDueChanged" />
         </FormField>
 
         <FormField Text="Repository">
@@ -162,12 +166,76 @@
     </Stack>
 
     <PlanningTaskFormActions Result="@submissionState.Result" IsBusy="@submissionState.IsBusy" IsEditMode="@IsEditMode"
+                             SubmitBlocked="@(comparison?.BlocksInput == true || ComparisonOwner is { IsActive: false })"
                              TestIdPrefix="project-structure-task-create" Submitted="SubmitAsync" Cancelled="Cancelled"
                              Readback="@(Readback is null ? default : EventCallback.Factory.Create(this, ReadbackAsync))" />
 </Stack>
 
 @code {
     private readonly TaskEditorSubmissionState submissionState = new();
+    private PlanningTaskLeaveGuard? leaveGuard;
+    private PlanningTaskEditorInput? initialInput;
+    private PlanningTaskComparison? comparison;
+    private PlanningTaskComparisonCurrent? acceptedComparison;
+    [Parameter] public IPlanningTaskComparisonOwner? ComparisonOwner { get; set; }
+    private bool CanEditDirectAssignee => acceptedComparison?.CanChangeDirectAssignee ?? CanChangeDirectAssignee;
+    private Task ComparisonChanged() {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private bool ApplyComparison(PlanningTaskLocalPatch patch, Func<bool> accept) {
+        if (!submissionState.CanAcceptComparison || CaptureInput() != patch.Expected ||
+            patch.Result is not PlanningTaskEditorInput.Structure { Estimate: { } rawEstimate, Execution: { } rawExecution } result ||
+            patch.Current.Input is not PlanningTaskEditorInput.Structure { Execution: { } currentExecution } ||
+            !Enum.IsDefined(rawExecution.State) || !Enum.IsDefined(currentExecution.State) ||
+            estimateEditor is null || executionEditor is null || !accept()) {
+            return false;
+        }
+        acceptedComparison = patch.Current;
+        initialInput = patch.Current.Input;
+        title = result.Title;
+        subtitle = result.Subtitle;
+        notes = result.Notes;
+        dueText = result.Due;
+        dueUtc = TryParseUtc(dueText, out var due) ? due : null;
+        repositoryNodeId = result.Repository;
+        proposedAssignee = result.Assignee;
+        resourceToAttach = result.Attachment;
+        selectedResource = result.SelectedResource;
+        estimateBeforeDefinitionSelection = null;
+        estimateBeforeDirectAssigneeSelection = null;
+        estimateEditor.ApplyInput(rawEstimate);
+        estimateInputValid = estimateEditor.TryGetValue(out var parsedEstimate, out validationError);
+        if (estimateInputValid) {
+            estimate = parsedEstimate;
+        }
+        execution = executionEditor.ApplyInput(rawExecution, currentExecution);
+        if (!executionEditor.TryGetValue(out _, out var executionError)) {
+            validationError = executionError;
+        }
+        estimateInputRevision++;
+        submissionState.AcceptComparison();
+        return true;
+    }
+
+    private PlanningTaskEditorInput CaptureInput() => new PlanningTaskEditorInput.Structure(title, subtitle, notes,
+        dueText, repositoryNodeId, estimateEditor?.CaptureInput(), executionEditor?.CaptureInput(), proposedAssignee,
+        resourceToAttach, selectedResource);
+
+    public PlanningTaskCloseRequest ReadCloseRequest() {
+        var input = CaptureInput();
+        return new(QuoteContext.OpeningId, input, input != initialInput, submissionState.IsBusy, submissionState.Result) { Comparison = comparison?.CaptureState() };
+    }
+
+    public Task<bool> ConfirmLeaveAsync() => leaveGuard?.RequestLeaveAsync() ?? Task.FromResult(false);
+
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            initialInput = CaptureInput();
+            StateHasChanged();
+        }
+    }
     private long estimateInputRevision;
     private bool estimateInputValid = true;
     private void EstimateInputChanged(bool valid) {
@@ -201,7 +269,7 @@
     {
         "workItemKind",
         "assigneeRef",
-        "dueUtc",
+        ProjectTaskInputKeys.DueUtc,
         "repositoryRef",
         ProjectTaskEstimateInputKeys.ExpectedEffortValue,
         ProjectTaskEstimateInputKeys.ExpectedEffortUnit,
@@ -266,12 +334,12 @@
 
     private bool CanClearSelectedResource =>
         selectedResource is not null &&
-        (resourceToAttach is not null || CanChangeDirectAssignee);
+        (resourceToAttach is not null || CanEditDirectAssignee);
 
     private IReadOnlySet<ProjectStructureTaskResourceKind> SelectableResourceKinds =>
         !IsEditMode
             ? DirectAssigneeKinds
-            : CanChangeDirectAssignee
+            : CanEditDirectAssignee
                 ? AllResourceKinds
                 : DefinitionResourceKinds;
 
@@ -290,7 +358,7 @@
         subtitle = CreateRequest.Subtitle ?? string.Empty;
         notes = CreateRequest.Notes ?? string.Empty;
         proposedAssignee = InitialAssignee;
-        selectedResource = CanChangeDirectAssignee
+        selectedResource = CanEditDirectAssignee
             ? InitialAssignee
             : null;
         execution = IsEditMode ? InitialExecution : ProjectTaskExecutionSnapshot.NotStarted;
@@ -300,7 +368,7 @@
             .LastOrDefault(value => string.Equals(value.Key, "repositoryRef", StringComparison.OrdinalIgnoreCase))
             ?.Value;
         var dueValue = inputValues
-            .LastOrDefault(value => string.Equals(value.Key, "dueUtc", StringComparison.OrdinalIgnoreCase))
+            .LastOrDefault(value => string.Equals(value.Key, ProjectTaskInputKeys.DueUtc, StringComparison.OrdinalIgnoreCase))
             ?.Value;
         dueText = dueValue ?? string.Empty;
         if (TryParseUtc(dueValue, out var parsedDue))
@@ -364,7 +432,7 @@
             return;
         }
 
-        if (!CanChangeDirectAssignee &&
+        if (!CanEditDirectAssignee &&
             selection.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
         {
             return;
@@ -404,11 +472,11 @@
         if (resourceToAttach is not null)
         {
             resourceToAttach = null;
-            selectedResource = CanChangeDirectAssignee
+            selectedResource = CanEditDirectAssignee
                 ? proposedAssignee
                 : null;
             RestoreEstimateBeforeDefinitionSelection();
-            if (CanChangeDirectAssignee &&
+            if (CanEditDirectAssignee &&
                 proposedAssignee is not null &&
                 costEstimator is not null && estimateInputValid)
             {
@@ -418,7 +486,7 @@
             return;
         }
 
-        if (!CanChangeDirectAssignee)
+        if (!CanEditDirectAssignee)
         {
             return;
         }
@@ -474,7 +542,7 @@
 
     private async Task SubmitAsync()
     {
-        if (!submissionState.CanSubmit) {
+        if (!submissionState.CanSubmit || comparison?.BlocksInput == true || ComparisonOwner is { IsActive: false }) {
             return;
         }
         if (!string.IsNullOrWhiteSpace(dueText) && !TryParseUtc(dueText, out _)) {
@@ -534,7 +602,7 @@
             Key = "workItemKind",
             Value = "task"
         });
-        AddInputValue(inputValues, "dueUtc", dueUtc?.ToString("O", CultureInfo.InvariantCulture));
+        inputValues.Add(new CanvasWorkbenchInputValue { Key = ProjectTaskInputKeys.DueUtc, Value = dueUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty });
         AddInputValue(inputValues, "repositoryRef", repositoryNodeId);
         AddEstimateInputValues(inputValues, estimate);
 

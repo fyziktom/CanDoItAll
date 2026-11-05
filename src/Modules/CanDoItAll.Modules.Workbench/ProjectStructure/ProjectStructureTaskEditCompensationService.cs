@@ -74,7 +74,7 @@ public sealed class ProjectStructureTaskEditCompensationService(
         task.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
             task.ObjectType,
             task.ObjectSubtype,
-            ProjectObjectMetadataSerializer.Serialize(metadata),
+            ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(task.MetadataJson, metadata),
             task.MetadataJson,
             task.Notes,
             media: null);

@@ -13,7 +13,7 @@ public sealed class TeamMetadataOwnershipTests {
         var original = Assert.Single(held.Catalog.AgentTeams);
         var editor = AgentTeamEditorModel.FromDefinition(original);
         editor.Description = "Metadata edit";
-        await second.UpdateAgentTeamMembersAsync(original.Id, [held.Catalog.Agents[1].Id]);
+        await second.UpdateAgentTeamMembersAsync(original.Id, [held.Catalog.Agents[1].Id], original.UpdatedAtUtc);
         await SaveMetadataAsync(first, editor);
         var saved = Assert.Single(held.Catalog.AgentTeams);
         Assert.Equal([held.Catalog.Agents[1].Id], saved.AgentIds);
@@ -46,7 +46,7 @@ public sealed class TeamMetadataOwnershipTests {
         var store = CreateStore(out var held);
         var owner = Owner(store);
         var editor = AgentTeamEditorModel.FromDefinition(Assert.Single(held.Catalog.AgentTeams));
-        await owner.DeleteAgentTeamAsync(editor.Id!.Value);
+        await owner.DeleteAgentTeamAsync(editor.Id!.Value, editor.ExpectedUpdatedAtUtc!.Value);
         await Assert.ThrowsAnyAsync<InvalidOperationException>(() => SaveMetadataAsync(owner, editor));
         Assert.Empty(held.Catalog.AgentTeams);
     }
@@ -68,7 +68,7 @@ public sealed class TeamMetadataOwnershipTests {
         var original = Assert.Single(held.Catalog.AgentTeams);
         var ids = new List<Guid> { held.Catalog.Agents[1].Id };
         held.Hold = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var pending = Owner(store).UpdateAgentTeamMembersAsync(original.Id, ids);
+        var pending = Owner(store).UpdateAgentTeamMembersAsync(original.Id, ids, original.UpdatedAtUtc);
         ids.Clear();
         held.Hold.SetResult();
         var saved = await pending;
@@ -82,7 +82,7 @@ public sealed class TeamMetadataOwnershipTests {
     public async Task Missing_member_is_refused_without_changes() {
         var store = CreateStore(out var held);
         var original = held.Catalog;
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Owner(store).UpdateAgentTeamMembersAsync(original.AgentTeams[0].Id, [Guid.NewGuid()]));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Owner(store).UpdateAgentTeamMembersAsync(original.AgentTeams[0].Id, [Guid.NewGuid()], original.AgentTeams[0].UpdatedAtUtc));
         Assert.Same(original, held.Catalog);
     }
 
@@ -102,7 +102,7 @@ public sealed class TeamMetadataOwnershipTests {
         var originalTeam = Assert.Single(held.Catalog.AgentTeams);
         var neighbor = originalTeam with { Id = Guid.NewGuid(), Name = "Neighbor" };
         held.Catalog = held.Catalog with { AgentTeams = [originalTeam, neighbor] };
-        await Owner(store).DeleteAgentTeamAsync(originalTeam.Id);
+        await Owner(store).DeleteAgentTeamAsync(originalTeam.Id, originalTeam.UpdatedAtUtc);
         Assert.Same(originalAgents, held.Catalog.Agents);
         Assert.Same(neighbor, Assert.Single(held.Catalog.AgentTeams));
     }

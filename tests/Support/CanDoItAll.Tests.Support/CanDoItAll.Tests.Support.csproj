@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj" />
     <PackageReference Include="CanDoItAll.Components.Mermaid" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Editing\CanDoItAll.Editing.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />

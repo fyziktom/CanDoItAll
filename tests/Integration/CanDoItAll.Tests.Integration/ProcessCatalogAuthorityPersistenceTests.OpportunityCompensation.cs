@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
@@ -60,14 +61,18 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             var failure = await Assert.ThrowsAsync<CrmOpportunityConversionRequiresObservationException>(() =>
                 services.GetRequiredService<CrmService>().ConvertOpportunityToProjectAsync(request));
             Assert.Equal(probe.TargetProjectId, failure.Project.ProjectId);
-            if (failure.InnerException is AggregateException aggregate) {
-                Assert.Same(probe.Failure, aggregate.InnerExceptions[0]);
+            var originalFailure = failure.InnerException is AggregateException aggregate
+                ? aggregate.InnerExceptions[0] : failure.InnerException;
+            if (edit == OpportunityCompensationEdit.RecreatedProject) {
+                Assert.IsType<ProjectWriteAdmissionRejectedException>(originalFailure);
             } else {
-                Assert.Same(probe.Failure, failure.InnerException);
+                Assert.Same(probe.Failure, originalFailure);
             }
         }
         Assert.True(probe.Fired);
-        Assert.IsType<DbUpdateConcurrencyException>(probe.Failure);
+        if (edit != OpportunityCompensationEdit.RecreatedProject) {
+            Assert.IsType<DbUpdateConcurrencyException>(probe.Failure);
+        }
         var projectId = probe.TargetProjectId!.Value;
         await using var owner = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         await using var read = new CrmHrDbContext(probe.Options);
@@ -121,7 +126,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         services.AddSingleton<IDbContextFactory<CrmHrDbContext>>(provider => {
             var builder = new DbContextOptionsBuilder<CrmHrDbContext>();
             AppDbContextOptionsConfigurator.Configure(builder, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
-            builder.AddInterceptors(probe);
+            builder.AddInterceptors(probe, new OpportunityCommitAcknowledgement(probe));
             return new Factory<CrmHrDbContext>(builder.Options, static options => new(options));
         });
     } };
@@ -156,6 +161,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         }
         return (new() { OpportunityId = saved.Value, ExpectedUpdatedAtUtc = opportunity.UpdatedAtUtc,
             LinkExistingProject = existingProject, ExistingProjectId = admission?.ProjectId, ExpectedProjectAdmission = admission,
+            ExpectedProjectBasis = admission is null ? null : (await crm.ObserveOpportunityProjectBasisAsync(saved.Value, opportunity.UpdatedAtUtc, admission)).Value,
             ProjectName = "Created conversion target", LastChangedBy = "integration-tests" }, before);
     }
 
@@ -171,14 +177,12 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         internal bool LoseAcknowledgement { get; init; }
         internal bool Fired { get; private set; }
         internal Exception? Failure { get; private set; }
-        private bool throwAfterCommit;
 
-        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
-            InterceptionResult<int> result, CancellationToken cancellationToken = default) {
-            var entry = eventData.Context?.ChangeTracker.Entries<Opportunity>().SingleOrDefault(item =>
+        internal async Task PrepareAsync(DbContext? context, CancellationToken cancellationToken) {
+            var entry = context?.ChangeTracker.Entries<Opportunity>().SingleOrDefault(item =>
                 item.Entity.Id == ArmedOpportunityId && item.State == EntityState.Modified && item.Entity.LinkedProjectId.HasValue);
             if (entry is null) {
-                return result;
+                return;
             }
             ArmedOpportunityId = null;
             TargetProjectId = entry.Entity.LinkedProjectId;
@@ -186,24 +190,20 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             if (BeforeFinalSave is not null) {
                 await BeforeFinalSave(TargetProjectId!.Value);
             }
-            if (LoseAcknowledgement) {
-                throwAfterCommit = true;
-            } else {
+            if (!LoseAcknowledgement) {
                 await using var concurrent = new CrmHrDbContext(Options);
                 await concurrent.Set<Opportunity>().Where(row => row.Id == entry.Entity.Id).ExecuteUpdateAsync(setters => setters
                     .SetProperty(row => row.UpdatedAtUtc, DateTimeOffset.UtcNow.AddMinutes(1))
                     .SetProperty(row => row.Notes, "Concurrent opportunity edit"), cancellationToken);
             }
-            return result;
         }
 
-        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default) {
-            if (throwAfterCommit) {
-                throwAfterCommit = false;
+        internal void LoseCommittedAcknowledgement(DbContext? context) {
+            if (LoseAcknowledgement && Fired && Failure is null && context?.ChangeTracker.Entries<Opportunity>().Any(entry =>
+                    entry.Entity.LinkedProjectId == TargetProjectId) == true) {
                 Failure = new IOException("Lost actual CRM commit acknowledgement");
                 throw Failure;
             }
-            return ValueTask.FromResult(result);
         }
 
         public override Task SaveChangesFailedAsync(DbContextErrorEventData eventData, CancellationToken cancellationToken = default) {
@@ -215,6 +215,19 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             InterceptionResult result, CancellationToken cancellationToken = default) {
             Failure ??= eventData.Exception;
             return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class OpportunityCommitAcknowledgement(OpportunityCompensationProbe probe) : DbTransactionInterceptor {
+        public override async ValueTask<InterceptionResult<DbTransaction>> TransactionStartingAsync(DbConnection connection,
+            TransactionStartingEventData eventData, InterceptionResult<DbTransaction> result, CancellationToken cancellationToken = default) {
+            await probe.PrepareAsync(eventData.Context, cancellationToken);
+            return result;
+        }
+
+        public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) {
+            probe.LoseCommittedAcknowledgement(eventData.Context);
+            return Task.CompletedTask;
         }
     }
 }

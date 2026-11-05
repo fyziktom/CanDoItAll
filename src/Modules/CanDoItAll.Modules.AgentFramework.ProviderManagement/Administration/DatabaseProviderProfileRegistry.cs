@@ -42,7 +42,11 @@ internal sealed class DatabaseProviderProfileRegistry(
     IEnumerable<IProviderProfileDeletionGuard> providerProfileDeletionGuards,
     IEnumerable<IProviderProfileCommitObserver>
         providerProfileCommitObservers,
-    ILogger<DatabaseProviderProfileRegistry> logger) :
+    ILogger<DatabaseProviderProfileRegistry> logger,
+    ProviderMutationWitness witnesses,
+    ProviderEditingWrites? editing = null,
+    ICanonicalRuntimeDatabase? database = null,
+    ProviderDiagnosticPersistence? diagnostics = null) :
     IProviderProfileRegistry, IProviderCatalogReconciliation
 {
     public Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
@@ -63,32 +67,63 @@ internal sealed class DatabaseProviderProfileRegistry(
             return providerProfileService.CreateEditor();
         }
 
-        var provider = await runtimeProfileLoader.LoadAsync(providerId.Value, cancellationToken)
+        var provider = await LoadAuthoringProviderAsync(providerId.Value, cancellationToken);
+        var editor = providerProfileService.CreateEditor(provider.Profile);
+        editor.ExpectedConcurrencyToken = provider.ConfigurationRevision?.Value ?? Guid.Empty;
+        return editor;
+    }
+
+    public async Task<ProviderProfileObservation> GetProviderObservationAsync(Guid providerId, CancellationToken cancellationToken = default) {
+        var workspace = ProviderWorkspace;
+        var provider = await LoadAuthoringProviderAsync(providerId, cancellationToken);
+        return new(workspace, provider.Profile, provider.ConfigurationRevision?.Value ?? Guid.Empty);
+    }
+
+    public Task RecordProviderHealthAsync(ProviderProfileObservation observation, ProviderHealthResult result,
+        DateTimeOffset checkedAtUtc, CancellationToken cancellationToken = default) {
+        if (observation.Workspace != ProviderWorkspace) {
+            throw new UnauthorizedAccessException("The provider diagnostic belongs to another dataset or activation.");
+        }
+        var owner = diagnostics ?? throw new NotSupportedException("This registry has no diagnostic metadata owner.");
+        return owner.RecordHealthAsync(owner.Observe(observation.Profile, observation.ExpectedConcurrencyToken), result,
+            checkedAtUtc, cancellationToken, ReconcileCatalogProviderAsync);
+    }
+
+    private AgentExecutionActivityWorkspaceIdentity ProviderWorkspace => database is not null
+        ? new(database.Profile.Profile.Id, WorkspaceScopeDescriptor.Sandbox, new(database.Generation))
+        : throw new NotSupportedException("Coherent provider observations require the canonical dataset identity.");
+
+    private async Task<CanonicalProviderRuntimeProfile> LoadAuthoringProviderAsync(Guid providerId, CancellationToken cancellationToken) {
+        var provider = await runtimeProfileLoader.LoadAsync(providerId, cancellationToken)
             ?? throw new KeyNotFoundException("Provider profile was not found.");
         if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(provider.Profile.ConnectorPluginKey)) {
             await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             if (await db.Set<SharedProviderImport>().AsNoTracking().AnyAsync(
                 import => import.ProviderProfileId == providerId &&
                     import.SelectionState == SharedProviderSelectionState.Retired, cancellationToken)) {
-                throw new ProviderRuntimeProfileUnavailableException(providerId.Value);
+                throw new ProviderRuntimeProfileUnavailableException(providerId);
             }
         }
-        var editor = providerProfileService.CreateEditor(provider.Profile);
-        editor.ExpectedConcurrencyToken = provider.ConfigurationRevision?.Value;
-        return editor;
+        return provider;
     }
 
-    public Task<Guid> SaveProviderAsync(
+    public async Task<Guid> SaveProviderAsync(
         AgentFrameworkProviderProfileEditorModel model,
-        CancellationToken cancellationToken = default) => SaveProviderCoreAsync(model, null, cancellationToken);
+        CancellationToken cancellationToken = default) => (await SaveProviderCoreAsync(model, null, cancellationToken)).Id!.Value;
 
-    private async Task<Guid> SaveProviderCoreAsync(
+    public Task<AgentFrameworkProviderProfileEditorModel> SaveProviderEditorAsync(
+        AgentFrameworkProviderProfileEditorModel model, CancellationToken cancellationToken = default)
+        => SaveProviderCoreAsync(model, null, cancellationToken);
+
+    private async Task<AgentFrameworkProviderProfileEditorModel> SaveProviderCoreAsync(
         AgentFrameworkProviderProfileEditorModel model,
         ProviderDiagnosticState? diagnostic,
         CancellationToken cancellationToken) {
 
         ArgumentNullException.ThrowIfNull(model);
+        model = ProviderEditorModelSnapshot.Copy(model);
         cancellationToken.ThrowIfCancellationRequested();
+        await RequireOriginalAuthorityAsync(model.Id, cancellationToken);
 
         var capabilityProfile = providerProfileService.CreateProfile(model);
         var secretRecordId = ResolveSecretRecordIdForSave(model);
@@ -98,7 +133,7 @@ internal sealed class DatabaseProviderProfileRegistry(
                 dbContext,
                 model.Id,
                 secretRecordId,
-                cancellationToken);
+                cancellationToken, requireTransaction: editing?.IsActive == true);
         using var coordination = secretMutationScope.HasMutationScope ? transactions.Enter(dbContext) : null;
         var current = secretMutationScope.Profile;
         if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
@@ -108,8 +143,9 @@ internal sealed class DatabaseProviderProfileRegistry(
                 SharedProviderProfileOwnershipPolicy.GenericSaveRejectionMessage);
         }
 
-        if (model.ExpectedConcurrencyToken is { } expectedToken &&
-            (expectedToken == Guid.Empty ? current is not null : current is null || current.ConcurrencyToken != expectedToken)) {
+        if (current is not null && model.ExpectedConcurrencyToken != current.ConcurrencyToken ||
+            current is null && (model.Id.HasValue && model.ExpectedConcurrencyToken != Guid.Empty ||
+                model.ExpectedConcurrencyToken is { } expectedToken && expectedToken != Guid.Empty)) {
             throw new ProviderProfileConcurrencyException(model.Id ?? Guid.Empty);
         }
 
@@ -242,42 +278,58 @@ internal sealed class DatabaseProviderProfileRegistry(
             ExpectedConcurrencyToken = current?.ConcurrencyToken
         };
         var committed = false;
+        AgentFrameworkProviderProfileEditorModel? accepted = null;
         try {
+            await RequireOriginalAuthorityAsync(model.Id, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             committed = dbContext.Database.CurrentTransaction is null;
+            accepted = providerProfileService.CreateEditor(providerMapper.Map(entity));
+            accepted.ExpectedConcurrencyToken = entity.ConcurrencyToken;
+            accepted = ProviderEditorModelSnapshot.Copy(accepted);
+            await RequireOriginalAuthorityAsync(model.Id, cancellationToken);
             await secretMutationScope.CommitAsync(cancellationToken);
             committed = true;
             coordination?.Dispose();
             await secretMutationScope.DisposeAsync();
-            await NotifyProviderSavedAsync(entity.Id);
-            await ProjectCatalogAsync(
-                entity.Id,
-                ProviderCatalogProjectionOperationKind.Upsert,
-                token => UpsertCatalogProvidersAsync([providerMapper.Map(entity)], token));
-            return entity.Id;
-        } catch (ProviderMutationCommittedException) {
-            throw;
+            await ProviderCommitEffects.RunAsync([
+                () => NotifyProviderSavedAsync(entity.Id),
+                () => ProjectCatalogAsync(entity.Id, ProviderCatalogProjectionOperationKind.Upsert,
+                    token => ReconcileCatalogProviderAsync(entity.Id, token))
+            ]);
+            return accepted;
+        } catch (ProviderMutationCommittedException exception) when (committed) {
+            throw new ProviderMutationCommittedException(
+                new(entity.Id, ProviderCatalogProjectionOperationKind.Upsert, entity.ConcurrencyToken, accepted),
+                exception.Message, exception);
         } catch (Exception exception) when (committed) {
             throw new ProviderMutationCommittedException(
-                new(entity.Id, ProviderCatalogProjectionOperationKind.Upsert, entity.ConcurrencyToken),
+                new(entity.Id, ProviderCatalogProjectionOperationKind.Upsert, entity.ConcurrencyToken, accepted),
                 "The provider is saved, but a secondary update needs reconciliation.", exception);
         } catch (Exception exception) when (exception is DbUpdateConcurrencyException ||
             SerializableMutationScope.IsConflict(exception)) {
             throw new ProviderProfileConcurrencyException(entity.Id, exception);
+        } catch (UnauthorizedAccessException) {
+            throw;
         } catch (Exception exception) {
-            throw new ProviderMutationUnconfirmedException(attempt with {
+            throw new ProviderMutationUnconfirmedException(witnesses.Sign(attempt with {
                 IntendedConcurrencyToken = entity.ConcurrencyToken == Guid.Empty ? null : entity.ConcurrencyToken
-            }, exception);
+            }), exception);
         }
     }
 
-    public async Task DeleteProviderAsync(
-        Guid providerId,
-        CancellationToken cancellationToken = default)
-    {
+    public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
+        => DeleteProviderCoreAsync(providerId, null, cancellationToken);
+
+    public Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => DeleteProviderCoreAsync(providerId, expectedConcurrencyToken, cancellationToken);
+
+    private async Task DeleteProviderCoreAsync(Guid providerId, Guid? expectedConcurrencyToken, CancellationToken cancellationToken) {
+        await RequireOriginalAuthorityAsync(providerId, cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var provider = await dbContext.Set<ProviderProfile>()
-            .SingleOrDefaultAsync(item => item.Id == providerId, cancellationToken);
+        await using var mutation = await ProviderProfileSecretMutationScope.BeginAsync(dbContext, providerId, null,
+            cancellationToken, requireTransaction: editing?.IsActive == true);
+        using var coordination = mutation.HasMutationScope ? transactions.Enter(dbContext) : null;
+        var provider = mutation.Profile;
         if (provider is not null)
         {
             foreach (var deletionGuard in providerProfileDeletionGuards)
@@ -287,41 +339,43 @@ internal sealed class DatabaseProviderProfileRegistry(
                     provider.Id,
                     cancellationToken);
             }
+            if (expectedConcurrencyToken != provider.ConcurrencyToken) {
+                throw new ProviderProfileConcurrencyException(providerId);
+            }
             dbContext.Remove(provider);
             cancellationToken.ThrowIfCancellationRequested();
             try {
+                await RequireOriginalAuthorityAsync(providerId, cancellationToken);
                 await dbContext.SaveChangesAsync(cancellationToken);
+                await RequireOriginalAuthorityAsync(providerId, cancellationToken);
+                await mutation.CommitAsync(cancellationToken);
             } catch (DbUpdateConcurrencyException exception) {
                 throw new ProviderProfileConcurrencyException(providerId, exception);
+            } catch (UnauthorizedAccessException) {
+                throw;
             } catch (Exception exception) {
                 throw new ProviderMutationUnconfirmedException(
-                    new(Guid.NewGuid(), providerId, ProviderMutationKind.Delete, provider.ConcurrencyToken), exception);
+                    witnesses.Sign(new(Guid.NewGuid(), providerId, ProviderMutationKind.Delete, provider.ConcurrencyToken)), exception);
             }
         }
-
         try {
-            await NotifyProviderDeletedAsync(providerId);
+            coordination?.Dispose();
+            await mutation.DisposeAsync();
+            await ProviderCommitEffects.RunAsync([
+                () => NotifyProviderDeletedAsync(providerId),
+                () => ProjectCatalogAsync(providerId, ProviderCatalogProjectionOperationKind.Delete,
+                    token => ReconcileCatalogProviderAsync(providerId, token))
+            ]);
         } catch (Exception exception) {
             throw new ProviderMutationCommittedException(
                 new(providerId, ProviderCatalogProjectionOperationKind.Delete),
                 "The provider is deleted, but a secondary update needs reconciliation.", exception);
         }
-        await ProjectCatalogAsync(
-            providerId,
-            ProviderCatalogProjectionOperationKind.Delete,
-            projectionCancellationToken =>
-                store.UpdateCatalogAsync(catalog => catalog with
-                {
-                    Providers = catalog.Providers
-                        .Where(item => item.Id != providerId)
-                        .ToList(),
-                    Agents = catalog.Agents
-                        .Select(agent => agent.ProviderProfileId == providerId
-                            ? agent with { ProviderProfileId = null }
-                            : agent)
-                        .ToList()
-                }, projectionCancellationToken));
     }
+
+    private ValueTask RequireOriginalAuthorityAsync(Guid? providerId, CancellationToken cancellationToken) => editing is null
+        ? ValueTask.CompletedTask
+        : editing.RequireAsync(database?.Profile.Profile.Id ?? throw new InvalidOperationException("Provider editing requires the canonical dataset."), providerId, cancellationToken);
 
     public async Task<AgentFrameworkProviderProfile> UpdateProviderAsync(
         Guid providerId,
@@ -355,17 +409,21 @@ internal sealed class DatabaseProviderProfileRegistry(
     public async Task ReconcileAsync(Guid providerId, CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
         var canonical = await GetProviderAsync(providerId, cancellationToken);
-        if (canonical is not null) {
-            await NotifyProviderSavedAsync(providerId);
-        } else {
-            await NotifyProviderDeletedAsync(providerId);
-        }
+        await ProviderCommitEffects.RunAsync([
+            () => canonical is not null ? NotifyProviderSavedAsync(providerId) : NotifyProviderDeletedAsync(providerId),
+            () => ReconcileCatalogProviderAsync(providerId, cancellationToken)
+        ]);
+    }
+
+    internal async Task ReconcileCatalogProviderAsync(Guid providerId, CancellationToken cancellationToken) {
+        var canonical = await GetProviderAsync(providerId, cancellationToken);
         await store.UpdateCatalogAsync(catalog => catalog with {
             Providers = catalog.Providers.Where(item => item.Id != providerId)
                 .Concat(canonical is null ? [] : new[] { canonical }).ToArray(),
             Agents = canonical is null
                 ? catalog.Agents.Select(agent => agent.ProviderProfileId == providerId
-                    ? agent with { ProviderProfileId = null } : agent).ToArray()
+                    ? agent with { ProviderProfileId = null,
+                        UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, DateTimeOffset.UtcNow) } : agent).ToArray()
                 : catalog.Agents
         }, cancellationToken);
     }
@@ -396,25 +454,11 @@ internal sealed class DatabaseProviderProfileRegistry(
         }, cancellationToken);
     }
 
-    private async Task NotifyProviderSavedAsync(Guid providerId)
-    {
-        foreach (var observer in providerProfileCommitObservers)
-        {
-            await observer.ProviderSavedAsync(
-                providerId,
-                CancellationToken.None);
-        }
-    }
+    private Task NotifyProviderSavedAsync(Guid providerId) => ProviderCommitEffects.RunAsync(
+        providerProfileCommitObservers.Select(observer => (Func<Task>)(() => observer.ProviderSavedAsync(providerId, CancellationToken.None))));
 
-    private async Task NotifyProviderDeletedAsync(Guid providerId)
-    {
-        foreach (var observer in providerProfileCommitObservers)
-        {
-            await observer.ProviderDeletedAsync(
-                providerId,
-                CancellationToken.None);
-        }
-    }
+    private Task NotifyProviderDeletedAsync(Guid providerId) => ProviderCommitEffects.RunAsync(
+        providerProfileCommitObservers.Select(observer => (Func<Task>)(() => observer.ProviderDeletedAsync(providerId, CancellationToken.None))));
 
     private async Task ProjectCatalogAsync(
         Guid providerId,

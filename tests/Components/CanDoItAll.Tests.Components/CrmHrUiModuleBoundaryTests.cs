@@ -137,7 +137,9 @@ public sealed class CrmHrUiModuleBoundaryTests
             typeof(CrmFinancialsPanel),             // owns the Financials read session for one account
             typeof(AgentRecruitingEvidencePanel),   // owns the technical owner's evidence reads and commands
             typeof(CrmAgentChatContextProvider),    // publishes the CRM agent-chat context; renders nothing
-            typeof(CrmHrSecondaryTabs)              // performs area navigation for the library's tab renderer
+            typeof(CrmHrSecondaryTabs),
+            typeof(CrmHrEditorLeaveGuard),
+            typeof(CrmHrLiveCatalog)
         ];
 
         var components = typeof(CrmHrHomePage).Assembly.GetTypes()

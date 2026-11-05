@@ -75,16 +75,18 @@ internal sealed class ProjectStructureLocalFileActionCoordinator(
                 current.Scope,
                 current.Occurrence,
                 action,
-                cancellationToken);
+                cancellationToken, ensureOrigin is null ? null : token => new ValueTask(ensureOrigin(token)));
             return new ProjectStructureLocalFileOpenResult(result.IsSuccess, result.Message);
         }
 
         return action switch
         {
             FileToolsLocalFileAction.OpenInPreferredApplication =>
-                await localFileOpener.OpenInPreferredApplicationAsync(currentNode, cancellationToken),
+                await localFileOpener.OpenInPreferredApplicationAsync(currentNode, cancellationToken,
+                    ensureOrigin is null ? null : token => new ValueTask(ensureOrigin(token))),
             FileToolsLocalFileAction.OpenContainingFolder =>
-                await localFileOpener.OpenAsync(currentNode, cancellationToken),
+                await localFileOpener.OpenAsync(currentNode, cancellationToken,
+                    ensureOrigin is null ? null : token => new ValueTask(ensureOrigin(token))),
             _ => throw new ArgumentOutOfRangeException(nameof(action))
         };
     }

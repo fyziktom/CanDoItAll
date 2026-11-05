@@ -1,4 +1,4 @@
-using Bunit;
+﻿using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
@@ -111,7 +111,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests {
                     Notes = "Existing reporting relationship"
                 }
             ],
-            "component-tests");
+            "component-tests", original: new([]));
         Assert.True(relationshipSave.IsSuccess);
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={sourcePartyId:D}");
@@ -240,6 +240,36 @@ public sealed class CrmHrDirectoryPageFreshnessTests {
 
     [Fact]
     public async Task Closing_the_record_dialog_invalidates_an_in_flight_save_refresh() {
+        CrmHrOwnerReadBackControl control = null!;
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => control = CrmHrOwnerReadBackControl.Install(services));
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var partyId = await CreatePartyAsync(partyDirectoryService, "Closing save dialog");
+        navigation.NavigateTo($"/crm-hr/directory?partyId={partyId:D}");
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
+        cut.WaitForElement("[data-testid='crmhr-directory-record-dialog']");
+        cut.Find("[data-testid='crmhr-party-summary']").Change("Saved while closing");
+        control.HoldReadIn(nameof(PartyDirectoryService.GetPartyAsync));
+
+        var saveTask = cut.InvokeAsync(
+            () => cut.Find("[data-testid='crmhr-party-save-button']").Click());
+        await control.HoldReached.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(1, control.Commits);
+        Assert.Equal(1, control.Interceptions);
+        await cut.InvokeAsync(
+            () => cut.Find("[data-testid='crmhr-directory-record-close']").Click());
+        control.Release();
+        await saveTask;
+
+        cut.WaitForAssertion(() => {
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
+            Assert.EndsWith("/crm-hr/directory", navigation.Uri, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task Closing_is_blocked_while_the_party_write_is_in_flight_then_allowed_after_acceptance() {
         var loadGate = new DelayedDbContextCreationGate();
         await using var harness = await ComponentTestHarness.CreateAsync(
             services => WrapDbContextFactory(services, loadGate));
@@ -252,13 +282,15 @@ public sealed class CrmHrDirectoryPageFreshnessTests {
         cut.Find("[data-testid='crmhr-party-summary']").Change("Saved while closing");
         loadGate.Arm();
 
-        var saveTask = cut.InvokeAsync(
-            () => cut.Find("[data-testid='crmhr-party-save-button']").Click());
+        var view = (ICrmHrDirectoryWorkspaceView)cut.Instance;
+        var saveTask = cut.InvokeAsync(view.SaveAsync);
         await loadGate.WaitForDelayedCreationAsync();
-        await cut.InvokeAsync(
-            () => cut.Find("[data-testid='crmhr-directory-record-close']").Click());
+        await cut.InvokeAsync(view.CloseEditorDialogAsync);
+        Assert.Single(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
         loadGate.Release();
         await saveTask;
+        Assert.Equal("Saved while closing", (await partyDirectoryService.GetPartyAsync(partyId))!.Summary);
+        await cut.InvokeAsync(view.CloseEditorDialogAsync);
 
         cut.WaitForAssertion(() => {
             Assert.Empty(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));

@@ -13,8 +13,8 @@ public sealed partial class ProjectWorkbenchService
         ProjectStructureClipboardCopyTaskPolicy taskPolicy = ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks,
         CancellationToken cancellationToken = default,
         ProjectStructureAgentContext? mutationOwner = null,
-        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
-    {
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetParentNodeKey);
 
         mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, projectId);
@@ -196,7 +196,7 @@ public sealed partial class ProjectWorkbenchService
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
 
         return new ProjectStructureClipboardCopyResult(
             forest.RootNodeKeys.Select(nodeKey => nodeKeyMap[nodeKey]).ToList(),

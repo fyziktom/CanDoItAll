@@ -5,20 +5,23 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed partial class ProjectWorkbenchService {
     public Task<ProjectStructureNode?> UpdateContentMetadataAsync(ProjectWriteAdmission admission,
         ProjectStructureNode expectedNode, string metadataJson, string? status = null,
-        ProjectNodeReferenceCollection? nodeReferences = null, CancellationToken cancellationToken = default)
+        ProjectNodeReferenceCollection? nodeReferences = null, CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => UpdateObjectMetadataCoreAsync(admission.ProjectId, expectedNode.Id, metadataJson, null,
-            null, status, nodeReferences, cancellationToken, admission, expectedContent: expectedNode);
+            null, status, nodeReferences, cancellationToken, admission, expectedContent: expectedNode, authorizeCommit: authorizeCommit);
 
     public Task<ProjectStructureNode?> ReplaceContentMediaAsync(ProjectWriteAdmission admission,
         ProjectStructureNode expectedNode, ProjectObjectMediaPayload media, string metadataJson,
-        string status, CancellationToken cancellationToken = default)
+        string status, CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => ReplaceObjectMediaCoreAsync(admission.ProjectId, expectedNode.Id, media, metadataJson,
-            null, status, cancellationToken, admission, expectedNode);
+            null, status, cancellationToken, admission, expectedNode, authorizeCommit);
 
     public Task<IReadOnlyList<ProjectStructureNode>> UpdateContentStatusesAsync(ProjectWriteAdmission admission,
-        IReadOnlyCollection<ProjectStructureNode> expectedNodes, string status, CancellationToken cancellationToken = default)
+        IReadOnlyCollection<ProjectStructureNode> expectedNodes, string status, CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => UpdateObjectStatusesCoreAsync(admission.ProjectId, expectedNodes.Select(node => node.Id).ToArray(),
-            status, cancellationToken, admission, expectedNodes: expectedNodes);
+            status, cancellationToken, admission, expectedNodes: expectedNodes, authorizeCommit: authorizeCommit);
 
     public async Task RequireContentCurrentAsync(ProjectWriteAdmission admission, ProjectStructureNode expectedNode,
         CancellationToken cancellationToken = default) {

@@ -30,7 +30,7 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
         await using var application = await TestApplication.CreateAsync(Harness(environment, profile, commands, saves));
         await using var scope = application.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
-        var result = await service.SaveAssignmentAsync(Request(seed));
+        var result = await service.SaveAssignmentAsync(await RequestAsync(service, seed));
         Assert.True(result.IsSuccess);
         AssertEnlisted(commands, saves);
         await AssertTaskAsync(application, seed, expectedRevision: 1, expectedDisplayName: "Chosen person", expectedCost: null);
@@ -40,8 +40,10 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
             Assert.Equal(seed.TaskNodeKey, assignment.NodeKey);
             Assert.Equal(seed.PartyId, assignment.PartyId);
         }
+        var assignmentOriginal = Assert.IsType<ProjectAssignmentObservation>(
+            await service.ReadAssignmentForEditingAsync(seed.Admission, result.Value));
         commands.Commands.Clear();
-        await service.DeleteAssignmentAsync(result.Value, expectedReference: ProjectAssignmentReference.From(seed.Admission));
+        await service.DeleteAssignmentAsync(result.Value, expectedReference: ProjectAssignmentReference.From(seed.Admission), original: assignmentOriginal);
         AssertEnlisted(commands, saves);
         await AssertTaskAsync(application, seed, expectedRevision: 2, expectedDisplayName: string.Empty, expectedCost: null);
         await using (var canonical = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
@@ -61,9 +63,10 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
         var seed = await SeedAsync(application);
         await using var scope = application.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
+        var request = await RequestAsync(service, seed);
         commands.Commands.Clear();
         saves.FailAssignmentSave = true;
-        await Assert.ThrowsAsync<InjectedWorkSaveFailure>(() => service.SaveAssignmentAsync(Request(seed)));
+        await Assert.ThrowsAsync<InjectedWorkSaveFailure>(() => service.SaveAssignmentAsync(request));
         saves.FailAssignmentSave = false;
         AssertEnlisted(commands, saves);
         Assert.Contains(commands.Commands, command => command.Text.Contains("UPDATE", StringComparison.OrdinalIgnoreCase));
@@ -144,9 +147,10 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
         return new(projectId, partyId, taskId, nodeKey, bindingId, referenceId, resourceId, admission);
     }
 
-    private static ProjectPartyAssignmentUpsertRequest Request(Seed seed) => new() {
+    private static async Task<ProjectPartyAssignmentUpsertRequest> RequestAsync(ProjectPartyIntegrationService service, Seed seed) => new() {
         ProjectId = seed.ProjectId, ExpectedProjectAdmission = seed.Admission, PartyId = seed.PartyId, Role = ProjectPartyAssignmentRole.WorkItemAssignee,
-        NodeKey = seed.TaskNodeKey, IsPrimary = true, Source = "owner-persistence-proof"
+        NodeKey = seed.TaskNodeKey, IsPrimary = true, Source = "owner-persistence-proof",
+        PrimaryOriginal = await service.ReadPrimaryObservationAsync(seed.Admission, ProjectPartyAssignmentRole.WorkItemAssignee, seed.TaskNodeKey)
     };
 
     private static async Task AssertTaskAsync(TestApplication application, Seed seed, long expectedRevision, string expectedDisplayName, decimal? expectedCost) {

@@ -11,7 +11,8 @@ public sealed class LlmChatDefinitionApplicationService(
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatProviderResolver providerResolver,
     TimeProvider timeProvider,
-    ILlmChatDefinitionCreateReceiptRepository createReceipts)
+    ILlmChatDefinitionCreateReceiptRepository createReceipts,
+    IEnumerable<ILlmChatDefinitionCommitObserver>? observers = null)
     : ILlmChatDefinitionApplicationService, ILlmChatDefinitionCreateReceiptService
 {
     public async Task<Result<LlmChatDefinitionDetails>> CreateAsync(
@@ -140,6 +141,7 @@ public sealed class LlmChatDefinitionApplicationService(
             LlmChatDefinitionStatus.Draft, revisionNumber, now, now, 0);
         await repository.CreateAsync(definition, revision, cancellationToken).ConfigureAwait(false);
         await repository.ReplaceTagsAsync(id, tags, cancellationToken).ConfigureAwait(false);
+        NotifyAfterCommit(id.Value);
         return new LlmChatDefinitionDetails(definition, revision, tags);
     }
 
@@ -199,6 +201,7 @@ public sealed class LlmChatDefinitionApplicationService(
                     revision,
                     transactionCancellationToken).ConfigureAwait(false);
                 await repository.ReplaceTagsAsync(updated.Id, tags, transactionCancellationToken).ConfigureAwait(false);
+                NotifyAfterCommit(updated.Id.Value);
                 return Result<LlmChatDefinitionDetails>.Success(new LlmChatDefinitionDetails(updated, revision, tags));
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -269,6 +272,7 @@ public sealed class LlmChatDefinitionApplicationService(
                     appendedRevision: null,
                     cancellationToken: transactionCancellationToken).ConfigureAwait(false);
                 var tags = await repository.ListTagsAsync(updated.Id, transactionCancellationToken).ConfigureAwait(false);
+                NotifyAfterCommit(updated.Id.Value, lifecycle: true);
                 return Result<LlmChatDefinitionDetails>.Success(new LlmChatDefinitionDetails(updated, revision, tags));
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -332,6 +336,26 @@ public sealed class LlmChatDefinitionApplicationService(
 
     private static LlmChatDefinitionDetails Map(LlmChatDefinitionReadModel model)
         => new(model.Definition, model.Revision, model.Tags);
+
+    private void NotifyAfterCommit(Guid id, bool lifecycle = false) {
+        var subscribers = observers?.ToArray() ?? [];
+        if (subscribers.Length == 0) {
+            return;
+        }
+        unitOfWork.RegisterPostCommit(() => {
+            List<Exception>? failures = null;
+            foreach (var observer in subscribers) {
+                try {
+                    observer.Committed(id, lifecycle);
+                } catch (Exception exception) {
+                    (failures ??= []).Add(exception);
+                }
+            }
+            if (failures is not null) {
+                throw new AggregateException("Definition commit notifications require reconciliation.", failures);
+            }
+        });
+    }
 
     private static LlmChatDefinitionRevision CreateRevision(
         LlmChatDefinitionId id,

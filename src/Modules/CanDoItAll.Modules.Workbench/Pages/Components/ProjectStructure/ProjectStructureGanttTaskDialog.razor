@@ -13,20 +13,31 @@
         source.StartUtc, source.EndUtc, source.ProgressPercent, source.Estimate, source.Assignee,
         source.ScheduleReadOnly, source.CanChangeDirectAssignee, source.Execution) : null;
 }
-<PlanningGanttTaskEditor @key="openingKey" ProjectId="ProjectId" QuoteContext="QuoteContext"
+<PlanningGanttTaskEditor @key="openingKey" @ref="editor" ProjectId="ProjectId" QuoteContext="QuoteContext"
                         DefaultStartUtc="DefaultStartUtc" DefaultEndUtc="DefaultEndUtc" DefaultEstimate="DefaultEstimate"
                         DefaultCurrencyCode="@DefaultCurrencyCode" EditModel="model" AfterTaskNodeId="@AfterTaskNodeId"
                         ResourceOptions="ResourceOptions" ResourceWarnings="ResourceWarnings" QuoteResolver="QuoteResolver"
+                        ComparisonOwner="ComparisonOwner"
                         CreateSubmitted="@(draft => SubmitCreateAsync(draft, create, reference, isCurrent))"
                         EditSubmitted="@(draft => SubmitAsync(draft, edit, reference, isCurrent))"
                         Cancelled="@(() => isCurrent() ? CloseAsync(reference) : Task.CompletedTask)" Readback="Readback" />
 
 @code {
     private bool disposed;
-    public void Dispose() => disposed = true;
+    private readonly ProjectTaskDialogCloseOwner closeOwner = new();
+    private PlanningGanttTaskEditor? editor;
+
+    protected override void OnAfterRender(bool firstRender) => closeOwner.Attach(DialogReference,
+        () => editor?.ReadCloseRequest(), () => editor?.ConfirmLeaveAsync() ?? Task.FromResult(false));
+
+    public void Dispose() {
+        disposed = true;
+        closeOwner.Dispose();
+    }
     private const decimal DefaultDurationHours = 8m;
     [CascadingParameter] public DialogReference? DialogReference { get; set; }
     [Parameter] public Func<Task<PlanningTaskSaveResult>>? Readback { get; set; }
+    [Parameter] public IPlanningTaskComparisonOwner? ComparisonOwner { get; set; }
     [Parameter, EditorRequired]
     public DateTimeOffset DefaultStartUtc { get; set; }
 
@@ -80,9 +91,14 @@
         if (reference is null) {
             return new(PlanningTaskSaveStatus.Rejected, "This task editor requires its original dialog reference.", [], [], []);
         }
-        var result = submit is null ? PlanningTaskSaveResult.Accepted : await submit(draft);
+        var submitted = editor?.ReadCloseRequest();
+        var result = submit is null ? new PlanningTaskSaveResult(PlanningTaskSaveStatus.Rejected,
+            "This task editor is not connected to a save owner.", [], [], []) : await submit(draft);
         if (result.ShouldClose) {
-            await reference.CloseAsync(draft);
+            if (!isCurrent() || !await closeOwner.CloseAcceptedAsync(reference, submitted, draft!)) {
+                return result with { RequiresReadback = true,
+                    Message = $"{result.Message} The current draft is retained. Review the original save outcome before another write." };
+            }
         }
         return result;
     }

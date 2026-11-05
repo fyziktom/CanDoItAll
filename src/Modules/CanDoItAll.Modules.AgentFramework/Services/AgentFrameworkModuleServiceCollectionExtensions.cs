@@ -1,4 +1,7 @@
+using Microsoft.Extensions.Logging;
 using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using CanDoItAll.Agents.Storage;
@@ -104,13 +107,26 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IMcpSetupTestService, McpSetupTestService>();
         services.TryAddScoped<ICapabilityAccessPolicyEvaluator, CapabilityAccessPolicyEvaluator>();
         services.TryAddScoped<IAgentCapabilitySetupFlowService, AgentCapabilitySetupFlowService>();
+        services.TryAddSingleton<AgentConfigurationWriteContext>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.TryAddScoped<AgentConfigurationChanges>(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new(provider.GetRequiredService<EditingChangeFeed>(),
+                () => new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<IEditingUiAccess>(), provider.GetRequiredService<AgentConfigurationWriteContext>(),
+                provider.GetRequiredService<ILogger<EditingObservation>>());
+        });
         services.AddScoped<IAgentCatalogMutationPolicy>(serviceProvider => new AgentProjectAccessCatalogPolicy(
             serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(),
-            serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id));
+            serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id,
+            serviceProvider.GetRequiredService<AgentConfigurationWriteContext>()));
         services.AddScoped<ISandboxWorkspaceStore>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
-            return new FileSandboxWorkspaceStore(workspaceRoot, scope, serviceProvider.GetRequiredService<IAgentCatalogMutationPolicy>());
+            var changes = serviceProvider.GetRequiredService<AgentConfigurationChanges>();
+            return new FileSandboxWorkspaceStore(workspaceRoot, scope, serviceProvider.GetRequiredService<IAgentCatalogMutationPolicy>(),
+                changes.Publisher(changes.Scope));
         });
         services.TryAddScoped<ISandboxWorkspaceHistoricalReadStore>(serviceProvider => {
             var state = serviceProvider.GetRequiredService<IDatabaseRuntimeState>();
@@ -453,10 +469,20 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<
             IWorkflowExternalResponseActorContextFactory,
             WorkflowExternalResponseActorContextFactory>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<EditingOperationContext>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.TryAddScoped(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new WorkflowChanges(provider.GetRequiredService<EditingChangeFeed>(),
+                new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<EditingOperationContext>(), provider.GetRequiredService<ILogger<WorkflowChanges>>());
+        });
         services.TryAddScoped<PersistentWorkflowCatalogService>();
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogSearchService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogLookupService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
+        services.TryAddScoped<Pages.Authoring.WorkflowCatalogReader>();
         services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.AddScoped<PersistentWorkflowStructureOutputStore>();

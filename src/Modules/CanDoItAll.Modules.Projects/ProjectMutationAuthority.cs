@@ -275,7 +275,8 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
         }
     }
 
-    internal Task CommitAsync(CancellationToken cancellationToken) => CommitCoreAsync(null, cancellationToken);
+    internal Task CommitAsync(CancellationToken cancellationToken, Func<CancellationToken, ValueTask>? requireCurrentWrite = null)
+        => CommitCoreAsync(null, cancellationToken, requireCurrentWrite);
 
     internal async Task CommitLifecycleAsync(Func<CancellationToken, ValueTask> requireCurrentWrite, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(requireCurrentWrite);
@@ -290,8 +291,8 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
         await CommitValidatedAsync(null, cancellationToken);
     }
 
-    internal Task CommitDefinitionAsync(ProjectDefinitionOperationAttempt attempt, CancellationToken cancellationToken)
-        => CommitCoreAsync(attempt, cancellationToken);
+    internal Task CommitDefinitionAsync(ProjectDefinitionOperationAttempt attempt, CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? requireCurrentWrite = null) => CommitCoreAsync(attempt, cancellationToken, requireCurrentWrite);
 
     internal async Task CommitDeletionAsync(ProjectDeletionRecoveryEvidence evidence,
         Func<CancellationToken, ValueTask> requireCurrentWrite, CancellationToken cancellationToken) {
@@ -346,7 +347,8 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
         await CommitValidatedAsync(null, cancellationToken);
     }
 
-    private async Task CommitCoreAsync(ProjectDefinitionOperationAttempt? attempt, CancellationToken cancellationToken) {
+    private async Task CommitCoreAsync(ProjectDefinitionOperationAttempt? attempt, CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? requireCurrentWrite = null) {
         RequireCommitAvailable();
         if (source is not null || expectedProjects.Length > 0) {
             using var coordination = transactions.Enter(context);
@@ -359,6 +361,9 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
         }
         if (attempt is not null) {
             await ProjectDefinitionCurrentWriteGuard.RequireAsync(attempt, cancellationToken);
+        }
+        if (requireCurrentWrite is not null) {
+            await requireCurrentWrite(cancellationToken);
         }
         await CommitValidatedAsync(attempt, cancellationToken);
     }

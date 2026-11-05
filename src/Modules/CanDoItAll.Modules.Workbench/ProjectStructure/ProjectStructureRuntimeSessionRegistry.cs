@@ -62,7 +62,7 @@ internal interface IProjectStructureRuntimeSessionRegistry
         => Task.FromResult<ProjectStructureRuntimeExitRecord?>(null);
 
     Task<ProjectStructureRuntimeLaunchResult> StopSessionAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, Func<CancellationToken, ValueTask>? authorizeStop = null)
         => Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "Expected-session stop is unavailable."));
 
     ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId);
@@ -73,7 +73,8 @@ internal interface IProjectStructureRuntimeSessionRegistry
         string nodeId,
         WorkspaceProcessSessionRequest request,
         CancellationToken cancellationToken,
-        ProjectStructureRuntimeSessionOwner? owner = null);
+        ProjectStructureRuntimeSessionOwner? owner = null,
+        Func<CancellationToken, ValueTask>? authorizeLaunch = null);
 
     Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
         string nodeId,
@@ -183,7 +184,8 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
         string nodeId,
         WorkspaceProcessSessionRequest request,
         CancellationToken cancellationToken,
-        ProjectStructureRuntimeSessionOwner? owner = null)
+        ProjectStructureRuntimeSessionOwner? owner = null,
+        Func<CancellationToken, ValueTask>? authorizeLaunch = null)
     {
         if (Volatile.Read(ref stopping) != 0)
         {
@@ -211,6 +213,9 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
                 await existing.Process.DisposeAsync().ConfigureAwait(false);
             }
 
+            if (authorizeLaunch is not null) {
+                await authorizeLaunch(cancellationToken).ConfigureAwait(false);
+            }
             var session = await ResolveProcessHost().StartSessionAsync(request, cancellationToken).ConfigureAwait(false);
             sessions[nodeId] = new(session, owner);
             lastExits.TryRemove(nodeId, out _);
@@ -227,11 +232,11 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
         => StopCoreAsync(nodeId, null, cancellationToken);
 
     public Task<ProjectStructureRuntimeLaunchResult> StopSessionAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
-        CancellationToken cancellationToken)
-        => StopCoreAsync(nodeId, expected, cancellationToken);
+        CancellationToken cancellationToken, Func<CancellationToken, ValueTask>? authorizeStop = null)
+        => StopCoreAsync(nodeId, expected, cancellationToken, authorizeStop);
 
     private async Task<ProjectStructureRuntimeLaunchResult> StopCoreAsync(string nodeId, WorkspaceOwnedProcessIdentity? expected,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, Func<CancellationToken, ValueTask>? authorizeStop = null) {
         IWorkspaceProcessSession? session;
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -250,6 +255,9 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
             gate.Release();
         }
 
+        if (authorizeStop is not null) {
+            await authorizeStop(cancellationToken).ConfigureAwait(false);
+        }
         var result = await session.TerminateAsync(
             WorkspaceProcessTerminationReason.CallerCanceled,
             "The Workbench operator stopped the runtime node.",

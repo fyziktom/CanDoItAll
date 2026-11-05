@@ -4,6 +4,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -50,7 +51,8 @@ public sealed class ProjectStructureTaskRawInputTests {
         var result = context.Services.GetRequiredService<DialogService>().OpenAsync<ProjectStructureTaskCreateDialog>("General task",
             new Dictionary<string, object?>() {
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = Guid.NewGuid(),
-                [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = request
+                [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = request,
+                [nameof(ProjectStructureTaskCreateDialog.Submitted)] = new Func<ProjectStructureTaskDialogResult, Task<PlanningTaskSaveResult>>(_ => Task.FromResult(PlanningTaskSaveResult.Accepted))
             });
         host.WaitForElement("[data-testid='project-structure-task-create-due']").Change("invalid UTC");
         host.Find("[data-testid='project-structure-task-create-title']").Input("New title");
@@ -75,6 +77,7 @@ public sealed class ProjectStructureTaskRawInputTests {
             [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = Guid.NewGuid(),
             [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = Start,
             [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = Start.AddHours(8),
+            [nameof(ProjectStructureGanttTaskDialog.EditSubmitted)] = new Func<ProjectStructureTaskEditDialogResult, Task<PlanningTaskSaveResult>>(_ => Task.FromResult(PlanningTaskSaveResult.Accepted)),
             [nameof(ProjectStructureGanttTaskDialog.EditModel)] = new ProjectStructureGanttTaskEditModel(
                 new("custom:original"), "Task", Start, Start.AddHours(8), progress,
                 new(8, ProjectWorkItemEffortUnit.Hours, null, ""), null, Execution: ProjectTaskExecutionSnapshot.Unknown)

@@ -75,11 +75,17 @@ public sealed class ProviderMutationRegressionTests {
         public Func<ProviderProfileEditorModel, Task<Guid>> Save { get; set; } = _ => throw new InvalidOperationException();
         public int WriteCount { get; private set; }
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
-            if (targetMethod?.Name == nameof(RuntimeAdministration.SaveProviderAsync)) {
+            if (targetMethod?.Name == nameof(RuntimeAdministration.SaveProviderEditorAsync)) {
                 WriteCount++;
-                return Save((ProviderProfileEditorModel)args![0]!);
+                return SaveEditorAsync((ProviderProfileEditorModel)args![0]!);
             }
             throw new InvalidOperationException("Unexpected runtime operation.");
+        }
+        private async Task<ProviderProfileEditorModel> SaveEditorAsync(ProviderProfileEditorModel request) {
+            var accepted = ProviderEditorSubmission.Copy(request);
+            accepted.Id = await Save(request);
+            accepted.ExpectedConcurrencyToken = Guid.NewGuid();
+            return accepted;
         }
     }
 

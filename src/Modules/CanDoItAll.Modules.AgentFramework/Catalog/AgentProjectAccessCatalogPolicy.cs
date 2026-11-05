@@ -4,10 +4,20 @@ using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-public sealed class AgentProjectAccessCatalogPolicy(ProjectWriteAdmissionService admissions, Guid databaseProfileId)
+public sealed class AgentProjectAccessCatalogPolicy(ProjectWriteAdmissionService admissions, Guid databaseProfileId,
+    AgentConfigurationWriteContext? editing = null)
     : IAgentCatalogMutationPolicy {
+    public Task<SandboxWorkspaceCatalog> ApplyAsync(SandboxWorkspaceCatalog before, SandboxWorkspaceCatalog after,
+        CancellationToken cancellationToken = default) => ApplyAsync(before, after, AgentCatalogMutationReason.UserCommand, cancellationToken);
+
     public async Task<SandboxWorkspaceCatalog> ApplyAsync(SandboxWorkspaceCatalog before, SandboxWorkspaceCatalog after,
-        CancellationToken cancellationToken = default) {
+        AgentCatalogMutationReason reason, CancellationToken cancellationToken = default) {
+        if (reason is not (AgentCatalogMutationReason.UserCommand or AgentCatalogMutationReason.ReadNormalization)) {
+            throw new ArgumentOutOfRangeException(nameof(reason));
+        }
+        if (reason == AgentCatalogMutationReason.UserCommand && editing is not null) {
+            await editing.RequireAsync(databaseProfileId, cancellationToken);
+        }
         if (databaseProfileId == Guid.Empty || admissions.DatabaseProfileId != databaseProfileId) {
             throw new InvalidOperationException("The agent catalog and project binding policy belong to different database profiles.");
         }
@@ -63,10 +73,14 @@ public sealed class AgentProjectAccessCatalogPolicy(ProjectWriteAdmissionService
             var configurationJson = AgentProjectStructureAccessMetadata.BindProjectLifetimes(change.Agent.ConfigurationJson, bindings);
             if (!string.Equals(configurationJson, change.Agent.ConfigurationJson, StringComparison.Ordinal)) {
                 changed = true;
-                agents.Add(change.Agent with { ConfigurationJson = configurationJson, UpdatedAtUtc = DateTimeOffset.UtcNow });
+                agents.Add(change.Agent with { ConfigurationJson = configurationJson,
+                    UpdatedAtUtc = AgentConfigurationVersion.NextRevision(change.Agent.UpdatedAtUtc, DateTimeOffset.UtcNow) });
             } else {
                 agents.Add(change.Agent);
             }
+        }
+        if (reason == AgentCatalogMutationReason.UserCommand && editing is not null) {
+            await editing.RequireAsync(databaseProfileId, cancellationToken);
         }
         return changed ? after with { Agents = agents } : after;
     }

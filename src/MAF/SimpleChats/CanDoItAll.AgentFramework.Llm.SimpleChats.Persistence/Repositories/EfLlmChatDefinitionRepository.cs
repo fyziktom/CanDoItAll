@@ -35,6 +35,7 @@ public sealed class EfLlmChatDefinitionRepository(SimpleChatsDbContext dbContext
         LlmChatDefinitionCreateClaim claim,
         CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(claim);
+        await LlmChatWriteAdmission.RequireTargetAsync(null, cancellationToken);
         if (!dbContext.Database.IsNpgsql() || dbContext.Database.CurrentTransaction is null) {
             throw new InvalidOperationException("A definition create receipt requires the owner's active PostgreSQL transaction.");
         }
@@ -123,6 +124,7 @@ public sealed class EfLlmChatDefinitionRepository(SimpleChatsDbContext dbContext
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tags);
+        await LlmChatWriteAdmission.RequireTargetAsync(id.Value, cancellationToken);
         var desiredTags = tags.ToHashSet(StringComparer.Ordinal);
         var existingTags = await dbContext.Set<LlmChatDefinitionTagRow>()
             .Where(row => row.DefinitionId == id.Value)
@@ -141,13 +143,14 @@ public sealed class EfLlmChatDefinitionRepository(SimpleChatsDbContext dbContext
         }));
     }
 
-    public Task CreateAsync(
+    public async Task CreateAsync(
         LlmChatDefinition definition,
         LlmChatDefinitionRevision revision,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(revision);
+        await LlmChatWriteAdmission.RequireCreateAsync(definition.Id.Value, cancellationToken);
         if (definition.Id != revision.DefinitionId || definition.CurrentRevision != revision.Revision)
         {
             throw new ArgumentException("A new definition must reference its supplied initial revision.", nameof(revision));
@@ -155,7 +158,6 @@ public sealed class EfLlmChatDefinitionRepository(SimpleChatsDbContext dbContext
 
         dbContext.Add(LlmChatPersistenceMapper.ToRow(definition));
         dbContext.Add(LlmChatPersistenceMapper.ToRow(revision));
-        return Task.CompletedTask;
     }
 
     public async Task ReplaceAsync(
@@ -166,6 +168,7 @@ public sealed class EfLlmChatDefinitionRepository(SimpleChatsDbContext dbContext
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentOutOfRangeException.ThrowIfNegative(expectedConcurrencyToken);
+        await LlmChatWriteAdmission.RequireTargetAsync(definition.Id.Value, cancellationToken);
         var expectedRevision = appendedRevision is null
             ? definition.CurrentRevision.Value
             : checked(definition.CurrentRevision.Value - 1);

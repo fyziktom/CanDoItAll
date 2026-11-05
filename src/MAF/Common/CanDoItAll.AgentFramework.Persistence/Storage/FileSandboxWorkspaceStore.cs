@@ -39,9 +39,15 @@ public sealed partial class FileSandboxWorkspaceStore :
     private readonly Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary;
     private readonly Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary;
     private readonly IAgentCatalogMutationPolicy? catalogMutationPolicy;
+    private readonly IAgentCatalogCommitObserver? catalogCommits;
 
     public FileSandboxWorkspaceStore(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null,
         IAgentCatalogMutationPolicy? catalogMutationPolicy = null)
+        : this(workspaceRoot, workspaceScope, catalogMutationPolicy, null) {
+    }
+
+    public FileSandboxWorkspaceStore(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope,
+        IAgentCatalogMutationPolicy? catalogMutationPolicy, IAgentCatalogCommitObserver? catalogCommits)
         : this(
             workspaceRoot,
             workspaceScope,
@@ -49,7 +55,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             existingRunDetailCommitBoundary: null,
             genericNewRunCommitBoundary: null,
             jsonReadDiagnostics: null,
-            catalogMutationPolicy: catalogMutationPolicy) {
+            catalogMutationPolicy: catalogMutationPolicy, catalogCommits: catalogCommits) {
     }
 
     internal FileSandboxWorkspaceStore(
@@ -104,7 +110,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null,
         Action<FileHistoryCommitStage>? historyCommitBoundary = null,
         IAgentCatalogMutationPolicy? catalogMutationPolicy = null,
-        DurableFileWriter? fileWriter = null) {
+        DurableFileWriter? fileWriter = null, IAgentCatalogCommitObserver? catalogCommits = null) {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
         gate = new(layout.WorkspaceLockPath);
         physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive);
@@ -129,6 +135,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         this.existingRunDetailCommitBoundary = existingRunDetailCommitBoundary;
         this.agentDeletionCommitBoundary = agentDeletionCommitBoundary;
         this.catalogMutationPolicy = catalogMutationPolicy;
+        this.catalogCommits = catalogCommits;
     }
 
     public async Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default)
@@ -293,6 +300,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         Action<SandboxWorkspaceCatalog>? validatePublication = null)
     {
         await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        SandboxWorkspaceCatalog? accepted = null;
         try {
             await EnsureCatalogReadCoreAsync(operation, cancellationToken);
             var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
@@ -320,6 +328,7 @@ public sealed partial class FileSandboxWorkspaceStore :
                 cancellationToken,
                 validatePublication,
                 dependencies: expectedRevision.HasValue ? CatalogPublicationDependencies.WholeWorkspace : CatalogPublicationDependencies.CatalogOnly);
+            accepted = catalogSave.Catalog;
             workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
             var nextWorkspaceIndex = new WorkspaceStorageIndex(
                 Revision: catalogSave.Changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
@@ -331,9 +340,13 @@ public sealed partial class FileSandboxWorkspaceStore :
                 await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
             }
 
+            await operation.DisposeAsync();
             return catalogSave.Catalog;
         } catch (Exception failure) {
-            operation.RetainFailure(failure);
+            var outcome = accepted is null || failure is SandboxWorkspaceCatalogCommittedException
+                ? failure : new SandboxWorkspaceCatalogCommittedException(accepted, failure);
+            operation.RetainFailure(outcome);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(outcome).Throw();
             throw;
         }
     }
@@ -1119,25 +1132,27 @@ public sealed partial class FileSandboxWorkspaceStore :
         SandboxWorkspaceDocument previousDocument,
         SandboxWorkspaceDocument document,
         long currentRevision,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AgentCatalogMutationReason mutationReason = AgentCatalogMutationReason.UserCommand)
     {
         document = FileSandboxWorkspacePreparedValues.Freeze(document);
         var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.ExecutionStorageRoot]);
         var catalogExists = File.Exists(layout.CatalogPath);
         var currentCatalog = await LoadCatalogCoreAsync(cancellationToken);
-        var preparedCatalog = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, document.ToCatalog(), cancellationToken);
+        var preparedCatalog = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, document.ToCatalog(), cancellationToken, mutationReason: mutationReason);
         document = SandboxWorkspaceDocument.Combine(preparedCatalog.Catalog, document.ToExecutionState());
         await using var publication = await operation.AcquireAsync(
             FileSandboxWorkspaceWriteSet.Workspace(previousDocument, document), witness, cancellationToken);
         try {
             jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
 
-            var finalCatalog = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, preparedCatalog.Catalog, cancellationToken);
+            var finalCatalog = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, preparedCatalog.Catalog, cancellationToken, mutationReason: mutationReason);
             if (finalCatalog.Changed != preparedCatalog.Changed || !HasSamePayload(finalCatalog.Catalog, preparedCatalog.Catalog)) {
                 throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.WriteSetChanged);
             }
             if (preparedCatalog.Changed) {
                 await jsonStore.WriteJsonAtomicallyAsync(layout.CatalogPath, preparedCatalog.Catalog, cancellationToken);
+                catalogCommits?.Committed(currentCatalog, preparedCatalog.Catalog);
             }
             var executionChanged = await SaveExecutionCoreAsync(operation, previousDocument.ToExecutionState(), document.ToExecutionState(), cancellationToken);
             var workspaceChanged = preparedCatalog.Changed || executionChanged || !File.Exists(layout.WorkspaceIndexPath);
@@ -1611,7 +1626,8 @@ public sealed partial class FileSandboxWorkspaceStore :
         {
             var seeded = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create());
             try {
-                await SaveCoreAsync(operation, SandboxWorkspaceDocument.Empty, seeded, currentRevision: 0L, cancellationToken);
+                await SaveCoreAsync(operation, SandboxWorkspaceDocument.Empty, seeded, currentRevision: 0L, cancellationToken,
+                    AgentCatalogMutationReason.ReadNormalization);
             } catch (SandboxWorkspacePublicationConflictException conflict) when (
                 conflict.Kind == SandboxWorkspacePublicationConflictKind.OriginalBytesChanged &&
                 File.Exists(layout.CatalogPath) && File.Exists(layout.ExecutionIndexPath) && File.Exists(layout.WorkspaceIndexPath)) {
@@ -1629,7 +1645,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             if (!File.Exists(layout.CatalogPath))
             {
                 var seededCatalog = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create()).ToCatalog();
-                await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken);
+                await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken, AgentCatalogMutationReason.ReadNormalization);
             }
 
             await EnsureWorkspaceIndexCoreAsync(cancellationToken);
@@ -1642,7 +1658,8 @@ public sealed partial class FileSandboxWorkspaceStore :
             if (legacyDocument is not null)
             {
                 var normalized = SandboxWorkspaceSeedFactory.Normalize(legacyDocument);
-                await SaveCoreAsync(operation, SandboxWorkspaceDocument.Empty, normalized, currentRevision: 0L, cancellationToken);
+                await SaveCoreAsync(operation, SandboxWorkspaceDocument.Empty, normalized, currentRevision: 0L, cancellationToken,
+                    AgentCatalogMutationReason.ReadNormalization);
                 return;
             }
         }
@@ -1650,7 +1667,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         if (!File.Exists(layout.CatalogPath))
         {
             var seededCatalog = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create()).ToCatalog();
-            await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken);
+            await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken, AgentCatalogMutationReason.ReadNormalization);
         }
 
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
@@ -1679,7 +1696,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             if (!File.Exists(layout.CatalogPath))
             {
                 var seededCatalog = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create()).ToCatalog();
-                await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken);
+                await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken, AgentCatalogMutationReason.ReadNormalization);
             }
 
             await EnsureWorkspaceIndexCoreAsync(cancellationToken);
@@ -1732,7 +1749,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             catalog,
             File.Exists(layout.CatalogPath),
             catalog,
-            cancellationToken);
+            cancellationToken, mutationReason: AgentCatalogMutationReason.ReadNormalization);
         if (catalogSave.Changed)
         {
             var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
@@ -1777,7 +1794,8 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     private async Task<CatalogSaveResult> SaveCatalogCoreAsync(FileSandboxWorkspacePublicationScope operation,
         SandboxWorkspaceCatalog catalog,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AgentCatalogMutationReason mutationReason = AgentCatalogMutationReason.UserCommand)
     {
         var catalogExists = File.Exists(layout.CatalogPath);
         var currentCatalog = await LoadCatalogCoreAsync(cancellationToken);
@@ -1785,7 +1803,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             currentCatalog,
             catalogExists,
             catalog,
-            cancellationToken);
+            cancellationToken, mutationReason: mutationReason);
     }
 
     private async Task<CatalogSaveResult> SaveCatalogCoreAsync(FileSandboxWorkspacePublicationScope operation,
@@ -1795,9 +1813,10 @@ public sealed partial class FileSandboxWorkspaceStore :
         CancellationToken cancellationToken,
         Action<SandboxWorkspaceCatalog>? validatePublication = null,
         AgentPolicyPublication? policyPublication = null,
-        CatalogPublicationDependencies dependencies = CatalogPublicationDependencies.WholeWorkspace)
+        CatalogPublicationDependencies dependencies = CatalogPublicationDependencies.WholeWorkspace,
+        AgentCatalogMutationReason mutationReason = AgentCatalogMutationReason.UserCommand)
     {
-        var prepared = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, catalog, cancellationToken, policyPublication);
+        var prepared = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, catalog, cancellationToken, policyPublication, mutationReason);
         if (!prepared.Changed && validatePublication is null) {
             return prepared;
         }
@@ -1808,8 +1827,9 @@ public sealed partial class FileSandboxWorkspaceStore :
             : await CapturePublicationWitnessAsync(cancellationToken);
         await using var publication = await operation.AcquireAsync(
             FileSandboxWorkspaceWriteSet.Catalog(currentCatalog, prepared.Catalog), witness, cancellationToken);
+        var committed = false;
         try {
-            var final = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, prepared.Catalog, cancellationToken, policyPublication);
+            var final = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, prepared.Catalog, cancellationToken, policyPublication, mutationReason);
             if (final.Changed != prepared.Changed || !HasSamePayload(final.Catalog, prepared.Catalog)) {
                 throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.WriteSetChanged);
             }
@@ -1817,11 +1837,16 @@ public sealed partial class FileSandboxWorkspaceStore :
             if (prepared.Changed) {
                 policyPublication?.EnterWrite(prepared.Catalog);
                 await jsonStore.WriteJsonAtomicallyAsync(layout.CatalogPath, prepared.Catalog, cancellationToken);
+                committed = true;
                 policyPublication?.Acknowledge();
+                catalogCommits?.Committed(currentCatalog, prepared.Catalog);
             }
+            await publication.DisposeAsync();
             return prepared;
         } catch (Exception failure) {
-            operation.RetainFailure(failure);
+            var outcome = committed ? new SandboxWorkspaceCatalogCommittedException(prepared.Catalog, failure) : failure;
+            operation.RetainFailure(outcome);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(outcome).Throw();
             throw;
         }
     }
@@ -1830,12 +1855,13 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     private async Task<CatalogSaveResult> PrepareCatalogCoreAsync(SandboxWorkspaceCatalog currentCatalog,
         bool catalogExists, SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken,
-        AgentPolicyPublication? policyPublication = null) {
+        AgentPolicyPublication? policyPublication = null,
+        AgentCatalogMutationReason mutationReason = AgentCatalogMutationReason.UserCommand) {
         _ = catalogNormalizer.TryNormalizeUnchanged(catalog, out var normalized);
         var normalizedCatalog = FileSandboxWorkspacePreparedValues.Freeze(normalized);
         if (catalogMutationPolicy is not null) {
             normalizedCatalog = await catalogMutationPolicy.ApplyAsync(
-                FileSandboxWorkspacePreparedValues.Freeze(currentCatalog), normalizedCatalog, cancellationToken);
+                FileSandboxWorkspacePreparedValues.Freeze(currentCatalog), normalizedCatalog, mutationReason, cancellationToken);
             SandboxWorkspaceDocumentInvariantValidator.Validate(
                 SandboxWorkspaceDocument.Combine(normalizedCatalog, SandboxWorkspaceExecutionState.Empty));
         }
@@ -1913,7 +1939,8 @@ public sealed partial class FileSandboxWorkspaceStore :
         var currentRevision = File.Exists(layout.WorkspaceIndexPath)
             ? (await LoadWorkspaceIndexCoreAsync(cancellationToken)).Revision
             : 0L;
-        await SaveCoreAsync(operation, currentDocument, normalizedDocument, currentRevision, cancellationToken);
+        await SaveCoreAsync(operation, currentDocument, normalizedDocument, currentRevision, cancellationToken,
+            AgentCatalogMutationReason.ReadNormalization);
     }
 
     private Task SaveWorkspaceIndexCoreAsync(WorkspaceStorageIndex index, CancellationToken cancellationToken)

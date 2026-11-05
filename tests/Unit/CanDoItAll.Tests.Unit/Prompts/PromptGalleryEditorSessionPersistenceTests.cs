@@ -60,7 +60,7 @@ public sealed class PromptGalleryEditorSessionPersistenceTests
         Assert.Equal("Content written by editor B", persisted.Value.DraftContent);
         Assert.True(persisted.Value.IsArchived);
         var rejected = Assert.Single(notices, notice => notice.Summary == "Prompt draft was not saved");
-        Assert.Contains("Reload it before saving", rejected.Detail, StringComparison.Ordinal);
+        Assert.Contains("explicitly", rejected.Detail, StringComparison.Ordinal);
         Assert.True(editorA.Presentation.HasExternalChange);
 
         // The explicit reload adopts B's revision; the next save continues from it.
@@ -69,6 +69,7 @@ public sealed class PromptGalleryEditorSessionPersistenceTests
         Assert.Equal("Rewritten by editor B", editorA.Presentation.Source?.Title);
         Assert.Equal(persisted.Value.UpdatedAtUtc, editorA.AcceptedToken);
 
+        await editorA.ApplyAsync(new PromptGalleryEditorIntent.ToggleArchive(editorA.Presentation.Generation));
         await editorA.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(
             editorA.Presentation.Generation,
             DraftA with { Title = "Rewritten by editor B", Content = "Merged by editor A after reload" }));

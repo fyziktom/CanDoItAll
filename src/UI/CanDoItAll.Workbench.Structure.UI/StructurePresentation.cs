@@ -53,6 +53,7 @@ public sealed record StructureNodesMovedIntent(Guid ContextId, CanvasWorkbenchNo
 public sealed record StructureContextIntent(Guid ContextId, CanvasWorkbenchContextActionRequest Request) : StructureIntent(ContextId);
 public sealed record StructureComposerOpenedIntent(Guid ContextId, CanvasWorkbenchComposerOpening Opening) : StructureIntent(ContextId);
 public sealed record StructureComposerClosedIntent(Guid ContextId, Guid OpeningId) : StructureIntent(ContextId);
+public sealed record StructureComposerComparisonIntent(Guid ContextId, CanvasWorkbenchComposerDraft Draft) : StructureIntent(ContextId);
 public sealed record StructureCreateIntent(Guid ContextId, CanvasWorkbenchCreateActionRequest Request) : StructureIntent(ContextId);
 public sealed record StructureNoteEditIntent(Guid ContextId, CanvasWorkbenchNodeEditRequest Request) : StructureIntent(ContextId);
 public sealed record StructureOpenIntent(Guid ContextId, string NodeId) : StructureIntent(ContextId);

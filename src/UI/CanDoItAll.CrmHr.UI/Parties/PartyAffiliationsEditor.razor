@@ -1,4 +1,5 @@
 @inject IPartyRecordQueryService PartyRecordQueryService
+@implements IDisposable
 
 <Stack GapScale="LayoutGap.Medium"
        AlignItems="AlignItems.Stretch"
@@ -9,7 +10,7 @@
         <div>
             <p class="cda-eyebrow">Organization affiliations</p>
             <p class="mt-1 text-sm leading-6 text-slate-600">
-                Record each company relationship separately. Selecting a primary affiliation clears the previous primary.
+                Record each company relationship separately. Selecting a primary affiliation clears the previous primary. End-date saved history; only unsaved rows can be removed.
             </p>
         </div>
         <Button Text="Add affiliation"
@@ -86,7 +87,7 @@
                         </div>
                         <div>
                             <label class="cda-field-label">Job title</label>
-                            <InputText Value="@item.JobTitle"
+                            <NativeValueInput TValue="string" Value="@item.JobTitle"
                                        ValueChanged="@((string? value) => UpdateJobTitleAsync(item, value))"
                                        ValueExpression="@(() => item.JobTitle)"
                                        class="cda-input"
@@ -97,7 +98,7 @@
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="3">
                         <div>
                             <label class="cda-field-label">Employee / engagement code</label>
-                            <InputText Value="@item.EmployeeCode"
+                            <NativeValueInput TValue="string" Value="@item.EmployeeCode"
                                        ValueChanged="@((string? value) => UpdateEmployeeCodeAsync(item, value))"
                                        ValueExpression="@(() => item.EmployeeCode)"
                                        class="cda-input"
@@ -107,6 +108,7 @@
                             <label class="cda-field-label">Valid from</label>
                             <InputDate TValue="DateOnly?"
                                        Value="@item.ValidFrom"
+                                       @oninput="@(() => ReportPendingDateAsync(item, AffiliationField.Start))"
                                        ValueChanged="@((DateOnly? value) => UpdateValidFromAsync(item, value))"
                                        ValueExpression="@(() => item.ValidFrom)"
                                        class="cda-input"
@@ -116,6 +118,7 @@
                             <label class="cda-field-label">Valid to</label>
                             <InputDate TValue="DateOnly?"
                                        Value="@item.ValidTo"
+                                       @oninput="@(() => ReportPendingDateAsync(item, AffiliationField.End))"
                                        ValueChanged="@((DateOnly? value) => UpdateValidToAsync(item, value))"
                                        ValueExpression="@(() => item.ValidTo)"
                                        class="cda-input"
@@ -192,7 +195,7 @@
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
                         <div>
                             <label class="cda-field-label">Notes</label>
-                            <InputTextArea Value="@item.Notes"
+                            <NativeValueInput TValue="string" Multiline="true" Value="@item.Notes"
                                            ValueChanged="@((string? value) => UpdateNotesAsync(item, value))"
                                            ValueExpression="@(() => item.Notes)"
                                            class="cda-input min-h-24"
@@ -209,6 +212,7 @@
                             <Button Text="Remove"
                                     ButtonStyle="ButtonStyle.Danger"
                                     Size="ButtonSize.Small"
+                                    Disabled="@(item.Id.HasValue && !item.IsNew)"
                                     Click="@(() => RemoveAffiliationAsync(item))"
                                     data-testid="@($"crmhr-affiliation-remove-{rowIndex}")" />
                         </div>
@@ -239,6 +243,9 @@
     private PartyOrganizationAffiliationEditorModel? pickerTarget;
     private AffiliationPartyField pickerField;
     private bool isNewPickerTarget;
+    private long configuredOwnerRevision;
+    private long pickerGeneration;
+    private bool disposed;
 
     [Parameter]
     public Guid? CurrentPersonPartyId { get; set; }
@@ -248,6 +255,11 @@
 
     [Parameter]
     public EventCallback<IReadOnlyList<PartyOrganizationAffiliationEditorModel>> AffiliationsChanged { get; set; }
+
+    [Parameter] public long OwnerRevision { get; set; }
+    [Parameter] public EventCallback<AffiliationInput> InputChanged { get; set; }
+    [Parameter] public EventCallback<bool> PendingInputChanged { get; set; }
+    [CascadingParameter] private EditContext? FormContext { get; set; }
 
     [Parameter]
     public IReadOnlyDictionary<Guid, string> PartyDisplayNames { get; set; } =
@@ -294,6 +306,19 @@
             partyNames[pair.Key] = pair.Value;
         }
 
+        if (configuredAffiliations is not null && configuredOwnerRevision != OwnerRevision) {
+            AffiliationValues.Adopt(edits, Affiliations);
+            configuredAffiliations = Affiliations;
+            configuredOwnerRevision = OwnerRevision;
+            lastPublishedAffiliations = null;
+            if (pickerTarget is not null && !edits.Contains(pickerTarget)) {
+                pickerTarget = null;
+                pickerGeneration++;
+            }
+            return;
+        }
+        configuredOwnerRevision = OwnerRevision;
+
         if (ReferenceEquals(Affiliations, configuredAffiliations) ||
             IsPublishedSnapshot(Affiliations))
         {
@@ -306,6 +331,7 @@
         lastPublishedAffiliations = null;
         pickerTarget = null;
         isNewPickerTarget = false;
+        pickerGeneration++;
     }
 
     private async Task AddAffiliationAsync()
@@ -317,6 +343,8 @@
 
         var affiliation = new PartyOrganizationAffiliationEditorModel
         {
+            Id = Guid.NewGuid(),
+            IsNew = true,
             PersonPartyId = personPartyId,
             AffiliationKind = PartyOrganizationAffiliationKind.ExternalContact,
             IsPrimary = edits.Count == 0
@@ -325,6 +353,8 @@
         pickerTarget = affiliation;
         pickerField = AffiliationPartyField.Organization;
         isNewPickerTarget = true;
+        pickerGeneration++;
+        await PendingInputChanged.InvokeAsync(true);
         await PublishAsync();
     }
 
@@ -340,13 +370,15 @@
         await PublishAsync();
     }
 
-    private void OpenPicker(
+    private async Task OpenPicker(
         PartyOrganizationAffiliationEditorModel affiliation,
         AffiliationPartyField field)
     {
         pickerTarget = affiliation;
         pickerField = field;
         isNewPickerTarget = false;
+        pickerGeneration++;
+        await PendingInputChanged.InvokeAsync(true);
     }
 
     private async Task SelectPartyAsync(Guid partyId)
@@ -356,9 +388,14 @@
             return;
         }
 
+        var target = pickerTarget;
+        var generation = pickerGeneration;
         var selectedParty = await PartyRecordQueryService.GetAsync(
             partyId,
             includeArchived: false);
+        if (disposed || generation != pickerGeneration || !ReferenceEquals(target, pickerTarget)) {
+            return;
+        }
         if (selectedParty is null || !IsExpectedPartyType(selectedParty.PartyType))
         {
             throw new InvalidOperationException(
@@ -381,9 +418,17 @@
                 throw new InvalidOperationException("No affiliation party field is selected.");
         }
 
+        var changedField = pickerField switch {
+            AffiliationPartyField.Organization => AffiliationField.Organization,
+            AffiliationPartyField.OrganizationUnit => AffiliationField.Unit,
+            AffiliationPartyField.Manager => AffiliationField.Manager,
+            _ => throw new InvalidOperationException("An affiliation picker field is required.")
+        };
         pickerTarget = null;
         isNewPickerTarget = false;
-        await PublishAsync();
+        pickerGeneration++;
+        await PendingInputChanged.InvokeAsync(false);
+        await PublishInputAsync(target, changedField);
     }
 
     private async Task ClosePickerAsync()
@@ -398,6 +443,8 @@
 
         pickerTarget = null;
         isNewPickerTarget = false;
+        pickerGeneration++;
+        await PendingInputChanged.InvokeAsync(false);
     }
 
     private bool IsExpectedPartyType(PartyType partyType)
@@ -420,11 +467,13 @@
             foreach (var item in edits)
             {
                 item.IsPrimary = ReferenceEquals(item, affiliation);
+                await ReportInputAsync(item, AffiliationField.Primary);
             }
         }
         else
         {
             affiliation.IsPrimary = false;
+            await ReportInputAsync(affiliation, AffiliationField.Primary);
         }
 
         await PublishAsync();
@@ -435,7 +484,7 @@
         PartyOrganizationAffiliationKind value)
     {
         affiliation.AffiliationKind = value;
-        await PublishAsync();
+        await PublishInputAsync(affiliation, AffiliationField.Kind);
     }
 
     private async Task UpdateJobTitleAsync(
@@ -443,7 +492,8 @@
         string? value)
     {
         affiliation.JobTitle = value ?? string.Empty;
-        await PublishAsync();
+
+        await PublishInputAsync(affiliation, AffiliationField.Title);
     }
 
     private async Task UpdateEmployeeCodeAsync(
@@ -451,7 +501,8 @@
         string? value)
     {
         affiliation.EmployeeCode = value ?? string.Empty;
-        await PublishAsync();
+
+        await PublishInputAsync(affiliation, AffiliationField.EmployeeCode);
     }
 
     private async Task UpdateValidFromAsync(
@@ -459,7 +510,7 @@
         DateOnly? value)
     {
         affiliation.ValidFrom = value;
-        await PublishAsync();
+        await PublishInputAsync(affiliation, AffiliationField.Start);
     }
 
     private async Task UpdateValidToAsync(
@@ -467,7 +518,7 @@
         DateOnly? value)
     {
         affiliation.ValidTo = value;
-        await PublishAsync();
+        await PublishInputAsync(affiliation, AffiliationField.End);
     }
 
     private async Task UpdateNotesAsync(
@@ -475,18 +526,33 @@
         string? value)
     {
         affiliation.Notes = value ?? string.Empty;
-        await PublishAsync();
+
+        await PublishInputAsync(affiliation, AffiliationField.Notes);
     }
 
     private async Task ClearUnitAsync(PartyOrganizationAffiliationEditorModel affiliation)
     {
         affiliation.OrganizationUnitPartyId = null;
-        await PublishAsync();
+        await PublishInputAsync(affiliation, AffiliationField.Unit);
     }
 
     private async Task ClearManagerAsync(PartyOrganizationAffiliationEditorModel affiliation)
     {
         affiliation.ManagerPartyId = null;
+        await PublishInputAsync(affiliation, AffiliationField.Manager);
+    }
+
+    private Task ReportInputAsync(PartyOrganizationAffiliationEditorModel row, AffiliationField field, bool pendingDate = false) {
+        if (!InputChanged.HasDelegate) {
+            return Task.CompletedTask;
+        }
+        return InputChanged.InvokeAsync(new(row.Id ?? throw new InvalidOperationException("An observed affiliation row needs an identity."), field, pendingDate));
+    }
+
+    private Task ReportPendingDateAsync(PartyOrganizationAffiliationEditorModel row, AffiliationField field) => ReportInputAsync(row, field, pendingDate: true);
+
+    private async Task PublishInputAsync(PartyOrganizationAffiliationEditorModel row, AffiliationField field) {
+        await ReportInputAsync(row, field);
         await PublishAsync();
     }
 
@@ -532,29 +598,17 @@
 
     private static PartyOrganizationAffiliationEditorModel Clone(
         PartyOrganizationAffiliationEditorModel affiliation)
-    {
-        return new PartyOrganizationAffiliationEditorModel
-        {
-            Id = affiliation.Id,
-            PersonPartyId = affiliation.PersonPartyId,
-            OrganizationPartyId = affiliation.OrganizationPartyId,
-            AffiliationKind = affiliation.AffiliationKind,
-            IsPrimary = affiliation.IsPrimary,
-            JobTitle = affiliation.JobTitle,
-            EmployeeCode = affiliation.EmployeeCode,
-            OrganizationUnitPartyId = affiliation.OrganizationUnitPartyId,
-            ManagerPartyId = affiliation.ManagerPartyId,
-            ValidFrom = affiliation.ValidFrom,
-            ValidTo = affiliation.ValidTo,
-            Notes = affiliation.Notes,
-            ExpectedUpdatedAtUtc = affiliation.ExpectedUpdatedAtUtc
-        };
-    }
+        => affiliation.Snapshot();
 
     private enum AffiliationPartyField
     {
         Organization,
         OrganizationUnit,
         Manager
+    }
+
+    public void Dispose() {
+        disposed = true;
+        pickerGeneration++;
     }
 }

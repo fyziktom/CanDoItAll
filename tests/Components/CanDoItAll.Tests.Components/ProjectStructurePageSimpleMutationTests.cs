@@ -194,8 +194,9 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
         createCounter.Reset();
 
         const string updatedNoteBody = "Updated heading\r\nSecond line of note";
-        await cut.InvokeAsync(() => CanvasComposerTestDispatch.EditAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
-            new CanvasWorkbenchNodeEditRequest(noteNode.Id, noteNode.Title, updatedNoteBody))));
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.EditAsync(canvasWorkbench.Instance,
+            new(noteNode.Id, noteNode.Title, noteNode.Notes),
+            new(noteNode.Id, noteNode.Title, updatedNoteBody)));
 
         cut.WaitForAssertion(() =>
         {
@@ -725,34 +726,36 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
 
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
         var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
         cut.WaitForAssertion(() => Assert.Contains("API runtime", cut.Markup));
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextAction(runtimeNode.Id, "edit", 0, 0));
+        var invocation = Assert.Single(harness.Context.JSInterop.Invocations["CanDoItAll.canvasWorkbench.openCreateComposer"]);
+        var original = Assert.IsType<CanvasWorkbenchCreateActionRequest>(invocation.Arguments[2]);
+        var opening = Guid.NewGuid();
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnComposerOpened(JsonSerializer.Serialize(
+            new CanvasWorkbenchComposerOpening(opening, original, null))));
         createCounter.Reset();
 
-        await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
-            new CanvasWorkbenchCreateActionRequest(
-                "edit:add-environment-dotnet-watch",
-                runtimeNode.Id,
-                runtimeNode.X,
-                runtimeNode.Y,
-                runtimeNode.ParentId,
-                "API runtime updated",
-                "Release host",
-                "Edited runtime description.",
-                "edit",
-                "dialog",
-                "dotnet-watch",
-                null,
-                [
-                    new CanvasWorkbenchInputValue { Key = "environmentKind", Value = "dotNetWatch" },
-                    new CanvasWorkbenchInputValue { Key = "projectPath", Value = runtimeProjectPath },
-                    new CanvasWorkbenchInputValue { Key = "launchProfileName", Value = "staging" },
-                    new CanvasWorkbenchInputValue { Key = "runtimeProtocol", Value = "http" },
-                    new CanvasWorkbenchInputValue { Key = "localhostUrl", Value = "http://localhost:5099" }
-                ]))));
+        var submitted = original with {
+            Title = "API runtime updated",
+            Subtitle = "Release host",
+            Notes = "Edited runtime description.",
+            ComposerOpeningId = opening,
+            InputValues = original.InputValues!.Select(value => new CanvasWorkbenchInputValue {
+                Key = value.Key,
+                Value = value.Key switch {
+                    "launchProfileName" => "staging",
+                    "runtimeProtocol" => "http",
+                    "localhostUrl" => "http://localhost:5099",
+                    _ => value.Value
+                }
+            }).ToArray()
+        };
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(submitted)));
 
         cut.WaitForAssertion(() =>
         {

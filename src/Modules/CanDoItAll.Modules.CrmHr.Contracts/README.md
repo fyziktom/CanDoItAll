@@ -37,6 +37,22 @@ persistence, Web or any module implementation; `CrmHrUiModuleBoundaryTests` guar
 
 ## Architecture Notes
 
+Workforce replacement uses complete original observations. Read the current workspace and
+send `profile.original`, `skills[].original` or `capacityBlocks[].original` back unchanged
+with the edited fields. Skill-definition updates send the original catalog item. An absent
+identifier expresses creation; it never overwrites a matching name or worker/skill pair.
+Unknown update identifiers, a row owned by another worker and stale originals are rejected.
+The Web API returns HTTP 409 for stale workforce, skill and capacity conflicts. Deletes in
+native UI services require the displayed row observation as well as its identifier.
+
+`IWorkforceProfileEditing` is implemented by the native profile owner, independently of the
+legacy HR facade. Native workforce owners freeze mutable input before awaiting and report
+canonical accepted state immediately after commit, before notifications or projections.
+The main UI retains later input and blocks replay when no receipt establishes an outcome.
+Capacity related-project labels remain informational; a linked write also requires the
+project admission captured at selection. A read never grants fresh authority for a prior
+selection. Read-only allocation rows retain their existing project-lifetime semantics.
+
 The editor input models are mutable form inputs, not backend editors. A host gives an editor its
 own draft and submits an independent copy; the application service remains the only validator and
 writer. The boundary decisions are recorded in

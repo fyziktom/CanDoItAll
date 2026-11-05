@@ -100,10 +100,10 @@ public sealed class ProviderProfilesSeamTests {
         cut.WaitForElement("[data-testid='providers-name-input']").Input("Keep my latest draft");
         await cut.FindAll("button[role='tab']").Single(button => button.TextContent.Contains("Runtime", StringComparison.Ordinal)).ClickAsync();
         cut.Find("[data-testid='providers-suggested-models']").Input("Unsubmitted model text");
-        Assert.Equal("Unsubmitted model text", ((AngleSharp.Html.Dom.IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
+        Assert.Equal("Unsubmitted model text", cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
         if (newDraft) {
             await cut.Find("[data-testid='providers-refresh']").ClickAsync();
-            Assert.Equal("Unsubmitted model text", ((AngleSharp.Html.Dom.IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
+            Assert.Equal("Unsubmitted model text", cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
         }
         await cut.InvokeAsync(() => {
             if (fails) {
@@ -114,7 +114,7 @@ public sealed class ProviderProfilesSeamTests {
         });
         await old;
         Assert.True(token.IsCancellationRequested);
-        Assert.Equal("Unsubmitted model text", ((AngleSharp.Html.Dom.IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
+        Assert.Equal("Unsubmitted model text", cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
         var model = Assert.IsType<ProviderProfileEditorModel>(cut.FindComponent<ProviderProfileEditorForm>().Instance.Context.Model);
         Assert.Equal(newDraft ? null : reads.First.Id, model.Id);
         Assert.Equal("Keep my latest draft", model.Name);
@@ -145,7 +145,7 @@ public sealed class ProviderProfilesSeamTests {
         if (!catalogRead) {
             cut.WaitForElement("[data-testid='providers-editor-loading']");
         }
-        await cut.InvokeAsync(cut.Instance.Dispose);
+        await cut.InvokeAsync(async () => await cut.Instance.DisposeAsync());
         Assert.True(token.IsCancellationRequested);
         await cut.InvokeAsync(() => {
             if (catalogRead) {

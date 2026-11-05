@@ -21,25 +21,44 @@ public sealed class ProjectWorkbenchCommandService(
         string nodeKey,
         ProjectStructureCommandKind commandKind,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        ProjectStructureNodeState? expectedState = null,
+        Func<CancellationToken, ValueTask>? authorizeRead = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        Action<ArtifactReference?>? onCommitted = null)
     {
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
+        var expectedAdmission = expectedState is null ? mutationOwner?.ExpectedProjectAdmission
+            : ProjectStructureNodeStateGuard.RequireProject(expectedState, projectId, nodeKey, mutationOwner?.ExpectedProjectAdmission);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
             await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
-                cancellationToken, mutationOwner?.ExpectedProjectAdmission is { } expected ? [expected] : null,
+                cancellationToken, expectedAdmission is { } expected ? [expected] : null,
                 mutationOwner?.ProcessMutationAdmission, mutationOwner?.AgentMutationAdmission);
         var node = await projectStructureAssemblyService.FindNodeAsync(dbContext, projectId, nodeKey, cancellationToken);
         if (node is null)
         {
             return null;
         }
-
-        if (IsPromptObject(node.ObjectType) &&
-            commandKind is ProjectStructureCommandKind.Open or ProjectStructureCommandKind.Wizard)
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
+        var materializes = IsPromptObject(node.ObjectType) &&
+            commandKind is ProjectStructureCommandKind.Open or ProjectStructureCommandKind.Wizard;
+        if (expectedState is not null || materializes) {
+            ProjectStructureNodeStateGuard.RequireProject(expectedState, projectId, nodeKey, mutationOwner?.ExpectedProjectAdmission);
+            ProjectStructureNodeStateGuard.EnsureCurrent(expectedState, node);
+        }
+        if (materializes)
         {
+            if (authorizeCommit is not null) {
+                await authorizeCommit(cancellationToken);
+            }
             var prepared = await EnsurePromptGalleryArtifactAsync(dbContext, projectId, node, cancellationToken);
             if (!node.IsSystemManaged)
             {
@@ -47,7 +66,8 @@ public sealed class ProjectWorkbenchCommandService(
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
-            await mutationScope.CommitAsync(cancellationToken);
+            await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
+            onCommitted?.Invoke(prepared.Artifact);
             await mutationScope.DisposeAsync();
             await CompletePromptCreationAsync(prepared, cancellationToken);
             return prepared.Artifact;
@@ -55,12 +75,17 @@ public sealed class ProjectWorkbenchCommandService(
 
         await mutationScope.CommitAsync(cancellationToken);
 
-        return commandKind switch
+        var artifact = commandKind switch
         {
             ProjectStructureCommandKind.Test => new ArtifactReference("test-plan", null, "Test Lab", $"/test-lab?projectId={projectId}", "Project test planning workspace", projectId),
             ProjectStructureCommandKind.Open => BuildArtifactReference(node, projectId),
             _ => BuildArtifactReference(node, projectId)
         };
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
+        onCommitted?.Invoke(artifact);
+        return artifact;
     }
 
     internal async Task<ProjectPromptBindingPreparation> EnsurePromptGalleryArtifactAsync(

@@ -20,10 +20,14 @@ public sealed class PromptGallerySearchSessionTests
     {
         var gallery = new ScriptedPromptGalleryService();
         var pending = new Queue<TaskCompletionSource<PromptGalleryPage<PromptGallerySearchItem>>>();
+        var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         gallery.Search = (_, _) =>
         {
             var source = new TaskCompletionSource<PromptGalleryPage<PromptGallerySearchItem>>();
             pending.Enqueue(source);
+            if (gallery.Queries.Count == 2) {
+                secondStarted.TrySetResult();
+            }
             return source.Task;
         };
         var notices = new List<PromptGalleryNotice>();
@@ -36,14 +40,15 @@ public sealed class PromptGallerySearchSessionTests
         var second = session.ApplyAsync(new PromptGallerySearchIntent.ChangeFilters(
             session.Presentation.Filters with { Kind = PromptGalleryItemKind.Part },
             Debounce: false));
-        Assert.Equal(2, pending.Count);
+        Assert.Single(pending);
         var staleOperation = pending.Dequeue();
-        var currentOperation = pending.Dequeue();
 
         // The backend ignores cancellation and completes the superseded request first.
         var staleItem = ScriptedPromptGalleryService.Item(title: "Stale");
         staleOperation.SetResult(ScriptedPromptGalleryService.Page(gallery.Queries[0], [staleItem]));
         await first;
+        await secondStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var currentOperation = pending.Dequeue();
 
         Assert.True(session.Presentation.IsLoading);
         Assert.Empty(session.Presentation.Items);
@@ -63,10 +68,14 @@ public sealed class PromptGallerySearchSessionTests
     {
         var gallery = new ScriptedPromptGalleryService();
         var pending = new Queue<TaskCompletionSource<PromptGalleryPage<PromptGallerySearchItem>>>();
+        var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         gallery.Search = (_, _) =>
         {
             var source = new TaskCompletionSource<PromptGalleryPage<PromptGallerySearchItem>>();
             pending.Enqueue(source);
+            if (gallery.Queries.Count == 2) {
+                secondStarted.TrySetResult();
+            }
             return source.Task;
         };
         var notices = new List<PromptGalleryNotice>();
@@ -78,10 +87,11 @@ public sealed class PromptGallerySearchSessionTests
         var first = session.ConfigureAsync(ChatContext);
         var second = session.ApplyAsync(new PromptGallerySearchIntent.LoadPage(1));
         var staleOperation = pending.Dequeue();
-        var currentOperation = pending.Dequeue();
 
         staleOperation.SetException(new IOException("Late search failure."));
         await first;
+        await secondStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var currentOperation = pending.Dequeue();
 
         Assert.True(session.Presentation.IsLoading);
         Assert.Null(session.Presentation.LoadError);
@@ -100,10 +110,14 @@ public sealed class PromptGallerySearchSessionTests
     {
         var gallery = new ScriptedPromptGalleryService();
         var pending = new Queue<TaskCompletionSource<PromptGalleryPage<PromptGallerySearchItem>>>();
+        var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         gallery.Search = (_, _) =>
         {
             var source = new TaskCompletionSource<PromptGalleryPage<PromptGallerySearchItem>>();
             pending.Enqueue(source);
+            if (gallery.Queries.Count == 2) {
+                secondStarted.TrySetResult();
+            }
             return source.Task;
         };
         await using var session = new PromptGallerySearchSession(gallery);
@@ -111,12 +125,14 @@ public sealed class PromptGallerySearchSessionTests
         var first = session.ConfigureAsync(ChatContext);
         var second = session.ConfigureAsync(ChatContext with { Model = "gpt-5.4" });
 
-        Assert.Equal(2, gallery.Queries.Count);
+        Assert.Single(gallery.Queries);
         Assert.Equal("gpt-5.4-mini", gallery.Queries[0].Model);
-        Assert.Equal("gpt-5.4", gallery.Queries[1].Model);
 
         pending.Dequeue().SetResult(ScriptedPromptGalleryService.Page(gallery.Queries[0], [ScriptedPromptGalleryService.Item(title: "Old model")]));
         await first;
+        await secondStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(2, gallery.Queries.Count);
+        Assert.Equal("gpt-5.4", gallery.Queries[1].Model);
         Assert.Empty(session.Presentation.Items);
         Assert.True(session.Presentation.IsLoading);
 

@@ -1,0 +1,8 @@
+.merge-field-value {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 12rem;
+    overflow: auto;
+    font: inherit;
+    margin: 0;
+}

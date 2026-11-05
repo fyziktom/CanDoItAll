@@ -8,14 +8,16 @@ public sealed class AgentEditorSubmission {
     private readonly Guid? originalId;
     private readonly DateTimeOffset? originalVersion;
 
-    internal AgentEditorSubmission(AgentEditorModel original, AgentEditorModel request) {
+    internal AgentEditorSubmission(AgentEditorModel original, AgentEditorModel request, long inputRevision) {
         originalId = original.Id;
         originalVersion = original.ExpectedUpdatedAtUtc;
         originalState = JsonSerializer.SerializeToUtf8Bytes(original);
         Request = request;
+        InputRevision = inputRevision;
     }
 
     public AgentEditorModel Request { get; }
+    public long InputRevision { get; }
 
     public bool HasLaterEdits(AgentEditorModel draft, IReadOnlyList<string> visibleTags) {
         var current = AgentEditorDraftPolicy.Copy(draft);
@@ -28,7 +30,7 @@ public sealed class AgentEditorSubmission {
 
 public static class AgentEditorDraftPolicy {
     public static AgentEditorSubmission Capture(AgentEditorModel draft, IReadOnlyList<string> visibleTags,
-        IReadOnlyList<ProviderProfile> providers) {
+        IReadOnlyList<ProviderProfile> providers, long inputRevision = 0) {
         var original = Copy(draft);
         original.Tags = BuildTags(draft.Tags, visibleTags);
         var request = Copy(original);
@@ -44,7 +46,7 @@ public static class AgentEditorDraftPolicy {
         access.DefaultModel = ProviderModelValuePolicy.Normalize(access.DefaultModel);
         request.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(access);
         request.ProjectStructureAccess = AgentProjectStructureAccessMetadata.Normalize(request.ProjectStructureAccess);
-        return new(original, request);
+        return new(original, request, inputRevision);
     }
 
     public static List<string> BuildTags(IEnumerable<string> storedTags, IEnumerable<string> visibleTags)

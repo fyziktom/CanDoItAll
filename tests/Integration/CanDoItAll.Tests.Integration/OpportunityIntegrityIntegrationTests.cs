@@ -157,13 +157,15 @@ public sealed class OpportunityIntegrityIntegrationTests
     public async Task Opportunity_project_references_use_the_projects_query_boundary()
     {
         var projectId = Guid.NewGuid();
+        var storedProject = new Project { Id = projectId, Name = "Persisted boundary project", Slug = projectId.ToString("N") };
+        var projectLifetime = storedProject.LifetimeId;
         var project = new ProjectRecordQueryItem(
             projectId,
             "Boundary project",
             ProjectStatus.Active,
             "Delivery",
             "Served by the Projects query boundary.",
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow) { LifetimeId = projectLifetime };
         var projectQuery = new StubProjectRecordQueryService(project);
         await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
         {
@@ -184,6 +186,11 @@ public sealed class OpportunityIntegrityIntegrationTests
             CreateParty(ownerId, PartyType.Person, "Olivia Owner"));
         var editor = CreateNewEditor(accountId, ownerId);
         editor.LinkedProjectId = projectId;
+        await using (var context = await dbContextFactory.CreateDbContextAsync()) {
+            context.Set<Project>().Add(storedProject);
+            await context.SaveChangesAsync();
+        }
+        editor.LinkedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId);
 
         var saveResult = await crmService.SaveOpportunityAsync(editor);
 
@@ -204,7 +211,7 @@ public sealed class OpportunityIntegrityIntegrationTests
         missingProject.LinkedProjectId = Guid.NewGuid();
         AssertError(
             await crmService.SaveOpportunityAsync(missingProject),
-            "crmhr.crm.opportunity-linked-project-missing");
+            CrmHrEditingErrorCodes.OpportunityProjectOriginalRequired);
     }
 
     private static CrmOpportunityEditorModel CreateNewEditor(Guid accountId, Guid ownerId)
@@ -245,6 +252,7 @@ public sealed class OpportunityIntegrityIntegrationTests
             Summary = opportunity.Summary,
             Notes = opportunity.Notes,
             LinkedProjectId = opportunity.LinkedProjectId,
+            LinkedProjectAdmission = opportunity.LinkedProjectAdmission,
             Parties = opportunity.Parties
                 .Select(item => new CrmOpportunityPartyLinkEditorModel
                 {

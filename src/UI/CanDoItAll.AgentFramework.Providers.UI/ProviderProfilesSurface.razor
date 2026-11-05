@@ -67,6 +67,37 @@
     </DetailHeader>
 
     <DetailContent>
+        @if (View.CatalogChanged) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="providers-catalog-changed">The provider catalog changed. Refresh providers to update the list; the open draft stays available.</Alert>
+        }
+        @if (View.NeedsComparison) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-changed">
+                The saved provider changed. Your draft is retained; compare before another write.
+                <Button Text="Compare provider" Disabled="@(isBusy || View.IsWriteUnconfirmed)" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Compare)))" data-testid="providers-compare" />
+            </Alert>
+        }
+        @if (View.Comparison is { } review) {
+            <Stack GapScale="LayoutGap.Small">
+                <ProviderComparisonSurface Review="review" Changed="StateHasChanged" />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Apply locally" Disabled="@(!review.CanApply || isBusy)" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.ApplyComparison)))" data-testid="providers-comparison-apply" />
+                    <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.CancelComparison)))" data-testid="providers-comparison-cancel" />
+                </Cluster>
+            </Stack>
+        }
+        @if (View.CanReviewCurrent) {
+            <Alert AlertStyle="AlertStyle.Warning">
+                The exact accepted version is unavailable. Read the current saved version and explicitly review it before continuing with this draft. This does not establish the earlier write's outcome.
+                <Button Text="Review current saved version" Disabled="@isBusy" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.ReviewCurrent)))" data-testid="providers-review-current" />
+            </Alert>
+        }
+        @if (View.RecoveryReview is { } recoveryReview) {
+            <ProviderRecoveryReviewSurface Review="recoveryReview" Changed="StateHasChanged" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Keep draft against reviewed version" Disabled="@(isBusy || !recoveryReview.CanApply)" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.ApplyCurrentReview)))" data-testid="providers-recovery-apply" />
+                <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.CancelComparison)))" />
+            </Cluster>
+        }
         @if (View.HasPendingReconciliation) {
             <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-reconciliation-pending">
                 The provider change is saved. Reconcile its current state before another write.
@@ -79,6 +110,11 @@
                 The write outcome is unconfirmed. Verify this exact provider attempt before another write.
                 <Button Text="Verify provider write" Icon="refresh" Disabled="@isBusy"
                         Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Verify)))" data-testid="providers-verify" />
+                @if (View.CanAcknowledgeDiagnostic) {
+                    <TextBlock Value="Only diagnostic metadata was requested. You can read current metadata and keep this outcome unconfirmed while continuing with your draft. This does not repeat the diagnostic or adopt another configuration version." />
+                    <Button Text="Read metadata and continue with draft" Disabled="@isBusy"
+                            Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.AcknowledgeDiagnostic)))" data-testid="providers-acknowledge-diagnostic" />
+                }
             </Alert>
         }
         @if (View.HasVerifiedRetry) {
@@ -194,6 +230,7 @@
                                 </div>
 
                                 <TagEditor Value="@providerTagValues"
+                                           PendingInput="@editor.PendingTag" PendingInputChanged="@(value => SetPendingTag(target, editor, value))"
                                            onkeydown="if (event.key === 'Enter' &amp;&amp; event.target instanceof HTMLInputElement) event.preventDefault();"
                                            ValueChanged="@(value => ChangeProviderTags(target, value))"
                                            Suggestions="@AvailableProviderTags"
@@ -305,7 +342,7 @@
                                         break;
                                     case ProviderEditorSection.Sharing:
 
-                            @if (View.State.Section == ProviderEditorSection.Sharing) {
+                            @if (View.State.SharingActivated || View.State.Section == ProviderEditorSection.Sharing) {
                                 @SharingSlot?.Invoke(slot)
                             }
 

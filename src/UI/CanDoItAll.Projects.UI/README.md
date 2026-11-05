@@ -7,8 +7,10 @@ The routed Projects host composes these components in production; the
 
 ## Boundary
 
-The leaf references BaseLib and Projects.Contracts. Source-mode BaseLib adds Common;
-Projects.Contracts adds SharedKernel. It has no reference to Infrastructure, EF,
+The leaf references BaseLib, Projects.Contracts, the pure Editing kernel and Editing.UI.
+Source-mode BaseLib adds Common; Projects.Contracts adds SharedKernel. The reviewed Editing
+references provide typed comparison state and the shared field renderer. They add no owner
+services or storage. The leaf has no reference to Infrastructure, EF,
 Workspace, concrete Projects services, Workbench or AgentFramework. The shared namespace
 preserves existing component consumers. The modal injects IJSRuntime for native form
 validity/focus and its typed logger for active validation and cleanup diagnostics;
@@ -34,11 +36,31 @@ removed rows and replacement rows survive. Starter rows belong to this draft; ac
 seeds are retired and unknown outcomes require inspection. The sandbox explicitly simulates
 these effects and does not claim database or file-authority proof.
 
-A rejected stale definition retains the original context and frozen submission. Explicit
-comparison reads belong to the native host and leave the original expectation untouched.
-Reload and manual reconciliation both create a new current-based draft; manual reconciliation
-keeps the previous definition and linked-object plans visible for selective copying until
-the reconciled save is accepted. The renderer cannot fetch or adopt a new token itself.
+An acquired draft retains its actual immutable original definition. A rejected stale definition
+also retains its original context and frozen submission. Explicit comparison reads and current
+verification before Apply belong to the native host; selecting results does not change the live
+model. The comparison has a separate EditContext and uses typed scalar/text fields, keyed phase
+and option rows, and explicit phase order. Options retain their native category/id order.
+
+Apply updates the same model and EditContext, advances the baseline and native expectation to
+the verified current definition, and leaves Save as a separate operation. Later input, stale
+comparisons, unknown native operations and unfinished dates block apply. Removed saved child
+rows kept explicitly become new draft rows; retired IDs are not reused. Undo restores local
+values while retaining the verified current authority basis, and is available before further
+input or Save. Starter effects and retained receipts keep their existing owners. Reload remains
+an explicit replacement action. A restored submission does not invent an original snapshot.
+
+Choices carry across a refreshed comparison only when their original, local and current values
+still match. Earlier custom result entries remain available for copying. The renderer cannot
+fetch, save or adopt a new native token on its own.
+
+The Project leave guard captures the actual draft, native operation state and comparison
+revision before a decision. Continue retains the form; explicit discard permits leaving.
+Later input or an accepted result invalidates an older decision. Unfinished dates, keyed
+rows and blank starter plans count as local changes. Retained native operations keep their
+original targets and recovery state. The native host supplies the same-editor route policy
+and checks replacement intents before changing URL state; wizard and overview transitions
+within the same acquired editor keep its context.
 
 ## Validation
 

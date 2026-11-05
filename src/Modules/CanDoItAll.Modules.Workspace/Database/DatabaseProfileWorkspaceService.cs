@@ -488,7 +488,14 @@ public sealed class DatabaseProfileWorkspaceService(
                 """
                 SELECT table_schema, table_name, column_name
                 FROM information_schema.columns
-                WHERE table_schema NOT IN ('pg_catalog', 'information_schema');
+                WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+                UNION ALL
+                SELECT namespaces.nspname, tables.relname, columns.attname
+                FROM pg_catalog.pg_attribute AS columns
+                JOIN pg_catalog.pg_class AS tables ON tables.oid = columns.attrelid
+                JOIN pg_catalog.pg_namespace AS namespaces ON namespaces.oid = tables.relnamespace
+                WHERE columns.attnum < 0 AND NOT columns.attisdropped
+                    AND namespaces.nspname NOT IN ('pg_catalog', 'information_schema');
                 """;
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);

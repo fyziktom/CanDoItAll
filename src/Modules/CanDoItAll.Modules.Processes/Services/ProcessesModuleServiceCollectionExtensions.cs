@@ -1,6 +1,8 @@
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Core.Execution;
@@ -23,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace CanDoItAll.Modules.Processes;
@@ -104,9 +107,20 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
         services.TryAddSingleton<ProcessTemplatePackLoader>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.TryAddScoped<Func<ProcessEditingSession>>(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            var changes = provider.GetRequiredService<EditingChangeFeed>();
+            var access = provider.GetRequiredService<IEditingUiAccess>();
+            var logger = provider.GetRequiredService<ILogger<EditingObservation>>();
+            return () => new(changes, access,
+                () => new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation), logger);
+        });
         services.TryAddScoped<ProcessAuthoringAdmissionPolicy>();
         services.TryAddScoped<IProcessAuthoringAdmissionPolicy>(provider => provider.GetRequiredService<ProcessAuthoringAdmissionPolicy>());
         services.TryAddScoped<IProcessAuthoringContext>(provider => provider.GetRequiredService<ProcessAuthoringAdmissionPolicy>());
+        services.TryAddScoped<IProcessAuthoringCommitObserver, ProcessAuthoringChanges>();
         services.TryAddScoped<IProcessAuthoringStore, EfProcessAuthoringStore>();
         services.TryAddScoped<IProcessCancellationRecoveryQueue, EfProcessCancellationRecoveryQueue>();
         services.TryAddScoped<IProcessDecisionRefreshDeliveryQueue, EfProcessDecisionRefreshDeliveryQueue>();

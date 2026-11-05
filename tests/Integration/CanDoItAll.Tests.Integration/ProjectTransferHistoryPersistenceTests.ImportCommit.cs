@@ -15,7 +15,50 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed partial class ProjectTransferHistoryPersistenceTests {
-    public enum ImportFailurePoint { AfterFlushBeforeCommit, AfterServerCommit, ConnectionClose, Publication }
+    public enum ImportFailurePoint { AfterFlushBeforeCommit, AfterServerCommit, ConnectionClose, Publication, ObserveOnly }
+
+    [Fact]
+    public async Task Package_current_access_revocation_after_sql_rolls_back_the_target_and_compensates_staged_assets() {
+        await using var fixture = await TransferFixture.CreateAsync();
+        var projectId = await SeedPackageMediaAsync(fixture, "Current Project import admission");
+        var exported = await fixture.PackageService().ExportAllAsync(new() { SourceProfileId = fixture.SourceProfile.Profile.Id });
+        Assert.True(exported.IsSuccess);
+        var package = exported.Value!;
+        var probe = new ImportCommitProbe(ImportFailurePoint.ObserveOnly, Path.Combine(fixture.TargetProfile.Profile.Storage.WorkspaceRoot,
+            "managed-files", "project-media", "imports", package.Manifest.PackageId.ToString("N")));
+        await using var source = await fixture.SourceContextAsync();
+        await using var target = CreateImportContext(fixture, probe);
+        var transfer = new DatabaseTransferOperation(fixture.SourceProfile, fixture.TargetProfile, true);
+        var operations = DatabaseTransferTestSupport.For(transfer, source, target,
+            inspections: fixture.SourceServices.GetRequiredService<ProjectTransferTargetInspectionRunner>(),
+            activation: fixture.SourceServices.GetRequiredService<DatasetActivationService>());
+        var guard = new ProjectTransferTargetStateGuard(fixture.SourceServices.GetRequiredService<IEnumerable<IProjectTransferTargetStateParticipant>>(), operations);
+        var storage = ActivatorUtilities.CreateInstance<StorageProfileTransferService>(fixture.SourceServices, operations);
+        var service = ActivatorUtilities.CreateInstance<ProjectPackageService>(fixture.SourceServices,
+            new Profiles(fixture.SourceProfile, fixture.TargetProfile), operations, new ProjectsProfileTransferStore(operations), storage, guard,
+            new ImportPublicationLogger(probe));
+        int checks = 0;
+        bool authorizedAfterSql = false;
+
+        var result = await service.ImportAllAsync(new() { PackagePath = package.PackagePath, TargetProfileId = fixture.TargetProfile.Profile.Id },
+            requireCurrentAccess: token => {
+                if (++checks == 2) {
+                    authorizedAfterSql = probe.ProjectSqlSaved && !probe.ServerCommitted;
+                    throw new UnauthorizedAccessException("Current Project write access was revoked after staged SQL.");
+                }
+                return ValueTask.CompletedTask;
+            });
+
+        Assert.Equal(2, checks);
+        Assert.True(authorizedAfterSql);
+        Assert.True(result.IsFailure);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Current Project write access", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Errors, error => error.Code == ProjectPackageErrorCodes.ImportOutcomeUnconfirmed);
+        await using var verify = await fixture.TargetContextAsync();
+        Assert.False(await verify.Set<Project>().AnyAsync(row => row.Id == projectId));
+        Assert.False(probe.ServerCommitted);
+        Assert.All(probe.StagedFiles.Where(path => !path.EndsWith(".candoitall.lock", StringComparison.Ordinal)), path => Assert.False(File.Exists(path)));
+    }
 
     [Theory]
     [InlineData(ImportFailurePoint.AfterFlushBeforeCommit)]
@@ -152,6 +195,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         public ImportFailurePoint Point { get; } = point;
         public string WorkspaceRoot { get; } = workspaceRoot;
         public bool ProjectSaveObserved { get; set; }
+        public bool ProjectSqlSaved { get; set; }
         public bool ServerCommitted { get; set; }
         public bool FailureThrown { get; set; }
         public string[] StagedFiles { get; set; } = [];
@@ -176,6 +220,9 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
 
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
             CancellationToken cancellationToken = default) {
+            if (eventData.Context is ProjectsDbContext && probe.ProjectSaveObserved && result > 0) {
+                probe.ProjectSqlSaved = true;
+            }
             if (probe.Point == ImportFailurePoint.AfterFlushBeforeCommit && eventData.Context is ProjectsDbContext && probe.ProjectSaveObserved) {
                 throw new ImportCommitFailure();
             }

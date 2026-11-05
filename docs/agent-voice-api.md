@@ -62,7 +62,16 @@ listeners that the voice is AI-generated.
 
 Configure each operation under **Agents → Voice** or through the existing
 workflow-settings API. A settings update replaces the document: read and preserve
-the full document before changing its voice settings. Audio requires an enabled
+the full document and its `updatedAtUtc` original before changing its voice settings.
+`POST /api/workflows/settings` returns a new revision after saving. An omitted/null
+revision is create-only; an existing, stale or concurrently created document returns
+HTTP409 with `workflows.settings-conflict`. Keep the original from the form's read;
+do not fetch a fresh revision merely to resubmit older values. The native Voice form
+retains its draft on conflict and offers an explicit discard/reload action.
+
+The revision uses the existing settings timestamp column; no data backfill is required.
+Upgrade and restart every native writer of the same dataset together, because older
+binaries do not enforce this replacement contract. Audio requires an enabled
 native OpenAI profile with purpose Chat and a supported voice driver. Imported
 shared providers and image-only profiles cannot provide these operations.
 

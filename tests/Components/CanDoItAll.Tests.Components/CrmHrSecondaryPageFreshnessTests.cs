@@ -13,6 +13,70 @@ namespace CanDoItAll.Tests.Components.CrmHr;
 public sealed class CrmHrSecondaryPageFreshnessTests
 {
     [Fact]
+    public async Task Agents_peer_hint_refreshes_the_catalog_without_replacing_the_open_record() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyId = Guid.NewGuid();
+        var original = CreateAgentWorkspace(partyId, "Initial agent snapshot");
+        var items = new List<AiAgentDirectoryItemModel> { CreateAgentItem(original) };
+        var workspaces = new Dictionary<Guid, AiAgentWorkspaceModel> { [partyId] = original };
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
+        var cut = harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
+            .Add(page => page.TestItems, items)
+            .Add(page => page.TestWorkspaces, workspaces));
+        var view = (ICrmHrAgentsWorkspaceView)cut.Instance;
+        cut.WaitForAssertion(() => AssertAgentDialogSurface(cut, partyId, original.DisplayName));
+        var location = navigation.Uri;
+        var updated = original with { DisplayName = "Current peer agent snapshot" };
+        workspaces[partyId] = updated;
+        items[0] = CreateAgentItem(updated);
+
+        harness.Context.Services.GetRequiredService<CrmHrChanges>().PublishParty(partyId);
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.Instance.DirectoryQueries.Count));
+        cut.WaitForElement("[data-testid='crmhr-agent-record-outdated']");
+        Assert.Same(original, view.SelectedWorkspace);
+        Assert.Single(cut.Instance.WorkspaceRequests);
+        Assert.Equal(location, navigation.Uri);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-agent-record-refresh']").ClickAsync(new()));
+        cut.WaitForAssertion(() => Assert.Same(updated, view.SelectedWorkspace));
+        Assert.Equal(location, navigation.Uri);
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-agent-record-outdated']"));
+        await harness.Context.DisposeRenderedComponentsAsync();
+        var feed = harness.Context.Services.GetRequiredService<CanDoItAll.Infrastructure.Editing.EditingChangeFeed>();
+        Assert.Equal(0, feed.ActiveSubscriptions);
+        Assert.Equal(0, feed.ActiveTopics);
+    }
+
+    [Fact]
+    public async Task Agents_discard_a_record_read_when_authority_changes_during_the_await() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyId = Guid.NewGuid();
+        var workspace = CreateAgentWorkspace(partyId, "Retired principal snapshot");
+        var cut = harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
+            .Add(page => page.TestItems, [CreateAgentItem(workspace)])
+            .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel> { [partyId] = workspace }));
+        var view = (ICrmHrAgentsWorkspaceView)cut.Instance;
+        cut.WaitForElement("[data-testid='crmhr-agent-item']");
+        cut.Instance.Delay(partyId);
+        var opening = cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-agent-item']").ClickAsync(new()));
+        await cut.Instance.WaitForRequestsAsync(partyId);
+        var access = Assert.IsType<CanDoItAll.Tests.Support.EditingUiTestAccess>(
+            harness.Context.Services.GetRequiredService<CanDoItAll.Editing.IEditingUiAccess>());
+        access.Principal = "changed-read-principal";
+        cut.Instance.Complete(partyId);
+        await opening;
+
+        cut.WaitForAssertion(() => Assert.Null(view.SelectedWorkspace));
+        Assert.Null(view.SelectedDirectoryItem);
+        cut.WaitForAssertion(() => {
+            var provider = cut.FindComponent<AgentChatContextSurfaceProvider>();
+            Assert.Equal(AgentChatContextAccessState.Failed, provider.Instance.ContextAccessState);
+            Assert.Null(provider.Instance.Surface.Position.PrimarySelection);
+        });
+    }
+
+    [Fact]
     public async Task Agents_page_requests_bounded_server_pages()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -177,15 +241,18 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
 
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
-                .Add(page => page.TestItems, [directoryItem])
-                .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel>
-                {
-                    [partyId] = workspace
-                })));
-
-        Assert.Contains("resolved conflicting technical agents", exception.Message, StringComparison.Ordinal);
+        Assert.NotEqual(workspace.TechnicalAgentId, directoryItem.Agent.Id);
+        var cut = harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
+            .Add(page => page.TestItems, [directoryItem])
+            .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel> { [partyId] = workspace }));
+        var view = (ICrmHrAgentsWorkspaceView)cut.Instance;
+        cut.WaitForAssertion(() => {
+            Assert.Null(view.SelectedWorkspace);
+            Assert.Null(view.SelectedDirectoryItem);
+            Assert.False(view.IsRecordDialogOpen);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-agent-record-dialog']"));
+            Assert.Equal(AgentChatContextAccessState.Failed, cut.FindComponent<AgentChatContextSurfaceProvider>().Instance.ContextAccessState);
+        });
     }
 
     [Theory]
@@ -214,7 +281,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         Assert.Equal(1, cut.Instance.StaffingDashboardRequestCount);
         cut.Instance.Delay(firstProject.Id, secondProject.Id);
 
-        var staleLoad = cut.InvokeAsync(() => InvokeProjectSelectionAsync(cut.Instance, firstProject.Id));
+        var staleLoad = cut.InvokeAsync(() => ((CanDoItAll.CrmHr.UI.Assignments.ICrmHrAssignmentsWorkspaceView)cut.Instance).RefreshRecordsAsync());
         await cut.Instance.WaitForRequestAsync(firstProject.Id);
         Assert.Equal(AgentChatContextAccessState.Loading, ReadAssignmentAccessState(cut.Instance));
 
@@ -289,7 +356,8 @@ public sealed class CrmHrSecondaryPageFreshnessTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.True(cut.Find("[data-testid='crmhr-assignment-create-button']").HasAttribute("disabled"));
+            Assert.True(((CanDoItAll.CrmHr.UI.Assignments.ICrmHrAssignmentsWorkspaceView)cut.Instance).IsProjectContextLoading);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-assignment-create-button']"));
             Assert.Empty(cut.FindAll("[data-testid='crmhr-assignment-create-dialog']"));
         });
         Assert.Empty(cut.Instance.SelectionRequests);
@@ -342,7 +410,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
     }
 
     [Fact]
-    public async Task Assignments_page_mounts_one_workflow_tab_and_loads_each_dataset_lazily()
+    public async Task Assignments_page_loads_each_dataset_lazily_and_retains_visited_renderers()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var project = CreateProject("Tabbed project");
@@ -366,11 +434,12 @@ public sealed class CrmHrSecondaryPageFreshnessTests
                 RecordedAssignmentSelectionData.Assignments));
         Assert.Equal(1, cut.Instance.StaffingDashboardRequestCount);
 
+        var schedule = cut.FindComponent<CanDoItAll.CrmHr.UI.Assignments.ProjectAssignmentResourceGanttPanel>().Instance;
         cut.Find("[data-testid='crmhr-assignments-tab-relationships']").Click();
         cut.WaitForAssertion(() =>
         {
             Assert.NotNull(cut.Find("[data-testid='crmhr-assignment-page']"));
-            Assert.Empty(cut.FindAll("[data-testid='crmhr-assignment-resource-schedule']"));
+            Assert.Same(schedule, cut.FindComponent<CanDoItAll.CrmHr.UI.Assignments.ProjectAssignmentResourceGanttPanel>().Instance);
             Assert.Empty(cut.FindAll("[data-testid='crmhr-assignment-role']"));
         });
         AssertSelectionRequests(
@@ -397,6 +466,9 @@ public sealed class CrmHrSecondaryPageFreshnessTests
                 project.Id,
                 RecordedAssignmentSelectionData.RelationshipAssignments));
 
+        var relationship = cut.FindComponent<CanDoItAll.CrmHr.UI.Assignments.ProjectPartyAssignmentPanel>().Instance;
+        await cut.InvokeAsync(() => cut.FindComponents<CanDoItAll.Components.BaseLib.Dialog>()
+            .Single(dialog => dialog.Instance.TestId == "crmhr-assignment-create-dialog").Instance.OnClose.InvokeAsync());
         cut.Find("[data-testid='crmhr-assignments-tab-staffing']").Click();
         cut.WaitForAssertion(() =>
         {
@@ -423,6 +495,8 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             new(project.Id, RecordedAssignmentSelectionData.StaffingRequests),
             new(project.Id, RecordedAssignmentSelectionData.SkillCatalog));
 
+        await cut.InvokeAsync(() => cut.FindComponents<CanDoItAll.Components.BaseLib.Dialog>()
+            .Single(dialog => dialog.Instance.TestId == "crmhr-staffing-request-dialog").Instance.OnClose.InvokeAsync());
         cut.Find("[data-testid='crmhr-assignments-tab-allocations']").Click();
         cut.WaitForAssertion(() =>
         {
@@ -454,6 +528,8 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             new(project.Id, RecordedAssignmentSelectionData.AllocationAssignments),
             new(project.Id, RecordedAssignmentSelectionData.StaffingCandidates));
         Assert.Equal(1, cut.Instance.StaffingDashboardRequestCount);
+        Assert.Same(schedule, cut.FindComponent<CanDoItAll.CrmHr.UI.Assignments.ProjectAssignmentResourceGanttPanel>().Instance);
+        Assert.Same(relationship, cut.FindComponent<CanDoItAll.CrmHr.UI.Assignments.ProjectPartyAssignmentPanel>().Instance);
     }
 
     [Fact]
@@ -624,7 +700,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             project.Status,
             project.CurrentPhase,
             string.Empty,
-            project.UpdatedAtUtc);
+            project.UpdatedAtUtc) { LifetimeId = project.Id };
 
     private static ProjectPartyAssignmentDetail CreateAssignment(Guid projectId, string displayName)
         => new(

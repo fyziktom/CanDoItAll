@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
@@ -8,7 +9,8 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 internal sealed class AgentFrameworkAiTechnicalAgentBridge(
     IAiTechnicalAgentProjectionStore projections,
-    ICanDoItAllAgentWorkspaceFactory workspaceFactory) : IAiTechnicalAgentBridge {
+    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IAiAgentCreationGuard creation) : IAiTechnicalAgentBridge {
     private const string CrmHrRuntimeAgentTemplateKeyPrefix = "crmhr-ai-resource";
 
     public async Task SynchronizeDirectoryProjectionAsync(CancellationToken cancellationToken = default) {
@@ -51,6 +53,21 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
     public async Task<Result<AiTechnicalAgentSaveResult>> SaveAsync(AiAgentProfileEditorModel model,
         CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(model);
+        model = model.Snapshot();
+        try {
+            using var configuration = JsonDocument.Parse(string.IsNullOrWhiteSpace(model.ExtendedDataJson) ? "{}" : model.ExtendedDataJson);
+            if (configuration.RootElement.ValueKind != JsonValueKind.Object || configuration.RootElement.EnumerateObject().Any()) {
+                return Result<AiTechnicalAgentSaveResult>.Failure(Error.Validation(
+                    "Additional technical configuration must be set directly in AgentFramework. CRM creation does not own that JSON.", AiStewardEditingErrors.TechnicalReadOnly));
+            }
+        } catch (JsonException) {
+            return Result<AiTechnicalAgentSaveResult>.Failure(Error.Validation("Extended data must be valid JSON.", AiStewardEditingErrors.InvalidTechnicalJson));
+        }
+        var opened = await creation.OpenAsync(model, cancellationToken);
+        if (opened.IsFailure) {
+            return Result<AiTechnicalAgentSaveResult>.Failure(opened.Errors);
+        }
+        await using var admission = opened.Value!;
         var resource = (await projections.ReadAsync([model.PartyId], cancellationToken)).GetValueOrDefault(model.PartyId);
         if (resource?.PartyType is null) {
             return Result<AiTechnicalAgentSaveResult>.Failure(Error.Validation("AI agent party was not found.", "crmhr.ai-agent.party-not-found"));
@@ -69,6 +86,10 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         }
 
         var agent = ResolveBoundAgent(resource.Directory, catalog.Agents, model.PartyId);
+        if (agent is not null) {
+            return Result<AiTechnicalAgentSaveResult>.Failure(Error.Validation(
+                "An existing technical Agent must be edited through AgentFramework.", AiStewardEditingErrors.TechnicalReadOnly));
+        }
         if (agent is null && resource.Directory.TechnicalAgentId.HasValue && resource.Directory.BindingStatus != AiResourceBindingStatus.PendingBackfill) {
             return Result<AiTechnicalAgentSaveResult>.Failure(Error.Validation(
                 "The bound technical Agent is unavailable. Reconcile the binding before creating another profile.", "crmhr.ai-agent.technical-agent-missing"));
@@ -93,9 +114,12 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         Guid technicalAgentId;
         try {
+            await admission.DemandCommitAsync(cancellationToken);
             technicalAgentId = await workspace.SaveAgentAsync(editor, cancellationToken);
         } catch (AgentEditorValidationException exception) {
             return Result<AiTechnicalAgentSaveResult>.Failure(Error.Validation(exception.Message, "crmhr.ai-agent.agentframework-validation-failed"));
+        } catch (AiTechnicalAgentCommittedSaveException exception) when (exception.PartyId is null) {
+            throw new AgentDirectoryProjectionSynchronizationException(exception.TechnicalAgentId, exception.InnerException ?? exception, partyId: model.PartyId);
         }
 
         try {
@@ -105,7 +129,9 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 throw new InvalidOperationException("The saved technical Agent is not reflected in the expected CRM Party binding.");
             }
 
-            return Result<AiTechnicalAgentSaveResult>.Success(new(technicalAgentId, current.BindingStatus, current.BindingSummary, current.AgentsRoute));
+            return Result<AiTechnicalAgentSaveResult>.Success(new(technicalAgentId, current.BindingStatus, current.BindingSummary, current.AgentsRoute) {
+                CreatedBusinessProfile = admission.Original
+            });
         } catch (Exception exception) {
             throw new AgentDirectoryProjectionSynchronizationException(technicalAgentId, exception, partyId: model.PartyId);
         }

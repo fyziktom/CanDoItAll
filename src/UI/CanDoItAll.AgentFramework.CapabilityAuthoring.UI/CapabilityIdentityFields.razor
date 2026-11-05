@@ -27,7 +27,8 @@
             <AuthoringText @bind-Value="Draft.Model.EndpointOrPath" disabled="@Draft.IdentityLocked" class="cda-input" data-testid="@($"{TestId}-endpoint")" />
         </div>
     }
-    <TagEditor Value="Draft.Model.Tags" ValueChanged="ChangeTags" Suggestions="TagSuggestions" Placeholder="Add capability tag" MaxTags="12" TestId="@($"{TestId}-tags")" InputTestId="@($"{TestId}-tags-input")" />
+    <TagEditor Value="Draft.Model.Tags" ValueChanged="ChangeTags" PendingInput="@Draft.PendingTagInput" PendingInputChanged="ChangePendingTag"
+               Suggestions="TagSuggestions" Placeholder="Add capability tag" MaxTags="12" TestId="@($"{TestId}-tags")" InputTestId="@($"{TestId}-tags-input")" />
 </FormSection>
 
 @code {
@@ -44,6 +45,11 @@
     };
     private void ChangeTags(IReadOnlyList<string> tags) {
         Draft.Model.Tags = tags.ToList();
+        Draft.Changed();
+    }
+
+    private void ChangePendingTag(string value) {
+        Draft.PendingTagInput = value;
         Draft.Changed();
     }
 }

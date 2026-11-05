@@ -9,28 +9,32 @@ public static class LlmChatUiFailureCodes
     public const string Forbidden = Prefix + "forbidden";
     public const string InvalidInput = Prefix + "invalid-input";
     public const string RequestFailed = Prefix + "request-failed";
+    public const string CommandPending = Prefix + "command-pending";
+    public const string OutcomeUnconfirmed = Prefix + "outcome-unconfirmed";
 }
 
 public sealed record LlmChatUiFailure(string Code, string Message);
 
 public sealed class LlmChatUiResult<T>
 {
-    private LlmChatUiResult(T? value, IReadOnlyList<LlmChatUiFailure> failures)
+    private LlmChatUiResult(T? value, IReadOnlyList<LlmChatUiFailure> failures, string? warning = null)
     {
         Value = value;
         Failures = failures;
+        Warning = warning;
     }
 
     public T? Value { get; }
 
     public IReadOnlyList<LlmChatUiFailure> Failures { get; }
+    public string? Warning { get; }
 
     public bool IsSuccess => Failures.Count == 0;
 
     public bool IsFailure => !IsSuccess;
 
-    public static LlmChatUiResult<T> Success(T value)
-        => new(value, []);
+    public static LlmChatUiResult<T> Success(T value, string? warning = null)
+        => new(value, [], warning);
 
     public static LlmChatUiResult<T> Failure(params LlmChatUiFailure[] failures)
     {

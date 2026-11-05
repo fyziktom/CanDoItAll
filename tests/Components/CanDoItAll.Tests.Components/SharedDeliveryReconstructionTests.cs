@@ -114,7 +114,7 @@ public sealed class SharedDeliveryReconstructionTests {
         await cut.Find("[data-testid='shared-provider-connections-close']").ClickAsync();
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
         Assert.Equal("Unsaved local name", ((Editor)context.Model).Name);
-        Assert.Equal(raw, ((AngleSharp.Html.Dom.IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
+        Assert.Equal(raw, cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
         Assert.Equal(1, proxy.Operations);
     }
 

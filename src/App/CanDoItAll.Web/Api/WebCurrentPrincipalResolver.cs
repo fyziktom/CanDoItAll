@@ -41,10 +41,17 @@ internal sealed class WebCurrentPrincipalResolver(
         if (principal?.Identity?.IsAuthenticated != true && interactive.IsAvailable) {
             principal = await interactive.TryGetTrustedLocalOperatorAsync(cancellationToken);
         }
+        return await ResolveCoreAsync(principal, interactive.IsAvailable, cancellationToken);
+    }
+
+    internal Task<WebCurrentPrincipal> ResolveHttpAsync(CancellationToken cancellationToken)
+        => ResolveCoreAsync(http.HttpContext?.User, false, cancellationToken);
+
+    private async Task<WebCurrentPrincipal> ResolveCoreAsync(ClaimsPrincipal? principal, bool allowInteractive, CancellationToken cancellationToken) {
         if (principal?.Identity?.IsAuthenticated != true) {
             throw Denied();
         }
-        var local = interactive.IsAvailable &&
+        var local = allowInteractive &&
             principal.Identity.AuthenticationType == LocalOperatorAuthenticationStateProvider.AuthenticationType &&
             principal.FindFirstValue(JwtRegisteredClaimNames.Sub) == LocalOperatorAuthenticationStateProvider.ActorId;
         var subject = principal.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? principal.FindFirstValue(ClaimTypes.NameIdentifier);

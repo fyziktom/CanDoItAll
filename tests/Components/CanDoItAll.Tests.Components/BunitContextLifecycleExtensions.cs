@@ -4,7 +4,11 @@ namespace CanDoItAll.Tests.Components;
 
 internal static class BunitContextLifecycleExtensions {
     public static Task DisposeRenderedComponentsAsync(this BunitContext context) {
-        // bUnit 2.7 clears its root list before queued disposal runs on a busy dispatcher.
-        return context.Renderer.Dispatcher.InvokeAsync(context.DisposeComponentsAsync);
+        // Keep bUnit's root list and async disposal continuations on the renderer dispatcher.
+        return context.Renderer.Dispatcher.InvokeAsync(async () => {
+            var scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            await Task.Factory.StartNew(context.DisposeComponentsAsync, CancellationToken.None,
+                TaskCreationOptions.DenyChildAttach, scheduler).Unwrap();
+        });
     }
 }

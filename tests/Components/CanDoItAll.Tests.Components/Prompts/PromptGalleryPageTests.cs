@@ -107,7 +107,7 @@ public sealed class PromptGalleryPageTests
     }
 
     [Fact]
-    public void PromptId_location_owns_the_editor_and_closing_a_deep_link_replaces_it_with_the_list()
+    public async Task PromptId_location_owns_the_editor_and_closing_a_deep_link_replaces_it_with_the_list()
     {
         var gallery = new ScriptedPromptGalleryService();
         var knownId = Guid.NewGuid();
@@ -137,21 +137,21 @@ public sealed class PromptGalleryPageTests
         cut.Render();
         Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']"));
 
-        navigation.NavigateTo($"/prompt-gallery?promptId={knownId:D}");
+        await cut.InvokeAsync(() => navigation.NavigateTo($"/prompt-gallery?promptId={knownId:D}"));
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
         Assert.Equal([knownId, knownId], gallery.GetItemCalls);
 
         // Back to the list location closes the addressed editor.
-        navigation.NavigateTo("/prompt-gallery");
+        await cut.InvokeAsync(() => navigation.NavigateTo("/prompt-gallery"));
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']")));
 
         // A missing item is a failed target with its own retry, never a new empty draft.
-        navigation.NavigateTo($"/prompt-gallery?promptId={missingId:D}");
+        await cut.InvokeAsync(() => navigation.NavigateTo($"/prompt-gallery?promptId={missingId:D}"));
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-retry']")));
         Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']"));
         Assert.Equal(missingId, cut.FindComponent<PromptGalleryItemEditorHost>().Instance.CurrentTarget);
 
-        navigation.NavigateTo($"/prompt-gallery?promptId={knownId:D}");
+        await cut.InvokeAsync(() => navigation.NavigateTo($"/prompt-gallery?promptId={knownId:D}"));
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
         Assert.Equal(knownId, cut.FindComponent<PromptGalleryItemEditorHost>().Instance.CurrentTarget);
     }
@@ -179,7 +179,7 @@ public sealed class PromptGalleryPageTests
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']")));
         Assert.Equal(1, back.Calls);
-        Assert.Equal("/prompt-gallery?kind=part", Location(navigation));
+        cut.WaitForAssertion(() => Assert.Equal("/prompt-gallery?kind=part", Location(navigation)));
         Assert.Single(gallery.Queries);
     }
 
@@ -274,7 +274,7 @@ public sealed class PromptGalleryPageTests
         await cut.Find("form").SubmitAsync();
         cut.WaitForAssertion(() => Assert.Equal(savedId, cut.FindComponent<PromptGalleryItemEditorHost>().Instance.CurrentTarget));
         Assert.Contains("Edit Gallery item", cut.Markup, StringComparison.Ordinal);
-        Assert.Equal(2, gallery.Queries.Count);
+        Assert.Equal(3, gallery.Queries.Count);
 
         cut.Find("[data-testid='prompt-gallery-editor-cancel']").Click();
 
@@ -430,6 +430,7 @@ public sealed class PromptGalleryPageTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IPromptGalleryService>(gallery);
+        CanDoItAll.Tests.Support.PromptGalleryUiTestAccess.Register(context.Services);
         context.Services.AddSingleton(launcher);
         var history = back ?? new ScriptedBack();
         history.Context = context;

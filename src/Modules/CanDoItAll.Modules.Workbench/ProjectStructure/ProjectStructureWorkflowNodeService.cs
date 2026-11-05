@@ -120,7 +120,8 @@ public sealed class ProjectStructureWorkflowNodeService(
         string parentTaskNodeId,
         ProjectStructureWorkflowNodeCreateInput request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         return leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
@@ -132,7 +133,7 @@ public sealed class ProjectStructureWorkflowNodeService(
                 parentTaskNodeId,
                 request,
                 allowCanonicalTaskParent: true,
-                cancellationToken, agent),
+                cancellationToken, agent, authorizeCommit),
             cancellationToken);
     }
 
@@ -269,7 +270,8 @@ public sealed class ProjectStructureWorkflowNodeService(
         ProjectStructureWorkflowNodeCreateInput request,
         bool allowCanonicalTaskParent,
         CancellationToken cancellationToken,
-        ProjectStructureAgentContext mutationOwner)
+        ProjectStructureAgentContext mutationOwner,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         if (request.WorkflowId.Value == Guid.Empty)
         {
@@ -374,7 +376,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             ? await projectWorkbenchService.CreateCanonicalTaskResourceObjectAsync(
                 projectId,
                 createRequest,
-                cancellationToken)
+                cancellationToken, authorizeCommit)
             : await projectWorkbenchService.CreateObjectAsync(
                 projectId,
                 createRequest,

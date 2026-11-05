@@ -232,7 +232,7 @@ public sealed class PromptGalleryEditorSessionTests
         Assert.All(notices, notice =>
         {
             Assert.Equal("Prompt draft was not saved", notice.Summary);
-            Assert.Contains("Reload it before saving", notice.Detail, StringComparison.Ordinal);
+            Assert.Contains("before saving", notice.Detail, StringComparison.Ordinal);
         });
     }
 
@@ -389,8 +389,10 @@ public sealed class PromptGalleryEditorSessionTests
         var gallery = new ScriptedPromptGalleryService();
         var itemId = Guid.NewGuid();
         var reads = 0;
+        var archived = false;
+        gallery.Archive = (_, value) => { archived = value; return Task.FromResult(Result.Success()); };
         gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
-            ScriptedPromptGalleryService.Details(id, DateTimeOffset.UnixEpoch.AddMinutes(++reads), isArchived: reads > 1)));
+            ScriptedPromptGalleryService.Details(id, DateTimeOffset.UnixEpoch.AddMinutes(++reads), isArchived: archived)));
         var commits = new List<PromptGalleryEditorCommit>();
         await using var session = new PromptGalleryEditorSession(gallery)
         {
@@ -408,7 +410,10 @@ public sealed class PromptGalleryEditorSessionTests
         Assert.False(session.Presentation.HasExternalChange);
 
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
-        Assert.Equal(DateTimeOffset.UnixEpoch.AddMinutes(2), Assert.Single(gallery.SavedDrafts).ExpectedUpdatedAtUtc);
+        Assert.Empty(gallery.SavedDrafts);
+        await session.ApplyAsync(new PromptGalleryEditorIntent.ToggleArchive(session.Presentation.Generation));
+        await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
+        Assert.Equal(DateTimeOffset.UnixEpoch.AddMinutes(3), Assert.Single(gallery.SavedDrafts).ExpectedUpdatedAtUtc);
     }
 
     [Fact]
@@ -445,13 +450,13 @@ public sealed class PromptGalleryEditorSessionTests
 
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
 
-        var draft = Assert.Single(gallery.SavedDrafts);
-        Assert.Equal(loadedToken, draft.ExpectedUpdatedAtUtc);
+        Assert.Empty(gallery.SavedDrafts);
+        Assert.Equal(loadedToken, session.AcceptedToken);
         Assert.Equal(new[] { PromptGalleryEditorCommitKind.Archived }, commits.Select(commit => commit.Kind));
         Assert.Contains(notices, notice => notice.Summary == "Prompt draft was not saved");
         Assert.Same(source, session.Presentation.Source);
         Assert.True(session.Presentation.HasExternalChange);
-        Assert.Single(gallery.SavedDrafts);
+        Assert.Empty(gallery.SavedDrafts);
     }
 
     [Fact]
@@ -475,9 +480,9 @@ public sealed class PromptGalleryEditorSessionTests
 
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
 
-        Assert.Equal(2, gallery.SavedDrafts.Count);
-        Assert.Equal(receiptToken, gallery.SavedDrafts[1].ExpectedUpdatedAtUtc);
-        Assert.NotEqual(foreignToken, gallery.SavedDrafts[1].ExpectedUpdatedAtUtc);
+        Assert.Single(gallery.SavedDrafts);
+        Assert.Equal(receiptToken, session.AcceptedToken);
+        Assert.NotEqual(foreignToken, session.AcceptedToken);
     }
 
     [Fact]

@@ -12,34 +12,9 @@ public enum OpportunityEditorSection
 
 public static class OpportunityEditorDrafts
 {
-    public static CrmOpportunityEditorModel Clone(CrmOpportunityEditorModel source)
-    {
+    public static CrmOpportunityEditorModel Clone(CrmOpportunityEditorModel source) {
         ArgumentNullException.ThrowIfNull(source);
-        return new CrmOpportunityEditorModel
-        {
-            Id = source.Id,
-            ExpectedUpdatedAtUtc = source.ExpectedUpdatedAtUtc,
-            AccountPartyId = source.AccountPartyId,
-            Title = source.Title,
-            Stage = source.Stage,
-            RelationshipStage = source.RelationshipStage,
-            OpportunitySource = source.OpportunitySource,
-            OwnerPartyId = source.OwnerPartyId,
-            DeliveryUnitPartyId = source.DeliveryUnitPartyId,
-            CurrencyCode = source.CurrencyCode,
-            Amount = source.Amount,
-            ProbabilityPercent = source.ProbabilityPercent,
-            ExpectedCloseOn = source.ExpectedCloseOn,
-            LostReason = source.LostReason,
-            CompetitorName = source.CompetitorName,
-            PartnerContributionSummary = source.PartnerContributionSummary,
-            Summary = source.Summary,
-            Notes = source.Notes,
-            StageNotes = source.StageNotes,
-            LinkedProjectId = source.LinkedProjectId,
-            Parties = source.Parties.Select(ClonePartyLink).ToList(),
-            LastChangedBy = source.LastChangedBy
-        };
+        return source.Snapshot();
     }
 
     public static CrmOpportunityEditorModel FromDetail(CrmOpportunityDetailModel opportunity)
@@ -66,6 +41,7 @@ public static class OpportunityEditorDrafts
             Summary = opportunity.Summary,
             Notes = opportunity.Notes,
             LinkedProjectId = opportunity.LinkedProjectId,
+            LinkedProjectAdmission = opportunity.LinkedProjectAdmission,
             Parties = opportunity.Parties
                 .Select(item => new CrmOpportunityPartyLinkEditorModel
                 {
@@ -77,14 +53,4 @@ public static class OpportunityEditorDrafts
         };
     }
 
-    private static CrmOpportunityPartyLinkEditorModel ClonePartyLink(
-        CrmOpportunityPartyLinkEditorModel source)
-    {
-        return new CrmOpportunityPartyLinkEditorModel
-        {
-            Id = source.Id,
-            PartyId = source.PartyId,
-            Role = source.Role
-        };
-    }
 }

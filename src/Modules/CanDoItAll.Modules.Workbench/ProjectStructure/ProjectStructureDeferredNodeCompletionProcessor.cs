@@ -30,15 +30,18 @@ public sealed class ProjectStructureDeferredNodeCompletionProcessor(
             if (request.Kind != ProjectStructureDeferredNodeCompletionKind.GeneratedImageAsset) {
                 throw new ArgumentException("Unsupported deferred content operation.");
             }
-            RequireAuthority(origin.Authority);
+            await RequireAuthorityAsync(origin.Authority, cancellationToken);
             await workbench.RequireContentCurrentAsync(origin.Authority.Project, expected, cancellationToken);
+            await RequireAuthorityAsync(origin.Authority, cancellationToken);
             provider = await RequireProviderAsync(imageRequest, cancellationToken);
-            RequireAuthority(origin.Authority);
+            await RequireAuthorityAsync(origin.Authority, cancellationToken);
             expected = await workbench.UpdateContentMetadataAsync(origin.Authority.Project, expected,
-                Metadata(ProjectStructureDeferredNodeCompletionState.Running), "Image generation running", cancellationToken: cancellationToken)
+                Metadata(ProjectStructureDeferredNodeCompletionState.Running), "Image generation running", cancellationToken: cancellationToken,
+                authorizeCommit: token => RequireAuthorityAsync(origin.Authority, token))
                 ?? throw new ProjectStructureEditConflictException();
-            RequireAuthority(origin.Authority);
+            await RequireAuthorityAsync(origin.Authority, cancellationToken);
             await workbench.RequireContentCurrentAsync(origin.Authority.Project, expected, cancellationToken);
+            await RequireAuthorityAsync(origin.Authority, cancellationToken);
             invoked = true;
             var generated = await imageGenerationService.GenerateAsync(new(provider, imageRequest.Model, imageRequest.Prompt,
                 imageRequest.Size, imageRequest.Quality, imageRequest.Format, []), cancellationToken);
@@ -46,17 +49,19 @@ public sealed class ProjectStructureDeferredNodeCompletionProcessor(
             var image = generated.Images.FirstOrDefault() ?? throw new InvalidDataException("The provider returned no image.");
             var contentType = ValidateImage(image, imageRequest.Format);
             hash = Convert.ToHexString(SHA256.HashData(image.Bytes));
-            RequireAuthority(origin.Authority);
+            await RequireAuthorityAsync(origin.Authority, cancellationToken);
             await RequireProviderAsync(imageRequest, cancellationToken);
-            RequireAuthority(origin.Authority);
+            await RequireAuthorityAsync(origin.Authority, cancellationToken);
             expected = await workbench.UpdateContentMetadataAsync(origin.Authority.Project, expected,
-                Metadata(ProjectStructureDeferredNodeCompletionState.Running), "Image generated; attachment pending", cancellationToken: cancellationToken)
+                Metadata(ProjectStructureDeferredNodeCompletionState.Running), "Image generated; attachment pending", cancellationToken: cancellationToken,
+                authorizeCommit: token => RequireAuthorityAsync(origin.Authority, token))
                 ?? throw new ProjectStructureEditConflictException();
-            RequireAuthority(origin.Authority);
+            await RequireAuthorityAsync(origin.Authority, cancellationToken);
             persistenceAttempted = true;
             var saved = await workbench.ReplaceContentMediaAsync(origin.Authority.Project, expected,
                 new(imageRequest.FileName, contentType, Convert.ToBase64String(image.Bytes)),
-                Metadata(ProjectStructureDeferredNodeCompletionState.Completed), "Generated image ready", cancellationToken)
+                Metadata(ProjectStructureDeferredNodeCompletionState.Completed), "Generated image ready", cancellationToken,
+                token => RequireAuthorityAsync(origin.Authority, token))
                 ?? throw new ProjectStructureEditConflictException();
             storedMedia = new(origin.Authority.Project, saved.Id, saved.RecordId!.Value, saved.StorageObjectReferenceJson,
                 saved.MediaOriginalFileName, saved.MediaContentType);
@@ -74,10 +79,11 @@ public sealed class ProjectStructureDeferredNodeCompletionProcessor(
             ProjectStructureNode? observed = null;
             if (!persistenceAttempted && !cancellationToken.IsCancellationRequested) {
                 try {
-                    RequireAuthority(origin.Authority);
+                    await RequireAuthorityAsync(origin.Authority, cancellationToken);
                     observed = await workbench.UpdateContentMetadataAsync(origin.Authority.Project, expected,
                         Metadata(invoked ? ProjectStructureDeferredNodeCompletionState.RequiresObservation : ProjectStructureDeferredNodeCompletionState.Failed, message),
-                        invoked ? "Image generation requires observation" : "Image generation refused", cancellationToken: cancellationToken);
+                        invoked ? "Image generation requires observation" : "Image generation refused", cancellationToken: cancellationToken,
+                        authorizeCommit: token => RequireAuthorityAsync(origin.Authority, token));
                 } catch (Exception observationFailure) {
                     logger.LogWarning("Image operation {OperationId} could not publish its failure to the original placeholder. FailureType={FailureType}",
                         request.OperationId, observationFailure.GetType().Name);
@@ -94,6 +100,14 @@ public sealed class ProjectStructureDeferredNodeCompletionProcessor(
             => new(request.OperationId, request.ProjectId, request.NodeId, request.Kind, success, message, node) {
                 ProviderInvoked = invoked, ProviderCompleted = completed, PersistenceAttempted = persistenceAttempted, ContentSha256 = hash, StoredMedia = storedMedia
             };
+    }
+
+    private async ValueTask RequireAuthorityAsync(ProjectStructureImageAuthority authority, CancellationToken cancellationToken) {
+        RequireAuthority(authority);
+        if (authority.AuthorizeWrite is { } authorize) {
+            await authorize(cancellationToken);
+        }
+        RequireAuthority(authority);
     }
 
     private void RequireAuthority(ProjectStructureImageAuthority authority) {

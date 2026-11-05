@@ -1,0 +1,16 @@
+@using CanDoItAll.Editing.UI
+
+<Stack GapScale="LayoutGap.Small" data-testid="processes-definition-comparison">
+    <TextBlock Value="Compare your original, your draft and the current saved fields. Applying changes your draft only; Save is a separate action." />
+    @foreach (var field in Review.Text) {
+        <MergeFieldView TValue="string" ShowUnchanged="false" Label="@field.Label" Field="@field.Value" Format="@(value => value)" Changed="Changed" />
+    }
+    <MergeFieldView TValue="ProcessDefinitionCriticalityLevel" ShowUnchanged="false" Label="@Review.Criticality.Label" Field="@Review.Criticality.Value" Format="@(value => value.ToString())" Changed="Changed" />
+    <MergeFieldView TValue="ProcessDefinitionAutonomyLevel" ShowUnchanged="false" Label="@Review.Autonomy.Label" Field="@Review.Autonomy.Value" Format="@(value => value.ToString())" Changed="Changed" />
+    <MergeFieldView TValue="ProcessDefinitionOperatingModeKind" ShowUnchanged="false" Label="@Review.OperatingMode.Label" Field="@Review.OperatingMode.Value" Format="@(value => value.ToString())" Changed="Changed" />
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public ProcessDefinitionComparison Review { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+}

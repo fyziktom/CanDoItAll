@@ -18,7 +18,7 @@ public interface ICrmHrWorkforceWorkspaceView : ICrmHrWorkspaceView
 {
     CrmHrActivityPresentation WorkforceHistoryPresentation { get; }
     string? WorkforceHistoryFailureMessage { get; }
-    DeliveryUnitQuickCreateModel DeliveryUnitEditor { get; }
+    CanDoItAll.CrmHr.UI.Parties.PartyEditorViewModel DeliveryUnitEditor { get; }
     SkillDefinitionEditorModel SkillDefinitionEditor { get; }
     WorkforceProfileWorkspaceModel? SelectedWorkspace { get; }
     WorkforceCapacityWorkspaceModel? CapacityWorkspace { get; }

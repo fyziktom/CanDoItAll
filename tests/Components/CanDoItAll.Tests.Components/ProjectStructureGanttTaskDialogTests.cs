@@ -2,6 +2,7 @@ using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
@@ -10,6 +11,93 @@ public sealed class ProjectStructureGanttTaskDialogTests
 {
     private static readonly Guid ProjectId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly DateTimeOffset StartUtc = new(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task A_task_without_a_submit_owner_is_rejected_and_keeps_its_draft() {
+        await using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var result = OpenDialog(context, [], hasOwner: false);
+        host.WaitForElement("[data-testid='project-structure-gantt-task-title']");
+        await host.InvokeAsync(() => host.Find("[data-testid='project-structure-gantt-task-title']").InputAsync(new() { Value = "Retained without owner" }));
+
+        await host.InvokeAsync(() => host.Find("[data-testid='project-structure-gantt-task-submit']").ClickAsync(new()));
+
+        Assert.False(result.IsCompleted);
+        Assert.Contains("not connected", host.Find("[data-testid='planning-task-save-result']").TextContent, StringComparison.Ordinal);
+        Assert.Equal("Retained without owner", host.Find("[data-testid='project-structure-gantt-task-title']").GetAttribute("value"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Accepted_task_closes_only_the_submitted_input_and_retains_a_queued_later_edit(bool queuedInput) {
+        await using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var model = new ProjectStructureGanttTaskEditModel(new("custom:accepted-task"), "Original task", StartUtc, StartUtc.AddHours(8),
+            0, new(8, ProjectWorkItemEffortUnit.Hours, null, ""), null, Execution: ProjectTaskExecutionSnapshot.NotStarted);
+        var result = OpenEditDialog(context, model, [], submitted: async _ => {
+            entered.TrySetResult();
+            await release.Task;
+            return new(PlanningTaskSaveStatus.Committed, "Task saved.", [model.TaskId.Value], [], []);
+        });
+        host.WaitForElement("[data-testid='project-structure-gantt-task-submit']");
+        var saving = host.InvokeAsync(() => host.Find("[data-testid='project-structure-gantt-task-submit']").ClickAsync(new()));
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        if (queuedInput) {
+            await host.InvokeAsync(() => host.Find("[data-testid='project-structure-gantt-task-title']").InputAsync(new() { Value = "Queued newer input" }));
+        }
+        release.TrySetResult();
+        await saving.WaitAsync(TimeSpan.FromSeconds(2));
+        if (!queuedInput) {
+            Assert.IsType<ProjectStructureTaskEditDialogResult>(await result.WaitAsync(TimeSpan.FromSeconds(2)));
+            return;
+        }
+        Assert.False(result.IsCompleted);
+        Assert.Equal("Queued newer input", host.Find("[data-testid='project-structure-gantt-task-title']").GetAttribute("value"));
+        Assert.Contains("The current draft is retained.", host.Find("[data-testid='planning-task-save-result']").TextContent, StringComparison.Ordinal);
+        Assert.True(host.Find("[data-testid='project-structure-gantt-task-submit']").HasAttribute("disabled"));
+        var closing = host.InvokeAsync(() => host.Find("[data-testid='project-structure-gantt-task-cancel']").ClickAsync(new()));
+        host.WaitForElement("[data-testid='planning-task-dirty-close']");
+        await host.InvokeAsync(() => host.Find("[data-testid='planning-task-dirty-discard']").ClickAsync(new()));
+        await closing;
+        Assert.Null(await result);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Dirty_task_close_requires_a_current_explicit_decision_and_Continue_retains_raw_input(bool partialCost) {
+        await using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var model = new ProjectStructureGanttTaskEditModel(new("custom:dirty-task"), "Original task", StartUtc, StartUtc.AddHours(8),
+            0, new(8, ProjectWorkItemEffortUnit.Hours, null, ""), null, Execution: ProjectTaskExecutionSnapshot.NotStarted);
+        var result = OpenEditDialog(context, model, []);
+        host.WaitForElement("[data-testid='project-structure-gantt-task-title']");
+        await host.InvokeAsync(() => host.Find("[data-testid='project-structure-gantt-task-title']").InputAsync(new() { Value = "Retained task input" }));
+        if (partialCost) {
+            await host.InvokeAsync(() => host.Find("[data-testid='project-structure-gantt-task-estimate-cost']").ChangeAsync(new() { Value = "2e" }));
+        }
+        var reference = Assert.Single(context.Services.GetRequiredService<DialogService>().Dialogs);
+        var closing = host.InvokeAsync(() => reference.CloseAsync());
+
+        host.WaitForElement("[data-testid='planning-task-dirty-close']");
+
+        Assert.False(result.IsCompleted);
+        await host.InvokeAsync(() => host.Find("[data-testid='planning-task-dirty-continue']").ClickAsync(new()));
+        await closing;
+        Assert.False(result.IsCompleted);
+        Assert.Equal("Retained task input", host.Find("[data-testid='project-structure-gantt-task-title']").GetAttribute("value"));
+        if (partialCost) {
+            Assert.Equal("2e", host.Find("[data-testid='project-structure-gantt-task-estimate-cost']").GetAttribute("value"));
+        }
+        closing = host.InvokeAsync(() => reference.CloseAsync());
+        host.WaitForElement("[data-testid='planning-task-dirty-close']");
+        await host.InvokeAsync(() => host.Find("[data-testid='planning-task-dirty-discard']").ClickAsync(new()));
+        await closing;
+        Assert.Null(await result);
+    }
 
     [Theory]
     [InlineData(ProjectTaskExecutionState.NotStarted, 28, "0", true)]
@@ -466,7 +554,8 @@ public sealed class ProjectStructureGanttTaskDialogTests
     private static Task<object?> OpenDialog(
         BunitContext context,
         IReadOnlyList<ProjectStructureTaskResourceOption> resources,
-        string? afterTaskNodeId = null)
+        string? afterTaskNodeId = null,
+        bool hasOwner = true)
     {
         return context.Services.GetRequiredService<DialogService>().OpenAsync<ProjectStructureGanttTaskDialog>(
             "Add project task",
@@ -476,6 +565,8 @@ public sealed class ProjectStructureGanttTaskDialogTests
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = StartUtc.AddHours(8),
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = ProjectId,
                 [nameof(ProjectStructureGanttTaskDialog.AfterTaskNodeId)] = afterTaskNodeId,
+                [nameof(ProjectStructureGanttTaskDialog.CreateSubmitted)] = hasOwner
+                    ? new Func<ProjectStructureTaskCreateRequest, Task<PlanningTaskSaveResult>>(_ => Task.FromResult(PlanningTaskSaveResult.Accepted)) : null,
                 [nameof(ProjectStructureGanttTaskDialog.ResourceOptions)] = resources
             },
             new DialogOptions
@@ -488,7 +579,8 @@ public sealed class ProjectStructureGanttTaskDialogTests
         BunitContext context,
         ProjectStructureGanttTaskEditModel editModel,
         IReadOnlyList<ProjectStructureTaskResourceOption> resources,
-        Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? quoteResolver = null)
+        Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? quoteResolver = null,
+        Func<ProjectStructureTaskEditDialogResult, Task<PlanningTaskSaveResult>>? submitted = null)
     {
         return context.Services.GetRequiredService<DialogService>().OpenAsync<ProjectStructureGanttTaskDialog>(
             "Edit project task",
@@ -500,6 +592,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
                 [nameof(ProjectStructureGanttTaskDialog.DefaultCurrencyCode)] = "USD",
                 [nameof(ProjectStructureGanttTaskDialog.EditModel)] = editModel,
                 [nameof(ProjectStructureGanttTaskDialog.ResourceOptions)] = resources,
+                [nameof(ProjectStructureGanttTaskDialog.EditSubmitted)] = submitted ?? (_ => Task.FromResult(PlanningTaskSaveResult.Accepted)),
                 [nameof(ProjectStructureGanttTaskDialog.QuoteResolver)] = quoteResolver
             },
             new DialogOptions

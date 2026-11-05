@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.Infrastructure;
@@ -18,7 +19,8 @@ public sealed class PromptGalleryServiceValidationTests
             new EfPromptGallerySearchDriver(factory),
             PromptGalleryTestSupport.CreateDisabledProjectionCoordinator(factory),
             new PromptGalleryCompatibilityEvaluator(),
-            NullLogger<PromptsService>.Instance);
+            NullLogger<PromptsService>.Instance,
+            PromptGalleryObservationTestSupport.Create());
 
         var result = await service.SaveDraftAsync(new PromptGalleryDraft(
             Id: null,
@@ -42,6 +44,10 @@ public sealed class PromptGalleryServiceValidationTests
                 "prompts.gallery.top-p-invalid"
             ],
             result.Errors.Select(error => error.Code));
+        var nonFinite = await service.SaveDraftAsync(new(null, null, null, "Non-finite recommendations", "",
+            PromptGalleryItemKind.FullPrompt, "", "Content", Recommendations: new(double.NaN, null, double.PositiveInfinity)));
+        Assert.Equal(new[] { "prompts.gallery.temperature-invalid", "prompts.gallery.top-p-invalid" },
+            nonFinite.Errors.Select(error => error.Code));
         await using var dbContext = factory.CreateDbContext();
         Assert.Empty(dbContext.Set<PromptArtifact>());
     }
@@ -58,7 +64,8 @@ public sealed class PromptGalleryServiceValidationTests
             new EfPromptGallerySearchDriver(factory),
             PromptGalleryTestSupport.CreateDisabledProjectionCoordinator(factory),
             new PromptGalleryCompatibilityEvaluator(),
-            NullLogger<PromptsService>.Instance);
+            NullLogger<PromptsService>.Instance,
+            PromptGalleryObservationTestSupport.Create());
 
         var receipt = (await service.SaveDraftAsync(CreateDraft())).Value;
         var persisted = Assert.IsType<PromptGalleryItemDetails>(

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Data.Common;
+using CanDoItAll.Editing;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
@@ -42,7 +43,8 @@ public sealed class PartyOrganizationAffiliationIntegrationTests
 
         var service = new PartyOrganizationAffiliationService(
             factory,
-            new FixedClock(Now));
+            new FixedClock(Now),
+            new CrmHrChanges(new(), new(EditingScopeKind.Dataset, Guid.NewGuid()), new()));
         var invalidEndpoint = await service.UpsertAsync(
             new PartyOrganizationAffiliationEditorModel
             {
@@ -203,7 +205,8 @@ public sealed class PartyOrganizationAffiliationIntegrationTests
 
         var service = new PartyOrganizationAffiliationService(
             factory,
-            new FixedClock(Now));
+            new FixedClock(Now),
+            new CrmHrChanges(new(), new(EditingScopeKind.Dataset, Guid.NewGuid()), new()));
         var result = await service.UpsertAsync(
             new PartyOrganizationAffiliationEditorModel
             {

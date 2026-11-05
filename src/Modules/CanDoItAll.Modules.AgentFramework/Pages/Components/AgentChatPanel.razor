@@ -1,3 +1,6 @@
+@if (!IsFocusedFloating) {
+    <CanDoItAll.Editing.UI.DraftNavigationGuard EditorName="chat" MustRetain="HasComposerDraft" IsBusy="isBusy" />
+}
 @using CanDoItAll.Modules.Prompts.Components
 @using CanDoItAll.AgentFramework.UI.Chat
 <AgentChatRecoverySurface State="ActionPresentation" Intent="HandleActionIntentAsync" ShowHistoricalReceipts="@(!ActionPresentation.FocusedFloating || workspace is null)" />

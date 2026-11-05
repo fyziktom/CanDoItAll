@@ -26,11 +26,16 @@
         @{ var editorOwner = CaptureOwner(); }
 <WorkflowCanvasEditor @key="EditorDefinitionKey"
                                               Definition="selectedDefinition"
+                                              HeadObservation="headObservation"
+                                              Authorize="AuthorizeCanvasAsync"
                                               OwnerToken="editorCancellation.Token"
                                               NewDraftRequested="StartCanvasDraftAsync"
                                               Components="components"
                                               ProviderOptions="providerOptions"
-                                              DefinitionSaved="@(definition => Owns(editorOwner) ? HandleCanvasDefinitionSavedAsync(definition) : Task.CompletedTask)"
+                                              LibraryRefreshRequired="componentLibraryRefreshRequired"
+                                              LibraryRefreshRequested="RefreshComponentLibraryAsync"
+                                              DefinitionSaved="@(definition => Owns(editorOwner) ? HandleCanvasDefinitionAcceptedAsync(definition) : Task.CompletedTask)"
+                                              DefinitionPulled="@(definition => Owns(editorOwner) ? HandleCanvasDefinitionAcceptedAsync(definition) : Task.CompletedTask)"
                                               PreviewRunCompleted="@(run => Owns(editorOwner) ? HandleCanvasPreviewRunCompletedAsync(run) : Task.CompletedTask)"
                                               ComponentLibraryChanged="@(() => Owns(editorOwner) ? RefreshComponentLibraryAsync() : Task.CompletedTask)"
                                               SelectedNodeChanged="@(node => Owns(editorOwner) ? HandleCanvasSelectedNodeChangedAsync(node) : Task.CompletedTask)" />
@@ -51,7 +56,7 @@
             @if (isTemplatePreviewDialogOpen && templatePreviewTemplate is { } currentTemplate && templatePreviewDefinition is { } definition) {
                 <WorkflowTemplatePreviewDialog @key="definition" Template="@(new(currentTemplate.Name, currentTemplate.Description))" Definition="definition"
                     Component="templatePreviewComponent" Executors="ExecutorCatalog.ListExecutors()"
-                    Error="@templatePreviewErrorMessage" Busy="isBusy" Closed="CloseTemplatePreviewDialog"
+                    Error="@(draftCreationUnknown?.Message ?? templatePreviewErrorMessage)" Busy="isBusy" CreationBlocked="@(draftCreationUnknown is not null)" Closed="CloseTemplatePreviewDialog"
                     AddDraft="AddSelectedTemplateToDraftsAsync" />
             }
 

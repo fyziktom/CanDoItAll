@@ -1852,7 +1852,10 @@ public sealed record ProjectStructureWorkflowNodeStartResult(
 /// </param>
 public sealed record ProjectStructureNodeCommandInput(
     ProjectStructureCommandKind CommandKind,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>
 /// Transfer of a node's descendants into another existing project, which does not have to be a subproject. The node

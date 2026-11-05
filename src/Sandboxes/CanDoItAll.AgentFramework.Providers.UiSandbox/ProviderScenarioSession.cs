@@ -67,7 +67,9 @@ public sealed class ProviderScenarioSession : IProviderProfilesView {
         IsWriteUnconfirmed = scenario == ProviderScenario.Unknown;
     }
 
-    public void SelectSection(ProviderEditorSection section) => State = State with { Section = section };
+    public void SelectSection(ProviderEditorSection section) => State = State with {
+        Section = section, SharingActivated = State.SharingActivated || section == ProviderEditorSection.Sharing
+    };
     public void SetSharedConnectionsOpen(bool open) => State = State with { SharedConnectionsOpen = open };
     public Task RefreshAsync() {
         CatalogLoadState = ProviderProfilesLoadState.Ready;

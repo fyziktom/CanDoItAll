@@ -1,0 +1,54 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+@typeparam TRow
+
+@if (WholeCollection is { } whole) {
+    @if (ShowUnchanged || whole.LocalChanged || whole.CurrentChanged) {
+        <FormSection Title="@Title" Description="This collection exceeds the detailed row comparison limit. Choose one complete collection; every row is retained in the chosen result.">
+            <Alert AlertStyle="AlertStyle.Warning">
+                <TextBlock Value="Review the snapshots below before choosing. Cancel keeps your parent draft. This choice applies to the entire collection, including rows not yet shown." />
+            </Alert>
+            <MergeFieldView TValue="IReadOnlyList<TRow>" Label="@Title" Field="@whole" Format="@(values => $"{values.Count} rows")" Changed="Changed" ShowUnchanged="true" />
+            <Grid ColumnsXl="3" Gap="LayoutGap.Small">
+                <FormField Text="Original rows">@SnapshotPreview(whole.Original)</FormField>
+                <FormField Text="My draft rows">@SnapshotPreview(whole.Local)</FormField>
+                <FormField Text="Current saved rows">@SnapshotPreview(whole.Current)</FormField>
+            </Grid>
+            @if (Math.Max(whole.Original.Count, Math.Max(whole.Local.Count, whole.Current.Count)) > visibleRows) {
+                <Button Text="Show more snapshot rows" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleRows += 50)" />
+            }
+        </FormSection>
+    }
+} else if (ShowUnchanged || Rows.Any(row => row.Field.LocalChanged || row.Field.CurrentChanged)) {
+<FormSection Title="@Title" Description="Rows keep their identities. Compare edits and removals before applying.">
+    @foreach (var row in Rows.Where(row => ShowUnchanged || row.Field.LocalChanged || row.Field.CurrentChanged).Take(visibleRows)) {
+        <Stack @key="row.Key" GapScale="LayoutGap.Small">
+        <MergeFieldView TValue="MergeEntry<TRow>" Label="@Title" Field="@row.Field" Format="FormatEntry" Changed="Changed" ShowUnchanged="@ShowUnchanged" />
+        @if (ResultActions is not null) {
+            @ResultActions(row)
+        }
+        </Stack>
+    }
+    @if (Rows.Count(row => ShowUnchanged || row.Field.LocalChanged || row.Field.CurrentChanged) > visibleRows) {
+        <Button Text="Show more rows" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleRows += 50)" />
+    }
+</FormSection>
+}
+
+@code {
+    private int visibleRows = 50;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public IReadOnlyList<KeyedMergeRow<Guid, TRow>> Rows { get; set; } = [];
+    [Parameter] public MergeField<IReadOnlyList<TRow>>? WholeCollection { get; set; }
+    [Parameter, EditorRequired] public Func<TRow, string> Format { get; set; } = default!;
+    [Parameter] public bool ShowUnchanged { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public RenderFragment<KeyedMergeRow<Guid, TRow>>? ResultActions { get; set; }
+    private string FormatEntry(MergeEntry<TRow> entry) => entry.Exists ? Format(entry.Value!) : "Removed / absent";
+    private RenderFragment SnapshotPreview(IReadOnlyList<TRow> values) => @<Stack GapScale="LayoutGap.Small" data-testid="crmhr-party-collection-snapshot">
+        @foreach (var value in values.Take(visibleRows)) {
+            <SurfaceCard Soft="true" data-testid="crmhr-party-collection-row"><TextBlock Value="@Format(value)" Class="whitespace-pre-wrap break-words" /></SurfaceCard>
+        }
+        <SmallText Text="@($"Showing {Math.Min(visibleRows, values.Count)} of {values.Count} rows")" />
+    </Stack>;
+}

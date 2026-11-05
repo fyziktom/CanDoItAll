@@ -2,6 +2,7 @@
 @using Microsoft.Extensions.Logging
 @inject ILlmChatDefinitionUiGateway Definitions
 @inject ILlmChatUiAuthorizationFacade Authorization
+@inject ILlmChatDefinitionEditorAccess EditorAccess
 @inject ILogger<LlmChatDefinitionCatalogSession> Logger
 @implements IAsyncDisposable
 
@@ -20,6 +21,7 @@
     private enum EditorKind { None, Route, LocalCreate }
     private LlmChatDefinitionCatalogSession session = default!;
     private CancellationTokenSource? authorizationOwner;
+    private LlmChatEditorOpening? catalogOpening;
     private Guid? observedRouteTarget;
     private Guid? selectedDefinitionId;
     private EditorKind editorKind;
@@ -27,7 +29,8 @@
     private bool disposed;
 
     protected override async Task OnInitializedAsync() {
-        session = new(Definitions, LlmChatDefinitionPresentationMapper.ToCatalogCard, Logger);
+        session = new(Definitions, LlmChatDefinitionPresentationMapper.ToCatalogCard, Logger,
+            token => (catalogOpening ?? throw new UnauthorizedAccessException("The original catalog access is unavailable.")).AuthorizeAsync(false, token));
         session.Changed += Render;
         using var owner = new CancellationTokenSource();
         authorizationOwner = owner;
@@ -35,6 +38,15 @@
             var access = await Authorization.GetAsync(owner.Token);
             if (disposed || owner.IsCancellationRequested) {
                 return;
+            }
+            if (access.CanRead) {
+                catalogOpening = await EditorAccess.OpenCatalogAsync(() => InvokeAsync(session.MarkChanged),
+                    () => InvokeAsync(session.FailAuthorization), owner.Token);
+                if (disposed || owner.IsCancellationRequested) {
+                    await catalogOpening.DisposeAsync();
+                    catalogOpening = null;
+                    return;
+                }
             }
             session.AcceptAuthorization(access);
             SynchronizeRouteTarget();
@@ -118,12 +130,14 @@
             StateHasChanged();
         }
     });
-    public ValueTask DisposeAsync() {
+    public async ValueTask DisposeAsync() {
         if (!disposed) {
             disposed = true;
             authorizationOwner?.Cancel();
             session.Dispose();
+            if (catalogOpening is not null) {
+                await catalogOpening.DisposeAsync();
+            }
         }
-        return ValueTask.CompletedTask;
     }
 }

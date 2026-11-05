@@ -6,6 +6,10 @@ public static class ProjectStructureTaskActionIds
     public const string CreateMode = "project-task-dialog";
 }
 
+public static class ProjectTaskInputKeys {
+    public const string DueUtc = "dueUtc";
+}
+
 /// <summary>
 /// Kind of resource selected for a task, as a JSON integer: 0 Person (a CRM/HR person party), 1 Agent (an AI agent
 /// party), 2 Workflow (a workflow definition), 3 Process (a process definition). Only Person and Agent can be direct

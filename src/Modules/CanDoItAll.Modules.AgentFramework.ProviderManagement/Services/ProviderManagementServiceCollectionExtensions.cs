@@ -3,6 +3,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,14 @@ public static class ProviderManagementServiceCollectionExtensions
         });
 
         services.AddHttpClient();
+        services.TryAddSingleton<ProviderEditingWrites>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.TryAddScoped<ProviderEditingChanges>();
+        services.AddScoped<ProviderDiagnosticPersistence>();
+        services.AddScoped<ProviderMutationWitness>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderProfileCommitObserver, ProviderEditingChanges>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISharedProviderPublicationCommitObserver, ProviderEditingChanges>());
         services.AddSingleton<ProviderDefaultsBootstrapService>();
         services.AddScoped<IProviderAdministrationConnector, OpenAiProviderAdministrationConnector>();
         services.AddScoped<IProviderAdministrationConnector, ScenarioHarnessProviderAdministrationConnector>();

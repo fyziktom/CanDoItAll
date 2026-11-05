@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Unit.Storage;
 
-public sealed class FileToolsIntegrationBoundaryTests
+public sealed partial class FileToolsIntegrationBoundaryTests
 {
     [Fact]
     public async Task Adapter_preserves_native_ordering_budgets_completeness_and_cursor()
@@ -275,9 +275,10 @@ public sealed class FileToolsIntegrationBoundaryTests
 
     private static StorageFileToolsBrowseSessionFactory CreateFactory(
         StorageCatalogRecord storage,
-        IReadOnlyList<FileToolsStorageBinding> bindings)
+        IReadOnlyList<FileToolsStorageBinding> bindings,
+        FakeBrowseDriver? native = null)
     {
-        var driver = new FakeBrowseDriver(storage.ProviderKind);
+        var driver = native ?? new FakeBrowseDriver(storage.ProviderKind);
         return new StorageFileToolsBrowseSessionFactory(
             new FakeBindingProvider(bindings),
             new FakeStorageCatalog(storage),
@@ -391,6 +392,7 @@ public sealed class FileToolsIntegrationBoundaryTests
         public StorageBrowseRequest? LastRequest { get; private set; }
 
         public int CallCount { get; private set; }
+        public Action? AfterRead { get; set; }
 
         public Task<StorageBrowsePage> BrowseAsync(
             StorageDriverInput storage,
@@ -399,6 +401,7 @@ public sealed class FileToolsIntegrationBoundaryTests
         {
             CallCount++;
             LastRequest = request;
+            AfterRead?.Invoke();
             return Failure is null ? Task.FromResult(Page) : Task.FromException<StorageBrowsePage>(Failure);
         }
     }

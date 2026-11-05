@@ -128,8 +128,8 @@ public sealed class AgentEditorSessionTests {
         await using var harness = await CreateHarnessAsync(reads);
         var cut = harness.Context.Render<AgentDetailsDialog>();
         var renders = cut.RenderCount;
-        await cut.InvokeAsync(() => {
-            cut.Instance.Dispose();
+        await cut.InvokeAsync(async () => {
+            await cut.Instance.DisposeAsync();
             pending.SetResult(reads.Result(new() { Id = Guid.NewGuid(), Name = "Disposed result" }));
         });
         cut.WaitForState(() => cut.RenderCount > renders);

@@ -1,5 +1,9 @@
 @using CanDoItAll.Modules.Projects
 
+@{
+    var displayedAssignment = Assignment;
+}
+
 <PanelCard Class="h-full" data-testid="@($"{TestIdPrefix}-item")">
     <Stack GapScale="LayoutGap.Small" Class="h-full">
         <Split Breakpoint="LayoutBreakpoint.None"
@@ -63,7 +67,7 @@
                             Icon="delete"
                             aria-label="Delete assignment"
                             data-testid="@($"{TestIdPrefix}-delete-button")"
-                            Click="@(() => Delete.InvokeAsync(Assignment.Id))" />
+                            Disabled="WritesDisabled" Click="@(() => Delete.InvokeAsync(displayedAssignment))" />
                 </TooltipTarget>
             </Cluster>
         </CardActions>
@@ -83,8 +87,10 @@
     [Parameter]
     public EventCallback<ProjectPartyAssignmentDetail> ShowDetails { get; set; }
 
+    [Parameter] public bool WritesDisabled { get; set; }
+
     [Parameter]
-    public EventCallback<Guid> Delete { get; set; }
+    public EventCallback<ProjectPartyAssignmentDetail> Delete { get; set; }
 
     private string BuildAssignmentMeta()
     {

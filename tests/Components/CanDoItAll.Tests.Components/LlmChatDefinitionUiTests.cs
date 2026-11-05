@@ -237,11 +237,11 @@ public sealed class LlmChatDefinitionUiTests
         cut.WaitForElement("[data-testid='llm-chat-definition-system-prompt']");
         Assert.NotNull(cut.FindComponent<ConversationProviderSelector>());
         Assert.NotNull(cut.FindComponent<ConversationProviderModelSelector>());
-        Assert.NotNull(cut.FindComponent<ConversationTemperatureField>());
+        Assert.Equal("0.2", cut.Find("[data-testid='llm-chat-definition-temperature']").GetAttribute("value"));
 
         cut.Find("[data-testid='llm-chat-definition-system-prompt']").Change("updated system prompt");
         cut.Find("[data-testid='llm-chat-definition-thinking-effort']").Change("1");
-        cut.Find("[data-testid='llm-chat-definition-timeout']").Change("90");
+        cut.Find("[data-testid='llm-chat-definition-timeout']").Input("90");
         cut.Find("[data-testid='llm-chat-definition-tab-output']").Click();
         cut.WaitForElement("[data-testid='llm-chat-definition-response-format']");
         cut.Find("[data-testid='llm-chat-definition-response-format']").Change("2");
@@ -287,8 +287,7 @@ public sealed class LlmChatDefinitionUiTests
     }
 
     [Fact]
-    public void Concurrency_conflict_is_sanitized_and_reload_replaces_stale_editor_state()
-    {
+    public async Task Concurrency_conflict_compares_without_discarding_the_draft_or_writing() {
         var initial = CreateEditor(
             name: "Stale name",
             summary: "Stale summary",
@@ -312,22 +311,52 @@ public sealed class LlmChatDefinitionUiTests
             .Add(component => component.DefinitionId, DefinitionId));
         cut.WaitForElement("[data-testid='llm-chat-definition-editor-save']");
         var staleSummary = cut.Find("[data-testid='llm-chat-definition-summary']");
-        staleSummary.Change("Unsaved stale summary");
+        var identityFields = cut.FindComponent<ConversationIdentityFields>().Instance;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='llm-chat-definition-summary']")
+            .ChangeAsync(new ChangeEventArgs { Value = "Unsaved stale summary" }));
 
-        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='llm-chat-definition-editor-save']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='llm-chat-definition-editor-reload']")));
         Assert.DoesNotContain("provider", cut.Find("[data-testid='llm-chat-definition-editor-error']").TextContent, StringComparison.OrdinalIgnoreCase);
-        cut.Find("[data-testid='llm-chat-definition-editor-reload']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='llm-chat-definition-editor-reload']").ClickAsync());
 
         cut.WaitForAssertion(() =>
         {
             var currentSummary = cut.Find("[data-testid='llm-chat-definition-summary']");
-            Assert.Equal("Current server name", cut.Find("[data-testid='llm-chat-definition-name']").GetAttribute("value"));
-            Assert.Equal("Current server summary", currentSummary.TextContent);
-            Assert.NotSame(staleSummary, currentSummary);
+            Assert.Equal("Stale name", cut.Find("[data-testid='llm-chat-definition-name']").GetAttribute("value"));
+            Assert.Equal("Unsaved stale summary", currentSummary.GetAttribute("value"));
+            Assert.Same(identityFields, cut.FindComponent<ConversationIdentityFields>().Instance);
             Assert.Equal(2, gateway.GetEditorCalls);
         });
+        var comparison = cut.Find("[data-testid='llm-chat-definition-comparison']");
+        Assert.Contains("Current server summary", comparison.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Stale summary", comparison.TextContent, StringComparison.Ordinal);
+        cut.Find("[data-testid='llm-chat-definition-review-summary'] button").Click();
+        cut.Find("[data-testid='llm-chat-definition-review-apply']").Click();
+        Assert.Equal("Current server name", cut.Find("[data-testid='llm-chat-definition-name']").GetAttribute("value"));
+        Assert.Equal("Unsaved stale summary", cut.Find("[data-testid='llm-chat-definition-summary']").GetAttribute("value"));
+        Assert.Equal(1, gateway.UpdateCalls);
+        gateway.UpdateFailure = null;
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(2, gateway.UpdateCalls));
+        Assert.Equal(9, gateway.UpdateExpectedConcurrencyToken);
+    }
+
+    [Fact]
+    public void Unconfirmed_save_is_not_automatically_replayed() {
+        var gateway = new StubDefinitionGateway(CreateEditor()) {
+            SaveHandler = (_, _) => throw new IOException("Private transport failure.")
+        };
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters.Add(component => component.DefinitionId, DefinitionId));
+        cut.WaitForElement("[data-testid='llm-chat-definition-name']").Change("Preserve my unconfirmed draft");
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        cut.WaitForAssertion(() => Assert.Contains("unconfirmed", cut.Find("[data-testid='llm-chat-definition-editor-error']").TextContent, StringComparison.OrdinalIgnoreCase));
+        Assert.True(cut.Find("[data-testid='llm-chat-definition-editor-save']").HasAttribute("disabled"));
+        Assert.Equal("Preserve my unconfirmed draft", cut.Find("[data-testid='llm-chat-definition-name']").GetAttribute("value"));
+        Assert.Equal(1, gateway.UpdateCalls);
+        Assert.DoesNotContain("Private transport", cut.Markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -421,8 +450,36 @@ public sealed class LlmChatDefinitionUiTests
         context.Services.AddSingleton(definitions);
         context.Services.AddSingleton(providers);
         context.Services.AddSingleton(authorization);
+        context.Services.AddSingleton<ILlmChatDefinitionEditorAccess>(new StubDefinitionEditorAccess(authorization));
         context.Services.AddSingleton<IAvatarGenerationGateway>(avatarGeneration ?? new StubAvatarGenerationGateway());
         return context;
+    }
+
+    internal sealed class StubDefinitionEditorAccess(ILlmChatUiAuthorizationFacade authorization) : ILlmChatDefinitionEditorAccess {
+        private Func<Task>? catalogHint;
+        internal Task HintCatalogAsync() => (catalogHint ?? throw new InvalidOperationException("The catalog has not opened."))();
+        public Task<LlmChatEditorOpening> OpenCatalogAsync(Func<Task> changed, Func<Task> retired, CancellationToken cancellationToken) {
+            catalogHint = changed;
+            return Task.FromResult(new LlmChatEditorOpening(null, Guid.NewGuid(), async (write, token) => {
+                if (!await authorization.IsAllowedAsync(write ? LlmChatUiPermission.Manage : LlmChatUiPermission.Read, token)) {
+                    throw new UnauthorizedAccessException();
+                }
+            }, CancellationToken.None, () => { }, () => ValueTask.CompletedTask));
+        }
+        internal static Task DispatchAsync(Action action) {
+            action();
+            return Task.CompletedTask;
+        }
+        public async Task<LlmChatEditorOpening> OpenAsync(Guid? target, Guid editorId, Func<Task> changed,
+            Func<Task> retired, CancellationToken cancellationToken) {
+            await ValidateAsync(false, cancellationToken);
+            return new(target, editorId, ValidateAsync, CancellationToken.None, () => { }, () => ValueTask.CompletedTask);
+        }
+        private async ValueTask ValidateAsync(bool write, CancellationToken cancellationToken) {
+            if (!await authorization.IsAllowedAsync(LlmChatUiPermission.Manage, cancellationToken)) {
+                throw new UnauthorizedAccessException("Test editor access was denied.");
+            }
+        }
     }
 
     internal static LlmChatDefinitionEditor CreateEditor(
@@ -485,12 +542,13 @@ public sealed class LlmChatDefinitionUiTests
         public LlmChatDefinitionMutation? CreatedMutation { get; private set; }
 
         public long? UpdateExpectedConcurrencyToken { get; private set; }
+        public int UpdateCalls { get; private set; }
 
         public LlmChatDefinitionStatus? RequestedStatus { get; private set; }
 
         public long? StatusExpectedConcurrencyToken { get; private set; }
 
-        public LlmChatUiFailure? UpdateFailure { get; init; }
+        public LlmChatUiFailure? UpdateFailure { get; set; }
 
         public Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>> ListPageAsync(
             LlmChatDefinitionQuery query,
@@ -553,6 +611,7 @@ public sealed class LlmChatDefinitionUiTests
             long expectedConcurrencyToken,
             CancellationToken cancellationToken = default)
         {
+            UpdateCalls++;
             UpdatedMutation = mutation;
             UpdateExpectedConcurrencyToken = expectedConcurrencyToken;
             if (SaveHandler is not null) {

@@ -64,6 +64,20 @@ public sealed class CrmHrAgentsSandboxView : ICrmHrAgentsWorkspaceView
     public bool IsWorkspaceLoading { get; private set; }
 
     public bool IsRecordDialogOpen { get; private set; }
+    public bool IsRecordOutdated => false;
+    public long CatalogRefreshVersion { get; private set; }
+    public void RefreshCatalog() {
+        CatalogRefreshVersion++;
+        Log("Refresh local agent catalog");
+    }
+    public async Task RefreshRecordAsync() {
+        var section = RecordSection;
+        if (SelectedWorkspace?.PartyId is { } id) {
+            await SelectPartyAsync(id);
+            RecordSection = section;
+        }
+        Log("Refresh local selected agent information");
+    }
 
     public CrmHrAgentRecordSection RecordSection { get; private set; }
 

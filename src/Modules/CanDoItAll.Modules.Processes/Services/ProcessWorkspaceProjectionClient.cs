@@ -7,6 +7,8 @@ namespace CanDoItAll.Modules.Processes;
 
 public interface IProcessWorkspaceProjectionClient
 {
+    IProcessWorkspaceProjectionClient WithUiAuthority(ProcessAuthoringUiAuthority authority)
+        => throw new NotSupportedException("This client does not support native UI authoring authority.");
     Task<ProcessAuthoringOperationStatus> GetAuthoringOperationAsync(ProcessAuthoringOperationQuery query, CancellationToken cancellationToken = default)
         => Task.FromResult(new ProcessAuthoringOperationStatus(ProcessAuthoringOperationState.Unavailable, null));
     Task<ProcessWorkspaceShellProjection> GetShellAsync(
@@ -50,9 +52,38 @@ public sealed class ProcessWorkspaceProjectionClient(
     IServiceScopeFactory scopeFactory,
     ProjectWriteAdmissionService projectAdmissions) : IProcessWorkspaceProjectionClient
 {
+    private readonly ProcessAuthoringUiAuthority? uiAuthority;
+
+    private ProcessWorkspaceProjectionClient(IServiceScopeFactory scopeFactory, ProjectWriteAdmissionService projectAdmissions,
+        ProcessAuthoringUiAuthority authority) : this(scopeFactory, projectAdmissions) {
+        uiAuthority = authority;
+    }
+
+    public IProcessWorkspaceProjectionClient WithUiAuthority(ProcessAuthoringUiAuthority authority)
+        => new ProcessWorkspaceProjectionClient(scopeFactory, projectAdmissions, authority);
+
+    private ValueTask RequireUiAsync(bool write, CancellationToken cancellationToken)
+        => uiAuthority is { } authority ? authority.Authorize(write, cancellationToken) : ValueTask.CompletedTask;
+
+    private IServiceScope CreateAuthoringScope() {
+        var scope = scopeFactory.CreateScope();
+        try {
+            if (uiAuthority is { } authority) {
+                scope.ServiceProvider.GetRequiredService<ProcessAuthoringAdmissionPolicy>().BindUiAuthority(authority);
+            }
+            return scope;
+        } catch {
+            scope.Dispose();
+            throw;
+        }
+    }
+
     public async Task<ProcessAuthoringOperationStatus> GetAuthoringOperationAsync(ProcessAuthoringOperationQuery query, CancellationToken cancellationToken = default) {
-        using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<ProcessAuthoringWorkspace>().GetOperationAsync(query, cancellationToken);
+        await RequireUiAsync(false, cancellationToken);
+        using var scope = CreateAuthoringScope();
+        var status = await scope.ServiceProvider.GetRequiredService<ProcessAuthoringWorkspace>().GetOperationAsync(query, cancellationToken);
+        await RequireUiAsync(false, cancellationToken);
+        return status;
     }
     public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
         ProcessWorkspaceShellRequest request,
@@ -83,64 +114,82 @@ public sealed class ProcessWorkspaceProjectionClient(
         ProcessDefinitionFeedDefaultsCommand command,
         CancellationToken cancellationToken = default)
     {
-        using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider
+        await RequireUiAsync(true, cancellationToken);
+        using var scope = CreateAuthoringScope();
+        var result = await scope.ServiceProvider
             .GetRequiredService<ProcessWorkspaceShellProjectionService>()
             .FeedDefaultDefinitionsAsync(command, cancellationToken)
             .ConfigureAwait(false);
+        await RequireUiAsync(false, cancellationToken);
+        return result;
     }
 
     public async Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
         ProcessDefinitionEditorCommand command,
         CancellationToken cancellationToken = default)
     {
-        using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider
+        await RequireUiAsync(true, cancellationToken);
+        using var scope = CreateAuthoringScope();
+        var result = await scope.ServiceProvider
             .GetRequiredService<ProcessWorkspaceShellProjectionService>()
             .ExecuteDefinitionEditorCommandAsync(command, cancellationToken)
             .ConfigureAwait(false);
+        await RequireUiAsync(false, cancellationToken);
+        return result;
     }
 
     public async Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
         ProcessDefinitionRoleEditorCommand command,
         CancellationToken cancellationToken = default)
     {
-        using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider
+        await RequireUiAsync(true, cancellationToken);
+        using var scope = CreateAuthoringScope();
+        var result = await scope.ServiceProvider
             .GetRequiredService<ProcessWorkspaceShellProjectionService>()
             .ExecuteDefinitionRoleEditorCommandAsync(command, cancellationToken)
             .ConfigureAwait(false);
+        await RequireUiAsync(false, cancellationToken);
+        return result;
     }
 
     public async Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
         ProcessDefinitionCanvasCommand command,
         CancellationToken cancellationToken = default)
     {
-        using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<ProcessWorkspaceShellProjectionService>()
+        await RequireUiAsync(true, cancellationToken);
+        using var scope = CreateAuthoringScope();
+        var result = await scope.ServiceProvider.GetRequiredService<ProcessWorkspaceShellProjectionService>()
             .ExecuteDefinitionCanvasCommandAsync(command, cancellationToken).ConfigureAwait(false);
+        await RequireUiAsync(false, cancellationToken);
+        return result;
     }
 
     public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
         ProcessDefinitionStepEditorCommand command,
         CancellationToken cancellationToken = default)
     {
-        using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider
+        await RequireUiAsync(true, cancellationToken);
+        using var scope = CreateAuthoringScope();
+        var result = await scope.ServiceProvider
             .GetRequiredService<ProcessWorkspaceShellProjectionService>()
             .ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken)
             .ConfigureAwait(false);
+        await RequireUiAsync(false, cancellationToken);
+        return result;
     }
 
     public async Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
         ProcessTemplateImportCommand command,
         CancellationToken cancellationToken = default)
     {
-        using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider
+        await RequireUiAsync(true, cancellationToken);
+        using var scope = CreateAuthoringScope();
+        var result = await scope.ServiceProvider
             .GetRequiredService<ProcessWorkspaceShellProjectionService>()
             .ExecuteTemplateImportCommandAsync(command, cancellationToken)
             .ConfigureAwait(false);
+        await RequireUiAsync(false, cancellationToken);
+        return result;
     }
 
     public async Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(

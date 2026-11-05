@@ -1,10 +1,12 @@
 using System.Data;
+using System.Linq.Expressions;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +16,12 @@ using Npgsql;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowCatalogService(
+    WorkflowChanges changes,
     IDbContextFactory<WorkflowDbContext> dbContextFactory,
     IWorkflowDefinitionValidator validator,
     IPromptGalleryService promptGallery,
-    IPromptGalleryImportService promptGalleryImporter,
+    IPromptGalleryMutationService promptMutations,
+    CoordinatedDatabaseTransaction transactions,
     IProviderProfileRegistry? providerRegistry = null,
     IProviderProfileService? providerProfileService = null,
     IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null,
@@ -33,6 +37,21 @@ public sealed class PersistentWorkflowCatalogService(
 
     private const string DefaultSettingsId = "default";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly Expression<Func<WorkflowDefinitionRecord, WorkflowCatalogItem>> CatalogProjection = item => new(
+        new WorkflowId(item.WorkflowId),
+        new WorkflowVersionId(item.VersionId),
+        item.Name,
+        item.Description,
+        item.Status,
+        item.PreferredBackend,
+        item.UpdatedAtUtc) {
+        TemplateKey = item.TemplateKey,
+        TemplatePackKey = item.TemplatePackKey,
+        TemplatePackVersion = item.TemplatePackVersion,
+        SourceHash = item.SourceHash,
+        ExternalNamespace = item.ExternalNamespace,
+        ExternalKey = item.ExternalKey
+    };
     private readonly IProviderRuntimeProfileSource? runtimeProviderSource =
         providerSource ?? providerRegistry as IProviderRuntimeProfileSource;
     private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
@@ -43,22 +62,11 @@ public sealed class PersistentWorkflowCatalogService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var records = await LatestDefinitionQuery(dbContext)
+        return await LatestDefinitionQuery(dbContext)
             .OrderByDescending(item => item.UpdatedAtUtc)
-            .Select(item => new WorkflowCatalogProjection(
-                item.WorkflowId,
-                item.VersionId,
-                item.Name,
-                item.Description,
-                item.Status,
-                item.PreferredBackend,
-                item.UpdatedAtUtc,
-                item.DefinitionJson))
+            .ThenBy(item => item.WorkflowId)
+            .Select(CatalogProjection)
             .ToListAsync(cancellationToken);
-
-        return records
-            .Select(MapCatalogItem)
-            .ToArray();
     }
 
     public async Task<WorkflowCatalogSearchPage> SearchDefinitionsAsync(
@@ -90,19 +98,11 @@ public sealed class PersistentWorkflowCatalogService(
             .ThenBy(item => item.WorkflowId)
             .Skip(query.Offset)
             .Take(query.PageSize)
-            .Select(item => new WorkflowCatalogProjection(
-                item.WorkflowId,
-                item.VersionId,
-                item.Name,
-                item.Description,
-                item.Status,
-                item.PreferredBackend,
-                item.UpdatedAtUtc,
-                item.DefinitionJson))
+            .Select(CatalogProjection)
             .ToArrayAsync(cancellationToken);
 
         return new WorkflowCatalogSearchPage(
-            records.Select(MapCatalogItem).ToArray(),
+            records,
             query.PageIndex,
             query.PageSize,
             totalCount);
@@ -122,22 +122,10 @@ public sealed class PersistentWorkflowCatalogService(
             .Select(workflowId => workflowId.Value)
             .ToArray();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var records = await LatestDefinitionQuery(dbContext)
+        return await LatestDefinitionQuery(dbContext)
             .Where(item => workflowIds.Contains(item.WorkflowId))
-            .Select(item => new WorkflowCatalogProjection(
-                item.WorkflowId,
-                item.VersionId,
-                item.Name,
-                item.Description,
-                item.Status,
-                item.PreferredBackend,
-                item.UpdatedAtUtc,
-                item.DefinitionJson))
+            .Select(CatalogProjection)
             .ToArrayAsync(cancellationToken);
-
-        return records
-            .Select(MapCatalogItem)
-            .ToArray();
     }
 
     public async Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
@@ -223,9 +211,7 @@ public sealed class PersistentWorkflowCatalogService(
                 $"Workflow definition '{workflowId}' has persisted versions but no current head.");
         }
 
-        if (request.ExpectedVersionId is { } expectedVersionId &&
-            head?.VersionId != expectedVersionId.Value)
-        {
+        if (head?.VersionId != request.ExpectedVersionId?.Value) {
             throw CreateDefinitionConcurrencyException(workflowId);
         }
 
@@ -301,7 +287,7 @@ public sealed class PersistentWorkflowCatalogService(
 
         try
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await CommitAuthoringAsync(dbContext, cancellationToken);
         }
         catch (DbUpdateConcurrencyException exception)
         {
@@ -319,6 +305,8 @@ public sealed class PersistentWorkflowCatalogService(
             throw CreateDefinitionConcurrencyException(workflowId, exception);
         }
 
+        changes.Publish(definition.Id, current is null ? EditingChangeKind.Created
+            : current.Status != definition.Status ? EditingChangeKind.LifecycleChanged : EditingChangeKind.EditableContentChanged);
         return definition;
     }
 
@@ -327,6 +315,10 @@ public sealed class PersistentWorkflowCatalogService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (request.ExpectedVersionId is null) {
+            throw new WorkflowDefinitionConcurrencyException(
+                $"Workflow definition '{request.WorkflowId}' requires its original version for a status change.");
+        }
 
         var detail = await GetDefinitionAsync(request.WorkflowId, versionId: null, cancellationToken)
             ?? throw new KeyNotFoundException($"Workflow definition '{request.WorkflowId}' was not found.");
@@ -338,7 +330,7 @@ public sealed class PersistentWorkflowCatalogService(
         return await SaveDefinitionAsync(
             new WorkflowDefinitionSaveRequest(
                 detail.Definition.Id,
-                request.ExpectedVersionId ?? detail.Definition.VersionId,
+                request.ExpectedVersionId,
                 detail.Definition.Name,
                 detail.Definition.Description,
                 request.Status,
@@ -372,6 +364,9 @@ public sealed class PersistentWorkflowCatalogService(
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Envelope);
         ArgumentNullException.ThrowIfNull(request.Envelope.Definition);
+        if (!request.PreserveWorkflowId && request.ExpectedVersionId.HasValue) {
+            throw new InvalidOperationException("A workflow import original version requires preserving the target workflow identifier.");
+        }
         if (!string.Equals(
             request.Envelope.SourceFormat,
             WorkflowDefinitionExchangeFormats.Current,
@@ -389,7 +384,7 @@ public sealed class PersistentWorkflowCatalogService(
         return await SaveDefinitionAsync(
             new WorkflowDefinitionSaveRequest(
                 workflowId,
-                null,
+                request.ExpectedVersionId,
                 importedName,
                 source.Description,
                 importedStatus,
@@ -416,27 +411,30 @@ public sealed class PersistentWorkflowCatalogService(
     }
 
     public async Task DeleteDefinitionAsync(
-        WorkflowId workflowId,
-        CancellationToken cancellationToken = default)
-    {
+        WorkflowDefinitionDeleteRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        var workflowId = request.Id;
+        if (request.ExpectedVersionId.Value == Guid.Empty) {
+            throw CreateDefinitionConcurrencyException(workflowId);
+        }
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var head = await dbContext.Set<WorkflowDefinitionHeadRecord>()
             .SingleOrDefaultAsync(item => item.WorkflowId == workflowId.Value, cancellationToken);
+        if (head is null || head.VersionId != request.ExpectedVersionId.Value) {
+            throw CreateDefinitionConcurrencyException(workflowId);
+        }
         var records = await dbContext.Set<WorkflowDefinitionRecord>()
             .Where(item => item.WorkflowId == workflowId.Value)
             .ToListAsync(cancellationToken);
-        if (head is null && records.Count == 0)
-        {
-            return;
-        }
-
-        if (head is not null)
-        {
-            dbContext.Remove(head);
-        }
-
+        dbContext.Remove(head);
         dbContext.RemoveRange(records);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await CommitAuthoringAsync(dbContext, cancellationToken);
+        } catch (DbUpdateConcurrencyException error) {
+            throw new WorkflowDefinitionConcurrencyException($"Workflow definition '{workflowId}' changed before deletion.", error);
+        }
+        changes.Publish(workflowId, EditingChangeKind.Deleted);
     }
 
     public async Task<WorkflowValidationResult> ValidateDefinitionAsync(
@@ -603,9 +601,9 @@ public sealed class PersistentWorkflowCatalogService(
 
     public async Task<LlmCallComponent> SaveComponentAsync(
         LlmCallComponentSaveRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
+        request = Deserialize<LlmCallComponentSaveRequest>(Serialize(request));
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Model);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Instructions);
@@ -614,16 +612,24 @@ public sealed class PersistentWorkflowCatalogService(
         ArgumentNullException.ThrowIfNull(request.ResultShape);
 
         var now = DateTimeOffset.UtcNow;
+        var componentId = request.Id ?? WorkflowComponentId.New();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, $"workflow-component:{componentId.Value:D}", cancellationToken);
+        using var participation = transactions.Enter(dbContext);
+        await changes.DemandCommitAsync(cancellationToken);
         var current = request.Id.HasValue
             ? await dbContext.Set<WorkflowComponentRecord>()
                 .SingleOrDefaultAsync(item => item.Id == request.Id.Value.Value, cancellationToken)
             : null;
+        if (request.ExpectedRevision == Guid.Empty || current?.Revision != request.ExpectedRevision) {
+            throw new WorkflowComponentConcurrencyException(request.Id ?? default);
+        }
         var currentComponent = current is null
             ? null
             : (await HydrateComponentsAsync([current], cancellationToken)).Single();
+        var revision = Guid.NewGuid();
         var componentCandidate = new LlmCallComponent(
-            request.Id ?? WorkflowComponentId.New(),
+            componentId,
             request.Name.Trim(),
             request.ProviderProfileId,
             request.Model.Trim(),
@@ -634,31 +640,30 @@ public sealed class PersistentWorkflowCatalogService(
             request.ResultShape,
             request.Permissions,
             current?.CreatedAtUtc ?? now,
-            now);
+            now) {
+            Revision = revision,
+            LifetimeId = currentComponent?.LifetimeId ?? revision
+        };
 
         var providerResolution = await ResolveProviderAsync(componentCandidate, cancellationToken);
         var validation = validator.Validate(CreateComponentValidationDefinition(componentCandidate), [componentCandidate]);
         var providerIssues = ValidateProviderCompatibility(componentCandidate, providerResolution);
         var issues = validation.Issues.Concat(providerIssues).ToArray();
-        if (issues.Length > 0)
-        {
+        if (issues.Length > 0) {
             throw new InvalidOperationException(string.Join(" ", issues.Select(issue => issue.Message)));
         }
 
         var existingPromptArtifactId = request.PromptArtifactId ?? currentComponent?.PromptArtifactId;
         PromptGalleryItemDetails? promptItem = null;
         var updateOwnedPromptModel = false;
-        if (existingPromptArtifactId.HasValue)
-        {
+        if (existingPromptArtifactId.HasValue) {
             promptItem = RequirePromptValue(
                 await promptGallery.GetItemAsync(existingPromptArtifactId.Value, cancellationToken),
                 "Prompt Gallery item");
             updateOwnedPromptModel = currentComponent is not null &&
                 request.PromptArtifactId is null && request.PromptVersionId is null &&
                 providerResolution.Provider is not null &&
-                promptItem.Source.Provenance is PromptArtifactProvenance.WorkflowCreated or PromptArtifactProvenance.WorkflowMigration &&
-                promptItem.Source.Catalog == WorkflowPromptSourceCatalog &&
-                promptItem.Source.Key == $"workflow-component:{currentComponent.Id.Value:D}" &&
+                IsOwnedComponentPrompt(promptItem, currentComponent) &&
                 string.Equals(promptItem.DraftContent.Trim(), currentComponent.Instructions.Trim(), StringComparison.Ordinal) &&
                 promptItem.SupportedModels.Count > 0 &&
                 !promptItem.SupportedModels.Any(model =>
@@ -678,17 +683,17 @@ public sealed class PersistentWorkflowCatalogService(
                 providerResolution.Provider?.Kind.ToString());
         }
 
-        var promptSnapshot = await ResolvePromptSnapshotAsync(
-            request,
-            currentComponent,
-            componentCandidate.Id,
-            promptItem,
-            providerResolution.Provider,
-            updateOwnedPromptModel,
-            cancellationToken);
+        PromptResolution resolution;
+        try {
+            resolution = await ResolvePromptSnapshotAsync(request, currentComponent, componentCandidate.Id,
+                componentCandidate.LifetimeId, promptItem, providerResolution.Provider, updateOwnedPromptModel, cancellationToken);
+        } catch (Exception error) when (IsComponentWriteConflict(error)) {
+            throw new WorkflowComponentConcurrencyException(componentId, error);
+        }
+        var promptSnapshot = resolution.Snapshot;
+        promptItem = resolution.Item ?? promptItem;
         var executionItem = promptItem?.Id == promptSnapshot.PromptArtifactId
-            ? promptItem with
-            {
+            ? promptItem with {
                 Status = PromptArtifactStatus.Final,
                 CurrentVersionNumber = Math.Max(promptItem.CurrentVersionNumber, promptSnapshot.VersionNumber)
             }
@@ -700,23 +705,39 @@ public sealed class PersistentWorkflowCatalogService(
             componentCandidate,
             PromptGalleryCompatibilityPurpose.Execution,
             providerResolution.Provider?.Kind.ToString());
-        var component = componentCandidate with
-        {
+        var component = componentCandidate with {
             Instructions = promptSnapshot.Content,
             PromptArtifactId = promptSnapshot.PromptArtifactId,
-            PromptVersionId = promptSnapshot.PromptVersionId
+            PromptVersionId = promptSnapshot.PromptVersionId,
+            PromptUpdatedAtUtc = resolution.Preparation?.Item.UpdatedAtUtc ??
+                (request.PromptVersionId.HasValue ? executionItem.UpdatedAtUtc : currentComponent?.PromptUpdatedAtUtc)
         };
 
-        if (current is null)
-        {
+        if (current is null) {
             dbContext.Set<WorkflowComponentRecord>().Add(WorkflowComponentRecord.FromComponent(component));
-        }
-        else
-        {
+        } else {
             current.Apply(component);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await changes.DemandCommitAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await changes.DemandCommitAsync(cancellationToken);
+            await mutation.CommitAsync(cancellationToken);
+        } catch (Exception exception) when (IsComponentWriteConflict(exception)) {
+            throw new WorkflowComponentConcurrencyException(component.Id, exception);
+        }
+        participation.Dispose();
+        await mutation.DisposeAsync();
+        try {
+            changes.PublishComponent(component.Id, current is null ? EditingChangeKind.Created : EditingChangeKind.EditableContentChanged);
+            if (resolution.Preparation is { } preparation) {
+                await promptMutations.CompleteVersionAsync(preparation, cancellationToken);
+            }
+        } catch (Exception error) {
+            changes.ReportComponentFollowUpFailure(component.Id, component.Revision, error);
+            return component with { RefreshRequired = true };
+        }
         return component;
     }
 
@@ -724,8 +745,7 @@ public sealed class PersistentWorkflowCatalogService(
         PromptGalleryItemDetails item,
         LlmCallComponent component,
         PromptGalleryCompatibilityPurpose purpose,
-        string? providerKind)
-    {
+        string? providerKind) {
         var suppressed = item.WarningSuppressions
             .Where(preference => preference.Consumer == PromptGalleryConsumer.Workflow)
             .Select(preference => preference.IssueCode)
@@ -744,53 +764,54 @@ public sealed class PersistentWorkflowCatalogService(
             : compatibility.Issues.Where(issue =>
                 issue.Severity == PromptCompatibilitySeverity.Error ||
                 issue.Code == PromptCompatibilityIssueCode.ProviderModelNotSupported).ToArray();
-        if (blockingIssues.Length > 0)
-        {
+        if (blockingIssues.Length > 0) {
             throw new InvalidOperationException(
                 string.Join(" ", blockingIssues.Select(issue => issue.Message)));
         }
     }
 
-    private async Task<PromptVersionSnapshot> ResolvePromptSnapshotAsync(
+    private async Task<PromptResolution> ResolvePromptSnapshotAsync(
         LlmCallComponentSaveRequest request,
         LlmCallComponent? currentComponent,
         WorkflowComponentId componentId,
+        Guid lifetimeId,
         PromptGalleryItemDetails? loadedItem,
         ProviderProfile? provider,
         bool updateOwnedPromptModel,
-        CancellationToken cancellationToken)
-    {
-        if (request.PromptVersionId is { } requestedVersionId)
-        {
+        CancellationToken cancellationToken) {
+        if (request.PromptVersionId is { } requestedVersionId) {
             var requestedSnapshot = RequirePromptValue(
                 await promptGallery.GetVersionSnapshotAsync(requestedVersionId, cancellationToken),
                 "Prompt Gallery version");
             if (request.PromptArtifactId is { } requestedArtifactId &&
-                requestedSnapshot.PromptArtifactId != requestedArtifactId)
-            {
+                requestedSnapshot.PromptArtifactId != requestedArtifactId) {
                 throw new InvalidOperationException(
                     $"Prompt Gallery version '{requestedVersionId:D}' does not belong to item '{requestedArtifactId:D}'.");
             }
 
-            return requestedSnapshot;
+            var selectedItem = loadedItem?.Id == requestedSnapshot.PromptArtifactId ? loadedItem : RequirePromptValue(
+                await promptGallery.GetItemAsync(requestedSnapshot.PromptArtifactId, cancellationToken), "Prompt Gallery item");
+            return new(requestedSnapshot, selectedItem, null);
         }
 
-        var promptArtifactId = request.PromptArtifactId ?? currentComponent?.PromptArtifactId;
-        if (promptArtifactId is null)
-        {
+        if (request.PromptArtifactId.HasValue) {
+            throw new InvalidOperationException("Selecting a Prompt Gallery item requires its explicit immutable version.");
+        }
+        var promptArtifactId = currentComponent?.PromptArtifactId;
+        if (promptArtifactId is null) {
             var provenance = currentComponent is null
                 ? PromptArtifactProvenance.WorkflowCreated
                 : PromptArtifactProvenance.WorkflowMigration;
-            return await CreateWorkflowPromptAsync(request, componentId, provider, provenance, cancellationToken);
+            var created = await CreateWorkflowPromptAsync(request, componentId, lifetimeId, provider, provenance, cancellationToken);
+            return new(created.Snapshot, created.Item, created);
         }
 
         if (!updateOwnedPromptModel && currentComponent?.PromptArtifactId == promptArtifactId &&
             currentComponent.PromptVersionId is { } currentVersionId &&
-            string.Equals(currentComponent.Instructions.Trim(), request.Instructions.Trim(), StringComparison.Ordinal))
-        {
-            return RequirePromptValue(
-                await promptGallery.GetVersionSnapshotAsync(currentVersionId, cancellationToken),
-                "Prompt Gallery version");
+            string.Equals(currentComponent.Instructions.Trim(), request.Instructions.Trim(), StringComparison.Ordinal)) {
+            var unchanged = RequirePromptValue(
+                await promptGallery.GetVersionSnapshotAsync(currentVersionId, cancellationToken), "Prompt Gallery version");
+            return new(unchanged, loadedItem, null);
         }
 
         var item = loadedItem?.Id == promptArtifactId.Value
@@ -798,7 +819,19 @@ public sealed class PersistentWorkflowCatalogService(
             : RequirePromptValue(
                 await promptGallery.GetItemAsync(promptArtifactId.Value, cancellationToken),
                 "Prompt Gallery item");
-        var saveResult = await promptGallery.SaveDraftAsync(
+        if (currentComponent is null || currentComponent.PromptUpdatedAtUtc is null ||
+            currentComponent.PromptUpdatedAtUtc != item.UpdatedAtUtc ||
+            item.Status != PromptArtifactStatus.Final ||
+            !IsOwnedComponentPrompt(item, currentComponent) ||
+            !string.Equals(item.DraftContent.Trim(), currentComponent.Instructions.Trim(), StringComparison.Ordinal)) {
+            throw new WorkflowComponentConcurrencyException(componentId);
+        }
+        var originalSnapshot = RequirePromptValue(await promptGallery.GetVersionSnapshotAsync(
+            currentComponent.PromptVersionId ?? throw new WorkflowComponentConcurrencyException(componentId), cancellationToken), "Prompt Gallery version");
+        if (originalSnapshot.VersionNumber != item.CurrentVersionNumber) {
+            throw new WorkflowComponentConcurrencyException(componentId);
+        }
+        var saveResult = await promptMutations.StageUpdateAndVersionAsync(
             new PromptGalleryDraft(
                 item.Id,
                 item.ProjectId,
@@ -815,35 +848,28 @@ public sealed class PersistentWorkflowCatalogService(
                     request.ModelSettings.Temperature,
                     request.ModelSettings.MaxOutputTokens,
                     item.Recommendations.TopP),
-                item.UpdatedAtUtc),
+                currentComponent.PromptUpdatedAtUtc),
+            new PromptImportVersionRequest($"Updated by workflow component '{request.Name.Trim()}'"),
             cancellationToken);
-        var saveReceipt = RequirePromptValue(saveResult, "Prompt Gallery item");
-
-        return RequirePromptValue(
-            await promptGallery.CreateVersionAsync(
-                saveReceipt.PromptArtifactId,
-                new PromptVersionCreateRequest(
-                    $"Updated by workflow component '{request.Name.Trim()}'",
-                    saveReceipt.UpdatedAtUtc),
-                cancellationToken),
-            "Prompt Gallery version");
+        var updated = RequireComponentPromptPreparation(saveResult, componentId);
+        return new(updated.Snapshot, updated.Item, updated);
     }
 
-    private async Task<PromptVersionSnapshot> CreateWorkflowPromptAsync(
+    private async Task<PromptVersionPreparation> CreateWorkflowPromptAsync(
         LlmCallComponentSaveRequest request,
         WorkflowComponentId componentId,
+        Guid lifetimeId,
         ProviderProfile? provider,
         PromptArtifactProvenance provenance,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         IReadOnlyList<PromptProviderModel> supportedModels = provider is null
             ? []
             : [new PromptProviderModel(provider.Kind.ToString(), request.Model.Trim(), IsPreferred: true)];
-        return RequirePromptValue(
-            await promptGalleryImporter.ImportVersionAsync(
+        return RequireComponentPromptPreparation(
+            await promptMutations.StageCreateImportedVersionAsync(
                 new PromptGalleryImportRequest(
                     provenance,
-                    $"workflow-component:{componentId.Value:D}",
+                    ComponentPromptSourceKey(componentId, lifetimeId),
                     WorkflowPromptSourceCatalog,
                     new PromptGalleryDraft(
                     Id: null,
@@ -867,13 +893,32 @@ public sealed class PersistentWorkflowCatalogService(
                             ? $"Migrated from workflow component '{request.Name.Trim()}'"
                             : $"Created for workflow component '{request.Name.Trim()}'")),
                 cancellationToken),
-            "Prompt Gallery workflow import");
+            componentId);
     }
 
-    private static T RequirePromptValue<T>(Result<T> result, string resourceName)
-    {
-        if (result.IsSuccess && result.Value is not null)
-        {
+    private sealed record PromptResolution(PromptVersionSnapshot Snapshot, PromptGalleryItemDetails? Item, PromptVersionPreparation? Preparation);
+
+    private static bool IsComponentWriteConflict(Exception error) => error is DbUpdateConcurrencyException ||
+        error.GetBaseException() is DbUpdateConcurrencyException or
+            PostgresException { SqlState: PostgresErrorCodes.SerializationFailure or PostgresErrorCodes.UniqueViolation };
+
+    private static bool IsOwnedComponentPrompt(PromptGalleryItemDetails item, LlmCallComponent component)
+        => item.Source.Provenance is PromptArtifactProvenance.WorkflowCreated or PromptArtifactProvenance.WorkflowMigration &&
+            item.Source.Catalog == WorkflowPromptSourceCatalog &&
+            item.Source.Key == ComponentPromptSourceKey(component.Id, component.LifetimeId);
+
+    private static string ComponentPromptSourceKey(WorkflowComponentId id, Guid lifetimeId)
+        => lifetimeId == Guid.Empty ? $"workflow-component:{id.Value:D}" : $"workflow-component:{id.Value:D}:{lifetimeId:D}";
+
+    private static PromptVersionPreparation RequireComponentPromptPreparation(Result<PromptVersionPreparation> result, WorkflowComponentId id) {
+        if (result.Errors.Any(error => error.Code is PromptGalleryErrorCodes.ConcurrencyConflict or PromptGalleryErrorCodes.ImportExpectationRequired)) {
+            throw new WorkflowComponentConcurrencyException(id);
+        }
+        return RequirePromptValue(result, "Prompt Gallery component mutation");
+    }
+
+    private static T RequirePromptValue<T>(Result<T> result, string resourceName) {
+        if (result.IsSuccess && result.Value is not null) {
             return result.Value;
         }
 
@@ -884,78 +929,97 @@ public sealed class PersistentWorkflowCatalogService(
     }
 
     public async Task DeleteComponentAsync(
-        WorkflowComponentId componentId,
-        CancellationToken cancellationToken = default)
-    {
+        WorkflowComponentDeleteRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var record = await dbContext.Set<WorkflowComponentRecord>()
-            .SingleOrDefaultAsync(item => item.Id == componentId.Value, cancellationToken);
-        if (record is null)
-        {
-            return;
+            .SingleOrDefaultAsync(item => item.Id == request.Id.Value, cancellationToken);
+        if (record is null || request.ExpectedRevision == Guid.Empty || record.Revision != request.ExpectedRevision) {
+            throw new WorkflowComponentConcurrencyException(request.Id);
         }
 
         dbContext.Remove(record);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await CommitAuthoringAsync(dbContext, cancellationToken);
+        } catch (DbUpdateConcurrencyException exception) {
+            throw new WorkflowComponentConcurrencyException(request.Id, exception);
+        }
+        changes.PublishComponent(request.Id, EditingChangeKind.Deleted);
     }
 
-    public async Task<WorkflowSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
-    {
+    public async Task<WorkflowSettings> GetSettingsAsync(CancellationToken cancellationToken = default) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var record = await dbContext.Set<WorkflowSettingsRecord>()
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == DefaultSettingsId, cancellationToken);
 
         return record is null
-            ? WorkflowSettings.Default
-            : Deserialize<WorkflowSettings>(record.SettingsJson);
+            ? Deserialize<WorkflowSettings>(Serialize(WorkflowSettings.Default))
+            : Deserialize<WorkflowSettings>(record.SettingsJson) with { UpdatedAtUtc = record.UpdatedAtUtc };
     }
 
     public async Task<WorkflowSettings> SaveSettingsAsync(
         WorkflowSettings settings,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(settings);
-        if (settings.ArtifactPolicy.MaxInlinePayloadCharacters <= 0)
-        {
+        settings = Deserialize<WorkflowSettings>(Serialize(settings));
+        if (settings.ArtifactPolicy.MaxInlinePayloadCharacters <= 0) {
             throw new InvalidOperationException("Workflow artifact inline payload limit must be positive.");
         }
 
-        if (settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes <= 0)
-        {
+        if (settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes <= 0) {
             throw new InvalidOperationException("Workflow human-in-loop timeout must be positive.");
         }
 
         var runtimeIssues = WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
             settings.DefaultRuntimePolicy,
             runtimeBackendCatalog);
-        if (runtimeIssues.Count > 0)
-        {
+        if (runtimeIssues.Count > 0) {
             throw new InvalidOperationException(
                 $"Workflow default runtime policy is invalid: {string.Join(" ", runtimeIssues.Select(issue => issue.Message))}");
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var now = DateTimeOffset.UtcNow;
         var record = await dbContext.Set<WorkflowSettingsRecord>()
             .SingleOrDefaultAsync(item => item.Id == DefaultSettingsId, cancellationToken);
-        if (record is null)
-        {
-            dbContext.Set<WorkflowSettingsRecord>().Add(new WorkflowSettingsRecord
-            {
-                Id = DefaultSettingsId,
-                SettingsJson = Serialize(settings),
-                UpdatedAtUtc = now
-            });
+        if (settings.UpdatedAtUtc != record?.UpdatedAtUtc) {
+            throw new WorkflowSettingsConcurrencyException();
         }
-        else
-        {
-            record.SettingsJson = Serialize(settings);
-            record.UpdatedAtUtc = now;
+        var accepted = settings with { UpdatedAtUtc = WorkflowEditRevision.Next(record?.UpdatedAtUtc) };
+        var content = Serialize(settings with { UpdatedAtUtc = null });
+        if (record is null) {
+            dbContext.Set<WorkflowSettingsRecord>().Add(new WorkflowSettingsRecord {
+                Id = DefaultSettingsId,
+                SettingsJson = content,
+                UpdatedAtUtc = accepted.UpdatedAtUtc.Value
+            });
+        } else {
+            record.SettingsJson = content;
+            record.UpdatedAtUtc = accepted.UpdatedAtUtc.Value;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return settings;
+        try {
+            await CommitAuthoringAsync(dbContext, cancellationToken);
+        } catch (DbUpdateConcurrencyException exception) {
+            throw new WorkflowSettingsConcurrencyException(exception);
+        } catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation }) {
+            throw new WorkflowSettingsConcurrencyException(exception);
+        }
+        changes.PublishSettings(EditingOwner.AgentVoiceSettings, accepted);
+        return accepted;
+    }
+
+    private async Task CommitAuthoringAsync(WorkflowDbContext context, CancellationToken cancellationToken) {
+        await changes.DemandCommitAsync(cancellationToken);
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+        await context.SaveChangesAsync(cancellationToken);
+        await changes.DemandCommitAsync(cancellationToken);
+        if (transaction is not null) {
+            await transaction.CommitAsync(cancellationToken);
+        }
     }
 
     private async Task<WorkflowDefinition?> LoadDefinitionAsync(
@@ -1249,7 +1313,7 @@ public sealed class PersistentWorkflowCatalogService(
                 ? record.Hydrate(snapshotsById.GetValueOrDefault(record.PromptVersionId!.Value)
                     ?? throw new InvalidOperationException(
                         $"Workflow component '{record.Id}' references missing Prompt Gallery version '{record.PromptVersionId}'."))
-                : Deserialize<LlmCallComponent>(record.ComponentJson))
+                : Deserialize<LlmCallComponent>(record.ComponentJson) with { Revision = record.Revision })
             .ToArray();
     }
 
@@ -1348,7 +1412,7 @@ public sealed class PersistentWorkflowCatalogService(
            DbUpdateExceptionClassifier.GetConstraintName(exception) ==
            WorkflowDefinitionPersistenceConstraints.ExternalIdentityUniqueIndex;
 
-    private static bool IsWorkflowDefinitionWriteCollision(DbUpdateException exception)
+    internal static bool IsWorkflowDefinitionWriteCollision(DbUpdateException exception)
     {
         if (!DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception))
         {
@@ -1444,27 +1508,6 @@ public sealed class PersistentWorkflowCatalogService(
                equals new { record.WorkflowId, record.VersionId }
            select record;
 
-    private static WorkflowCatalogItem MapCatalogItem(WorkflowCatalogProjection item)
-    {
-        var definition = Deserialize<WorkflowDefinition>(item.DefinitionJson);
-        return new WorkflowCatalogItem(
-            new WorkflowId(item.WorkflowId),
-            new WorkflowVersionId(item.VersionId),
-            item.Name,
-            item.Description,
-            item.Status,
-            item.PreferredBackend,
-            item.UpdatedAtUtc)
-        {
-            TemplateKey = definition.TemplateKey,
-            TemplatePackKey = definition.TemplatePackKey,
-            TemplatePackVersion = definition.TemplatePackVersion,
-            SourceHash = definition.SourceHash,
-            ExternalNamespace = definition.ExternalNamespace,
-            ExternalKey = definition.ExternalKey
-        };
-    }
-
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, JsonOptions);
 
     private static T Deserialize<T>(string json)
@@ -1473,15 +1516,6 @@ public sealed class PersistentWorkflowCatalogService(
             ?? throw new InvalidOperationException($"Stored workflow JSON could not be deserialized as '{typeof(T).Name}'.");
     }
 
-    private sealed record WorkflowCatalogProjection(
-        Guid WorkflowId,
-        Guid VersionId,
-        string Name,
-        string Description,
-        WorkflowLifecycleStatus Status,
-        WorkflowRuntimeBackendKind PreferredBackend,
-        DateTimeOffset UpdatedAtUtc,
-        string DefinitionJson);
 }
 
 public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<WorkflowDbContext> dbContextFactory,
@@ -2821,6 +2855,18 @@ public sealed class WorkflowDefinitionRecord
 
     public WorkflowRuntimeBackendKind PreferredBackend { get; set; }
 
+    public string TemplateKey { get; set; } = string.Empty;
+
+    public string TemplatePackKey { get; set; } = string.Empty;
+
+    public string TemplatePackVersion { get; set; } = string.Empty;
+
+    public string SourceHash { get; set; } = string.Empty;
+
+    public string ExternalNamespace { get; set; } = string.Empty;
+
+    public string ExternalKey { get; set; } = string.Empty;
+
     public string DefinitionJson { get; set; } = "{}";
 
     public int InstructionSnapshotSchemaVersion { get; set; }
@@ -2840,6 +2886,12 @@ public sealed class WorkflowDefinitionRecord
         Description = definition.Description,
         Status = definition.Status,
         PreferredBackend = definition.RuntimePolicy.PreferredBackend,
+        TemplateKey = definition.TemplateKey,
+        TemplatePackKey = definition.TemplatePackKey,
+        TemplatePackVersion = definition.TemplatePackVersion,
+        SourceHash = definition.SourceHash,
+        ExternalNamespace = definition.ExternalNamespace,
+        ExternalKey = definition.ExternalKey,
         DefinitionJson = JsonSerializer.Serialize(definition, JsonOptions),
         InstructionSnapshotSchemaVersion = WorkflowPersistenceSchemaVersions.InstructionSnapshot,
         CreatedAtUtc = definition.CreatedAtUtc,
@@ -2852,6 +2904,7 @@ public sealed class WorkflowComponentRecord
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public Guid Id { get; set; }
+    public Guid Revision { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -2891,6 +2944,7 @@ public sealed class WorkflowComponentRecord
         }
 
         Id = component.Id.Value;
+        Revision = component.Revision;
         Name = component.Name;
         ProviderProfileId = component.ProviderProfileId;
         Model = component.Model;
@@ -2914,7 +2968,7 @@ public sealed class WorkflowComponentRecord
 
         var binding = JsonSerializer.Deserialize<WorkflowComponentBinding>(ComponentJson, JsonOptions)
             ?? throw new InvalidOperationException($"Workflow component '{Id}' binding JSON deserialized to null.");
-        return binding.ToComponent(snapshot);
+        return binding.ToComponent(snapshot) with { Revision = Revision };
     }
 
     private sealed record WorkflowComponentBinding(
@@ -2930,6 +2984,8 @@ public sealed class WorkflowComponentRecord
         DateTimeOffset CreatedAtUtc,
         DateTimeOffset UpdatedAtUtc)
     {
+        public DateTimeOffset? PromptUpdatedAtUtc { get; init; }
+        public Guid LifetimeId { get; init; }
         public static WorkflowComponentBinding FromComponent(LlmCallComponent component)
             => new(
                 component.Id,
@@ -2942,7 +2998,10 @@ public sealed class WorkflowComponentRecord
                 component.ResultShape,
                 component.Permissions,
                 component.CreatedAtUtc,
-                component.UpdatedAtUtc);
+                component.UpdatedAtUtc) {
+                PromptUpdatedAtUtc = component.PromptUpdatedAtUtc,
+                LifetimeId = component.LifetimeId
+            };
 
         public LlmCallComponent ToComponent(PromptVersionSnapshot snapshot)
             => new(
@@ -2960,7 +3019,9 @@ public sealed class WorkflowComponentRecord
                 UpdatedAtUtc)
             {
                 PromptArtifactId = snapshot.PromptArtifactId,
-                PromptVersionId = snapshot.PromptVersionId
+                PromptVersionId = snapshot.PromptVersionId,
+                PromptUpdatedAtUtc = PromptUpdatedAtUtc,
+                LifetimeId = LifetimeId
             };
     }
 }
@@ -3325,6 +3386,7 @@ internal sealed class WorkflowDefinitionRecordConfiguration : IEntityTypeConfigu
         builder.Property(item => item.Status).HasConversion<int>();
         builder.Property(item => item.PreferredBackend).HasConversion<int>();
         builder.Property(item => item.DefinitionJson).HasColumnType("TEXT");
+        builder.Property(item => item.InstructionSnapshotSchemaVersion).IsConcurrencyToken();
         builder.HasIndex(item => item.WorkflowId);
         builder.HasIndex(item => new { item.WorkflowId, item.Revision })
             .IsUnique()
@@ -3362,6 +3424,7 @@ internal sealed class WorkflowComponentRecordConfiguration : IEntityTypeConfigur
     {
         builder.ToTable("AgentFramework_WorkflowComponents");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.Revision).HasDefaultValueSql("gen_random_uuid()").IsConcurrencyToken();
         builder.Property(item => item.Name).HasMaxLength(240).IsRequired();
         builder.Property(item => item.Model).HasMaxLength(240).IsRequired();
         builder.Property(item => item.Modality).HasConversion<int>();
@@ -3391,6 +3454,7 @@ internal sealed class WorkflowSettingsRecordConfiguration : IEntityTypeConfigura
         builder.HasKey(item => item.Id);
         builder.Property(item => item.Id).HasMaxLength(64);
         builder.Property(item => item.SettingsJson).HasColumnType("TEXT");
+        builder.Property(item => item.UpdatedAtUtc).IsConcurrencyToken();
     }
 }
 
@@ -3497,7 +3561,3 @@ internal sealed class WorkflowArtifactRecordEntityConfiguration : IEntityTypeCon
 
 /// <summary>A workflow definition the store rejected because it failed validation; nothing was saved.</summary>
 public sealed class WorkflowDefinitionValidationException(string message) : InvalidOperationException(message);
-
-/// <summary>A workflow definition save that lost to a concurrent update; its transaction saved nothing.</summary>
-public sealed class WorkflowDefinitionConcurrencyException(string message, Exception? innerException = null)
-    : InvalidOperationException(message, innerException);

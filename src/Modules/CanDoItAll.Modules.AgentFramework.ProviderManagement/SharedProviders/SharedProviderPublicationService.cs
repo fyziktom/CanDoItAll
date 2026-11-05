@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-public sealed class SharedProviderPublicationStore(
+internal sealed class SharedProviderPublicationStore(
     IDbContextFactory<ProvidersDbContext> dbContextFactory,
     IClock clock,
     CoordinatedDatabaseTransaction transactions)

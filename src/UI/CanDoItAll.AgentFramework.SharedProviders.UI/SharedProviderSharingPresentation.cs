@@ -7,7 +7,9 @@ public enum SharedProviderImportAvailability { Available, Unpublished, Missing, 
 public enum SharedProviderConfirmationKind { Unpublish, RetireImport }
 
 public sealed record SharedProviderSharingOrigin(Guid ViewId, long Activation, Guid SnapshotId,
-    Guid? ProviderId, Guid? PublicationToken, SharedProviderImportBaseline? Import);
+    Guid? ProviderId, Guid? PublicationToken, SharedProviderImportBaseline? Import) {
+    public Guid? ProviderConfigurationToken { get; init; }
+}
 
 public sealed record SharedProviderPublicationPresentation(SharedProviderPublicationId PublicId, bool IsPublished);
 public sealed record SharedProviderEligibleModelPresentation(string UpstreamModelId, IReadOnlyList<SharedProviderCapability> Capabilities);
@@ -31,11 +33,15 @@ public sealed record SharedProviderConfirmation(Guid Id, SharedProviderSharingOr
 
 public sealed record SharedProviderSharingPresentation(SharedProviderSharingOrigin Origin,
     SharedProviderProfilePresentation? Profile, SharedProviderImportDraft? Draft,
-    bool Loading, bool WritesBlocked, string? Warning, SharedProviderConfirmation? Confirmation);
+    bool Loading, bool WritesBlocked, string? Warning, SharedProviderConfirmation? Confirmation) {
+    public bool CanAcknowledgeCurrent { get; init; }
+    public bool ReviewBlocked { get; init; }
+}
 
 public interface ISharedProviderSharingView {
     SharedProviderSharingPresentation Presentation { get; }
     Task RetryAsync(SharedProviderSharingOrigin origin);
+    Task AcknowledgeCurrentAsync(SharedProviderSharingOrigin origin);
     Task PublishAsync(SharedProviderSharingOrigin origin);
     Task SaveImportedAsync(SharedProviderSharingOrigin origin, SharedProviderImportSubmission submission);
     void OpenConfirmation(SharedProviderSharingOrigin origin, SharedProviderConfirmationKind kind);

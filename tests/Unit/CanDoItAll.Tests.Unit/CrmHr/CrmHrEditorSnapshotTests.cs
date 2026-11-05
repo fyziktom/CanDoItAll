@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using CanDoItAll.Modules.CrmHr;
@@ -11,6 +12,17 @@ namespace CanDoItAll.Tests.Unit.CrmHr;
 // covered without editing this file, and a forgotten nested copy fails here.
 public sealed class CrmHrEditorSnapshotTests
 {
+    private static readonly HashSet<Type> ObservationTypes = [
+        typeof(AiStewardProfileObservation), typeof(AiAgentProfileObservation), typeof(AiProfileTechnicalInput),
+        typeof(WorkforceProfileObservation), typeof(WorkforceProfileValues), typeof(PartySkillObservation), typeof(CapacityBlockObservation),
+        typeof(SkillCatalogItemModel), typeof(StaffingRequestObservation), typeof(RecruitmentApplicationObservation),
+        typeof(RecruitmentInterviewObservation), typeof(RecruitmentConversionObservation), typeof(LifecycleTaskObservation),
+        typeof(CrmOpportunityConversionProjectBasis), typeof(CrmOpportunityAssignmentOriginal),
+        typeof(ProjectAssignmentObservation), typeof(ProjectAssignmentPrimaryObservation),
+        typeof(PartyRelationshipObservation), typeof(PartyRelationshipVersion), typeof(CrmAccountConnectionsObservation),
+        typeof(CrmAccountConnectionOriginal), typeof(CrmAccountConnectionProjectOriginal)
+    ];
+
     public static TheoryData<Type> EditorInputs
     {
         get
@@ -70,7 +82,18 @@ public sealed class CrmHrEditorSnapshotTests
 
     private static object Populate(Type type, ref int seed)
     {
-        var instance = Activator.CreateInstance(type)!;
+        object instance;
+        if (ObservationTypes.Contains(type)) {
+            var constructor = type.GetConstructors().Single();
+            var parameters = constructor.GetParameters();
+            var arguments = new object?[parameters.Length];
+            for (var index = 0; index < parameters.Length; index++) {
+                arguments[index] = Value(parameters[index].ParameterType, ref seed);
+            }
+            instance = constructor.Invoke(arguments);
+        } else {
+            instance = Activator.CreateInstance(type)!;
+        }
         foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.CanWrite && property.GetIndexParameters().Length == 0))
         {
             property.SetValue(instance, Value(property.PropertyType, ref seed));
@@ -88,6 +111,9 @@ public sealed class CrmHrEditorSnapshotTests
         if (underlying == typeof(bool)) return true;
         if (underlying == typeof(int)) return seed;
         if (underlying == typeof(long)) return (long)seed;
+        if (underlying == typeof(uint)) {
+            return (uint)seed;
+        }
         if (underlying == typeof(decimal)) return seed + 0.25m;
         if (underlying == typeof(double)) return seed + 0.5d;
         if (underlying == typeof(DateOnly)) return new DateOnly(2026, 1, 1).AddDays(seed);
@@ -96,16 +122,31 @@ public sealed class CrmHrEditorSnapshotTests
         if (underlying.IsEnum) return Enum.GetValues(underlying).Cast<object>().Last();
         if (underlying == typeof(ProjectWriteAdmission)) return new ProjectWriteAdmission(Id(ref seed), Id(ref seed), Id(ref seed));
         if (underlying == typeof(ProjectAssignmentReference)) return new ProjectAssignmentReference(Id(ref seed), Id(ref seed), Id(ref seed));
-        if (underlying.IsGenericType && underlying.GetGenericTypeDefinition() == typeof(List<>))
+        if (underlying == typeof(ImmutableArray<Guid>)) {
+            return ImmutableArray.Create(Id(ref seed), Id(ref seed));
+        }
+        if (underlying == typeof(CrmAccountProfileObservation)) {
+            return new CrmAccountProfileObservation(Id(ref seed), DateTimeOffset.UnixEpoch.AddMinutes(seed), DateTimeOffset.UnixEpoch.AddHours(seed));
+        }
+        if (underlying.IsGenericType && underlying.GetGenericTypeDefinition() is var definition &&
+            (definition == typeof(Dictionary<,>) || definition == typeof(IReadOnlyDictionary<,>))) {
+            var arguments = underlying.GetGenericArguments();
+            var dictionary = (IDictionary)Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(arguments))!;
+            dictionary.Add(Value(arguments[0], ref seed)!, Value(arguments[1], ref seed));
+            dictionary.Add(Value(arguments[0], ref seed)!, Value(arguments[1], ref seed));
+            return dictionary;
+        }
+        if (underlying.IsGenericType &&
+            (underlying.GetGenericTypeDefinition() == typeof(List<>) || underlying.GetGenericTypeDefinition() == typeof(IReadOnlyList<>)))
         {
-            var list = (IList)Activator.CreateInstance(underlying)!;
             var element = underlying.GetGenericArguments()[0];
+            var list = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(element))!;
             list.Add(Value(element, ref seed));
             list.Add(Value(element, ref seed));
             return list;
         }
 
-        if (underlying.IsClass && underlying.GetConstructor(Type.EmptyTypes) is not null)
+        if (ObservationTypes.Contains(underlying) || underlying.IsClass && underlying.GetConstructor(Type.EmptyTypes) is not null)
         {
             return Populate(underlying, ref seed);
         }
@@ -121,6 +162,12 @@ public sealed class CrmHrEditorSnapshotTests
         {
             var left = property.GetValue(original);
             var right = property.GetValue(snapshot);
+            if (left is IDictionary leftDictionary && right is IDictionary rightDictionary) {
+                Assert.False(ReferenceEquals(leftDictionary, rightDictionary), $"{path}.{property.Name} shares its dictionary with the snapshot");
+            }
+            if (left is not null && right is not null && ObservationTypes.Contains(left.GetType())) {
+                AssertIndependent(left, right, $"{path}.{property.Name}");
+            }
             if (left is IList leftList && right is IList rightList)
             {
                 Assert.False(ReferenceEquals(leftList, rightList), $"{path}.{property.Name} shares its list with the snapshot");
@@ -142,11 +189,19 @@ public sealed class CrmHrEditorSnapshotTests
         {
             switch (property.GetValue(original))
             {
+                case CrmAccountProfileObservation observation:
+                    property.SetValue(original, observation with { PartyUpdatedAtUtc = observation.PartyUpdatedAtUtc.AddSeconds(1) });
+                    break;
                 case string text:
                     property.SetValue(original, text + "-edited");
                     break;
                 case Guid id:
                     property.SetValue(original, new Guid(id.ToByteArray().Reverse().ToArray()));
+                    break;
+                case ImmutableArray<Guid>:
+                    break;
+                case IDictionary dictionary when dictionary.Count > 0:
+                    dictionary.Remove(dictionary.Keys.Cast<object>().First());
                     break;
                 case IList list when list.Count > 0:
                     if (list[0] is { } first && HasSnapshot(first.GetType()))
@@ -155,6 +210,29 @@ public sealed class CrmHrEditorSnapshotTests
                     }
 
                     list.RemoveAt(list.Count - 1);
+                    break;
+                case { } observation when ObservationTypes.Contains(observation.GetType()):
+                    DisturbObservationCollections(observation);
+                    var seed = 200;
+                    property.SetValue(original, Value(property.PropertyType, ref seed));
+                    break;
+            }
+        }
+    }
+
+    private static void DisturbObservationCollections(object observation) {
+        foreach (var property in observation.GetType().GetProperties().Where(property => property.GetIndexParameters().Length == 0)) {
+            switch (property.GetValue(observation)) {
+                case ImmutableArray<Guid>:
+                    break;
+                case IDictionary dictionary when dictionary.Count > 0:
+                    dictionary.Remove(dictionary.Keys.Cast<object>().First());
+                    break;
+                case IList list when list.Count > 0:
+                    list.RemoveAt(list.Count - 1);
+                    break;
+                case { } nested when ObservationTypes.Contains(nested.GetType()):
+                    DisturbObservationCollections(nested);
                     break;
             }
         }

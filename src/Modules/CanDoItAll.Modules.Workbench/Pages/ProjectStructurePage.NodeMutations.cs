@@ -122,15 +122,17 @@ public partial class ProjectStructurePage
         var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), opening.Context.Admission,
             ProjectStructureAuthoringOperation.ConvertNode, ProjectStructureAuthoringResultKind.Unconfirmed,
             $"The conversion result for node {node.Id} was not confirmed. Inspect the original node before retrying.") { SourceNodeId = node.Id };
+        await using var access = ObserveActionAccess();
         try {
-            var updated = await ProjectWorkbenchService.ReclassifyObjectAsync(opening.Context.Surface.ProjectId, node.Id, request);
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(opening.Context, access, write: true, deferredCompletionCts.Token);
+            var updated = await ProjectWorkbenchService.ReclassifyObjectAsync(opening.Context.Surface.ProjectId, node.Id, request,
+                authorizeCommit: token => AuthorizeActionAsync(opening.Context, access, write: true, token));
             outcome = updated is null
                 ? outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = "The original node is unavailable or can no longer be changed to the requested type." }
                 : outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = updated,
                     Message = $"{updated.Title} was {(wasBlockTypeChange ? "changed" : "converted")} to {ProjectStructureCanvasCatalog.ResolveNodeLabel(updated).ToLowerInvariant()}." };
-        } catch (ProjectStructureEditConflictException exception) {
-            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
-        } catch (ProjectWriteAdmissionRejectedException exception) {
+        } catch (Exception exception) when (exception is ProjectStructureEditConflictException or ProjectWriteAdmissionRejectedException or UnauthorizedAccessException) {
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
         } catch (Exception exception) {
             opening.RequiresObservation = true;
@@ -138,14 +140,15 @@ public partial class ProjectStructurePage
         } finally {
             opening.IsBusy = false;
         }
-        RecordAuthoringOutcome(opening, outcome);
+        RecordCurrentAuthoringOutcome(opening, outcome);
         if (IsCurrentAuthoring(opening, blockOpening)) {
             if (outcome.Kind == ProjectStructureAuthoringResultKind.Committed) {
                 blockMutationDialog = null;
                 try {
+                    await AuthorizeActionAsync(opening.Context, access, write: false, deferredCompletionCts.Token);
                     await ApplySurfaceNodeUpdatesAsync([outcome.Node!]);
                 } catch (Exception failure) {
-                    RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                    RecordCurrentAuthoringOutcome(opening, outcome with { Failure = failure,
                         Message = $"{outcome.Message} The accepted change could not be displayed. Reload the original project; do not repeat the conversion." });
                 }
                 if (ReferenceEquals(opening, blockOpening)) {
@@ -223,11 +226,26 @@ public partial class ProjectStructurePage
                 TargetProjectId = targetId,
                 SourceNodeId = sourceNode.Id
             };
+        await using var access = ObserveActionAccess();
+        await using var projectAccess = new ProjectRootCreationAccess(ProjectCreateChanges, ProjectCreateUiAccess,
+            ProjectCreateProjectChanges, ProjectCreateObservationLogger);
+        async ValueTask AuthorizeCreationAsync(CancellationToken token) {
+            await AuthorizeActionAsync(source, access, write: true, token);
+            await projectAccess.AuthorizeWriteAsync(token);
+            await AuthorizeActionAsync(source, access, write: true, token);
+        }
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await projectAccess.OpenAsync();
+            await AuthorizeCreationAsync(deferredCompletionCts.Token);
+            using var creationAdmission = ProjectCreateProjectChanges.EnterUiWrite(AuthorizeCreationAsync);
             var reservation = await InsightsAdmissions.ReserveCreationAsync(targetId, opening.Id, submissionId,
                 source.Surface.ProjectId, expectedParentAdmission: source.Admission);
-            var sourceProject = await ProjectsService.GetAsync(source.Surface.ProjectId);
-            var editor = await ProjectsService.GetAsync(null);
+            await AuthorizeActionAsync(source, access, write: false, deferredCompletionCts.Token);
+            var sourceProject = await projectAccess.ReadAsync(token => ProjectsService.GetAsync(source.Surface.ProjectId, token), deferredCompletionCts.Token);
+            await AuthorizeActionAsync(source, access, write: false, deferredCompletionCts.Token);
+            var editor = await projectAccess.ReadAsync(token => ProjectsService.GetAsync(null, token), deferredCompletionCts.Token);
+            await AuthorizeCreationAsync(deferredCompletionCts.Token);
             editor.Name = projectName;
             editor.Description = $"Extracted from {sourceNode.Title} in {source.Surface.ProjectName}.";
             editor.Objective = string.IsNullOrWhiteSpace(sourceNode.Notes) ? sourceNode.Title : ProjectStructureNodeHelpers.BuildSimpleNoteTitle(sourceNode.Notes);
@@ -239,12 +257,13 @@ public partial class ProjectStructurePage
                 ExpectedGraph = ProjectStructureGraphStateGuard.Capture(source.Surface)
             };
             var result = await SubprojectTransferCoordinator.MoveDescendantsToNewSubprojectAsync(
-                source.Surface.ProjectId, reservation, editor, sourceNode.Id, mutationOwner: owner);
+                source.Surface.ProjectId, reservation, editor, sourceNode.Id, mutationOwner: owner,
+                authorizeCommit: token => AuthorizeActionAsync(source, access, write: true, token));
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Transfer = result, Creation = result.CreationReceipt,
                 Message = result.Transfer.MovedNodeCount == 1
                     ? $"Created {projectName} and moved 1 descendant into it."
                     : $"Created {projectName} and moved {result.Transfer.MovedNodeCount} descendants into it." };
-        } catch (ProjectWriteAdmissionRejectedException exception) {
+        } catch (Exception exception) when (exception is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException) {
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
         } catch (ProjectStructureCompensatedSubprojectTransferException exception) {
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Compensated, Failure = exception, Creation = exception.CreationReceipt,
@@ -270,7 +289,7 @@ public partial class ProjectStructurePage
         } finally {
             opening.IsBusy = false;
         }
-        RecordAuthoringOutcome(opening, outcome);
+        RecordCurrentAuthoringOutcome(opening, outcome);
         if (IsCurrentAuthoring(opening, transferOpening)) {
             if (outcome.Kind is ProjectStructureAuthoringResultKind.Committed or ProjectStructureAuthoringResultKind.PartialCommit) {
                 subprojectTransferDialog = null;

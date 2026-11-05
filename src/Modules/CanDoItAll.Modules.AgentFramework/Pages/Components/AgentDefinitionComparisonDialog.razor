@@ -1,0 +1,46 @@
+@using CanDoItAll.AgentFramework.Editor.UI
+@using CanDoItAll.Components.Common
+@implements IDisposable
+
+<Stack GapScale="LayoutGap.Small">
+    <AgentDefinitionComparisonSurface Review="Review" ProviderNames="ProviderNames" CapabilityNames="CapabilityNames" Changed="StateHasChanged" />
+    <StickyActionFooter StatusLabel="Agent comparison">
+        <SecondaryActions><Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="CancelAsync" /></SecondaryActions>
+        <PrimaryActions><Button Text="Apply to draft" Disabled="@(!Review.IsResolved || Review.IsStale)" Click="ApplyAsync" data-testid="agents-comparison-apply" /></PrimaryActions>
+    </StickyActionFooter>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public AgentDefinitionComparison Review { get; set; } = default!;
+    [Parameter] public IReadOnlyDictionary<Guid, string> ProviderNames { get; set; } = new Dictionary<Guid, string>();
+    [Parameter] public IReadOnlyDictionary<Guid, string> CapabilityNames { get; set; } = new Dictionary<Guid, string>();
+    [CascadingParameter] public DialogReference? Dialog { get; set; }
+    private AgentDefinitionComparison? bound;
+    private bool disposed;
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(bound, Review)) {
+            if (bound is not null) {
+                bound.Invalidated -= ReviewInvalidated;
+            }
+            bound = Review;
+            bound.Invalidated += ReviewInvalidated;
+        }
+    }
+    private void ReviewInvalidated() {
+        if (!disposed) {
+            _ = InvokeAsync(() => {
+                if (!disposed) {
+                    StateHasChanged();
+                }
+            });
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        if (bound is not null) {
+            bound.Invalidated -= ReviewInvalidated;
+        }
+    }
+    private Task CancelAsync() => Dialog?.CloseAsync(false) ?? Task.CompletedTask;
+    private Task ApplyAsync() => Review.IsResolved && !Review.IsStale ? Dialog?.CloseAsync(true) ?? Task.CompletedTask : Task.CompletedTask;
+}

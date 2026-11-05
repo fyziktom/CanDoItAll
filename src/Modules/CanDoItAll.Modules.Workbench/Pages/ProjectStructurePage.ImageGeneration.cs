@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Workbench.Content.UI.Generation;
 using Microsoft.AspNetCore.Components;
 
@@ -47,9 +48,13 @@ public partial class ProjectStructurePage {
         CloseImageSetup(imageOpening);
         imageOpening = opening;
         imageAuthorities.Add(authority, context);
+        await using var access = ObserveActionAccess();
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
             var providers = (await ProviderRuntimeProfileSource.ListProvidersAsync(deferredCompletionCts.Token))
                 .Where(provider => provider.IsEnabled && provider.Purpose == ProviderProfilePurpose.ImageGeneration).ToArray();
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
             if (IsCurrentImage(opening)) {
                 opening.Providers = providers;
                 opening.State = new(opening.Ownership.Id, providers.Select(ProjectImageProvider).ToArray(), false, false, true);
@@ -110,7 +115,12 @@ public partial class ProjectStructurePage {
         opening.State = opening.State with { IsBusy = true, Message = string.Empty };
         var outcome = NewContentOutcome(owner, ProjectStructureAuthoringOperation.GenerateImage);
         var invoked = false;
+        var access = ObserveActionAccess();
+        var accessTransferred = false;
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
+            opening.Authority.AuthorizeWrite = token => AuthorizeActionAsync(context, access, write: true, token);
             var provider = opening.Providers.FirstOrDefault(provider => provider.Id == draft.ProviderId)
                 ?? throw new ArgumentException("Select an available image provider.");
             var model = string.IsNullOrWhiteSpace(draft.Model) ? provider.DefaultModel.Trim() : draft.Model.Trim();
@@ -130,11 +140,9 @@ public partial class ProjectStructurePage {
                 draft.Quality.ToString().ToLowerInvariant(), format, BuildGeneratedImageFileName(draft.Title, format)) {
                 ProviderFingerprint = ProviderConfigurationFingerprintFactory.Create(provider)
             };
-            if (!HasOriginalContentAuthority(context)) {
-                throw new ProjectStructureEditConflictException();
-            }
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             invoked = true;
-            var created = await CreateObjectAsync(opening.Definition, opening.Request with {
+            var created = await CreateObjectAsync(context, opening.Definition, opening.Request with {
                 UploadedFile = BuildGeneratedImageWaitingPlaceholderUpload(), Title = draft.Title, Subtitle = draft.Usage, Notes = request.Prompt
             }, native => native with {
                 ExpectedProjectAdmission = context.Admission, ExpectedParticipants = [owner.Node],
@@ -144,16 +152,14 @@ public partial class ProjectStructurePage {
                 owner.RequiresObservation = true;
                 outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.PartialCommit, Node = node, ProviderId = provider.Id,
                     Message = $"Image placeholder {node.Id} was saved. Generation has not yet been acknowledged by the queue." };
-                RecordAuthoringOutcome(owner, outcome);
-            }, capturedSurface: context.Surface, capturedNavigationRevision: context.NavigationRevision,
-                canPublish: () => IsCurrentImage(opening)) ?? throw new ProjectStructureEditConflictException();
+                RecordCurrentAuthoringOutcome(owner, outcome);
+            },
+                canPublish: () => IsCurrentImage(opening),
+                authorizeCommit: token => AuthorizeActionAsync(context, access, write: true, token)) ?? throw new ProjectStructureEditConflictException();
             opening.State = opening.State with { CanSubmit = false, Receipt = new(outcome.SubmissionId,
                 ContentImagePhase.PlaceholderSaved, outcome.Message, created.Id, created.RecordId) };
             await RenderAuthoringOutcomeAsync();
-            if (!HasOriginalContentAuthority(context)) {
-                opening.Authority.Revoke();
-                throw new ProjectStructureEditConflictException();
-            }
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             var handle = await DeferredNodeCompletionQueue.EnqueueAsync(new(outcome.SubmissionId, context.Admission.ProjectId,
                 created.Id, ProjectStructureDeferredNodeCompletionKind.GeneratedImageAsset, request) {
                 Origin = new(opening.Authority, created)
@@ -161,17 +167,21 @@ public partial class ProjectStructurePage {
             opening.Queued = true;
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
                 Message = $"Generation was queued for original placeholder {created.Id}. The queue is in memory; completion is not yet confirmed." };
-            RecordAuthoringOutcome(owner, outcome);
+            RecordCurrentAuthoringOutcome(owner, outcome);
             opening.State = opening.State with { Receipt = new(handle.OperationId, ContentImagePhase.Queued, outcome.Message, created.Id, created.RecordId) };
-            _ = TrackAuthoringOperationAsync(ObserveImageCompletionAsync(opening, handle, created, outcome));
+            accessTransferred = true;
+            _ = TrackAuthoringOperationAsync(ObserveImageCompletionAsync(opening, handle, created, outcome, access));
         } catch (Exception failure) {
             outcome = ContentFailure(owner, outcome, invoked, failure);
-            RecordAuthoringOutcome(owner, outcome);
+            RecordCurrentAuthoringOutcome(owner, outcome);
             opening.State = opening.State with { CanSubmit = !owner.RequiresObservation,
                 Message = outcome.Message, Receipt = new(outcome.SubmissionId,
                     outcome.Node is not null ? ContentImagePhase.PlaceholderSaved : owner.RequiresObservation ? ContentImagePhase.Unconfirmed : ContentImagePhase.Rejected,
                     outcome.Message, outcome.Node?.Id, outcome.Node?.RecordId) };
         } finally {
+            if (!accessTransferred) {
+                await access.DisposeAsync();
+            }
             owner.IsBusy = false;
             opening.State = opening.State with { IsBusy = false };
             if (!opening.Queued && !ReferenceEquals(imageOpening, opening)) {
@@ -182,7 +192,9 @@ public partial class ProjectStructurePage {
     }
 
     private async Task ObserveImageCompletionAsync(ImageOpening opening, ProjectStructureDeferredNodeCompletionHandle handle,
-        ProjectStructureNode placeholder, ProjectStructureAuthoringOutcome accepted) {
+        ProjectStructureNode placeholder, ProjectStructureAuthoringOutcome accepted, EditingObservation access) {
+        await using var ownedAccess = access;
+        var observed = accepted;
         try {
             var result = await handle.Completion.WaitAsync(deferredCompletionCts.Token);
             if (result.OperationId != handle.OperationId || result.ProjectId != accepted.Project.ProjectId || result.NodeId != placeholder.Id ||
@@ -196,7 +208,8 @@ public partial class ProjectStructurePage {
                     : result.ProviderInvoked ? ProjectStructureExternalEffectState.Dispatched : ProjectStructureExternalEffectState.NotStarted,
                 Message = result.Message, StoredMedia = result.StoredMedia
             };
-            RecordAuthoringOutcome(opening.Ownership, receipt);
+            observed = receipt;
+            RecordCurrentAuthoringOutcome(opening.Ownership, receipt);
             await InvokeAsync(async () => {
                 opening.State = opening.State with { Receipt = new(result.OperationId,
                     result.IsSuccess ? ContentImagePhase.MediaSaved : result.ProviderCompleted ? ContentImagePhase.ProviderCompleted
@@ -204,6 +217,7 @@ public partial class ProjectStructurePage {
                     result.Message, placeholder.Id, placeholder.RecordId, result.ProviderInvoked, result.ProviderCompleted, result.ContentSha256) };
                 if (IsCurrentAction(opening.Ownership.Context) && result.UpdatedNode is { } updated &&
                     surface?.Nodes.Any(node => node.Id == placeholder.Id && node.RecordId == placeholder.RecordId) is true) {
+                    await AuthorizeActionAsync(opening.Ownership.Context, access, write: false, deferredCompletionCts.Token);
                     await ApplySurfaceNodeUpdatesAsync([updated]);
                 }
                 StateHasChanged();
@@ -211,8 +225,12 @@ public partial class ProjectStructurePage {
         } catch (OperationCanceledException) when (deferredCompletionCts.IsCancellationRequested) {
         } catch (Exception failure) {
             LogContentFailure(opening.Ownership, ProjectStructureAuthoringOperation.GenerateImage, failure);
+            var message = observed.Kind == ProjectStructureAuthoringResultKind.Committed
+                ? "The original image result was saved. Refresh its original view before continuing."
+                : "The original queued operation could not be observed. Inspect its placeholder; do not generate it again.";
+            RecordCurrentAuthoringOutcome(opening.Ownership, observed with { Failure = failure, Message = message });
             if (IsCurrentImage(opening)) {
-                opening.State = opening.State with { Message = "The original queued operation could not be observed. Inspect its placeholder; do not generate it again." };
+                opening.State = opening.State with { Message = message };
                 await RenderAuthoringOutcomeAsync();
             }
         } finally {

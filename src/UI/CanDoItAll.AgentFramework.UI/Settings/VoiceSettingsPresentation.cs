@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.AgentFramework.UI.Settings;
 
 public sealed record VoiceSettingsValues {
+    public DateTimeOffset? UpdatedAtUtc { get; init; }
     public bool SpeechEnabled { get; init; }
     public AgentVoiceDriverKind SpeechDriver { get; init; }
     public Guid? SpeechProviderId { get; init; }
@@ -21,14 +22,16 @@ public sealed record VoiceSettingsValues {
     public string DisclosureText { get; init; } = AgentVoiceDefaults.DisclosureText;
 }
 public sealed record VoiceSettingsProvider(Guid Id, string Name, string DefaultModel);
-public enum VoiceSettingsStatus { Loading, Ready, LoadFailed, Saving, Saved, GeneratingSample, PlayingSample, SamplePlayed, SaveFailed, SavedSynthesisFailed, SavedPlaybackFailed }
-public enum VoiceSettingsAction { Save, PlaySample, Reload }
+public enum VoiceSettingsStatus { Loading, Ready, LoadFailed, Saving, Saved, GeneratingSample, PlayingSample, SamplePlayed, SaveFailed, SavedSynthesisFailed, SavedPlaybackFailed, Conflict, Unknown, AccessChanged, SavedWithWarning }
+public enum VoiceSettingsAction { Save, PlaySample, Reload, Compare }
 public sealed record VoiceSettingsIntent(long Generation, VoiceSettingsAction Action, VoiceSettingsValues? Submission = null);
 public sealed record VoiceSettingsPresentation(long Generation = 0, VoiceSettingsValues? Source = null,
     ImmutableArray<VoiceSettingsProvider> Providers = default, VoiceSettingsStatus Status = VoiceSettingsStatus.Loading, bool ProvidersUnavailable = false) {
+    public SettingsDraftState<VoiceSettingsValues> Editor { get; init; } = VoiceSettingsFields.CreateEditor();
     public bool IsBusy => Status is VoiceSettingsStatus.Loading or VoiceSettingsStatus.Saving or VoiceSettingsStatus.GeneratingSample or VoiceSettingsStatus.PlayingSample;
     public bool IsPlaying => Status is VoiceSettingsStatus.GeneratingSample or VoiceSettingsStatus.PlayingSample;
     public string ProviderError => ProvidersUnavailable ? "Voice settings loaded, but the provider catalog is unavailable. Existing provider selections are retained." : "";
+    public string ConflictMessage => "Settings changed after this form was loaded. Your draft is retained. Reload saved settings before submitting another change.";
     public string StatusText => Status switch {
         VoiceSettingsStatus.Loading => "Loading",
         VoiceSettingsStatus.Ready => "Ready",
@@ -39,13 +42,17 @@ public sealed record VoiceSettingsPresentation(long Generation = 0, VoiceSetting
         VoiceSettingsStatus.PlayingSample => "Saved. Playing sample",
         VoiceSettingsStatus.SamplePlayed => "Saved. Sample played",
         VoiceSettingsStatus.SaveFailed => "Voice settings could not be saved. Review the values and try again.",
+        VoiceSettingsStatus.Conflict => "Settings changed. Draft retained.",
         VoiceSettingsStatus.SavedSynthesisFailed => "Saved. Sample generation failed.",
         VoiceSettingsStatus.SavedPlaybackFailed => "Saved. Sample playback failed.",
+        VoiceSettingsStatus.Unknown => "The save outcome is unconfirmed. Compare current settings and review before starting a new save.",
+        VoiceSettingsStatus.AccessChanged => "Original editing access changed. Your draft is retained; reopen with current access.",
+        VoiceSettingsStatus.SavedWithWarning => "Saved. Change notification needs an explicit refresh.",
         _ => throw new ArgumentOutOfRangeException(nameof(Status))
     };
     public string StatusTone => Status switch {
         VoiceSettingsStatus.LoadFailed or VoiceSettingsStatus.SaveFailed => "danger",
-        VoiceSettingsStatus.SavedSynthesisFailed or VoiceSettingsStatus.SavedPlaybackFailed => "warning",
+        VoiceSettingsStatus.SavedSynthesisFailed or VoiceSettingsStatus.SavedPlaybackFailed or VoiceSettingsStatus.Conflict or VoiceSettingsStatus.Unknown or VoiceSettingsStatus.AccessChanged or VoiceSettingsStatus.SavedWithWarning => "warning",
         VoiceSettingsStatus.Ready or VoiceSettingsStatus.Saved or VoiceSettingsStatus.SamplePlayed => "success",
         _ => "neutral"
     };

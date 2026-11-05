@@ -8,6 +8,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -125,7 +126,10 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         string profileFingerprint)
     {
         var store = new FileSandboxWorkspaceStore(workspaceRoot, scope,
-            new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId));
+            new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId,
+                serviceProvider.GetRequiredService<AgentConfigurationWriteContext>()),
+            serviceProvider.GetRequiredService<AgentConfigurationChanges>().Publisher(
+                new(EditingScopeKind.Dataset, workspaceIdentity.DatabaseProfileId, workspaceIdentity.DatabaseProfileGeneration.Value)));
         var toolAdmission = serviceProvider.GetService<IAgentToolAdmissionVerifier>() is null ? null :
             new AgentToolAdmissionJournal(store, new(workspaceIdentity.DatabaseProfileId, profileFingerprint,
                 workspaceIdentity.DatabaseProfileGeneration), timeProvider, backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),

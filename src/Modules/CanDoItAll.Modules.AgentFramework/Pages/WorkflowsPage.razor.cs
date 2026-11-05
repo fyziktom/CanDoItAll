@@ -1,4 +1,7 @@
 using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Modules.AgentFramework.Pages.Authoring;
 using CanDoItAll.AgentFramework.UI.Chat;
 using Microsoft.Extensions.Logging;
 using CanDoItAll.AgentFramework.Core;
@@ -20,7 +23,7 @@ using CanDoItAll.Modules.AgentFramework.Pages.Navigation;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
-public partial class WorkflowsPage : IDisposable {
+public partial class WorkflowsPage : IDisposable, IAsyncDisposable {
     private const int HistoryRunPageSize = 8;
     private const int HistoryEventPageSize = 8;
     private const int DashboardTabIndex = 0;
@@ -38,6 +41,12 @@ public partial class WorkflowsPage : IDisposable {
 
     [Inject]
     public IWorkflowCatalogService CatalogService { get; set; } = default!;
+
+    [Inject] public WorkflowCatalogReader CatalogReader { get; set; } = default!;
+    [Inject] public WorkflowChanges Changes { get; set; } = default!;
+    [Inject] public EditingChangeFeed ChangeFeed { get; set; } = default!;
+    [Inject] public IEditingUiAccess EditingAccess { get; set; } = default!;
+    [Inject] public ILogger<EditingObservation> ObservationLogger { get; set; } = default!;
 
     [Inject]
     public IWorkflowComponentLibraryService ComponentLibrary { get; set; } = default!;
@@ -103,6 +112,25 @@ public partial class WorkflowsPage : IDisposable {
     private IAppNavigationHistory NavigationHistory { get; set; } = default!;
 
     private IReadOnlyList<WorkflowCatalogItem> definitions = [];
+    private WorkflowCatalogItem? selectedCatalogItem;
+    private WorkflowHeadObservation? headObservation;
+    private WorkflowCatalogSearchQuery catalogQuery = new();
+    private int catalogTotalCount;
+    private int catalogTotalPages;
+    private long catalogReadGeneration;
+    private readonly CancellationTokenSource catalogLifetime = new();
+    private CancellationTokenSource catalogReadCancellation = new();
+    private EditingObservation? catalogObservation;
+    private Task? catalogObservationStart;
+    private bool catalogRefreshPending;
+    private bool catalogObservationRetired;
+    private EditingObservation? componentObservation;
+    private Task? componentObservationStart;
+    private long componentChangeGeneration;
+    private bool componentLibraryRefreshRequired;
+    private string catalogReadError = string.Empty;
+    private WorkflowDraftInspection? draftInspection;
+    private string draftInspectionError = string.Empty;
     private IReadOnlyList<LlmCallComponent> components = [];
     private IReadOnlyList<WorkflowProviderOption> providerOptions = [];
     private IReadOnlyList<WorkflowRunSnapshot> runs = [];
@@ -134,6 +162,7 @@ public partial class WorkflowsPage : IDisposable {
     private string templateSearchText = string.Empty;
     private string templateCatalogueErrorMessage = string.Empty;
     private string templatePreviewErrorMessage = string.Empty;
+    private WorkflowDraftCreationUnknownException? draftCreationUnknown;
     private string errorMessage = string.Empty;
     private int activeWorkflowTabIndex;
     private int historyRunPageIndex;
@@ -218,6 +247,7 @@ public partial class WorkflowsPage : IDisposable {
     private WorkflowCatalogItem? SelectedDefinitionSummary
         => CurrentDefinitionId is { } definitionId
             ? definitions.FirstOrDefault(definition => definition.Id == definitionId)
+                ?? (selectedCatalogItem?.Id == definitionId ? selectedCatalogItem : null)
             : null;
 
     private string WorkflowCuratorDisplayName
@@ -325,21 +355,29 @@ public partial class WorkflowsPage : IDisposable {
         ActiveTab = (WorkflowTab)activeWorkflowTabIndex,
         IsLoading = isLoading,
         IsBusy = isBusy || isLoading,
-        ErrorMessage = errorMessage,
-        DefinitionCount = definitions.Count.ToString(),
+        CreationBlocked = draftCreationUnknown is not null,
+        Recovery = draftCreationUnknown is { } unconfirmed ? new(unconfirmed.WorkflowId.Value, unconfirmed.ComponentId.Value,
+            draftInspection?.Definition?.VersionId.Value, draftInspection?.Definition?.Name, draftInspection?.Component?.Name,
+            draftInspection is not null, draftInspectionError) : null,
+        ErrorMessage = draftCreationUnknown is { } unknown ? $"{errorMessage} {unknown.Message}".Trim() : errorMessage,
+        DefinitionCount = catalogTotalCount.ToString(),
         ComponentCount = ComponentCountText,
         RunCount = HistoryRunCountText,
         PendingCount = PendingRequestCountText,
         Backend = settings.DefaultRuntimePolicy.PreferredBackend.ToString(),
         EditorTitle = SelectedDefinitionTitle,
         EditorLoading = IsSelectedDefinitionDetailPending,
-        EditorUnavailable = IsSelectedDefinitionDetailUnavailable
+        EditorUnavailable = hasRouteIdentityFailure || IsSelectedDefinitionDetailUnavailable
     };
 
     private WorkflowCatalogPresentation CatalogPresentation => new() {
         Revision = presentationRevision,
         IsBusy = isBusy || isLoading,
-        DefinitionCount = definitions.Count,
+        DefinitionCount = catalogTotalCount,
+        Search = catalogQuery.Text ?? string.Empty,
+        Page = new(catalogQuery.PageIndex, catalogTotalPages, catalogTotalCount,
+            $"Page {catalogQuery.PageIndex + 1} of {Math.Max(1, catalogTotalPages)} · {catalogTotalCount} workflows"),
+        ReadError = catalogReadError,
         Tree = WorkflowDefinitionTreeNodes.Select(MapTreeEntry).ToImmutableArray(),
         Definition = selectedDefinition is { } definition
             ? new(definition.Id.Value, definition.Name, definition.Description, definition.Status.ToString(),
@@ -350,7 +388,7 @@ public partial class WorkflowsPage : IDisposable {
                     summary.PreferredBackend.ToString(), 0, 0, false)
                 : null,
         DetailLoading = IsSelectedDefinitionDetailPending,
-        DetailUnavailable = IsSelectedDefinitionDetailUnavailable,
+        DetailUnavailable = hasRouteIdentityFailure || IsSelectedDefinitionDetailUnavailable,
         ValidationText = ValidationText,
         ValidationTone = ValidationTone,
         Issues = validationIssues.Select(issue => new WorkflowValidationView(issue.Code.ToString(), FormatWorkflowMessage(issue.Message))).ToImmutableArray(),
@@ -418,8 +456,25 @@ public partial class WorkflowsPage : IDisposable {
         }
 
         switch (intent.Action) {
+            case WorkflowAction.InspectUnconfirmedDraft:
+                await InspectUnconfirmedDraftAsync();
+                break;
+            case WorkflowAction.OpenInspectedDraft:
+                await OpenInspectedDraftAsync();
+                break;
             case WorkflowAction.Refresh:
                 await RefreshAsync();
+                break;
+            case WorkflowAction.CatalogSearch:
+                catalogQuery = new(intent.Text, catalogQuery.Status, pageSize: catalogQuery.PageSize);
+                await RefreshVisibleCatalogAsync();
+                break;
+            case WorkflowAction.CatalogPage when intent.Delta is -1 or 1:
+                var nextPage = catalogQuery.PageIndex + intent.Delta;
+                if (nextPage >= 0 && nextPage < catalogTotalPages) {
+                    catalogQuery = new(catalogQuery.Text, catalogQuery.Status, nextPage, catalogQuery.PageSize);
+                    await RefreshVisibleCatalogAsync();
+                }
                 break;
             case WorkflowAction.CreateStarter:
                 await CreateStarterWorkflowAsync();
@@ -502,9 +557,83 @@ public partial class WorkflowsPage : IDisposable {
         url = new(Navigation, WorkflowsUrlCodec.Instance, NavigationHistory, typeof(WorkflowsPage));
     }
 
+    private Task EnsureCatalogObservationAsync() => catalogObservationStart ??= StartCatalogObservationAsync();
+
+    private async Task StartCatalogObservationAsync() {
+        var observation = new EditingObservation(ChangeFeed, EditingAccess,
+            new(Changes.Scope, EditingOwner.WorkflowDefinition), ObservationLogger);
+        catalogObservation = observation;
+        try {
+            await observation.StartAsync(_ => InvokeAsync(async () => {
+                await Task.Delay(TimeSpan.FromMilliseconds(150), observation.Lifetime);
+                if (isLoading) {
+                    catalogRefreshPending = true;
+                    return;
+                }
+                await RefreshVisibleCatalogAsync();
+                StateHasChanged();
+            }), () => InvokeAsync(() => {
+                catalogObservationRetired = true;
+                catalogReadError = "Workflow updates are unavailable. Reopen this workspace with current access.";
+                StateHasChanged();
+            }), catalog: true);
+        } catch (Exception error) {
+            catalogObservationRetired = true;
+            catalogReadError = "Workflow updates are unavailable. Reopen this workspace with current access.";
+            Logger.LogWarning("Workflow catalog observation unavailable for activation {ActivationGeneration}: {FailureType}",
+                Changes.Scope.ActivationGeneration, error.GetType().Name);
+            throw;
+        }
+    }
+
+    private void ApplyCatalog(WorkflowCatalogRead read, WorkflowId? observedId) {
+        definitions = read.Page.Items.ToImmutableArray();
+        selectedCatalogItem = read.Selected;
+        headObservation = observedId is { } id ? new(id, read.Selected?.VersionId) : null;
+        catalogTotalCount = read.Page.TotalCount;
+        catalogTotalPages = read.Page.TotalPages;
+        catalogQuery = new(catalogQuery.Text, catalogQuery.Status, read.Page.PageIndex, read.Page.PageSize);
+    }
+
+    private async Task RefreshVisibleCatalogAsync() {
+        if (disposed || catalogObservationRetired) {
+            return;
+        }
+        var generation = ++catalogReadGeneration;
+        RenewRead(ref catalogReadCancellation);
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(catalogReadCancellation.Token, catalogLifetime.Token);
+        var owner = CaptureOwner();
+        var query = catalogQuery;
+        try {
+            if (catalogObservation is { } observation) {
+                await observation.AuthorizeAsync(write: false, request.Token);
+            }
+            var read = await CatalogReader.ReadAsync(query, owner.DefinitionId, request.Token);
+            if (catalogObservation is { } current) {
+                await current.AuthorizeAsync(write: false, request.Token);
+            }
+            if (generation == catalogReadGeneration && Owns(owner)) {
+                ApplyCatalog(read, owner.DefinitionId);
+                catalogReadError = string.Empty;
+            }
+        } catch (OperationCanceledException) when (disposed || request.IsCancellationRequested) {
+        } catch (Exception error) {
+            if (generation == catalogReadGeneration && Owns(owner)) {
+                catalogReadError = "The workflow catalog could not be refreshed. Your open workflow is retained.";
+                Logger.LogWarning("Workflow catalog read failed for page {PageIndex}, activation {ActivationGeneration}: {FailureType}",
+                    query.PageIndex, Changes.Scope.ActivationGeneration, error.GetType().Name);
+            }
+        }
+    }
+
     protected override async Task OnParametersSetAsync() {
         var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
         if (!change.IsChanged) {
+            return;
+        }
+        if (!RendererInfo.IsInteractive) {
+            routeIdentity = CreateRouteIdentity(change.Current);
+            activeWorkflowTabIndex = (int)change.Current.Tab;
             return;
         }
 
@@ -540,22 +669,30 @@ public partial class WorkflowsPage : IDisposable {
         if (isBusy) {
             return;
         }
-
-        var request = WorkflowRouteRequest.Create(
-            route.ProjectId,
-            route.WorkflowId,
-            route.RunId);
-        var navigation = AgentChatNavigationFence;
-        var generation = BeginPageLoad(clearSelection: request.HasExplicitSelection);
-        await ExecutePageLoadAsync(
-            request.HasExplicitSelection ? request.WorkflowId : CurrentDefinitionId,
-            request.HasExplicitSelection ? request.RunId : selectedRun?.RunId,
-            request.HasExplicitSelection ? request : null,
-            generation,
-            navigation);
-        if (IsCurrentPageLoad(generation, navigation)) {
+        var owner = CaptureOwner();
+        await RefreshVisibleCatalogAsync();
+        if (!Owns(owner) || catalogObservationRetired) {
+            return;
+        }
+        if (componentLibraryLoaded) {
+            await RefreshComponentLibraryAsync();
+            if (!Owns(owner) || catalogObservationRetired) {
+                return;
+            }
+        }
+        analyticsRefreshVersion++;
+        await EnsureWorkflowCuratorAgentAsync();
+        if (activeWorkflowTabIndex == HistoryTabIndex && !hasRouteIdentityFailure) {
+            await LoadRunsPageAsync(CurrentDefinitionId, historyRunPageIndex, selectedRun?.RunId);
             await ReconcileRunDetailAsync();
         }
+    }
+
+    private ValueTask AuthorizeCanvasAsync(bool write, CancellationToken cancellationToken) {
+        if (disposed || catalogObservationRetired || catalogObservation is not { } observation) {
+            return ValueTask.FromException(new UnauthorizedAccessException("Current native workflow editing access is required."));
+        }
+        return observation.AuthorizeAsync(write, cancellationToken);
     }
 
     private async Task RefreshRouteAsync(
@@ -624,6 +761,11 @@ public partial class WorkflowsPage : IDisposable {
             return;
         }
 
+        if (catalogRefreshPending) {
+            catalogRefreshPending = false;
+            await RefreshVisibleCatalogAsync();
+        }
+
         StateHasChanged();
         await EnsureWorkflowCuratorAgentAsync();
     }
@@ -658,21 +800,25 @@ public partial class WorkflowsPage : IDisposable {
         analyticsRefreshVersion++;
         using var request = CancellationTokenSource.CreateLinkedTokenSource(pageReadCancellation.Token);
         var cancellation = request.Token;
+        await EnsureCatalogObservationAsync();
+        await AuthorizeCanvasAsync(false, cancellation);
         var settingsTask = SettingsService.GetSettingsAsync(cancellation);
-        var definitionsTask = CatalogService.ListDefinitionsAsync(cancellation);
+        var definitionsTask = CatalogReader.ReadAsync(catalogQuery, preferredDefinitionId, cancellation);
         await Task.WhenAll(settingsTask, definitionsTask);
+        await AuthorizeCanvasAsync(false, cancellation);
 
         if (!IsCurrentPageLoad(generation, navigation)) {
             return;
         }
 
         var loadedSettings = await settingsTask;
-        var loadedDefinitions = await definitionsTask;
+        var loadedCatalog = await definitionsTask;
+        var loadedDefinitions = loadedCatalog.Page.Items;
         WorkflowAgentChatProjectSelection? routeProject = null;
         var routeError = requiredRoute?.ValidationError ?? string.Empty;
         if (string.IsNullOrEmpty(routeError) &&
             requiredRoute?.WorkflowId is { } requiredDefinitionId &&
-            loadedDefinitions.All(definition => definition.Id != requiredDefinitionId)) {
+            loadedDefinitions.All(definition => definition.Id != requiredDefinitionId) && loadedCatalog.Selected?.Id != requiredDefinitionId) {
             routeError = $"Workflow definition '{requiredDefinitionId}' was not found.";
         }
 
@@ -688,7 +834,7 @@ public partial class WorkflowsPage : IDisposable {
         }
 
         settings = loadedSettings;
-        definitions = loadedDefinitions.ToImmutableArray();
+        ApplyCatalog(loadedCatalog, preferredDefinitionId);
         if (!string.IsNullOrEmpty(routeError)) {
             FailRouteIdentity(routeError);
             return;
@@ -964,7 +1110,7 @@ public partial class WorkflowsPage : IDisposable {
     }
 
     private async Task AddSelectedTemplateToDraftsAsync() {
-        if (isBusy ||
+        if (isBusy || draftCreationUnknown is not null ||
             templatePack is null ||
             templatePreviewTemplate is null) {
             return;
@@ -982,6 +1128,10 @@ public partial class WorkflowsPage : IDisposable {
             if (!componentLibraryLoaded || !Owns(owner) || generation != templateGeneration) {
                 return;
             }
+            var authority = catalogObservation ?? throw new UnauthorizedAccessException("Current workflow editing access is required.");
+            await authority.AuthorizeAsync(true, editorCancellation.Token);
+            using var admission = Changes.EnterUiWrite(token => authority.AuthorizeAsync(true, token));
+            using var operation = Changes.Enter(new(Guid.NewGuid(), Guid.NewGuid()));
             var saved = await TemplateDrafts.CreateAsync(template.Key);
             committed = true;
 
@@ -995,6 +1145,16 @@ public partial class WorkflowsPage : IDisposable {
             isBusy = false;
             OpenCreatedDefinition(saved.Id);
             await LoadPageAsync(preferredDefinitionId: saved.Id);
+        } catch (WorkflowDraftCreationUnknownException exception) {
+            if (!Owns(owner)) {
+                return;
+            }
+            draftCreationUnknown = exception;
+            if (generation != templateGeneration) {
+                return;
+            }
+            templatePreviewErrorMessage = exception.Message;
+            NotificationService.Warning("Draft outcome unknown", exception.Message);
         } catch (Exception exception) {
             if (!Owns(owner) || generation != templateGeneration) {
                 return;
@@ -1051,8 +1211,77 @@ public partial class WorkflowsPage : IDisposable {
         selectedDefinitionDetailUnavailable = false;
     }
 
+    private async Task InspectUnconfirmedDraftAsync() {
+        if (isBusy || draftCreationUnknown is not { } unconfirmed) {
+            return;
+        }
+        var owner = CaptureOwner();
+        var authority = catalogObservation ?? throw new UnauthorizedAccessException("Current workflow access is required.");
+        isBusy = true;
+        draftInspection = null;
+        draftInspectionError = string.Empty;
+        try {
+            await authority.AuthorizeAsync(false, editorCancellation.Token);
+            await EnsureComponentObservationAsync();
+            var componentAccess = componentObservation ?? throw new UnauthorizedAccessException("Current component access is required.");
+            await componentAccess.AuthorizeAsync(false, editorCancellation.Token);
+            var inspection = await TemplateDrafts.InspectAsync(unconfirmed.WorkflowId, unconfirmed.ComponentId, editorCancellation.Token);
+            await authority.AuthorizeAsync(false, editorCancellation.Token);
+            await componentAccess.AuthorizeAsync(false, editorCancellation.Token);
+            if (Owns(owner) && ReferenceEquals(unconfirmed, draftCreationUnknown)) {
+                draftInspection = inspection;
+            }
+        } catch (Exception error) {
+            if (Owns(owner) && ReferenceEquals(unconfirmed, draftCreationUnknown)) {
+                draftInspectionError = "Saved resources could not be inspected. The creation outcome remains unconfirmed.";
+                Logger.LogWarning("Unconfirmed draft inspection failed for workflow {WorkflowId}, component {ComponentId}: {FailureType}",
+                    unconfirmed.WorkflowId.Value, unconfirmed.ComponentId.Value, error.GetType().Name);
+            }
+        } finally {
+            if (Owns(owner)) {
+                isBusy = false;
+            }
+        }
+    }
+
+    private async Task OpenInspectedDraftAsync() {
+        if (isBusy || draftCreationUnknown is not { } unconfirmed || draftInspection?.Definition is not { } inspected ||
+            inspected.Id != unconfirmed.WorkflowId) {
+            return;
+        }
+        var owner = CaptureOwner();
+        try {
+            var authority = catalogObservation ?? throw new UnauthorizedAccessException("Current workflow access is required.");
+            await authority.AuthorizeAsync(false, editorCancellation.Token);
+            if (!Owns(owner)) {
+                return;
+            }
+            CloseTemplatePreviewDialog();
+            CloseTemplateCatalogueDialog();
+            ClearSelectedDefinitionState();
+            OpenCreatedDefinition(inspected.Id);
+            await LoadPageAsync(preferredDefinitionId: inspected.Id);
+            if (CurrentDefinitionId == inspected.Id) {
+                await EnsureSelectedDefinitionLoadedAsync();
+            }
+            await authority.AuthorizeAsync(false, catalogLifetime.Token);
+            if (!disposed && ReferenceEquals(unconfirmed, draftCreationUnknown) && selectedDefinition?.Id == inspected.Id &&
+                selectedDefinitionDetailLoaded && !selectedDefinitionDetailUnavailable) {
+                draftCreationUnknown = null;
+                draftInspection = null;
+                draftInspectionError = string.Empty;
+            }
+        } catch (Exception error) {
+            if (!disposed && ReferenceEquals(unconfirmed, draftCreationUnknown)) {
+                draftInspectionError = "The saved workflow could not be opened. The creation outcome remains unconfirmed.";
+                Logger.LogWarning("Unconfirmed workflow {WorkflowId} could not be opened: {FailureType}",
+                    unconfirmed.WorkflowId.Value, error.GetType().Name);
+            }
+        }
+    }
+
     private async Task CreateStarterWorkflowAsync() {
-        if (isBusy) {
+        if (isBusy || draftCreationUnknown is not null) {
             return;
         }
 
@@ -1066,34 +1295,21 @@ public partial class WorkflowsPage : IDisposable {
                 return;
             }
             var providerOption = ResolveDefaultProviderOption();
-            var component = await ComponentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
-                Id: null,
-                Name: $"Starter LLM call {DateTimeOffset.UtcNow:HHmmss}",
-                ProviderProfileId: providerOption?.ProviderProfileId,
-                Model: ResolveDefaultModel(providerOption),
-                Modality: WorkflowModality.Text,
-                ModelSettings: new WorkflowModelSettings(
-                    Temperature: 0.2,
-                    MaxOutputTokens: 800,
-                    RequireJsonOutput: false,
-                    ResponseFormatJsonSchema: string.Empty),
-                Instructions: "Summarize the workflow input and return a concise result.",
-                InputShape: WorkflowValueShape.Text,
-                ResultShape: WorkflowValueShape.Text,
-                Permissions: AgentPermissionsPolicy.Default));
-            var definition = await CatalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
-                Id: null,
-                ExpectedVersionId: null,
-                Name: $"Starter workflow {DateTimeOffset.UtcNow:HHmmss}",
-                Description: "Starter workflow with one prepared LLM Call Component and in-process preview policy.",
-                Status: WorkflowLifecycleStatus.Draft,
-                Graph: CreateStarterGraph(component.Id),
-                RuntimePolicy: new WorkflowRuntimePolicy(
-                    WorkflowRuntimeBackendKind.InProcess,
-                    AllowInProcessPreviewRuns: true,
-                    RequireDurableProductionRuns: false,
-                    ExposeAzureFunctionsStatusEndpoint: false,
-                    ExposeAzureFunctionsMcpTool: false)));
+            var now = DateTimeOffset.UtcNow;
+            var component = new LlmCallComponent(WorkflowComponentId.New(), $"Starter LLM call {now:HHmmss}",
+                providerOption?.ProviderProfileId, ResolveDefaultModel(providerOption), WorkflowModality.Text,
+                new(0.2, 800, false, string.Empty), "Summarize the workflow input and return a concise result.",
+                WorkflowValueShape.Text, WorkflowValueShape.Text, AgentPermissionsPolicy.Default, now, now);
+            var prepared = new WorkflowDefinition(WorkflowId.New(), WorkflowVersionId.New(), $"Starter workflow {now:HHmmss}",
+                "Starter workflow with one prepared LLM Call Component and in-process preview policy.", WorkflowLifecycleStatus.Draft,
+                CreateStarterGraph(component), new(WorkflowRuntimeBackendKind.InProcess,
+                    AllowInProcessPreviewRuns: true, RequireDurableProductionRuns: false,
+                    ExposeAzureFunctionsStatusEndpoint: false, ExposeAzureFunctionsMcpTool: false), now, now);
+            var authority = catalogObservation ?? throw new UnauthorizedAccessException("Current workflow editing access is required.");
+            await authority.AuthorizeAsync(true, editorCancellation.Token);
+            using var admission = Changes.EnterUiWrite(token => authority.AuthorizeAsync(true, token));
+            using var operation = Changes.Enter(new(Guid.NewGuid(), Guid.NewGuid()));
+            var definition = await TemplateDrafts.SavePreparedDraftAsync(component, prepared);
 
             if (!Owns(owner)) {
                 return;
@@ -1103,6 +1319,11 @@ public partial class WorkflowsPage : IDisposable {
             NotificationService.Success("Workflow created", "Starter workflow and LLM component were created.");
             OpenCreatedDefinition(definition.Id);
             await LoadPageAsync(preferredDefinitionId: definition.Id);
+        } catch (WorkflowDraftCreationUnknownException exception) {
+            if (Owns(owner)) {
+                draftCreationUnknown = exception;
+                NotificationService.Warning("Draft outcome unknown", exception.Message);
+            }
         } catch (Exception exception) {
             if (!Owns(owner)) {
                 return;
@@ -1630,7 +1851,7 @@ public partial class WorkflowsPage : IDisposable {
             WorkflowExternalResponseServiceOutcome.Denied or
             WorkflowExternalResponseServiceOutcome.Resuming;
 
-    private async Task HandleCanvasDefinitionSavedAsync(WorkflowDefinition definition) {
+    private async Task HandleCanvasDefinitionAcceptedAsync(WorkflowDefinition definition) {
         if (disposed || CurrentDefinitionId is { } current && current != definition.Id) {
             return;
         }
@@ -1644,11 +1865,7 @@ public partial class WorkflowsPage : IDisposable {
         selectedDefinitionNavigation = AgentChatNavigationFence;
         presentationRevision++;
         analyticsRefreshVersion++;
-        var owner = CaptureOwner();
-        var catalog = await CatalogService.ListDefinitionsAsync(editorCancellation.Token);
-        if (Owns(owner)) {
-            definitions = catalog.ToImmutableArray();
-        }
+        await RefreshVisibleCatalogAsync();
     }
 
     private async Task StartCanvasDraftAsync() {
@@ -1752,6 +1969,25 @@ public partial class WorkflowsPage : IDisposable {
         return componentLibraryLoadTask is { IsCompleted: false } pending ? pending : componentLibraryLoadTask = LoadComponentLibraryAsync();
     }
 
+    private Task EnsureComponentObservationAsync() => componentObservationStart ??= StartComponentObservationAsync();
+
+    private async Task StartComponentObservationAsync() {
+        var observation = new EditingObservation(ChangeFeed, EditingAccess,
+            new(Changes.Scope, EditingOwner.WorkflowComponent), ObservationLogger);
+        componentObservation = observation;
+        await observation.StartAsync(_ => InvokeAsync(() => {
+            componentChangeGeneration++;
+            componentLibraryRefreshRequired = true;
+            StateHasChanged();
+        }), () => InvokeAsync(() => {
+            catalogObservationRetired = true;
+            components = [];
+            providerOptions = [];
+            catalogReadError = "Component updates are unavailable. Reopen this workspace with current access.";
+            StateHasChanged();
+        }), catalog: true);
+    }
+
     private async Task RefreshComponentLibraryAsync() {
         if (disposed) {
             return;
@@ -1774,15 +2010,22 @@ public partial class WorkflowsPage : IDisposable {
         using var request = CancellationTokenSource.CreateLinkedTokenSource(selectionReadCancellation.Token);
         var cancellation = request.Token;
         try {
+            await EnsureComponentObservationAsync();
+            var observation = componentObservation ?? throw new UnauthorizedAccessException("Current component library access is required.");
+            await observation.AuthorizeAsync(false, cancellation);
+            var observedGeneration = componentChangeGeneration;
             var loadedComponents = await ComponentLibrary.ListComponentsAsync(cancellation);
+            await observation.AuthorizeAsync(false, cancellation);
             var loadedProviders = await ComponentLibrary.ListProviderOptionsAsync(cancellation);
-            if (!Owns(owner) || cancellation.IsCancellationRequested) {
+            await observation.AuthorizeAsync(false, cancellation);
+            if (!Owns(owner) || cancellation.IsCancellationRequested || catalogObservationRetired) {
                 return;
             }
 
             components = loadedComponents.ToImmutableArray();
             providerOptions = loadedProviders.ToImmutableArray();
             componentLibraryLoaded = true;
+            componentLibraryRefreshRequired = observedGeneration != componentChangeGeneration;
         } catch (Exception exception) {
             if (Owns(owner) && !cancellation.IsCancellationRequested) {
                 errorMessage = FormatWorkflowException(exception);
@@ -2070,15 +2313,21 @@ public partial class WorkflowsPage : IDisposable {
         return trimmed;
     }
 
-    private static WorkflowGraph CreateStarterGraph(WorkflowComponentId componentId) {
+    private static WorkflowGraph CreateStarterGraph(LlmCallComponent component) {
         var start = new WorkflowNodeId("start");
         var llm = new WorkflowNodeId("llm");
         var end = new WorkflowNodeId("end");
+        var call = CreateNode(llm, WorkflowNodeKind.LlmCall, component.Id, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text);
+        call = call with { Settings = call.Settings with {
+            Instructions = component.Instructions,
+            ProviderProfileId = component.ProviderProfileId,
+            Model = component.Model
+        } };
         return new WorkflowGraph(
             start,
             [
                 CreateNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
-                CreateNode(llm, WorkflowNodeKind.LlmCall, componentId, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text),
+                call,
                 CreateNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
             ],
             [
@@ -2437,6 +2686,7 @@ public partial class WorkflowsPage : IDisposable {
         && owner.Navigation == AgentChatNavigationFence;
 
     private void InvalidateSelectionEffects() {
+        RenewRead(ref catalogReadCancellation);
         RenewRead(ref editorCancellation);
         targetGeneration++;
         presentationRevision++;
@@ -2476,14 +2726,28 @@ public partial class WorkflowsPage : IDisposable {
         }
 
         disposed = true;
+        catalogLifetime.Cancel();
+        catalogObservation?.Stop();
+        componentObservation?.Stop();
         InvalidateSelectionEffects();
         foreach (var cancellation in new[] { pageReadCancellation, selectionReadCancellation, runReadCancellation,
-            overlayReadCancellation, lifetimeCancellation, editorCancellation }) {
+            overlayReadCancellation, lifetimeCancellation, editorCancellation, catalogReadCancellation }) {
             cancellation.Cancel();
             cancellation.Dispose();
         }
 
         responseDrafts.Clear();
         GC.SuppressFinalize(this);
+    }
+
+    public async ValueTask DisposeAsync() {
+        Dispose();
+        if (catalogObservation is { } observation) {
+            await observation.DisposeAsync();
+        }
+        if (componentObservation is { } componentsObservation) {
+            await componentsObservation.DisposeAsync();
+        }
+        catalogLifetime.Dispose();
     }
 }

@@ -8,6 +8,10 @@
             @state.Warning
         </Alert>
         <Button Text="Retry sharing read" Click="@(() => View.RetryAsync(origin))" Disabled="@state.Loading" data-testid="shared-provider-retry" />
+        @if (state.CanAcknowledgeCurrent) {
+            <Button Text="Acknowledge current sharing state" ButtonStyle="ButtonStyle.Light"
+                    Click="@(() => View.AcknowledgeCurrentAsync(origin))" data-testid="shared-provider-acknowledge-current" />
+        }
     }
     @if (state.Loading && state.Profile is null) {
         <EmptyState Eyebrow="Loading" Title="Loading sharing state" Description="Reading provider sharing state." />
@@ -24,6 +28,8 @@
             Unpublish="@(() => View.OpenConfirmation(origin, SharedProviderConfirmationKind.Unpublish))" />
     } else if (state.Profile.Import is { } import && state.Draft is { } draft) {
         <SharedProviderImportedProfileContent @key="import.Baseline.ImportId" Import="import" Draft="draft"
+            DraftChanged="StateHasChanged"
+            ReviewBlocked="state.ReviewBlocked"
             IsBusy="state.WritesBlocked" Save="@(submission => View.SaveImportedAsync(origin, submission))"
             Retire="@(() => View.OpenConfirmation(origin, SharedProviderConfirmationKind.RetireImport))" />
     } else {

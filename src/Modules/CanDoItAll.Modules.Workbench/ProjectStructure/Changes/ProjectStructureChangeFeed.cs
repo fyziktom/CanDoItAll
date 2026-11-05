@@ -10,25 +10,30 @@ public enum ProjectStructureChangeKind {
 }
 
 [Description("Position in the bounded, process-local project structure change feed. A new stream ID requires refreshing the structure.")]
-public sealed record ProjectStructureChangeCursor(Guid StreamId, long Sequence);
+public sealed record ProjectStructureChangeCursor(
+    [property: Description("GUID identifying this process-local feed incarnation; a changed value invalidates earlier cursor positions.")] Guid StreamId,
+    [property: Description("Non-negative feed sequence returned by the server. Retain the complete cursor for the next poll or SSE resume.")] long Sequence);
 
 [Description("A committed node change. NodeId is the canvas node key; Title is its label at commit, including for deleted nodes.")]
-public sealed record ProjectStructureChangedNode(string NodeId, string Title, ProjectStructureChangeKind Kind);
+public sealed record ProjectStructureChangedNode(
+    [property: Description("Canonical canvas node key within the addressed project; a deleted key can no longer be selected after refresh.")] string NodeId,
+    [property: Description("Node display label captured at commit, including for a deleted node; this hint is not current node content.")] string Title,
+    [property: Description("Committed change kind as a JSON integer: 0 Created, 1 Updated, 2 Deleted, 3 RelationshipChanged.")] ProjectStructureChangeKind Kind);
 
 [Description("One committed change, shared by polling and SSE. SessionId identifies its editor session, not authorization. Nodes can include deleted nodes.")]
 public sealed record ProjectStructureChange(
-    long Sequence,
-    Guid ProjectId,
-    Guid SessionId,
-    string Actor,
-    DateTimeOffset OccurredAtUtc,
-    IReadOnlyList<ProjectStructureChangedNode> Nodes);
+    [property: Description("Server-issued sequence of this committed change within the current process feed.")] long Sequence,
+    [property: Description("GUID of the project whose committed structure contribution produced this hint.")] Guid ProjectId,
+    [property: Description("Originating editor-session GUID for identifying own hints; it is not authentication or authorization.")] Guid SessionId,
+    [property: Description("Originating actor display label, intended only for the update notice and not as proof of authority.")] string Actor,
+    [property: Description("Server commit-notification instant with UTC offset; this is not an audit-log ordering guarantee.")] DateTimeOffset OccurredAtUtc,
+    [property: Description("Changed node keys, labels and kinds captured for this commit; refresh canonical Structure before acting on current content.")] IReadOnlyList<ProjectStructureChangedNode> Nodes);
 
 [Description("A page of committed changes. Save Cursor for the next poll. RequiresRefresh means replay was lost or the server restarted. A request without a cursor starts at the current position without historical notifications.")]
 public sealed record ProjectStructureChanges(
-    ProjectStructureChangeCursor Cursor,
-    IReadOnlyList<ProjectStructureChange> Changes,
-    bool RequiresRefresh);
+    [property: Description("Server-issued next feed position; retain both streamId and sequence for polling or SSE resume.")] ProjectStructureChangeCursor Cursor,
+    [property: Description("Bounded committed hints after the supplied cursor. An omitted cursor establishes a current position and returns no history.")] IReadOnlyList<ProjectStructureChange> Changes,
+    [property: Description("True when replay continuity was lost or the stream changed; explicitly refresh canonical Structure before relying on displayed node state.")] bool RequiresRefresh);
 
 public sealed class ProjectStructureChangeSession {
     public Guid Id { get; } = Guid.NewGuid();

@@ -27,5 +27,5 @@ public sealed record ProjectOptionAcknowledgement(
 
 public interface IAdmittedProjectWorkbenchSeedService {
     Task SeedProjectObjectsAsync(ProjectWriteAdmission project, IReadOnlyCollection<ProjectObjectSeedDraft> seeds,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentWrite = null);
 }

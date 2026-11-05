@@ -411,14 +411,16 @@ public sealed class ProjectFilesSurfaceSessionTests {
         public bool IsLocalLaunchAvailable => true;
         public int Launches { get; private set; }
         public FilesFixtureGate? Gate { get; set; }
-        public async ValueTask<FileToolsBrowseItemActionResult> LaunchAsync(FileToolsSemanticScope scope, FileBrowserItemKey itemKey, FileToolsLocalFileAction action, CancellationToken cancellationToken = default) {
+        public async ValueTask<FileToolsBrowseItemActionResult> LaunchAsync(FileToolsSemanticScope scope, FileBrowserItemKey itemKey, FileToolsLocalFileAction action, CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null) {
             Launches++;
             if (Gate is not null) {
                 await Gate.WaitAsync();
             }
             return FileToolsBrowseItemActionResult.Success("Recorded original launch");
         }
-        public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(FileToolsSemanticScope scope, FileBrowserItemKey itemKey, CancellationToken cancellationToken = default)
+        public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(FileToolsSemanticScope scope, FileBrowserItemKey itemKey, CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => throw new InvalidOperationException("Download was not requested by this control.");
     }
 

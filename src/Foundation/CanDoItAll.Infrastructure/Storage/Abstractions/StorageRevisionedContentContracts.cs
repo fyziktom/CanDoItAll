@@ -19,12 +19,13 @@ public sealed record StorageRevisionedWriteRequest
         StorageObjectReference reference,
         byte[] content,
         StorageContentRevision? expectedRevision,
-        bool allowOverwrite)
-    {
+        bool allowOverwrite,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         Reference = reference ?? throw new ArgumentNullException(nameof(reference));
         Content = content ?? throw new ArgumentNullException(nameof(content));
         ExpectedRevision = expectedRevision;
         AllowOverwrite = allowOverwrite;
+        AuthorizeCommit = authorizeCommit;
     }
 
     public StorageObjectReference Reference { get; }
@@ -34,6 +35,9 @@ public sealed record StorageRevisionedWriteRequest
     public StorageContentRevision? ExpectedRevision { get; }
 
     public bool AllowOverwrite { get; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Func<CancellationToken, ValueTask>? AuthorizeCommit { get; }
 }
 
 public sealed record StorageRevisionedWriteResult(

@@ -19,6 +19,58 @@ public sealed class PagedRecordBrowserTests : BunitContext
     }
 
     [Fact]
+    public async Task Background_refresh_defers_to_pending_search_without_remounting_or_committing_it_early() {
+        var requests = new List<PagedRecordRequest<RecordScope>>();
+        var changes = new List<PagedRecordQueryChange<RecordScope>>();
+        var cut = RenderControlledBrowser(new("", [], RecordScope.All, 0), RecordingLoader(requests, 1), changes.Add);
+        var instance = cut.Instance;
+        var typing = cut.InvokeAsync(() => cut.Find("[data-testid='records-search']").InputAsync(new ChangeEventArgs { Value = "typed search" }));
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RefreshVersion, 1)));
+        Assert.Single(requests);
+        Assert.Empty(changes);
+
+        await typing;
+
+        WaitForLoads(cut, requests, 2);
+        Assert.Equal("typed search", requests[1].SearchText);
+        Assert.Equal("typed search", Assert.Single(changes).Query.SearchText);
+        Assert.Same(instance, cut.Instance);
+        Assert.Equal("typed search", cut.Find("[data-testid='records-search']").GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task Refreshes_during_a_load_coalesce_into_one_trailing_read_with_the_same_selection_and_query() {
+        var first = new TaskCompletionSource<PagedRecordPage<Guid>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var requests = new List<PagedRecordRequest<RecordScope>>();
+        var cut = Render<PagedRecordBrowser<Guid, RecordScope>>(parameters => parameters
+            .Add(component => component.InitialFilter, RecordScope.All)
+            .Add(component => component.Selection, new PagedRecordSelection<Guid>(AlphaId))
+            .Add(component => component.Query, new("alpha", ["priority"], RecordScope.All, 0))
+            .Add(component => component.Loader, (request, _) => {
+                requests.Add(request);
+                return requests.Count == 1 ? first.Task : Task.FromResult(Page(request, Option(AlphaId, "Alpha")));
+            })
+            .Add(component => component.DataTestId, "records"));
+        var instance = cut.Instance;
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RefreshVersion, 1)));
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RefreshVersion, 2)));
+        Assert.Single(requests);
+        first.SetResult(Page(requests[0], Option(AlphaId, "Alpha")));
+
+        WaitForLoads(cut, requests, 2);
+
+        Assert.Same(instance, cut.Instance);
+        Assert.Equal(AlphaId, cut.Instance.Selection!.Key);
+        Assert.All(requests, request => {
+            Assert.Equal("alpha", request.SearchText);
+            Assert.Equal(["priority"], request.Tags);
+            Assert.Equal(0, request.PageIndex);
+        });
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RefreshVersion, 2)));
+        Assert.Equal(2, requests.Count);
+    }
+
+    [Fact]
     public void Initial_load_uses_a_zero_based_typed_request()
     {
         PagedRecordRequest<RecordScope>? receivedRequest = null;
@@ -463,6 +515,35 @@ public sealed class PagedRecordBrowserTests : BunitContext
             Assert.Contains("No pages", cut.Markup);
             Assert.Empty(cut.FindAll("[data-testid='records-loading']"));
         });
+    }
+
+    [Fact]
+    public async Task Dialog_refresh_keeps_pending_selection_when_the_refreshed_page_contains_other_rows() {
+        var reads = 0;
+        Guid? confirmed = null;
+        var cut = Render<PagedRecordPickerDialog<Guid, RecordScope>>(parameters => parameters
+            .Add(component => component.IsOpen, true)
+            .Add(component => component.Loader, (_, _) => Task.FromResult(new PagedRecordPage<Guid>(
+                [++reads == 1 ? Option(AlphaId, "Alpha") : Option(BetaId, "Beta")], 0, 2, 1)))
+            .Add(component => component.InitialFilter, RecordScope.All)
+            .Add(component => component.FilterOptions, ScopeOptions())
+            .Add(component => component.PageSize, 2)
+            .Add(component => component.ShowTagFilter, false)
+            .Add(component => component.DataTestId, "record-dialog")
+            .Add(component => component.SelectionConfirmed, value => confirmed = value));
+        cut.WaitForElement("[data-testid='record-alpha']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='record-alpha']").ClickAsync(new()));
+        var browser = cut.FindComponent<PagedRecordBrowser<Guid, RecordScope>>().Instance;
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='record-dialog-refresh']").ClickAsync(new()));
+
+        cut.WaitForElement("[data-testid='record-beta']");
+        Assert.Equal(2, reads);
+        Assert.Same(browser, cut.FindComponent<PagedRecordBrowser<Guid, RecordScope>>().Instance);
+        Assert.Contains("1 record selected", cut.Markup);
+        Assert.Null(confirmed);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='record-dialog-confirm']").ClickAsync(new()));
+        Assert.Equal(AlphaId, confirmed);
     }
 
     [Fact]

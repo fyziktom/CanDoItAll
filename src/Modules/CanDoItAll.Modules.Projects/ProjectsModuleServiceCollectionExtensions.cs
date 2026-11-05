@@ -3,6 +3,8 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -49,6 +51,21 @@ public static class ProjectsModuleServiceCollectionExtensions
             "Projects definition operation limits and deadlines must remain within supported bounds.").ValidateOnStart();
         services.AddScoped<IProjectSummaryQueryService>(provider => provider.GetRequiredService<ProjectsService>());
         services.AddScoped<ProjectWriteAdmissionService>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<EditingOperationContext>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.AddScoped(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new ProjectChanges(provider.GetRequiredService<EditingChangeFeed>(),
+                new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<EditingOperationContext>(), provider.GetServices<IProjectCommittedChangeSink>());
+        });
+        services.AddScoped(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new ProjectAssignmentChanges(provider.GetRequiredService<EditingChangeFeed>(),
+                new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<EditingOperationContext>());
+        });
         services.AddScoped<ProjectWriteSelectionQuery>();
         services.AddScoped<ProjectRecordQueryService>();
         services.AddScoped<ProjectsProfileTransferStore>();

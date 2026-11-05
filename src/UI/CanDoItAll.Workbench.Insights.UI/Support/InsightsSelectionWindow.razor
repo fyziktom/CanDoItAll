@@ -23,6 +23,7 @@
                       StateChanged="@(state => receiver.InvokeAsync(new InsightsWindowIntent(origin, InsightsWindow.Selection, state)))">
     <ProjectStructureSelectionPanel State="@selection" Origin="@origin" Dispatch="dispatch"
                                     AdvancedDetailsHelpBody="@help" AdvancedDetailsHelpTip="@tip" />
+    @SelectionSupplement
 </CanvasFloatingWindow>
 
 @code {
@@ -36,4 +37,5 @@
     [Parameter, EditorRequired] public ProjectStructureSelectionPanelState Selection { get; set; } = default!;
     [Parameter] public EventCallback<InsightsWindowIntent> WindowChanged { get; set; }
     [Parameter] public EventCallback<InsightsSelectionIntent> Dispatch { get; set; }
+    [Parameter] public RenderFragment? SelectionSupplement { get; set; }
 }

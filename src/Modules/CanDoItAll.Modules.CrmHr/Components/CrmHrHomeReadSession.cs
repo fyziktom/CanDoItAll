@@ -9,16 +9,16 @@ public sealed class CrmHrHomeReadSession : IDisposable
 {
     public const string FailureMessage = "The CRM / HR overview could not be loaded. Retry, or open the directory directly.";
 
-    private readonly ICrmHrHomeQueryService query;
+    private readonly Func<CancellationToken, Task<CrmHrHomeSnapshotModel>> read;
     private readonly ILogger? logger;
     private readonly CancellationTokenSource lifetime = new();
     private long generation;
     private bool isReading;
     private bool disposed;
 
-    public CrmHrHomeReadSession(ICrmHrHomeQueryService query, ILogger? logger = null)
+    public CrmHrHomeReadSession(Func<CancellationToken, Task<CrmHrHomeSnapshotModel>> read, ILogger? logger = null)
     {
-        this.query = query ?? throw new ArgumentNullException(nameof(query));
+        this.read = read ?? throw new ArgumentNullException(nameof(read));
         this.logger = logger;
         Presentation = CrmHrHomePresentation.CreateLoading(generation);
     }
@@ -43,15 +43,15 @@ public sealed class CrmHrHomeReadSession : IDisposable
         return ReadCompletion = ReadAsync(++generation, retrying: false);
     }
 
-    // Explicit retry of a failed read. Stale generations and duplicate admissions while a read is in flight are ignored.
-    public Task RetryAsync(long requested)
-    {
-        if (disposed || isReading || requested != generation || Presentation.Phase != CrmHrHomePhase.Failed)
-        {
+    public Task RetryAsync(long requested) => RequestReadAsync(requested, CrmHrHomePhase.Failed);
+    public Task RefreshAsync(long requested) => RequestReadAsync(requested, CrmHrHomePhase.Ready);
+
+    private Task RequestReadAsync(long requested, CrmHrHomePhase expected) {
+        if (disposed || isReading || requested != generation || Presentation.Phase != expected) {
             return Task.CompletedTask;
         }
 
-        return ReadCompletion = ReadAsync(++generation, retrying: true);
+        return ReadCompletion = ReadAsync(++generation, retrying: expected == CrmHrHomePhase.Failed);
     }
 
     private async Task ReadAsync(long current, bool retrying)
@@ -63,7 +63,7 @@ public sealed class CrmHrHomeReadSession : IDisposable
         await PublishAsync(current);
         try
         {
-            var snapshot = await query.GetAsync(lifetime.Token);
+            var snapshot = await read(lifetime.Token);
             if (!IsCurrent(current))
             {
                 return;

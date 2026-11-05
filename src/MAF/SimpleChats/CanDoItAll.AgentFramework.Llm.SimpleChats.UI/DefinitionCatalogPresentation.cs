@@ -35,7 +35,7 @@ public sealed record DefinitionCatalogCard(Guid DefinitionId, string Name, strin
 
 public sealed record DefinitionCatalogPresentation(bool CanRead, bool CanManage, DefinitionCatalogPhase Phase,
     ImmutableArray<DefinitionCatalogCard> Cards, DefinitionCatalogFilters Filters, bool HasMore = false,
-    DefinitionCatalogFailure? Failure = null) {
+    DefinitionCatalogFailure? Failure = null, bool NeedsRefresh = false) {
     public static DefinitionCatalogPresentation Initial { get; } = new(false, false, DefinitionCatalogPhase.Authorizing, [], DefinitionCatalogFilters.Empty);
     public bool IsBusy => Phase is DefinitionCatalogPhase.Authorizing or DefinitionCatalogPhase.Loading or DefinitionCatalogPhase.Refreshing;
     public string ResultText => IsBusy ? "Loading definitions" : $"{Cards.Length} definition{(Cards.Length == 1 ? "" : "s")}";
@@ -48,6 +48,7 @@ public sealed record DefinitionCatalogPresentation(bool CanRead, bool CanManage,
 }
 
 public abstract record DefinitionCatalogIntent {
+    public sealed record Refresh : DefinitionCatalogIntent;
     public sealed record SearchChanged(string Value) : DefinitionCatalogIntent;
     public sealed record TagsChanged(ImmutableArray<string> Value) : DefinitionCatalogIntent;
     public sealed record StatusChanged(LlmChatDefinitionStatusFilter Value) : DefinitionCatalogIntent;

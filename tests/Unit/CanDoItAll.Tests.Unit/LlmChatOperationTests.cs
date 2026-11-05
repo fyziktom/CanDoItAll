@@ -17,6 +17,45 @@ namespace CanDoItAll.Tests.Unit.LlmChats;
 public sealed class LlmChatOperationIdempotencyTests
 {
     [Fact]
+    public async Task Known_admission_commit_preserves_its_operation_and_replay_never_dispatches_a_second_turn() {
+        var harness = await LlmChatOperationHarness.CreateAsync(suppliedUnitOfWork: new CommittedAdmissionWarningUnit());
+        var command = harness.CreateSendCommand(LlmChatOperationId.New(), "Committed message");
+        var warning = await Assert.ThrowsAsync<LlmChatCommittedException<CanDoItAll.SharedKernel.Result<LlmChatOperationDetails>>>(() => harness.Service.SendAsync(command));
+        Assert.True(warning.Accepted.IsSuccess);
+        Assert.Equal(command.OperationId, warning.Accepted.Value!.Operation.Id);
+        Assert.Equal(command.ConversationId, warning.Accepted.Value.Operation.ConversationId);
+        Assert.NotNull((await harness.Operations.TryGetAsync(command.OperationId))!.TurnAdmittedAtUtc);
+        Assert.Equal(0, harness.Engine.SendCount);
+
+        var recovered = await harness.SendAndDispatchAsync(command);
+
+        Assert.True(recovered.IsSuccess);
+        Assert.Equal(command.OperationId, recovered.Value!.Operation.Id);
+        Assert.Equal(LlmChatOperationStatus.Succeeded, recovered.Value.Operation.Status);
+        Assert.Equal(1, harness.Engine.SendCount);
+    }
+
+    private sealed class CommittedAdmissionWarningUnit : ILlmChatUnitOfWork {
+        private readonly InlineLlmChatUnitOfWork inner = new();
+        private int depth;
+        private bool fail = true;
+        public async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> operation, CancellationToken cancellationToken = default) {
+            depth++;
+            try {
+                var accepted = await inner.ExecuteAsync(operation, cancellationToken);
+                if (depth == 1 && fail) {
+                    fail = false;
+                    throw new LlmChatCommittedException<T>(accepted, new IOException("Private admission notification failure."));
+                }
+                return accepted;
+            } finally {
+                depth--;
+            }
+        }
+        public void RegisterPostCommit(Action callback) => inner.RegisterPostCommit(callback);
+    }
+
+    [Fact]
     public async Task Committed_replay_succeeds_without_an_available_executor()
     {
         var harness = await LlmChatOperationHarness.CreateAsync();

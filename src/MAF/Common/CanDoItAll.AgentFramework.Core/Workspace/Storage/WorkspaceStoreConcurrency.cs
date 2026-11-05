@@ -6,6 +6,16 @@ public sealed record SandboxWorkspaceCatalogSnapshot(
     SandboxWorkspaceCatalog Catalog,
     CatalogDataRevision Revision);
 
+public sealed class SandboxWorkspaceCatalogCommittedException(SandboxWorkspaceCatalog accepted, Exception innerException)
+    : Exception("The workspace catalog is saved, but a secondary effect requires reconciliation.", innerException) {
+    public SandboxWorkspaceCatalog Accepted { get; } = accepted;
+}
+
+public sealed class AgentCatalogCommittedException<T>(T accepted, Exception innerException)
+    : Exception("The configuration is saved, but a secondary update requires reconciliation.", innerException) {
+    public T Accepted { get; } = accepted;
+}
+
 public sealed record AgentWorkspaceCatalogSnapshot(
     AgentExecutionActivityWorkspaceIdentity Workspace,
     SandboxWorkspaceCatalogSnapshot Snapshot);

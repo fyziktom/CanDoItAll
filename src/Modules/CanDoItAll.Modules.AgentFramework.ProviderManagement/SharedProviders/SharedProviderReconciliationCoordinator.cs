@@ -1,4 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Editing;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -14,17 +16,26 @@ public sealed class SharedProviderReconciliationCoordinator
     private readonly IClock clock;
     private readonly CoordinatedDatabaseTransaction transactions;
     private readonly IReadOnlyList<IProviderProfileCommitObserver> providerProfileCommitObservers;
+    private readonly ProviderEditingWrites? editing;
+    private readonly ICanonicalRuntimeDatabase? database;
+    private readonly ProviderEditingChanges? changes;
 
     public SharedProviderReconciliationCoordinator(
         IDbContextFactory<ProvidersDbContext> dbContextFactory,
         IClock clock,
         IEnumerable<IProviderProfileCommitObserver> providerProfileCommitObservers,
-        CoordinatedDatabaseTransaction transactions)
+        CoordinatedDatabaseTransaction transactions,
+        ProviderEditingWrites? editing = null,
+        ICanonicalRuntimeDatabase? database = null,
+        ProviderEditingChanges? changes = null)
     {
         this.dbContextFactory = dbContextFactory;
         this.clock = clock;
         this.transactions = transactions;
         this.providerProfileCommitObservers = providerProfileCommitObservers.ToArray();
+        this.editing = editing;
+        this.database = database;
+        this.changes = changes;
     }
 
     public async Task<SharedProviderReconciliationResult> ReconcileAsync(
@@ -32,6 +43,9 @@ public sealed class SharedProviderReconciliationCoordinator
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (request.ExpectedSourceConcurrencyToken is null || request.OriginalSelection is null) {
+            throw new SharedProviderConcurrencyException(nameof(SharedProviderSource), request.SourceId);
+        }
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var mutationScope = await SerializableMutationScope.BeginAsync(
             dbContext,
@@ -52,6 +66,10 @@ public sealed class SharedProviderReconciliationCoordinator
         var imports = await dbContext.Set<SharedProviderImport>()
             .Where(import => import.SourceId == source.Id)
             .ToListAsync(cancellationToken);
+        if (!request.OriginalSelection.Matches(source.ConcurrencyToken,
+            imports.Select(import => KeyValuePair.Create(import.Id, import.ConcurrencyToken)))) {
+            throw new SharedProviderConcurrencyException(nameof(SharedProviderSource), source.Id);
+        }
         var now = clock.GetUtcNow();
         var identityAcceptance = SharedProviderSourceTransitions.ApplySuccessfulCatalog(
             source,
@@ -114,6 +132,7 @@ public sealed class SharedProviderReconciliationCoordinator
                         now);
                     dbContext.Add(createdProfile);
                     dbContext.Add(createdImport);
+                    imports.Add(createdImport);
                     affectedProviderIds.Add(createdProfile.Id);
                     break;
                 }
@@ -167,6 +186,8 @@ public sealed class SharedProviderReconciliationCoordinator
         }
 
         await SaveAndCommitAsync(dbContext, mutationScope, source.Id, cancellationToken);
+        var accepted = new SharedProviderSourceObservation(source.ConcurrencyToken,
+            imports.Select(import => KeyValuePair.Create(import.Id, import.ConcurrencyToken)));
 
         coordination.Dispose();
         var committedProviderIds = affectedProviderIds.Order().ToArray();
@@ -179,7 +200,8 @@ public sealed class SharedProviderReconciliationCoordinator
             committedProviderIds)
         {
             RetiredProviderProfileIds = retiredProviderIds.Order().ToArray(),
-            Change = change
+            Change = change,
+            AcceptedObservation = accepted
         };
     }
 
@@ -217,7 +239,7 @@ public sealed class SharedProviderReconciliationCoordinator
         profile.SupportsVision = capabilities.Contains(SharedProviderCapability.VisionInput);
     }
 
-    private static async Task SaveAndCommitAsync(
+    private async Task SaveAndCommitAsync(
         ProvidersDbContext dbContext,
         SerializableMutationScope mutationScope,
         Guid sourceId,
@@ -225,8 +247,11 @@ public sealed class SharedProviderReconciliationCoordinator
     {
         try
         {
+            await RequireOriginalAsync(sourceId, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
+            await RequireOriginalAsync(sourceId, cancellationToken);
             await mutationScope.CommitAsync(cancellationToken);
+            changes?.SourcesChanged(sourceId);
         }
         catch (Exception exception) when (
             SerializableMutationScope.IsConflict(exception) ||
@@ -238,5 +263,10 @@ public sealed class SharedProviderReconciliationCoordinator
                 exception);
         }
     }
+
+    private ValueTask RequireOriginalAsync(Guid sourceId, CancellationToken cancellationToken) => editing is null
+        ? ValueTask.CompletedTask
+        : editing.RequireAsync(database?.Profile.Profile.Id ?? throw new InvalidOperationException("Source synchronization requires the canonical dataset."),
+            sourceId, cancellationToken, EditingOwner.SharedProviderSource);
 
 }

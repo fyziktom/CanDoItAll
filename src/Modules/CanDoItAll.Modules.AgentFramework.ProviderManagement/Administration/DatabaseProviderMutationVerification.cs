@@ -3,12 +3,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-internal sealed class DatabaseProviderMutationVerification(IDbContextFactory<ProvidersDbContext> factory) : IProviderMutationVerification {
+internal sealed class DatabaseProviderMutationVerification(IDbContextFactory<ProvidersDbContext> factory, ProviderMutationWitness witnesses) : IProviderMutationVerification {
     public async Task<ProviderMutationVerification> VerifyAsync(
         ProviderMutationAttempt attempt, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(attempt);
         if (attempt.ProviderId == Guid.Empty || attempt.AttemptId == Guid.Empty || !Enum.IsDefined(attempt.Kind)) {
             throw new ArgumentException("The mutation receipt is invalid.", nameof(attempt));
+        }
+        if (!witnesses.IsTrusted(attempt)) {
+            return new(ProviderVerificationDisposition.StillUnconfirmed, attempt.ProviderId);
         }
         try {
             await using var db = await factory.CreateDbContextAsync(cancellationToken);
@@ -18,14 +21,12 @@ internal sealed class DatabaseProviderMutationVerification(IDbContextFactory<Pro
                 .SingleOrDefaultAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             var outcome = attempt.Kind switch {
-                ProviderMutationKind.Create => row is null
-                    ? ProviderVerificationDisposition.DefinitelyNotCommitted : ProviderVerificationDisposition.Committed,
-                ProviderMutationKind.Delete when row is null => ProviderVerificationDisposition.Committed,
+                ProviderMutationKind.HealthPersistence => ProviderVerificationDisposition.StillUnconfirmed,
                 _ when row is null => ProviderVerificationDisposition.StillUnconfirmed,
                 _ when attempt.IntendedConcurrencyToken is { } intended &&
                     intended != attempt.ExpectedConcurrencyToken && row.ConcurrencyToken == intended =>
                     ProviderVerificationDisposition.Committed,
-                _ when attempt.ExpectedConcurrencyToken is { } expected && row.ConcurrencyToken == expected =>
+                _ when !attempt.IsCreate && attempt.ExpectedConcurrencyToken is { } expected && expected != Guid.Empty && row.ConcurrencyToken == expected =>
                     ProviderVerificationDisposition.DefinitelyNotCommitted,
                 _ => ProviderVerificationDisposition.StillUnconfirmed
             };

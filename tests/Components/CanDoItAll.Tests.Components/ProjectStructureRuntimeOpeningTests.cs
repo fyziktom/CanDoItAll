@@ -21,7 +21,7 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed partial class ProjectStructureRuntimeOpeningTests {
-    public enum ApprovalChange { None, Cancel, Metadata, Kind, Parent, ProjectLifetime, Navigation, SelectionABA, Actor, RuntimeGeneration }
+    public enum ApprovalChange { None, Cancel, Metadata, Kind, Parent, ProjectLifetime, Navigation, SelectionABA, Actor, RuntimeGeneration, ReadAccess, WriteAccess }
 
     [Theory]
     [InlineData(ApprovalChange.None)]
@@ -34,11 +34,15 @@ public sealed partial class ProjectStructureRuntimeOpeningTests {
     [InlineData(ApprovalChange.SelectionABA)]
     [InlineData(ApprovalChange.Actor)]
     [InlineData(ApprovalChange.RuntimeGeneration)]
+    [InlineData(ApprovalChange.ReadAccess)]
+    [InlineData(ApprovalChange.WriteAccess)]
     public async Task One_launch_approval_cannot_admit_a_changed_original_target(ApprovalChange change) {
         var launcher = new Launcher();
+        var access = new RuntimeAccess();
         RuntimeGeneration? runtime = null;
         await using var harness = await ComponentTestHarness.CreateAsync(services => {
             services.Replace(ServiceDescriptor.Singleton<IProjectStructureRuntimeLauncher>(launcher));
+            services.Replace(ServiceDescriptor.Singleton<CanDoItAll.Editing.IEditingUiAccess>(access));
             services.AddSingleton<CanonicalRuntimeDatabase>();
             services.AddSingleton<ICanonicalRuntimeDatabase>(provider => runtime = new(provider.GetRequiredService<CanonicalRuntimeDatabase>()));
         });
@@ -79,6 +83,10 @@ public sealed partial class ProjectStructureRuntimeOpeningTests {
             } else if (change == ApprovalChange.SelectionABA) {
                 await SelectAsync(cut, target.Neighbor.Id);
                 await SelectAsync(cut, target.Node.Id);
+            } else if (change == ApprovalChange.ReadAccess) {
+                access.Inner.Allowed = false;
+            } else if (change == ApprovalChange.WriteAccess) {
+                access.WriteAllowed = false;
             } else if (change is ApprovalChange.Actor or ApprovalChange.RuntimeGeneration) {
                 if (change == ApprovalChange.RuntimeGeneration) {
                     runtime!.Generation++;
@@ -99,8 +107,9 @@ public sealed partial class ProjectStructureRuntimeOpeningTests {
             await dialogs.InvokeAsync(() => harness.Context.Services.GetRequiredService<DialogService>().CloseAsync(false));
         }
         await pending;
-        Assert.Equal(change == ApprovalChange.None ? 1 : 0, launcher.Launched.Count);
-        if (change == ApprovalChange.None) {
+        var acceptedLaunch = change is ApprovalChange.None or ApprovalChange.WriteAccess;
+        Assert.Equal(acceptedLaunch ? 1 : 0, launcher.Launched.Count);
+        if (acceptedLaunch) {
             var accepted = Assert.Single(cut.Instance.RuntimeOutcomes);
             Assert.Equal(launcher.Identity, accepted.Identity);
             Assert.Equal(target.Node.Id, Assert.Single(launcher.Launched));

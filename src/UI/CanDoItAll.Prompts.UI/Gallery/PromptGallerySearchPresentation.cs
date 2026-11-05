@@ -40,7 +40,8 @@ public sealed record PromptGallerySearchPresentation(
     string? ContextProvider,
     string? ContextModel,
     bool ShowActualChatModelFilter,
-    Guid? FavoriteBusyItemId)
+    Guid? FavoriteBusyItemId,
+    bool IsQuietRefresh = false)
 {
     public static PromptGallerySearchPresentation Initial { get; } = new(
         PromptGalleryFilterValues.Initial,

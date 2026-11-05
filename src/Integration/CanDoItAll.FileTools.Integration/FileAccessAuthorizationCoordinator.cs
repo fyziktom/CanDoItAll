@@ -124,7 +124,7 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
             }
         }
 
-        FileAccessHandleGrant grant = registry.Issue(effectiveRequest, reference);
+        FileAccessHandleGrant grant = registry.Issue(effectiveRequest, reference, storage.BuildContentSourceFingerprint());
         return AuthorizedFileReference.Create(grant.Id, effectiveRequest.ExpectedRevision);
     }
 
@@ -137,6 +137,10 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
         FileAccessHandleId id = AuthorizedFileReference.Parse(file);
         FileAccessHandleGrant grant = registry.Resolve(id, context, operation);
         StorageDriverInput storage = await ResolveStorageAsync(grant.Request.StorageId, cancellationToken);
+        if (grant.SourceFingerprint != storage.BuildContentSourceFingerprint()) {
+            throw new FileAccessDeniedException(FileAccessFailureCode.SourceUnavailable,
+                "The original file source changed. Reopen the file with current access.");
+        }
         EnsureWritableStorage(storage, operation);
         if (grant.Reference.StorageId != storage.Id || grant.Reference.ProviderKind != storage.ProviderKind)
         {

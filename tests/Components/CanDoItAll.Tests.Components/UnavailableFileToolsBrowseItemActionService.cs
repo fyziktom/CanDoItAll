@@ -11,14 +11,16 @@ internal sealed class UnavailableFileToolsBrowseItemActionService : IFileToolsBr
         FileToolsSemanticScope scope,
         FileBrowserItemKey itemKey,
         FileToolsLocalFileAction action,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         => ValueTask.FromException<FileToolsBrowseItemActionResult>(
             new InvalidOperationException("Local file actions are not expected in this test."));
 
     public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
         FileToolsSemanticScope scope,
         FileBrowserItemKey itemKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         => ValueTask.FromException<IFileToolsDownloadLease>(
             new InvalidOperationException("File downloads are not expected in this test."));
 }

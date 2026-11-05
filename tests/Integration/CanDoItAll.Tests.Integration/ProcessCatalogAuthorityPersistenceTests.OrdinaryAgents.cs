@@ -422,7 +422,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             OrdinaryGraphChange.Copy => service.CopyNodesAsync(projectId, new([nodes.First], $"project:{projectId}") { ExpectedGraph = graph }, owner, ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks),
             OrdinaryGraphChange.Delete => service.DeleteNodeDetailedAsync(projectId, nodes.First, new(ProjectStructureManagedStorageDisposition.RetainManagedFiles) { ExpectedGraph = graph }, owner),
             OrdinaryGraphChange.Import => service.ImportAsync(new(projectId, null, ProjectStructureImportSourceKind.JsonOutline, "Import", "[]", LeafWorkItemSubtype: "feature"), owner),
-            OrdinaryGraphChange.PromptCommand => service.ExecuteNodeCommandAsync(projectId, nodes.First, new(ProjectStructureCommandKind.Open), owner),
+            OrdinaryGraphChange.PromptCommand => service.ExecuteNodeCommandAsync(projectId, nodes.First, new(ProjectStructureCommandKind.Open) { ExpectedState = state }, owner),
             OrdinaryGraphChange.Approval => service.CreateApprovalRequestAsync(projectId, new("Approval", "", "", "Requested operation"), owner),
             _ => throw new ArgumentOutOfRangeException(nameof(change))
         };

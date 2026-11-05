@@ -16,7 +16,7 @@
                     Title="@(IsEditorMode ? (Editor.Id.HasValue ? Editor.Name : "New project") : (ActiveProjectSummary?.Name ?? Editor.Name))"
                     Subtitle="Inspect the project or shape its next steps."
                     Size="ModalSize.Wide" ShowCloseButton="false"
-                    TestId="@(IsEditorMode ? "projects-editor-modal" : "projects-detail-modal")" OnClose="Close">
+                    TestId="@(IsEditorMode ? "projects-editor-modal" : "projects-detail-modal")" OnClose="HandleCloseAsync">
                 <HeaderActions>
                     <Cluster Wrap="FlexWrap.Wrap"
                              Gap="LayoutGap.Small"
@@ -43,16 +43,27 @@
                     </Cluster>
                 </HeaderActions>
                 <ChildContent>
+                    @if (Draft.Definition.Missing) {
+                        <Alert AlertStyle="AlertStyle.Warning" data-testid="project-definition-unavailable">
+                            <TextBlock Value="The original Project lifetime is no longer available. Your draft is retained for copying; close and reopen the current Project explicitly." />
+                        </Alert>
+                    } else if (Draft.Definition.IsOutdated && Draft.Conflict is null) {
+                        <Alert AlertStyle="AlertStyle.Warning" data-testid="project-definition-updates">
+                            <TextBlock Value="This Project changed since your original read. Your draft and unfinished input are preserved." />
+                            <Button Text="Compare changes" ButtonStyle="ButtonStyle.Light" Disabled="@(!Draft.CanCompare || ReadingCurrent)"
+                                    Click="HandleReconciliationAsync" data-testid="project-definition-compare" />
+                        </Alert>
+                    }
                     <section hidden="@(!IsEditorMode)" aria-label="Project editor">
                         <ProjectPendingRecoverySurface View="PendingRecovery" Action="PendingAction" />
                         @if (Draft.InspectedDefinition is not null) {
                             <Alert AlertStyle="AlertStyle.Info" data-testid="project-current-inspection">
                                 <Stack GapScale="LayoutGap.Small">
-                                    <TextBlock Value="The current saved definition is shown separately. It does not replace the accepted result for the retained save." />
+                                    <TextBlock Value="The current saved definition is shown separately. It does not change your original or unsaved draft, or the accepted result of a retained save." />
                                     <Cluster Wrap="FlexWrap.Wrap">
                                         <Button Text="Discard draft and reload current" ButtonStyle="ButtonStyle.Light" Disabled="@(!Draft.CanMutate)"
                                                 Click="@(() => DiscardAndReloadDefinition.InvokeAsync(Draft))" />
-                                        <Button Text="Reconcile in a current-based draft" Disabled="@(!Draft.CanMutate)" Click="HandleReconciliationAsync" />
+                                        <Button Text="Compare and merge" Disabled="@(!Draft.CanCompare || ReadingCurrent)" Click="HandleReconciliationAsync" />
                                     </Cluster>
                                 </Stack>
                             </Alert>
@@ -74,8 +85,8 @@
                                         <Button Text="Discard draft and reload current" ButtonStyle="ButtonStyle.Light"
                                                 Disabled="@(conflict.ReadState != ProjectEditorConflictReadState.Ready)"
                                                 Click="@(() => DiscardAndReloadDefinition.InvokeAsync(Draft))" data-testid="project-conflict-reload" />
-                                        <Button Text="Reconcile in a current-based draft"
-                                                Disabled="@(conflict.ReadState != ProjectEditorConflictReadState.Ready)"
+                                        <Button Text="Compare and merge"
+                                                Disabled="@(conflict.ReadState != ProjectEditorConflictReadState.Ready || !Draft.CanCompare)"
                                                 Click="HandleReconciliationAsync" data-testid="project-conflict-reconcile" />
                                     </Cluster>
                                 </Stack>
@@ -129,10 +140,10 @@
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnsLg="2">
                                             <FormField Text="Name">
-                                                <InputText @bind-Value="Editor.Name" @oninput="@((ChangeEventArgs args) => ChangeText(Editor, nameof(Editor.Name), value => Editor.Name = value, args))" class="cda-input" data-testid="project-name-input" />
+                                                <NativeValueInput TValue="string" @bind-Value="Editor.Name" class="cda-input" data-testid="project-name-input" />
                                             </FormField>
                                             <FormField Text="Current phase">
-                                                <InputText @bind-Value="Editor.CurrentPhase" @oninput="@((ChangeEventArgs args) => ChangeText(Editor, nameof(Editor.CurrentPhase), value => Editor.CurrentPhase = value, args))"
+                                                <NativeValueInput TValue="string" @bind-Value="Editor.CurrentPhase"
                                                            class="cda-input"
                                                            data-testid="project-phase-input" />
                                             </FormField>
@@ -148,16 +159,16 @@
                                                 </InputSelect>
                                             </FormField>
                                             <FormField Text="Target date">
-                                                <InputDate data-testid="project-target-date" @bind-Value="Editor.TargetDateUtc" class="cda-input" />
+                                                <NativeValueInput TValue="DateTime?" data-testid="project-target-date" @bind-Value="Editor.TargetDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(Editor, nameof(Editor.TargetDateUtc)), pending))" class="cda-input" />
                                             </FormField>
                                         </Grid>
 
                                         <FormField Text="Description">
-                                            <InputTextArea @bind-Value="Editor.Description" @oninput="@((ChangeEventArgs args) => ChangeText(Editor, nameof(Editor.Description), value => Editor.Description = value, args))" class="cda-input cda-input--textarea min-h-28" />
+                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="Editor.Description" class="cda-input cda-input--textarea min-h-28" />
                                         </FormField>
 
                                         <FormField Text="Objective">
-                                            <InputTextArea @bind-Value="Editor.Objective" @oninput="@((ChangeEventArgs args) => ChangeText(Editor, nameof(Editor.Objective), value => Editor.Objective = value, args))" class="cda-input cda-input--textarea min-h-28" />
+                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="Editor.Objective" class="cda-input cda-input--textarea min-h-28" />
                                         </FormField>
                                     </ChildContent>
                                 </FormSection>
@@ -185,15 +196,15 @@
                                                     <PanelCard @key="phase" data-testid="project-phase-row">
                                                         <Grid Gap="LayoutGap.Medium"
                                                               ColumnsXl="5">
-                                                            <InputText @bind-Value="phase.Name" @oninput="@((ChangeEventArgs args) => ChangeText(phase, nameof(phase.Name), value => phase.Name = value, args))" class="cda-input xl:col-span-2" />
+                                                            <NativeValueInput TValue="string" @bind-Value="phase.Name" class="cda-input xl:col-span-2" />
                                                             <InputSelect @bind-Value="phase.Status" class="cda-input">
                                                                 @foreach (var status in Enum.GetValues<ProjectPhaseStatus>()) {
                                                                     <option value="@status">@status</option>
                                                                 }
                                                             </InputSelect>
-                                                            <InputDate @bind-Value="phase.StartDateUtc" class="cda-input" />
-                                                            <InputDate @bind-Value="phase.EndDateUtc" class="cda-input" />
-                                                            <InputTextArea @bind-Value="phase.Goal" @oninput="@((ChangeEventArgs args) => ChangeText(phase, nameof(phase.Goal), value => phase.Goal = value, args))" class="cda-input cda-input--textarea min-h-20 xl:col-span-4" />
+                                                            <NativeValueInput TValue="DateTime?" @bind-Value="phase.StartDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(phase, nameof(phase.StartDateUtc)), pending))" class="cda-input" />
+                                                            <NativeValueInput TValue="DateTime?" @bind-Value="phase.EndDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(phase, nameof(phase.EndDateUtc)), pending))" class="cda-input" />
+                                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="phase.Goal" class="cda-input cda-input--textarea min-h-20 xl:col-span-4" />
                                                             <Button ButtonStyle="ButtonStyle.Danger"
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"
@@ -216,8 +227,8 @@
                                                 <PanelCard @key="option" data-testid="@($"project-option-{option.Category}")">
                                                     <div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
                                                     <Grid Gap="LayoutGap.Medium">
-                                                        <InputText @bind-Value="option.OptionName" @oninput="@((ChangeEventArgs args) => ChangeText(option, nameof(option.OptionName), value => option.OptionName = value, args))" class="cda-input" />
-                                                        <InputText @bind-Value="option.Notes" @oninput="@((ChangeEventArgs args) => ChangeText(option, nameof(option.Notes), value => option.Notes = value, args))" class="cda-input" />
+                                                        <NativeValueInput TValue="string" @bind-Value="option.OptionName" class="cda-input" />
+                                                        <NativeValueInput TValue="string" @bind-Value="option.Notes" class="cda-input" />
                                                     </Grid>
                                                 </PanelCard>
                                             }
@@ -256,8 +267,8 @@
                                                                     <option value="@kind">@kind</option>
                                                                 }
                                                             </InputSelect>
-                                                            <InputText data-testid="project-starter-title" @bind-Value="starter.Title" @oninput="@((ChangeEventArgs args) => ChangeText(starter, nameof(starter.Title), value => starter.Title = value, args))" class="cda-input" />
-                                                            <InputText @bind-Value="starter.Subtitle" @oninput="@((ChangeEventArgs args) => ChangeText(starter, nameof(starter.Subtitle), value => starter.Subtitle = value, args))" class="cda-input" />
+                                                            <NativeValueInput TValue="string" data-testid="project-starter-title" @bind-Value="starter.Title" class="cda-input" />
+                                                            <NativeValueInput TValue="string" @bind-Value="starter.Subtitle" class="cda-input" />
                                                             @if (starter.WasDispatched && !starter.IsSeeded) {
                                                                 <TextBlock Value="An earlier submitted version was attempted. Inspect Structure; newer changes to this plan will not be sent automatically." />
                                                             }
@@ -488,6 +499,11 @@
                                 <Button Type="submit" ButtonStyle="ButtonStyle.Info"
                                         Text="Save and open structure" Disabled="@(!SubmissionReady || !Draft.CanMutate)" data-testid="project-save-open-button"
                                         Click="@(() => openAfterSubmit = true)" />
+                                @if (Draft.Definition.CanUndo) {
+                                    <Button Text="Undo comparison" ButtonStyle="ButtonStyle.Light" Disabled="@(!Draft.CanUndoMerge)"
+                                            Click="UndoMerge" data-testid="project-merge-undo" />
+                                    <SmallText Text="Undo is available until the next edit or Save." />
+                                }
                                 @if (Editor.Id.HasValue) {
                                     <Button ButtonStyle="ButtonStyle.Light"
                                             Text="Open dashboard tab"
@@ -526,10 +542,21 @@
                 </Footer>
             </Dialog>
         </EditForm>
+        @if (Draft.Definition.Review is { } review) {
+            <ProjectDefinitionMergeDialog @key="review" Review="review" Previous="Draft.Definition.PreviousReview" FormId="@MergeFormId"
+                                          Stale="Draft.Definition.ReviewIsStale" CanApply="Draft.CanApplyMerge" Busy="@(validating || ReadingCurrent)"
+                                          Message="@Draft.Message" Cancel="CancelMerge" Refresh="HandleReconciliationAsync" Apply="HandleApplyMergeAsync" Changed="ReviewChanged" />
+        }
     </div>
 }
 
+<ProjectEditorLeaveGuard @ref="leaveGuard" Draft="Draft" IsOpen="IsOpen" ObserveNavigation="ObserveNavigation" IsSameEditorRoute="IsSameEditorRoute" />
+
 @code {
+    private ProjectEditorLeaveGuard? leaveGuard;
+    [Parameter] public bool ObserveNavigation { get; set; }
+    [Parameter] public Func<string, bool>? IsSameEditorRoute { get; set; }
+    public Task<bool> RequestLeaveAsync() => leaveGuard?.RequestLeaveAsync() ?? Task.FromResult(false);
     [Parameter]
     public bool IsOpen { get; set; }
 
@@ -618,6 +645,9 @@
     [Parameter]
     public EventCallback<ProjectEditorDraft> BeginDefinitionReconciliation { get; set; }
 
+    [Parameter] public EventCallback<ProjectEditorDraft> ApplyDefinitionReconciliation { get; set; }
+    [Parameter] public bool ReadingCurrent { get; set; }
+
     [Parameter]
     public ProjectPendingEditorView? PendingRecovery { get; set; }
 
@@ -657,6 +687,7 @@
     private bool retired;
     private ProjectEditorDraft? focusDraft;
     private readonly string formId = $"project-editor-{Guid.NewGuid():N}";
+    private string MergeFormId => $"{formId}-comparison";
     private Task<IJSObjectReference?>? moduleLoad;
     private IJSObjectReference? loadedModule;
     private Task? moduleCleanup;
@@ -701,11 +732,11 @@
     }
 
     private async Task HandleReconciliationAsync() {
-        if (validating || retired || !Draft.HasCurrentDefinition) {
+        if (validating || retired || !Draft.CanCompare) {
             return;
         }
         const string invalid = "Complete or clear invalid dates before preserving this draft for reconciliation. Discard and reload remains available.";
-        if (!Draft.EditContext.Validate()) {
+        if (Draft.HasPendingInput) {
             Draft.Message = invalid;
             Draft.IsError = true;
             return;
@@ -726,13 +757,41 @@
         }
     }
 
-    private async Task<bool> InspectFormAsync(ProjectEditorDraft origin, string? invalidMessage = null) {
+    private async Task HandleApplyMergeAsync() {
+        if (validating || retired || !Draft.CanApplyMerge) {
+            return;
+        }
+        var origin = Draft;
+        var review = origin.Definition.Review;
+        validating = true;
+        try {
+            if (await InspectFormAsync(origin) && await InspectFormAsync(origin, "Complete or clear unfinished result dates before applying.", MergeFormId) &&
+                ReferenceEquals(review, origin.Definition.Review) && origin.CanApplyMerge) {
+                await ApplyDefinitionReconciliation.InvokeAsync(origin);
+            }
+        } catch (Exception exception) when (exception is JSException or OperationCanceledException) {
+            ReportInteropFailure(origin, exception);
+        } finally {
+            if (IsCurrent(origin)) {
+                validating = false;
+            }
+        }
+    }
+
+    private void CancelMerge() => Draft.Definition.Cancel();
+    private void UndoMerge() => Draft.UndoMerge();
+    private void ReviewChanged() {
+        Draft.Definition.Review?.RecordInput();
+        StateHasChanged();
+    }
+
+    private async Task<bool> InspectFormAsync(ProjectEditorDraft origin, string? invalidMessage = null, string? inspectedForm = null) {
         moduleLoad ??= AcquireModuleAsync();
         var module = await moduleLoad;
         if (module is null || !IsCurrent(origin)) {
             return false;
         }
-        var validity = await module.InvokeAsync<ProjectFormValidity>("inspect", formId);
+        var validity = await module.InvokeAsync<ProjectFormValidity>("inspect", inspectedForm ?? formId);
         if (!IsCurrent(origin)) {
             return false;
         }
@@ -805,10 +864,6 @@
         return moduleCleanup is null ? ValueTask.CompletedTask : new(moduleCleanup);
     }
 
-    private void ChangeText(object model, string field, Action<string> update, ChangeEventArgs args) {
-        update(args.Value?.ToString() ?? string.Empty);
-        Draft.EditContext.NotifyFieldChanged(new(model, field));
-    }
 
     private Task HandleOpenStructureAsync()
         => Editor.Id.HasValue
@@ -825,6 +880,9 @@
             ? OpenCalendar.InvokeAsync(Editor.Id.Value)
             : Task.CompletedTask;
 
-    private Task HandleCloseAsync()
-        => Close.InvokeAsync();
+    private async Task HandleCloseAsync() {
+        if (await RequestLeaveAsync()) {
+            await Close.InvokeAsync();
+        }
+    }
 }

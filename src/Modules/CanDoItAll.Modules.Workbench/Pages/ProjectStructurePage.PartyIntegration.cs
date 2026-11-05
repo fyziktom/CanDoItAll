@@ -15,16 +15,17 @@ public partial class ProjectStructurePage {
     private async Task LoadPartyEditorAsync() {
         if (selectedNode is not { ObjectType: ProjectObjectType.Participant or ProjectObjectType.Meeting } node ||
             NodeAssignmentPolicyBridge.Resolve(node.ObjectType, node.ObjectSubtype).ReplacementRoles.Count == 0) {
-            partySession?.Retire();
-            partySession = null;
+            RetirePartySession();
             return;
         }
         if (partySession is { IsCurrent: true } existing && existing.NodeId == node.Id) {
             return;
         }
-        partySession?.Retire();
+        RetirePartySession();
+        await DisposeRetiredNodeSessionsAsync();
         var context = CaptureActionContext();
         var selection = insightsSelectionRevision;
+        var access = ObserveActionAccess();
         ProjectPartyEditorSession? opening = null;
         opening = new(context.Admission, node, ProjectPartyIntegrationBridge, NodeAssignmentPolicyBridge,
             ProjectWorkbenchService, PartyPresentation,
@@ -34,10 +35,21 @@ public partial class ProjectStructurePage {
                 if (opening!.IsCurrent) {
                     await ApplySurfaceNodeUpdatesAsync([updated]);
                 }
-            }, RecordCreatedParty, Logger);
+            }, access, (write, token) => AuthorizeActionAsync(context, access, write, token), RecordCreatedParty, Logger);
         partySession = opening;
         await InvokeAsync(StateHasChanged);
         await opening.LoadAsync();
+    }
+
+    private void RetirePartySession() {
+        if (partySession is not { } opening) {
+            return;
+        }
+        opening.Retire();
+        if (!retiredAuthoringSessions.Contains(opening)) {
+            retiredAuthoringSessions.Add(opening);
+        }
+        partySession = null;
     }
 
     private void RecordCreatedParty(ProjectWriteAdmission project, string nodeId, PartyCreated party) {

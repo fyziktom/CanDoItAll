@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Operators.UI.Parties;
 using Microsoft.Extensions.Logging;
@@ -8,12 +9,14 @@ namespace CanDoItAll.Modules.Workbench;
 internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission, ProjectStructureNode node,
     IProjectPartyIntegrationBridge parties, IProjectNodeAssignmentPolicyBridge policy, ProjectWorkbenchService workbench,
     ProjectPartyPresentationWriter presentation, Func<bool> current, Func<bool> originalAuthority, Func<ProjectStructureNode, Task> publish,
-    Action<ProjectWriteAdmission, string, PartyCreated> recordCreate, ILogger logger) {
+    EditingObservation access, Func<bool, CancellationToken, ValueTask> authorize,
+    Action<ProjectWriteAdmission, string, PartyCreated> recordCreate, ILogger logger) : IAsyncDisposable {
     private ProjectStructureNode expectedNode = node;
     private IReadOnlyList<ProjectPartyAssignmentDetail> assignments = [];
     private IReadOnlyList<ProjectPartyOption> options = [];
     private readonly ProjectNodeAssignmentSemantics semantics = policy.Resolve(node.ObjectType, node.ObjectSubtype);
     private long readGeneration;
+    private bool accessStarted;
     public PartyEditorState State { get; } = new(node.ObjectType == ProjectObjectType.Participant ? PartyEditorKind.Participant : PartyEditorKind.Meeting, node.Title);
     public string NodeId => expectedNode.Id;
     public bool IsCurrent => current() && !State.IsRetired;
@@ -21,15 +24,37 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
     public void Retire() {
         State.IsRetired = true;
         readGeneration++;
+        access.Stop();
+    }
+
+    public ValueTask DisposeAsync() {
+        Retire();
+        return access.DisposeAsync();
     }
 
     public async Task LoadAsync() {
         var generation = ++readGeneration;
         State.IsLoading = true;
         try {
+            if (!accessStarted) {
+                await access.StartAsync(_ => Task.CompletedTask, () => {
+                    if (IsCurrent) {
+                        State.Choices = [];
+                        State.ProjectDefaults = [];
+                        State.IsUnavailable = true;
+                        State.Message = "The original Structure access retired. Reopen the relationship editor with current access.";
+                    }
+                    return Task.CompletedTask;
+                });
+                accessStarted = true;
+            }
+            await RequireAccessAsync(write: false);
             await workbench.RequireContentCurrentAsync(admission, expectedNode);
+            await RequireAccessAsync(write: false);
             var loadedOptions = await parties.ListPartyOptionsAsync(admission.ProjectId);
+            await RequireAccessAsync(write: false);
             var loadedAssignments = await parties.ListAssignmentsDetailedAsync(admission.ProjectId);
+            await RequireAccessAsync(write: false);
             if (!IsCurrent || generation != readGeneration) {
                 return;
             }
@@ -44,6 +69,8 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
         } catch (Exception failure) {
             if (IsCurrent && generation == readGeneration) {
                 State.IsUnavailable = true;
+                State.Choices = [];
+                State.ProjectDefaults = [];
                 State.Message = "Relationships could not be loaded. Reload before changing assignments.";
             }
             Log(failure, "load");
@@ -72,12 +99,16 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
         State.IsBusy = true;
         var dispatched = false;
         try {
+            await RequireAccessAsync(write: true);
             await workbench.RequireContentCurrentAsync(admission, expectedNode);
+            await RequireAccessAsync(write: true);
             if (!IsCurrent) {
                 return;
             }
             dispatched = true;
-            var result = await parties.CreatePartyAsync(request);
+            var result = await parties.CreatePartyAsync(request,
+                authorizeCommit: token => RequireAccessAsync(write: true, token),
+                authorizeRead: token => RequireAccessAsync(write: false, token));
             if (result.IsFailure) {
                 State.Message = result.Errors.FirstOrDefault()?.Message ?? "Unable to create the party.";
                 return;
@@ -109,10 +140,13 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
         State.Receipt = new(PartySavePhase.NotSubmitted, [], null, "Preparing the original relationship change.");
         var dispatched = false;
         try {
+            await RequireAccessAsync(write: true);
             await workbench.RequireContentCurrentAsync(admission, expectedNode);
+            await RequireAccessAsync(write: false);
             var selectedOptions = new List<ProjectPartyOption>();
             foreach (var id in selected) {
                 var option = await parties.GetPartyOptionAsync(id);
+                await RequireAccessAsync(write: false);
                 if (option is null && assignments.All(item => item.PartyId != id)) {
                     State.Message = "A selected party could not be loaded. No assignment change was submitted.";
                     return;
@@ -125,11 +159,13 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
                 return;
             }
             var desired = DesiredAssignments(selected, selectedOptions);
+            await RequireAccessAsync(write: true);
             dispatched = true;
             var result = await parties.ReplaceNodeAssignmentsIfCurrentAsync(admission.ProjectId, new(NodeId), desired,
                 semantics.ReplacementRoles, assignments.Select(ProjectPartyAssignmentConcurrencySnapshot.From).ToArray(),
                 new ProjectPartyNodeOccurrence(expectedNode.RecordId ?? throw new InvalidOperationException("The original node has no record identity."),
-                    expectedNode.ObjectType, expectedNode.ObjectSubtype, expectedNode.ParentId), expectedProjectAdmission: admission);
+                    expectedNode.ObjectType, expectedNode.ObjectSubtype, expectedNode.ParentId), expectedProjectAdmission: admission,
+                authorizeCommit: token => RequireAccessAsync(write: true, token));
             if (result.IsFailure) {
                 State.Message = result.Errors.FirstOrDefault()?.Message ?? "Unable to save the canonical assignments.";
                 State.Receipt = new(PartySavePhase.Rejected, [], null, State.Message);
@@ -145,15 +181,18 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
                 State.Message = "Assignments committed under the original authority. Node metadata was not submitted after that authority retired.";
                 return;
             }
+            await RequireAccessAsync(write: true);
             var updated = await presentation.SaveAsync(admission, expectedNode,
                 State.Kind == PartyEditorKind.Participant ? selectedOptions.SingleOrDefault() : null,
                 State.Kind == PartyEditorKind.Meeting ? string.Join(", ", selected.Select(id => selectedOptions.FirstOrDefault(option => option.PartyId == id)?.DisplayName
-                    ?? assignments.First(item => item.PartyId == id).PartyDisplayName)) : null, clearParticipant: selected.Length == 0);
+                    ?? assignments.First(item => item.PartyId == id).PartyDisplayName)) : null, clearParticipant: selected.Length == 0,
+                authorizeCommit: token => RequireAccessAsync(write: true, token));
             State.Receipt = State.Receipt with { Phase = PartySavePhase.NodeCommitted, NodeId = updated.Id,
                 Message = "Canonical assignments and node presentation committed. Read-back is pending." };
             expectedNode = updated;
-            State.Title = updated.Title;
             if (IsCurrent) {
+                await RequireAccessAsync(write: false);
+                State.Title = updated.Title;
                 await publish(updated);
                 await ObserveSavedAsync();
             }
@@ -203,7 +242,9 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
             return;
         }
         var generation = ++readGeneration;
+        await RequireAccessAsync(write: false);
         var loaded = await parties.ListPartyOptionsAsync(admission.ProjectId);
+        await RequireAccessAsync(write: false);
         if (!IsCurrent || generation != readGeneration) {
             return;
         }
@@ -216,8 +257,11 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
 
     private async Task ObserveSavedAsync() {
         var generation = ++readGeneration;
+        await RequireAccessAsync(write: false);
         var loaded = NodeAssignments(await parties.ListAssignmentsDetailedAsync(admission.ProjectId));
+        await RequireAccessAsync(write: false);
         var structure = await workbench.GetStructureAsync(admission.ProjectId);
+        await RequireAccessAsync(write: false);
         if (!IsCurrent || generation != readGeneration) {
             return;
         }
@@ -276,5 +320,15 @@ internal sealed class ProjectPartyEditorSession(ProjectWriteAdmission admission,
             phase, admission.ProjectId, NodeId, State.OpeningId, failure.GetType().Name, State.Created?.Id);
 
     private static bool KnownRejection(Exception failure)
-        => failure is ArgumentException or InvalidDataException or ProjectWriteAdmissionRejectedException or ProjectStructureEditConflictException;
+        => failure is UnauthorizedAccessException or ArgumentException or InvalidDataException or ProjectWriteAdmissionRejectedException or ProjectStructureEditConflictException;
+
+    private async ValueTask RequireAccessAsync(bool write, CancellationToken cancellationToken = default) {
+        if (!IsCurrent) {
+            throw new UnauthorizedAccessException("The original relationship opening has retired.");
+        }
+        await authorize(write, cancellationToken);
+        if (!IsCurrent) {
+            throw new UnauthorizedAccessException("The original relationship opening changed during authorization.");
+        }
+    }
 }

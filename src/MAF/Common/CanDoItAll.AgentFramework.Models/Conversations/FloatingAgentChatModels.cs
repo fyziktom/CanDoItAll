@@ -1076,6 +1076,8 @@ public sealed record ActiveAgentChat(
     DateTimeOffset LastActivityUtc,
     DateTimeOffset? HiddenAtUtc)
 {
+    public bool HasUnsentDraft { get; init; }
+
     public bool IsVisible => Visibility == ActiveAgentChatVisibility.Visible;
 
     public bool CanStop => RunState != ActiveAgentChatRunState.Running;
@@ -1089,6 +1091,8 @@ public sealed record FloatingAgentChatSettings(
     int PreparedResourceIdleRetentionMinutes = 10)
 {
     public static FloatingAgentChatSettings Default { get; } = new();
+
+    public DateTimeOffset? UpdatedAtUtc { get; init; }
 
     [JsonIgnore]
     public TimeSpan HiddenActiveChatRetention

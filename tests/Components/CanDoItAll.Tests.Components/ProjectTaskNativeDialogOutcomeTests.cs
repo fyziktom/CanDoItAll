@@ -29,36 +29,45 @@ public sealed class ProjectTaskNativeDialogOutcomeTests {
         Task opening;
         if (general) {
             var context = new ProjectStructureCanvasTaskDialogContext(projectId, [],
-                (draft, configure) => CreateNodeAsync(workbench, projectId, draft, configure), _ => Refresh(), owner);
+                (draft, configure, authorizeCommit) => CreateNodeAsync(workbench, projectId, draft, configure, authorizeCommit),
+                async (_, authorizeRead) => {
+                    await authorizeRead(CancellationToken.None);
+                    await Refresh();
+                }, owner);
             opening = dialogHost.InvokeAsync(() => services.GetRequiredService<ProjectStructureCanvasTaskDialogCoordinator>()
                 .OpenCreateAsync(context, Request(projectId)));
         } else {
             var surface = await workbench.GetStructureAsync(projectId);
             var panel = harness.Context.Render<ProjectStructureGanttPanel>(parameters => parameters
                 .Add(component => component.ProjectId, projectId).Add(component => component.Surface, surface)
-                .Add(component => component.MutationCommitted, Refresh));
+                .Add(component => component.ReadAuthoritativeProject, async authorizeRead => {
+                    await authorizeRead(CancellationToken.None);
+                    await Refresh();
+                }));
             panel.WaitForAssertion(() => Assert.False(panel.FindComponent<PlanningGanttSurface>().Instance.Presentation.IsLoading));
             var renderer = panel.FindComponent<PlanningGanttSurface>().Instance;
             opening = panel.InvokeAsync(() => renderer.AddRequested.InvokeAsync(new(renderer.Presentation.Origin)));
         }
-        var prefix = general ? "project-structure-task-create" : "project-structure-gantt-task";
-        dialogHost.WaitForElement($"[data-testid='{prefix}-title']").Input("Native receipt task");
-        await dialogHost.Find($"[data-testid='{prefix}-submit']").ClickAsync(new MouseEventArgs());
-        var receipt = dialogHost.FindComponent<PlanningTaskFormActions>().Instance.Result;
-        Assert.NotNull(receipt);
-        Assert.True(receipt.RequiresReadback);
-        Assert.False(receipt.CanRetry);
-        Assert.False(opening.IsCompleted);
-        var actual = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Title == "Native receipt task");
-        Assert.Equal(actual.Id, Assert.Single(receipt.TaskIds));
-        Assert.Contains(receipt.Phases, phase => phase.Phase == PlanningTaskPhase.Task && phase.State == PlanningTaskPhaseState.Committed);
-        var submit = dialogHost.FindComponent<PlanningTaskFormActions>().Instance.Submitted;
-        await dialogHost.InvokeAsync(() => submit.InvokeAsync());
-        await dialogHost.Find("[data-testid='planning-task-readback']").ClickAsync(new MouseEventArgs());
-        Assert.Equal(2, refreshCalls);
-        Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Title == "Native receipt task");
-        await dialogHost.Find($"[data-testid='{prefix}-cancel']").ClickAsync(new MouseEventArgs());
-        await opening.WaitAsync(TimeSpan.FromSeconds(10));
+        try {
+            var prefix = general ? "project-structure-task-create" : "project-structure-gantt-task";
+            dialogHost.WaitForElement($"[data-testid='{prefix}-title']").Input("Native receipt task");
+            await dialogHost.Find($"[data-testid='{prefix}-submit']").ClickAsync(new MouseEventArgs());
+            var receipt = dialogHost.FindComponent<PlanningTaskFormActions>().Instance.Result;
+            Assert.NotNull(receipt);
+            Assert.True(receipt.RequiresReadback);
+            Assert.False(receipt.CanRetry);
+            Assert.False(opening.IsCompleted);
+            var actual = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Title == "Native receipt task");
+            Assert.Equal(actual.Id, Assert.Single(receipt.TaskIds));
+            Assert.Contains(receipt.Phases, phase => phase.Phase == PlanningTaskPhase.Task && phase.State == PlanningTaskPhaseState.Committed);
+            var submit = dialogHost.FindComponent<PlanningTaskFormActions>().Instance.Submitted;
+            await dialogHost.InvokeAsync(() => submit.InvokeAsync());
+            await dialogHost.Find("[data-testid='planning-task-readback']").ClickAsync(new MouseEventArgs());
+            Assert.Equal(2, refreshCalls);
+            Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Title == "Native receipt task");
+        } finally {
+            await TaskDialogTestDriver.CloseAsync(dialogHost, services.GetRequiredService<DialogService>(), opening);
+        }
     }
 
     [Theory]
@@ -71,29 +80,35 @@ public sealed class ProjectTaskNativeDialogOutcomeTests {
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
         var host = harness.Context.Render<DialogHost>();
         var creates = 0;
-        var context = new ProjectStructureCanvasTaskDialogContext(projectId, [], async (draft, configure) => {
+        var context = new ProjectStructureCanvasTaskDialogContext(projectId, [], async (draft, configure, authorizeCommit) => {
             creates++;
-            var created = await CreateNodeAsync(workbench, projectId, draft, configure);
+            var created = await CreateNodeAsync(workbench, projectId, draft, configure, authorizeCommit);
             var failure = new IOException("Injected acknowledgement or canvas-follow-up failure.");
             if (knownReceipt) {
                 throw new ProjectStructureNodeCreatedWithFollowUpFailureException(created!, failure);
             }
             throw failure;
-        }, async _ => { await workbench.GetStructureAsync(projectId); }, owner);
+        }, async (_, authorizeRead) => {
+            await authorizeRead(CancellationToken.None);
+            await workbench.GetStructureAsync(projectId);
+            await authorizeRead(CancellationToken.None);
+        }, owner);
         var opening = host.InvokeAsync(() => services.GetRequiredService<ProjectStructureCanvasTaskDialogCoordinator>()
             .OpenCreateAsync(context, Request(projectId)));
-        host.WaitForElement("[data-testid='project-structure-task-create-title']").Input("Native interrupted create");
-        await host.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new MouseEventArgs());
-        var receipt = host.FindComponent<PlanningTaskFormActions>().Instance.Result!;
-        Assert.Equal(knownReceipt ? PlanningTaskSaveStatus.Partial : PlanningTaskSaveStatus.Unknown, receipt.Status);
-        var actual = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Title == "Native interrupted create");
-        Assert.Equal(knownReceipt ? new[] { actual.Id } : [], receipt.TaskIds);
-        await host.Find("[data-testid='planning-task-readback']").ClickAsync(new MouseEventArgs());
-        await host.InvokeAsync(() => host.FindComponent<PlanningTaskFormActions>().Instance.Submitted.InvokeAsync());
-        Assert.Equal(1, creates);
-        Assert.False(host.FindComponent<PlanningTaskFormActions>().Instance.Result!.CanRetry);
-        await host.Find("[data-testid='project-structure-task-create-cancel']").ClickAsync(new MouseEventArgs());
-        await opening.WaitAsync(TimeSpan.FromSeconds(10));
+        try {
+            host.WaitForElement("[data-testid='project-structure-task-create-title']").Input("Native interrupted create");
+            await host.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new MouseEventArgs());
+            var receipt = host.FindComponent<PlanningTaskFormActions>().Instance.Result!;
+            Assert.Equal(knownReceipt ? PlanningTaskSaveStatus.Partial : PlanningTaskSaveStatus.Unknown, receipt.Status);
+            var actual = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Title == "Native interrupted create");
+            Assert.Equal(knownReceipt ? new[] { actual.Id } : [], receipt.TaskIds);
+            await host.Find("[data-testid='planning-task-readback']").ClickAsync(new MouseEventArgs());
+            await host.InvokeAsync(() => host.FindComponent<PlanningTaskFormActions>().Instance.Submitted.InvokeAsync());
+            Assert.Equal(1, creates);
+            Assert.False(host.FindComponent<PlanningTaskFormActions>().Instance.Result!.CanRetry);
+        } finally {
+            await TaskDialogTestDriver.CloseAsync(host, services.GetRequiredService<DialogService>(), opening);
+        }
     }
 
     [Fact]
@@ -106,21 +121,24 @@ public sealed class ProjectTaskNativeDialogOutcomeTests {
         var host = harness.Context.Render<DialogHost>();
         var current = true;
         var context = new ProjectStructureCanvasTaskDialogContext(projectId, [],
-            (draft, configure) => CreateNodeAsync(workbench, projectId, draft, configure), _ => Task.CompletedTask, owner) {
+            (draft, configure, authorizeCommit) => CreateNodeAsync(workbench, projectId, draft, configure, authorizeCommit),
+            async (_, authorizeRead) => await authorizeRead(CancellationToken.None), owner) {
             IsCurrent = () => current
         };
         var opening = host.InvokeAsync(() => services.GetRequiredService<ProjectStructureCanvasTaskDialogCoordinator>()
             .OpenCreateAsync(context, Request(projectId)));
-        host.WaitForElement("[data-testid='project-structure-task-create-title']");
-        current = false;
-        await host.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new MouseEventArgs());
-        Assert.False(opening.IsCompleted);
-        Assert.Equal(PlanningTaskSaveStatus.Rejected, host.FindComponent<PlanningTaskFormActions>().Instance.Result!.Status);
-        foreach (var id in new[] { projectId, replacementId }) {
-            Assert.DoesNotContain((await workbench.GetStructureAsync(id)).Nodes, node => node.ObjectSubtype == "task");
+        try {
+            host.WaitForElement("[data-testid='project-structure-task-create-title']");
+            current = false;
+            await host.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new MouseEventArgs());
+            Assert.False(opening.IsCompleted);
+            Assert.Equal(PlanningTaskSaveStatus.Rejected, host.FindComponent<PlanningTaskFormActions>().Instance.Result!.Status);
+            foreach (var id in new[] { projectId, replacementId }) {
+                Assert.DoesNotContain((await workbench.GetStructureAsync(id)).Nodes, node => node.ObjectSubtype == "task");
+            }
+        } finally {
+            await TaskDialogTestDriver.CloseAsync(host, services.GetRequiredService<DialogService>(), opening);
         }
-        await host.Find("[data-testid='project-structure-task-create-cancel']").ClickAsync(new MouseEventArgs());
-        await opening.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     private static async Task<(Guid, ProjectStructureAgentContext)> CreateProjectAsync(ComponentTestHarness harness) {
@@ -135,7 +153,8 @@ public sealed class ProjectTaskNativeDialogOutcomeTests {
         $"project:{projectId}", 100, 100, $"project:{projectId}", "Native task", "Delivery", "Preserved notes", "child",
         ProjectStructureTaskActionIds.CreateMode, "task", null, []);
     private static async Task<ProjectStructureNode?> CreateNodeAsync(ProjectWorkbenchService owner, Guid projectId,
-        CanvasWorkbenchCreateActionRequest draft, Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest> configure)
+        CanvasWorkbenchCreateActionRequest draft, Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest> configure,
+        Func<CancellationToken, ValueTask> authorizeCommit)
         => await owner.CreateObjectAsync(projectId, configure(new(ProjectObjectType.WorkItem, draft.Title!, draft.Subtitle!,
-            draft.Notes!, $"project:{projectId}", 100, 100, ObjectSubtype: "task")));
+            draft.Notes!, $"project:{projectId}", 100, 100, ObjectSubtype: "task")), authorizeCommit: authorizeCommit);
 }

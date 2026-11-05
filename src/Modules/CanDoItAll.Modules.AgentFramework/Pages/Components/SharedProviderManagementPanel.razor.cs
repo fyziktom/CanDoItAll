@@ -2,13 +2,16 @@ using CanDoItAll.AgentFramework.SharedProviders.UI;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using Microsoft.AspNetCore.Components;
+using CanDoItAll.Editing;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-public partial class SharedProviderManagementPanel : ISharedProviderSharingView, IDisposable {
+public partial class SharedProviderManagementPanel : ISharedProviderSharingView, IDisposable, IAsyncDisposable {
     [Inject] public ISharedProviderManagementService ManagementService { get; set; } = default!;
     [Inject] public SharedProviderRecovery Recovery { get; set; } = default!;
     [Inject] public NotificationService NotificationService { get; set; } = default!;
+    [Inject] public ProviderEditingChanges Editing { get; set; } = default!;
+    [Parameter] public ProviderEditingOpening? OriginalOpening { get; set; }
     [Parameter] public Guid? ProviderProfileId { get; set; }
     [Parameter] public long Revision { get; set; }
     [Parameter] public Guid? ProviderRevision { get; set; }
@@ -16,8 +19,10 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
 
     private SharedProviderProfileSharingSnapshot? profileState;
     private SharedProviderImportDraft? importDraft;
-    private (Guid AttemptId, SharedProviderImportSubmission Submission)? importAttempt;
-    private bool importCommitted;
+    private ProviderEditingOpening? opening;
+    private bool admitted;
+    private long changeSequence;
+    private (Guid AttemptId, long Sequence)? verifiedAttempt;
     private CancellationTokenSource? owner;
     private Guid? loadedProviderProfileId;
     private long loadedRevision = -1;
@@ -35,16 +40,70 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
     private SharedProviderConfirmation? confirmation;
     private SharedProviderSharingOrigin Origin => new(viewId, activation, snapshotId, ProviderProfileId,
         profileState?.Publication?.ConcurrencyToken,
-        profileState?.Import is { } import ? SharedProviderPresentationMapper.Baseline(import) : null);
+        profileState?.Import is { } import ? SharedProviderPresentationMapper.Baseline(import) : null) {
+            ProviderConfigurationToken = OriginalOpening is null ? profileState?.ProviderConcurrencyToken : ProviderRevision
+        };
 
-    public SharedProviderSharingPresentation Presentation => new(Origin, SharedProviderPresentationMapper.Sharing(profileState),
-        importDraft, isLoading, isBusy || isLoading || readFailed || hasPendingAttempt, warning, confirmation);
+    private bool NeedsProviderReview => OriginalOpening is not null && profileState?.Ownership == SharedProviderProfileOwnership.Local &&
+        (ProviderRevision is null || profileState.ProviderConcurrencyToken != ProviderRevision);
 
-    private bool CanWrite(SharedProviderSharingOrigin origin) => origin == Origin && !disposed && owner is not null &&
-        !isBusy && !isLoading && !readFailed && !hasPendingAttempt && profileState?.ProviderProfileId == ProviderProfileId;
+    public SharedProviderSharingPresentation Presentation => new(Origin, admitted ? SharedProviderPresentationMapper.Sharing(profileState) : null,
+        admitted ? importDraft : null, isLoading, !admitted || isBusy || isLoading || readFailed || hasPendingAttempt || NeedsProviderReview,
+        warning ?? (NeedsProviderReview ? "Provider configuration changed. Review it in the provider editor before changing publication." : null), confirmation) {
+        ReviewBlocked = !admitted || isBusy || isLoading || readFailed,
+        CanAcknowledgeCurrent = admitted && !isBusy && !isLoading && !readFailed && importDraft?.HasConflict != true &&
+            Recovery.FindTarget(ProviderProfileId) is { } attempt && Recovery.PendingDelivery(attempt.AttemptId) is null &&
+            verifiedAttempt == (attempt.AttemptId, changeSequence)
+    };
+
+    private bool CanWrite(SharedProviderSharingOrigin origin) => origin == Origin && !disposed && admitted && owner is not null &&
+        !isBusy && !isLoading && !readFailed && !hasPendingAttempt && !NeedsProviderReview && profileState?.ProviderProfileId == ProviderProfileId;
+
+    protected override async Task OnInitializedAsync() {
+        if (!RendererInfo.IsInteractive) {
+            return;
+        }
+        opening = Editing.Open(viewId, () => !disposed, parent: OriginalOpening);
+        try {
+            await opening.StartAsync(OnChangedAsync, () => {
+                RetireAccess();
+                return InvokeAsync(StateHasChanged);
+            });
+            Recovery.Bind(new(opening.Scope, opening.PrincipalStamp));
+            admitted = true;
+        } catch (UnauthorizedAccessException) {
+            RetireAccess();
+        }
+    }
+
+    private Task OnChangedAsync(EditingChangeBatch batch) => InvokeAsync(() => {
+        if (!admitted || disposed || !batch.RequiresResync && !batch.Changes.Any(change =>
+                change.OriginEditorId != viewId && change.Resource.ResourceId == ProviderProfileId &&
+                change.Kind != EditingChangeKind.MetadataChanged)) {
+            return;
+        }
+        changeSequence++;
+        verifiedAttempt = null;
+        importDraft?.Invalidate();
+        readFailed = true;
+        CloseConfirmationDialog();
+        warning = "This provider changed. Read its current sharing state before another change; your draft is retained.";
+        StateHasChanged();
+    });
+
+    private void RetireAccess() {
+        admitted = false;
+        opening?.Stop();
+        profileState = null;
+        verifiedAttempt = null;
+        CloseConfirmationDialog();
+        isLoading = false;
+        isBusy = false;
+        warning = "Original sharing access has ended. Reopen the provider with current access.";
+    }
 
     protected override async Task OnParametersSetAsync() {
-        if (disposed) {
+        if (disposed || !admitted) {
             return;
         }
         if (loadedProviderProfileId == ProviderProfileId && loadedRevision == Revision && loadedProviderRevision == ProviderRevision) {
@@ -64,9 +123,8 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
         if (targetChanged) {
             activation++;
             profileState = null;
-            importDraft = null;
-            importAttempt = null;
-            importCommitted = false;
+            importDraft = Recovery.TargetDraft(ProviderProfileId);
+            verifiedAttempt = null;
         }
         isBusy = false;
         warning = Recovery.FindTarget(ProviderProfileId) is { } pending
@@ -79,27 +137,32 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
     }
 
     private bool IsCurrent(long operation, CancellationToken token) =>
-        !disposed && operation == generation && !token.IsCancellationRequested;
+        !disposed && admitted && operation == generation && !token.IsCancellationRequested;
 
     private async Task LoadAsync(long operation, CancellationToken token, bool verify = false) {
         using var request = CancellationTokenSource.CreateLinkedTokenSource(token);
         token = request.Token;
         var targetId = ProviderProfileId;
         var unresolved = Recovery.FindTarget(targetId);
+        var coveredSequence = changeSequence;
         isLoading = true;
         readFailed = false;
         try {
-            var state = targetId is { } id ? await ManagementService.GetProfileSharingAsync(id, token) : null;
+            var state = targetId is { } id ? await (opening ?? throw new UnauthorizedAccessException("Original sharing access is unavailable."))
+                .ReadAsync(ct => ManagementService.GetProfileSharingAsync(id, ct), token) : null;
             if (!IsCurrent(operation, token)) {
                 return;
             }
             if (state is not null && state.ProviderProfileId != targetId) {
                 throw new InvalidOperationException("The sharing response has a different provider identity.");
             }
-            var verification = verify && unresolved is not null && state is not null
-                ? SharedProviderTargetVerification.Evaluate(unresolved, state) : null;
-            AcceptProfile(state, verification?.Disposition == SharedProviderTargetVerificationDisposition.Satisfied &&
-                importAttempt?.AttemptId == unresolved?.AttemptId ? importAttempt?.Submission : null);
+            AcceptProfile(state);
+            readFailed = coveredSequence != changeSequence;
+            if (readFailed) {
+                importDraft?.Invalidate();
+                warning = "The provider changed during this read. Read the current sharing state again.";
+                return;
+            }
             if (!verify || state is null) {
                 return;
             }
@@ -110,24 +173,10 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
             if (Recovery.FindTarget(targetId)?.AttemptId != unresolved.AttemptId) {
                 return;
             }
-            switch (verification!.Disposition) {
-                case SharedProviderTargetVerificationDisposition.Satisfied:
-                    Recovery.RecordCommit(unresolved.AttemptId, verification.Change);
-                    if (Recovery.PendingDelivery(unresolved.AttemptId) is not null) {
-                        await DeliverAsync(unresolved, operation, token);
-                    } else if (Recovery.CompleteTarget(unresolved)) {
-                        warning = null;
-                    }
-                    break;
-                case SharedProviderTargetVerificationDisposition.NotApplied:
-                    if (Recovery.CompleteTarget(unresolved)) {
-                        warning = "The sharing write was not applied. Current state is unchanged; you can make a deliberate new change.";
-                    }
-                    break;
-                default:
-                    warning = "The sharing write remains unresolved. Current state does not establish the requested outcome; no write was repeated.";
-                    break;
-            }
+            verifiedAttempt = (unresolved.AttemptId, coveredSequence);
+            warning = "Current sharing state was read. The earlier outcome remains unconfirmed. Review any changed local settings, then acknowledge current state; no write is repeated.";
+        } catch (UnauthorizedAccessException) {
+            RetireAccess();
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
         } catch (Exception) {
             if (IsCurrent(operation, token)) {
@@ -142,7 +191,7 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
     }
 
     public async Task RetryAsync(SharedProviderSharingOrigin origin) {
-        if (origin != Origin || owner is null || disposed || isBusy || isLoading) {
+        if (origin != Origin || owner is null || disposed || !admitted || isBusy || isLoading) {
             return;
         }
         var operation = ++generation;
@@ -151,10 +200,14 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
         if (Recovery.FindTarget(ProviderProfileId) is { } pending && Recovery.PendingDelivery(pending.AttemptId) is not null) {
             isBusy = true;
             try {
+                await (opening ?? throw new UnauthorizedAccessException("Original sharing access is unavailable."))
+                    .ReadAsync(_ => Task.FromResult(true), token);
                 await DeliverAsync(pending, operation, token);
                 if (IsCurrent(operation, token) && Recovery.FindTarget(ProviderProfileId) is null) {
                     await LoadAsync(operation, token);
                 }
+            } catch (UnauthorizedAccessException) {
+                RetireAccess();
             } finally {
                 if (IsCurrent(operation, token)) {
                     isBusy = false;
@@ -166,16 +219,34 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
         }
     }
 
+    public async Task AcknowledgeCurrentAsync(SharedProviderSharingOrigin origin) {
+        if (origin != Origin || !Presentation.CanAcknowledgeCurrent || owner is null ||
+            Recovery.FindTarget(ProviderProfileId) is not { } attempt) {
+            return;
+        }
+        try {
+            await (opening ?? throw new UnauthorizedAccessException("Original sharing access is unavailable."))
+                .ReadAsync(_ => Task.FromResult(true), owner.Token);
+            if (origin == Origin && Presentation.CanAcknowledgeCurrent && Recovery.AcknowledgeTargetCurrent(attempt)) {
+                verifiedAttempt = null;
+                warning = "Current state acknowledged. The earlier outcome remains unconfirmed; no operation was repeated.";
+            }
+        } catch (UnauthorizedAccessException) {
+            RetireAccess();
+        }
+    }
+
     public Task PublishAsync(SharedProviderSharingOrigin origin) =>
         profileState?.Eligibility?.IsEligible == true && profileState.Publication?.IsPublished != true
             ? ChangePublicationAsync(origin, SharedProviderPublicationAction.Publish) : Task.CompletedTask;
 
     private Task ChangePublicationAsync(SharedProviderSharingOrigin origin, SharedProviderPublicationAction action) {
-        if (!CanWrite(origin) || profileState is not { Ownership: SharedProviderProfileOwnership.Local }) {
+        if (!CanWrite(origin) || profileState is not { Ownership: SharedProviderProfileOwnership.Local } ||
+            origin.ProviderConfigurationToken is not { } original || original == Guid.Empty) {
             return Task.CompletedTask;
         }
         return RunMutationAsync(token => ManagementService.SetPublicationAsync(
-            origin.ProviderId!.Value, action, origin.PublicationToken, token), "Publication updated",
+            origin.ProviderId!.Value, action, origin.PublicationToken, original, token), "Publication updated",
             action == SharedProviderPublicationAction.Publish ? SharedProviderTargetMutationKind.Publish : SharedProviderTargetMutationKind.Unpublish);
     }
 
@@ -199,15 +270,10 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
             return;
         }
         var baseline = SharedProviderPresentationMapper.Baseline(import);
-        submission ??= importCommitted ? importAttempt?.Submission : null;
         if (importDraft is null || importDraft.Baseline.ImportId != import.ImportId) {
             importDraft = new(baseline);
-        } else if (submission is not null && submission.DraftId == importDraft.Id &&
-            SharedProviderLocalAliasPolicy.Normalize(submission.Settings.LocalAlias) == import.LocalAlias &&
-            submission.Settings.IsEnabled == import.IsEnabled) {
+        } else if (submission is not null && submission.DraftId == importDraft.Id) {
             importDraft.Accept(submission, baseline);
-            importAttempt = null;
-            importCommitted = false;
         } else {
             importDraft.Reconcile(baseline);
         }
@@ -227,34 +293,41 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
     private async Task RunMutationAsync(Func<CancellationToken, Task<SharedProviderProfileSharingSnapshot>> mutation,
         string title, SharedProviderTargetMutationKind kind, SharedProviderImportedProfileUpdateRequest? request = null,
         SharedProviderImportSubmission? submission = null) {
-        if (disposed || owner is null || isBusy || isLoading || readFailed || hasPendingAttempt ||
+        if (disposed || !admitted || owner is null || isBusy || isLoading || readFailed || hasPendingAttempt ||
             profileState?.ProviderProfileId != ProviderProfileId) {
             return;
         }
-        SharedProviderTargetAttempt attempt;
-        try {
-            attempt = Recovery.BeginTarget(ProviderProfileId!.Value, kind, profileState!, request);
-            importAttempt = submission is null ? null : (attempt.AttemptId, submission);
-            importCommitted = false;
-        } catch (ArgumentException) {
-            warning = "The requested local settings are invalid. Correct the alias and retry.";
-            return;
-        }
+        SharedProviderTargetAttempt? attempt = null;
         var operation = ++generation;
+        var submittedSequence = changeSequence;
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
         var token = lifetime.Token;
         isBusy = true;
         warning = null;
         try {
-            var result = await mutation(token);
+            var result = await (opening ?? throw new UnauthorizedAccessException("Original sharing access is unavailable."))
+                .WriteAsync(() => {
+                    attempt = Recovery.BeginTarget(ProviderProfileId!.Value, kind, profileState!, request);
+                    Recovery.RetainTargetDraft(attempt, importDraft);
+                    verifiedAttempt = null;
+                    return mutation(token);
+                }, () => IsCurrent(operation, token), token);
+            if (attempt is null) {
+                throw new InvalidOperationException("The sharing operation did not capture its original attempt.");
+            }
             if (result.ProviderProfileId != attempt.ProviderId) {
                 throw new InvalidOperationException("The sharing response has a different provider identity.");
             }
             Recovery.RecordCommit(attempt.AttemptId, result.Change);
+            result = await opening.ReadAsync(_ => Task.FromResult(result), token);
             if (!IsCurrent(operation, token)) {
                 return;
             }
             AcceptProfile(result, submission);
+            if (submittedSequence != changeSequence) {
+                readFailed = true;
+                importDraft?.Invalidate();
+            }
             if (result.Change is null) {
                 Recovery.CompleteTarget(attempt);
             } else {
@@ -269,20 +342,27 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
                 }
             }
         } catch (SharedProviderCommittedException exception) {
+            if (attempt is null) {
+                throw;
+            }
             Recovery.RecordCommit(attempt.AttemptId, exception.Change);
             if (IsCurrent(operation, token)) {
-                importCommitted = submission is not null;
                 profileState = null;
                 await DeliverAsync(attempt, operation, token);
                 if (IsCurrent(operation, token) && Recovery.FindTarget(ProviderProfileId) is null) {
                     warning = exception.Change.Warning;
                 }
             }
-        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (UnauthorizedAccessException) {
+            if (attempt is not null && Recovery.PendingDelivery(attempt.AttemptId) is null) {
+                Recovery.CompleteTarget(attempt);
+            }
+            RetireAccess();
+        } catch (OperationCanceledException) when (token.IsCancellationRequested || !admitted) {
         } catch (Exception exception) {
             var rejected = exception is SharedProviderConcurrencyException or SharedProviderPublicationEligibilityException
                 or ArgumentException or KeyNotFoundException;
-            if (rejected) {
+            if (rejected && attempt is not null) {
                 Recovery.CompleteTarget(attempt);
             }
             if (IsCurrent(operation, token)) {
@@ -347,10 +427,19 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
             return;
         }
         disposed = true;
+        admitted = false;
+        opening?.Stop();
         owner?.Cancel();
         owner?.Dispose();
         owner = null;
         CloseConfirmationDialog();
+    }
+
+    public async ValueTask DisposeAsync() {
+        Dispose();
+        if (opening is not null) {
+            await opening.DisposeAsync();
+        }
     }
 
 }

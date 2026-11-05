@@ -20,7 +20,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         await using var harness = await AgentEditorLoadCharacterizationTests.CreateHarnessAsync(workspace, probe);
         workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agent = (await workspace.ListAgentsAsync(false)).First();
-        var pending = new TaskCompletionSource<Guid>();
+        var pending = new TaskCompletionSource<AgentDefinition>();
         var saveStarted = ObserveSave(probe, _ => pending.Task);
         var completions = new List<AgentDetailsDialogResult>();
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
@@ -33,7 +33,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         cut.FindComponent<StickyActionFooter>().FindAll("button").Single(button => button.TextContent.Trim() == "Clear").Click();
         cut.WaitForAssertion(() => Assert.Null(((AgentEditorModel)cut.FindComponent<EditForm>().Instance.EditContext!.Model).Id));
         var resetContext = cut.FindComponent<EditForm>().Instance.EditContext;
-        await cut.InvokeAsync(() => Complete(pending, agent.Id, fail));
+        await cut.InvokeAsync(() => Complete(pending, agent, fail));
         await submitted;
         Assert.Same(resetContext, cut.FindComponent<EditForm>().Instance.EditContext);
         Assert.True(cut.Instance.CurrentTarget.IsNew);
@@ -50,7 +50,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         await using var harness = await AgentEditorLoadCharacterizationTests.CreateHarnessAsync(workspace, probe);
         workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agent = (await workspace.ListAgentsAsync(false)).First();
-        var pending = new TaskCompletionSource<Guid>();
+        var pending = new TaskCompletionSource<AgentDefinition>();
         var saveStarted = ObserveSave(probe, _ => pending.Task);
         var completions = new List<AgentDetailsDialogResult>();
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
@@ -60,9 +60,9 @@ public sealed class AgentEditorCommandLifetimeTests {
         cut.WaitForElement("[data-testid='agents-catalog-name']");
         var submitted = cut.Find("form").SubmitAsync();
         await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
-        await cut.InvokeAsync(() => {
-            cut.Instance.Dispose();
-            Complete(pending, agent.Id, fail);
+        await cut.InvokeAsync(async () => {
+            await cut.Instance.DisposeAsync();
+            Complete(pending, agent, fail);
         });
         await submitted;
         Assert.Empty(completions);
@@ -76,7 +76,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         await using var harness = await AgentEditorLoadCharacterizationTests.CreateHarnessAsync(workspace, probe);
         workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agent = (await workspace.ListAgentsAsync(false)).First();
-        var pending = new TaskCompletionSource<Guid>();
+        var pending = new TaskCompletionSource<AgentDefinition>();
         var saveStarted = ObserveSave(probe, _ => pending.Task);
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.AgentId, agent.Id)
@@ -87,7 +87,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         var request = await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
         cut.Find("[data-testid='agents-catalog-name']").Input("Later edit");
         var submittedNameAfterEdit = request.Name;
-        await cut.InvokeAsync(() => pending.SetResult(agent.Id));
+        await cut.InvokeAsync(() => pending.SetResult(agent));
         await submitted;
         Assert.Equal("Submitted name", submittedNameAfterEdit);
         Assert.Same(context, cut.FindComponent<EditForm>().Instance.EditContext);
@@ -105,7 +105,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         var pending = new TaskCompletionSource();
         var saveStarted = ObserveSave(probe, async request => {
             await pending.Task;
-            return await probe.Target.SaveAgentAsync(request);
+            return await probe.Target.SaveAgentDefinitionAsync(request);
         });
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
         var submitted = cut.Find("form").SubmitAsync();
@@ -126,7 +126,7 @@ public sealed class AgentEditorCommandLifetimeTests {
     public async Task Reset_cancels_an_inflight_save_without_an_unconfirmed_write_warning() {
         var probe = AgentEditorLoadCharacterizationTests.CreateProbe(out var workspace);
         await using var harness = await AgentEditorLoadCharacterizationTests.CreateHarnessAsync(workspace, probe);
-        var pending = new TaskCompletionSource<Guid>();
+        var pending = new TaskCompletionSource<AgentDefinition>();
         var saveStarted = ObserveSave(probe, _ => pending.Task);
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
@@ -145,7 +145,7 @@ public sealed class AgentEditorCommandLifetimeTests {
     }
 
     private static Task<AgentEditorModel> ObserveSave(AgentEditorWorkspaceProbe probe,
-        Func<AgentEditorModel, Task<Guid>> save) {
+        Func<AgentEditorModel, Task<AgentDefinition>> save) {
         var started = new TaskCompletionSource<AgentEditorModel>(TaskCreationOptions.RunContinuationsAsynchronously);
         probe.Save = request => {
             started.SetResult(request);
@@ -154,11 +154,11 @@ public sealed class AgentEditorCommandLifetimeTests {
         return started.Task;
     }
 
-    private static void Complete(TaskCompletionSource<Guid> pending, Guid id, bool fail) {
+    private static void Complete(TaskCompletionSource<AgentDefinition> pending, AgentDefinition accepted, bool fail) {
         if (fail) {
             pending.SetException(new InvalidOperationException("Delayed save failure."));
         } else {
-            pending.SetResult(id);
+            pending.SetResult(accepted);
         }
     }
 }

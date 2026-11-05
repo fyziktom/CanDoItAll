@@ -163,9 +163,10 @@ public sealed class HrAgentAdministrationService(
         {
             try
             {
-                await workspaceService.UpdateAgentTeamMembersAsync(
+                await workspaceService.EnsureAgentTeamMemberAsync(
                     team.Id,
-                    team.AgentIds.Append(id).Distinct().ToArray(),
+                    team.CreatedAtUtc,
+                    id,
                     cancellationToken);
             }
             catch (OperationCanceledException)

@@ -1,7 +1,16 @@
+@using CanDoItAll.Editing
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Forms
+
 <FormSection Title="Skills and certifications"
              Description="Maintain searchable skill coverage, proficiency, and qualification notes on the shared workforce party instead of hiding staffing fit in free text.">
     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
         <SurfaceCard>
+            <EditForm EditContext="skillContext" OnValidSubmit="SubmitSkillAsync" data-testid="crmhr-skill-form">
+            @Editing
+            @if (pending.Count > 0) {
+                <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="Complete the date or number input before saving. Your raw input is retained." /></Alert>
+            }
             <p class="cda-eyebrow">Skill assignment</p>
             <h3 class="mt-1 text-lg font-semibold text-slate-950">Attach a skill to this profile</h3>
             <p class="mt-2 text-sm leading-6 text-slate-600">
@@ -18,7 +27,7 @@
             {
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Skill">
-                        <InputSelect @bind-Value="SkillDraft.SkillId"
+                        <InputSelect TValue="Guid" Value="SkillDraft.SkillId" ValueChanged="SelectSkillAsync" ValueExpression="@(() => SkillDraft.SkillId)"
                                      class="cda-input"
                                      data-testid="crmhr-skill-skill-id">
                             <option value="@Guid.Empty">Choose a skill</option>
@@ -29,7 +38,7 @@
                         </InputSelect>
                     </FormField>
                     <FormField Text="Proficiency">
-                        <InputSelect @bind-Value="SkillDraft.Proficiency"
+                        <InputSelect @bind-Value="SkillDraft.Proficiency" @bind-Value:after="@(() => SkillParsedAsync(WorkforceSkillField.Proficiency))"
                                      class="cda-input"
                                      data-testid="crmhr-skill-proficiency">
                             @foreach (var proficiency in Enum.GetValues<SkillProficiencyLevel>())
@@ -42,25 +51,25 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                     <FormField Text="Years">
-                        <InputNumber @bind-Value="SkillDraft.YearsExperience"
+                        <NativeValueInput TValue="int" DisplayName="Years of experience" @bind-Value="SkillDraft.YearsExperience"
                                      class="cda-input"
-                                     data-testid="crmhr-skill-years" />
+                                     data-testid="crmhr-skill-years" PendingChanged="@(pending => SkillValueInputAsync(WorkforceSkillField.Years, pending))" />
                     </FormField>
                     <FormField Text="Certification">
-                        <InputText @bind-Value="SkillDraft.CertificationStatus"
+                        <NativeValueInput TValue="string" @bind-Value="SkillDraft.CertificationStatus" PendingChanged="@(_ => SkillTextAsync(WorkforceSkillField.Certification))"
                                    class="cda-input"
                                    data-testid="crmhr-skill-certification" />
                     </FormField>
                     <FormField Text="Last validated">
-                        <InputDate @bind-Value="SkillDraft.LastValidatedOn"
+                        <NativeValueInput TValue="DateOnly?" DisplayName="Last validated" @bind-Value="SkillDraft.LastValidatedOn"
                                    class="cda-input"
-                                   data-testid="crmhr-skill-validated-on" />
+                                   data-testid="crmhr-skill-validated-on" PendingChanged="@(pending => SkillValueInputAsync(WorkforceSkillField.Validated, pending))" />
                     </FormField>
                 </Grid>
 
                 <div class="mt-4">
                     <FormField Text="Notes">
-                        <InputTextArea @bind-Value="SkillDraft.Notes"
+                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="SkillDraft.Notes" PendingChanged="@(_ => SkillTextAsync(WorkforceSkillField.Notes))"
                                        class="cda-input cda-input--textarea min-h-[7rem]"
                                        data-testid="crmhr-skill-notes" />
                     </FormField>
@@ -68,13 +77,15 @@
 
                 <Cluster Gap="LayoutGap.Small" Class="mt-4">
                     <Button Text="Save skill"
-                            Click="SavePartySkill"
+                            Click="SubmitSkillAsync" Disabled="SkillSaveDisabled"
                             data-testid="crmhr-skill-save-button" />
                 </Cluster>
             }
+            </EditForm>
         </SurfaceCard>
 
         <SurfaceCard Soft="true">
+            <EditForm EditContext="definitionContext" OnValidSubmit="SubmitDefinitionAsync" data-testid="crmhr-skill-definition-form">
             <p class="cda-eyebrow">Skill dictionary</p>
             <h3 class="mt-1 text-lg font-semibold text-slate-950">Add a reusable skill definition</h3>
             <p class="mt-2 text-sm leading-6 text-slate-600">
@@ -83,12 +94,12 @@
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                 <FormField Text="Skill name">
-                    <InputText @bind-Value="SkillDefinitionDraft.Name"
+                    <NativeValueInput TValue="string" @bind-Value="SkillDefinitionDraft.Name" PendingChanged="@(_ => DefinitionTextAsync(WorkforceDefinitionField.Name))"
                                class="cda-input"
                                data-testid="crmhr-skill-definition-name" />
                 </FormField>
                 <FormField Text="Category">
-                    <InputText @bind-Value="SkillDefinitionDraft.Category"
+                    <NativeValueInput TValue="string" @bind-Value="SkillDefinitionDraft.Category" PendingChanged="@(_ => DefinitionTextAsync(WorkforceDefinitionField.Category))"
                                class="cda-input"
                                data-testid="crmhr-skill-definition-category" />
                 </FormField>
@@ -96,23 +107,24 @@
 
             <div class="mt-4">
                 <FormField Text="Description">
-                    <InputTextArea @bind-Value="SkillDefinitionDraft.Description"
+                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="SkillDefinitionDraft.Description" PendingChanged="@(_ => DefinitionTextAsync(WorkforceDefinitionField.Description))"
                                    class="cda-input cda-input--textarea min-h-[7rem]"
                                    data-testid="crmhr-skill-definition-description" />
                 </FormField>
             </div>
 
             <label class="mt-4 inline-flex items-center gap-2 text-sm text-slate-700">
-                <InputCheckbox @bind-Value="SkillDefinitionDraft.IsActive"
+                <InputCheckbox @bind-Value="SkillDefinitionDraft.IsActive" @bind-Value:after="@(() => DefinitionInputChanged.InvokeAsync(new(WorkforceDefinitionField.Active)))"
                                data-testid="crmhr-skill-definition-active" />
                 <span>Active skill</span>
             </label>
 
             <Cluster Gap="LayoutGap.Small" Class="mt-4">
                 <Button Text="Save skill definition"
-                        Click="SaveSkillDefinition"
+                        Click="SubmitDefinitionAsync" Disabled="DefinitionSaveDisabled"
                         data-testid="crmhr-skill-definition-save-button" />
             </Cluster>
+            </EditForm>
         </SurfaceCard>
     </Grid>
 
@@ -157,7 +169,7 @@
                                 <Button Text="Delete"
                                         ButtonStyle="ButtonStyle.Danger"
                                         Size="ButtonSize.Small"
-                                        Click="@(() => DeletePartySkill.InvokeAsync(skill.Id))"
+                                        Click="@(() => DeletePartySkill.InvokeAsync(skill.Id))" Disabled="WritesDisabled"
                                         data-testid="crmhr-skill-delete-button" />
                             </Cluster>
                         </Split>
@@ -169,6 +181,59 @@
 </FormSection>
 
 @code {
+    private bool disposed;
+    private EditContext skillContext = default!;
+    private EditContext definitionContext = default!;
+    private readonly HashSet<WorkforceSkillField> pending = [];
+    [Parameter] public RenderFragment? Editing { get; set; }
+    [Parameter] public bool WritesDisabled { get; set; }
+    [Parameter] public bool SkillSaveDisabled { get; set; }
+    [Parameter] public bool DefinitionSaveDisabled { get; set; }
+    [Parameter] public EventCallback<Guid> SkillSelected { get; set; }
+    [Parameter] public EventCallback<RecordInput<WorkforceSkillField>> SkillInputChanged { get; set; }
+    [Parameter] public EventCallback<RecordInput<WorkforceDefinitionField>> DefinitionInputChanged { get; set; }
+    protected override void OnParametersSet() {
+        if (skillContext is null || !ReferenceEquals(skillContext.Model, SkillDraft)) {
+            skillContext = new(SkillDraft);
+            pending.Clear();
+        }
+        if (definitionContext is null || !ReferenceEquals(definitionContext.Model, SkillDefinitionDraft)) {
+            definitionContext = new(SkillDefinitionDraft);
+        }
+    }
+    private Task SelectSkillAsync(Guid id) => disposed ? Task.CompletedTask : SkillSelected.InvokeAsync(id);
+    private Task SubmitSkillAsync() => disposed || WritesDisabled || SkillSaveDisabled || pending.Count > 0 || !skillContext.Validate()
+        ? Task.CompletedTask : SavePartySkill.InvokeAsync();
+    private Task SubmitDefinitionAsync() => disposed || WritesDisabled || DefinitionSaveDisabled || !definitionContext.Validate()
+        ? Task.CompletedTask : SaveSkillDefinition.InvokeAsync();
+    private Task SkillTextAsync(WorkforceSkillField field) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+
+        return SkillInputChanged.InvokeAsync(new(field));
+    }
+    private Task DefinitionTextAsync(WorkforceDefinitionField field) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+
+        return DefinitionInputChanged.InvokeAsync(new(field));
+    }
+    private Task SkillValueInputAsync(WorkforceSkillField field, bool isPending) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (isPending) {
+            pending.Add(field);
+        } else {
+            pending.Remove(field);
+        }
+        return SkillInputChanged.InvokeAsync(new(field, isPending));
+    }
+    private Task SkillParsedAsync(WorkforceSkillField field) => SkillValueInputAsync(field, false);
+    public void Dispose() => disposed = true;
+
     [Parameter]
     public IReadOnlyList<SkillCatalogItemModel> SkillCatalog { get; set; } = [];
 

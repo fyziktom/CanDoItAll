@@ -11,10 +11,9 @@ internal static class CanvasComposerTestDispatch {
         await canvas.OnCreateAction(JsonSerializer.Serialize(request with { ComposerOpeningId = id }));
     }
 
-    public static async Task EditAsync(CanvasWorkbench canvas, string json) {
-        var request = JsonSerializer.Deserialize<CanvasWorkbenchNodeEditRequest>(json)!;
+    public static async Task EditAsync(CanvasWorkbench canvas, CanvasWorkbenchNodeEditRequest original, CanvasWorkbenchNodeEditRequest request) {
         var id = Guid.NewGuid();
-        await canvas.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(id, null, request)));
+        await canvas.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(id, null, original)));
         await canvas.OnNodeEdited(JsonSerializer.Serialize(request with { ComposerOpeningId = id }));
     }
 }

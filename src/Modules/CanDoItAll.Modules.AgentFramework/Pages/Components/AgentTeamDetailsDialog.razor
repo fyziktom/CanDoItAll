@@ -2,14 +2,20 @@
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.AgentFramework.UI.Teams
 @using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Editing
 @using Microsoft.Extensions.Logging
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IAgentFrameworkWorkspaceService WorkspaceService
 @inject IDatabaseSwitchNotificationService ProfileChanges
 @inject DialogService DialogService
 @inject ILogger<AgentTeamDetailsDialog> Logger
+@inject AgentConfigurationChanges ConfigurationChanges
 
-<TeamMetadataEditor @ref="editor" TeamId="TeamId" Operations="operations!" OwnerCancellationToken="ownerToken" Completed="CompleteAsync" Cancelled="CancelAsync" />
+@if (!RendererInfo.IsInteractive || opening?.IsReady != true) {
+    <SurfaceCard data-testid="agents-team-access"><TextBlock Value="@(accessError ?? "Initializing Team editing access.")" /></SurfaceCard>
+} else {
+    <TeamMetadataEditor @ref="editor" TeamId="TeamId" Operations="operations!" ChangeSequence="changeSequence" OwnerCancellationToken="ownerToken" Completed="CompleteAsync" Cancelled="CancelAsync" />
+}
 
 @code {
     [Parameter] public Guid? TeamId { get; set; }
@@ -21,30 +27,76 @@
     private CancellationToken ownerToken;
     private TeamMetadataEditor? editor;
     private TeamMetadataOperations? operations;
+    private AgentConfigurationOpening? opening;
+    private Guid? previousTeamId;
+    private Guid? observedTeamId;
+    private Guid openingId;
+    private long changeSequence;
+    private string? accessError;
     private bool disposed;
     protected override void OnInitialized() {
         ProfileChanges.Changed += ProfileChanged;
-        operations = new((id, token) => WorkspaceService.GetAgentTeamEditorAsync(id, token), SaveAsync, ChooseIconAsync);
+        operations = new(LoadTeamAsync, SaveAsync, ChooseIconAsync);
     }
-    protected override void OnParametersSet() {
-        if (owner is not null && previousOwner == OwnerCancellationToken) {
+    protected override async Task OnParametersSetAsync() {
+        if (disposed || !RendererInfo.IsInteractive || owner is not null && previousOwner == OwnerCancellationToken && previousTeamId == TeamId) {
             return;
         }
         owner?.Cancel();
+        if (opening is { } oldOpening) {
+            await oldOpening.DisposeAsync();
+        }
         owner?.Dispose();
         previousOwner = OwnerCancellationToken;
-        owner = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, OwnerCancellationToken);
-        ownerToken = owner.Token;
+        previousTeamId = TeamId;
+        observedTeamId = TeamId;
+        var id = openingId = Guid.NewGuid();
+        opening = new(ConfigurationChanges, EditingOwner.AgentTeam, TeamId, id, () => !disposed && openingId == id && !lifetime.IsCancellationRequested);
+        try {
+            await opening.StartAsync(batch => InvokeAsync(() => {
+                if (!disposed && openingId == id && observedTeamId is not null && (batch.RequiresResync ||
+                    batch.Changes.Any(change => change.OriginEditorId != id && change.Resource.ResourceId == observedTeamId))) {
+                    changeSequence++;
+                    StateHasChanged();
+                }
+            }), RetireAsync, catalog: TeamId is null);
+            owner = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, OwnerCancellationToken, opening.Lifetime);
+            ownerToken = owner.Token;
+        } catch (Exception error) {
+            accessError = "Team editing access is unavailable. Close and reopen with current workspace access.";
+            Logger.LogWarning("Team editor access could not be opened for {TeamId}: {FailureType}", TeamId, error.GetType().Name);
+        }
+    }
+
+    private Task<AgentTeamEditorModel> LoadTeamAsync(Guid? id, CancellationToken token)
+        => opening!.ReadAsync(request => WorkspaceService.GetAgentTeamEditorAsync(id, request), token);
+
+    private Task RetireAsync() {
+        owner?.Cancel();
+        return InvokeAsync(() => {
+            if (!disposed) {
+                accessError = "Team editing access changed. Close and reopen with current workspace access.";
+                StateHasChanged();
+            }
+        });
     }
     private async Task<TeamMetadataOutcome> SaveAsync(TeamMetadataSubmission submission, CancellationToken token) {
         if (disposed || ownerToken.IsCancellationRequested) {
             return new TeamMetadataOutcome.Rejected();
         }
         try {
-            var accepted = await WorkspaceService.SaveAgentTeamMetadataAsync(submission.ToEditorModel(), token);
-            return accepted.Id is { } id ? new TeamMetadataOutcome.Accepted(id) : new TeamMetadataOutcome.Unknown();
+            var accepted = await opening!.WriteAsync(request => WorkspaceService.SaveAgentTeamMetadataAsync(submission.ToEditorModel(), request), token);
+            observedTeamId = accepted.Id;
+            return accepted.Id is { } id ? new TeamMetadataOutcome.Accepted(id, accepted) : new TeamMetadataOutcome.Unknown();
+        } catch (AgentCatalogCommittedException<AgentTeamEditorModel> exception) when (exception.Accepted.Id is { } id) {
+            if (!token.IsCancellationRequested && (submission.Id is null || submission.Id == id)) {
+                observedTeamId = id;
+            }
+            return new TeamMetadataOutcome.Accepted(id, exception.Accepted, exception.Message);
         } catch (AgentTeamMetadataRejectedException) {
             return new TeamMetadataOutcome.Rejected();
+        } catch (AgentTeamConcurrencyException) {
+            return new TeamMetadataOutcome.Conflict();
         } catch (Exception error) {
             Logger.LogWarning("Team metadata acknowledgement unavailable for {TeamId}: {FailureType}", submission.Id, error.GetType().Name);
             return new TeamMetadataOutcome.Unknown();
@@ -69,13 +121,14 @@
             return;
         }
         lifetime.Cancel();
+        opening?.Stop();
         _ = InvokeAsync(() => {
             if (!disposed) {
                 StateHasChanged();
             }
         });
     }
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
         if (disposed) {
             return;
         }
@@ -83,6 +136,10 @@
         ProfileChanges.Changed -= ProfileChanged;
         editor?.Dispose();
         lifetime.Cancel();
+        opening?.Stop();
+        if (opening is { } currentOpening) {
+            await currentOpening.DisposeAsync();
+        }
         owner?.Dispose();
         lifetime.Dispose();
     }

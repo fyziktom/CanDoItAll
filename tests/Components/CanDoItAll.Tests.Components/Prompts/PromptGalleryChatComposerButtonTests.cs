@@ -713,6 +713,7 @@ public sealed class PromptGalleryChatComposerButtonTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IPromptGalleryService>(gallery);
+        CanDoItAll.Tests.Support.PromptGalleryUiTestAccess.Register(context.Services);
         return context;
     }
 }

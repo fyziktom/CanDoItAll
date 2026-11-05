@@ -64,7 +64,7 @@
     <ChildContent>
         @if (editorOpen)
         {
-            <PromptGalleryItemEditorHost ItemId="@selectedItemId"
+            <PromptGalleryItemEditorHost @ref="editorHost" ItemId="@selectedItemId"
                                          Committed="HandleCommittedAsync"
                                          Cancelled="CloseEditorAsync" />
         }
@@ -76,7 +76,8 @@
     private UrlStateBinding<PromptGalleryUrlState> url = default!;
     private PromptGallerySearchHost? searchHost;
     private Guid? selectedItemId;
-    private bool editorDirty;
+    private bool catalogInvalidated;
+    private PromptGalleryItemEditorHost? editorHost;
     private bool editorOpen;
     private bool creatingNew;
     private bool isOpeningCurator;
@@ -190,8 +191,11 @@
         _ = LoadCuratorPresentationAsync();
     }
 
-    private Task CreateNewAsync()
+    private async Task CreateNewAsync()
     {
+        if (editorHost is not null && !await editorHost.RequestCloseAsync()) {
+            return;
+        }
         if (url.State.PromptId is not null)
         {
             url.Navigate(url.State with { PromptId = null }, UrlHistoryMode.Replace);
@@ -200,16 +204,17 @@
         selectedItemId = null;
         creatingNew = true;
         editorOpen = true;
-        return Task.CompletedTask;
     }
 
-    private Task OpenEditorAsync(Guid itemId)
+    private async Task OpenEditorAsync(Guid itemId)
     {
+        if (editorHost is not null && editorHost.CurrentTarget != itemId && !await editorHost.RequestCloseAsync()) {
+            return;
+        }
         url.OpenOverlay(url.State with { PromptId = itemId });
         selectedItemId = itemId;
         creatingNew = false;
         editorOpen = true;
-        return Task.CompletedTask;
     }
 
     private async Task OpenCuratorAsync()
@@ -320,7 +325,7 @@
     {
         // The editor reports the identity it owns; the page echoes it back as the requested target.
         selectedItemId = commit.ItemId;
-        editorDirty = true;
+        catalogInvalidated = true;
         if (creatingNew && editorOpen)
         {
             // The first save gives the draft its identity; the editor becomes addressable without a new history entry.
@@ -328,11 +333,14 @@
             url.Navigate(url.State with { PromptId = commit.ItemId }, UrlHistoryMode.Replace);
         }
 
-        return Task.CompletedTask;
+        return RefreshAfterEditorAsync();
     }
 
     private async Task CloseEditorAsync()
     {
+        if (editorHost is not null && !await editorHost.RequestCloseAsync()) {
+            return;
+        }
         editorOpen = false;
         creatingNew = false;
         selectedItemId = null;
@@ -346,13 +354,13 @@
 
     private async Task RefreshAfterEditorAsync()
     {
-        if (disposed || !editorDirty)
+        if (disposed || !catalogInvalidated)
         {
             return;
         }
 
         // Persisted changes invalidate the catalog data in place; filters and paging are preserved.
-        editorDirty = false;
+        catalogInvalidated = false;
         if (searchHost is not null)
         {
             await searchHost.RefreshAsync();

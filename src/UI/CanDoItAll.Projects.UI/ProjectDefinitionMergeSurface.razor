@@ -1,0 +1,135 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using System.Globalization
+
+<Stack GapScale="LayoutGap.Large" data-testid="project-merge-review">
+    <Alert AlertStyle="AlertStyle.Info">
+        <TextBlock Value="Compare the original, your draft and the current saved definition. Apply changes your draft only; Save is a separate action." />
+        <TextBlock Value="Starter objects and retained operation references keep their separate state." />
+    </Alert>
+    <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+    <MergeFieldView TValue="string" Label="Project name" Field="Review.Name" Format="Text" ShowUnchanged="showUnchanged" Changed="Changed" TestId="project-merge-name">
+        <ResultEditor Context="value">
+            <NativeValueInput TValue="string" Value="@value" ValueChanged="@(value => Set(Review.Name, value))" ValueExpression="@(() => Review.Name.Local)" class="cda-input" aria-label="Merged project name" data-testid="project-merge-name-result" />
+        </ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView TValue="string" Label="Description" Field="Review.Description" Format="Text" ShowUnchanged="showUnchanged" Changed="Changed" TestId="project-merge-description">
+        <ResultEditor Context="value">
+            <NativeValueInput TValue="string" Multiline="true" Value="@value" ValueChanged="@(value => Set(Review.Description, value))" ValueExpression="@(() => Review.Description.Local)" class="cda-input cda-input--textarea" aria-label="Merged project description" />
+        </ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView TValue="string" Label="Objective" Field="Review.Objective" Format="Text" ShowUnchanged="showUnchanged" Changed="Changed">
+        <ResultEditor Context="value">
+            <NativeValueInput TValue="string" Multiline="true" Value="@value" ValueChanged="@(value => Set(Review.Objective, value))" ValueExpression="@(() => Review.Objective.Local)" class="cda-input cda-input--textarea" aria-label="Merged project objective" />
+        </ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView TValue="ProjectStatus" Label="Status" Field="Review.Status" Format="@(value => value.ToString())" ShowUnchanged="showUnchanged" Changed="Changed" />
+    <MergeFieldView TValue="string" Label="Current phase" Field="Review.CurrentPhase" Format="Text" ShowUnchanged="showUnchanged" Changed="Changed">
+        <ResultEditor Context="value">
+            <NativeValueInput TValue="string" Value="@value" ValueChanged="@(value => Set(Review.CurrentPhase, value))" ValueExpression="@(() => Review.CurrentPhase.Local)" class="cda-input" aria-label="Merged current phase" />
+        </ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView TValue="DateTime?" Label="Target date" Field="Review.TargetDate" Format="Date" ShowUnchanged="showUnchanged" Changed="Changed">
+        <ResultEditor Context="value">
+            <NativeValueInput TValue="DateTime?" Value="value" ValueChanged="@(date => Set(Review.TargetDate, date))" ValueExpression="@(() => Review.TargetDate.Local)"
+                              PendingChanged="@(pending => Pending(new(new(ProjectMergeInputField.TargetDate), pending)))" class="cda-input" aria-label="Merged project target date" />
+        </ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView TValue="ProjectDefinitionExternalIdentity" Label="External identity" Field="Review.ExternalIdentity" Format="Identity" ShowUnchanged="showUnchanged" Changed="Changed" />
+    @if (Review.Current.ExternalIdentity is not null) {
+        <SmallText Text="The assigned external identity is immutable. Keep the current identity to apply this comparison." />
+    }
+    <FormSection Title="Phase order" Description="Choose the delivery order separately from row membership. Retained rows absent from the chosen order are appended in current order.">
+        @if (Review.OrderNeedsReview) {
+            <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="A retained phase is absent from the automatic order. Choose an order explicitly." /></Alert>
+        }
+        <MergeFieldView TValue="IReadOnlyList<ProjectDefinitionRowKey>" Label="Delivery sequence" Field="Review.PhaseOrder" Format="Order" ShowUnchanged="@(showUnchanged || Review.OrderNeedsReview)" Changed="Changed" TestId="project-merge-phase-order" />
+    </FormSection>
+    @foreach (var row in Review.Phases.Where(row => showUnchanged || row.IsChanged).Take(visiblePhases)) {
+        <ProjectPhaseMergeSurface @key="row.Key" Row="row" ShowUnchanged="showUnchanged" Changed="Changed" ResultPending="Pending" />
+    }
+    @if (visiblePhases < Review.Phases.Count(row => showUnchanged || row.IsChanged)) {
+        <Button Text="Show more phases" ButtonStyle="ButtonStyle.Light" Click="@(() => visiblePhases += PageSize)" />
+    }
+    @foreach (var row in Review.Options.Where(row => showUnchanged || row.IsChanged).Take(visibleOptions)) {
+        <ProjectOptionMergeSurface @key="row.Key" Row="row" ShowUnchanged="showUnchanged" Changed="Changed" />
+    }
+    @if (visibleOptions < Review.Options.Count(row => showUnchanged || row.IsChanged)) {
+        <Button Text="Show more options" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleOptions += PageSize)" />
+    }
+    @if (previousResults.Count > 0) {
+        <FormSection Title="Earlier result entries" Description="These custom entries are retained for copying. Choices carry over only when their original, local and current values still match.">
+            @foreach (var result in previousResults.Take(visiblePrevious)) {
+                <FormField Text="@result.Label"><TextBlock Value="@result.Value" /></FormField>
+            }
+            @if (visiblePrevious < previousResults.Count) {
+                <Button Text="Show more earlier entries" ButtonStyle="ButtonStyle.Light" Click="@(() => visiblePrevious += PageSize)" />
+            }
+        </FormSection>
+    }
+</Stack>
+
+@code {
+    private const int PageSize = 25;
+    private int visiblePhases = PageSize;
+    private int visibleOptions = PageSize;
+    private int visiblePrevious = PageSize;
+    private bool showUnchanged;
+    private ProjectDefinitionReview? observed;
+    private ProjectDefinitionReview? prior;
+    private IReadOnlyDictionary<ProjectDefinitionRowKey, string> phaseNames = new Dictionary<ProjectDefinitionRowKey, string>();
+    private readonly List<PreviousResult> previousResults = [];
+    [Parameter, EditorRequired] public ProjectDefinitionReview Review { get; set; } = default!;
+    [Parameter] public ProjectDefinitionReview? Previous { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(observed, Review)) {
+            observed = Review;
+            phaseNames = Review.Phases.ToDictionary(row => row.Key, row => row.Label);
+        }
+        if (ReferenceEquals(prior, Previous)) {
+            return;
+        }
+        prior = Previous;
+        previousResults.Clear();
+        if (Previous is not { } previous) {
+            return;
+        }
+        Add("Project name", previous.Name, Text);
+        Add("Description", previous.Description, Text);
+        Add("Objective", previous.Objective, Text);
+        Add("Current phase", previous.CurrentPhase, Text);
+        Add("Target date", previous.TargetDate, Date);
+        foreach (var row in previous.Phases.Where(row => row.Fields is not null)) {
+            Add($"{row.Label}: name", row.Fields!.Name, Text);
+            Add($"{row.Label}: goal", row.Fields.Goal, Text);
+            Add($"{row.Label}: dates", row.Fields.Dates, value => $"{Date(value.Start)} — {Date(value.End)}");
+        }
+        foreach (var row in previous.Options.Where(row => row.Fields is not null)) {
+            Add($"{row.Label}: name", row.Fields!.Name, Text);
+            Add($"{row.Label}: notes", row.Fields.Notes, Text);
+        }
+    }
+
+    private void Add<T>(string label, MergeField<T> field, Func<T, string> format) {
+        if (field.Choice == MergeChoice.Custom) {
+            previousResults.Add(new(label, format(field.Result)));
+        }
+    }
+    private static string Text(string value) => value;
+    private static string Date(DateTime? value) => value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "Not set";
+    private static string Identity(ProjectDefinitionExternalIdentity? value) => value is null ? "Not assigned" : $"{value.Namespace}: {value.Key}";
+    private string Order(IReadOnlyList<ProjectDefinitionRowKey> keys) => string.Join(" → ", keys.Select(key => phaseNames[key]));
+    private async Task Set<T>(MergeField<T> field, T value) {
+        field.SetResult(value);
+        await Changed.InvokeAsync();
+    }
+    private async Task Pending(ProjectMergePendingInput input) {
+        Review.PendingInput(input.Input, input.Pending);
+        await Changed.InvokeAsync();
+    }
+    private sealed record PreviousResult(string Label, string Value);
+}

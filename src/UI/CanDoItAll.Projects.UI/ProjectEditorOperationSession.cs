@@ -34,7 +34,7 @@ public sealed class ProjectEditorOperationSession : IDisposable {
 
     public void RememberAcceptance() {
         if (Pending.KnownAccepted is ProjectDefinitionAcceptedReceipt.Full full) {
-            Draft.RecordAcceptedOutcome(Submitted, full.Result.Acknowledgement);
+            Draft.RecordAcceptedOutcome(Submitted, full.Result.Acknowledgement, full.Result.Operation.Id);
         }
     }
 

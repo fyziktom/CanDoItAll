@@ -31,7 +31,7 @@ public static class CrmHrHomePresentationMapper
             party.DisplayName,
             FormatPartyType(party.PartyType),
             FormatLifecycle(party.LifecycleStatus),
-            string.IsNullOrWhiteSpace(party.Summary) ? null : party.Summary,
+            party.IsSensitive || string.IsNullOrWhiteSpace(party.Summary) ? null : party.Summary,
             party.IsSensitive);
     }
 

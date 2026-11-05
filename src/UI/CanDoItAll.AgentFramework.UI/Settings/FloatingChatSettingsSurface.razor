@@ -2,85 +2,83 @@
 @if (Presentation.Source is null) {
     <StatusBadge Tone="@Presentation.StatusTone" Text="@Presentation.StatusText" />
     @if (!Presentation.IsBusy) {
-        <Button Text="Reload settings" Click="ReloadAsync" />
+        <Button Text="Reload settings" Click="CompareAsync" />
     }
 } else {
-    <fieldset disabled="@Presentation.IsBusy" class="min-w-0">
-<Grid Gap="LayoutGap.Large"
-      ColumnsLg="2"
-      data-testid="floating-agent-chat-settings">
-    <SurfaceCard>
-        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Active chat lifecycle" />
-        <h2 class="mt-1 text-lg font-semibold text-slate-950">Retention and capacity</h2>
-        <ConversationActiveChatLifecycleFields @bind-HiddenChatRetentionMinutes:get="draft.HiddenActiveChatRetentionMinutes" @bind-HiddenChatRetentionMinutes:set="(int value) => draft = draft with { HiddenActiveChatRetentionMinutes = value }"
-                                               MaximumRetentionMinutes="@Presentation.Limits!.MaximumRetentionMinutes"
-                                               @bind-MaximumActiveChats:get="draft.MaximumActiveChats" @bind-MaximumActiveChats:set="(int value) => draft = draft with { MaximumActiveChats = value }"
-                                               MaximumActiveChatLimit="@Presentation.Limits!.MaximumActiveChats"
-                                               Disabled="@Presentation.IsBusy"
-                                               Class="mt-4"
-                                               RetentionInputTestId="floating-agent-chat-retention"
-                                               MaximumActiveInputTestId="floating-agent-chat-maximum-active" />
-    </SurfaceCard>
-
-    <SurfaceCard>
-        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Prepared activation stock" />
-        <h2 class="mt-1 text-lg font-semibold text-slate-950">Background preparation budget</h2>
-        <Stack GapScale="LayoutGap.Medium" Class="mt-4">
-            <Alert AlertStyle="AlertStyle.Info">
-                Preparation caches immutable agent activation metadata only. Live runtime agents, credentials, tool clients, and execution sessions remain per-run and are never pooled.
-            </Alert>
-
-            <label class="cda-field">
-                <span class="cda-field-label">Maximum prepared agents</span>
-                <InputNumber @bind-Value:get="draft.MaximumPreparedAgents" @bind-Value:set="(int value) => draft = draft with { MaximumPreparedAgents = value }"
-                             class="cda-input"
-                             min="0"
-                             max="@Presentation.Limits!.MaximumPreparedAgents"
-                             data-testid="floating-agent-chat-maximum-prepared" />
-            </label>
-            <TextBlock TextStyle="TextStyle.Caption"
-                       Value="Use 0 to disable background preparation. The stock favors agents used most often in this circuit." />
-
-            <label class="cda-inline-option">
-                <InputCheckbox data-testid="floating-agent-chat-adaptive" @bind-Value:get="draft.AdaptivePreparationEnabled" @bind-Value:set="(bool value) => draft = draft with { AdaptivePreparationEnabled = value }" />
-                <span>Adapt preparation to recent usage</span>
-            </label>
-
-            <label class="cda-field">
-                <span class="cda-field-label">Prepared metadata idle retention (minutes)</span>
-                <InputNumber @bind-Value:get="draft.PreparedResourceIdleRetentionMinutes" @bind-Value:set="(int value) => draft = draft with { PreparedResourceIdleRetentionMinutes = value }"
-                             class="cda-input"
-                             min="1"
-                             max="@Presentation.Limits!.MaximumRetentionMinutes"
-                             data-testid="floating-agent-chat-prepared-retention" />
-            </label>
-        </Stack>
-    </SurfaceCard>
-</Grid>
-
-<Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
-    <Button Text="Save floating chat settings"
-            Icon="save"
-            Disabled="@Presentation.IsBusy"
-            IsBusy="@Presentation.IsBusy"
-            Click="SaveAsync"
-            data-testid="floating-agent-chat-settings-save" />
-    <StatusBadge Tone="@Presentation.StatusTone" Text="@Presentation.StatusText" />
-</Cluster>
-    </fieldset>
+    <Stack GapScale="LayoutGap.Medium" data-testid="floating-agent-chat-settings">
+        @if (Presentation.Editor.UpdatesAvailable || Presentation.Editor.NeedsReview || Presentation.Editor.OutcomeUnknown) {
+            <Alert AlertStyle="AlertStyle.Warning">Saved information may have changed. Compare current settings; your local entries stay in this editor.</Alert>
+        }
+        @if (invalid) {
+            <Alert AlertStyle="AlertStyle.Danger">Enter whole numbers within the displayed limits. Your unfinished entries are retained.</Alert>
+        }
+        <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+            <SurfaceCard>
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Active chat lifecycle" />
+                <FormStack>
+                    <FormField Text="Hidden chat retention (minutes)">
+                        <TextBox Value="@draft.Retention" ValueChanged="@(value => draft = draft with { Retention = value ?? string.Empty })" Immediate="true" inputmode="numeric" data-testid="floating-agent-chat-retention" />
+                    </FormField>
+                    <FormField Text="Maximum active chats">
+                        <TextBox Value="@draft.ActiveLimit" ValueChanged="@(value => draft = draft with { ActiveLimit = value ?? string.Empty })" Immediate="true" inputmode="numeric" data-testid="floating-agent-chat-maximum-active" />
+                    </FormField>
+                    <SmallText Text="@($"Retention: 1–{Presentation.Limits!.MaximumRetentionMinutes} minutes. Active chats: 1–{Presentation.Limits.MaximumActiveChats}.")" />
+                </FormStack>
+            </SurfaceCard>
+            <SurfaceCard>
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Prepared activation stock" />
+                <FormStack>
+                    <Alert AlertStyle="AlertStyle.Info">Preparation caches immutable agent activation metadata only. Live runtime agents, credentials, tool clients, and execution sessions remain per-run and are never pooled.</Alert>
+                    <FormField Text="Maximum prepared agents">
+                        <TextBox Value="@draft.PreparedLimit" ValueChanged="@(value => draft = draft with { PreparedLimit = value ?? string.Empty })" Immediate="true" inputmode="numeric" data-testid="floating-agent-chat-maximum-prepared" />
+                    </FormField>
+                    <SmallText Text="@($"Use 0 to disable background preparation. Maximum: {Presentation.Limits!.MaximumPreparedAgents}.")" />
+                    <FormField Text="Adapt preparation to recent usage">
+                        <CheckBox TValue="bool" Value="@draft.Adaptive" ValueChanged="@(value => draft = draft with { Adaptive = value })" data-testid="floating-agent-chat-adaptive" />
+                    </FormField>
+                    <FormField Text="Prepared metadata idle retention (minutes)">
+                        <TextBox Value="@draft.PreparedRetention" ValueChanged="@(value => draft = draft with { PreparedRetention = value ?? string.Empty })" Immediate="true" inputmode="numeric" data-testid="floating-agent-chat-prepared-retention" />
+                    </FormField>
+                </FormStack>
+            </SurfaceCard>
+        </Grid>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <Button Text="Save floating chat settings" Icon="save" Disabled="@(Presentation.IsBusy || Presentation.Editor.NeedsReview || Presentation.Editor.OutcomeUnknown || Presentation.Status == FloatingChatSettingsStatus.AccessChanged)" IsBusy="@Presentation.IsBusy" Click="SaveAsync" data-testid="floating-agent-chat-settings-save" />
+            <Button Text="Compare current settings" ButtonStyle="ButtonStyle.Light" Disabled="@Presentation.IsBusy" Click="CompareAsync" data-testid="floating-agent-chat-settings-compare" />
+            @if (Presentation.Editor.CanUndo) {
+                <Button Text="Undo local review" ButtonStyle="ButtonStyle.Light" Disabled="@Presentation.IsBusy" Click="UndoAsync" />
+            }
+            <StatusBadge Tone="@Presentation.StatusTone" Text="@Presentation.StatusText" />
+        </Cluster>
+        <SettingsComparisonSurface Editor="Presentation.Editor" Changed="DraftChanged" />
+    </Stack>
 }
 
 @code {
     [Parameter, EditorRequired] public FloatingChatSettingsPresentation Presentation { get; set; } = new();
     [Parameter] public EventCallback<FloatingChatSettingsIntent> Intent { get; set; }
-    private FloatingChatSettingsValues draft = new();
-    private FloatingChatSettingsValues? accepted;
-    protected override void OnParametersSet() {
-        if (!ReferenceEquals(accepted, Presentation.Source)) {
-            accepted = Presentation.Source;
-            draft = accepted ?? new();
+    [Parameter] public EventCallback DraftChanged { get; set; }
+    private bool invalid;
+    private FloatingChatSettingsInput draft {
+        get => Presentation.Editor.Draft;
+        set {
+            Presentation.Editor.Input(value);
+            _ = DraftChanged.InvokeAsync();
         }
     }
-    private Task SaveAsync() => Intent.InvokeAsync(new(Presentation.Generation, FloatingChatSettingsAction.Save, draft));
-    private Task ReloadAsync() => Intent.InvokeAsync(new(Presentation.Generation, FloatingChatSettingsAction.Reload));
+    protected override void OnParametersSet() {
+        if (Presentation.Editor.Original is null && Presentation.Source is { } source) {
+            Presentation.Editor.Open(FloatingChatSettingsInput.From(source));
+        }
+    }
+    private Task SaveAsync() {
+        var values = draft.Parse(Presentation.Editor.Original!.UpdatedAtUtc, Presentation.Limits!);
+        invalid = values is null;
+        return values is null ? Task.CompletedTask : Intent.InvokeAsync(new(Presentation.Generation, FloatingChatSettingsAction.Save, values));
+    }
+    private Task CompareAsync() => Intent.InvokeAsync(new(Presentation.Generation, FloatingChatSettingsAction.Compare));
+    private async Task UndoAsync() {
+        Presentation.Editor.Undo();
+        await DraftChanged.InvokeAsync();
+    }
 }

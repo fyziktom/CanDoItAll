@@ -12,5 +12,7 @@
     <PackageReference Include="CanDoItAll.Components.Mermaid" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="../../Modules/CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj" />
     <ProjectReference Include="../CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
+    <ProjectReference Include="../../Foundation/CanDoItAll.Editing/CanDoItAll.Editing.csproj" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
   </ItemGroup>
 </Project>

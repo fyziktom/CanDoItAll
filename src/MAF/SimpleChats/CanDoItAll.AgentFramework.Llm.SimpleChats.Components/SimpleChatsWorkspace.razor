@@ -2,7 +2,9 @@
 
 <Tabs SelectedIndex="@selectedTabIndex"
       SelectedIndexChanged="HandleSelectedTabChangedAsync"
-      RenderMode="TabRenderMode.Server"
+      RenderMode="TabRenderMode.Client"
+      FillHeight="true"
+      PanelOverflowMode="@(View == SimpleChatWorkspaceView.Conversations ? TabsPanelOverflowMode.Hidden : TabsPanelOverflowMode.Auto)"
       Variant="TabsVariant.WorkspacePrimary"
       BorderMode="TabsBorderMode.Soft"
       OverflowMode="TabsOverflowMode.Wrap"
@@ -11,14 +13,20 @@
     <TabsItem Text="Definitions"
               Icon="tune"
               data-testid="llm-chats-tab-definitions">
-        <LlmChatDefinitionCatalogPanel RequestedDefinitionId="@DefinitionId"
-                                       SelectedDefinitionIdChanged="HandleDefinitionChangedAsync" />
+        @if (definitionsVisited) {
+            <LlmChatDefinitionCatalogPanel RequestedDefinitionId="@retainedDefinitionId"
+                                           SelectedDefinitionIdChanged="HandleDefinitionChangedAsync" />
+        }
     </TabsItem>
     <TabsItem Text="Conversations"
               Icon="chat"
               data-testid="llm-chats-tab-conversations">
-        <LlmChatConversationWorkspace InitialConversationId="@ConversationId"
-                                      SelectedConversationIdChanged="HandleConversationChangedAsync" />
+        @if (conversationsVisited) {
+            <LlmChatConversationWorkspace InitialConversationId="@retainedConversationId"
+                                          SelectedConversationIdChanged="HandleConversationChangedAsync"
+                                          RetainsNavigation="RetainsConversationNavigation"
+                                          NavigationBlocked="RevealConversationAsync" />
+        }
     </TabsItem>
 </Tabs>
 
@@ -35,10 +43,23 @@
     [Parameter]
     public EventCallback<SimpleChatWorkspaceRouteState> RouteStateChanged { get; set; }
 
+    [Parameter] public Func<string, Guid?, bool>? RetainsConversationNavigation { get; set; }
+
     private int selectedTabIndex;
+    private bool definitionsVisited;
+    private bool conversationsVisited;
+    private Guid? retainedDefinitionId;
+    private Guid? retainedConversationId;
 
     protected override void OnParametersSet()
     {
+        if (View == SimpleChatWorkspaceView.Definitions) {
+            definitionsVisited = true;
+            retainedDefinitionId = DefinitionId;
+        } else {
+            conversationsVisited = true;
+            retainedConversationId = ConversationId;
+        }
         selectedTabIndex = View switch
         {
             SimpleChatWorkspaceView.Definitions => 0,
@@ -57,21 +78,29 @@
         };
 
         selectedTabIndex = index;
+        definitionsVisited |= view == SimpleChatWorkspaceView.Definitions;
+        conversationsVisited |= view == SimpleChatWorkspaceView.Conversations;
         return RouteStateChanged.InvokeAsync(new(
             view,
-            view == SimpleChatWorkspaceView.Definitions ? DefinitionId : null,
-            view == SimpleChatWorkspaceView.Conversations ? ConversationId : null));
+            view == SimpleChatWorkspaceView.Definitions ? retainedDefinitionId : null,
+            view == SimpleChatWorkspaceView.Conversations ? retainedConversationId : null));
     }
 
-    private Task HandleConversationChangedAsync(Guid? conversationId)
-        => RouteStateChanged.InvokeAsync(new(
+    private Task HandleConversationChangedAsync(Guid? conversationId) {
+        retainedConversationId = conversationId;
+        return RouteStateChanged.InvokeAsync(new(
             SimpleChatWorkspaceView.Conversations,
             null,
             conversationId));
+    }
 
-    private Task HandleDefinitionChangedAsync(Guid? definitionId)
-        => RouteStateChanged.InvokeAsync(new(
+    private Task HandleDefinitionChangedAsync(Guid? definitionId) {
+        retainedDefinitionId = definitionId;
+        return RouteStateChanged.InvokeAsync(new(
             SimpleChatWorkspaceView.Definitions,
             definitionId,
             null));
+    }
+
+    private Task RevealConversationAsync() => HandleConversationChangedAsync(retainedConversationId);
 }

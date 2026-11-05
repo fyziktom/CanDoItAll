@@ -24,6 +24,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Modules.Workbench.ProjectStructure
 @using CanDoItAll.Modules.Workspace
 @using CanDoItAll.Infrastructure.Storage
+@using CanDoItAll.Infrastructure.Editing
+@using CanDoItAll.Editing
 @using CanDoItAll.SharedKernel
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.Extensions.Logging
@@ -57,7 +59,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
 <ProjectStructureChangeObserver Inbox="@changeInbox" Admission="@(surface?.ProjectId == ProjectId ? surface.ExpectedProjectAdmission : null)"
                                 InitialCursor="@changeBaseline" ProjectIds="@(surface?.HierarchyAdmissions.Keys.ToArray() ?? [])"
-                                Changed="@(() => InvokeAsync(StateHasChanged))" />
+                                Changed="HandleStructureInboxChangedAsync" />
+
+<StructureComposerLeaveGuard @ref="composerLeaveGuard" IsOpen="@(composerOpening is not null)"
+                             OpeningId="@(composerOpening?.Ownership.Id ?? Guid.Empty)" Review="@(composerOpening?.Session?.Review)"
+                             ReadCurrent="ReadComposerCloseRequestAsync" IsSameRoute="IsProjectCreateRoute" />
 
 <ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
                                           ProjectName="@(surface?.ProjectName ?? "Requested project")"
@@ -69,17 +75,24 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                           ContextAccessState="@agentChatContextAccessState"
                                           RefreshRequested="HandleAgentExecutionCompletedAsync" />
 
-<StructureWorkspace @ref="workbenchRef" @key="StructureContextId" Presentation="@BuildStructurePresentation()" SelectedView="@structureViewIndex" Dispatch="HandleStructureIntentAsync" Dialogs="@BuildStructureDialogs()" DialogIntent="HandleStructureDialogIntentAsync">
+<StructureWorkspace @ref="workbenchRef" @key="StructureContextId" Presentation="@BuildStructurePresentation()" SelectedView="@structureViewIndex" Dispatch="HandleStructureIntentAsync" ConfirmComposerClose="ConfirmComposerCloseAsync" Dialogs="@BuildStructureDialogs()" DialogIntent="HandleStructureDialogIntentAsync"
+                    EditorMessage="@(composerOpening?.Session is { ShowComparison: false } editorStatus ? editorStatus.Message : null)">
     <ToolbarSupplement>
         <Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
                 aria-label="Structure updates" title="Show changes from other editors" data-testid="project-structure-changes-toggle"
                 Click="@(() => changeInbox.ToggleWindow())" />
     </ToolbarSupplement>
+    <EditorActions>
+        @if (composerOpening?.Session is { CanUndo: true } nodeEditor) {
+            <Button Text="Undo node comparison" ButtonStyle="ButtonStyle.Light" Disabled="@nodeEditor.Busy"
+                    Click="@(() => ApplyNodeComparisonAsync(nodeEditor, undo: true))" data-testid="structure-node-compare-undo" />
+        }
+    </EditorActions>
     <Planning>
                 <ProjectStructureGanttPanel ProjectId="@ProjectId"
                                             Surface="@surface"
                                             OpenAgentCatalog="ToggleAgentWindowAsync"
-                                            MutationCommitted="@(() => ReloadSurfaceAsync())"
+                                            ReadAuthoritativeProject="@(authorizeRead => ReloadSurfaceAsync(canPublish: () => !deferredCompletionCts.IsCancellationRequested, onPublished: StateHasChanged, authorizeRead: authorizeRead))"
                                             ObservationChanged="HandleGanttObservationChanged" />
     </Planning>
     <Insights>
@@ -108,10 +121,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                                                OnExecuteNodeContextAction="ExecuteInsightsMenuAsync"
                                                                DefaultWidth="@ObjectIndexWindowDefaultWidth" />
                         }
-                        @if (FileBrowserWindowState.IsVisible)
+                        @if (FileBrowserWindowState.IsVisible && fileBrowserOpening is { } filesOpening)
                         {
                             <ProjectStructureFileBrowserWindow WindowId="@FileBrowserWindowKey"
-                                                               Opening="@CurrentFileBrowserOpening"
+                                                               Opening="@filesOpening"
                                                                ActionCompleted="RecordFileActionOutcome"
                                                                State="@FileBrowserWindowState"
                                                                StateChanged="HandleFileBrowserWindowStateChangedAsync"
@@ -156,11 +169,27 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                 Title="@SelectionWindowTitle" Summary="@SelectionWindowSummary"
                                 WindowState="@SelectionWindowState" WindowChanged="HandleInsightsWindowAsync"
                                 Selection="@CurrentInsights.Selection" Dispatch="HandleInsightsSelectionAsync"
-                                Help="@AdvancedDetailsHelpBody" Tip="@AdvancedDetailsHelpTip" />
+                                Help="@AdvancedDetailsHelpBody" Tip="@AdvancedDetailsHelpTip">
+                                <SelectionSupplement>
+                                    @if (partySession is { } parties) {
+                                        <CanDoItAll.Workbench.Operators.UI.Parties.PartyEditor @key="parties.State.OpeningId" State="@parties.State"
+                                            Create="@(input => TrackAuthoringOperationAsync(parties.CreateAsync(input)))"
+                                            Save="@(selection => TrackAuthoringOperationAsync(parties.SaveAsync(selection)))" Retry="@parties.RetryAsync" />
+                                    }
+                                </SelectionSupplement>
+                            </CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow>
                         }
 
     </SupportWindows>
     <DeferredDialogs>
+        @if (composerOpening?.Session is { ShowComparison: true } nodeComparison) {
+            <StructureNodeComparisonDialog Review="nodeComparison.Review" Previous="nodeComparison.PreviousReview"
+                                           Message="@nodeComparison.Message" Busy="@nodeComparison.Busy" MayBeStale="@nodeComparison.CurrentMayBeStale"
+                                           Cancel="@(() => nodeComparison.ShowComparison = false)"
+                                           Refresh="@(() => RefreshNodeComparisonAsync(nodeComparison))"
+                                           Apply="@(() => ApplyNodeComparisonAsync(nodeComparison))" />
+        }
+
                             @{
                                 var quickOpening = quickActionDialog;
                                 var webOpening = webPreviewDialog;
@@ -220,14 +249,6 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                         </ProjectStructureDeferredSurface>
     </DeferredDialogs>
 </StructureWorkspace>
-
-@if (surface is not null && canvasSurface is not null && structureViewIndex == CanvasViewIndex && partySession is { } parties) {
-    <div class="project-structure-integrations">
-        <CanDoItAll.Workbench.Operators.UI.Parties.PartyEditor @key="parties.State.OpeningId" State="@parties.State"
-            Create="@(input => TrackAuthoringOperationAsync(parties.CreateAsync(input)))"
-            Save="@(selection => TrackAuthoringOperationAsync(parties.SaveAsync(selection)))" Retry="@parties.RetryAsync" />
-    </div>
-}
 
 @if (imageOpening is { } imageSetup) {
     <CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog State="@imageSetup.State" CanvasScoped="false"
@@ -306,7 +327,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         </Stack>
     </Alert>
 }
-<ProjectModalHost @key="projectCreateDraft" IsOpen="@showProjectCreateModal"
+<ProjectModalHost @key="projectCreateDraft" @ref="projectCreateModal" IsOpen="@showProjectCreateModal"
+                  ObserveNavigation="@RendererInfo.IsInteractive" IsSameEditorRoute="IsProjectCreateRoute"
                   IsEditorMode="true"
                   Draft="@projectCreateDraft"
                   StarterObjectKinds="@ProjectCreateStarterObjectKinds"
@@ -370,6 +392,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     private UrlStateBinding<ProjectStructureUrlState> url = default!;
     private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? observedActor;
+    private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? displayedActor;
     private readonly ProjectStructureChangeInbox changeInbox = new();
     private ProjectStructureChangeCursor? changeBaseline;
     private ProjectStructureSurface? surface;
@@ -528,8 +551,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             CloseWorkflowAddDialog();
             CloseWorkflowStartDialog();
             actionNavigationRevision++;
-            partySession?.Retire();
-            partySession = null;
+            RetirePartySession();
             CloseSummary();
             CancelTranscriptAction();
             CloseSecretReferenceDialog();
@@ -558,13 +580,15 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
 
         if (scopeChanged || actorChanged) {
+            RetireFileBrowserOpening();
             changeBaseline = ChangeFeed.Read(InsightsAdmissions.DatabaseProfileId, [ProjectId]).Cursor;
             await ReloadSurfaceAsync();
         }
     }
 
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null,
-        Action? onPublished = null, IReadOnlyList<string>? preferredSelectionIds = null, bool preserveEditorDrafts = false) {
+        Action? onPublished = null, IReadOnlyList<string>? preferredSelectionIds = null, bool preserveEditorDrafts = false,
+        Func<CancellationToken, ValueTask>? authorizeRead = null) {
         IReadOnlyList<string> preferredSelection = preferredSelectionIds ??
             (string.IsNullOrWhiteSpace(preferredSelectionId) ? [] : [preferredSelectionId]);
         IReadOnlyList<string>? liveSelectionSnapshot = surface?.ProjectId == ProjectId
@@ -573,12 +597,19 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         var request = new SurfaceReloadRequest(
             ProjectId,
             Interlocked.Increment(ref surfaceReloadGeneration), canPublish);
+        await using var readAccess = new EditingObservation(ProjectCreateChanges, ProjectCreateUiAccess,
+            new(ProjectCreateProjectChanges.Scope, EditingOwner.ProjectStructure), ProjectCreateObservationLogger);
+        if (authorizeRead is not null) {
+            await authorizeRead(deferredCompletionCts.Token);
+        }
         if (canPublish is null) {
             agentChatContextAccessState = AgentChatContextAccessState.Loading;
             structureLoadError = null;
         }
         try
         {
+            await readAccess.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await readAccess.AuthorizeAsync(write: false, deferredCompletionCts.Token);
             CancelPendingCanvasViewStatePersistence();
             pendingWorkbenchSelectionId = null;
             var originalGeneration = ContentDatabase.Generation;
@@ -594,6 +625,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 loadStorageCatalogTask,
                 loadDeletionRecoveriesTask,
                 loadDeletionNoticesTask);
+            await readAccess.AuthorizeAsync(write: false, deferredCompletionCts.Token);
+            if (authorizeRead is not null) {
+                await authorizeRead(deferredCompletionCts.Token);
+            }
             if (!IsCurrentSurfaceReload(request))
             {
                 return;
@@ -729,6 +764,16 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 return;
             }
 
+            if (authorizeRead is not null) {
+                await authorizeRead(deferredCompletionCts.Token);
+                if (!IsCurrentSurfaceReload(request)) {
+                    return;
+                }
+            }
+            await readAccess.AuthorizeAsync(write: false, deferredCompletionCts.Token);
+            if (!IsCurrentSurfaceReload(request)) {
+                return;
+            }
             storageCatalog = nextStorageCatalog;
             unavailableState = null;
             previewNode = reloadedPreview;
@@ -748,16 +793,38 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             surface = nextSurface;
             displayedLifecycleScope = originalScope;
             displayedRuntimeGeneration = originalGeneration;
+            displayedActor = InsightsAuthentication;
             RetireInactiveAuthoring();
             currentViewStateJson = nextSurface.ViewStateJson;
             RefreshCanvasSurface();
             InvalidateClipboardStateForCurrentSurface();
             await LoadPartyEditorAsync();
+            if (FileBrowserWindowState.IsVisible) {
+                await PrepareFileBrowserOpeningAsync();
+            }
             if (IsCurrentSurfaceReload(request))
             {
                 agentChatContextAccessState = AgentChatContextAccessState.Ready;
                 onPublished?.Invoke();
             }
+        }
+        catch (UnauthorizedAccessException) {
+            if (!IsCurrentSurfaceReload(request)) {
+                return;
+            }
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            if (canPublish is not null) {
+                throw;
+            }
+            const string message = "Current Structure access could not be verified. The new project data was not displayed. Reopen with current access.";
+            if (surface?.ProjectId == request.ProjectId && displayedRuntimeGeneration == ContentDatabase.Generation &&
+                    ReferenceEquals(displayedActor, InsightsAuthentication)) {
+                workflowFeedback = message;
+                workflowFeedbackTone = "warn";
+            } else {
+                structureLoadError = message;
+            }
+            Logger.LogWarning("Structure read access changed for project {ProjectId}; fresh data withheld.", request.ProjectId);
         }
         catch (Exception exception)
         {
@@ -1068,16 +1135,20 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 return;
             }
             var originalPositions = targets.Select(node => new CanvasWorkbenchNodePositionChange(node.Id, node.X, node.Y)).ToArray();
-            TryPatchSurfaceNodePositions(args.Positions);
+            await using var access = ObserveActionAccess();
             IReadOnlyList<string> updatedNodeIds;
             try {
+                await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+                await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
+                TryPatchSurfaceNodePositions(args.Positions);
                 updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(context.Surface.ProjectId, requestedPositions,
-                    expectedProjectAdmission: context.Admission, expectedNodes: targets);
+                    expectedProjectAdmission: context.Admission, expectedNodes: targets,
+                    authorizeCommit: token => AuthorizeActionAsync(context, access, write: true, token));
             } catch (Exception failure) {
                 if (IsCurrentAction(context)) {
                     TryPatchSurfaceNodePositions(originalPositions);
                 }
-                RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                RecordCurrentAuthoringOutcome(opening, outcome with { Failure = failure,
                     Kind = IsKnownGraphRejection(failure) ? ProjectStructureAuthoringResultKind.Rejected : ProjectStructureAuthoringResultKind.Unconfirmed,
                     Message = IsKnownGraphRejection(failure) ? failure.Message : "The original movement is unconfirmed. Observe the original project before repeating it." });
                 return;
@@ -1086,7 +1157,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, NodeIds = updatedNodeIds,
                 Positions = requestedPositions.Where(position => updatedNodeIds.Contains(position.NodeId)).ToArray(),
                 Message = $"Saved {updatedNodeIds.Count} original node positions." };
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
             if (!IsCurrentAction(context)) {
                 return;
             }
@@ -1095,7 +1166,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             try {
                 await TryAdoptMovedNodesIntoBordersAsync(new(committed));
             } catch (Exception failure) {
-                RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                RecordCurrentAuthoringOutcome(opening, outcome with { Failure = failure,
                     Kind = ProjectStructureAuthoringResultKind.PartialCommit,
                     Message = "The original positions were saved, but border-state reconciliation failed. Do not repeat the movement." });
             }
@@ -1239,6 +1310,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         if (TryResolveEditAction(request.ActionId, out _)) {
             return;
         }
+        var actionContext = CaptureActionContext();
         if (IsSecretReferenceCreateRequest(request))
         {
             if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition("add-secret-reference", out var secretDefinition))
@@ -1282,7 +1354,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
             try
             {
-                await CreateObjectAsync(definition, request);
+                await CreateImmediateObjectAsync(actionContext, definition, request);
             }
             catch (OperationCanceledException) when (deferredCompletionCts.IsCancellationRequested)
             {
@@ -1375,7 +1447,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 return;
             }
 
-            await CreateObjectAsync(definition, request);
+            await CreateImmediateObjectAsync(actionContext, definition, request);
             return;
         }
 
@@ -1591,54 +1663,102 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
 
         CloseQuickActionDialog();
-        var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(context.Surface.ProjectId, targetNodeId, commandKind,
-            mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission });
-        committedInsightCommands.Enqueue((context.Admission, targetNodeId, commandKind, artifact));
-        while (committedInsightCommands.Count > 16) {
-            committedInsightCommands.Dequeue();
-        }
-        if (!IsCurrentAction(context)) {
+        if (attachmentNode is null) {
             return;
         }
-        linkModeSourceId = null;
+        await using var access = ObserveActionAccess();
+        var committed = false;
+        void RecordCommand(ArtifactReference? accepted) {
+            committed = true;
+            committedInsightCommands.Enqueue((context.Admission, targetNodeId, commandKind, accepted));
+            while (committedInsightCommands.Count > 16) {
+                committedInsightCommands.Dequeue();
+            }
+        }
+        ValueTask AuthorizeReadAsync(CancellationToken token) => AuthorizeActionAsync(context, access, write: false, token);
         try {
-            await ReloadSurfaceAsync(targetNodeId);
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, "The native command completed; reload the view instead of repeating it.");
-            return;
-        }
-        if (!IsCurrentAction(context)) {
-            return;
-        }
-        if (artifact is not null)
-        {
-            if (openInNewTab)
-            {
-                await OpenArtifactInNewTabAsync(artifact.Route);
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeReadAsync(deferredCompletionCts.Token);
+            var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(context.Surface.ProjectId, targetNodeId, commandKind,
+                deferredCompletionCts.Token,
+                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission },
+                expectedState: ProjectStructureNodeStateGuard.Capture(attachmentNode, context.Admission), authorizeRead: AuthorizeReadAsync,
+                authorizeCommit: token => AuthorizeActionAsync(context, access, write: true, token), onCommitted: RecordCommand);
+            if (!IsCurrentAction(context)) {
                 return;
             }
+            await AuthorizeReadAsync(deferredCompletionCts.Token);
+            linkModeSourceId = null;
+            await ReloadSurfaceAsync(targetNodeId, authorizeRead: AuthorizeReadAsync);
+            if (!IsCurrentAction(context) || artifact is null) {
+                return;
+            }
+            await AuthorizeReadAsync(deferredCompletionCts.Token);
+            if (openInNewTab) {
+                await OpenArtifactInNewTabAsync(artifact.Route);
+            } else {
+                Navigation.NavigateTo(artifact.Route);
+            }
+        } catch (Exception failure) {
+            ReportActionFailure(context, failure, committed
+                ? "The native command completed; its result is retained. Refresh the original view instead of repeating it."
+                : "The native command was not confirmed. Review the original node before trying again.");
+        }
+    }
 
-            Navigation.NavigateTo(artifact.Route);
+    private async Task CreateImmediateObjectAsync(ProjectStructureActionContext context, ProjectStructureCreateLeafDefinition definition,
+        CanvasWorkbenchCreateActionRequest request) {
+        var sourceId = request.SourceNodeId ?? request.ParentNodeId ?? $"project:{context.Admission.ProjectId:D}";
+        var source = context.Surface.Nodes.FirstOrDefault(node => node.Id == sourceId);
+        if (source is null) {
+            ReportActionResult(context, "The original create source is unavailable. Refresh the structure before creating a node.", "warn");
+            return;
+        }
+        var opening = BeginContentAction(context, source, ProjectStructureAuthoringOperation.CreateNode);
+        if (opening is null) {
+            return;
+        }
+        var outcome = NewContentOutcome(opening, ProjectStructureAuthoringOperation.CreateNode);
+        try {
+            await CreateObjectAsync(context, definition, request, cancellationToken: deferredCompletionCts.Token,
+                onNodeCommitted: node => {
+                    outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = node,
+                        Message = $"{node.Title} was created ({node.Id})." };
+                    RecordCurrentAuthoringOutcome(opening, outcome);
+                });
+        } catch (Exception failure) {
+            RecordCurrentAuthoringOutcome(opening, ContentFailure(opening, outcome, invoked: true, failure));
+        } finally {
+            EndContentAction(opening, ProjectStructureAuthoringOperation.CreateNode);
+            await RenderAuthoringOutcomeAsync();
         }
     }
 
     private async Task<ProjectStructureNode?> CreateObjectAsync(
+        ProjectStructureActionContext context,
         ProjectStructureCreateLeafDefinition definition,
         CanvasWorkbenchCreateActionRequest request,
         Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest>? configureRequest = null,
         CancellationToken cancellationToken = default,
         Action<ProjectStructureNode>? onNodeCommitted = null,
-        ProjectStructureSurface? capturedSurface = null,
-        long? capturedNavigationRevision = null,
-        Func<bool>? canPublish = null)
-    {
-        var mutationNavigationRevision = capturedNavigationRevision ?? actionNavigationRevision;
-        var mutationSurface = capturedSurface ?? surface;
-        var mutationProjectId = mutationSurface?.ProjectId ?? ProjectId;
-        var sourceNode = mutationSurface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
+        Func<bool>? canPublish = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        await using var access = ObserveActionAccess();
+        await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+        async ValueTask AuthorizeCreateAsync(CancellationToken token) {
+            await AuthorizeActionAsync(context, access, write: true, token);
+            if (authorizeCommit is not null) {
+                await authorizeCommit(token);
+                await AuthorizeActionAsync(context, access, write: true, token);
+            }
+        }
+        await AuthorizeCreateAsync(cancellationToken);
+        var mutationSurface = context.Surface;
+        var mutationProjectId = mutationSurface.ProjectId;
+        var sourceNode = mutationSurface.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
         var parentNodeId = ProjectStructurePlacementPolicy.ResolveParentNodeId(sourceNode, request);
-        var parentNode = mutationSurface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
-        var placementPlan = placementPolicy.ResolveCreatePlacementPlan(mutationSurface?.Nodes ?? [], sourceNode, parentNode, request, definition.ObjectType);
+        var parentNode = mutationSurface.Nodes.FirstOrDefault(node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
+        var placementPlan = placementPolicy.ResolveCreatePlacementPlan(mutationSurface.Nodes, sourceNode, parentNode, request, definition.ObjectType);
         var prepared = ProjectStructureCreateRequestComposer.Compose(
             definition,
             request with
@@ -1651,13 +1771,12 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             placementPlan.Placement);
         var createRequest = configureRequest?.Invoke(prepared.Request) ?? prepared.Request;
         createRequest = createRequest with {
-            ExpectedProjectAdmission = createRequest.ExpectedProjectAdmission ?? mutationSurface?.ExpectedProjectAdmission
-                ?? throw new InvalidOperationException("The original project lifetime is unavailable. Reopen this create action.")
+            ExpectedProjectAdmission = createRequest.ExpectedProjectAdmission ?? context.Admission
         };
         var created = await ProjectWorkbenchService.CreateObjectAsync(
             mutationProjectId,
             createRequest,
-            cancellationToken);
+            cancellationToken, AuthorizeCreateAsync);
         onNodeCommitted?.Invoke(created);
 
         foreach (var pendingLink in prepared.PendingLinks)
@@ -1667,7 +1786,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 created.Id,
                 pendingLink.TargetNodeId,
                 pendingLink.LinkKind,
-                cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission);
+                cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission,
+                authorizeCommit: AuthorizeCreateAsync);
         }
 
         if (placementPlan.FollowUpMoves.Count > 0)
@@ -1676,10 +1796,12 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 mutationProjectId,
                 placementPlan.FollowUpMoves,
                 cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission,
-                expectedNodes: mutationSurface!.Nodes.Where(node => placementPlan.FollowUpMoves.Any(move => move.NodeId == node.Id)).ToArray());
+                expectedNodes: mutationSurface.Nodes.Where(node => placementPlan.FollowUpMoves.Any(move => move.NodeId == node.Id)).ToArray(),
+                authorizeCommit: AuthorizeCreateAsync);
         }
 
-        if (actionNavigationRevision == mutationNavigationRevision && ProjectId == mutationProjectId && surface?.ExpectedProjectAdmission == createRequest.ExpectedProjectAdmission && canPublish?.Invoke() != false) {
+        if (IsCurrentAction(context) && canPublish?.Invoke() != false) {
+            await AuthorizeActionAsync(context, access, write: false, cancellationToken);
             await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
         }
         return created;
@@ -1687,6 +1809,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     private async Task OpenCreateDialogAsync(CanvasWorkbenchAction action)
     {
+        var actionContext = CaptureActionContext();
         var sourceNode = selectedNode;
         var request = new CanvasWorkbenchCreateActionRequest(
             action.ActionId,
@@ -1734,7 +1857,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
         if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(action.ActionId, out var definition))
         {
-            await CreateObjectAsync(definition, request);
+            await CreateImmediateObjectAsync(actionContext, definition, request);
         }
     }
 
@@ -1881,51 +2004,38 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     private IReadOnlyList<ProjectStructureInspectorCreateGroup> BuildInspectorCreateGroups(ProjectObjectType? sourceType)
         => HydrateCreateGroups(actionCatalog.BuildInspectorCreateGroups(sourceType));
 
-    private async Task ApplyProgressAsync(IReadOnlyCollection<string> nodeIds, string progressMode, int progressPercent, ProjectStructureActionContext? originalContext = null)
-    {
-        if (nodeIds.Count == 0)
-        {
-            return;
+    private Task ApplyProgressAsync(IReadOnlyCollection<string> nodeIds, string progressMode, int progressPercent, ProjectStructureActionContext? originalContext = null) {
+        if (nodeIds.Count == 0) {
+            return Task.CompletedTask;
         }
-
         var context = originalContext ?? CaptureActionContext();
         var expected = ProjectStructureNodeStateGuard.CaptureMany(context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id)), context.Admission);
-        var updatedNodes = await ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(context.Surface.ProjectId, nodeIds, progressMode, progressPercent, expectedProjectAdmission: context.Admission, expectedStates: expected);
-        if (IsCurrentAction(context)) {
-            await ApplySurfaceNodeUpdatesAsync(updatedNodes);
-        }
+        return ApplyCanvasNodeChangesAsync(context, nodeIds, authorize => ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(
+            context.Surface.ProjectId, nodeIds, progressMode, progressPercent, expectedProjectAdmission: context.Admission,
+            expectedStates: expected, authorizeCommit: authorize));
     }
 
-    private async Task ApplyMarkerAsync(IReadOnlyCollection<string> nodeIds, string markerIcon, string markerTone, string markerLabel, ProjectStructureActionContext? originalContext = null)
-    {
-        if (nodeIds.Count == 0)
-        {
-            return;
+    private Task ApplyMarkerAsync(IReadOnlyCollection<string> nodeIds, string markerIcon, string markerTone, string markerLabel, ProjectStructureActionContext? originalContext = null) {
+        if (nodeIds.Count == 0) {
+            return Task.CompletedTask;
         }
-
         var context = originalContext ?? CaptureActionContext();
         var expected = ProjectStructureNodeStateGuard.CaptureMany(context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id)), context.Admission);
-        var updatedNodes = string.IsNullOrWhiteSpace(markerIcon)
-            ? await ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(context.Surface.ProjectId, nodeIds, expectedProjectAdmission: context.Admission, expectedStates: expected)
-            : await ProjectWorkbenchService.AddObjectMarkerDetailedAsync(context.Surface.ProjectId, nodeIds, markerIcon, markerTone, markerLabel, expectedProjectAdmission: context.Admission, expectedStates: expected);
-        if (IsCurrentAction(context)) {
-            await ApplySurfaceNodeUpdatesAsync(updatedNodes);
-        }
+        return ApplyCanvasNodeChangesAsync(context, nodeIds, authorize => string.IsNullOrWhiteSpace(markerIcon)
+            ? ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(context.Surface.ProjectId, nodeIds,
+                expectedProjectAdmission: context.Admission, expectedStates: expected, authorizeCommit: authorize)
+            : ProjectWorkbenchService.AddObjectMarkerDetailedAsync(context.Surface.ProjectId, nodeIds, markerIcon, markerTone, markerLabel,
+                expectedProjectAdmission: context.Admission, expectedStates: expected, authorizeCommit: authorize));
     }
 
-    private async Task ApplyPriorityAsync(IReadOnlyCollection<string> nodeIds, int priority, ProjectStructureActionContext? originalContext = null)
-    {
-        if (nodeIds.Count == 0)
-        {
-            return;
+    private Task ApplyPriorityAsync(IReadOnlyCollection<string> nodeIds, int priority, ProjectStructureActionContext? originalContext = null) {
+        if (nodeIds.Count == 0) {
+            return Task.CompletedTask;
         }
-
         var context = originalContext ?? CaptureActionContext();
         var expected = ProjectStructureNodeStateGuard.CaptureMany(context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id)), context.Admission);
-        var updatedNodes = await ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(context.Surface.ProjectId, nodeIds, priority, expectedProjectAdmission: context.Admission, expectedStates: expected);
-        if (IsCurrentAction(context)) {
-            await ApplySurfaceNodeUpdatesAsync(updatedNodes);
-        }
+        return ApplyCanvasNodeChangesAsync(context, nodeIds, authorize => ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(
+            context.Surface.ProjectId, nodeIds, priority, expectedProjectAdmission: context.Admission, expectedStates: expected, authorizeCommit: authorize));
     }
 
     private async Task CreateSelectionBorderAsync()
@@ -2053,7 +2163,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             await PersistCapturedViewStateAsync(context, stateJson, persistCts.Token);
         } catch (OperationCanceledException) when (persistCts.IsCancellationRequested) {
         } catch (Exception failure) {
-            ReportActionFailure(context, failure, "The original canvas state could not be confirmed.");
+            ReportCanvasPreferenceFailure(context, failure);
             await RenderAuthoringOutcomeAsync();
         } finally {
             if (ReferenceEquals(pendingCanvasViewStatePersistCts, persistCts)) {
@@ -2073,7 +2183,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 return false;
             }
             cancellationToken.ThrowIfCancellationRequested();
-            await ProjectWorkbenchService.SaveViewStateAsync(context.Admission, "structure", stateJson);
+            await using var access = ObserveActionAccess();
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: true, cancellationToken);
+            await ProjectWorkbenchService.SaveViewStateAsync(context.Admission, "structure", stateJson, cancellationToken,
+                token => AuthorizeActionAsync(context, access, write: true, token));
             return true;
         } finally {
             canvasViewStateCommitGate.Release();
@@ -2086,10 +2200,17 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         persistCts?.Cancel();
     }
 
-    private Task PersistCurrentViewStateAsync() {
+    private async Task PersistCurrentViewStateAsync() {
         CancelPendingCanvasViewStatePersistence();
-        return string.IsNullOrWhiteSpace(currentViewStateJson) ? Task.CompletedTask :
-            TrackAuthoringOperationAsync(PersistCapturedViewStateAsync(CaptureActionContext(), currentViewStateJson));
+        if (string.IsNullOrWhiteSpace(currentViewStateJson)) {
+            return;
+        }
+        var context = CaptureActionContext();
+        try {
+            await TrackAuthoringOperationAsync(PersistCapturedViewStateAsync(context, currentViewStateJson));
+        } catch (Exception failure) {
+            ReportCanvasPreferenceFailure(context, failure);
+        }
     }
 
     private static CanvasWorkbenchUiState NormalizePersistedCanvasUiState(CanvasWorkbenchUiState uiState)
@@ -2258,11 +2379,21 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     {
         try
         {
+            await using var access = ObserveActionAccess();
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            async Task EnsureLocalOriginAsync(CancellationToken token) {
+                await AuthorizeActionAsync(context, access, write: false, token);
+                await EnsureFileOriginAsync(context, context.Admission.ProjectId, requestedNode, token);
+                if (!ProjectStructureNodeHelpers.HasManagedAttachment(requestedNode)) {
+                    await ProjectWorkbenchService.RequireContentCurrentAsync(context.Admission, requestedNode, token);
+                }
+                await AuthorizeActionAsync(context, access, write: false, token);
+            }
             return await LocalFileActionCoordinator.LaunchAsync(
                 context.Admission.ProjectId,
                 requestedNode.Id,
                 action,
-                ensureOrigin: cancellationToken => EnsureFileOriginAsync(context, context.Admission.ProjectId, requestedNode, cancellationToken));
+                ensureOrigin: EnsureLocalOriginAsync);
         }
         catch (Exception exception)
         {
@@ -2300,13 +2431,44 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         previewNode = null;
         isOpeningAttachmentPreview = true;
         var slot = PreviewInteractionSlot;
+        var access = ObserveActionAccess();
+        var transferred = false;
+        async ValueTask AuthorizePreviewAsync(bool write, CancellationToken token) {
+            try {
+                if (!IsCurrentAuthoring(opening, previewOpening)) {
+                    throw new UnauthorizedAccessException("The original file interaction has retired.");
+                }
+                await AuthorizeActionAsync(context, access, write, token);
+                if (!IsCurrentAuthoring(opening, previewOpening)) {
+                    throw new UnauthorizedAccessException("The original file interaction changed during authorization.");
+                }
+            } catch (Exception failure) {
+                Logger.LogWarning("File interaction authorization failed. ProjectId={ProjectId} NodeId={NodeId} OpeningId={OpeningId} Write={Write} FailureType={FailureType}.",
+                    context.Admission.ProjectId, node.Id, opening.Id, write, failure.GetType().Name);
+                throw;
+            }
+        }
+        async Task EnsurePreviewOriginAsync(CancellationToken token) {
+            await AuthorizePreviewAsync(write: false, token);
+            await EnsureFileOriginAsync(context, context.Admission.ProjectId, node, token);
+            await AuthorizePreviewAsync(write: false, token);
+        }
+        async ValueTask AuthorizeFileWriteAsync(CancellationToken token) {
+            await EnsurePreviewOriginAsync(token);
+            await AuthorizePreviewAsync(write: true, token);
+        }
         try {
+            await slot.CloseAsync();
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
             var opened = await slot.OpenAsync(cancellationToken => KnownFileInteractionCoordinator.OpenBoundAsync(
                 context.Admission.ProjectId, node.Id,
-                token => EnsureFileOriginAsync(context, context.Admission.ProjectId, node, token), cancellationToken));
+                EnsurePreviewOriginAsync, cancellationToken,
+                authorizeRead: token => AuthorizePreviewAsync(write: false, token),
+                authorizeWrite: AuthorizeFileWriteAsync, ownedLifetime: access));
             if (opened is null) {
                 return;
             }
+            transferred = true;
             if (!IsCurrentAuthoring(opening, previewOpening)) {
                 await slot.CloseIfCurrentAsync(opened);
                 return;
@@ -2324,6 +2486,9 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 workflowFeedbackTone = "warn";
             }
         } finally {
+            if (!transferred) {
+                await access.DisposeAsync();
+            }
             if (ReferenceEquals(previewOpening, opening)) {
                 isOpeningAttachmentPreview = false;
             }
@@ -2348,6 +2513,9 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     private void DisposeSynchronousState()
     {
+        RetireFileBrowserOpening();
+        RetirePartySession();
+        projectCreateAccess?.Stop();
         foreach (var session in projectCreateSessions.Values) {
             session.Dispose();
         }
@@ -2367,17 +2535,26 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     public async ValueTask DisposeAsync()
     {
         DisposeAgentWindowState();
+        RetireNodeSession(composerOpening?.Session);
         DisposeSynchronousState();
         try {
             await Task.WhenAll(authoringOperations.ToArray());
-            if (previewInteractionSlot is not null) {
-                await previewInteractionSlot.DisposeAsync();
-                previewInteractionSlot = null;
-            }
         } finally {
-            nodeMoveCommitGate.Dispose();
-            canvasViewStateCommitGate.Dispose();
-            deferredCompletionCts.Dispose();
+            try {
+                var cleanup = new List<Task> { DisposeRetiredNodeSessionsAsync() };
+                if (projectCreateAccess is { } access) {
+                    cleanup.Add(access.DisposeAsync().AsTask());
+                }
+                if (previewInteractionSlot is { } preview) {
+                    previewInteractionSlot = null;
+                    cleanup.Add(preview.DisposeAsync().AsTask());
+                }
+                await Task.WhenAll(cleanup);
+            } finally {
+                nodeMoveCommitGate.Dispose();
+                canvasViewStateCommitGate.Dispose();
+                deferredCompletionCts.Dispose();
+            }
         }
     }
 

@@ -19,6 +19,8 @@ public interface IActiveAgentChatRegistry
 
     ActiveAgentChat KeepActive(AgentChatHandleId handleId);
 
+    void SetDraftPending(AgentChatHandleId handleId, bool pending);
+
     ActiveAgentChat SetRunState(
         AgentChatHandleId handleId,
         ActiveAgentChatRunState runState);
@@ -36,6 +38,17 @@ public sealed class ActiveAgentChatRegistry(TimeProvider timeProvider) : IActive
     private readonly Dictionary<AgentChatHandleId, ActiveAgentChat> chats = [];
 
     public event EventHandler? Changed;
+
+    public void SetDraftPending(AgentChatHandleId handleId, bool pending) {
+        lock (gate) {
+            var chat = RequireChat(handleId);
+            if (chat.HasUnsentDraft == pending) {
+                return;
+            }
+            chats[handleId] = chat with { HasUnsentDraft = pending };
+        }
+        RaiseChanged();
+    }
 
     public IReadOnlyList<ActiveAgentChat> Snapshot()
     {
@@ -304,6 +317,7 @@ public sealed class ActiveAgentChatRegistry(TimeProvider timeProvider) : IActive
             .Where(item =>
                 item.Visibility == ActiveAgentChatVisibility.Hidden &&
                 item.RunState == ActiveAgentChatRunState.Idle &&
+                !item.HasUnsentDraft &&
                 item.HiddenAtUtc.HasValue &&
                 now - item.HiddenAtUtc.Value >= settings.HiddenActiveChatRetention)
             .Select(item => item.HandleId)

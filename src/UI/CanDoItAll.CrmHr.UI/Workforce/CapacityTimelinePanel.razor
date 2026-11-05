@@ -1,3 +1,7 @@
+@using CanDoItAll.Editing
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Forms
+
 <FormSection Title="Capacity and allocations"
              Description="Capacity windows and project allocations stay on the same workforce record so conflict detection is grounded in live project commitments.">
     @{
@@ -102,6 +106,10 @@
 
     <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-6">
         <SurfaceCard>
+            <EditForm EditContext="context" OnValidSubmit="SubmitAsync" data-testid="crmhr-capacity-form">
+            @if (pending.Count > 0) {
+                <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="Complete the date or number input before saving. Your raw input is retained." /></Alert>
+            }
             <p class="cda-eyebrow">Capacity block</p>
             <h3 class="mt-1 text-lg font-semibold text-slate-950">Add leave or reserve time</h3>
             <p class="mt-2 text-sm leading-6 text-slate-600">
@@ -110,7 +118,7 @@
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                 <FormField Text="Block type">
-                    <InputSelect @bind-Value="CapacityBlockDraft.BlockKind"
+                    <InputSelect @bind-Value="CapacityBlockDraft.BlockKind" @bind-Value:after="@(() => ParsedAsync(WorkforceCapacityField.Kind, nameof(CapacityBlockDraft.BlockKind)))"
                                  class="cda-input"
                                  data-testid="crmhr-capacity-block-kind">
                         @foreach (var blockKind in Enum.GetValues<CapacityBlockKind>())
@@ -120,25 +128,25 @@
                     </InputSelect>
                 </FormField>
                 <FormField Text="Starts on">
-                    <InputDate @bind-Value="CapacityBlockDraft.StartDate"
+                    <NativeValueInput TValue="DateOnly?" DisplayName="Start date" @bind-Value="CapacityBlockDraft.StartDate"
                                class="cda-input"
-                               data-testid="crmhr-capacity-block-start-date" />
+                               data-testid="crmhr-capacity-block-start-date" PendingChanged="@(pending => ValueInputAsync(WorkforceCapacityField.Dates, nameof(CapacityBlockDraft.StartDate), pending))" />
                 </FormField>
                 <FormField Text="Ends on">
-                    <InputDate @bind-Value="CapacityBlockDraft.EndDate"
+                    <NativeValueInput TValue="DateOnly?" DisplayName="End date" @bind-Value="CapacityBlockDraft.EndDate"
                                class="cda-input"
-                               data-testid="crmhr-capacity-block-end-date" />
+                               data-testid="crmhr-capacity-block-end-date" PendingChanged="@(pending => ValueInputAsync(WorkforceCapacityField.Dates, nameof(CapacityBlockDraft.EndDate), pending))" />
                 </FormField>
             </Grid>
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                 <FormField Text="Blocked %">
-                    <InputNumber @bind-Value="CapacityBlockDraft.Percentage"
+                    <NativeValueInput TValue="decimal" DisplayName="Blocked percentage" @bind-Value="CapacityBlockDraft.Percentage"
                                  class="cda-input"
-                                 data-testid="crmhr-capacity-block-percentage" />
+                                 data-testid="crmhr-capacity-block-percentage" PendingChanged="@(pending => ValueInputAsync(WorkforceCapacityField.Percentage, nameof(CapacityBlockDraft.Percentage), pending))" />
                 </FormField>
                 <FormField Text="Notes">
-                    <InputText @bind-Value="CapacityBlockDraft.Notes"
+                    <NativeValueInput TValue="string" @bind-Value="CapacityBlockDraft.Notes" PendingChanged="@(_ => NotesAsync())"
                                class="cda-input"
                                data-testid="crmhr-capacity-block-notes" />
                 </FormField>
@@ -146,9 +154,10 @@
 
             <Cluster Gap="LayoutGap.Small" Class="mt-4">
                 <Button Text="Save capacity block"
-                        Click="SaveCapacityBlock"
+                        Click="SubmitAsync" Disabled="SaveDisabled"
                         data-testid="crmhr-capacity-block-save-button" />
             </Cluster>
+            </EditForm>
         </SurfaceCard>
 
         <SurfaceCard Soft="true">
@@ -221,7 +230,7 @@
                                     <Button Text="Delete"
                                             ButtonStyle="ButtonStyle.Danger"
                                             Size="ButtonSize.Small"
-                                            Click="@(() => DeleteCapacityBlock.InvokeAsync(block.Id))"
+                                            Click="@(() => DeleteCapacityBlock.InvokeAsync(block.Id))" Disabled="WritesDisabled"
                                             data-testid="crmhr-capacity-block-delete-button" />
                                 </Cluster>
                             </Split>
@@ -285,6 +294,40 @@
         new(40m, 0m, 0m, 100m, WorkforceAvailabilityState.Bench, "Bench or lightly committed.", null, false, true);
     private static readonly IReadOnlyList<GanttDependency> EmptyGanttDependencies = [];
     private const string AllocationGanttExportFileName = "workforce-allocations.png";
+    private bool disposed;
+    private EditContext context = default!;
+    private readonly Dictionary<string, WorkforceCapacityField> pending = new(StringComparer.Ordinal);
+    [Parameter] public bool WritesDisabled { get; set; }
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public EventCallback<RecordInput<WorkforceCapacityField>> InputChanged { get; set; }
+    protected override void OnParametersSet() {
+        if (context is null || !ReferenceEquals(context.Model, CapacityBlockDraft)) {
+            context = new(CapacityBlockDraft);
+            pending.Clear();
+        }
+    }
+    private Task SubmitAsync() => disposed || WritesDisabled || SaveDisabled || pending.Count > 0 || !context.Validate()
+        ? Task.CompletedTask : SaveCapacityBlock.InvokeAsync();
+    private Task NotesAsync() {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+
+        return InputChanged.InvokeAsync(new(WorkforceCapacityField.Notes));
+    }
+    private Task ValueInputAsync(WorkforceCapacityField field, string property, bool isPending) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (isPending) {
+            pending[property] = field;
+        } else {
+            pending.Remove(property);
+        }
+        return InputChanged.InvokeAsync(new(field, pending.Values.Contains(field)));
+    }
+    private Task ParsedAsync(WorkforceCapacityField field, string property) => ValueInputAsync(field, property, false);
+    public void Dispose() => disposed = true;
 
     [Parameter]
     public WorkforceCapacitySummaryModel? CapacitySummary { get; set; }

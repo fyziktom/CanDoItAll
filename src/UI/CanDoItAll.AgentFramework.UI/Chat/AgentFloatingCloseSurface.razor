@@ -3,6 +3,9 @@
 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="floating-agent-chat-close-dialog">
     <TextBlock TextStyle="TextStyle.Body1"
                Value="@($"Keep {rendered.AgentName}'s chat ready for another action, or stop its active handle now. The saved conversation remains in chat history.")" />
+    @if (rendered.HasUnsentDraft) {
+        <Alert AlertStyle="AlertStyle.Warning">This chat has an unsent draft. Keep active preserves it; stopping discards it.</Alert>
+    }
     @if (!rendered.CanStop) {
         <Alert AlertStyle="AlertStyle.Warning">
             This chat is still working. Keep it active now; it can be stopped after the current model call completes.
@@ -19,7 +22,7 @@
         <Button Text="Keep active" Icon="schedule" ButtonStyle="ButtonStyle.Light"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.KeepActive)))"
                 data-testid="floating-agent-chat-keep-active" />
-        <Button Text="Stop chat" Icon="stop_circle" ButtonStyle="ButtonStyle.Danger" Disabled="@(!rendered.CanStop)"
+        <Button Text="@(rendered.HasUnsentDraft ? "Stop and discard draft" : "Stop chat")" Icon="stop_circle" ButtonStyle="ButtonStyle.Danger" Disabled="@(!rendered.CanStop)"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.Stop)))"
                 data-testid="floating-agent-chat-stop" />
     </Cluster>

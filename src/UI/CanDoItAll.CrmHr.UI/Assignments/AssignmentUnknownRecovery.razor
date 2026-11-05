@@ -1,0 +1,19 @@
+@if (IsUnknown) {
+    <Stack GapScale="LayoutGap.Small">
+        <SmallText Text="Read saved records to review the pending operation. Refresh never repeats the write. Discarding removes only the local pending draft; the server outcome remains unconfirmed." />
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Review saved records" ButtonStyle="ButtonStyle.Light" Click="Refresh"
+                data-testid="@($"{TestIdPrefix}-review-records")" />
+            <Button Text="Discard local pending operation" ButtonStyle="ButtonStyle.Danger" Disabled="@(!CanDiscard)" Click="Discard"
+                data-testid="@($"{TestIdPrefix}-discard-unknown")" />
+        </Cluster>
+    </Stack>
+}
+
+@code {
+    [Parameter] public bool IsUnknown { get; set; }
+    [Parameter] public bool CanDiscard { get; set; }
+    [Parameter] public string TestIdPrefix { get; set; } = "crmhr-assignments";
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback Discard { get; set; }
+}

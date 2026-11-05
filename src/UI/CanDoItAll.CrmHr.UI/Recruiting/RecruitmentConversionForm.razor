@@ -1,0 +1,131 @@
+@implements IDisposable
+@using CanDoItAll.Editing
+@using CanDoItAll.SharedKernel
+
+@Editing
+<FormSection Title="Hiring conversion"
+             Description="Convert an approved candidate on the same Party identity. Technical-agent activation remains a separate AgentFramework command.">
+        <EditForm EditContext="context" OnValidSubmit="SubmitAsync" data-testid="crmhr-recruiting-conversion-form">
+    <ValidationSummary />
+    <SurfaceCard>
+            @if (HasWorkforceProfile) {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="crmhr-recruiting-convert-existing-callout"><TextBlock Value="This candidate already has a workforce profile. Conversion updates the observed identity and keeps fields outside this form." /></Alert>
+            }
+
+            @if (EligibilityError is { } conversionError) {
+                <Alert AlertStyle="AlertStyle.Warning" Class="mt-4">
+                    @conversionError.Message
+                </Alert>
+            }
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                <FormField Text="Workforce kind">
+                    <InputSelect @bind-Value="Draft.WorkforceKind" @bind-Value:after="@(() => ReportAsync(RecruitmentConversionField.Kind))" class="cda-input" data-testid="crmhr-recruiting-convert-kind">
+                        @foreach (var workforceKind in Enum.GetValues<WorkforceKind>()) {
+                            <option value="@workforceKind">@workforceKind</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Job title">
+                    <NativeValueInput TValue="string" @bind-Value="Draft.JobTitle" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Title))" class="cda-input" data-testid="crmhr-recruiting-convert-job-title" />
+                </FormField>
+                <FormField Text="Discipline">
+                    <NativeValueInput TValue="string" @bind-Value="Draft.Discipline" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Discipline))" class="cda-input" data-testid="crmhr-recruiting-convert-discipline" />
+                </FormField>
+            </Grid>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                <FormField Text="Seniority">
+                    <NativeValueInput TValue="string" @bind-Value="Draft.Seniority" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Seniority))" class="cda-input" data-testid="crmhr-recruiting-convert-seniority" />
+                </FormField>
+                <PartyPicker Label="Home unit"
+                             TestIdPrefix="crmhr-recruiting-convert-home-unit"
+                             AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
+                             InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
+                             SelectedPartyId="@Draft.HomeUnitPartyId"
+                             SelectedPartyIdChanged="SetHomeUnitAsync" PendingChanged="@(pending => ReportAsync(RecruitmentConversionField.HomeUnit, pending))" />
+                <PartyPicker Label="Manager"
+                             TestIdPrefix="crmhr-recruiting-convert-manager"
+                             AllowedScope="PartyRecordScope.People"
+                             InitialScope="PartyRecordScope.People"
+                             ExcludedPartyId="@CandidatePartyId"
+                             SelectedPartyId="@Draft.ManagerPartyId"
+                             SelectedPartyIdChanged="SetManagerAsync" PendingChanged="@(pending => ReportAsync(RecruitmentConversionField.Manager, pending))" />
+            </Grid>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
+                <FormField Text="Start date"><NativeValueInput TValue="DateOnly?" DisplayName="Start date" @bind-Value="Draft.StartDate" PendingChanged="@(pending => ReportAsync(RecruitmentConversionField.StartDate, pending))" class="cda-input" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
+                <FormField Text="Location"><NativeValueInput TValue="string" @bind-Value="Draft.Location" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Location))" class="cda-input" data-testid="crmhr-recruiting-convert-location" /></FormField>
+                <FormField Text="Time zone"><NativeValueInput TValue="string" @bind-Value="Draft.TimeZone" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.TimeZone))" class="cda-input" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
+                <FormField Text="Capacity h/week"><NativeValueInput TValue="decimal" DisplayName="Capacity hours per week" @bind-Value="Draft.CapacityHoursPerWeek" PendingChanged="@(pending => ReportAsync(RecruitmentConversionField.Capacity, pending))" class="cda-input" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
+            </Grid>
+
+            <div class="mt-4">
+                <FormField Text="Notes">
+                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Notes))" class="cda-input cda-input--textarea min-h-[7rem]" data-testid="crmhr-recruiting-convert-notes" />
+                </FormField>
+            </div>
+
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
+                <Button Text="Convert to workforce"
+                        Disabled="@(SaveDisabled || EligibilityError is not null)"
+                        Type="submit"
+                        data-testid="crmhr-recruiting-convert-save-button" />
+                @if (CandidatePartyId.HasValue) {
+                    <Button Text="Open workforce" ButtonStyle="ButtonStyle.Light" Click="OpenWorkforce" data-testid="crmhr-recruiting-convert-open-workforce" />
+                }
+            </Cluster>
+        </SurfaceCard>
+    </EditForm>
+</FormSection>
+
+@code {
+    private bool disposed;
+    private EditContext context = default!;
+    private readonly HashSet<RecruitmentConversionField> pending = [];
+    [Parameter, EditorRequired] public RecruitmentConversionEditorModel Draft { get; set; } = default!;
+    [Parameter] public Guid? CandidatePartyId { get; set; }
+    [Parameter] public bool HasWorkforceProfile { get; set; }
+    [Parameter] public Error? EligibilityError { get; set; }
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public RenderFragment? Editing { get; set; }
+    [Parameter] public EventCallback Save { get; set; }
+    [Parameter] public EventCallback OpenWorkforce { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentConversionField>> InputChanged { get; set; }
+    protected override void OnInitialized() => context = new(Draft);
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(context.Model, Draft)) {
+            throw new InvalidOperationException("A different conversion draft requires a new form lifetime.");
+        }
+    }
+    public Task SubmitAsync() => disposed || SaveDisabled || EligibilityError is not null || pending.Count > 0 || !context.Validate() ? Task.CompletedTask : Save.InvokeAsync();
+    private Task TextAsync(RecruitmentConversionField field) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+
+        return ReportAsync(field);
+    }
+    private Task ReportAsync(RecruitmentConversionField field, bool incomplete = false) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (incomplete) {
+            pending.Add(field);
+        } else {
+            pending.Remove(field);
+        }
+        return InputChanged.InvokeAsync(new(field, incomplete));
+    }
+    private Task SetHomeUnitAsync(Guid? id) => ReferenceAsync(id, RecruitmentConversionField.HomeUnit, nameof(Draft.HomeUnitPartyId), value => Draft.HomeUnitPartyId = value);
+    private Task SetManagerAsync(Guid? id) => ReferenceAsync(id, RecruitmentConversionField.Manager, nameof(Draft.ManagerPartyId), value => Draft.ManagerPartyId = value);
+    private Task ReferenceAsync(Guid? id, RecruitmentConversionField field, string property, Action<Guid?> assign) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        assign(id);
+        context.NotifyFieldChanged(new(Draft, property));
+        return InputChanged.InvokeAsync(new(field, pending.Contains(field)));
+    }
+    public void Dispose() => disposed = true;
+}

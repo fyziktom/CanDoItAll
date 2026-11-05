@@ -26,7 +26,7 @@ public interface IProjectStructureRuntimeLauncher
         => Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "This launcher cannot admit an immutable reviewed plan."));
 
     Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? authorizeStop = null)
         => Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "This launcher cannot stop an expected owned session."));
 
     ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => null;
@@ -137,8 +137,8 @@ internal sealed class ProjectStructureRuntimeLauncher(
         => executionAdapter.WaitForExitAsync(nodeId, expected, timeout, cancellationToken);
 
     public Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
-        CancellationToken cancellationToken = default)
-        => executionAdapter.StopAsync(nodeId, expected, cancellationToken);
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? authorizeStop = null)
+        => executionAdapter.StopAsync(nodeId, expected, cancellationToken, authorizeStop);
 
     public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => executionAdapter.GetLastExit(nodeId);
 
@@ -295,6 +295,9 @@ internal sealed class ProjectStructureRuntimeLauncher(
             node.Id,
             mode,
             plan.Kind);
+        if (plan.AuthorizeLaunch is not null) {
+            await plan.AuthorizeLaunch(cancellationToken);
+        }
         return mode switch
         {
             ProjectStructureRuntimeLaunchMode.Direct =>

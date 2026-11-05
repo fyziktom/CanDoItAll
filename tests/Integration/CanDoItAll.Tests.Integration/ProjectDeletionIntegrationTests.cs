@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -356,6 +357,8 @@ public sealed partial class ProjectDeletionIntegrationTests
                 PartyId = createdParty.PartyId,
                 Role = ProjectPartyAssignmentRole.Stakeholder,
                 IsPrimary = true,
+                PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                    .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Stakeholder, string.Empty),
                 Source = "project-deletion-integration-test"
             });
         Assert.True(
@@ -571,6 +574,8 @@ public sealed partial class ProjectDeletionIntegrationTests
                 PartyId = createdParty.PartyId,
                 Role = ProjectPartyAssignmentRole.Stakeholder,
                 IsPrimary = true,
+                PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                    .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Stakeholder, string.Empty),
                 Source = "project-deletion-replay-integration-test"
             });
         Assert.True(

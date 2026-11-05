@@ -27,6 +27,9 @@ public interface IProviderAdministrationService
         Guid id,
         CancellationToken cancellationToken = default);
 
+    Task DeleteProviderAsync(Guid id, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider administration owner does not support conditional deletion.");
+
     Task<ProviderHealthCheckResult> TestProviderAsync(
         Guid id,
         CancellationToken cancellationToken = default);

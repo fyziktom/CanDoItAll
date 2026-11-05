@@ -1,0 +1,166 @@
+@implements IDisposable
+
+@Editing
+<EditForm EditContext="Context" OnValidSubmit="SubmitAsync" data-testid="crmhr-workforce-profile-form">
+    <ValidationSummary />
+    <FormSection Title="Workforce profile" Description="Keep employment, rates and reporting lines attached to the shared party identity.">
+        <Stack GapScale="LayoutGap.Medium" Stretch="true">
+            <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+                <FormField Text="Workforce kind">
+                    <InputSelect @bind-Value="Model.WorkforceKind" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Kind, nameof(Model.WorkforceKind)))" class="cda-input" data-testid="crmhr-workforce-kind">
+                        @foreach (var kind in WorkforceKinds) {
+                            <option value="@kind">@kind</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Status">
+                    <InputSelect @bind-Value="Model.Status" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Status, nameof(Model.Status)))" class="cda-input" data-testid="crmhr-workforce-status">
+                        @foreach (var status in CrmHrWorkforceWorkspacePresentation.WorkforceStatuses.Append(Model.Status).Distinct(StringComparer.Ordinal)) {
+                            <option value="@status">@status</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Employee code">
+                    <NativeValueInput TValue="string" @bind-Value="Model.EmployeeCode" PendingChanged="@(_ => TextAsync(WorkforceProfileField.EmployeeCode))" class="cda-input" data-testid="crmhr-workforce-employee-code" />
+                </FormField>
+            </Grid>
+            <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+                <FormField Text="Job title">
+                    <NativeValueInput TValue="string" @bind-Value="Model.JobTitle" PendingChanged="@(_ => TextAsync(WorkforceProfileField.JobTitle))" class="cda-input" data-testid="crmhr-workforce-job-title" />
+                </FormField>
+                <FormField Text="Discipline">
+                    <NativeValueInput TValue="string" @bind-Value="Model.Discipline" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Discipline))" class="cda-input" data-testid="crmhr-workforce-discipline" />
+                </FormField>
+                <FormField Text="Seniority">
+                    <InputSelect @bind-Value="Model.Seniority" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Seniority, nameof(Model.Seniority)))" class="cda-input" data-testid="crmhr-workforce-seniority">
+                        @foreach (var seniority in CrmHrWorkforceWorkspacePresentation.SeniorityValues.Append(Model.Seniority).Distinct(StringComparer.Ordinal)) {
+                            <option value="@seniority">@seniority</option>
+                        }
+                    </InputSelect>
+                </FormField>
+            </Grid>
+            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                <PartyPicker Label="Home unit" TestIdPrefix="crmhr-workforce-home-unit" SelectedPartyId="Model.HomeUnitPartyId" SelectedPartyIdChanged="@(id => ReferenceAsync(WorkforceProfileField.HomeUnit, id))" ExcludedPartyId="Model.PartyId" AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)" InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)" PendingChanged="@(pending => PickerAsync(WorkforceProfileField.HomeUnit, pending))" />
+                <PartyPicker Label="Manager" TestIdPrefix="crmhr-workforce-manager" SelectedPartyId="Model.ManagerPartyId" SelectedPartyIdChanged="@(id => ReferenceAsync(WorkforceProfileField.Manager, id))" ExcludedPartyId="Model.PartyId" AllowedScope="PartyRecordScope.People" InitialScope="PartyRecordScope.People" PendingChanged="@(pending => PickerAsync(WorkforceProfileField.Manager, pending))" />
+            </Grid>
+            <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+                <FormField Text="Start date">
+                    <NativeValueInput TValue="DateOnly?" DisplayName="Start date" @bind-Value="Model.StartDate" class="cda-input" data-testid="crmhr-workforce-start-date" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Dates, nameof(Model.StartDate), pending))" />
+                </FormField>
+                <FormField Text="End date">
+                    <NativeValueInput TValue="DateOnly?" DisplayName="End date" @bind-Value="Model.EndDate" class="cda-input" data-testid="crmhr-workforce-end-date" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Dates, nameof(Model.EndDate), pending))" />
+                </FormField>
+                <FormField Text="Capacity hours / week">
+                    <NativeValueInput TValue="decimal" DisplayName="Capacity hours per week" @bind-Value="Model.CapacityHoursPerWeek" class="cda-input" data-testid="crmhr-workforce-capacity" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Capacity, nameof(Model.CapacityHoursPerWeek), pending))" />
+                </FormField>
+            </Grid>
+            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                <FormField Text="Location">
+                    <NativeValueInput TValue="string" @bind-Value="Model.Location" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Location))" class="cda-input" data-testid="crmhr-workforce-location" />
+                </FormField>
+                <FormField Text="Time zone">
+                    <NativeValueInput TValue="string" @bind-Value="Model.TimeZone" PendingChanged="@(_ => TextAsync(WorkforceProfileField.TimeZone))" class="cda-input" data-testid="crmhr-workforce-time-zone" />
+                </FormField>
+            </Grid>
+            <Grid Gap="LayoutGap.Large" ColumnsMd="4">
+                <FormField Text="Internal cost rate">
+                    <NativeValueInput TValue="decimal?" DisplayName="Internal cost rate" @bind-Value="Model.InternalCostRate" class="cda-input" data-testid="crmhr-workforce-internal-rate" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Rates, nameof(Model.InternalCostRate), pending))" />
+                </FormField>
+                <FormField Text="External billing rate">
+                    <NativeValueInput TValue="decimal?" DisplayName="External billing rate" @bind-Value="Model.ExternalBillingRate" class="cda-input" data-testid="crmhr-workforce-external-rate" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Rates, nameof(Model.ExternalBillingRate), pending))" />
+                </FormField>
+                <FormField Text="Rate unit">
+                    <InputSelect @bind-Value="Model.RateUnit" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Rates, nameof(Model.RateUnit)))" class="cda-input" data-testid="crmhr-workforce-rate-unit">
+                        @foreach (var unit in Enum.GetValues<ProjectResourceRateUnit>()) {
+                            <option value="@unit">@unit</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Rate currency">
+                    <NativeValueInput TValue="string" @bind-Value="Model.RateCurrencyCode" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Rates))" class="cda-input" maxlength="3" data-testid="crmhr-workforce-rate-currency" />
+                </FormField>
+            </Grid>
+            <FormField Text="Notes">
+                <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Notes" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Notes))" class="cda-input cda-input--textarea min-h-[9rem]" data-testid="crmhr-workforce-notes" />
+            </FormField>
+        </Stack>
+    </FormSection>
+</EditForm>
+
+@code {
+    private bool disposed;
+    private readonly Dictionary<string, WorkforceProfileField> pendingFields = new(StringComparer.Ordinal);
+    private readonly HashSet<WorkforceProfileField> openPickers = [];
+    private EditContext Context { get; set; } = default!;
+    [Parameter, EditorRequired] public WorkforceProfileEditorModel Model { get; set; } = default!;
+    [Parameter] public IReadOnlyList<WorkforceKind> WorkforceKinds { get; set; } = [];
+    [Parameter] public RenderFragment? Editing { get; set; }
+    [Parameter] public EventCallback<WorkforceProfileEditorModel> Submit { get; set; }
+    [Parameter] public EventCallback<WorkforceProfileInput> InputChanged { get; set; }
+    [Parameter] public EventCallback<bool> PickerChanged { get; set; }
+    protected override void OnInitialized() => Context = new(Model);
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(Context.Model, Model)) {
+            throw new InvalidOperationException("A new workforce draft requires a new form lifetime.");
+        }
+    }
+
+    public Task SubmitAsync() => disposed || pendingFields.Count > 0 || openPickers.Count > 0 || !Context.Validate()
+        ? Task.CompletedTask : Submit.InvokeAsync(Model);
+
+    private Task TextAsync(WorkforceProfileField field) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+
+        return ReportAsync(field);
+    }
+
+    private Task ValueInputAsync(WorkforceProfileField field, string property, bool pending) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (pending) {
+            pendingFields[property] = field;
+        } else {
+            pendingFields.Remove(property);
+        }
+        return ReportAsync(field);
+    }
+
+    private Task ParsedAsync(WorkforceProfileField field, string property) => ValueInputAsync(field, property, false);
+
+    private Task ReportAsync(WorkforceProfileField field) => InputChanged.InvokeAsync(new(field, pendingFields.Values.Contains(field)));
+
+    private Task ReferenceAsync(WorkforceProfileField field, Guid? id) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        var property = field switch {
+            WorkforceProfileField.HomeUnit => nameof(Model.HomeUnitPartyId),
+            WorkforceProfileField.Manager => nameof(Model.ManagerPartyId),
+            _ => throw new ArgumentOutOfRangeException(nameof(field))
+        };
+        if (field == WorkforceProfileField.HomeUnit) {
+            Model.HomeUnitPartyId = id;
+        } else {
+            Model.ManagerPartyId = id;
+        }
+        Context.NotifyFieldChanged(new(Model, property));
+        return ReportAsync(field);
+    }
+
+    private Task PickerAsync(WorkforceProfileField field, bool pending) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (pending) {
+            openPickers.Add(field);
+        } else {
+            openPickers.Remove(field);
+        }
+        return PickerChanged.InvokeAsync(openPickers.Count > 0);
+    }
+
+    public void Dispose() => disposed = true;
+}

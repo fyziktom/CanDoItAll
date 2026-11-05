@@ -214,7 +214,7 @@ public sealed class WorkflowImageGenerationSettingsRendererTests
             => throw new NotSupportedException();
 
         public Task DeleteComponentAsync(
-            WorkflowComponentId componentId,
+            WorkflowComponentDeleteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }

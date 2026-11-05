@@ -16,11 +16,14 @@
 
     private CancellationTokenSource? lifetime;
     private Task observation = Task.CompletedTask;
+    private Task stopping = Task.CompletedTask;
+    private long observationGeneration;
+    private bool disposed;
     private Guid[] observedProjects = [];
     private Task<AuthenticationState>? observedAuthentication;
 
     protected override async Task OnParametersSetAsync() {
-        if (!RendererInfo.IsInteractive) {
+        if (disposed || !RendererInfo.IsInteractive) {
             return;
         }
         var projects = Admission is { } target ? ProjectIds.Append(target.ProjectId).Distinct().Order().ToArray() : [];
@@ -28,22 +31,32 @@
         if (!identityChanged && observedProjects.SequenceEqual(projects)) {
             return;
         }
-        await StopAsync();
-        if (identityChanged) {
-            Inbox.Reset(Admission, InitialCursor);
-        }
+        var generation = ++observationGeneration;
+        var admission = Admission;
+        var authentication = Authentication;
+        var initialCursor = InitialCursor;
         observedProjects = projects;
-        observedAuthentication = Authentication;
-        if (Admission is not { } admission) {
+        observedAuthentication = authentication;
+        await StopAsync();
+        if (disposed || generation != observationGeneration) {
             return;
         }
-        if (Authentication is not null) {
-            var actor = await Authentication;
+        if (identityChanged) {
+            Inbox.Reset(admission, initialCursor);
+        }
+        if (admission is not { } targetAdmission) {
+            return;
+        }
+        if (authentication is not null) {
+            var actor = await authentication;
+            if (disposed || generation != observationGeneration) {
+                return;
+            }
             Session.Actor = actor.User.Identity?.Name ?? "Another editor";
         }
         lifetime = new();
         var contextId = Inbox.ContextId;
-        observation = ObserveAsync(admission, projects, contextId, lifetime.Token);
+        observation = ObserveAsync(targetAdmission, projects, contextId, lifetime.Token);
     }
 
     private async Task ObserveAsync(ProjectWriteAdmission admission, Guid[] projects, Guid contextId, CancellationToken cancellationToken) {
@@ -58,7 +71,7 @@
                     if (batch.Changes.Count > 0 || batch.RequiresRefresh) {
                         await Changed.InvokeAsync();
                     }
-                });
+                }).WaitAsync(cancellationToken);
                 await Feed.WaitAsync(batch.Cursor, cancellationToken);
             }
         } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
@@ -69,19 +82,33 @@
                     Inbox.FailRefresh("Live updates are unavailable. Refresh the structure or reopen the project to reconnect.");
                     await Changed.InvokeAsync();
                 }
-            });
+            }).WaitAsync(cancellationToken);
         }
     }
 
-    private async Task StopAsync() {
-        if (lifetime is null) {
-            return;
+    private Task StopAsync() {
+        if (lifetime is not { } ownedLifetime) {
+            return stopping;
         }
-        await lifetime.CancelAsync();
-        await observation;
-        lifetime.Dispose();
         lifetime = null;
+        var pending = observation;
+        observation = Task.CompletedTask;
+        return stopping = StopObservationAsync(ownedLifetime, pending);
     }
 
-    public ValueTask DisposeAsync() => new(StopAsync());
+    private static async Task StopObservationAsync(CancellationTokenSource ownedLifetime, Task pending) {
+        await ownedLifetime.CancelAsync();
+        try {
+            await pending;
+        } catch (OperationCanceledException) when (ownedLifetime.IsCancellationRequested) {
+        } finally {
+            ownedLifetime.Dispose();
+        }
+    }
+
+    public ValueTask DisposeAsync() {
+        disposed = true;
+        observationGeneration++;
+        return new(StopAsync());
+    }
 }

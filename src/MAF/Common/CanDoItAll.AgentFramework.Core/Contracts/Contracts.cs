@@ -214,6 +214,9 @@ public interface ISandboxWorkspaceAgentDeletionStore
     Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(
         Guid agentId,
         CancellationToken cancellationToken = default);
+    Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This owner does not support conditional agent deletion.");
 }
 
 public sealed record AgentWorkspaceDeletionResult(
@@ -403,6 +406,13 @@ public interface IProviderProfileService
 
 public interface IProviderProfileRegistry
 {
+    Task<ProviderProfileObservation> GetProviderObservationAsync(Guid providerId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider owner does not expose coherent configuration observations.");
+
+    Task RecordProviderHealthAsync(ProviderProfileObservation observation, ProviderHealthResult result,
+        DateTimeOffset checkedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider owner does not support original-bound diagnostic metadata.");
+
     Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default);
 
     Task<ProviderProfile?> GetProviderAsync(
@@ -417,9 +427,15 @@ public interface IProviderProfileRegistry
         ProviderProfileEditorModel model,
         CancellationToken cancellationToken = default);
 
+    Task<ProviderProfileEditorModel> SaveProviderEditorAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider owner does not return an exact accepted configuration.");
+
     Task DeleteProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken = default);
+
+    Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider owner does not support conditional deletion.");
 
     Task<ProviderProfile> UpdateProviderAsync(
         Guid providerId,
@@ -520,6 +536,8 @@ public interface IAgentFrameworkWorkspaceService :
     Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default);
     Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default);
+    Task<AgentDefinition> SaveAgentDefinitionAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This agent owner does not return the exact accepted configuration.");
     Task GrantAgentProjectStructureAccessAsync(
         Guid agentId,
         Guid projectId,
@@ -553,13 +571,23 @@ public interface IAgentFrameworkWorkspaceService :
         throw new NotSupportedException("This workspace does not support project lifetime access revocation.");
     }
     Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
+    Task DeleteAgentAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support conditional agent deletion.");
     Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default);
     Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default);
     Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace owner does not support team metadata editing.");
     Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default);
+    Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support conditional team membership replacement.");
     Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default);
+    Task DeleteAgentTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support conditional team deletion.");
+    Task<AgentTeamDefinition> EnsureAgentTeamMemberAsync(Guid teamId, DateTimeOffset expectedCreatedAtUtc, Guid agentId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support an explicit team member addition.");
     Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default);
     Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default);
     Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
@@ -587,6 +615,8 @@ public interface IAgentFrameworkWorkspaceService :
     Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default);
     Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default);
+    Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace owner does not support conditional provider deletion.");
     Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default);
     Task<ProviderTestChatResult> RunProviderTestChatAsync(Guid providerId, ProviderTestChatRequest request, CancellationToken cancellationToken = default);
     Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default);
@@ -596,6 +626,8 @@ public interface IAgentFrameworkWorkspaceService :
     Task<CapabilityEditorModel> SaveCapabilityEditorAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not return accepted capability definitions.");
     Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default);
+    Task DeleteCapabilityAsync(Guid capabilityId, string expectedFingerprint, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support conditional capability deletion.");
     Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default);

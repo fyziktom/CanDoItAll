@@ -59,7 +59,7 @@ public sealed class SharedProviderBoundaryTests {
         (name is "mscorlib" or "netstandard" || name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft.", StringComparison.Ordinal));
     private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.AgentFramework.SharedProviders.UI" or
         "CanDoItAll.AgentFramework.SharedProviders.UiSandbox" or "CanDoItAll.Components.BaseLib" or
-        "CanDoItAll.Components.Common" or "CanDoItAll.SharedProviders.Abstractions";
+        "CanDoItAll.Components.Common" or "CanDoItAll.SharedProviders.Abstractions" or "CanDoItAll.Editing" or "CanDoItAll.Editing.UI";
 
     internal static void Visit(string root, Func<string, IEnumerable<string>> references) {
         var complete = new HashSet<string>(StringComparer.Ordinal);

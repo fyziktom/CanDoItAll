@@ -737,7 +737,9 @@ public sealed class ProjectStructureFileScopeResolverTests
 
         public ValueTask<FileToolsKnownFileSession> CreateAsync(
             FileToolsKnownFileRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null,
+            Func<CancellationToken, ValueTask>? authorizeWrite = null)
         {
             CallCount++;
             return ValueTask.FromResult(new FileToolsKnownFileSession(

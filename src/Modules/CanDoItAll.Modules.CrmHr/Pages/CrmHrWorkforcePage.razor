@@ -1,10 +1,21 @@
 @using static CanDoItAll.CrmHr.UI.Workforce.CrmHrWorkforceWorkspacePresentation
 @page "/crm-hr/workforce"
-@implements IDisposable
+@implements IAsyncDisposable
+@using CanDoItAll.Editing
+@using CanDoItAll.Infrastructure.Editing
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @using Microsoft.Extensions.Logging
+@using CanDoItAll.SharedKernel
+@using CanDoItAll.CrmHr.UI.Parties
+@inject ILogger<PartyDirectoryEditor> DeliveryLogger
 @inject HrService HrService
+@inject IWorkforceProfileEditing WorkforceProfiles
+@inject CrmHrChanges Changes
+@inject EditingChangeFeed EditingFeed
+@inject IEditingUiAccess EditingAccess
+@inject ILogger<EditingObservation> ObservationLogger
+@inject ILogger<WorkforceProfileSession> ProfileLogger
 @inject PartyDirectoryService PartyDirectoryService
 @inject IPartyOrganizationAffiliationService AffiliationService
 @inject NavigationManager Navigation
@@ -14,11 +25,47 @@
 
 <PageTitle>CRM / HR Workforce</PageTitle>
 
+<CrmHrEditorLeaveGuard @ref="workforceLeaveGuard" TestIdPrefix="crmhr-workforce" HasLocalChanges="HasWorkforceChanges" IsSameEditorRoute="IsSameWorkforceRoute"
+            Opening="profileEditing.State.Opening" InputRevision="@(workforceInputRevision + profileEditing.State.InputRevision)" HasInput="HasWorkforceChanges()" IsBusy="@(() => WorkforceWriteInFlight)" Unknown="AnyWorkforceOutcomeUnknown" />
+
+
+<CrmHrLiveCatalog Owner="EditingOwner.CrmWorkforceProfile" Ignore="profileEditing.IsOwn" Changed="@(() => profileCatalogRefreshVersion++)">
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<CrmHrWorkforceWorkspaceSurface View="this">
+<CrmHrWorkforceWorkspaceSurface View="this" CatalogRefreshVersion="profileCatalogRefreshVersion" ProfileSaveDisabled="@(!profileEditing.State.CanSave || profileEditing.Reading || WorkforceMutationInFlight || AnyWorkforceOutcomeUnknown)"
+    ProfileInputChanged="ProfileInputChanged" ProfilePickerChanged="ProfilePickerChanged"
+    SkillSelected="SelectSkillAsync" SkillInputChanged="SkillInputAsync" DefinitionInputChanged="DefinitionInputAsync" CapacityInputChanged="CapacityInputAsync"
+    RecordWritesDisabled="@(WorkforceMutationInFlight || AnyWorkforceOutcomeUnknown)" SkillSaveDisabled="@(!recordDrafts.CanSaveSkill)"
+    DefinitionSaveDisabled="@(!recordDrafts.Definition.CanSave)" CapacitySaveDisabled="@(!recordDrafts.Capacity.CanSave)"
+    DeliveryInputChanged="DeliveryInputAsync" DeliverySaveDisabled="@(deliveryEditing?.State.IsUnknown == true || deliveryEditing?.State.IsOutdated == true || deliveryEditing?.ReadingReview == true || deliveryEditing?.State.Review is not null)">
+    <DeliveryEditing>
+        @if (deliveryEditing is { } current) {
+            <CrmHrEditorLeaveGuard @ref="deliveryLeaveGuard" TestIdPrefix="crmhr-delivery-unit" ObserveNavigation="false" HasLocalChanges="HasDeliveryChanges" IsSameEditorRoute="@(_ => false)"
+                Opening="deliveryUnitDialogGeneration" InputRevision="workforceInputRevision" HasInput="HasDeliveryChanges()" IsBusy="@(() => isDeliveryUnitSaving)" Unknown="current.State.IsUnknown" />
+            <PartyEditingStatus State="current.State" Message="@current.Message" ReadingReview="current.ReadingReview" ReviewRequested="current.ReviewAsync" UndoRequested="UndoDeliveryMerge" />
+            <PartyReviewDialog State="current.State" ReadingReview="current.ReadingReview" Changed="ProfileReviewChanged" Cancelled="current.CancelReview" RefreshRequested="current.ReviewAsync" ApplyRequested="ApplyDeliveryReview" />
+        }
+    </DeliveryEditing>
+    <RecordUpdates>
+        @if (contextOutdated || recordsOutdated || catalogOutdated || RecordMessage is not null || AnyWorkforceOutcomeUnknown) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-workforce-record-updates">
+                <TextBlock Value="@(AnyWorkforceOutcomeUnknown ? "A workforce command has an unknown outcome. Submitted values and later input are retained; repeating writes is blocked." : contextOutdated || recordsOutdated || catalogOutdated ? "Workforce information changed. Refresh the saved rows and context; your drafts will remain." : RecordMessage)" />
+                <Button Text="Refresh saved information" ButtonStyle="ButtonStyle.Light" Disabled="WorkforceMutationInFlight" Click="RefreshWorkforceContextAsync" data-testid="crmhr-workforce-refresh-records" />
+            </Alert>
+        }
+    </RecordUpdates>
+    <SkillEditing>
+        <WorkforceSkillEditing State="recordDrafts" Reading="WorkforceMutationInFlight" ReviewRequested="ReviewSkillAsync" ApplyRequested="ApplySkillAsync"
+            UndoRequested="UndoSkillAsync" Cancelled="recordDrafts.CancelSkillReview" Changed="ProfileReviewChanged" />
+    </SkillEditing>
+    <ProfileEditing>
+        <WorkforceProfileEditing State="profileEditing.State" Message="@profileEditing.Message" Attention="profileEditing.RequiresAttention" Reading="profileEditing.Reading"
+            PartyName="profileEditing.PartyName" ReviewRequested="profileEditing.ReviewAsync" ApplyRequested="profileEditing.ApplyReviewAsync"
+            UndoRequested="profileEditing.UndoAsync" Cancelled="CancelProfileReview" Changed="ProfileReviewChanged" />
+
+    </ProfileEditing>
     <SecondaryNavigation>
         <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Workforce" />
     </SecondaryNavigation>
@@ -34,6 +81,7 @@
                              EmptyDescription="Save a workforce profile or related CRM-HR workflow to build the shared audit trail." />
     </ActivityTimeline>
 </CrmHrWorkforceWorkspaceSurface>
+</CrmHrLiveCatalog>
 
 @code {
     // What the history lane accepted for the selected record, and its failure copy; the surface never sees the session.
@@ -58,11 +106,12 @@
     public string? PageQuery { get; set; }
 
     private UrlStateBinding<WorkforceUrlState> url = default!;
-    private readonly DeliveryUnitQuickCreateModel deliveryUnitEditor = new();
-    private readonly SkillDefinitionEditorModel skillDefinitionEditor = new()
-    {
-        IsActive = true
-    };
+    private PartyDirectoryEditor? deliveryEditing;
+    private PartyEditorViewModel deliveryUnitEditor => deliveryEditing?.Draft ?? emptyDeliveryDraft;
+    private readonly PartyEditorViewModel emptyDeliveryDraft = new();
+    private CrmHrEditorLeaveGuard? deliveryLeaveGuard;
+    private readonly WorkforceRecordDrafts recordDrafts = new();
+    private SkillDefinitionEditorModel skillDefinitionEditor => recordDrafts.Definition.Draft;
     private CrmHrActivityHistorySession workforceHistory = default!;
     private long workforceHistoryGeneration;
     private WorkforceProfileWorkspaceModel? selectedWorkspace;
@@ -73,21 +122,38 @@
     private Task<WorkforceCapacityWorkspaceModel?>? capacityWorkspaceLoadTask;
     private Guid? capacityWorkspaceLoadPartyId;
     private long capacityWorkspaceLoadWorkforceGeneration;
-    private CancellationTokenSource? deliveryUnitSaveCancellation;
-    private WorkforceProfileEditorModel profileEditor = new();
-    private PartySkillEditorModel skillEditor = CreatePartySkillEditor(Guid.Empty);
-    private CapacityBlockEditorModel capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
+    private WorkforceProfileSession profileEditing = default!;
+    private WorkforceProfileEditorModel profileEditor => profileEditing.State.Draft;
+    private CrmHrEditorLeaveGuard? workforceLeaveGuard;
+    private long workforceInputRevision;
+    private long recordsRevision;
+    private long catalogRevision;
+    private long profileCatalogRefreshVersion;
+    private bool recordsOutdated;
+    private bool catalogOutdated;
+    private PartySkillEditorModel skillEditor => recordDrafts.Skill.Draft;
+    private CapacityBlockEditorModel capacityBlockEditor => recordDrafts.Capacity.Draft;
+    private PartySkillObservation? unknownSkillDelete;
+    private CapacityBlockObservation? unknownCapacityDelete;
+    private string? recordOutcome;
+    private long recordOutcomeRevision;
+    private string? RecordMessage {
+        get => recordOutcome;
+        set {
+            recordOutcomeRevision++;
+            recordOutcome = value;
+        }
+    }
+    private bool contextOutdated;
+    private long contextRevision;
     private string capacityWorkspaceError = string.Empty;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private long workforceLoadGeneration;
     private readonly CrmHrMutationGate mutationGate = new();
-    private readonly CrmHrDraftReconciler drafts = new();
-    private const string ProfileDraft = "profile";
-    private const string SkillDraft = "skill";
-    private const string CapacityDraft = "capacity";
     private long deliveryUnitDialogGeneration;
     private int workforceBrowserVersion;
     private bool isCapacityWorkspaceLoading;
+    private bool capacityNeedsRefresh;
     private bool isRecordDialogOpen;
     private bool isProfileCreationRequested;
     private bool isDeliveryUnitDialogOpen;
@@ -154,6 +220,29 @@
 
     protected override void OnInitialized()
     {
+        profileEditing = new(WorkforceProfiles, Changes, EditingFeed, EditingAccess, ObservationLogger, ProfileLogger) {
+            Dispatch = work => InvokeAsync(work), Changed = ProfileStateChanged,
+            Retired = () => {
+                Interlocked.Increment(ref workforceLoadGeneration);
+                isRecordDialogOpen = false;
+                ClearWorkforceSelection();
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            },
+            ContextChanged = () => {
+                contextRevision++;
+                contextOutdated = true;
+            },
+            RecordsChanged = () => {
+                recordsRevision++;
+                recordsOutdated = true;
+                recordDrafts.HintSkills();
+            },
+            CatalogChanged = () => {
+                catalogRevision++;
+                catalogOutdated = true;
+            },
+            Notice = () => NotificationService.Warning("Workforce profile requires attention", profileEditing.Message ?? "Review the current workforce profile.")
+        };
         url = new UrlStateBinding<WorkforceUrlState>(Navigation, WorkforceUrlCodec.Instance, History, typeof(CrmHrWorkforcePage));
         workforceHistory = new CrmHrActivityHistorySession(
             (query, cancellationToken) => PartyDirectoryService.SearchPartyActivityAsync(query, cancellationToken),
@@ -248,8 +337,7 @@
     }
 
     private async Task<WorkforceLoadOutcome> LoadAndCommitWorkforceAsync(
-        WorkforceLoadRequest request,
-        WorkforceEditor committed = WorkforceEditor.None)
+        WorkforceLoadRequest request, bool refreshDraft = false)
     {
         try
         {
@@ -259,7 +347,7 @@
                 return WorkforceLoadOutcome.Stale;
             }
 
-            CommitWorkforceSnapshot(snapshot, committed);
+            CommitWorkforceSnapshot(snapshot, refreshDraft);
             return snapshot.RequestedPartyFound
                 ? WorkforceLoadOutcome.Ready
                 : WorkforceLoadOutcome.Missing;
@@ -279,10 +367,15 @@
     {
         if (!requestedPartyId.HasValue)
         {
+            await profileEditing.CloseAsync();
             return WorkforceLoadSnapshot.Empty(requestedPartyFound: true);
         }
 
-        var workspace = await HrService.GetWorkforceProfileWorkspaceAsync(requestedPartyId.Value);
+        var observedRecords = recordsRevision;
+        var observedCatalog = catalogRevision;
+        var observedContext = contextRevision;
+        var profileRead = await profileEditing.ReadWorkspaceAsync(requestedPartyId.Value, default);
+        var workspace = profileRead.Workspace;
         if (workspace is null)
         {
             return WorkforceLoadSnapshot.Empty(requestedPartyFound: false);
@@ -294,10 +387,10 @@
         return new WorkforceLoadSnapshot(
             workspace,
             affiliations,
-            RequestedPartyFound: true);
+            RequestedPartyFound: true) { ProfileRead = profileRead, RecordsRevision = observedRecords, CatalogRevision = observedCatalog, ContextRevision = observedContext };
     }
 
-    private void CommitWorkforceSnapshot(WorkforceLoadSnapshot snapshot, WorkforceEditor committed)
+    private void CommitWorkforceSnapshot(WorkforceLoadSnapshot snapshot, bool refreshDraft)
     {
         if (snapshot.Workspace is null)
         {
@@ -308,12 +401,19 @@
         var isPartySelectionChanged = selectedWorkspace?.PartyId != snapshot.Workspace.PartyId;
         if (isPartySelectionChanged)
         {
-            InvalidateCapacityWorkspace();
+            InvalidateCapacityWorkspace(retire: true);
         }
 
+        profileEditing.Observe(snapshot.ProfileRead ?? throw new InvalidOperationException("The workforce snapshot has no authorized profile observation."), refreshDraft);
+        contextOutdated = snapshot.ContextRevision != contextRevision;
+        recordsOutdated = snapshot.RecordsRevision != recordsRevision;
+        catalogOutdated = snapshot.CatalogRevision != catalogRevision;
+        if (selectedWorkspace?.PartyId == snapshot.Workspace.PartyId) {
+            recordDrafts.ObserveSkills(snapshot.Workspace.Skills);
+        }
         InvalidateHistory();
         selectedAffiliations = snapshot.Affiliations;
-        ApplyLoadedWorkspace(snapshot.Workspace, isPartySelectionChanged, committed);
+        ApplyLoadedWorkspace(snapshot.Workspace, isPartySelectionChanged);
     }
 
     private bool IsCurrentWorkforceLoad(WorkforceLoadRequest request)
@@ -327,60 +427,27 @@
     // keeps what the operator typed into the editors it did not commit.
     private void ApplyLoadedWorkspace(
         WorkforceProfileWorkspaceModel workspace,
-        bool partyChanged,
-        WorkforceEditor committed)
+        bool partyChanged)
     {
         selectedWorkspace = workspace;
         selectedClassification = WorkforceRecordPresentation.ResolveSelectedClassification(
             workspace,
             selectedAffiliations);
-        var profileCommitted = committed.HasFlag(WorkforceEditor.Profile);
-        if (partyChanged || profileCommitted || !drafts.IsDirty(ProfileDraft, profileEditor))
-        {
+        if (partyChanged || !profileEditing.State.IsDirty) {
             isProfileCreationRequested = false;
         }
 
-        profileEditor = drafts.Reconcile(ProfileDraft, profileEditor, () => new WorkforceProfileEditorModel
-        {
-            Id = workspace.Profile.Id,
-            PartyId = workspace.Profile.PartyId,
-            WorkforceKind = workspace.Profile.WorkforceKind,
-            EmployeeCode = workspace.Profile.EmployeeCode,
-            JobTitle = workspace.Profile.JobTitle,
-            Discipline = workspace.Profile.Discipline,
-            Seniority = workspace.Profile.Seniority,
-            HomeUnitPartyId = workspace.Profile.HomeUnitPartyId,
-            ManagerPartyId = workspace.Profile.ManagerPartyId,
-            StartDate = workspace.Profile.StartDate,
-            EndDate = workspace.Profile.EndDate,
-            Location = workspace.Profile.Location,
-            TimeZone = workspace.Profile.TimeZone,
-            InternalCostRate = workspace.Profile.InternalCostRate,
-            ExternalBillingRate = workspace.Profile.ExternalBillingRate,
-            RateUnit = workspace.Profile.RateUnit,
-            RateCurrencyCode = workspace.Profile.RateCurrencyCode,
-            CapacityHoursPerWeek = workspace.Profile.CapacityHoursPerWeek,
-            Status = workspace.Profile.Status,
-            Notes = workspace.Profile.Notes,
-            LastChangedBy = workspace.Profile.LastChangedBy
-        }, partyChanged, profileCommitted);
-        skillEditor = drafts.Reconcile(
-            SkillDraft,
-            skillEditor,
-            () => CreatePartySkillEditor(workspace.PartyId),
-            partyChanged,
-            committed.HasFlag(WorkforceEditor.Skill));
-        capacityBlockEditor = drafts.Reconcile(
-            CapacityDraft,
-            capacityBlockEditor,
-            () => CreateCapacityBlockEditor(workspace.PartyId),
-            partyChanged,
-            committed.HasFlag(WorkforceEditor.Capacity));
+        if (partyChanged) {
+            recordDrafts.Open(workspace.PartyId);
+            unknownSkillDelete = null;
+            unknownCapacityDelete = null;
+            RecordMessage = null;
+        }
+
     }
 
     private async Task<bool> ReloadAfterActionAsync(
-        WorkforceActionStamp action,
-        WorkforceEditor committed = WorkforceEditor.None)
+        WorkforceActionStamp action, bool refreshDraft = false)
     {
         if (!IsCurrentWorkforceAction(action))
         {
@@ -394,7 +461,7 @@
         WorkforceLoadOutcome outcome;
         try
         {
-            outcome = await LoadAndCommitWorkforceAsync(request, committed);
+            outcome = await LoadAndCommitWorkforceAsync(request, refreshDraft);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -448,40 +515,50 @@
         selectedAffiliations = [];
         selectedClassification = WorkforceRecordClassification.ExternalContact;
         isProfileCreationRequested = false;
-        InvalidateCapacityWorkspace();
+        InvalidateCapacityWorkspace(retire: true);
         InvalidateHistory();
         // Closing the record discards its drafts: the next record, or the same one reopened, starts from the owner.
-        drafts.Reset();
-        profileEditor = new();
-        skillEditor = CreatePartySkillEditor(Guid.Empty);
-        capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
+        recordDrafts.Open(Guid.Empty);
+        unknownSkillDelete = null;
+        unknownCapacityDelete = null;
+        RecordMessage = null;
+        contextOutdated = false;
+        profileEditing.Clear();
+        recordsOutdated = catalogOutdated = false;
     }
 
     // A card opens its record over the catalog as a new history entry; Back closes it again.
-    private Task SelectPartyAsync(Guid partyId)
+    private async Task SelectPartyAsync(Guid partyId)
     {
         if (url.State.PartyId == partyId && selectedWorkspace?.PartyId == partyId)
         {
             isRecordDialogOpen = true;
-            return Task.CompletedTask;
+            return;
         }
 
+        if (!await RequestWorkforceLeaveAsync()) {
+            return;
+        }
         url.OpenOverlay(url.State.WithoutRecord() with { PartyId = partyId });
-        return OpenRouteRecordAsync(url.State);
+        await OpenRouteRecordAsync(url.State);
     }
 
-    private Task CloseRecordDialogAsync()
+    private async Task CloseRecordDialogAsync()
     {
         if (!isRecordDialogOpen)
         {
-            return Task.CompletedTask;
+            return;
         }
 
+        if (!await RequestWorkforceLeaveAsync()) {
+            return;
+        }
         Interlocked.Increment(ref workforceLoadGeneration);
         isRecordDialogOpen = false;
         ClearWorkforceSelection();
         agentChatContextAccessState = AgentChatContextAccessState.Ready;
-        return url.CloseOverlayAsync(url.State.WithoutRecord());
+        await profileEditing.CloseAsync();
+        await url.CloseOverlayAsync(url.State.WithoutRecord());
     }
 
     private Task HandleWorkforceBrowserLoadFailedAsync(Exception exception)
@@ -572,10 +649,21 @@
     private void InvalidateHistory()
         => workforceHistory.Invalidate();
 
+    private async Task<WorkforceCapacityWorkspaceModel?> ReadCapacityWorkspaceAsync(Guid partyId) {
+        var authorize = profileEditing.CaptureReadAdmission(partyId, WorkforceWriteArea.Records);
+        await authorize(default);
+        var workspace = await HrService.GetWorkforceCapacityWorkspaceAsync(partyId);
+        await authorize(default);
+        if (workspace is not null && workspace.PartyId != partyId) {
+            throw new InvalidOperationException("The capacity read returned another workforce record.");
+        }
+        return workspace;
+    }
+
     private async Task EnsureCapacityWorkspaceLoadedAsync()
     {
         if (selectedWorkspace is not { } workspace ||
-            capacityWorkspace?.PartyId == workspace.PartyId)
+            capacityWorkspace?.PartyId == workspace.PartyId && !capacityNeedsRefresh)
         {
             return;
         }
@@ -588,7 +676,7 @@
         {
             capacityWorkspaceLoadPartyId = partyId;
             capacityWorkspaceLoadWorkforceGeneration = workforceGeneration;
-            capacityWorkspaceLoadTask = HrService.GetWorkforceCapacityWorkspaceAsync(partyId);
+            capacityWorkspaceLoadTask = ReadCapacityWorkspaceAsync(partyId);
             isCapacityWorkspaceLoading = true;
             capacityWorkspaceError = string.Empty;
         }
@@ -611,6 +699,7 @@
             }
 
             capacityWorkspace = loadedWorkspace;
+            capacityNeedsRefresh = false;
         }
         catch (Exception exception)
         {
@@ -660,9 +749,12 @@
         await EnsureCapacityWorkspaceLoadedAsync();
     }
 
-    private void InvalidateCapacityWorkspace()
+    private void InvalidateCapacityWorkspace(bool retire = false)
     {
-        capacityWorkspace = null;
+        if (retire) {
+            capacityWorkspace = null;
+        }
+        capacityNeedsRefresh = true;
         capacityWorkspaceLoadTask = null;
         capacityWorkspaceLoadPartyId = null;
         capacityWorkspaceLoadWorkforceGeneration = 0;
@@ -670,27 +762,56 @@
         isCapacityWorkspaceLoading = false;
     }
 
-    private void OpenDeliveryUnitDialog()
-    {
-        if (isDeliveryUnitSaving)
-        {
+    private void OpenDeliveryUnitDialog() {
+        if (isDeliveryUnitDialogOpen || isDeliveryUnitSaving || isDisposed) {
             return;
         }
-
         Interlocked.Increment(ref deliveryUnitDialogGeneration);
+        deliveryEditing = new(PartyDirectoryService, Changes, EditingFeed, EditingAccess, ObservationLogger, DeliveryLogger) {
+            Dispatch = work => InvokeAsync(work), Changed = StateHasChanged,
+            Retired = () => { isDeliveryUnitDialogOpen = false; },
+            Notice = () => NotificationService.Warning("Delivery unit changed", "Review the current delivery unit before saving your draft.")
+        };
+        deliveryEditing.Draft.PartyType = PartyType.OrganizationUnit;
+        deliveryEditing.Draft.LifecycleStatus = PartyLifecycleStatus.Active;
+        deliveryEditing.Draft.PrimaryRoleKindText = PartyRoleKind.DeliveryUnit.ToString();
+        deliveryEditing.State.Reset(deliveryEditing.Draft);
         isDeliveryUnitDialogOpen = true;
     }
 
-    private Task CloseDeliveryUnitDialogAsync()
-    {
-        if (!isDeliveryUnitDialogOpen || isDeliveryUnitSaving)
-        {
-            return Task.CompletedTask;
+    private async Task CloseDeliveryUnitDialogAsync() {
+        if (!isDeliveryUnitDialogOpen || isDeliveryUnitSaving || deliveryEditing is not { } current) {
+            return;
         }
+        if ((HasDeliveryChanges() || current.State.IsUnknown) &&
+            !await (deliveryLeaveGuard ?? throw new InvalidOperationException("The delivery-unit editor requires its leave guard.")).RequestLeaveAsync()) {
+            return;
+        }
+        if (ReferenceEquals(deliveryEditing, current)) {
+            isDeliveryUnitDialogOpen = false;
+            Interlocked.Increment(ref deliveryUnitDialogGeneration);
+            await current.DisposeAsync();
+            deliveryEditing = null;
+        }
+    }
 
-        isDeliveryUnitDialogOpen = false;
-        Interlocked.Increment(ref deliveryUnitDialogGeneration);
+    private Task DeliveryInputAsync(PartyEditableField field) {
+        deliveryEditing?.State.InputChanged(new(new(field)));
+        workforceInputRevision++;
         return Task.CompletedTask;
+    }
+
+    private void ApplyDeliveryReview() {
+        if (deliveryEditing?.ApplyReview() == true) {
+            workforceInputRevision++;
+        }
+    }
+
+    private void UndoDeliveryMerge() {
+        if (deliveryEditing is { } current) {
+            current.State.Undo(current.Draft);
+            workforceInputRevision++;
+        }
     }
 
     private void OpenDirectory()
@@ -705,358 +826,335 @@
         return Task.CompletedTask;
     }
 
-    private async Task SaveWorkforceProfileAsync()
-    {
-        if (!TryCaptureSelectedWorkforceAction(out var action))
-        {
+    private async Task SaveWorkforceProfileAsync() {
+        if (AnyWorkforceOutcomeUnknown || !TryCaptureSelectedWorkforceAction(out var action) || !profileEditing.State.CanSave || profileEditing.Reading) {
             return;
         }
-
         using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
+        if (admission is null) {
             return;
         }
+        var known = await profileEditing.SaveAsync(profileEditor);
+        if (!known || !IsCurrentWorkforceAction(action)) {
+            return;
+        }
+        if (!await ReloadAfterActionAsync(action)) {
+            profileEditing.RefreshFailed();
+            return;
+        }
+        workforceBrowserVersion++;
+    }
 
-        var result = await HrService.SaveWorkforceProfileAsync(
-            drafts.Submit(ProfileDraft, profileEditor, static editor => editor.Snapshot()));
-        if (result.IsFailure)
-        {
-            // Nothing was written: the draft stays exactly as the operator left it and owns all of its fields again.
-            drafts.Retire(ProfileDraft);
-            if (IsCurrentWorkforceAction(action))
-            {
-                NotificationService.Error("Workforce profile save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+    private Task SaveSkillDefinitionAsync() => SaveRecordAsync(recordDrafts.Definition, WorkforceWriteArea.Catalog,
+        (model, accepted) => HrService.SaveSkillDefinitionAsync(model, onCommitted: accepted), recordDrafts.AcceptDefinition, "Skill definition");
+
+    private Task SavePartySkillAsync() => !recordDrafts.CanSaveSkill ? Task.CompletedTask : SaveRecordAsync(recordDrafts.Skill, WorkforceWriteArea.Records,
+        (model, accepted) => HrService.SavePartySkillAsync(model, onCommitted: accepted), recordDrafts.AcceptSkill, "Skill");
+
+    private Task SaveCapacityBlockAsync() => SaveRecordAsync(recordDrafts.Capacity, WorkforceWriteArea.Records,
+        (model, accepted) => HrService.SaveCapacityBlockAsync(model, onCommitted: accepted), recordDrafts.AcceptCapacity, "Capacity block");
+
+    private async Task SaveRecordAsync<TModel, TField>(RecordDraftState<TModel, TField> draft, WorkforceWriteArea area,
+        Func<TModel, Action<WorkforceSaveReceipt<TModel>>, Task<Result<Guid>>> write,
+        Action<RecordSubmission<TModel, TField>, WorkforceSaveReceipt<TModel>> accept, string label)
+        where TModel : class where TField : struct, Enum {
+        if (WorkforceMutationInFlight || AnyWorkforceOutcomeUnknown || !TryCaptureSelectedWorkforceAction(out var action) || action.SelectedPartyId is not { } party) {
+            return;
+        }
+        using var gate = mutationGate.TryEnter(action.Generation);
+        if (gate is null || draft.Begin() is not { } submitted) {
+            return;
+        }
+        var started = false;
+        try {
+            var authorize = profileEditing.CaptureWriteAdmission(party, area);
+            await authorize(default);
+            if (!IsCurrentWorkforceAction(action) || !draft.IsCurrent(submitted)) {
+                return;
             }
-
-            return;
-        }
-
-        if (!await ReloadAfterActionAsync(action, WorkforceEditor.Profile))
-        {
-            return;
-        }
-
-        NotificationService.Success("Workforce profile saved", "Workforce profile saved.");
-    }
-
-    private async Task SaveSkillDefinitionAsync()
-    {
-        var action = CaptureWorkforceAction();
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        var result = await HrService.SaveSkillDefinitionAsync(skillDefinitionEditor.Snapshot());
-        if (result.IsFailure)
-        {
-            if (IsCurrentWorkforceAction(action))
-            {
-                NotificationService.Error("Skill definition save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
-            }
-
-            return;
-        }
-
-        if (!IsCurrentWorkforceAction(action))
-        {
-            return;
-        }
-
-        skillDefinitionEditor.Name = string.Empty;
-        skillDefinitionEditor.Category = string.Empty;
-        skillDefinitionEditor.Description = string.Empty;
-        skillDefinitionEditor.IsActive = true;
-
-        if (!await ReloadAfterActionAsync(action))
-        {
-            return;
-        }
-
-        NotificationService.Success("Skill definition saved", "Skill definition saved.");
-    }
-
-    private async Task SavePartySkillAsync()
-    {
-        if (!TryCaptureSelectedWorkforceAction(out var action) ||
-            action.SelectedPartyId is not Guid partyId)
-        {
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        skillEditor.PartyId = partyId;
-        var result = await HrService.SavePartySkillAsync(
-            drafts.Submit(SkillDraft, skillEditor, static editor => editor.Snapshot()));
-        if (result.IsFailure)
-        {
-            drafts.Retire(SkillDraft);
-            if (IsCurrentWorkforceAction(action))
-            {
-                NotificationService.Error("Skill save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
-            }
-
-            return;
-        }
-
-        if (!IsCurrentWorkforceAction(action))
-        {
-            return;
-        }
-
-        // The create editor starts over once the owner accepted it, unless the operator already typed the next skill
-        // into it while the write was in flight; that draft is theirs and survives the read-back whole.
-        var skillStartsOver = !drafts.ChangedAfterSubmission(SkillDraft, skillEditor);
-        drafts.Retire(SkillDraft);
-        if (skillStartsOver)
-        {
-            skillEditor = drafts.Replace(SkillDraft, CreatePartySkillEditor(partyId));
-        }
-
-        if (!await ReloadAfterActionAsync(action, skillStartsOver ? WorkforceEditor.Skill : WorkforceEditor.None))
-        {
-            return;
-        }
-
-        NotificationService.Success("Skill saved", "Skill saved.");
-    }
-
-    private async Task DeletePartySkillAsync(Guid partySkillId)
-    {
-        if (!TryCaptureSelectedWorkforceAction(out var action))
-        {
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        await HrService.DeletePartySkillAsync(partySkillId);
-        if (!await ReloadAfterActionAsync(action))
-        {
-            return;
-        }
-
-        NotificationService.Success("Skill removed", "Skill removed.");
-    }
-
-    private async Task SaveCapacityBlockAsync()
-    {
-        if (!TryCaptureSelectedWorkforceAction(out var action) ||
-            action.SelectedPartyId is not Guid partyId)
-        {
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        capacityBlockEditor.PartyId = partyId;
-        var result = await HrService.SaveCapacityBlockAsync(
-            drafts.Submit(CapacityDraft, capacityBlockEditor, static editor => editor.Snapshot()));
-        if (result.IsFailure)
-        {
-            drafts.Retire(CapacityDraft);
-            if (IsCurrentWorkforceAction(action))
-            {
-                NotificationService.Error("Capacity block save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
-            }
-
-            return;
-        }
-
-        if (!IsCurrentWorkforceAction(action))
-        {
-            return;
-        }
-
-        var capacityStartsOver = !drafts.ChangedAfterSubmission(CapacityDraft, capacityBlockEditor);
-        drafts.Retire(CapacityDraft);
-        if (capacityStartsOver)
-        {
-            capacityBlockEditor = drafts.Replace(CapacityDraft, CreateCapacityBlockEditor(partyId));
-        }
-
-        if (!await ReloadAfterActionAsync(action, capacityStartsOver ? WorkforceEditor.Capacity : WorkforceEditor.None))
-        {
-            return;
-        }
-
-        NotificationService.Success("Capacity block saved", "Capacity block saved.");
-    }
-
-    private async Task DeleteCapacityBlockAsync(Guid capacityBlockId)
-    {
-        if (!TryCaptureSelectedWorkforceAction(out var action))
-        {
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        await HrService.DeleteCapacityBlockAsync(capacityBlockId);
-        if (!await ReloadAfterActionAsync(action))
-        {
-            return;
-        }
-
-        NotificationService.Success("Capacity block removed", "Capacity block removed.");
-    }
-
-    private async Task CreateDeliveryUnitAsync()
-    {
-        if (!isDeliveryUnitDialogOpen || isDeliveryUnitSaving)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(deliveryUnitEditor.Name))
-        {
-            NotificationService.Warning("Delivery unit not created", "Delivery unit name is required.");
-            return;
-        }
-
-        var dialogGeneration = Volatile.Read(ref deliveryUnitDialogGeneration);
-        using var saveCancellation = new CancellationTokenSource();
-        deliveryUnitSaveCancellation = saveCancellation;
-        isDeliveryUnitSaving = true;
-        Guid? createdPartyId = null;
-
-        try
-        {
-            var saveResult = await PartyDirectoryService.SavePartyAsync(new PartyEditorModel
-            {
-                PartyType = PartyType.OrganizationUnit,
-                LifecycleStatus = PartyLifecycleStatus.Active,
-                DisplayName = deliveryUnitEditor.Name.Trim(),
-                ExternalCode = deliveryUnitEditor.ExternalCode.Trim(),
-                Summary = deliveryUnitEditor.Summary.Trim(),
-                LastChangedBy = "crm-hr-ui",
-                Roles =
-                [
-                    new PartyRoleAssignmentEditorModel
-                    {
-                        RoleKind = PartyRoleKind.DeliveryUnit,
-                        Title = "Delivery unit",
-                        IsPrimary = true
-                    }
-                ]
-            }, saveCancellation.Token);
-            if (saveResult.IsFailure)
-            {
-                if (IsCurrentDeliveryUnitSave(dialogGeneration, saveCancellation))
-                {
-                    NotificationService.Error("Delivery unit create failed", string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+            using var authority = Changes.EnterUiWrite(authorize);
+            using var origin = profileEditing.EnterWrite(party);
+            started = true;
+            var result = await write(submitted.Model, receipt => {
+                if (IsCurrentWorkforceAction(action) && draft.IsCurrent(submitted)) {
+                    accept(submitted, receipt);
+                    RecordMessage = label + " saved. Later input remains in your draft.";
                 }
-
+            });
+            if (result.IsFailure && IsCurrentWorkforceAction(action)) {
+                RecordMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+                if (result.Errors.Any(error => error.Code == CrmHrEditingErrorCodes.SkillConflict)) {
+                    recordDrafts.HintSkills();
+                    recordsOutdated = true;
+                }
+                NotificationService.Warning(label + " was not saved", RecordMessage);
                 return;
             }
+            if (draft.Accepted is null) {
+                throw new InvalidOperationException("The workforce owner completed without a commit receipt.");
+            }
+            if (!await ReloadAfterActionAsync(action)) {
+                RecordMessage = label + " was saved; refresh failed. Your draft is retained.";
+            }
+        } catch (UnauthorizedAccessException exception) {
+            if (draft.IsCurrent(submitted)) {
+                RecordMessage = "Current access no longer permits this workforce change.";
+                Logger.LogWarning(exception, "Workforce {Area} write rejected for party {PartyId}.", area, party);
+            }
+        } catch (Exception exception) {
+            if (draft.IsCurrent(submitted)) {
+                if (started && draft.Accepted is null) {
+                    draft.Unknown(submitted);
+                    RecordMessage = label + " save outcome is unknown. Its submission and later input are retained; resubmission is blocked.";
+                } else {
+                    RecordMessage = label + (draft.Accepted is null ? " was not saved." : " was saved; a follow-up failed. Your draft is retained.");
+                }
+                Logger.LogWarning(exception, "Workforce {Area} write failed for party {PartyId}; acceptance known: {Known}.", area, party, draft.Accepted is not null);
+            }
+        } finally {
+            draft.Complete(submitted);
+        }
+    }
 
-            if (!IsCurrentDeliveryUnitSave(dialogGeneration, saveCancellation))
-            {
+    private Task DeletePartySkillAsync(Guid id) {
+        var original = selectedWorkspace?.Skills.SingleOrDefault(row => row.Id == id)?.Original;
+        return original is null ? Task.CompletedTask : DeleteRecordAsync(id,
+            accepted => HrService.DeletePartySkillAsync(id, original: original, onCommitted: accepted), () => unknownSkillDelete = original, "Skill");
+    }
+
+    private Task DeleteCapacityBlockAsync(Guid id) {
+        var original = capacityWorkspace?.CapacityBlocks.SingleOrDefault(row => row.Id == id)?.Original;
+        return original is null ? Task.CompletedTask : DeleteRecordAsync(id,
+            accepted => HrService.DeleteCapacityBlockAsync(id, original: original, onCommitted: accepted), () => unknownCapacityDelete = original, "Capacity block");
+    }
+
+    private async Task DeleteRecordAsync(Guid id, Func<Action<WorkforceDeleteReceipt>, Task<Result>> write, Action unknown, string label) {
+        if (WorkforceMutationInFlight || AnyWorkforceOutcomeUnknown || !TryCaptureSelectedWorkforceAction(out var action) || action.SelectedPartyId is not { } party) {
+            return;
+        }
+        using var gate = mutationGate.TryEnter(action.Generation);
+        if (gate is null) {
+            return;
+        }
+        var known = false;
+        var started = false;
+        try {
+            var authorize = profileEditing.CaptureWriteAdmission(party, WorkforceWriteArea.Records);
+            await authorize(default);
+            using var authority = Changes.EnterUiWrite(authorize);
+            using var origin = profileEditing.EnterWrite(party);
+            started = true;
+            var result = await write(receipt => {
+                if (receipt.Id != id || receipt.PartyId != party) {
+                    throw new InvalidOperationException("The workforce deletion receipt identifies another row or worker.");
+                }
+                known = true;
+            });
+            if (!IsCurrentWorkforceAction(action)) {
                 return;
             }
+            if (result.IsFailure) {
+                RecordMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+                NotificationService.Warning(label + " was not removed", RecordMessage);
+                return;
+            }
+            if (!known) {
+                throw new InvalidOperationException("The workforce deletion completed without a receipt.");
+            }
+            RecordMessage = label + " removed.";
+            await ReloadAfterActionAsync(action);
+        } catch (UnauthorizedAccessException exception) {
+            RecordMessage = "Current access no longer permits removing this workforce row.";
+            Logger.LogWarning(exception, "Workforce deletion rejected for party {PartyId}, row {RowId}.", party, id);
+        } catch (Exception exception) {
+            if (IsCurrentWorkforceAction(action)) {
+                if (started && !known) {
+                    unknown();
+                }
+                RecordMessage = known ? label + " was removed; a follow-up failed." : label + " removal outcome is unknown. Review the current rows; repeating the command is blocked.";
+                Logger.LogWarning(exception, "Workforce deletion failed for party {PartyId}, row {RowId}; acceptance known: {Known}.", party, id, known);
+            }
+        }
+    }
 
-            deliveryUnitEditor.Name = string.Empty;
-            deliveryUnitEditor.ExternalCode = string.Empty;
-            deliveryUnitEditor.Summary = string.Empty;
+    private async Task ReviewSkillAsync() {
+        if (WorkforceMutationInFlight || !TryCaptureSelectedWorkforceAction(out var action)) {
+            return;
+        }
+        var opening = recordDrafts.Skill.Opening;
+        var hint = recordDrafts.BeginSkillReview();
+        if (await ReloadAfterActionAsync(action) && opening == recordDrafts.Skill.Opening && selectedWorkspace is { } workspace) {
+            recordDrafts.CompareSkill(workspace.Skills, hint);
+        }
+    }
+
+    private async Task<bool> AuthorizeLocalRecordEditAsync(Guid partyId) {
+        try {
+            var authorize = profileEditing.CaptureWriteAdmission(partyId, WorkforceWriteArea.Records);
+            await authorize(default);
+            return selectedWorkspace?.PartyId == partyId;
+        } catch (UnauthorizedAccessException exception) {
+            RecordMessage = "Current workforce write access is required. Your draft is retained.";
+            Logger.LogWarning(exception, "Local skill reconciliation rejected for party {PartyId}.", partyId);
+            return false;
+        }
+    }
+
+    private async Task ApplySkillAsync() {
+        if (selectedWorkspace is not { } workspace || !recordDrafts.CanApplySkill) {
+            return;
+        }
+        if (!await AuthorizeLocalRecordEditAsync(workspace.PartyId)) {
+            return;
+        }
+        if (recordDrafts.ApplySkill()) {
+            workforceInputRevision++;
+        }
+    }
+
+    private async Task UndoSkillAsync() {
+        if (selectedWorkspace is not { } workspace || !recordDrafts.CanUndoSkill) {
+            return;
+        }
+        if (!await AuthorizeLocalRecordEditAsync(workspace.PartyId)) {
+            return;
+        }
+        recordDrafts.UndoSkill();
+        workforceInputRevision++;
+    }
+
+    private Task SelectSkillAsync(Guid id) {
+        if (!AnyWorkforceOutcomeUnknown) {
+            recordDrafts.SelectSkill(id, selectedWorkspace?.Skills.SingleOrDefault(row => row.SkillId == id)?.Original);
+            workforceInputRevision++;
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task SkillInputAsync(RecordInput<WorkforceSkillField> input) {
+        recordDrafts.Skill.Input(input);
+        workforceInputRevision++;
+        return Task.CompletedTask;
+    }
+
+    private Task DefinitionInputAsync(RecordInput<WorkforceDefinitionField> input) {
+        recordDrafts.Definition.Input(input);
+        workforceInputRevision++;
+        return Task.CompletedTask;
+    }
+
+    private Task CapacityInputAsync(RecordInput<WorkforceCapacityField> input) {
+        recordDrafts.Capacity.Input(input);
+        workforceInputRevision++;
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshWorkforceContextAsync() {
+        if (WorkforceMutationInFlight || !TryCaptureSelectedWorkforceAction(out var action)) {
+            return;
+        }
+        var observed = contextRevision;
+        var outcome = recordOutcomeRevision;
+        if (await ReloadAfterActionAsync(action, refreshDraft: true)) {
+            contextOutdated = observed != contextRevision;
+            if (outcome == recordOutcomeRevision && !AnyWorkforceOutcomeUnknown) {
+                RecordMessage = null;
+            }
+        }
+    }
+
+    private async Task CreateDeliveryUnitAsync() {
+        if (!isDeliveryUnitDialogOpen || isDeliveryUnitSaving || deliveryEditing is not { } current || AnyWorkforceOutcomeUnknown) {
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(current.Draft.DisplayName)) {
+            NotificationService.Warning("Delivery unit not saved", "Delivery unit name is required.");
+            return;
+        }
+        var opening = deliveryUnitDialogGeneration;
+        isDeliveryUnitSaving = true;
+        Guid? accepted = null;
+        try {
+            var result = await current.SaveAsync();
+            if (isDisposed || opening != deliveryUnitDialogGeneration || !ReferenceEquals(deliveryEditing, current)) {
+                return;
+            }
+            if (result.IsFailure) {
+                NotificationService.Warning("Delivery unit was not saved", current.Message ?? string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
+            workforceBrowserVersion++;
+            if (current.State.IsDirty(current.Draft) || current.State.IsOutdated || current.State.Review is not null) {
+                NotificationService.Success("Delivery unit saved", "Later input remains in this delivery-unit draft. Save it separately.");
+                return;
+            }
+            accepted = result.Value;
             isDeliveryUnitDialogOpen = false;
             Interlocked.Increment(ref deliveryUnitDialogGeneration);
-
-            workforceBrowserVersion++;
-            createdPartyId = saveResult.Value;
-            NotificationService.Success("Delivery unit created", "Delivery unit created.");
-        }
-        catch (OperationCanceledException) when (saveCancellation.IsCancellationRequested)
-        {
-            return;
-        }
-        finally
-        {
-            if (ReferenceEquals(deliveryUnitSaveCancellation, saveCancellation))
-            {
-                deliveryUnitSaveCancellation = null;
+            await current.DisposeAsync();
+            deliveryEditing = null;
+        } finally {
+            if (ReferenceEquals(deliveryEditing, current) || deliveryEditing is null) {
                 isDeliveryUnitSaving = false;
             }
         }
-
-        // The created unit opens over the catalog as a new history entry, like a card the operator chose.
-        if (createdPartyId is { } partyId)
-        {
-            url.OpenOverlay(url.State.WithoutRecord() with { PartyId = partyId });
-            await OpenRouteRecordAsync(url.State);
+        if (accepted is { } party) {
+            await SelectPartyAsync(party);
         }
     }
 
-    private bool IsCurrentDeliveryUnitSave(
-        long dialogGeneration,
-        CancellationTokenSource saveCancellation)
-        => isDeliveryUnitDialogOpen &&
-           isDeliveryUnitSaving &&
-           !saveCancellation.IsCancellationRequested &&
-           ReferenceEquals(deliveryUnitSaveCancellation, saveCancellation) &&
-           dialogGeneration == Volatile.Read(ref deliveryUnitDialogGeneration);
-
-    private static string ResolveKindTone(WorkforceKind? workforceKind)
-    {
-        return workforceKind switch
-        {
-            WorkforceKind.Employee => "success",
-            WorkforceKind.Contractor => "warning",
-            WorkforceKind.Freelancer => "info",
-            WorkforceKind.DeliveryUnit => "primary",
-            _ => "base"
-        };
+    private void ProfileStateChanged() {
+        if (selectedWorkspace is { } workspace && profileEditing.CurrentProfile is { } saved && saved.PartyId == workspace.PartyId) {
+            selectedWorkspace = workspace with {
+                Profile = saved, LastChangedBy = saved.LastChangedBy,
+                HomeUnitName = saved.HomeUnitPartyId is null ? string.Empty : profileEditing.PartyName(saved.HomeUnitPartyId),
+                ManagerName = saved.ManagerPartyId is null ? string.Empty : profileEditing.PartyName(saved.ManagerPartyId)
+            };
+            selectedClassification = WorkforceRecordPresentation.ResolveSelectedClassification(selectedWorkspace, selectedAffiliations);
+        }
+        StateHasChanged();
     }
 
-    private static PartySkillEditorModel CreatePartySkillEditor(Guid partyId)
-    {
-        return new PartySkillEditorModel
-        {
-            PartyId = partyId,
-            Proficiency = SkillProficiencyLevel.Basic,
-            LastValidatedOn = DateOnly.FromDateTime(DateTime.UtcNow)
-        };
+    private bool WorkforceWriteInFlight => isDeliveryUnitSaving || profileEditing.State.IsSaving ||
+        mutationGate.IsInFlight(Volatile.Read(ref workforceLoadGeneration));
+    private bool WorkforceMutationInFlight => WorkforceWriteInFlight || profileEditing.Reading ||
+        profileEditing.State.PickerPending || agentChatContextAccessState == AgentChatContextAccessState.Loading;
+
+    private bool AnyWorkforceOutcomeUnknown => profileEditing.State.IsUnknown || recordDrafts.IsUnknown || unknownSkillDelete is not null || unknownCapacityDelete is not null || deliveryEditing?.State.IsUnknown == true;
+
+    private bool HasWorkforceChanges() => profileEditing.State.IsDirty || profileEditing.State.Review is not null || recordDrafts.IsDirty || HasDeliveryChanges();
+
+    private bool HasDeliveryChanges() => isDeliveryUnitDialogOpen && deliveryEditing is { } current && (current.State.IsDirty(current.Draft) || current.State.Review is not null);
+
+    private Task ProfileInputChanged(WorkforceProfileInput input) {
+        profileEditing.State.InputChanged(input);
+        workforceInputRevision++;
+        return Task.CompletedTask;
     }
 
-    private static CapacityBlockEditorModel CreateCapacityBlockEditor(Guid partyId)
-    {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        return new CapacityBlockEditorModel
-        {
-            PartyId = partyId,
-            BlockKind = CapacityBlockKind.Leave,
-            StartDate = today,
-            EndDate = today,
-            Percentage = 100m
-        };
+    private Task ProfilePickerChanged(bool pending) {
+        profileEditing.State.ReportPicker(pending);
+        return Task.CompletedTask;
     }
 
-    // The inline editors of the workforce record; a reload names the one whose commit caused it.
-    [Flags]
-    private enum WorkforceEditor
-    {
-        None = 0,
-        Profile = 1,
-        Skill = 2,
-        Capacity = 4
+    private Task CancelProfileReview() {
+        profileEditing.State.CancelReview();
+        return Task.CompletedTask;
+    }
+
+    private void ProfileReviewChanged() {
+        workforceInputRevision++;
+        StateHasChanged();
+    }
+
+    private Task<bool> RequestWorkforceLeaveAsync() => !HasWorkforceChanges() && !WorkforceWriteInFlight && !AnyWorkforceOutcomeUnknown
+        ? Task.FromResult(true)
+        : (workforceLeaveGuard ?? throw new InvalidOperationException("An active workforce draft requires its leave guard.")).RequestLeaveAsync();
+
+    private bool IsSameWorkforceRoute(string target) {
+        var destination = Navigation.ToAbsoluteUri(target);
+        return destination.AbsolutePath == new Uri(Navigation.Uri).AbsolutePath &&
+            WorkforceUrlCodec.Instance.Read(destination.AbsoluteUri).PartyId == url.State.PartyId;
     }
 
     private enum WorkforceLoadBinding
@@ -1089,6 +1187,11 @@
         IReadOnlyList<PartyOrganizationAffiliationListItemModel> Affiliations,
         bool RequestedPartyFound)
     {
+        public WorkforceProfileRead? ProfileRead { get; init; }
+        public long RecordsRevision { get; init; }
+        public long CatalogRevision { get; init; }
+        public long ContextRevision { get; init; }
+
         public static WorkforceLoadSnapshot Empty(bool requestedPartyFound)
             => new(
                 Workspace: null,
@@ -1096,7 +1199,7 @@
                 RequestedPartyFound: requestedPartyFound);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (isDisposed)
         {
@@ -1104,9 +1207,12 @@
         }
 
         isDisposed = true;
-        deliveryUnitSaveCancellation?.Cancel();
         Interlocked.Increment(ref workforceLoadGeneration);
         Interlocked.Increment(ref deliveryUnitDialogGeneration);
         workforceHistory.Dispose();
+        await profileEditing.DisposeAsync();
+        if (deliveryEditing is { } current) {
+            await current.DisposeAsync();
+        }
     }
 }

@@ -1,0 +1,50 @@
+@using CanDoItAll.Editing.UI
+
+<Stack GapScale="LayoutGap.Small" data-testid="capability-comparison">
+    <TextBlock Value="Compare the saved definition with your draft. Applying changes stays local; Save and setup tests remain separate actions." />
+    @if (Review.IsStale) {
+        <Alert AlertStyle="AlertStyle.Warning" data-testid="capability-comparison-stale">The saved definition or your draft changed during review. Cancel and compare again; your unfinished work is retained.</Alert>
+    }
+    @if (Review.HasIncompleteConfiguration) {
+        <Alert AlertStyle="AlertStyle.Warning">
+            Your configuration has unfinished or invalid input. It stays in the editor, including its validation messages.
+            Keeping it can replace the saved execution settings after you correct it and Save.
+            <FormField Text="Keep my unfinished configuration locally">
+                <CheckBox TValue="bool" Value="Review.KeepIncompleteConfiguration" ValueChanged="KeepIncomplete" data-testid="capability-comparison-keep-input" />
+            </FormField>
+        </Alert>
+    }
+    <MergeFieldView TValue="string" Label="Name" Field="Review.Name" ShowUnchanged="false" Format="@(value => value)" Changed="Changed" />
+    <MergeFieldView TValue="string" Label="Description" Field="Review.Description.Field" ShowUnchanged="false" Format="@(value => value)" Changed="Changed" />
+    <TextBlock Value="Execution settings, trust, bindings and their stored extensions are reviewed together. Choosing a side keeps that complete configuration; no permissions are combined." />
+    <MergeFieldView TValue="CapabilityExecutionConfiguration" Label="Execution configuration" Field="Review.Configuration" ShowUnchanged="false"
+                    HasPendingInput="Review.HasIncompleteConfiguration" Format="Describe" Changed="Changed" />
+    <FormField Text="Combined tags"><TextBlock Value="@string.Join(", ", Review.Tags)" /></FormField>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public CapabilityAuthoringComparison Review { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private async Task KeepIncomplete(bool value) {
+        Review.KeepIncompleteConfiguration = value;
+        await Changed.InvokeAsync();
+    }
+
+    private static string Describe(CapabilityExecutionConfiguration value) {
+        using var draft = new CapabilityAuthoringDraft(new() {
+            Kind = value.Kind, Key = value.Key, EndpointOrPath = value.Endpoint, ConfigurationJson = value.Json, IsBuiltIn = value.IsBuiltIn
+        }, false);
+        var identity = $"{value.Kind}; key: {value.Key}; endpoint/path: {value.Endpoint}; built-in: {value.IsBuiltIn}";
+        if (draft.ConfigurationError is not null) {
+            return $"{identity}\nStored configuration needs explicit repair. Its values are retained privately.";
+        }
+        var details = value.Kind switch {
+            CapabilityKind.McpServer => $"Transport: {draft.Mcp.Transport}; hosted: {draft.Mcp.Hosted}; server: {draft.Mcp.ServerName}\nEndpoint: {draft.Mcp.Endpoint}\nCommand: {draft.Mcp.Command}\nArguments: {draft.Mcp.ArgumentsText}\nWorking directory: {draft.Mcp.WorkingDirectory}\nAllowed directories: {draft.Mcp.AllowedWorkingDirectoriesText}\nAllowed tools: {draft.Mcp.AllowedToolsText}\nApproval: {draft.Mcp.ApprovalMode}\nEnvironment bindings: {draft.Mcp.EnvironmentVariableBindingsText}\nHeader bindings: {draft.Mcp.HeaderBindingsText}",
+            CapabilityKind.Skill => $"Source: {draft.Skill.SkillSource}; root: {draft.Skill.SkillRoot}; registered service: {draft.Skill.RegisteredSkillServiceType}\nExternal roots: {draft.Skill.AllowedExternalRootsText}\nScript approval: {draft.Skill.ScriptApproval}; trust: {draft.Skill.ScriptTrustLevel}\nInline skill: {draft.Skill.InlineName}\n{draft.Skill.InlineDescription}\n{draft.Skill.InlineInstructions}",
+            CapabilityKind.Tool => $"Type: {draft.Tool.ToolKind}; runtime tool: {draft.Tool.RuntimeToolName}; implementation: {draft.Tool.ImplementationKey}\nOperations: {draft.Tool.OperationClassificationsText}; effects: {draft.Tool.SideEffectKind}; state-changing: {draft.Tool.IsStateChanging}; approval: {draft.Tool.RequiresApprovalByDefault}\nCommand: {draft.Tool.Command}\nArguments: {draft.Tool.ArgumentsText}\nWorking directory: {draft.Tool.WorkingDirectory}\nAllowed executables: {draft.Tool.AllowedExecutableNamesText}\nHTTP: {draft.Tool.HttpMethod} {draft.Tool.Endpoint}\nHeader bindings: {draft.Tool.HeaderBindingsText}\nProcess timeout/output limit: {draft.Tool.ProcessTimeoutSecondsText} / {draft.Tool.MaxOutputBytesText}; HTTP timeout/output limit: {draft.Tool.HttpTimeoutSecondsText} / {draft.Tool.MaxResponseBytesText}",
+            _ => "Stored extension configuration is retained privately."
+        };
+        return $"{identity}\n{details}";
+    }
+}

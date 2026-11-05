@@ -51,4 +51,40 @@ public sealed class PromptGalleryImportTests
         Assert.Equal(firstSnapshot.PromptVersionId, version.Id);
         Assert.Equal(1, version.VersionNumber);
     }
+
+    [Fact]
+    public async Task Existing_import_replacement_requires_its_original_stamp_and_never_overwrites_a_foreign_change() {
+        var factory = PromptGalleryTestSupport.CreateFactory(nameof(Existing_import_replacement_requires_its_original_stamp_and_never_overwrites_a_foreign_change));
+        var service = PromptGalleryTestSupport.CreateService(factory);
+        var request = new PromptGalleryImportRequest(PromptArtifactProvenance.WorkflowMigration, "original-source", "test-catalog",
+            new(null, null, null, "Original", "", PromptGalleryItemKind.FullPrompt, "", "Original content"), new("Initial import"));
+        var imported = (await service.ImportVersionAsync(request)).Value!;
+        var original = (await service.GetItemAsync(imported.PromptArtifactId)).Value!;
+        var changed = request with { Draft = request.Draft with { Content = "New source content" } };
+        var missing = await service.ImportVersionAsync(changed);
+        Assert.Contains(missing.Errors, error => error.Code == PromptGalleryErrorCodes.ImportExpectationRequired);
+        Assert.True((await service.SetFavoriteAsync(original.Id, true)).IsSuccess);
+        var stale = await service.ImportVersionAsync(changed with { ExpectedUpdatedAtUtc = original.UpdatedAtUtc });
+        Assert.Contains(stale.Errors, error => error.Code == PromptGalleryErrorCodes.ConcurrencyConflict);
+        var current = (await service.GetItemAsync(original.Id)).Value!;
+        Assert.Equal("Original content", current.DraftContent);
+        Assert.True(current.IsFavorite);
+        var accepted = await service.ImportVersionAsync(changed with { ExpectedUpdatedAtUtc = current.UpdatedAtUtc });
+        Assert.True(accepted.IsSuccess);
+        Assert.Equal("New source content", (await service.GetItemAsync(original.Id)).Value!.DraftContent);
+    }
+
+    [Fact]
+    public async Task Exact_import_replay_is_read_only_and_keeps_the_original_witness() {
+        var factory = PromptGalleryTestSupport.CreateFactory(nameof(Exact_import_replay_is_read_only_and_keeps_the_original_witness));
+        var service = PromptGalleryTestSupport.CreateService(factory);
+        var request = new PromptGalleryImportRequest(PromptArtifactProvenance.WorkflowMigration, "unchanged-source", "test-catalog",
+            new(null, null, null, "Original", "", PromptGalleryItemKind.FullPrompt, "", "Content"), new("Initial import"));
+        var imported = (await service.ImportVersionAsync(request)).Value!;
+        var before = (await service.GetItemAsync(imported.PromptArtifactId)).Value!;
+        Assert.True((await service.ImportVersionAsync(request)).IsSuccess);
+        var after = (await service.GetItemAsync(imported.PromptArtifactId)).Value!;
+        Assert.Equal(before.UpdatedAtUtc, after.UpdatedAtUtc);
+        Assert.Equal(before.CurrentVersionNumber, after.CurrentVersionNumber);
+    }
 }

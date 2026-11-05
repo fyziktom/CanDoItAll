@@ -283,7 +283,8 @@ public sealed partial class ProjectStructureAgentService(
         Guid projectId,
         ProjectStructureNodeCreateInput request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ProjectStructureManagedAssetCreationPolicy.EnsureGenericNodeCreateAllowed(
             request.ObjectType,
@@ -294,14 +295,15 @@ public sealed partial class ProjectStructureAgentService(
             request,
             agent,
             allowCanonicalTask: false,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     internal Task<ProjectStructureNodeSummary> CreateCanonicalTaskNodeAsync(
         Guid projectId,
         ProjectStructureNodeCreateInput request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         if (!ProjectStructureCanonicalTaskMutationPolicy.IsTask(
                 request.ObjectType,
@@ -316,7 +318,7 @@ public sealed partial class ProjectStructureAgentService(
             request,
             agent,
             allowCanonicalTask: true,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     private async Task<ProjectStructureNodeSummary> CreateNodeCoreAsync(
@@ -324,7 +326,8 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureNodeCreateInput request,
         ProjectStructureAgentContext agent,
         bool allowCanonicalTask,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         EnsureValidMediaPayload(request.Media);
         ProjectStructureSvgAssetValidator.Validate(request.Media);
@@ -382,7 +385,7 @@ public sealed partial class ProjectStructureAgentService(
                             ProcessMutationAdmission = agent.ProcessMutationAdmission,
                             AgentMutationAdmission = agent.AgentMutationAdmission
                     },
-                    cancellationToken);
+                    cancellationToken, authorizeCommit);
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest, createAdmission);
             },
             cancellationToken);
@@ -933,7 +936,8 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureLinkInput request,
         ProjectStructureAgentContext agent,
         bool allowCanonicalTaskResourceLink,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ValidateLinkInput(request);
         return await leaseService.RunWithProjectMutationLeaseAsync(
@@ -963,7 +967,7 @@ public sealed partial class ProjectStructureAgentService(
                         request.SourceNodeId,
                         request.TargetNodeId,
                         request.Kind,
-                        cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission);
+                        cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, authorizeCommit);
                 }
                 else
                 {
@@ -1088,7 +1092,8 @@ public sealed partial class ProjectStructureAgentService(
         string sourceTaskNodeId,
         ProjectStructureProcessDefinitionLinkInput request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         if (request.ProcessDefinitionId == Guid.Empty)
         {
@@ -1108,7 +1113,7 @@ public sealed partial class ProjectStructureAgentService(
                 request.LeaseToken),
             agent,
             allowCanonicalTaskResourceLink: true,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     private async Task EnsureResourceLinkAllowedAsync(
@@ -1322,6 +1327,10 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        if (request.ExpectedState is { } state) {
+            agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+                state, projectId, nodeId, agent.ExpectedProjectAdmission) };
+        }
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -1333,7 +1342,7 @@ public sealed partial class ProjectStructureAgentService(
                     projectId,
                     nodeId,
                     request.CommandKind,
-                    cancellationToken, agent);
+                    cancellationToken, agent, expectedState: request.ExpectedState);
                 if (artifact is null)
                 {
                     throw RejectedBeforeWrite(

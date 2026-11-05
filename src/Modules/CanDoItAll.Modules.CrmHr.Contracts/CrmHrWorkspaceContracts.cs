@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using System.Security.Cryptography;
@@ -127,6 +128,8 @@ public sealed class PartyEditorModel
     }
 }
 
+public sealed record PartySaveReceipt(Guid PartyId, PartyEditorModel Accepted);
+
 public sealed record PartySummaryModel(
     Guid Id,
     string DisplayName,
@@ -205,7 +208,9 @@ public sealed record CrmOpportunityDetailModel(
     string LinkedProjectName,
     IReadOnlyList<CrmOpportunityPartyLinkItemModel> Parties,
     IReadOnlyList<OpportunityStageHistoryItemModel> StageHistory,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc) {
+    public ProjectWriteAdmission? LinkedProjectAdmission { get; init; }
+}
 
 public sealed class CrmOpportunityPartyLinkEditorModel
 {
@@ -221,6 +226,7 @@ public sealed class CrmOpportunityPartyLinkEditorModel
 
 public sealed class CrmOpportunityEditorModel
 {
+    public ProjectWriteAdmission? LinkedProjectAdmission { get; set; }
     public Guid? Id { get; set; }
 
     public DateTimeOffset? ExpectedUpdatedAtUtc { get; set; }
@@ -286,6 +292,8 @@ public sealed class CrmOpportunityConversionEditorModel
 
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; set; }
 
+    public CrmOpportunityConversionProjectBasis? ExpectedProjectBasis { get; set; }
+
     public string ProjectName { get; set; } = string.Empty;
 
     public string ProjectDescription { get; set; } = string.Empty;
@@ -296,18 +304,29 @@ public sealed class CrmOpportunityConversionEditorModel
 
     public string LastChangedBy { get; set; } = "crm-hr-ui";
 
-    public CrmOpportunityConversionEditorModel Snapshot() => (CrmOpportunityConversionEditorModel)MemberwiseClone();
+    public CrmOpportunityConversionEditorModel Snapshot() {
+        var snapshot = (CrmOpportunityConversionEditorModel)MemberwiseClone();
+        snapshot.ExpectedProjectBasis = ExpectedProjectBasis is { } basis
+            ? basis with { Assignments = basis.Assignments.ToArray(), PartyNames = new Dictionary<Guid, string>(basis.PartyNames) } : null;
+        return snapshot;
+    }
 }
 
 public sealed record CrmOpportunityConversionResult(
     Guid OpportunityId,
     Guid ProjectId,
-    bool CreatedNewProject);
+    bool CreatedNewProject) {
+    public ProjectWriteAdmission? ProjectAdmission { get; init; }
+    public string ProjectName { get; init; } = string.Empty;
+    public DateTimeOffset? OpportunityUpdatedAtUtc { get; init; }
+}
 
 public sealed record CrmAccountConnectionProjectItemModel(
     Guid Id,
     string Name,
-    ProjectStatus Status);
+    ProjectStatus Status) {
+    public ProjectWriteAdmission? Admission { get; init; }
+}
 
 public sealed record CrmAccountConnectedRecordItemModel(
     Guid Id,
@@ -363,6 +382,10 @@ public sealed record CrmInteractionDetailModel(
     string Subject,
     Guid? RelatedOpportunityId);
 
+public sealed record CrmAccountProfileObservation(Guid? ProfileId, DateTimeOffset? ProfileUpdatedAtUtc, DateTimeOffset PartyUpdatedAtUtc);
+
+public sealed record CrmAccountProfileSaveReceipt(Guid AccountPartyId, CrmAccountProfileEditorModel Accepted);
+
 public sealed class CrmAccountProfileEditorModel
 {
     public Guid? Id { get; set; }
@@ -372,6 +395,7 @@ public sealed class CrmAccountProfileEditorModel
     public string ConstraintNotes { get; set; } = string.Empty;
     public string TimingRiskNotes { get; set; } = string.Empty;
     public string LastChangedBy { get; set; } = "crm-hr-ui";
+    public CrmAccountProfileObservation? Original { get; set; }
 
     // An independent submission; the model holds no mutable descendants.
     public CrmAccountProfileEditorModel Snapshot() => (CrmAccountProfileEditorModel)MemberwiseClone();
@@ -385,12 +409,14 @@ public sealed class CrmAccountConnectionEditorModel
     public bool IsPrimary { get; set; }
     public string Notes { get; set; } = string.Empty;
     public List<Guid> ProjectIds { get; set; } = [];
+    public Dictionary<Guid, ProjectWriteAdmission> ProjectAdmissions { get; set; } = [];
 
     // An independent submission: its own lists and nested inputs, so later edits of the draft cannot reach it.
     public CrmAccountConnectionEditorModel Snapshot()
     {
         var snapshot = (CrmAccountConnectionEditorModel)MemberwiseClone();
         snapshot.ProjectIds = ProjectIds.ToList();
+        snapshot.ProjectAdmissions = new(ProjectAdmissions);
         return snapshot;
     }
 }
@@ -417,6 +443,8 @@ public sealed class CrmInteractionEditorModel
     }
 }
 
+public sealed record CrmInteractionAppendReceipt(Guid AccountPartyId, Guid InteractionId, CrmInteractionEditorModel Accepted);
+
 public sealed record CrmAccountWorkspaceModel(
     Guid AccountPartyId,
     string DisplayName,
@@ -429,7 +457,9 @@ public sealed record CrmAccountWorkspaceModel(
     CrmAccountProfileEditorModel Profile,
     IReadOnlyList<CrmAccountConnectedRecordItemModel> ConnectedRecords,
     IReadOnlyList<PartyOptionModel> ConnectedParties,
-    int OpportunityCount);
+    int OpportunityCount) {
+    public CrmAccountConnectionsObservation? ConnectionsOriginal { get; init; }
+}
 
 public sealed record WorkforceProfileSummaryModel(Guid Id, Guid PartyId, WorkforceKind WorkforceKind, string JobTitle, string Status);
 
@@ -476,6 +506,9 @@ public sealed record WorkforceListItemModel(
 /// </summary>
 public sealed class WorkforceProfileEditorModel
 {
+    [Description("Exact owner-read original for this row; retain it unchanged for conditional replacement. Null is permitted only for create-only intent and never authorizes overwriting an existing row.")]
+    public WorkforceProfileObservation? Original { get; set; }
+
     /// <summary>
     /// Identifier of the workforce profile; null when the party has no saved profile. It is not the party identifier,
     /// and the profile save finds the profile by <c>partyId</c> instead.
@@ -701,6 +734,8 @@ public sealed record SkillCatalogItemModel(
 
 public sealed class SkillDefinitionEditorModel
 {
+    public SkillCatalogItemModel? Original { get; set; }
+
     public Guid? Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
@@ -734,10 +769,15 @@ public sealed record PartySkillItemModel(
     int YearsExperience,
     string CertificationStatus,
     DateOnly? LastValidatedOn,
-    string Notes);
+    string Notes) {
+    [Description("Exact owner-read original for this row; retain it unchanged for conditional replacement. Null is permitted only for create-only intent and never authorizes overwriting an existing row.")]
+    public PartySkillObservation? Original { get; init; }
+}
 
 public sealed class PartySkillEditorModel
 {
+    public PartySkillObservation? Original { get; set; }
+
     public Guid? Id { get; set; }
     public Guid PartyId { get; set; }
     public Guid SkillId { get; set; }
@@ -783,10 +823,18 @@ public sealed record CapacityBlockItemModel(
     string RelatedProjectName,
     string Notes,
     bool IsActive,
-    bool IsFuture);
+    bool IsFuture) {
+    [Description("Exact owner-read original for this row; retain it unchanged for conditional replacement. Null is permitted only for create-only intent and never authorizes overwriting an existing row.")]
+    public CapacityBlockObservation? Original { get; init; }
+    [Description("Owner-issued lifetime observation for the selected related project. Required with that project identifier; null means no related project. This observation does not grant project permissions.")]
+    public ProjectWriteAdmission? RelatedProjectAdmission { get; init; }
+}
 
 public sealed class CapacityBlockEditorModel
 {
+    public CapacityBlockObservation? Original { get; set; }
+    public ProjectWriteAdmission? RelatedProjectAdmission { get; set; }
+
     public Guid? Id { get; set; }
     public Guid PartyId { get; set; }
     public CapacityBlockKind BlockKind { get; set; } = CapacityBlockKind.Leave;
@@ -883,6 +931,7 @@ public sealed record WorkforceCapacityWorkspaceModel(
 public sealed class StaffingRequestEditorModel
 {
     public Guid? Id { get; set; }
+    public StaffingRequestObservation? Original { get; set; }
     public Guid? ProjectId { get; set; }
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; set; }
 
@@ -921,7 +970,9 @@ public sealed record StaffingRequestItemModel(
     decimal AllocationPercent,
     StaffingRequestStatus Status,
     string Notes,
-    Guid? ProjectLifetimeId = null);
+    Guid? ProjectLifetimeId = null) {
+    public StaffingRequestObservation? Original { get; init; }
+}
 
 public sealed record StaffingCandidateItemModel(
     Guid PartyId,
@@ -1009,6 +1060,7 @@ public sealed class AiCapabilityEditorModel
 
 public sealed class AiAgentProfileEditorModel
 {
+    public AiAgentProfileObservation? Original { get; set; }
     public Guid? Id { get; set; }
     public Guid PartyId { get; set; }
     public Guid? ProviderProfileId { get; set; }

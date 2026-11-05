@@ -11,6 +11,13 @@ identity before notifying the host; later edits remain in the document. A baseli
 of the complete native definition preserves fields that the editor does not change.
 Invalid raw JSON, GUIDs, numbers and route indices remain visible.
 
+For an existing definition, the native host supplies a controlled current-read operation
+and a metadata head hint. Check for updates opens a typed original/draft/current review.
+Applying choices updates the local draft and its original version; Save remains a separate
+action. Graphs are chosen as complete documents, preserving opaque settings. Choosing the
+local graph also retains unfinished raw input. A changed draft, a newer head hint or a
+failed reread invalidates the comparison. Unknown save outcomes remain non-retryable.
+
 `WorkflowRouteFields`, `WorkflowExecutionPolicyEditor`, the provider/model selector
 and image settings surface share the actual forms. The native settings slot keeps
 renderer key, owner, trust and schema checks. No provider, database or runtime
@@ -23,6 +30,7 @@ Unknown effect acknowledgements never enable an automatic retry.
 
 The existing `Workflows.UI` five-tab shell remains separate and lightweight. This
 library consumes its catalog/result presentation; it does not introduce a reverse
-reference. The evaluated sibling-source closure is 17 projects; the shell remains
+reference. Comparison reuses the existing lightweight Editing.UI library and its pure
+Editing dependency. The prior WF1 sibling-source closure was 17 projects; the shell remains
 the same four projects. See [WF1 evidence](../../../docs/architecture/workflow-authoring-ui-wf1.md)
 for qualified validation and remaining work.

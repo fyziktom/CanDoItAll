@@ -35,6 +35,17 @@
         <Stack GapScale="LayoutGap.Medium">
             @SecondaryNavigation
 
+            @if (View.RecordsChanged || View.EditingRequiresAttention) {
+                <Alert AlertStyle="@(View.EditingRequiresAttention ? AlertStyle.Warning : AlertStyle.Info)" data-testid="crmhr-assignments-editing-status">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock Value="@(View.RecordsChanged ? "Project assignments changed. Refresh the saved records; open drafts are retained." : View.EditingMessage)" />
+                        <Button Text="Refresh saved records" ButtonStyle="ButtonStyle.Light" Click="View.RefreshRecordsAsync" data-testid="crmhr-assignments-refresh-records" />
+                        <AssignmentUnknownRecovery IsUnknown="View.HasUnknownOperation" CanDiscard="View.CanDiscardReviewedUnknown"
+                            Refresh="View.RefreshRecordsAsync" Discard="View.DiscardReviewedUnknownAsync" />
+                    </Stack>
+                </Alert>
+            }
+
             <AssignmentsProjectContextBar SelectedProject="View.SelectedProject"
                                           SelectedProjectId="View.SelectedProjectId"
                                           SelectedProjectIdChanged="View.HandleProjectChanged"
@@ -48,7 +59,7 @@
             <Tabs @key="View.WorkspaceTabsKey"
                   SelectedIndex="@((int)View.SelectedWorkspaceTab)"
                   SelectedIndexChanged="View.HandleWorkspaceTabChangedAsync"
-                  RenderMode="TabRenderMode.Server"
+                  RenderMode="TabRenderMode.Client"
                   Variant="TabsVariant.WorkspaceSecondary"
                   BorderMode="TabsBorderMode.Soft"
                   OverflowMode="TabsOverflowMode.Wrap"
@@ -64,7 +75,7 @@
                                       Title="Loading the bounded schedule window"
                                       Description="Only the current project's dated allocation view is being loaded." />
                     }
-                    else
+                    else if (View.HasDisplayed(AssignmentSelectionData.ScheduleAssignments))
                     {
                         <ProjectAssignmentResourceGanttPanel ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
                                                              Assignments="View.ScheduleAssignments"
@@ -82,9 +93,11 @@
                                       Title="Loading relationship records"
                                       Description="The selected relationship page is being loaded from the server." />
                     }
-                    else
+                    else if (View.HasDisplayed(AssignmentSelectionData.RelationshipAssignments))
                     {
-                        <ProjectPartyAssignmentPanel ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
+                        <ProjectPartyAssignmentPanel Recovery="@(RecoveryActions("crmhr-assignment", AssignmentEditorKind.Relationship))" SaveDisabled="View.RelationshipSaveDisabled" WritesDisabled="View.WritesDisabled" StatusMessage="@View.EditingMessage"
+                                                     HasChanges="@(() => View.RelationshipDirty)" RequestDiscard="@(() => View.RequestDiscardAsync(AssignmentEditorKind.Relationship))"
+                                                     InputChanged="View.AssignmentInputChangedAsync" ReviewPrimary="View.ReviewRelationshipPrimaryAsync" ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
                                                      CanCreate="@(View.SelectedProjectId.HasValue && !View.IsProjectContextLoading)"
                                                      Draft="View.DraftAssignment"
                                                      Assignments="View.RelationshipAssignments"
@@ -116,12 +129,16 @@
                                       Title="Loading project demand"
                                       Description="Only this tab's staffing records are being loaded." />
                     }
-                    else
+                    else if (View.HasDisplayed(AssignmentSelectionData.StaffingRequests))
                     {
-                        <StaffingRequestEditor ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
+                        <StaffingRequestEditor Recovery="@(RecoveryActions("crmhr-staffing-request", AssignmentEditorKind.Staffing))" SaveDisabled="View.StaffingSaveDisabled" WritesDisabled="View.WritesDisabled" StatusMessage="@View.EditingMessage"
+                                                     HasChanges="@(() => View.StaffingDirty)" RequestDiscard="@(() => View.RequestDiscardAsync(AssignmentEditorKind.Staffing))"
+                                                     InputChanged="View.StaffingInputChangedAsync" ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
                                                CanCreate="@(View.SelectedProjectId.HasValue && !View.IsProjectContextLoading)"
                                                Draft="View.StaffingRequestDraft"
                                                SkillCatalog="View.SkillCatalog"
+                                               RefreshSkills="View.RefreshSkillCatalogAsync"
+                                               RefreshSkillsDisabled="@View.IsLoading(AssignmentSelectionData.SkillCatalog)"
                                                Requests="View.StaffingRequests"
                                                PageIndex="View.StaffingRequestPageIndex"
                                                PageSize="CrmHrAssignmentsWorkspacePresentation.StaffingPageSize"
@@ -148,9 +165,11 @@
                                       Title="Loading allocation records"
                                       Description="The selected allocation page is being loaded from the server." />
                     }
-                    else
+                    else if (View.HasDisplayed(AssignmentSelectionData.AllocationAssignments))
                     {
-                        <ProjectAllocationEditor Draft="View.AllocationDraft"
+                        <ProjectAllocationEditor Recovery="@(RecoveryActions("crmhr-allocation", AssignmentEditorKind.Allocation))" SaveDisabled="View.AllocationSaveDisabled" WritesDisabled="View.WritesDisabled" StatusMessage="@View.EditingMessage"
+                                                     HasChanges="@(() => View.AllocationDirty)" RequestDiscard="@(() => View.RequestDiscardAsync(AssignmentEditorKind.Allocation))"
+                                                     InputChanged="View.AllocationInputChangedAsync" ReviewPrimary="View.ReviewAllocationPrimaryAsync" Draft="View.AllocationDraft"
                                                  ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
                                                  CanCreate="@(View.SelectedProjectId.HasValue && !View.IsProjectContextLoading)"
                                                  Allocations="View.AllocationAssignments"
@@ -189,3 +208,21 @@
         </Stack>
     </ChildContent>
 </PageScaffold>
+<AssignmentReviewDialog Disabled="View.WritesDisabled" Cancelled="View.RequestRender" State="View.Comparisons" Skills="View.SkillCatalog" Apply="View.ApplyComparisonAsync" Refresh="@(() => View.Comparisons.Editor is { } editor ? View.CompareAsync(editor) : Task.CompletedTask)" />
+
+@code {
+    private RenderFragment RecoveryActions(string prefix, AssignmentEditorKind editor) => @<Stack GapScale="LayoutGap.Small">
+        <AssignmentUnknownRecovery IsUnknown="View.HasUnknownOperation" CanDiscard="View.CanDiscardReviewedUnknown"
+            Refresh="View.RefreshRecordsAsync" Discard="View.DiscardReviewedUnknownAsync" TestIdPrefix="@prefix" />
+        @if (editor == AssignmentEditorKind.Staffing ? View.StaffingRequestDraft.Id.HasValue :
+            editor == AssignmentEditorKind.Relationship ? View.DraftAssignment.AssignmentId.HasValue : View.AllocationDraft.AssignmentId.HasValue) {
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Compare saved changes" ButtonStyle="ButtonStyle.Light" Disabled="@(View.WritesDisabled || View.Comparisons.Reading)"
+                    Click="@(() => View.CompareAsync(editor))" data-testid="@($"{prefix}-compare")" />
+                @if (View.Comparisons.CanUndoFor(editor)) {
+                    <Button Text="Undo applied comparison" ButtonStyle="ButtonStyle.Light" Click="View.UndoComparisonAsync" data-testid="@($"{prefix}-undo-comparison")" />
+                }
+            </Cluster>
+        }
+    </Stack>;
+}

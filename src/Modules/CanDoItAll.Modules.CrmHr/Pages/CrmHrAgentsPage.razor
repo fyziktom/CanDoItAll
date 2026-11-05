@@ -1,14 +1,19 @@
 @using static CanDoItAll.CrmHr.UI.Agents.CrmHrAgentsWorkspacePresentation
 @page "/crm-hr/agents"
 @implements IAsyncDisposable
+@using CanDoItAll.Editing
 @inject AiAgentService AiAgentService
 @inject IAiAgentDirectoryQueryService AiAgentDirectoryQueryService
 @inject NavigationManager Navigation
 @inject IAppNavigationHistory History
 @inject NotificationService NotificationService
+@inject CrmHrChanges Changes
+@inject IEditingUiAccess EditingAccess
+@inject ILogger<CrmHrAgentsPage> Logger
 
 <PageTitle>CRM Agents</PageTitle>
 
+<CrmHrLiveCatalog Owner="EditingOwner.CrmAiStewardProfile" Changed="RefreshCatalog" Observed="ObserveAgentChanges">
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
@@ -21,6 +26,7 @@
         <AgentRecruitingEvidencePanel CandidateAgentId="technicalAgentId" />
     </RecruitingEvidence>
 </CrmHrAgentsWorkspaceSurface>
+</CrmHrLiveCatalog>
 
 @code {
     // Triggers only: the binding reads the complete location, so these values are never parsed here.
@@ -55,6 +61,9 @@
     private bool isDisposed;
     private long loadGeneration;
     private long directoryLoadGeneration;
+    private long catalogRefreshVersion;
+    private long recordRevision;
+    private bool recordOutdated;
     private CancellationTokenSource? loadCancellation;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
 
@@ -97,16 +106,37 @@
         return LoadAsync(change.Current.PartyId);
     }
 
-    private async Task LoadAsync(Guid? requestedPartyId)
-    {
+    private void RefreshCatalog() => catalogRefreshVersion++;
+
+    private void ObserveAgentChanges(EditingChangeBatch batch) {
+        if (isDisposed || !isRecordDialogOpen || url.State.PartyId is not Guid id) {
+            return;
+        }
+        if (batch.RequiresResync || selectedWorkspace is null || batch.Changes.Any(change =>
+                change.Resource.ResourceId == id || change.Resource.ResourceId == selectedWorkspace.Profile.OwnerPartyId)) {
+            recordRevision++;
+            recordOutdated = true;
+            agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        }
+    }
+
+    private Task RefreshRecordAsync() => isWorkspaceLoading || url.State.PartyId is not Guid id
+        ? Task.CompletedTask : LoadAsync(id, retainCurrent: true);
+
+    private async Task LoadAsync(Guid? requestedPartyId, bool retainCurrent = false) {
         var expectedQueryPartyId = requestedPartyId;
         var currentGeneration = Interlocked.Increment(ref loadGeneration);
+        var observedRevision = recordRevision;
+        var keepCurrent = retainCurrent && requestedPartyId is Guid id && selectedWorkspace?.PartyId == id;
         var cancellation = new CancellationTokenSource();
         var supersededLoad = Interlocked.Exchange(ref loadCancellation, cancellation);
         supersededLoad?.Cancel();
 
-        selectedDirectoryItem = null;
-        selectedWorkspace = null;
+        if (!keepCurrent) {
+            selectedDirectoryItem = null;
+            selectedWorkspace = null;
+        }
+        recordOutdated = keepCurrent;
         isRecordDialogOpen = requestedPartyId.HasValue;
         isWorkspaceLoading = requestedPartyId.HasValue;
         agentChatContextAccessState = requestedPartyId.HasValue
@@ -122,10 +152,15 @@
 
         try
         {
-            var workspaceTask = GetAgentWorkspaceAsync(requestedPartyId.Value, cancellation.Token);
-            var directoryItemTask = GetAgentDirectoryItemAsync(requestedPartyId.Value, cancellation.Token);
+            using var grant = await EditingAccess.OpenAsync(new(Changes.Scope, EditingOwner.CrmAiStewardProfile), cancellation.Token);
+            using var reading = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token, grant.Lifetime);
+            await EditingAccess.ValidateAsync(grant, write: false, reading.Token);
+            var workspaceTask = GetAgentWorkspaceAsync(requestedPartyId.Value, reading.Token);
+            var directoryItemTask = GetAgentDirectoryItemAsync(requestedPartyId.Value, reading.Token);
+            await Task.WhenAll(workspaceTask, directoryItemTask);
             var loadedWorkspace = await workspaceTask;
             var loadedDirectoryItem = await directoryItemTask;
+            await EditingAccess.ValidateAsync(grant, write: false, reading.Token);
 
             if (!IsCurrentLoad(currentGeneration, expectedQueryPartyId))
             {
@@ -157,8 +192,9 @@
             selectedWorkspace = loadedWorkspace;
             selectedDirectoryItem = loadedDirectoryItem;
             isRecordDialogOpen = loadedWorkspace is not null && loadedDirectoryItem is not null;
+            recordOutdated = observedRevision != recordRevision;
             agentChatContextAccessState = isRecordDialogOpen
-                ? AgentChatContextAccessState.Ready
+                ? recordOutdated ? AgentChatContextAccessState.Loading : AgentChatContextAccessState.Ready
                 : AgentChatContextAccessState.Failed;
             if (!isRecordDialogOpen)
             {
@@ -171,13 +207,20 @@
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
         }
-        catch
-        {
-            if (IsCurrentLoad(currentGeneration, expectedQueryPartyId))
-            {
-                isRecordDialogOpen = false;
+        catch (Exception exception) {
+            if (IsCurrentLoad(currentGeneration, expectedQueryPartyId)) {
+                var denied = exception is UnauthorizedAccessException or OperationCanceledException;
+                if (denied || !keepCurrent) {
+                    selectedWorkspace = null;
+                    selectedDirectoryItem = null;
+                }
+                isRecordDialogOpen = !denied && keepCurrent;
+                recordOutdated = !denied && keepCurrent;
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
-                throw;
+                Logger.LogWarning("Agent workspace read failed for {PartyId} after {FailureType}.", requestedPartyId, exception.GetType().Name);
+                NotificationService.Warning("Agent information unavailable", denied
+                    ? "Current CRM access is required. Reopen this workspace with current access."
+                    : "The current agent information could not be read. Refresh the saved information or reopen the record.");
             }
         }
         finally
@@ -224,13 +267,17 @@
         isListLoading = true;
         try
         {
+            using var grant = await EditingAccess.OpenAsync(new(Changes.Scope, EditingOwner.CrmAiStewardProfile), cancellationToken);
+            using var reading = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, grant.Lifetime);
+            await EditingAccess.ValidateAsync(grant, write: false, reading.Token);
             var result = await QueryAgentDirectoryAsync(
                 new AiAgentDirectoryQuery(
                     request.SearchText,
                     MapValidationFilter(request.Filter),
                     request.PageIndex,
                     request.PageSize),
-                cancellationToken);
+                reading.Token);
+            await EditingAccess.ValidateAsync(grant, write: false, reading.Token);
             cancellationToken.ThrowIfCancellationRequested();
             if (generation != Volatile.Read(ref directoryLoadGeneration) || isDisposed)
             {

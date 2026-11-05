@@ -1,6 +1,6 @@
 @{ var rendered = State; }
 
-<PageScaffold MaxWidthClass="max-w-full">
+<PageScaffold MaxWidthClass="max-w-full" FillHeight="FillHeight">
     <Header>
         <PageHeader Eyebrow="AgentFramework"
                     Title="Integrated technical agent runtime"
@@ -112,4 +112,6 @@
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public bool FillHeight { get; set; }
 }

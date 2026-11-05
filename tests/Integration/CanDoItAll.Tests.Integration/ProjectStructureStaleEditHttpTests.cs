@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructureStaleEditHttpTests {
+public sealed partial class ProjectStructureStaleEditHttpTests {
     [Fact]
     public async Task GraphPhantomLink_BlocksStaleCascadeDelete() {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();

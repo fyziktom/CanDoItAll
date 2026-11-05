@@ -1,0 +1,91 @@
+@using System.Globalization
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+
+<Dialog IsOpen="@(State.Editor is not null)" Title="Compare saved changes" Size="ModalSize.Full" DenseChrome="true"
+    CloseOnBackdrop="false" OnClose="Cancel" TestId="crmhr-assignment-review-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            <TextBlock Value="Compare the original, your draft and the current saved record. Applying updates your draft; Save remains a separate action." />
+            @if (State.Reading) {
+                <TextBlock Value="Reading the current saved record…" />
+            }
+            @if (State.IsStale) {
+                <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="The saved records or your input changed. Refresh the comparison; choices for unchanged values are retained." /></Alert>
+            }
+            @if (State.HasPendingSelection) {
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Finish or cancel the pending selection before applying a comparison." /></Alert>
+            }
+            @if (State.HasPendingInput && !State.HasPendingSelection) {
+                <Alert AlertStyle="AlertStyle.Info">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock Value="Incomplete number or date input stays in the underlying form. Correct it there to choose a saved value for that field, or explicitly retain it while combining the other fields." />
+                        <Cluster Gap="LayoutGap.Small">
+                            <CheckBox TValue="bool" @bind-Value="State.KeepIncompleteInput" aria-label="Keep incomplete local input" />
+                            <TextBlock Value="Keep my incomplete local input" />
+                        </Cluster>
+                    </Stack>
+                </Alert>
+            }
+            @if (State.Assignment is { } assignment) {
+                <MergeFieldView TValue="Guid" Label="Assigned party" Field="assignment.Party" Format="@(value => State.PartyName(value))" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="Guid?" Label="Affiliation" Field="assignment.Affiliation" Format="@(value => value is { } id ? $"Affiliation {id:N}" : "None")" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="ProjectPartyAssignmentRole" Label="Role" Field="assignment.Role" Format="@(value => value.ToString())" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="string" Label="Task scope" Field="assignment.Node" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="bool" Label="Primary assignment" Field="assignment.Primary" Format="@(value => value.ToString())" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="decimal?" Label="Allocation %" Field="assignment.Allocation" Format="@(value => value?.ToString(CultureInfo.InvariantCulture) ?? "None")" HasPendingInput="@State.IsPending(AssignmentField.Allocation)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="DateOnly?" Label="Start date (UTC)" Field="assignment.Start" Format="@(value => value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "None")" HasPendingInput="@State.IsPending(AssignmentField.Start)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="DateOnly?" Label="End date (UTC)" Field="assignment.End" Format="@(value => value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "None")" HasPendingInput="@State.IsPending(AssignmentField.End)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="string" Label="Source" Field="assignment.Source" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="string" Label="Notes" Field="assignment.Notes" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged">
+                    <ResultEditor Context="text"><TextArea Value="@text" Rows="4" Immediate="true" ValueChanged="@(value => assignment.Notes.SetResult(value))" aria-label="Merged assignment notes" /></ResultEditor>
+                </MergeFieldView>
+                @RetainedNotes(assignment.RetainedNotes, assignment.Notes)
+            }
+            @if (State.Staffing is { } staffing) {
+                <MergeFieldView TValue="string" Label="Request title" Field="staffing.Title" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="string" Label="Role" Field="staffing.Role" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="Guid?" Label="Requested by" Field="staffing.Requester" Format="@(value => State.PartyName(value))" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="Guid?" Label="Delivery unit" Field="staffing.DeliveryUnit" Format="@(value => State.PartyName(value))" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="DateOnly?" Label="Start date (UTC)" Field="staffing.Start" Format="@(value => value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "None")" HasPendingInput="@State.IsPending(StaffingField.Start)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="DateOnly?" Label="End date (UTC)" Field="staffing.End" Format="@(value => value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "None")" HasPendingInput="@State.IsPending(StaffingField.End)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="decimal" Label="Allocation %" Field="staffing.Allocation" Format="@(value => value.ToString(CultureInfo.InvariantCulture))" HasPendingInput="@State.IsPending(StaffingField.Allocation)" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="StaffingRequestStatus" Label="Status" Field="staffing.Status" Format="@(value => value.ToString())" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView TValue="string" Label="Notes" Field="staffing.Notes" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged">
+                    <ResultEditor Context="text"><TextArea Value="@text" Rows="4" Immediate="true" ValueChanged="@(value => staffing.Notes.SetResult(value))" aria-label="Merged staffing notes" /></ResultEditor>
+                </MergeFieldView>
+                @RetainedNotes(staffing.RetainedNotes, staffing.Notes)
+                <FormField Text="Combined required skills"><TextBlock Value="@string.Join(", ", staffing.Skills.Select(SkillName))" /></FormField>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="crmhr-assignment-review-cancel" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="State.Reading" Click="Refresh" data-testid="crmhr-assignment-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(Disabled || !State.CanApply)" Click="Apply" data-testid="crmhr-assignment-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public AssignmentComparisons State { get; set; } = default!;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public IReadOnlyList<SkillCatalogItemModel> Skills { get; set; } = [];
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback Apply { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    private async Task Cancel() {
+        State.Cancel();
+        await Cancelled.InvokeAsync();
+    }
+    private RenderFragment RetainedNotes(string? retained, MergeField<string> field) => @<Stack GapScale="LayoutGap.Small">
+        @if (retained is { } text && (!field.IsResolved || field.Result != text)) {
+            <FormField Text="Your previous comparison text"><TextArea Value="@text" Rows="3" Disabled="true" /></FormField>
+            <Button Text="Use my previous text" ButtonStyle="ButtonStyle.Light" Click="@(() => field.SetResult(text))" />
+        }
+    </Stack>;
+    private string SkillName(Guid id) => $"{Skills.FirstOrDefault(skill => skill.Id == id)?.Name ?? "Unavailable skill"} ({id.ToString("N")[..8]})";
+}

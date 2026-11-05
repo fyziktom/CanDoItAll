@@ -8,6 +8,7 @@ public sealed class ProjectStructureImageAuthority(ProjectWriteAdmission project
     public long DatabaseGeneration { get; } = databaseGeneration;
     public string? ActorId { get; } = actorId;
     public bool IsRevoked => Volatile.Read(ref revoked) != 0;
+    internal Func<CancellationToken, ValueTask>? AuthorizeWrite { get; set; }
     public void Revoke() => Interlocked.Exchange(ref revoked, 1);
 }
 

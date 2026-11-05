@@ -8,7 +8,8 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistenceDbContext> factory,
     CoordinatedDatabaseTransaction transactions, IProcessAuthoringAdmissionPolicy admissions, TimeProvider clock,
-    DbContextOptions<ProcessPersistenceDbContext>? options = null) : IProcessAuthoringStore {
+    DbContextOptions<ProcessPersistenceDbContext>? options = null,
+    IProcessAuthoringCommitObserver? changes = null) : IProcessAuthoringStore {
     public async Task RequireLaunchableAsync(ProcessExecutableDefinitionClosure definitions, bool underMutationGate, CancellationToken cancellationToken = default) {
         ProcessAuthoringAddress lookup = new(definitions.DatabaseProfileId, definitions.ProjectId, definitions.ProjectLifetimeId, definitions.DefinitionKey);
         lookup.Validate();
@@ -183,6 +184,9 @@ public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistence
         await context.SaveChangesAsync(cancellationToken);
         await admissions.RequireAsync(command.Address, command.CallerId, true, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        if (outcome == ProcessAuthoringOutcome.Accepted) {
+            changes?.Committed(command);
+        }
         return receipt;
     }
 

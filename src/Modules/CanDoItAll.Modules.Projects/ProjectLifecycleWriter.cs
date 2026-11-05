@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Editing;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
@@ -11,7 +12,8 @@ public sealed class ProjectLifecycleWriter(IDbContextFactory<ProjectsDbContext> 
     ProjectLifecycleOperationProtocol protocol, ProjectDeletionCompletionOwner completionOwner,
     CoordinatedDatabaseTransaction transactions, ProjectWriteAdmissionService admissions,
     IEnumerable<IProjectDeletionParticipant> participants, SearchIndexService search, StorageCatalogService storage,
-    IClock clock, IActivityStream activity, ProjectDeletionCompletionDispatcher completionDispatcher, ILogger<ProjectLifecycleWriter> logger) {
+    IClock clock, IActivityStream activity, ProjectDeletionCompletionDispatcher completionDispatcher,
+    ProjectChanges changes, ILogger<ProjectLifecycleWriter> logger) {
     private readonly ProjectLifecycleEffects effects = new(participants, transactions, search, storage, clock);
 
     public async Task<ProjectLifecycleOutcome> SubmitAsync(ProjectLifecycleSubmission submission,
@@ -65,6 +67,7 @@ public sealed class ProjectLifecycleWriter(IDbContextFactory<ProjectsDbContext> 
                 }
                 mutation.Token.ThrowIfCancellationRequested();
                 await ProjectLifecycleOperationProtocol.RequireCurrentWriteAsync(attempt, mutation.Token);
+                await changes.DemandCommitAsync(mutation.Token);
                 ProjectLifecycleAcknowledgement acknowledgement;
                 ProjectDeletionRecoveryEvidence? evidence = null;
                 if (attempt.Submission.Command is ProjectLifecycleCommand.Delete command) {
@@ -86,13 +89,29 @@ public sealed class ProjectLifecycleWriter(IDbContextFactory<ProjectsDbContext> 
                 }
                 await protocol.StageAcceptedAsync(context, attempt, acknowledgement, mutation.Token);
                 if (evidence is not null) {
-                    await scope.CommitDeletionAsync(evidence, token => protocol.RequireCommitAsync(context, attempt, token), mutation.Token);
+                    await scope.CommitDeletionAsync(evidence, RequireCommitAsync, mutation.Token);
                 } else {
-                    await scope.CommitLifecycleAsync(token => protocol.RequireCommitAsync(context, attempt, token), mutation.Token);
+                    await scope.CommitLifecycleAsync(RequireCommitAsync, mutation.Token);
+                }
+
+                async ValueTask RequireCommitAsync(CancellationToken token) {
+                    await protocol.RequireCommitAsync(context, attempt, token);
+                    await changes.DemandCommitAsync(token);
                 }
             }
         } catch (Exception operationFailure) {
             failure = operationFailure;
+        }
+        if (scope?.IsCommitted == true && !attempt.ReplayObserved) {
+            try {
+                foreach (var project in scope.RequiredProjects.Distinct()) {
+                    var kind = attempt.Submission.Command is ProjectLifecycleCommand.Delete deleted && deleted.Expected.Project == project
+                        ? EditingChangeKind.Deleted : EditingChangeKind.MetadataChanged;
+                    changes.Publish(project.ProjectId, kind, attempt.Submission.Operation.Id);
+                }
+            } catch (Exception notificationFailure) {
+                failure = Combine(failure, notificationFailure);
+            }
         }
         if (deletion is not null) {
             closedDeletion = await deletion.CloseAsync(CancellationToken.None);
@@ -124,6 +143,13 @@ public sealed class ProjectLifecycleWriter(IDbContextFactory<ProjectsDbContext> 
                 var postCommitFailure = await CompleteKnownAsync(attempt, cancellationToken);
                 if (postCommitFailure is not null) {
                     failure = Combine(failure, postCommitFailure);
+                }
+                if (attempt.Accepted?.Acknowledgement is ProjectLifecycleAcknowledgement.DeletionCommitted) {
+                    try {
+                        changes.Publish(attempt.Target.ProjectId, EditingChangeKind.MetadataChanged, attempt.Submission.Operation.Id);
+                    } catch (Exception notificationFailure) {
+                        failure = Combine(failure, notificationFailure);
+                    }
                 }
             }
             var issue = !ownerReleased ? ProjectLifecycleCompletionIssue.OwnerReleaseUnconfirmed

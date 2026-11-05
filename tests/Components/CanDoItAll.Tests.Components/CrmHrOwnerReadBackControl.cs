@@ -21,6 +21,7 @@ internal sealed class CrmHrOwnerReadBackControl : IDbContextFactory<CrmHrDbConte
     private string[]? heldWrite;
     private string[]? heldRead;
     private string[]? failedRead;
+    private string[]? failedWrite;
     private int commits;
     private int interceptions;
 
@@ -65,6 +66,7 @@ internal sealed class CrmHrOwnerReadBackControl : IDbContextFactory<CrmHrDbConte
         Interlocked.Exchange(ref commits, 0);
         Volatile.Write(ref heldWrite, frames);
     }
+    public void FailWriteIn(params string[] frames) => Volatile.Write(ref failedWrite, frames);
 
     // Fails the first read after a commit whose call stack carries all of the named frames.
     public void FailReadIn(params string[] frames)
@@ -90,6 +92,9 @@ internal sealed class CrmHrOwnerReadBackControl : IDbContextFactory<CrmHrDbConte
 
     public async Task<CrmHrDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
     {
+        if (TryTake(ref failedWrite, requireCommit: false)) {
+            throw new InvalidOperationException("The native owner connection failed after command admission.");
+        }
         if (TryTake(ref heldWrite, requireCommit: false) || TryTake(ref heldRead, requireCommit: true))
         {
             reached.TrySetResult();

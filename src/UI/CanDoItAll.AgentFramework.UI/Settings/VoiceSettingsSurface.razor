@@ -2,13 +2,16 @@
 @if (Presentation.ProvidersUnavailable) {
     <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-voice-provider-warning">@Presentation.ProviderError</Alert>
 }
+@if (Presentation.Editor.UpdatesAvailable || Presentation.Editor.NeedsReview || Presentation.Editor.OutcomeUnknown) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-voice-settings-conflict">Saved settings may have changed. Compare current settings; your local draft is retained.</Alert>
+}
 @if (Presentation.Source is null) {
     <StatusBadge Tone="@Presentation.StatusTone" Text="@Presentation.StatusText" />
     @if (!Presentation.IsBusy) {
         <Button Text="Reload settings" Click="ReloadAsync" />
     }
 } else {
-    <fieldset disabled="@Presentation.IsBusy" class="min-w-0">
+    <fieldset disabled="@(Presentation.Status == VoiceSettingsStatus.AccessChanged)" class="min-w-0">
 <Grid Gap="LayoutGap.Large"
       ColumnsLg="2"
       data-testid="agents-voice-settings">
@@ -30,8 +33,8 @@
                 <span class="cda-field-label">Provider</span>
                 <InputSelect data-testid="agents-voice-stt-provider" @bind-Value:get="draft.SpeechProviderId" @bind-Value:set="(Guid? value) => draft = draft with { SpeechProviderId = value }" class="cda-input">
                     <option value="">Select provider</option>
-                    @if (Presentation.ProvidersUnavailable && draft.SpeechProviderId is { } speechProvider) {
-                        <option value="@speechProvider.ToString("D")">Existing provider (catalog unavailable)</option>
+                    @if (draft.SpeechProviderId is { } speechProvider && !Presentation.Providers.Any(provider => provider.Id == speechProvider)) {
+                        <option value="@speechProvider.ToString("D")">Existing provider (unavailable in current catalog)</option>
                     }
                     @foreach (var provider in Presentation.Providers) {
                         <option value="@provider.Id.ToString("D")">@provider.Name (@provider.DefaultModel)</option>
@@ -46,11 +49,10 @@
                 <span class="cda-field-label">Language</span>
                 <InputText @bind-Value:get="draft.Language" @bind-Value:set="(string value) => draft = draft with { Language = value }" class="cda-input" data-testid="agents-voice-stt-language" />
             </label>
-            <label class="cda-field">
+            <label class="cda-field w-full">
                 <span class="cda-field-label">Prompt</span>
-                <InputTextArea @bind-Value:get="draft.Prompt" @bind-Value:set="(string value) => draft = draft with { Prompt = value }"
-                               class="cda-input cda-input--textarea"
-                               data-testid="agents-voice-stt-prompt" />
+                <TextArea Value="@draft.Prompt" ValueChanged="@(value => draft = draft with { Prompt = value ?? string.Empty })"
+                          Rows="6" Class="w-full" data-testid="agents-voice-stt-prompt" />
             </label>
         </Stack>
     </SurfaceCard>
@@ -73,8 +75,8 @@
                 <span class="cda-field-label">Provider</span>
                 <InputSelect data-testid="agents-voice-tts-provider" @bind-Value:get="draft.SynthesisProviderId" @bind-Value:set="(Guid? value) => draft = draft with { SynthesisProviderId = value }" class="cda-input">
                     <option value="">Select provider</option>
-                    @if (Presentation.ProvidersUnavailable && draft.SynthesisProviderId is { } synthesisProvider) {
-                        <option value="@synthesisProvider.ToString("D")">Existing provider (catalog unavailable)</option>
+                    @if (draft.SynthesisProviderId is { } synthesisProvider && !Presentation.Providers.Any(provider => provider.Id == synthesisProvider)) {
+                        <option value="@synthesisProvider.ToString("D")">Existing provider (unavailable in current catalog)</option>
                     }
                     @foreach (var provider in Presentation.Providers) {
                         <option value="@provider.Id.ToString("D")">@provider.Name (@provider.DefaultModel)</option>
@@ -103,26 +105,29 @@
                     }
                 </InputSelect>
             </label>
-            <label class="cda-field">
+            <label class="cda-field w-full">
                 <span class="cda-field-label">Sample text</span>
-                <InputTextArea @bind-Value:get="draft.SampleText" @bind-Value:set="(string value) => draft = draft with { SampleText = value }"
-                               class="cda-input cda-input--textarea"
-                               data-testid="agents-voice-sample-text" />
+                <TextArea Value="@draft.SampleText" ValueChanged="@(value => draft = draft with { SampleText = value ?? string.Empty })"
+                          Rows="4" Class="w-full" data-testid="agents-voice-sample-text" />
             </label>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Button Text="Save voice settings"
                         Icon="save"
-                        Disabled="@Presentation.IsBusy"
+                        Disabled="@(Presentation.IsBusy || Presentation.Editor.NeedsReview || Presentation.Editor.OutcomeUnknown)"
                         IsBusy="@Presentation.IsBusy"
                         Click="SaveAsync"
                         data-testid="agents-voice-save" />
                 <Button Text="Play sample"
                         Icon="volume_up"
                         ButtonStyle="ButtonStyle.Light"
-                        Disabled="@Presentation.IsBusy"
+                        Disabled="@(Presentation.IsBusy || Presentation.Editor.NeedsReview || Presentation.Editor.OutcomeUnknown)"
                         IsBusy="@Presentation.IsPlaying"
                         Click="PlaySampleAsync"
                         data-testid="agents-voice-play-sample" />
+                <Button Text="Compare current settings" ButtonStyle="ButtonStyle.Light" Disabled="@Presentation.IsBusy" Click="ReloadAsync" data-testid="agents-voice-compare" />
+                @if (Presentation.Editor.CanUndo) {
+                    <Button Text="Undo local review" ButtonStyle="ButtonStyle.Light" Disabled="@Presentation.IsBusy" Click="UndoAsync" />
+                }
                 <StatusBadge Tone="@Presentation.StatusTone" Text="@Presentation.StatusText" />
             </Cluster>
             <TextBlock TextStyle="TextStyle.Caption" Value="@draft.DisclosureText" />
@@ -130,20 +135,31 @@
     </SurfaceCard>
 </Grid>
     </fieldset>
+    <SettingsComparisonSurface Editor="Presentation.Editor" Changed="DraftChanged" />
 }
 
 @code {
     [Parameter, EditorRequired] public VoiceSettingsPresentation Presentation { get; set; } = new();
     [Parameter] public EventCallback<VoiceSettingsIntent> Intent { get; set; }
-    private VoiceSettingsValues draft = new();
-    private VoiceSettingsValues? accepted;
-    protected override void OnParametersSet() {
-        if (!ReferenceEquals(accepted, Presentation.Source)) {
-            accepted = Presentation.Source;
-            draft = accepted ?? new();
+    [Parameter] public EventCallback DraftChanged { get; set; }
+    private VoiceSettingsValues draft {
+        get => Presentation.Editor.Draft;
+        set {
+            Presentation.Editor.Input(value);
+            _ = DraftChanged.InvokeAsync();
         }
     }
-    private Task SaveAsync() => Intent.InvokeAsync(new(Presentation.Generation, VoiceSettingsAction.Save, draft));
-    private Task ReloadAsync() => Intent.InvokeAsync(new(Presentation.Generation, VoiceSettingsAction.Reload));
-    private Task PlaySampleAsync() => Intent.InvokeAsync(new(Presentation.Generation, VoiceSettingsAction.PlaySample, draft));
+    protected override void OnParametersSet() {
+        if (Presentation.Editor.Original is null && Presentation.Source is { } source) {
+            Presentation.Editor.Open(source);
+        }
+    }
+    private VoiceSettingsValues Submission => draft with { UpdatedAtUtc = Presentation.Editor.Original!.UpdatedAtUtc };
+    private Task SaveAsync() => Intent.InvokeAsync(new(Presentation.Generation, VoiceSettingsAction.Save, Submission));
+    private Task ReloadAsync() => Intent.InvokeAsync(new(Presentation.Generation, VoiceSettingsAction.Compare));
+    private Task PlaySampleAsync() => Intent.InvokeAsync(new(Presentation.Generation, VoiceSettingsAction.PlaySample, Submission));
+    private async Task UndoAsync() {
+        Presentation.Editor.Undo();
+        await DraftChanged.InvokeAsync();
+    }
 }

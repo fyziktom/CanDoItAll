@@ -105,24 +105,28 @@ public sealed class ProjectStructurePartyPickerTests
         var customerId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Meeting Customer");
         var ownerId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Meeting Owner");
 
-        await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = admission,
             PartyId = customerId,
             Role = ProjectPartyAssignmentRole.Customer,
             IsPrimary = true,
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Customer, string.Empty),
             Source = "component-tests"
-        });
-        await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        })).IsSuccess);
+        Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = admission,
             PartyId = ownerId,
             Role = ProjectPartyAssignmentRole.Manager,
             IsPrimary = true,
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Manager, string.Empty),
             Source = "component-tests"
-        });
+        })).IsSuccess);
 
         var meetingNode = await workbenchService.CreateObjectAsync(
             projectId,
@@ -250,6 +254,8 @@ public sealed class ProjectStructurePartyPickerTests
             Role = ProjectPartyAssignmentRole.TeamMember,
             NodeKey = participantNode.Id,
             IsPrimary = true,
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.TeamMember, participantNode.Id),
             Source = "component-tests"
         })).IsSuccess);
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
@@ -260,6 +266,8 @@ public sealed class ProjectStructurePartyPickerTests
             Role = ProjectPartyAssignmentRole.MeetingParticipant,
             NodeKey = meetingNode.Id,
             IsPrimary = true,
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.MeetingParticipant, meetingNode.Id),
             Source = "component-tests"
         })).IsSuccess);
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest

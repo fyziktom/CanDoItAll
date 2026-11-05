@@ -2,7 +2,6 @@
 @using CanDoItAll.Workbench.Planning.UI
 @{
     var agentsCallback = OpenAgentCatalog;
-    var reloadCallback = MutationCommitted;
 }
 <PlanningGanttSurface Presentation="@BuildPresentation()" DependencyIdFactory="CreateDependencyId"
                       TitleChanged="@(intent => AcceptAsync(intent.Origin, () => ApplyTitleAsync(intent.Value)))"
@@ -15,5 +14,5 @@
                       AddRequested="@(intent => AcceptAsync(intent.Origin, OpenGeneralTaskDialogAsync))"
                       ExportRequested="@(intent => AcceptAsync(intent.Origin, OpenMermaidPreviewAsync))"
                       PreviewClosed="@(intent => AcceptAsync(intent.Origin, CloseMermaidPreviewAsync))"
-                      ReloadRequested="@(intent => AcceptAsync(intent.Origin, () => reloadCallback.InvokeAsync()))"
+                      ReloadRequested="@(intent => AcceptAsync(intent.Origin, ReloadScheduleAsync))"
                       AgentsRequested="@(intent => AcceptAsync(intent.Origin, () => agentsCallback.InvokeAsync()))" />

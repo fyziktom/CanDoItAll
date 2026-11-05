@@ -139,7 +139,8 @@
             if (!IsCurrent(current)) {
                 return;
             }
-            opened = await Coordinator.OpenAsync(origin.Request, requestedSubprojects, current.Token);
+            opened = await Coordinator.OpenAsync(origin.Request, requestedSubprojects, current.Token,
+                token => new ValueTask(origin.EnsureCurrentAsync(token)));
             await origin.EnsureCurrentAsync(current.Token);
             if (!IsCurrent(current)) {
                 return;
@@ -198,7 +199,8 @@
             if (!IsCurrent(current) || !ReferenceEquals(workspace, target)) {
                 return;
             }
-            activated = await Coordinator.ActivateAsync(target, itemKey, current.Token);
+            activated = await Coordinator.ActivateAsync(target, itemKey, current.Token,
+                token => new ValueTask(origin.EnsureCurrentAsync(token)));
             await origin.EnsureCurrentAsync(current.Token);
             if (!IsCurrent(current) || !ReferenceEquals(workspace, target)) {
                 return;

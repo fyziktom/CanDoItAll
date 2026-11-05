@@ -148,14 +148,12 @@ public sealed class SharedDeliveryLifecycleTests {
     }
 
     [Fact]
-    public void Known_source_commit_revokes_controlled_retry_until_delivery() {
+    public void Known_source_commit_cannot_be_replayed_or_acknowledged_as_unconfirmed_until_delivery() {
         var recovery = new SharedProviderRecovery();
         var attempt = new SharedProviderSourceMutationAttempt(Guid.NewGuid(), SharedProviderSourceMutationKind.Create);
         recovery.BeginSource(attempt);
-        recovery.AllowSourceRetry(attempt);
-        Assert.True(recovery.SourceRetryAllowed);
         recovery.RecordCommit(attempt.AttemptId, new(SharedProviderChangeKind.SourceConfiguration, []));
-        Assert.False(recovery.SourceRetryAllowed);
+        Assert.False(recovery.AcknowledgeSourceCurrent(attempt));
         Assert.Throws<InvalidOperationException>(() => recovery.BeginSource(attempt));
         Assert.Same(attempt, recovery.Source);
     }

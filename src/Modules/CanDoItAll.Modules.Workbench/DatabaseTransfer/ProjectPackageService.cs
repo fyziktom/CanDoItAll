@@ -35,10 +35,11 @@ public sealed class ProjectPackageService(
 
     public async Task<Result<ProjectPackageExportResult>> ExportAllAsync(
         ProjectPackageExportRequest request,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentAccess = null) {
         ArgumentNullException.ThrowIfNull(request);
 
         try {
+            await DemandCurrentAccessAsync(requireCurrentAccess, cancellationToken);
             var sourceProfile = request.SourceProfileId.HasValue
                 ? profileAccessor.ResolveProfile(request.SourceProfileId.Value)
                 : profileAccessor.ResolveCurrentProfile();
@@ -82,7 +83,8 @@ public sealed class ProjectPackageService(
                 }
                 var manifest = snapshot.Manifest;
                 await WriteJsonFileAsync(Path.Combine(workingRoot!, "manifest.json"), manifest, cancellationToken);
-                await CreatePackageArchiveAsync(workingRoot!, snapshot.PackagePath, manifest.CreatedUtc, physicalPathPolicyFactory, cancellationToken);
+                await CreatePackageArchiveAsync(workingRoot!, snapshot.PackagePath, manifest.CreatedUtc, physicalPathPolicyFactory,
+                    cancellationToken, token => DemandCurrentAccessAsync(requireCurrentAccess, token));
                 logger.LogInformation(
                     "Exported project package {PackageId} from profile {ProfileId}. Records={RecordCount}. MutableStorageFiles={StorageFileCount}. ImmutableReferences={ImmutableReferenceCount}.",
                     manifest.PackageId, sourceProfile.Profile.Id, manifest.TotalRecordCount, manifest.StorageFiles.Count, manifest.ImmutableStorageReferences.Count);
@@ -92,6 +94,9 @@ public sealed class ProjectPackageService(
                     DeleteDirectoryIfExists(workingRoot);
                 }
             }
+        } catch (AccessRejectedException) {
+            logger.LogWarning("Project package export refused because current read access changed before archive publication.");
+            return Result<ProjectPackageExportResult>.Failure(Error.Failure("Current Project read access is required. No project package was published."));
         } catch (InvalidDataException exception) {
             logger.LogWarning(
                 "Project package export validation failed. FailureType={FailureType}.",
@@ -110,7 +115,7 @@ public sealed class ProjectPackageService(
 
     public async Task<Result<ProjectPackageImportResult>> ImportAllAsync(
         ProjectPackageImportRequest request,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentAccess = null) {
         ArgumentNullException.ThrowIfNull(request);
 
         if (string.IsNullOrWhiteSpace(request.PackagePath)) {
@@ -127,6 +132,7 @@ public sealed class ProjectPackageService(
         ProjectPackageImportResult? acknowledged = null;
         Guid? unconfirmedPackageId = null;
         try {
+            await DemandCurrentAccessAsync(requireCurrentAccess, cancellationToken);
             var targetProfile = profileAccessor.ResolveProfile(request.TargetProfileId.Value);
             if (IsCurrentProfile(targetProfile)) {
                 return ActiveTargetFailure();
@@ -203,6 +209,7 @@ public sealed class ProjectPackageService(
                                 await storageTransfers.ValidateAndPersistTargetAsync(database, storagePlan, token);
                                 await data.ClearAsync(database, token);
                                 await data.SaveAsync(database, dataSet, token);
+                                await DemandCurrentAccessAsync(requireCurrentAccess, token);
                                 return true;
                             }, storageToken);
                             preserveStagedWrites = true;
@@ -240,6 +247,9 @@ public sealed class ProjectPackageService(
             return Result<ProjectPackageImportResult>.Failure(Error.Failure(
                 $"Import of package {packageId:D} into profile {request.TargetProfileId.Value:D} is unconfirmed; target data may have committed and staged assets were retained. Inspect the target before further action. Do not repeat import or delete retained assets.",
                 ProjectPackageErrorCodes.ImportOutcomeUnconfirmed));
+        } catch (AccessRejectedException) {
+            logger.LogWarning("Project package import refused because current write access changed before target commit.");
+            return Result<ProjectPackageImportResult>.Failure(Error.Failure("Current Project write access is required. The inactive target project data was not replaced."));
         } catch (InvalidDataException exception) {
             logger.LogWarning(
                 "Project package import validation failed. FailureType={FailureType}.",
@@ -261,6 +271,19 @@ public sealed class ProjectPackageService(
                     "Project package import failed before completion. The inactive target project data was not replaced."));
         }
     }
+
+    private static async ValueTask DemandCurrentAccessAsync(Func<CancellationToken, ValueTask>? requireCurrentAccess, CancellationToken cancellationToken) {
+        if (requireCurrentAccess is null) {
+            return;
+        }
+        try {
+            await requireCurrentAccess(cancellationToken);
+        } catch (UnauthorizedAccessException exception) {
+            throw new AccessRejectedException(exception);
+        }
+    }
+
+    private sealed class AccessRejectedException(UnauthorizedAccessException inner) : Exception("Current Project access was refused.", inner);
 
     public async Task<Result<ProjectPackageManifest>> ReadManifestAsync(
         string packagePath,

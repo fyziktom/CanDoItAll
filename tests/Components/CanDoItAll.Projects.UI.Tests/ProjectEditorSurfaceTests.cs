@@ -12,6 +12,65 @@ namespace CanDoItAll.Tests.Components.ProjectsUi;
 
 public sealed class ProjectEditorSurfaceTests {
     [Fact]
+    public async Task A_late_comparison_result_invalidates_an_older_leave_decision_without_changing_the_native_form() {
+        using var context = Context();
+        var original = ProjectDefinitionReviewTests.Original();
+        var draft = new ProjectEditorDraft(ProjectEditorDraft.CreateModel(original), original: original);
+        draft.InspectCurrent(ProjectDefinitionReviewTests.Current(original, original.Scalars with { Name = "Peer project name" }));
+        draft.BeginMerge();
+        var cut = Render(context, draft);
+        long nativeRevision = draft.EditRevision;
+        var leaving = cut.InvokeAsync(() => cut.Instance.RequestLeaveAsync());
+        cut.WaitForElement("[data-testid='project-dirty-close']");
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-merge-name-result']").InputAsync(new() { Value = "Later comparison result" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-dirty-discard']").ClickAsync(new()));
+
+        Assert.False(await leaving);
+        Assert.Equal(original.Scalars.Name, draft.Model.Name);
+        Assert.Equal(nativeRevision, draft.EditRevision);
+        Assert.Equal("Later comparison result", draft.Definition.Review!.Name.Result);
+    }
+
+    [Theory]
+    [InlineData(ProjectEditorMutationState.Ready)]
+    [InlineData(ProjectEditorMutationState.Saving)]
+    [InlineData(ProjectEditorMutationState.SaveOutcomeUnknown)]
+    public async Task Dirty_close_requires_a_current_explicit_discard_without_resolving_the_native_operation(ProjectEditorMutationState mutation) {
+        using var context = Context();
+        var draft = NewDraft();
+        draft.Mutation = mutation;
+        var cut = Render(context, draft);
+        int closes = 0;
+        cut.Render(p => p.Add(x => x.Close, () => closes++));
+        var originalContext = draft.EditContext;
+
+        var close = cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        cut.WaitForElement("[data-testid='project-dirty-close']", TimeSpan.FromSeconds(2));
+        Assert.Equal(0, closes);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-dirty-continue']").ClickAsync(new()));
+        await close;
+        Assert.Equal(0, closes);
+        Assert.Same(originalContext, draft.EditContext);
+
+        close = cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        cut.WaitForElement("[data-testid='project-dirty-close']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "Later input during leave decision" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-dirty-discard']").ClickAsync(new()));
+        await close;
+        Assert.Equal(0, closes);
+        Assert.Equal("Later input during leave decision", draft.Model.Name);
+
+        close = cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        cut.WaitForElement("[data-testid='project-dirty-close']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-dirty-discard']").ClickAsync(new()));
+        await close;
+        Assert.Equal(1, closes);
+        Assert.Equal(mutation, draft.Mutation);
+        Assert.Null(draft.Acknowledgement);
+    }
+
+    [Fact]
     public async Task Submit_snapshots_before_held_browser_validation_and_retired_forms_cannot_dispatch() {
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -45,18 +104,18 @@ public sealed class ProjectEditorSurfaceTests {
         using var context = Context();
         var draft = NewDraft();
         var cut = Render(context, draft);
-        var date = cut.FindComponents<InputDate<DateTime?>>().First();
+        var date = cut.FindComponents<NativeValueInput<DateTime?>>().First();
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = "not-a-date" }));
         foreach (int step in Enumerable.Range(0, 5)) {
             await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.WizardStep, step)));
-            Assert.Same(date.Instance, cut.FindComponents<InputDate<DateTime?>>().First().Instance);
+            Assert.Same(date.Instance, cut.FindComponents<NativeValueInput<DateTime?>>().First().Instance);
             Assert.Same(draft.EditContext, cut.FindComponent<EditForm>().Instance.EditContext);
             Assert.NotEmpty(draft.EditContext.GetValidationMessages(new FieldIdentifier(draft.Model, nameof(draft.Model.TargetDateUtc))));
             Assert.Equal("not-a-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
         }
         await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.IsEditorMode, false)));
         await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.IsEditorMode, true)));
-        Assert.Same(date.Instance, cut.FindComponents<InputDate<DateTime?>>().First().Instance);
+        Assert.Same(date.Instance, cut.FindComponents<NativeValueInput<DateTime?>>().First().Instance);
         Assert.False(await cut.InvokeAsync(draft.Validate));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = "2026-12-07" }));
         Assert.True(await cut.InvokeAsync(draft.Validate));
@@ -79,6 +138,28 @@ public sealed class ProjectEditorSurfaceTests {
         await cut.InvokeAsync(() => cut.Find($"[data-testid='{button}']").ClickAsync(new()));
         Assert.Equal(1, calls);
         Assert.Equal("Žluťoučký 東京", draft.Model.Name);
+    }
+
+    [Fact]
+    public async Task Accepted_date_normalization_cannot_replace_later_unfinished_input_or_its_typed_value() {
+        using var context = Context();
+        var draft = NewDraft();
+        var submittedDate = new DateTime(2026, 12, 7, 12, 30, 0, DateTimeKind.Utc);
+        draft.Model.TargetDateUtc = submittedDate;
+        var cut = Render(context, draft);
+        var submitted = draft.Capture();
+        var accepted = (await new ProjectsScenarioStore(ProjectsScenario.Empty).SaveAsync(submitted.Model)).Value!;
+        accepted = accepted with { TargetDateUtc = submittedDate.Date };
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = "unfinished-date" }));
+
+        await cut.InvokeAsync(() => draft.Acknowledge(submitted, accepted));
+
+        Assert.Equal(submittedDate, draft.Model.TargetDateUtc);
+        Assert.Equal("unfinished-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
+        Assert.True(draft.HasPendingInput);
+        Assert.False(draft.CanMutate);
+        Assert.Equal(accepted.TargetDateUtc, draft.Original!.Scalars.TargetDateUtc);
+        Assert.NotEmpty(draft.EditContext.GetValidationMessages(new FieldIdentifier(draft.Model, nameof(draft.Model.TargetDateUtc))));
     }
 
     [Fact]
@@ -197,7 +278,7 @@ public sealed class ProjectEditorSurfaceTests {
         draft.StarterObjects.Add(new() { Title = "Preserved plan", Subtitle = "Unsubmitted planning detail" });
         draft.RecordConflict(draft.Capture());
         var cut = Render(context, draft);
-        var date = cut.FindComponents<InputDate<DateTime?>>().First().Instance;
+        var date = cut.FindComponents<NativeValueInput<DateTime?>>().First().Instance;
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = "not-a-date" }));
         ProjectEditorDraft? read = null;
         ProjectEditorDraft? discard = null;
@@ -212,7 +293,7 @@ public sealed class ProjectEditorSurfaceTests {
 
         draft.CompleteConflictRead(ProjectEditorDraftTests.CurrentDefinition(draft));
         cut.Render();
-        Assert.Same(date, cut.FindComponents<InputDate<DateTime?>>().First().Instance);
+        Assert.Same(date, cut.FindComponents<NativeValueInput<DateTime?>>().First().Instance);
         Assert.Equal("not-a-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
         Assert.Equal("My local draft", cut.Find("[data-testid='project-name-input']").GetAttribute("value"));
         string comparison = cut.Find("[data-testid='project-definition-comparison']").TextContent;
@@ -263,12 +344,51 @@ public sealed class ProjectEditorSurfaceTests {
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
         Assert.Contains("Concurrent phase goal", cut.Find("[data-testid='project-definition-comparison']").TextContent);
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-reconcile']").ClickAsync(new()));
-        Assert.Equal("Changed by another synthetic editor", cut.Find("[data-testid='project-name-input']").GetAttribute("value"));
-        Assert.Contains("Local scenario edit", cut.Find("[data-testid='project-definition-comparison']").TextContent);
+        var original = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        Assert.Equal("Local scenario edit", cut.Find("[data-testid='project-name-input']").GetAttribute("value"));
+        Assert.NotNull(cut.Find("[data-testid='project-merge-review']"));
+        Assert.Contains("Simulated writes: 0", cut.Find("[data-testid='scenario-effects']").TextContent);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-merge-name']").QuerySelectorAll("button").Single(button => button.TextContent == "Use my draft").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.ApplyDefinitionReconciliation.InvokeAsync(original));
+        Assert.Same(original, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+        Assert.Equal("Local scenario edit", original.Model.Name);
         Assert.Contains("Simulated writes: 0", cut.Find("[data-testid='scenario-effects']").TextContent);
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
         Assert.Contains("Simulated writes: 1", cut.Find("[data-testid='scenario-effects']").TextContent);
         Assert.Empty(cut.FindAll("[data-testid='project-definition-comparison']"));
+    }
+
+    [Fact]
+    public async Task Result_controls_have_an_independent_EditContext_and_do_not_edit_the_live_draft_before_apply() {
+        using var context = Context();
+        var original = ProjectDefinitionReviewTests.Original();
+        var draft = new ProjectEditorDraft(ProjectEditorDraft.CreateModel(original), original: original);
+        draft.Model.Name = "My name";
+        draft.InspectCurrent(ProjectDefinitionReviewTests.Current(original, original.Scalars with { Name = "Peer name" }));
+        draft.BeginMerge();
+        var revision = draft.EditRevision;
+        var cut = Render(context, draft);
+        var forms = cut.FindComponents<EditForm>();
+        Assert.Equal(2, forms.Count);
+        Assert.Single(forms, form => ReferenceEquals(form.Instance.EditContext, draft.EditContext));
+        Assert.Single(forms, form => ReferenceEquals(form.Instance.EditContext?.Model, draft.Definition.Review));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-merge-name-result']").InputAsync(new() { Value = "Chosen custom name 東京" }));
+
+        Assert.Equal(revision, draft.EditRevision);
+        Assert.Equal("My name", draft.Model.Name);
+        Assert.Equal("Chosen custom name 東京", draft.Definition.Review!.Name.Result);
+        Assert.True(draft.CanApplyMerge);
+        Assert.False(cut.Find("[data-testid='project-merge-apply']").HasAttribute("disabled"));
+        var model = draft.Model;
+        var editContext = draft.EditContext;
+        cut.Render(p => p.Add(x => x.ApplyDefinitionReconciliation, target => target.ApplyMerge()));
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectDefinitionMergeDialog>().Instance.Apply.InvokeAsync());
+        Assert.Same(model, draft.Model);
+        Assert.Same(editContext, draft.EditContext);
+        Assert.Equal("Chosen custom name 東京", model.Name);
+        Assert.Null(draft.Acknowledgement);
+        Assert.True(draft.CanUndoMerge);
     }
 
     [Fact]

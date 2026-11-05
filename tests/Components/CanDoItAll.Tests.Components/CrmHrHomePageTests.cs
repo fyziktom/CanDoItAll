@@ -41,6 +41,81 @@ public sealed class CrmHrHomePageTests
         ]);
 
     [Fact]
+    public async Task Overview_denies_the_read_before_querying_without_current_access() {
+        var query = new ScriptedHomeQuery();
+        using var context = CreateContext(query);
+        var access = Assert.IsType<CanDoItAll.Tests.Support.EditingUiTestAccess>(
+            context.Services.GetRequiredService<CanDoItAll.Editing.IEditingUiAccess>());
+        access.Allowed = false;
+
+        var cut = context.Render<CrmHrHomePage>();
+        await cut.Instance.ReadCompletion;
+
+        Assert.Empty(query.Calls);
+        Assert.Equal(CrmHrHomePhase.Failed, cut.Instance.Presentation.Phase);
+        Assert.Null(cut.Instance.Presentation.Overview);
+        cut.WaitForElement("[data-testid='crmhr-catalog-access-unavailable']");
+    }
+
+    [Fact]
+    public async Task Overview_retires_visible_data_after_access_is_revoked_without_reloading_the_aggregate() {
+        var query = new ScriptedHomeQuery();
+        using var context = CreateContext(query);
+        var cut = context.Render<CrmHrHomePage>();
+        await cut.InvokeAsync(() => query.Complete(Snapshot));
+        cut.WaitForElement("[data-testid='crmhr-home-directory-item']");
+        var access = Assert.IsType<CanDoItAll.Tests.Support.EditingUiTestAccess>(
+            context.Services.GetRequiredService<CanDoItAll.Editing.IEditingUiAccess>());
+
+        access.Allowed = false;
+        context.Services.GetRequiredService<CrmHrChanges>().PublishParty(Guid.NewGuid());
+
+        cut.WaitForElement("[data-testid='crmhr-catalog-access-unavailable']");
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-home']"));
+        Assert.Single(query.Calls);
+        await context.DisposeRenderedComponentsAsync();
+        var feed = context.Services.GetRequiredService<CanDoItAll.Infrastructure.Editing.EditingChangeFeed>();
+        Assert.Equal(0, feed.ActiveSubscriptions);
+        Assert.Equal(0, feed.ActiveTopics);
+    }
+
+    [Fact]
+    public async Task Overview_rejects_a_delayed_snapshot_after_its_principal_changes() {
+        var query = new ScriptedHomeQuery();
+        using var context = CreateContext(query);
+        var access = Assert.IsType<CanDoItAll.Tests.Support.EditingUiTestAccess>(
+            context.Services.GetRequiredService<CanDoItAll.Editing.IEditingUiAccess>());
+        var cut = context.Render<CrmHrHomePage>();
+        Assert.Single(query.Calls);
+
+        access.Principal = "retired-overview-principal";
+        await cut.InvokeAsync(() => query.Complete(Snapshot));
+
+        cut.WaitForAssertion(() => Assert.Equal(CrmHrHomePhase.Failed, cut.Instance.Presentation.Phase));
+        Assert.Null(cut.Instance.Presentation.Overview);
+        Assert.DoesNotContain("Aurora Logistics", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Refresh_reads_current_overview_in_the_same_host_without_navigating() {
+        var query = new ScriptedHomeQuery();
+        using var context = CreateContext(query);
+        var navigation = context.Services.GetRequiredService<BunitNavigationManager>();
+        var location = navigation.Uri;
+        var cut = context.Render<CrmHrHomePage>();
+        await cut.InvokeAsync(() => query.Complete(Snapshot));
+        cut.WaitForAssertion(() => Assert.Equal("ready", cut.Find("[data-testid='crmhr-home']").GetAttribute("data-phase")));
+
+        var refresh = cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-home-refresh']").ClickAsync(new()));
+        cut.WaitForAssertion(() => Assert.Equal("loading", cut.Find("[data-testid='crmhr-home']").GetAttribute("data-phase")));
+        await cut.InvokeAsync(() => query.Complete(Snapshot with { PartyCount = 51 }));
+        await refresh;
+
+        cut.WaitForAssertion(() => Assert.Contains("51", cut.Find("[data-testid='crmhr-home-stat-parties']").TextContent, StringComparison.Ordinal));
+        Assert.Equal(location, navigation.Uri);
+    }
+
+    [Fact]
     public async Task Host_renders_the_shared_surface_reads_once_and_records_exactly_one_navigation_per_action()
     {
         var query = new ScriptedHomeQuery();
@@ -264,6 +339,12 @@ public sealed class CrmHrHomePageTests
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<ICrmHrHomeQueryService>(query);
+        context.Services.AddSingleton<CanDoItAll.Editing.IEditingUiAccess>(new CanDoItAll.Tests.Support.EditingUiTestAccess());
+        context.Services.AddSingleton(new CanDoItAll.Infrastructure.Editing.EditingChangeFeed());
+        context.Services.AddSingleton<CrmHrChanges>(services => new(
+            services.GetRequiredService<CanDoItAll.Infrastructure.Editing.EditingChangeFeed>(),
+            new(CanDoItAll.Editing.EditingScopeKind.Dataset, Guid.NewGuid(), 1),
+            new CanDoItAll.Infrastructure.Editing.EditingOperationContext()));
         context.Services.AddSingleton<IAgentChatContextRegistry>(new AgentChatContextRegistry(TimeProvider.System));
         return context;
     }

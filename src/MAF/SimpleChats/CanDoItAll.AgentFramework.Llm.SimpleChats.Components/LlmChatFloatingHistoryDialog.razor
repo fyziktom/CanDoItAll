@@ -1,6 +1,17 @@
 @implements IDisposable
 @{ var renderedGeneration = generation; }
 
+@if (RequiresAcknowledgement) {
+    <Stack GapScale="LayoutGap.Small">
+        <Alert AlertStyle="AlertStyle.Warning">An earlier command may have succeeded. Inspect the current bounded history before authorizing another command.</Alert>
+        <FormField Text="I inspected this history and understand that another command is a separate action.">
+            <CheckBox TValue="bool" @bind-Value="acknowledged" data-testid="floating-simple-chat-history-acknowledge" />
+        </FormField>
+        <Button Text="Acknowledge reviewed commands" Disabled="@(!acknowledged)"
+                Click="@(() => AcknowledgeAsync(renderedGeneration))" data-testid="floating-simple-chat-history-reviewed" />
+    </Stack>
+}
+
 <ConversationThreadHistoryList Threads="@threads"
                                MaxItems="25"
                                ContextLabel="@Definition?.Name"
@@ -13,6 +24,9 @@
     [CascadingParameter] public DialogReference? DialogReference { get; set; }
     private long generation;
     private bool disposed;
+    private bool acknowledged;
+
+    [Parameter] public bool RequiresAcknowledgement { get; set; }
 
     [Parameter]
     public LlmChatDefinitionListItem? Definition { get; set; }
@@ -24,10 +38,15 @@
 
     protected override void OnParametersSet() {
         generation++;
+        acknowledged = false;
         threads = Conversations
             .Select(item => LlmChatConversationPresentationMapper.ToThread(item, null, false))
             .ToArray();
     }
+
+    private Task AcknowledgeAsync(long renderedGeneration) => !disposed && generation == renderedGeneration && acknowledged
+        ? DialogReference?.CloseAsync(LlmChatFloatingHistoryResolution.CommandsReviewed) ?? Task.CompletedTask
+        : Task.CompletedTask;
 
     private Task SelectConversationAsync(ConversationPresentationKey key, long renderedGeneration) {
         if (disposed || generation != renderedGeneration) {

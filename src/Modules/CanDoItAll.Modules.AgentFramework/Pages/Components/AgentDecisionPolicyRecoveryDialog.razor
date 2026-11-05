@@ -5,40 +5,65 @@
 @inject IAgentDecisionPolicyPendingStore Pending
 @inject ILogger<AgentDecisionPolicyRecoverySession> Logger
 
-<AgentDecisionPolicyRecoverySurface Rows="session.Rows" Busy="session.Busy" Error="@session.Error"
-                                    Reload="ReadAsync" Selected="SelectAsync" Closed="Closed" />
+@if (admitted && RendererInfo.IsInteractive && Opening.IsReady) {
+    <AgentDecisionPolicyRecoverySurface Rows="session.Rows" Busy="session.Busy" Error="@session.Error"
+                                        Reload="ReadAsync" Selected="SelectAsync" Closed="Closed" />
+} else {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="agent-policy-recovery-access-unavailable">Policy recovery access is unavailable. Reopen this workspace with current access.</Alert>
+}
 
 @code {
     [Parameter] public CancellationToken OwnerLifetime { get; set; }
+    [Parameter, EditorRequired] public AgentConfigurationOpening Opening { get; set; } = default!;
+    [Parameter] public EventCallback AccessRetired { get; set; }
     [Parameter] public EventCallback Closed { get; set; }
     [Parameter] public EventCallback<AgentDecisionPolicyRecoverySelection> Selected { get; set; }
     private readonly CancellationTokenSource reads = new();
     private AgentDecisionPolicyRecoverySession session = default!;
     private bool disposed;
+    private bool admitted;
+    private bool initialReadStarted;
 
-    protected override void OnInitialized() => session = new(Workspace, Pending, Logger);
+    protected override void OnInitialized() => session = new(Workspace, Pending, Logger, Opening);
+
+    protected override async Task OnParametersSetAsync() {
+        if (!disposed && RendererInfo.IsInteractive) {
+            try {
+                await Opening.AuthorizeAsync(false, reads.Token);
+                admitted = true;
+            } catch (UnauthorizedAccessException) {
+                admitted = false;
+                session.Retire();
+                await AccessRetired.InvokeAsync();
+            }
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if (firstRender) {
+        if (!initialReadStarted && admitted && RendererInfo.IsInteractive && Opening.IsReady) {
+            initialReadStarted = true;
             await ReadAsync();
         }
     }
 
     private async Task ReadAsync() {
-        if (disposed) {
+        if (disposed || !RendererInfo.IsInteractive || !Opening.IsReady) {
             return;
         }
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(reads.Token, OwnerLifetime);
         var read = session.ReadAsync(cancellation.Token);
         StateHasChanged();
         await read;
+        if (!Opening.IsReady && !disposed) {
+            await AccessRetired.InvokeAsync();
+        }
         if (!disposed) {
             StateHasChanged();
         }
     }
 
     private async Task SelectAsync(AgentDecisionPolicyPendingSummary row) {
-        if (disposed) {
+        if (disposed || !RendererInfo.IsInteractive || !Opening.IsReady) {
             return;
         }
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(reads.Token, OwnerLifetime);

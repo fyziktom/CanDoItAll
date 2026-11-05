@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
 
@@ -14,6 +15,9 @@ public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext)
         LlmChatDefinitionId id,
         CancellationToken cancellationToken = default)
     {
+        await using var snapshot = dbContext.Database.IsRelational() && dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false)
+            : null;
         var row = await JoinRevision(
                 dbContext.Set<LlmChatDefinitionRow>()
                     .AsNoTracking()

@@ -134,7 +134,7 @@ public sealed class AgentCatalogBoundaryTests {
         object result = members ? new AgentTeamMembersDialogResult(team.Id, [agent.Id]) : new AgentTeamDetailsDialogResult(team.Id);
         await cut.InvokeAsync(() => dialogs.CloseAsync(result));
         cut.WaitForAssertion(() => Assert.Equal(2, operations.Loads));
-        Assert.Equal(members ? 1 : 0, operations.MemberWrites);
+        Assert.Equal(0, operations.MemberWrites);
         Assert.Equal(team.Id, selected.Last()?.Id);
     }
 
@@ -247,8 +247,8 @@ public sealed class AgentCatalogBoundaryTests {
                 EventCallback.Factory.Create<AgentChatContextAccessState>(this, states.Add)));
         cut.WaitForAssertion(() => Assert.Equal(1, operations.Loads));
         var count = states.Count;
-        await cut.InvokeAsync(() => {
-            cut.Instance.Dispose();
+        await cut.InvokeAsync(async () => {
+            await cut.Instance.DisposeAsync();
             var callbacks = 0;
             using var registration = operations.LastToken.Register(() => callbacks++);
             Assert.Equal(1, callbacks);
@@ -263,7 +263,8 @@ public sealed class AgentCatalogBoundaryTests {
         await cut.InvokeAsync(() => Task.CompletedTask);
         Assert.True(operations.LastToken.IsCancellationRequested);
         Assert.Equal(count, states.Count);
-        Assert.Empty(cut.FindComponent<AgentCatalogPanel>().Instance.Snapshot.Agents);
+        Assert.Empty(cut.FindComponents<AgentCatalogPanel>());
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-access']"));
         Assert.Empty(harness.Context.Services.GetRequiredService<NotificationService>().Messages);
     }
 
@@ -287,7 +288,7 @@ public sealed class AgentCatalogBoundaryTests {
         var dialogs = harness.Context.Services.GetRequiredService<DialogService>();
         cut.WaitForAssertion(() => Assert.Single(dialogs.Dialogs));
         var pendingDialog = dialogs.Dialogs[0];
-        await cut.InvokeAsync(() => cut.Instance.Dispose());
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
         Assert.Empty(dialogs.Dialogs);
         Assert.True(pendingDialog.Result.IsCanceled);
         object result = members ? new AgentTeamMembersDialogResult(team.Id, []) : new AgentTeamDetailsDialogResult(team.Id);
@@ -311,6 +312,7 @@ public sealed class AgentCatalogBoundaryTests {
         };
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
             services.AddSingleton<IAgentCatalogOperations>(operations));
+        var dialogHost = harness.Context.Render<DialogHost>();
         var selected = new List<AgentTeamDefinition?>();
         var cut = harness.Context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.RequestedTeamId, team.Id)
@@ -319,16 +321,14 @@ public sealed class AgentCatalogBoundaryTests {
         Task action;
         if (members) {
             await cut.Find("[data-testid='agents-team-members']").ClickAsync();
-            var dialogs = harness.Context.Services.GetRequiredService<DialogService>();
-            cut.WaitForAssertion(() => Assert.Single(dialogs.Dialogs));
-            action = cut.InvokeAsync(() => dialogs.CloseAsync(new AgentTeamMembersDialogResult(team.Id, [])));
+            action = dialogHost.WaitForElement("[data-testid='agents-team-members-confirm']").ClickAsync();
         } else {
             action = cut.Find("[data-testid='agents-team-delete']").ClickAsync();
         }
         await operations.MutationStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.Equal(1, operations.MemberWrites + operations.DeletedTeams.Count);
-        await cut.InvokeAsync(() => {
-            cut.Instance.Dispose();
+        await cut.InvokeAsync(async () => {
+            await cut.Instance.DisposeAsync();
             var callbacks = 0;
             using var registration = operations.LastToken.Register(() => callbacks++);
             Assert.Equal(1, callbacks);
@@ -359,8 +359,8 @@ public sealed class AgentCatalogBoundaryTests {
         var cut = harness.Context.Render<AgentCatalogHost>();
         var started = cut.WaitForElement("[data-testid='agents-hr-agent-open']").ClickAsync();
         cut.WaitForAssertion(() => Assert.True(launcher.Token.CanBeCanceled));
-        await cut.InvokeAsync(() => {
-            cut.Instance.Dispose();
+        await cut.InvokeAsync(async () => {
+            await cut.Instance.DisposeAsync();
             var callbacks = 0;
             using var registration = launcher.Token.Register(() => callbacks++);
             Assert.Equal(1, callbacks);
@@ -407,7 +407,7 @@ public sealed class AgentCatalogBoundaryTests {
         cut.WaitForAssertion(() => Assert.Equal(2, dialogs.Dialogs.Count));
         var owned = dialogs.Dialogs.Single(dialog => dialog.ComponentType == typeof(AgentDetailsDialog));
 
-        await cut.InvokeAsync(() => cut.Instance.Dispose());
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
 
         Assert.True(owned.Result.IsCanceled);
         Assert.False(unrelated.IsCompleted);
@@ -416,7 +416,7 @@ public sealed class AgentCatalogBoundaryTests {
             .Add(component => component.RequestedAgentId, agent.Id));
         replacement.WaitForAssertion(() => Assert.Single(dialogs.Dialogs.Where(dialog =>
             dialog.ComponentType == typeof(AgentDetailsDialog))));
-        await replacement.InvokeAsync(() => replacement.Instance.Dispose());
+        await replacement.InvokeAsync(() => replacement.Instance.DisposeAsync().AsTask());
         Assert.Equal(typeof(AgentTeamDetailsDialog), Assert.Single(dialogs.Dialogs).ComponentType);
         await dialogs.CloseAsync();
     }
@@ -428,6 +428,7 @@ public sealed class AgentCatalogBoundaryTests {
         var team = new AgentTeamDefinition(Guid.NewGuid(), "Readback team", "", [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
         var operations = new RecordingCatalogOperations { Snapshot = new([AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Fixture agent", "")], [team], new Dictionary<Guid, bool>()) };
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IAgentCatalogOperations>(operations));
+        var dialogHost = harness.Context.Render<DialogHost>();
         var failCallback = false;
         var cut = harness.Context.Render<AgentCatalogHost>(p => p.Add(c => c.RequestedTeamId, team.Id)
             .Add(c => c.SelectedTeamChanged, _ => {
@@ -443,7 +444,7 @@ public sealed class AgentCatalogBoundaryTests {
         if (!failParentCallback) {
             operations.NextLoad = Task.FromException<AgentCatalogSnapshot>(new IOException("PRIVATE_TEAM_REFRESH_CANARY"));
         }
-        await cut.InvokeAsync(() => dialogs.CloseAsync(new AgentTeamMembersDialogResult(team.Id, [])));
+        await dialogHost.WaitForElement("[data-testid='agents-team-members-confirm']").ClickAsync();
         cut.WaitForElement("[data-testid='agents-team-retry-read']");
         Assert.Equal(1, operations.MemberWrites);
         Assert.Contains("was saved", cut.Find("[data-testid='agents-team-recovery']").TextContent, StringComparison.Ordinal);
@@ -487,7 +488,7 @@ public sealed class AgentCatalogBoundaryTests {
         held.SetResult(operations.Snapshot);
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='agents-team-recovery']")));
         Assert.Equal(second.Id, cut.FindComponent<AgentCatalogPanel>().Instance.Selection.TeamId);
-        Assert.Equal(1, operations.MemberWrites);
+        Assert.Equal(0, operations.MemberWrites);
     }
 
     private sealed class PendingChatLauncher : IAgentChatLauncher {
@@ -511,6 +512,8 @@ public sealed class AgentCatalogBoundaryTests {
         public int Loads { get; private set; }
         public CancellationToken LastToken { get; private set; }
         public int MemberWrites { get; private set; }
+        public Task<AgentTeamDefinition> ReadTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Snapshot.Teams.Single(team => team.Id == teamId));
         public Task<AgentCatalogSnapshot> LoadAsync(AgentCatalogLoadRequest request, CancellationToken cancellationToken = default) {
             LastToken = cancellationToken;
             Loads++;
@@ -523,12 +526,24 @@ public sealed class AgentCatalogBoundaryTests {
             Snapshot = Snapshot with { Teams = Snapshot.Teams.Where(team => team.Id != teamId).ToArray() };
             return NextMutation ?? Task.CompletedTask;
         }
+        public Task DeleteTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default) {
+            if (Snapshot.Teams.Single(team => team.Id == teamId).UpdatedAtUtc != expectedUpdatedAtUtc) {
+                throw new AgentTeamConcurrencyException(teamId);
+            }
+            return DeleteTeamAsync(teamId, cancellationToken);
+        }
         public Task UpdateMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default) {
             LastToken = cancellationToken;
             MemberWrites++;
             MutationStarted.TrySetResult();
             Snapshot = Snapshot with { Teams = Snapshot.Teams.Select(team => team.Id == teamId ? team with { AgentIds = agentIds } : team).ToArray() };
             return NextMutation ?? Task.CompletedTask;
+        }
+        public Task UpdateMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default) {
+            if (Snapshot.Teams.Single(team => team.Id == teamId).UpdatedAtUtc != expectedUpdatedAtUtc) {
+                throw new AgentTeamConcurrencyException(teamId);
+            }
+            return UpdateMembersAsync(teamId, agentIds, cancellationToken);
         }
     }
 }

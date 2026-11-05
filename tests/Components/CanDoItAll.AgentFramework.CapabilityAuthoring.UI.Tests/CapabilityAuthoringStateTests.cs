@@ -156,7 +156,7 @@ public sealed class CapabilityAuthoringStateTests {
         session.Draft.Mcp.Transport = "logical";
         await session.SaveAsync();
         await session.SaveAsync();
-        Assert.Equal(unknown ? 1 : 2, calls);
+        Assert.Equal(1, calls);
         Assert.Equal(unknown, session.SaveUnknown);
         Assert.Equal("Fixture", session.Draft.Model.Name);
     }

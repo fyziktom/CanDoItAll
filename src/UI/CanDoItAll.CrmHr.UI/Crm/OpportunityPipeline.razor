@@ -230,7 +230,7 @@
     public EventCallback<Guid> SelectOpportunity { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> AdvanceOpportunityStage { get; set; }
+    public EventCallback<CrmOpportunityStageAdvance> AdvanceOpportunityStage { get; set; }
 
     [Parameter]
     public EventCallback<Exception> LoadFailed { get; set; }

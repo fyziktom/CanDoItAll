@@ -293,6 +293,7 @@ public static class ProjectStructureAgentApi
                 StatusCodes.Status500InternalServerError);
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/command", ExecuteNodeCommandAsync)
+            .WithDescription("Open and Wizard on prompt nodes can create or update the Gallery binding and require expectedState unchanged from a canonical Structure read. Missing or stale original state returns HTTP 409 without a binding or Gallery write. Test and other read-only commands keep their existing native authority. A project lease is separate from this content precondition; preserve an unconfirmed result instead of blindly resending it.")
             .Produces<ArtifactReference>()
             .ProducesProjectStructureErrors(
                 StatusCodes.Status400BadRequest,

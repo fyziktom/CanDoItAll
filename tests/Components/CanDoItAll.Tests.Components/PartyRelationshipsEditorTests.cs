@@ -1,4 +1,4 @@
-using Bunit;
+﻿using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Components;
@@ -13,7 +13,8 @@ public sealed class PartyRelationshipsEditorTests {
         var relationships = new List<PartyRelationshipEditorModel>();
         var cut = context.Render<PartyRelationshipsEditor>(parameters => parameters
             .Add(component => component.CurrentPartyId, (Guid?)null)
-            .Add(component => component.Relationships, relationships));
+            .Add(component => component.Relationships, relationships)
+            .Add(component => component.RelationshipsChanged, rows => RelationshipValues.Adopt(relationships, rows)));
 
         Assert.Contains("Save the party first", cut.Markup, StringComparison.Ordinal);
         Assert.True(cut.Find("[data-testid='crmhr-relationship-add']").HasAttribute("disabled"));
@@ -39,7 +40,8 @@ public sealed class PartyRelationshipsEditorTests {
         var relationships = new List<PartyRelationshipEditorModel>();
         var cut = context.Render<PartyRelationshipsEditor>(parameters => parameters
             .Add(component => component.CurrentPartyId, currentPartyId)
-            .Add(component => component.Relationships, relationships));
+            .Add(component => component.Relationships, relationships)
+            .Add(component => component.RelationshipsChanged, rows => RelationshipValues.Adopt(relationships, rows)));
 
         cut.Find("[data-testid='crmhr-relationship-add']").Click();
 
@@ -63,11 +65,13 @@ public sealed class PartyRelationshipsEditorTests {
     public void Direction_and_remove_callbacks_target_the_rendered_relationship_after_reorder() {
         using var context = CreateContext(new StubPartyRecordQueryService([]));
         var first = new PartyRelationshipEditorModel {
+            Id = Guid.NewGuid(),
             RelatedPartyId = Guid.NewGuid(),
             RelationshipKind = PartyRelationshipKind.MemberOf,
             IsOutgoing = true
         };
         var second = new PartyRelationshipEditorModel {
+            Id = Guid.NewGuid(),
             RelatedPartyId = Guid.NewGuid(),
             RelationshipKind = PartyRelationshipKind.ReportsTo,
             IsOutgoing = true
@@ -75,12 +79,17 @@ public sealed class PartyRelationshipsEditorTests {
         var relationships = new List<PartyRelationshipEditorModel> { first, second };
         var cut = context.Render<PartyRelationshipsEditor>(parameters => parameters
             .Add(component => component.CurrentPartyId, Guid.NewGuid())
-            .Add(component => component.Relationships, relationships));
+            .Add(component => component.Relationships, relationships)
+            .Add(component => component.RelationshipsChanged, rows => RelationshipValues.Adopt(relationships, rows)));
+
+        Assert.Equal(["true", "false"], cut.FindAll("[data-testid='crmhr-relationship-direction-0'] option").Select(option => option.GetAttribute("value")));
 
         relationships.Reverse();
         cut.Render(parameters => parameters
+            .Add(component => component.OwnerRevision, 1)
             .Add(component => component.CurrentPartyId, Guid.NewGuid())
-            .Add(component => component.Relationships, relationships));
+            .Add(component => component.Relationships, relationships)
+            .Add(component => component.RelationshipsChanged, rows => RelationshipValues.Adopt(relationships, rows)));
         cut.Find("[data-testid='crmhr-relationship-direction-0']")
             .Change("false");
 
@@ -100,7 +109,8 @@ public sealed class PartyRelationshipsEditorTests {
         var relationships = new List<PartyRelationshipEditorModel>();
         var cut = context.Render<PartyRelationshipsEditor>(parameters => parameters
             .Add(component => component.CurrentPartyId, Guid.NewGuid())
-            .Add(component => component.Relationships, relationships));
+            .Add(component => component.Relationships, relationships)
+            .Add(component => component.RelationshipsChanged, rows => RelationshipValues.Adopt(relationships, rows)));
 
         cut.Find("[data-testid='crmhr-relationship-add']").Click();
         Assert.Single(relationships);

@@ -36,7 +36,8 @@ public sealed class ProjectStructureGanttRowOrderService(
         Guid projectId,
         ProjectStructureGanttRowMoveRequest request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(agent);
@@ -47,7 +48,7 @@ public sealed class ProjectStructureGanttRowOrderService(
             token => projectWorkbenchService.MoveGanttTaskInRowOrderAsync(
                 projectId,
                 request,
-                token, agent),
+                token, agent, authorizeCommit),
             cancellationToken);
     }
 
@@ -89,12 +90,13 @@ public sealed class ProjectStructureGanttRowOrderService(
         string taskNodeId,
         string? afterTaskNodeId,
         CancellationToken cancellationToken,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => projectWorkbenchService.InsertGanttTaskIntoRowOrderAsync(
             projectId,
             taskNodeId,
             afterTaskNodeId,
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, authorizeCommit);
 
     private static SemaphoreSlim ResolveMutationGate(Guid projectId)
     {

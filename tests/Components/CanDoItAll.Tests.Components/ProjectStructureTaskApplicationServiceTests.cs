@@ -349,7 +349,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                     }
                 ],
                 [ProjectPartyAssignmentRole.WorkItemAssignee],
-                expectedProjectAdmission: admission);
+                expectedProjectAdmission: admission,
+                expectedAssignments: (await ReadDirectAssignmentsAsync(bridge, projectId, created.Task.Id))
+                    .Select(ProjectPartyAssignmentConcurrencySnapshot.From).ToArray());
         Assert.True(exactAssignmentResult.IsSuccess);
         var originalAssignment = Assert.Single(
             await ReadDirectAssignmentsAsync(

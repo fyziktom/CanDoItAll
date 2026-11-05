@@ -15,6 +15,52 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 [Trait("Category", "HostPlatform")]
 public sealed class SharedProviderLocalConcurrencyTests {
     [Fact]
+    public async Task Sharing_section_navigation_keeps_invalid_input_and_context_and_observes_peers_without_reading_bodies() {
+        NativeManagementProxy? proxy = null;
+        await using var harness = await CreateHarnessAsync(value => proxy = value);
+        var seed = await CreateImportAsync(harness.Context.Services);
+        var cut = await OpenSharingAsync(harness, seed.ProviderId);
+        var original = cut.FindComponent<SharedProviderImportedProfileContent>().Instance.Draft;
+        cut.Find("[data-testid='shared-provider-import-alias']").Input(" ");
+        var context = original.Context;
+        var reads = proxy!.SharingReads;
+        await cut.FindAll("[role='tab']")[ProviderEditorSections.IndexOf(ProviderEditorSection.Connection)].ClickAsync();
+        var before = (await proxy.Owner.GetProfileSharingAsync(seed.ProviderId)).Import!;
+        await proxy.Owner.UpdateImportedProfileAsync(new(before.ImportId, before.ProviderProfileId, "Peer while sharing is hidden", false,
+            before.ImportConcurrencyToken, before.ProviderConcurrencyToken));
+        await cut.FindAll("[role='tab']")[ProviderEditorSections.IndexOf(ProviderEditorSection.Sharing)].ClickAsync();
+        cut.WaitForElement("[data-testid='shared-provider-import-alias']");
+        var returned = cut.FindComponent<SharedProviderImportedProfileContent>().Instance.Draft;
+        Assert.Same(original, returned);
+        Assert.Same(context, returned.Context);
+        Assert.Equal(" ", returned.LocalAlias);
+        cut.WaitForAssertion(() => Assert.True(returned.NeedsCurrentRead));
+        Assert.Equal(reads, proxy.SharingReads);
+        Assert.Equal(before.ImportConcurrencyToken, returned.Baseline.ImportToken);
+    }
+
+    [Fact]
+    public async Task Retiring_the_selected_import_finishes_delivery_and_keeps_a_read_only_view_of_the_same_target() {
+        await using var harness = await CreateHarnessAsync(_ => { });
+        var seed = await CreateImportAsync(harness.Context.Services);
+        var cut = await OpenSharingAsync(harness, seed.ProviderId);
+        await cut.FindAll("button").Single(button => button.TextContent.Trim() == "Retire import").ClickAsync();
+        await cut.Find("[data-testid='shared-provider-confirmation-apply']").ClickAsync();
+        var owner = harness.Context.Services.GetRequiredService<ISharedProviderManagementService>();
+        Assert.Equal(SharedProviderSelectionState.Retired, (await owner.GetProfileSharingAsync(seed.ProviderId)).Import!.SelectionState);
+        var recovery = harness.Context.Services.GetRequiredService<SharedProviderRecovery>();
+        cut.WaitForAssertion(() => Assert.Null(recovery.FindTarget(seed.ProviderId)));
+        Assert.Equal(seed.ProviderId, cut.Instance.Editor.Model.Id);
+        Assert.Contains("Retired", cut.Markup, StringComparison.Ordinal);
+        await cut.Find("[data-testid='providers-refresh']").ClickAsync();
+        cut.WaitForElement("[data-testid='shared-provider-import-alias']");
+        Assert.Equal(seed.ProviderId, cut.Instance.Editor.Model.Id);
+        Assert.DoesNotContain("could not be loaded", cut.Markup, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<CanDoItAll.AgentFramework.Core.ProviderRuntimeProfileUnavailableException>(() => harness.Context.Services
+            .GetRequiredService<CanDoItAll.AgentFramework.Core.IProviderProfileRegistry>().GetProviderEditorAsync(seed.ProviderId));
+    }
+
+    [Fact]
     public async Task Clean_sharing_refresh_and_save_cannot_revert_another_native_owners_local_settings() {
         NativeManagementProxy? captured = null;
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddScoped(provider => {
@@ -103,8 +149,17 @@ public sealed class SharedProviderLocalConcurrencyTests {
         Assert.Equal(changed.IsEnabled, unchanged.IsEnabled);
         Assert.Equal(changed.ImportConcurrencyToken, unchanged.ImportConcurrencyToken);
 
-        await cut.InvokeAsync(() => cut.Find(keepEdits ? "[data-testid='shared-provider-import-keep-edits']" :
-            "[data-testid='shared-provider-import-use-saved']").ClickAsync(new()));
+        await cut.Find("[data-testid='shared-provider-import-compare']").ClickAsync();
+        var field = cut.Find(keepEdits && editA == LocalEdit.Alias ? "[data-testid='shared-provider-import-review-alias']" :
+            editA == LocalEdit.Enabled && keepEdits ? "[data-testid='shared-provider-import-review-enabled']" :
+            "[data-testid='shared-provider-import-review-alias']");
+        var choice = keepEdits ? "Use my draft" : "Use current";
+        await field.QuerySelectorAll("button").Single(button => button.TextContent.Trim() == choice).ClickAsync();
+        if (!keepEdits && editA == LocalEdit.Enabled) {
+            await cut.Find("[data-testid='shared-provider-import-review-enabled']").QuerySelectorAll("button")
+                .Single(button => button.TextContent.Trim() == "Use current").ClickAsync();
+        }
+        await cut.Find("[data-testid='shared-provider-import-review-apply']").ClickAsync();
         await cut.InvokeAsync(() => cut.Find("[data-testid='shared-provider-import-save']").ClickAsync(new()));
         var saved = (await otherOwner.GetProfileSharingAsync(seed.ProviderId)).Import!;
         Assert.Equal(keepEdits && editA == LocalEdit.Alias ? "Draft A" : changed.LocalAlias, saved.LocalAlias);
@@ -132,9 +187,10 @@ public sealed class SharedProviderLocalConcurrencyTests {
         var catalog = seed.Catalog with { Providers = publications };
         catalog = catalog with { CatalogRevision = SharedProviderCanonicalRevision.ComputeCatalog(catalog) };
         var source = await harness.Context.Services.GetRequiredService<SharedProviderSourceService>().GetAsync(seed.SourceId);
+        var original = await harness.Context.Services.GetRequiredService<SharedProviderSourceSyncService>().ObserveAsync(seed.SourceId);
         await harness.Context.Services.GetRequiredService<SharedProviderReconciliationCoordinator>().ReconcileAsync(new(seed.SourceId,
             catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision), publications.Select(item => item.PublicationId).ToHashSet(),
-            expectedSourceConcurrencyToken: source.ConcurrencyToken));
+            expectedSourceConcurrencyToken: source.ConcurrencyToken, originalSelection: original));
 
         await cut.Find("[data-testid='providers-refresh']").ClickAsync();
         cut.WaitForAssertion(() => Assert.NotEqual(before.ImportToken, child.Draft.Latest.ImportToken));
@@ -189,7 +245,7 @@ public sealed class SharedProviderLocalConcurrencyTests {
     }
 
     [Fact]
-    public async Task Known_native_conflict_requires_reload_and_read_failure_cannot_authorize_old_values() {
+    public async Task Native_peer_hint_blocks_stale_dispatch_and_read_failure_cannot_authorize_old_values() {
         NativeManagementProxy? proxy = null;
         await using var harness = await CreateHarnessAsync(value => proxy = value);
         var seed = await CreateImportAsync(harness.Context.Services);
@@ -199,11 +255,11 @@ public sealed class SharedProviderLocalConcurrencyTests {
         await proxy.Owner.UpdateImportedProfileAsync(new(before.ImportId, before.ProviderProfileId, "Saved B", false,
             before.ImportConcurrencyToken, before.ProviderConcurrencyToken));
         await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
-        Assert.Single(proxy.Updates);
+        Assert.Empty(proxy.Updates);
         proxy.FailRead = true;
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
-        Assert.Single(proxy.Updates);
+        Assert.Empty(proxy.Updates);
         proxy.FailRead = false;
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
         Assert.NotNull(cut.Find("[data-testid='shared-provider-import-conflict']"));
@@ -245,7 +301,7 @@ public sealed class SharedProviderLocalConcurrencyTests {
         catalog = catalog with { CatalogRevision = SharedProviderCanonicalRevision.ComputeCatalog(catalog) };
         await services.GetRequiredService<SharedProviderReconciliationCoordinator>().ReconcileAsync(new(source.Id, catalog,
             SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision), publications.Select(item => item.PublicationId).ToHashSet(),
-            expectedSourceConcurrencyToken: source.ConcurrencyToken));
+            expectedSourceConcurrencyToken: source.ConcurrencyToken, originalSelection: new(source.ConcurrencyToken, [])));
         var imports = Assert.Single(await services.GetRequiredService<ISharedProviderManagementService>().ListSourcesAsync()).Imports;
         return (imports.Single(item => item.LocalAlias == "Team model").ProviderProfileId,
             imports.Single(item => item.LocalAlias == "Unrelated model").ProviderProfileId, source.Id, catalog);
@@ -261,6 +317,7 @@ public sealed class SharedProviderLocalConcurrencyTests {
     }
 
     public class NativeManagementProxy : DispatchProxy {
+        public int SharingReads { get; private set; }
         public ISharedProviderManagementService Owner { get; set; } = null!;
         public List<SharedProviderImportedProfileUpdateRequest> Updates { get; } = [];
         public bool HoldUpdate { get; set; }
@@ -268,6 +325,9 @@ public sealed class SharedProviderLocalConcurrencyTests {
         public TaskCompletionSource<SharedProviderProfileSharingSnapshot> Committed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) {
+            if (method?.Name == nameof(ISharedProviderManagementService.GetProfileSharingAsync)) {
+                SharingReads++;
+            }
             if (method!.Name == nameof(ISharedProviderManagementService.UpdateImportedProfileAsync)) {
                 var request = (SharedProviderImportedProfileUpdateRequest)arguments![0]!;
                 Updates.Add(request);

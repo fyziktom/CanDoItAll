@@ -5,6 +5,9 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.UI.Catalog;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Editing;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,9 +18,76 @@ public sealed class AgentDecisionPolicyDialogTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Retired_original_access_blocks_submission_before_retention_or_native_write(bool actorChanged) {
+        await using var context = Context(out var proxy, out var state);
+        var cut = context.RenderPolicy(parameters => parameters.Add(component => component.State, state));
+        cut.WaitForElement("[data-testid='agent-policy-work']").Input("unfinished 東京");
+        var access = Assert.IsType<EditingUiTestAccess>(context.Services.GetRequiredService<IEditingUiAccess>());
+        if (actorChanged) {
+            access.Principal = "different-test-principal";
+        } else {
+            access.Allowed = false;
+        }
+        await cut.Find("form").SubmitAsync();
+        cut.WaitForElement("[data-testid='agent-policy-access-unavailable']");
+        Assert.Equal(0, proxy.Writes);
+        Assert.Null(context.Services.GetRequiredService<PendingStore>().Record);
+        Assert.Equal("unfinished 東京", state.Draft.MaximumWorkDuration);
+        Assert.Null(state.Unconfirmed);
+    }
+
+    [Fact]
+    public async Task Read_completing_after_actor_retirement_cannot_publish_protected_policy_values() {
+        await using var context = Context(out var proxy, out var state);
+        proxy.ReadCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cut = context.RenderPolicy(parameters => parameters.Add(component => component.State, state));
+        Assert.Equal(1, proxy.CurrentReads);
+        Assert.IsType<EditingUiTestAccess>(context.Services.GetRequiredService<IEditingUiAccess>()).Principal = "different-read-principal";
+        await cut.InvokeAsync(() => proxy.ReadCompletion.SetResult(new(new(proxy.Workspace, proxy.AgentId, new(4)), new(MaximumReplans: 7))));
+        cut.WaitForElement("[data-testid='agent-policy-access-unavailable']");
+        Assert.Null(state.Original);
+        Assert.Empty(cut.FindAll("form"));
+    }
+
+    [Fact]
+    public async Task Policy_dispatch_keeps_the_catalog_editor_and_original_receipt_operation_identity() {
+        await using var context = Context(out var proxy, out var state);
+        Guid? editor = null;
+        Guid? operation = null;
+        proxy.BeforeWrite = _ => {
+            var origin = context.Services.GetRequiredService<AgentConfigurationWriteContext>().Origin;
+            editor = origin?.EditorId;
+            operation = origin?.OperationId;
+        };
+        var cut = context.RenderPolicy(parameters => parameters.Add(component => component.State, state));
+        cut.WaitForElement("[data-testid='agent-policy-save']");
+        var save = cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        await proxy.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        proxy.Completion.SetResult(Accepted(proxy.Submitted!));
+        await save;
+        Assert.Equal(context.Services.GetRequiredService<AgentConfigurationOpening>().EditorId, editor);
+        Assert.Equal(proxy.Submitted!.OperationId, operation);
+        Assert.Equal(1, proxy.Writes);
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task Policy_surface_does_not_read_or_render_protected_values_without_interactive_admission(bool interactive, bool allowed) {
+        await using var context = Context(out var proxy, out var state);
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", interactive));
+        Assert.IsType<EditingUiTestAccess>(context.Services.GetRequiredService<IEditingUiAccess>()).Allowed = allowed;
+        var cut = context.RenderPolicy(parameters => parameters.Add(component => component.State, state));
+        Assert.Equal(0, proxy.CurrentReads);
+        Assert.Empty(cut.FindAll("form"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Delayed_save_preserves_typing_and_reopened_editor_observes_the_original_outcome(bool unknown) {
         await using var context = Context(out var proxy, out var state);
-        var cut = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state).Add(x => x.AgentName, "Selected policy Agent"));
+        var cut = context.RenderPolicy(p => p.Add(x => x.State, state).Add(x => x.AgentName, "Selected policy Agent"));
         cut.WaitForElement("[data-testid='agent-policy-read']");
         Assert.Contains("Selected policy Agent", cut.Markup, StringComparison.Ordinal);
         await cut.InvokeAsync(() => cut.Find("[data-testid='agent-policy-read']").Change("RunSnapshot"));
@@ -27,7 +97,7 @@ public sealed class AgentDecisionPolicyDialogTests {
         Assert.Equal(ReadBasisMode.RunSnapshot, proxy.Submitted!.Policy.ReadBasisMode);
         Assert.Null(proxy.Submitted.Policy.MaximumWorkDuration);
         await context.DisposeRenderedComponentsAsync();
-        var reopened = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var reopened = context.RenderPolicy(p => p.Add(x => x.State, state));
         Assert.True(reopened.Find("[data-testid='agent-policy-save']").HasAttribute("disabled"));
         var command = proxy.Submitted;
         proxy.Completion.SetResult(unknown ? new AgentDecisionDataPolicySaveOutcome.Unconfirmed(command)
@@ -51,7 +121,7 @@ public sealed class AgentDecisionPolicyDialogTests {
     [Fact]
     public async Task Invalid_numeric_text_cannot_submit_a_stale_last_valid_value() {
         await using var context = Context(out var proxy, out var state);
-        var cut = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var cut = context.RenderPolicy(p => p.Add(x => x.State, state));
         cut.WaitForElement("[data-testid='agent-policy-replans']");
         await cut.InvokeAsync(() => cut.Find("[data-testid='agent-policy-replans']").Change("invalid"));
         await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
@@ -64,7 +134,7 @@ public sealed class AgentDecisionPolicyDialogTests {
         await using var context = Context(out var proxy, out var state);
         using var lifetime = new CancellationTokenSource();
         var callbacks = 0;
-        var cut = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state)
+        var cut = context.RenderPolicy(p => p.Add(x => x.State, state)
             .Add(x => x.OwnerLifetime, lifetime.Token).Add(x => x.Saved, _ => callbacks++));
         cut.WaitForElement("[data-testid='agent-policy-save']");
         var pending = cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
@@ -89,7 +159,7 @@ public sealed class AgentDecisionPolicyDialogTests {
         await using var context = Context(out var proxy, out var state);
         var store = context.Services.GetRequiredService<PendingStore>();
         store.Failure = failure;
-        var cut = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var cut = context.RenderPolicy(p => p.Add(x => x.State, state));
         if (failure != PendingFailure.Initialize) {
             cut.WaitForAssertion(() => Assert.True(state.CanSave));
             await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
@@ -111,7 +181,7 @@ public sealed class AgentDecisionPolicyDialogTests {
     [Fact]
     public async Task Reload_restores_original_command_across_generation_and_lookup_preserves_later_typing() {
         await using var context = Context(out var proxy, out var state);
-        var cut = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var cut = context.RenderPolicy(p => p.Add(x => x.State, state));
         cut.WaitForAssertion(() => Assert.True(state.CanSave));
         await cut.InvokeAsync(() => cut.Find("[data-testid='agent-policy-work']").Input("00:03:00"));
         var save = cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
@@ -122,7 +192,7 @@ public sealed class AgentDecisionPolicyDialogTests {
         await context.DisposeRenderedComponentsAsync();
         proxy.Workspace = new(proxy.Workspace.DatabaseProfileId, proxy.Workspace.WorkspaceScope, new(2));
         state = new(proxy.AgentId);
-        var restored = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var restored = context.RenderPolicy(p => p.Add(x => x.State, state));
         restored.WaitForAssertion(() => Assert.Equal(command, state.Pending?.Command));
         Assert.Equal("00:03:00", state.Draft.MaximumWorkDuration);
         Assert.NotEqual(command.Expectation.Workspace, state.Original!.Expectation.Workspace);
@@ -148,7 +218,7 @@ public sealed class AgentDecisionPolicyDialogTests {
         await using var context = Context(out var proxy, out var state);
         var store = context.Services.GetRequiredService<PendingStore>();
         store.Failure = failure;
-        var cut = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var cut = context.RenderPolicy(p => p.Add(x => x.State, state));
         cut.WaitForAssertion(() => Assert.True(state.CanSave));
         var save = cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
         await proxy.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -177,7 +247,7 @@ public sealed class AgentDecisionPolicyDialogTests {
         var store = context.Services.GetRequiredService<PendingStore>();
         var command = new ReplaceAgentDecisionDataPolicyCommand(Guid.NewGuid(), new(proxy.Workspace, proxy.AgentId, new(4)), new(MaximumReplans: 2));
         store.Record = new(command, AgentDecisionPolicyPendingStage.Prepared);
-        var cut = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var cut = context.RenderPolicy(p => p.Add(x => x.State, state));
         cut.WaitForElement("[data-testid='agent-policy-discard-prepared']");
         Assert.Equal(2, state.Draft.MaximumReplans);
         store.Record = new(command, AgentDecisionPolicyPendingStage.Dispatching);
@@ -189,7 +259,7 @@ public sealed class AgentDecisionPolicyDialogTests {
         await context.DisposeRenderedComponentsAsync();
         store.Record = new(command, AgentDecisionPolicyPendingStage.Prepared);
         state = new(proxy.AgentId);
-        var reopened = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var reopened = context.RenderPolicy(p => p.Add(x => x.State, state));
         reopened.WaitForElement("[data-testid='agent-policy-discard-prepared']");
         await reopened.InvokeAsync(() => reopened.Find("[data-testid='agent-policy-discard-prepared']").ClickAsync(new MouseEventArgs()));
         Assert.Null(store.Record);
@@ -202,7 +272,7 @@ public sealed class AgentDecisionPolicyDialogTests {
     public async Task Another_tabs_operation_survives_late_acknowledgement_and_recovery_holds_the_busy_gate() {
         await using var context = Context(out var proxy, out var state);
         var store = context.Services.GetRequiredService<PendingStore>();
-        var cut = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var cut = context.RenderPolicy(p => p.Add(x => x.State, state));
         cut.WaitForAssertion(() => Assert.True(state.CanSave));
         var save = cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
         await proxy.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -234,12 +304,15 @@ public sealed class AgentDecisionPolicyDialogTests {
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.AddPolicyOpeningFixture();
         var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, PolicyWorkspace>();
         proxy = (PolicyWorkspace)(object)workspace;
         state = new(proxy.AgentId);
         context.Services.AddSingleton(workspace);
         context.Services.AddSingleton<PendingStore>();
         context.Services.AddSingleton<IAgentDecisionPolicyPendingStore>(services => services.GetRequiredService<PendingStore>());
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
+        context.OpenPolicyScope();
         return context;
     }
 
@@ -250,17 +323,22 @@ public sealed class AgentDecisionPolicyDialogTests {
         public TaskCompletionSource<AgentDecisionDataPolicySaveOutcome> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public ReplaceAgentDecisionDataPolicyCommand? Submitted { get; private set; }
         public int Writes { get; private set; }
+        public int CurrentReads { get; private set; }
         public int Lookups { get; private set; }
         public ReplaceAgentDecisionDataPolicyCommand? LookedUp { get; private set; }
         public AgentDecisionDataPolicyLookup LookupResult { get; set; } = new AgentDecisionDataPolicyLookup.NotObserved();
         public TaskCompletionSource? LookupEntered { get; set; }
         public TaskCompletionSource<AgentDecisionDataPolicyLookup>? LookupCompletion { get; set; }
+        public TaskCompletionSource<AgentDecisionDataPolicySnapshot>? ReadCompletion { get; set; }
+        public Action<ReplaceAgentDecisionDataPolicyCommand>? BeforeWrite { get; set; }
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
             if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.ReadAgentDecisionDataPolicyAsync)) {
-                return Task.FromResult(new AgentDecisionDataPolicySnapshot(new(Workspace, AgentId, new(4)), null));
+                CurrentReads++;
+                return ReadCompletion?.Task ?? Task.FromResult(new AgentDecisionDataPolicySnapshot(new(Workspace, AgentId, new(4)), null));
             }
             if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.ReplaceAgentDecisionDataPolicyAsync)) {
                 Submitted = (ReplaceAgentDecisionDataPolicyCommand)args![0]!;
+                BeforeWrite?.Invoke(Submitted);
                 Writes++;
                 Entered.TrySetResult();
                 return Completion.Task;

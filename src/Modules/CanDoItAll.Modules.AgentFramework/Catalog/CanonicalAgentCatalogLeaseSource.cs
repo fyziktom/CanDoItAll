@@ -16,12 +16,12 @@ public sealed partial class CanonicalAgentCatalogLeaseSource : IAgentCatalogRead
     private readonly ProjectDeletionSourceRecovery.CanonicalOrganizationCatalog sourceRecovery;
 
     public CanonicalAgentCatalogLeaseSource(ICanonicalRuntimeDatabase database, IOptions<StorageOptions> storageOptions,
-        IHostEnvironment environment, ProjectWriteAdmissionService projectAdmissions) {
+        IHostEnvironment environment, ProjectWriteAdmissionService projectAdmissions, AgentConfigurationWriteContext? editing = null) {
         var profile = database.Profile;
         var paths = new WorkspacePathResolver(storageOptions, environment, new BoundProfile(profile));
         sourceRecovery = new(profile.Profile.Id, HostBoundPathPolicy.BindCurrent(paths.ResolveWorkspaceRoot(), DateTimeOffset.UtcNow));
         store = new(sourceRecovery.RootPath, WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N")),
-            new AgentProjectAccessCatalogPolicy(projectAdmissions, profile.Profile.Id));
+            new AgentProjectAccessCatalogPolicy(projectAdmissions, profile.Profile.Id, editing));
     }
 
     public Task<IAgentCatalogReadLease> AcquireAgentReadLeaseAsync(Guid agentId, CancellationToken cancellationToken = default)

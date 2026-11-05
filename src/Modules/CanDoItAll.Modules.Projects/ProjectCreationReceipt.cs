@@ -2,6 +2,9 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Projects;
 
+public sealed class ProjectCreationWriteRejectedException(Exception inner)
+    : UnauthorizedAccessException("The project was not created because current write access changed before commit.", inner);
+
 public sealed class ProjectCreationReceipt {
     internal ProjectCreationReceipt(ProjectWriteAdmission project, DatasetNamespaceId originalNamespace, ProjectCreationReservation? reservation, string fingerprint, ProjectMutationAuthorization? authorization = null) {
         ArgumentNullException.ThrowIfNull(originalNamespace);

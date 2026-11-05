@@ -108,7 +108,8 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         ProjectTaskExecutionSnapshot previousExecution,
         ProjectTaskExecutionSnapshot expectedCurrentExecution,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ValidateRequiredRequestValues(resource, previousExecution);
         if (expectedCurrentExecution is null)
@@ -127,7 +128,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
             expectedCurrentExecution,
             workflowInputSettings: null,
             agent,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     private async Task<ProjectStructureTaskResourceAttachResult> AttachCoreAsync(
@@ -138,7 +139,8 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         ProjectTaskExecutionSnapshot expectedCurrentExecution,
         ProjectStructureWorkflowInputSettings? workflowInputSettings,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ValidateRequiredRequestValues(resource, previousExecution);
         if (expectedCurrentExecution is null)
@@ -155,6 +157,9 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
             ProjectStructureTaskResourceSelectionPolicy.ValidateAndNormalizeWorkflowInputSettings(
             resource,
             workflowInputSettings);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
 
         var pricingPlan = await pricingCommitService.PrepareAfterTransitionAsync(
             projectId,
@@ -172,11 +177,11 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
                 resource,
                 normalizedWorkflowInputSettings,
                 agent,
-                cancellationToken);
+                cancellationToken, authorizeCommit);
             ValidateAttachmentReceipt(resource, attachment);
             var pricing = await pricingCommitService.CommitAsync(
                 pricingPlan,
-                cancellationToken);
+                cancellationToken, authorizeCommit);
             return new ProjectStructureTaskResourceAttachResult(
                 resource,
                 pricing,

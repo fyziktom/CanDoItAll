@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Editing;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -8,8 +9,10 @@ using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
@@ -19,6 +22,119 @@ public sealed class ProjectStructureProjectCreatePendingTests {
     public enum StorageFault { BeforePreparation, LostPreparationAcknowledgement, LostDispatchClaimAcknowledgement }
     public enum Retirement { Close, Route, Dispose, NewHierarchy }
     public enum SeedResult { Accepted, Refused, Unconfirmed }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Revoked_current_access_cannot_dispatch_or_seed_a_native_Workbench_creation(bool afterAcceptance) {
+        var access = new EditingUiTestAccess();
+        var store = new FaultStore();
+        if (afterAcceptance) {
+            store.Inner.BeforeAccept = () => {
+                access.Allowed = false;
+                return Task.CompletedTask;
+            };
+        } else {
+            store.AfterDispatchClaim = () => access.Allowed = false;
+        }
+        var seed = new CountingSeed();
+        await using var harness = await Harness(store, seed, access);
+        var (page, projects, parent) = await OpenAsync(harness);
+        var modal = page.FindComponent<ProjectModalHost>().Instance;
+        var draft = modal.Draft;
+        draft.Model.Name = "Preserve original creation input";
+        draft.StarterObjects.Add(new() { ObjectType = ProjectObjectType.Note, Title = "Must remain unsent" });
+
+        await page.InvokeAsync(() => modal.Save.InvokeAsync(draft.Capture()));
+
+        Assert.Equal(0, seed.Calls);
+        Assert.Equal("Preserve original creation input", draft.Model.Name);
+        Assert.Null(draft.Acknowledgement);
+        Assert.Null(draft.Model.Id);
+        Assert.False(draft.CanMutate);
+        Assert.Equal(1, store.Inner.DispatchClaims);
+        Assert.Single(store.Inner.Records);
+        if (afterAcceptance) {
+            Assert.NotNull(draft.AcceptedOutcome);
+            Assert.Equal(2, (await projects.ListAsync()).Count);
+        } else {
+            Assert.Null(draft.AcceptedOutcome);
+            Assert.Equal(parent, Assert.Single(await projects.ListAsync()).Id);
+        }
+    }
+
+    [Fact]
+    public async Task Native_Workbench_seed_carries_the_held_current_write_check() {
+        var store = new FaultStore();
+        var seed = new CountingSeed();
+        await using var harness = await Harness(store, seed);
+        var (page, _, _) = await OpenAsync(harness);
+        var modal = page.FindComponent<ProjectModalHost>().Instance;
+        modal.Draft.Model.Name = "Admitted Workbench seed";
+        modal.Draft.StarterObjects.Add(new() { ObjectType = ProjectObjectType.Note, Title = "One explicit starter" });
+
+        await page.InvokeAsync(() => modal.Save.InvokeAsync(modal.Draft.Capture()));
+
+        Assert.Equal(1, seed.Calls);
+        Assert.True(seed.HadCurrentWriteCheck);
+    }
+
+    [Fact]
+    public async Task Revocation_after_native_Project_SQL_rolls_back_Workbench_creation_and_retains_its_reference() {
+        var access = new EditingUiTestAccess();
+        var probe = new RevokeAfterSql(access);
+        var store = new FaultStore();
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IProjectPendingSubmissionStore>(store);
+            services.AddSingleton<IProjectPendingReferenceStore>(store.Inner);
+            services.AddSingleton<IEditingUiAccess>(access);
+            services.ConfigureDbContext<ProjectsDbContext>(options => options.AddInterceptors(probe), ServiceLifetime.Singleton);
+        });
+        var (page, projects, parent) = await OpenAsync(harness);
+        var modal = page.FindComponent<ProjectModalHost>().Instance;
+        modal.Draft.Model.Name = RevokeAfterSql.Target;
+        probe.Armed = true;
+
+        await page.InvokeAsync(() => modal.Save.InvokeAsync(modal.Draft.Capture()));
+
+        Assert.True(probe.Reached);
+        Assert.Equal(parent, Assert.Single(await projects.ListAsync()).Id);
+        Assert.Null(modal.Draft.AcceptedOutcome);
+        Assert.Equal(RevokeAfterSql.Target, modal.Draft.Model.Name);
+        Assert.Single(store.Inner.Records);
+        Assert.False(modal.Draft.CanMutate);
+    }
+
+    [Fact]
+    public async Task Opening_Projects_recovery_requires_an_explicit_leave_decision_for_the_current_creation() {
+        var store = new FaultStore();
+        await using var harness = await Harness(store);
+        var (page, _, parent) = await OpenAsync(harness);
+        var modal = page.FindComponent<ProjectModalHost>().Instance;
+        var draft = modal.Draft;
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var originalUri = navigation.Uri;
+        Assert.True(modal.IsSameEditorRoute!($"/projects/{parent:D}/structure?tab=gantt"));
+        Assert.False(modal.IsSameEditorRoute!($"/projects/{parent:D}/structure?foreignProject={Guid.NewGuid():D}"));
+        Assert.False(modal.IsSameEditorRoute!($"/projects/{parent:D}/processes"));
+        Assert.False(modal.IsSameEditorRoute!("https://external.invalid/projects"));
+        await page.InvokeAsync(() => page.Find("[data-testid='project-name-input']").Input("Keep this raw creation draft"));
+        var leaving = page.InvokeAsync(() => page.Find("[data-testid='project-create-recovery-open']").ClickAsync(new()));
+        page.WaitForElement("[data-testid='project-dirty-close']");
+        await page.InvokeAsync(() => page.Find("[data-testid='project-dirty-continue']").ClickAsync(new()));
+        await leaving;
+        Assert.Equal(originalUri, navigation.Uri);
+        Assert.Same(draft, page.FindComponent<ProjectModalHost>().Instance.Draft);
+        Assert.Equal("Keep this raw creation draft", draft.Model.Name);
+
+        leaving = page.InvokeAsync(() => page.Find("[data-testid='project-create-recovery-open']").ClickAsync(new()));
+        page.WaitForElement("[data-testid='project-dirty-close']");
+        await page.InvokeAsync(() => page.Find("[data-testid='project-dirty-discard']").ClickAsync(new()));
+        await leaving;
+        Assert.EndsWith("/projects", navigation.Uri);
+        Assert.Empty(store.Inner.Records);
+        Assert.Equal(0, store.Inner.DispatchClaims);
+    }
 
     [Theory]
     [InlineData(StorageFault.BeforePreparation)]
@@ -146,9 +262,13 @@ public sealed class ProjectStructureProjectCreatePendingTests {
             return release.Task;
         };
         var seed = new CountingSeed();
-        await using var harness = await Harness(store, seed);
+        var access = new CreationLifetimeAccess();
+        await using var harness = await Harness(store, seed, access);
         var (page, projects, parent) = await OpenAsync(harness);
         var owner = page.Instance;
+        Assert.True(access.CreationLifetime.CanBeCanceled);
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var registration = access.CreationLifetime.Register(() => stopped.TrySetResult());
         var successor = (await projects.SaveAsync(new() { Name = "Route successor" })).Value;
         var modal = page.FindComponent<ProjectModalHost>().Instance;
         var draft = modal.Draft;
@@ -169,6 +289,7 @@ public sealed class ProjectStructureProjectCreatePendingTests {
                     break;
                 case Retirement.Dispose:
                     disposing = harness.Context.DisposeRenderedComponentsAsync();
+                    await stopped.Task.WaitAsync(TimeSpan.FromSeconds(20));
                     break;
                 case Retirement.NewHierarchy:
                     await page.InvokeAsync(() => page.FindComponent<CanvasWorkbench>().Instance.OnContextAction(
@@ -347,10 +468,28 @@ public sealed class ProjectStructureProjectCreatePendingTests {
         Assert.False(modal.Draft.CanMutate);
     }
 
-    private static Task<ComponentTestHarness> Harness(FaultStore store, CountingSeed? seed = null)
+    private sealed class CreationLifetimeAccess : IEditingUiAccess {
+        private readonly EditingUiTestAccess inner = new();
+        public CancellationToken CreationLifetime { get; private set; }
+
+        public Task<EditingUiGrant> OpenAsync(EditingTopic topic, CancellationToken cancellationToken) {
+            if (topic.Owner == EditingOwner.Project && topic.ResourceId is null) {
+                CreationLifetime = cancellationToken;
+            }
+            return inner.OpenAsync(topic, cancellationToken);
+        }
+
+        public ValueTask ValidateAsync(EditingUiGrant grant, bool write, CancellationToken cancellationToken)
+            => inner.ValidateAsync(grant, write, cancellationToken);
+    }
+
+    private static Task<ComponentTestHarness> Harness(FaultStore store, CountingSeed? seed = null, IEditingUiAccess? access = null)
         => ComponentTestHarness.CreateAsync(services => {
             services.AddSingleton<IProjectPendingSubmissionStore>(store);
             services.AddSingleton<IProjectPendingReferenceStore>(store.Inner);
+            if (access is not null) {
+                services.AddSingleton<IEditingUiAccess>(access);
+            }
             if (seed is not null) {
                 services.AddSingleton<IProjectWorkbenchSeedService>(seed);
             }
@@ -360,6 +499,7 @@ public sealed class ProjectStructureProjectCreatePendingTests {
         ComponentTestHarness harness, bool expectEditor = true) {
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         var parent = (await projects.SaveAsync(new() { Name = "Creation hierarchy parent" })).Value;
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/projects/{parent:D}/structure");
         var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, parent));
         page.WaitForElement("[data-testid='project-structure-canvas-loaded']");
         await page.InvokeAsync(() => page.FindComponent<CanvasWorkbench>().Instance.OnContextAction($"project:{parent:D}", "project:add-subproject", 0, 0));
@@ -373,15 +513,21 @@ public sealed class ProjectStructureProjectCreatePendingTests {
     private sealed class CountingSeed : IProjectWorkbenchSeedService, IAdmittedProjectWorkbenchSeedService {
         public SeedResult Result { get; init; }
         public int Calls { get; private set; }
+        public bool HadCurrentWriteCheck { get; private set; }
         public Task SeedProjectObjectsAsync(Guid projectId, IReadOnlyCollection<ProjectObjectSeedDraft> seeds, CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("The test requires original project-lifetime admission.");
-        public Task SeedProjectObjectsAsync(ProjectWriteAdmission project, IReadOnlyCollection<ProjectObjectSeedDraft> seeds, CancellationToken cancellationToken = default) {
+        public async Task SeedProjectObjectsAsync(ProjectWriteAdmission project, IReadOnlyCollection<ProjectObjectSeedDraft> seeds,
+            CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentWrite = null) {
+            HadCurrentWriteCheck = requireCurrentWrite is not null;
+            if (requireCurrentWrite is not null) {
+                await requireCurrentWrite(cancellationToken);
+            }
             Calls++;
-            return Result switch {
+            await (Result switch {
                 SeedResult.Refused => Task.FromException(new ProjectWriteAdmissionRejectedException(project)),
                 SeedResult.Unconfirmed => Task.FromException(new IOException("Starter completion unavailable")),
                 _ => Task.CompletedTask
-            };
+            });
         }
     }
 
@@ -389,6 +535,7 @@ public sealed class ProjectStructureProjectCreatePendingTests {
         public ProjectPendingSubmissionTestStore Inner { get; } = new();
         public StorageFault? Fault { get; init; }
         public int Preparations { get; private set; }
+        public Action? AfterDispatchClaim { get; set; }
         public ValueTask InitializeAsync(CancellationToken token = default) => Inner.InitializeAsync(token);
         public async ValueTask<ProjectPendingStoreChange> PrepareAsync(ProjectDefinitionFrozenSubmission frozen, bool starter, CancellationToken token = default) {
             Preparations++;
@@ -403,6 +550,7 @@ public sealed class ProjectStructureProjectCreatePendingTests {
         }
         public async ValueTask<ProjectPendingStoreChange> BeginDispatchAsync(ProjectPendingSubmission record, Guid attempt, bool retry, CancellationToken token = default) {
             var result = await Inner.BeginDispatchAsync(record, attempt, retry, token);
+            AfterDispatchClaim?.Invoke();
             if (Fault == StorageFault.LostDispatchClaimAcknowledgement) {
                 throw new IOException("Browser dispatch-claim acknowledgement lost");
             }
@@ -419,5 +567,22 @@ public sealed class ProjectStructureProjectCreatePendingTests {
             => Inner.ListAsync(scope, take, after, token);
         public ValueTask<ProjectPendingStoreChange> CancelPreparedAsync(ProjectPendingSubmission record, CancellationToken token = default) => Inner.CancelPreparedAsync(record, token);
         public ValueTask<ProjectPendingStoreChange> ClearResolvedAsync(ProjectPendingSubmission record, CancellationToken token = default) => Inner.ClearResolvedAsync(record, token);
+    }
+
+    private sealed class RevokeAfterSql(EditingUiTestAccess access) : SaveChangesInterceptor {
+        public const string Target = "Workbench held SQL authority";
+        public bool Armed { get; set; }
+        public bool Reached { get; private set; }
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+            CancellationToken cancellationToken = default) {
+            if (Armed && result > 0 && eventData.Context is ProjectsDbContext context &&
+                context.ChangeTracker.Entries<Project>().Any(entry => entry.Entity.Name == Target)) {
+                Assert.NotNull(context.Database.CurrentTransaction);
+                Reached = true;
+                Armed = false;
+                access.Allowed = false;
+            }
+            return ValueTask.FromResult(result);
+        }
     }
 }

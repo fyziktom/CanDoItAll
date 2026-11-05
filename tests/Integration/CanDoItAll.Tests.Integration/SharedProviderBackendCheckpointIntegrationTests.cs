@@ -1002,7 +1002,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
                 catalog,
                 SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
                 Selection(publication.PublicationId),
-                SharedProviderSelectionMode.Replace));
+                SharedProviderSelectionMode.Replace, source.ConcurrencyToken, new(source.ConcurrencyToken, [])));
         Assert.Equal(SharedProviderReconciliationOutcome.Applied, reconciliation.Outcome);
 
         await using var editContext = await dbContextFactory.CreateDbContextAsync();
@@ -1076,6 +1076,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds)
     {
         await using var scope = application.Services.CreateAsyncScope();
+        var original = await scope.ServiceProvider.GetRequiredService<SharedProviderSourceSyncService>().ObserveAsync(sourceId);
         return await scope.ServiceProvider
             .GetRequiredService<SharedProviderReconciliationCoordinator>()
             .ReconcileAsync(new SharedProviderReconciliationRequest(
@@ -1083,7 +1084,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
                 catalog,
                 SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
                 selectedPublicationIds,
-                SharedProviderSelectionMode.AddOrReactivate));
+                SharedProviderSelectionMode.AddOrReactivate, original.ConcurrencyToken, original));
     }
 
     private static async Task<PersistedSharedIdentity> LoadSharedIdentityAsync(

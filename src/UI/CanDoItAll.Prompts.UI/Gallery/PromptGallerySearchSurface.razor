@@ -125,7 +125,7 @@
         </Cluster>
     }
 
-    @if (Presentation.IsLoading)
+    @if (Presentation.IsLoading && !Presentation.IsQuietRefresh)
     {
         <LoadingState Eyebrow="Prompt gallery"
                       Title="Searching reusable prompts"

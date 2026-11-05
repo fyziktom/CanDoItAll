@@ -13,6 +13,7 @@ public partial class CapabilityAuthoringForm : IDisposable {
     [Parameter] public CapabilityKind InitialKind { get; set; } = CapabilityKind.McpServer;
     [Parameter] public IReadOnlyList<string> TagSuggestions { get; set; } = [];
     [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [Parameter] public long ChangeSequence { get; set; }
     [Parameter] public EventCallback<Guid> Completed { get; set; }
     [Parameter] public EventCallback Cancelled { get; set; }
     [Inject] public NotificationService Notifications { get; set; } = default!;
@@ -32,6 +33,7 @@ public partial class CapabilityAuthoringForm : IDisposable {
         }
         var target = (Mode, CapabilityId, InitialKind, OwnerCancellationToken);
         if (session is not null && ReferenceEquals(boundOperations, Operations) && boundTarget == target) {
+            session.ObserveChanges(ChangeSequence);
             return;
         }
         Retire();
@@ -40,7 +42,7 @@ public partial class CapabilityAuthoringForm : IDisposable {
         step = 0;
         tab = 0;
         var owner = new CapabilityAuthoringSession(Operations, Mode == CapabilityAuthoringMode.Details ? CapabilityId : null,
-            InitialKind, OwnerCancellationToken, Notifications, Logger);
+            InitialKind, OwnerCancellationToken, Notifications, Logger, ChangeSequence);
         session = owner;
         owner.StateChanged += SessionChanged;
         await owner.LoadAsync();
@@ -67,6 +69,7 @@ public partial class CapabilityAuthoringForm : IDisposable {
 
     private void DraftChanged(object? sender, FieldChangedEventArgs args) {
         if (!disposed && ReferenceEquals(sender, observedContext)) {
+            session?.Comparison?.Invalidate();
             StateHasChanged();
         }
     }
@@ -84,6 +87,12 @@ public partial class CapabilityAuthoringForm : IDisposable {
         await owner.LoadAsync();
         if (IsCurrent(owner)) {
             Observe(owner.Draft.Context);
+        }
+    }
+
+    private void ApplyComparison(CapabilityAuthoringSession owner) {
+        if (IsCurrent(owner)) {
+            owner.ApplyComparison();
         }
     }
 

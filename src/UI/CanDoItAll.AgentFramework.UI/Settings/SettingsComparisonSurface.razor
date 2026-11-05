@@ -1,0 +1,77 @@
+@using CanDoItAll.Components.OverlayLib
+@typeparam T where T : class
+
+@if (Editor.Comparison is { } review) {
+    <OverlayWindow WindowId="@windowId" Title="Review settings changes" AriaLabel="Review settings changes"
+                   Summary="Apply updates your local draft. Save remains a separate action."
+                   State="window" StateChanged="WindowChanged" DefaultWidth="1000" DefaultHeight="760"
+                   MinWidth="600" MaxWidth="1300" MaxHeight="900" KeepContentMountedWhenMinimized="true"
+                   TestId="settings-comparison">
+        <Stack GapScale="LayoutGap.Small">
+            @foreach (var field in review.Fields) {
+                <SurfaceCard Soft="true">
+                    <TextBlock Value="@field.Label" />
+                    <Grid ColumnsLg="3" Gap="LayoutGap.Small">
+                        <FormField Text="Original"><pre class="whitespace-pre-wrap break-words">@field.Original</pre></FormField>
+                        <FormField Text="My draft"><pre class="whitespace-pre-wrap break-words">@field.Local</pre></FormField>
+                        <FormField Text="Current saved"><pre class="whitespace-pre-wrap break-words">@field.Current</pre></FormField>
+                    </Grid>
+                    <Cluster Gap="LayoutGap.Small">
+                        <Button Text="Use my draft" Size="ButtonSize.Small" Click="@(() => Choose(field, true))" />
+                        <Button Text="Use current" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => Choose(field, false))" />
+                        <TextBlock Value="@field.Result" />
+                    </Cluster>
+                </SurfaceCard>
+            }
+            @if (Editor.OutcomeUnknown) {
+                <FormField Text="I reviewed current settings. The previous outcome remains unconfirmed; a later Save is a new conditional command.">
+                    <CheckBox TValue="bool" @bind-Value="acknowledged" data-testid="settings-unknown-acknowledge" />
+                </FormField>
+            }
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Apply to my draft" Disabled="@(!Editor.CanApply || Editor.OutcomeUnknown && !acknowledged)" Click="Apply" data-testid="settings-review-apply" />
+                <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
+            </Cluster>
+        </Stack>
+    </OverlayWindow>
+}
+
+@code {
+    [Parameter, EditorRequired] public SettingsDraftState<T> Editor { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+    private readonly string windowId = $"settings-review-{Guid.NewGuid():N}";
+    private OverlayWindowState window = new();
+    private SettingsComparison<T>? observed;
+    private bool acknowledged;
+
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(observed, Editor.Comparison)) {
+            observed = Editor.Comparison;
+            acknowledged = false;
+            window.IsVisible = true;
+            window.IsMinimized = false;
+        }
+    }
+    private async Task Choose(SettingsMergeField<T> field, bool local) {
+        if (local) {
+            field.UseLocal();
+        } else {
+            field.UseCurrent();
+        }
+        await Changed.InvokeAsync();
+    }
+    private async Task Apply() {
+        Editor.Apply(acknowledged);
+        await Changed.InvokeAsync();
+    }
+    private async Task Cancel() {
+        Editor.CancelComparison();
+        await Changed.InvokeAsync();
+    }
+    private async Task WindowChanged(OverlayWindowState value) {
+        window = value;
+        if (!value.IsVisible) {
+            await Cancel();
+        }
+    }
+}

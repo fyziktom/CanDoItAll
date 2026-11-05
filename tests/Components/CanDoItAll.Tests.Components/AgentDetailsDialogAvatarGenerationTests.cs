@@ -46,15 +46,16 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         };
         var cut = RenderIdentityTab(context, editor, [provider]);
 
-        cut.Find("[data-testid='agents-catalog-avatar-open']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-avatar-open']").ClickAsync());
 
         var prompt = cut.Find("[data-testid='agents-catalog-avatar-ai-prompt']");
-        Assert.Contains("Luna", prompt.TextContent, StringComparison.Ordinal);
-        Assert.Contains("Research assistant", prompt.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Luna", prompt.GetAttribute("value"), StringComparison.Ordinal);
+        Assert.Contains("Research assistant", prompt.GetAttribute("value"), StringComparison.Ordinal);
 
-        prompt.Input("A calm blue fox with a subtle lunar motif.");
-        await cut.Find("[data-testid='agents-catalog-avatar-ai-generate']")
-            .ClickAsync(new MouseEventArgs());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-avatar-ai-prompt']")
+            .InputAsync(new ChangeEventArgs { Value = "A calm blue fox with a subtle lunar motif." }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-avatar-ai-generate']")
+            .ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {

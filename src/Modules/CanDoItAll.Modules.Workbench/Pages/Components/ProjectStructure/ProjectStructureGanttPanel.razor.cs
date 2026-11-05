@@ -45,6 +45,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private ProjectStructureTaskCreationService TaskCreationService { get; set; } = default!;
 
     [Inject]
+    private ProjectStructureTaskEditingSessions TaskEditingSessions { get; set; } = default!;
+
+    [Inject]
     private ProjectStructureGanttTaskEditCoordinator TaskEditCoordinator { get; set; } = default!;
 
     [Inject]
@@ -77,8 +80,8 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     [Parameter, EditorRequired]
     public ProjectStructureSurface Surface { get; set; } = default!;
 
-    [Parameter, EditorRequired]
-    public EventCallback MutationCommitted { get; set; }
+    [Parameter]
+    public Func<Func<CancellationToken, ValueTask>, Task>? ReadAuthoritativeProject { get; set; }
 
     [Parameter]
     public EventCallback OpenAgentCatalog { get; set; }
@@ -247,6 +250,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         try
         {
+            var admission = capturedSurface.ExpectedProjectAdmission
+                ?? throw new InvalidOperationException("A current Project admission is required before reading the Gantt projection.");
+            await using var access = TaskEditingSessions.CreateAccess(admission, () => !disposed &&
+                ReferenceEquals(loadedSurface, capturedSurface) && ReferenceEquals(Surface, capturedSurface) && ProjectId == capturedSurface.ProjectId);
+            await access.OpenAsync(lifetimeCancellation.Token);
             var assignmentsTask = ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(
                 ProjectId,
                 lifetimeCancellation.Token);
@@ -254,6 +262,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 ProjectId,
                 lifetimeCancellation.Token);
             await Task.WhenAll(assignmentsTask, viewStateTask);
+            await access.AuthorizeReadAsync(lifetimeCancellation.Token);
             if (disposed || !ReferenceEquals(loadedSurface, capturedSurface) || !ReferenceEquals(Surface, capturedSurface) ||
                     ProjectId != capturedSurface.ProjectId) {
                 return;
@@ -336,7 +345,8 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         await ExecuteMutationAsync(
             "title",
-            cancellationToken => MutationService.ApplyTitleAsync(owner.ExpectedProjectAdmission!.ProjectId, request, cancellationToken, owner));
+            owner.ExpectedProjectAdmission!,
+            (token, authorize) => MutationService.ApplyTitleAsync(owner.ExpectedProjectAdmission!.ProjectId, request, token, owner, authorize));
     }
 
     private async Task ApplyScheduleAsync(GanttTaskScheduleChangeRequest request)
@@ -358,10 +368,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
         var committed = await ExecuteMutationAsync(
             "schedule",
-            cancellationToken => MutationService.ApplyScheduleAsync(
+            owner.ExpectedProjectAdmission!,
+            (token, authorize) => MutationService.ApplyScheduleAsync(
                 owner.ExpectedProjectAdmission!.ProjectId,
                 frozenRequest,
-                cancellationToken, owner));
+                token, owner, authorize));
         if (committed == PlanningCommitState.Rejected && IsCurrent(origin) && ReferenceEquals(projection, pendingProjection))
         {
             projection = renderedProjection;
@@ -376,7 +387,8 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         await ExecuteMutationAsync(
             "dependency",
-            cancellationToken => MutationService.ApplyDependencyAsync(owner.ExpectedProjectAdmission!.ProjectId, request, cancellationToken, owner));
+            owner.ExpectedProjectAdmission!,
+            (token, authorize) => MutationService.ApplyDependencyAsync(owner.ExpectedProjectAdmission!.ProjectId, request, token, owner, authorize));
     }
 
     private async Task ApplyInsertionAsync(GanttTaskInsertionRequest request)
@@ -387,7 +399,8 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         await ExecuteMutationAsync(
             "insertion",
-            cancellationToken => MutationService.ApplyInsertionAsync(owner.ExpectedProjectAdmission!.ProjectId, request, cancellationToken, owner),
+            owner.ExpectedProjectAdmission!,
+            (token, authorize) => MutationService.ApplyInsertionAsync(owner.ExpectedProjectAdmission!.ProjectId, request, token, owner, authorize),
             renewInsertionCandidate: true);
     }
 
@@ -411,7 +424,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
         var origin = viewOrigin;
         var operation = Guid.NewGuid();
-        var reload = MutationCommitted;
+        var editorProject = ProjectId;
+        var editorAdmission = loadedSurface.ExpectedProjectAdmission;
+        bool IsEditorCurrent() => !disposed && ProjectId == editorProject && editorAdmission is not null &&
+            loadedSurface?.ExpectedProjectAdmission == editorAdmission && Surface?.ExpectedProjectAdmission == editorAdmission;
         mutationOperation = operation;
         mutationInFlight = true;
         try
@@ -423,10 +439,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                     projection,
                     loadedAssignments,
                     uiMutationOwner with { ExpectedProjectAdmission = loadedSurface.ExpectedProjectAdmission }) {
-                        IsCurrent = () => IsCurrent(origin)
+                        IsCurrent = IsEditorCurrent
                     },
                 taskId,
-                () => IsCurrent(origin) ? reload.InvokeAsync() : Task.CompletedTask,
+                ReadProjectWithAccessAsync,
                 lifetimeCancellation.Token);
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
@@ -444,11 +460,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         var origin = viewOrigin;
         var operation = Guid.NewGuid();
-        var reload = MutationCommitted;
         mutationOperation = operation;
         mutationInFlight = true;
         try {
-            await OpenTaskDialogCoreAsync(startUtc, afterTaskNodeId, origin, operation, reload);
+            await OpenTaskDialogCoreAsync(startUtc, afterTaskNodeId, origin, operation);
         } finally {
             EndMutation(operation);
         }
@@ -461,19 +476,32 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
     }
 
-    private async Task OpenTaskDialogCoreAsync(DateTimeOffset startUtc, string? afterTaskNodeId, Guid origin, Guid operation, EventCallback reload) {
+    private async Task OpenTaskDialogCoreAsync(DateTimeOffset startUtc, string? afterTaskNodeId, Guid origin, Guid operation) {
         var openedProjectId = ProjectId;
         var openedAdmission = loadedSurface?.ExpectedProjectAdmission
             ?? throw new InvalidOperationException("Reload the project structure before creating a task.");
         var openedOwner = uiMutationOwner with { ExpectedProjectAdmission = openedAdmission };
+        bool IsEditorCurrent() => !disposed && ProjectId == openedProjectId &&
+            loadedSurface?.ExpectedProjectAdmission == openedAdmission && Surface?.ExpectedProjectAdmission == openedAdmission;
+        await using var access = TaskEditingSessions.CreateAccess(openedAdmission, IsEditorCurrent);
+        try {
+            await access.OpenAsync(lifetimeCancellation.Token);
+        } catch (Exception failure) when (failure is InvalidOperationException or UnauthorizedAccessException) {
+            ReportTaskCreateAccessFailure(openedProjectId, IsEditorCurrent, failure);
+            return;
+        }
         IReadOnlyList<ProjectStructureTaskResourceOption> resourceOptions = [];
         IReadOnlyList<string> resourceWarnings = [];
         try
         {
-            resourceOptions = await TaskResourceService.ListOptionsAsync(openedProjectId, lifetimeCancellation.Token);
+            resourceOptions = await access.ReadPrivateAsync(token => TaskResourceService.ListOptionsAsync(openedProjectId, token), lifetimeCancellation.Token);
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
         {
+            return;
+        }
+        catch (Exception failure) when (failure is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException) {
+            ReportTaskCreateAccessFailure(openedProjectId, IsEditorCurrent, failure);
             return;
         }
         catch (Exception exception)
@@ -485,11 +513,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 exception.GetType().Name);
         }
 
-        if (!IsCurrent(origin)) {
+        if (!IsEditorCurrent()) {
             return;
         }
         var normalizedStart = startUtc.ToUniversalTime();
-        var session = new ProjectTaskDialogSession(() => IsCurrent(origin), () => reload.InvokeAsync(), Logger);
+        var session = new ProjectTaskDialogSession(IsEditorCurrent, () => ReadProjectWithAccessAsync(access.AuthorizeReadAsync), Logger);
         await DialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
             "Add project task",
             new Dictionary<string, object?>
@@ -498,7 +526,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                     new Func<ProjectStructureTaskCreateRequest, Task<PlanningTaskSaveResult>>(draft =>
                         session.SubmitAsync(() => CreateTaskAsync(openedProjectId,
                             draft with { ExpectedProjectAdmission = openedAdmission, AfterTaskNodeId = afterTaskNodeId },
-                            openedOwner, origin, operation, session))),
+                            openedOwner, access, origin, operation, session))),
                 [nameof(ProjectStructureGanttTaskDialog.Readback)] = new Func<Task<PlanningTaskSaveResult>>(session.ReadbackAsync),
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = openedProjectId,
                 [nameof(ProjectStructureGanttTaskDialog.QuoteContext)] = new ProjectTaskQuoteContext(
@@ -516,7 +544,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 [nameof(ProjectStructureGanttTaskDialog.ResourceWarnings)] = resourceWarnings,
                 [nameof(ProjectStructureGanttTaskDialog.QuoteResolver)] =
                     new Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>(
-                        TaskResourceCostService.GetQuoteAsync)
+                        (request, token) => access.ReadPrivateAsync(current => TaskResourceCostService.GetQuoteAsync(request, current), token))
             },
             new DialogOptions
             {
@@ -535,8 +563,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     }
 
     private async Task CreateTaskAsync(Guid openedProjectId, ProjectStructureTaskCreateRequest request,
-        ProjectStructureAgentContext openedOwner, Guid origin, Guid operation, ProjectTaskDialogSession session) {
-        var result = await TaskCreationService.CreateAsync(openedProjectId, request, openedOwner, CancellationToken.None);
+        ProjectStructureAgentContext openedOwner, ProjectStructureTaskEditorAccess access, Guid origin, Guid operation, ProjectTaskDialogSession session) {
+        await access.AuthorizeWriteAsync(CancellationToken.None);
+        var result = await TaskCreationService.CreateAsync(openedProjectId, request, openedOwner, CancellationToken.None, access.AuthorizeWriteAsync);
         session.TaskCommitted([result.TaskNodeId], result.Pricing,
             request.Resource?.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent,
             rowOrderChanged: true);
@@ -553,6 +582,43 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
     }
 
+    private async Task ReadProjectWithAccessAsync(Func<CancellationToken, ValueTask> authorizeRead) {
+        var read = ReadAuthoritativeProject ?? throw new InvalidOperationException("Bind the native current-access Project reader before reading back a Task operation.");
+        await authorizeRead(lifetimeCancellation.Token);
+        await read(authorizeRead);
+        await authorizeRead(lifetimeCancellation.Token);
+    }
+
+    private async Task ReloadScheduleAsync() {
+        var owner = CaptureRenderedMutationOwner(loadedSurface ?? Surface);
+        if (owner is null) {
+            return;
+        }
+        var expected = owner.ExpectedProjectAdmission!;
+        var origin = viewOrigin;
+        await using var access = TaskEditingSessions.CreateAccess(expected, () => !disposed && ProjectId == expected.ProjectId &&
+            Surface.ExpectedProjectAdmission == expected && loadedSurface?.ExpectedProjectAdmission == expected);
+        try {
+            await access.OpenAsync(lifetimeCancellation.Token);
+            await ReadProjectWithAccessAsync(access.AuthorizeReadAsync);
+        } catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested) {
+        } catch (Exception failure) {
+            if (IsCurrent(origin)) {
+                readbackRequired = true;
+                NotificationService.Error("Project schedule read unavailable", "The original Project and current Structure access could not be verified. New data was not displayed.");
+            }
+            Logger.LogWarning("Gantt read failed for project {ProjectId}; failure type {FailureType}.", Mask(expected.ProjectId), failure.GetType().Name);
+        }
+    }
+
+    private void ReportTaskCreateAccessFailure(Guid project, Func<bool> isCurrent, Exception failure) {
+        if (isCurrent()) {
+            NotificationService.Error("Task creation unavailable", "The original Project and current Structure access could not be verified. Reopen the creator with current access.");
+        }
+        Logger.LogWarning("Could not open or read Gantt Task creation choices for project {ProjectId}; failure type {FailureType}.",
+            Mask(project), failure.GetType().Name);
+    }
+
     private async Task ApplyTaskOrderAsync(GanttTaskOrderChangeRequest request) {
         var owner = CaptureRenderedMutationOwner(loadedSurface ?? Surface);
         if (owner is null) {
@@ -564,9 +630,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             _ => throw new ArgumentOutOfRangeException(nameof(request), request.Placement, "Unknown Gantt row placement.")
         };
         var move = new ProjectStructureGanttRowMoveRequest(request.TaskId.Value, request.AnchorTaskId.Value, placement);
-        await ExecuteMutationAsync("task order", async cancellationToken => {
+        await ExecuteMutationAsync("task order", owner.ExpectedProjectAdmission!, async (token, authorize) => {
             try {
-                await RowOrderService.MoveAsync(owner.ExpectedProjectAdmission!.ProjectId, move, owner, cancellationToken);
+                await RowOrderService.MoveAsync(owner.ExpectedProjectAdmission!.ProjectId, move, owner, token, authorize);
                 return new([request.TaskId, request.AnchorTaskId], 0, 0);
             } catch (ProjectStructureGanttRowOrderConflictException) {
                 throw new ProjectStructureGanttMutationException(ProjectStructureGanttMutationErrorCode.StaleTask,
@@ -577,7 +643,8 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
     private async Task<PlanningCommitState> ExecuteMutationAsync(
         string operation,
-        Func<CancellationToken, Task<ProjectStructureGanttMutationResult>> mutation,
+        ProjectWriteAdmission expected,
+        Func<CancellationToken, Func<CancellationToken, ValueTask>, Task<ProjectStructureGanttMutationResult>> mutation,
         bool renewInsertionCandidate = false)
     {
         if (!EnsureMutationHostAvailable())
@@ -587,14 +654,18 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
         var origin = viewOrigin;
         var operationId = Guid.NewGuid();
-        var projectId = ProjectId;
-        var reload = MutationCommitted;
+        var projectId = expected.ProjectId;
         mutationOperation = operationId;
         mutationInFlight = true;
         var mutationCommitted = false;
+        await using var access = TaskEditingSessions.CreateAccess(expected, () => !disposed && ProjectId == projectId &&
+            Surface.ExpectedProjectAdmission == expected && loadedSurface?.ExpectedProjectAdmission == expected &&
+            (mutationCommitted || IsCurrent(origin)));
         try
         {
-            var result = await mutation(CancellationToken.None);
+            await access.OpenAsync(lifetimeCancellation.Token);
+            await access.AuthorizeWriteAsync(CancellationToken.None);
+            var result = await mutation(CancellationToken.None, access.AuthorizeWriteAsync);
             mutationCommitted = true;
             mutationReceipts[operationId] = new(origin, operationId, PlanningCommitState.Committed,
                 BuildMutationStatus(operation, result), result.AffectedTaskIds.ToArray());
@@ -606,7 +677,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 insertionCandidate = CreateInsertionCandidate(projectionOriginUtc);
             }
 
-            await reload.InvokeAsync();
+            await ReadProjectWithAccessAsync(access.AuthorizeReadAsync);
             if (!IsCurrent(origin)) {
                 return PlanningCommitState.Committed;
             }
@@ -630,9 +701,26 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         catch (ProjectWriteAdmissionRejectedException) {
             if (IsCurrent(origin)) {
                 readbackRequired = true;
-                NotificationService.Error("Project schedule change rejected", "The original project lifetime is no longer available. Read the project again.");
+                NotificationService.Error("Project schedule unavailable", mutationCommitted
+                    ? "The change was saved, but the original project is no longer available for readback. Do not repeat the change."
+                    : "The original project lifetime is no longer available. Read the project again.");
             }
-            return PlanningCommitState.Rejected;
+            return mutationCommitted ? PlanningCommitState.Committed : PlanningCommitState.Rejected;
+        }
+        catch (UnauthorizedAccessException) {
+            if (!mutationCommitted) {
+                mutationReceipts[operationId] = new(origin, operationId, PlanningCommitState.Rejected,
+                    "Structure access changed. The schedule change was rejected; reload with current access before editing again.", []);
+            }
+            if (IsCurrent(origin)) {
+                readbackRequired = true;
+                NotificationService.Error("Project schedule access changed", mutationCommitted
+                    ? "The change was saved, but current access prevented readback. Do not repeat the change."
+                    : "Current Structure access could not be verified. The change was rejected. Reload with current access before editing again.");
+            }
+            Logger.LogWarning("Gantt {Operation} access changed for project {ProjectId}; confirmed commit {Committed}.",
+                operation, Mask(projectId), mutationCommitted);
+            return mutationCommitted ? PlanningCommitState.Committed : PlanningCommitState.Rejected;
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
         {
@@ -678,7 +766,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         if (disposed || readbackRequired || loadError is not null) {
             return false;
         }
-        if (!MutationCommitted.HasDelegate)
+        if (ReadAuthoritativeProject is null)
         {
             NotificationService.Error(
                 "Project schedule change unavailable",

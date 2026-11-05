@@ -27,6 +27,8 @@ public partial class ConversationShellHost
     private string searchText = string.Empty;
     private bool attached;
     private bool isInitializing;
+    private bool isRefreshing;
+    private string refreshFailure = string.Empty;
     private int disposed;
 
     internal Task Initialization { get; private set; } = Task.CompletedTask;
@@ -74,23 +76,29 @@ public partial class ConversationShellHost
             .Select(message => message!)
             .ToArray();
 
-    private ConversationShellWindowDescriptor? FocusedWindow
-    {
-        get
-        {
-            if (state.FocusedWindow is not { } focused)
-            {
-                return null;
-            }
+    private IEnumerable<ConversationShellWindowDescriptor> RenderedWindows => ContributorSnapshots
+        .SelectMany(source => source.Snapshot.Windows)
+        .Where(window => window.KeepContentMounted || window.Key == state.FocusedWindow);
 
-            return ContributorSnapshots
-                .SelectMany(snapshot => snapshot.Snapshot.Windows)
-                .FirstOrDefault(window => window.Key == focused);
+    private IReadOnlyList<(string SourceId, ConversationParticipantKind Kind, ConversationShellContributorSnapshot Snapshot)> ContributorSnapshots
+        => contributors.Select(item => (item.SourceId, item.Kind, item.Snapshot())).ToArray();
+
+    private async Task RefreshAsync(Func<CancellationToken, Task> refresh) {
+        if (isRefreshing || Volatile.Read(ref disposed) != 0) {
+            return;
+        }
+        isRefreshing = true;
+        refreshFailure = string.Empty;
+        try {
+            await refresh(lifetimeToken);
+        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            refreshFailure = "The conversation catalog could not be refreshed. Its previous information is retained.";
+            Logger.LogWarning("Conversation catalog refresh failed with {FailureType}.", exception.GetType().Name);
+        } finally {
+            isRefreshing = false;
         }
     }
-
-    private IReadOnlyList<(ConversationParticipantKind Kind, ConversationShellContributorSnapshot Snapshot)> ContributorSnapshots
-        => contributors.Select(item => (item.Kind, item.Snapshot())).ToArray();
 
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
@@ -190,7 +198,7 @@ public partial class ConversationShellHost
         }
 
         windowState = OverlayWindowState.Normalize(windowState);
-        windowState.IsVisible = true;
+        windowState.IsVisible = state.FocusedWindow == window.Key;
         windowStates[window.Key] = windowState;
         return windowState;
     }
@@ -282,7 +290,14 @@ public partial class ConversationShellHost
                     return;
                 }
                 if (refreshState) {
-                    state = Coordinator.Snapshot();
+                    var next = Coordinator.Snapshot();
+                    if (next.FocusGeneration != state.FocusGeneration && next.FocusedWindow is { } focused &&
+                        windowStates.TryGetValue(focused, out var current)) {
+                        var restored = OverlayWindowState.Normalize(current);
+                        restored.IsMinimized = false;
+                        windowStates[focused] = restored;
+                    }
+                    state = next;
                 }
                 StateHasChanged();
             });

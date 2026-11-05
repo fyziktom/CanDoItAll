@@ -57,6 +57,36 @@ with the same public ID; legacy unbound references retain their existing display
 - Relationship replacement is authoritative for the selected party. Read, merge, and send the complete intended relationship list.
 - Invalid references return the shared structured error response. Do not retry through a database bypass.
 
+Affiliation application commands require the original `ExpectedUpdatedAtUtc` for an
+existing row, including updates through the safe Party command and HR tools. A missing
+original returns `crmhr.affiliation.concurrency-version-required`; a stale original
+returns a concurrency error. Read and explicitly reconcile instead of fetching a new
+version merely to retry the old payload. New native UI rows carry a stable identity and
+an explicit `IsNew` absence expectation; that intent cannot replace an existing row.
+Full affiliation replacement retains audited history: end-date saved rows rather than
+omitting them. Successful results contain the values accepted by that command, captured
+inside its transaction, even if another writer commits before the response is delivered.
+Party type changes, including atomic imports, cannot invalidate saved affiliation
+endpoints, including historical rows. They return `crmhr.party.affiliation-type-conflict`.
+Affiliation writes and type changes share native transaction exclusion; an endpoint
+cannot change type between validation and commit. Ordinary name/content edits remain
+available and still require their original Party observation.
+
+Relationship replacement requires an explicit `Original` observation, including for an
+empty set. Build it from the complete relationship read: each observed row contributes
+its `Id`, `RelatedPartyId`, and `Version`. Send the complete intended list with that
+observation; fetching a fresh version to retry an old list can delete another editor's
+work. Missing originals return 400 (`crmhr.party.relationship-original-required`); stale row
+versions, changed membership, or changed endpoints return 409. Saved rows keep their
+identities, and a successful response contains `PartyId` and the exact `Accepted` rows
+from the committed transaction. A later read is a new observation, not the receipt.
+
+Recruiting support reads also include `Original`, limited to the manager, buddy and
+mentor relationships they own. Return that observation on support saves. These saves
+use the same versioned owner and preserve unrelated relationships; buddy and mentor
+remain distinct roles even when assigned to the same person. Canonical support
+endpoints must remain people, including during Party type changes and imports.
+
 ## Idempotent Scenario Operation
 
 Use stable external codes such as `DEMO-CRMHR-*` and stable application names:

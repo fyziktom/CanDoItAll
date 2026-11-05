@@ -14,11 +14,10 @@ public enum ProviderMutationKind { Create, Update, Delete, HealthPersistence, Mo
 
 /// <summary>
 /// Result of checking an unconfirmed provider-profile write against the stored profile, written as the text name of
-/// the member. Committed: the stored profile shows that the write took effect (a created profile exists, a deleted one
-/// is gone, or an update's intended concurrency token is stored). DefinitelyNotCommitted: the stored profile shows that
-/// it did not (a created profile does not exist, or the token the write expected is still stored). StillUnconfirmed:
-/// the stored state proves neither, or the profile could not be read; check again later and do not repeat the write
-/// blindly.
+/// the member. Committed requires a native attestation and the attempt's intended token in canonical state.
+/// DefinitelyNotCommitted requires a native attestation and the original token still in canonical state for a
+/// configuration update or delete. Absence, unsigned assertions and diagnostic-only metadata remain StillUnconfirmed.
+/// An unavailable read also remains unconfirmed; do not repeat the write blindly.
 /// </summary>
 public enum ProviderVerificationDisposition { Committed, DefinitelyNotCommitted, StillUnconfirmed }
 
@@ -49,7 +48,7 @@ public enum ProviderVerificationDisposition { Committed, DefinitelyNotCommitted,
 /// </param>
 /// <param name="SubmissionFingerprint">
 /// Server-computed fingerprint (hexadecimal SHA-256) of the submitted editor body, for correlating the attempt with
-/// the request; null when not recorded. Verification does not use it.
+/// the request; null when not recorded. Native attestation binds this fingerprint to the attempt.
 /// </param>
 public sealed record ProviderMutationAttempt(
     Guid AttemptId,
@@ -57,7 +56,8 @@ public sealed record ProviderMutationAttempt(
     ProviderMutationKind Kind,
     Guid? ExpectedConcurrencyToken,
     Guid? IntendedConcurrencyToken = null,
-    string? SubmissionFingerprint = null) {
+    string? SubmissionFingerprint = null,
+    string? Witness = null) {
     /// <summary>
     /// True when <c>kind</c> is 0 Create. Computed by the server; ignored when the receipt is sent back.
     /// </summary>

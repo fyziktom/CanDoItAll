@@ -33,8 +33,25 @@ compensation facts before the captured dialog can close. Partial and unknown res
 retain the draft and known identities; readback does not replay a write. A preview
 quote never substitutes for native save-time pricing.
 
+Existing Task edits retain original, raw local and explicitly read current values.
+`PlanningTaskFormReview` groups delivery intervals, effort/unit, money/currency and
+execution/dates; notes use the bounded text merge. Result choices stay separate from
+the mounted form until an exact local-input check and native current verification
+allow one synchronous local patch. Apply performs no save, attachment or quote.
+Undo restores the previous raw draft while retaining the accepted current baseline.
+Invalid raw input and a lifecycle-invalid local choice remain visible and block Save.
+
+`IPlanningTaskComparisonOwner` is the native read/verification boundary. The native
+host retains Project/Task occurrence, complete assignment witnesses, current access
+and physical commit checks. A retired grant, deleted Task or replaced Project clears
+private comparison values while preserving the local draft. Shared close guards cover
+raw input, comparison choices, in-flight submission and unresolved outcomes. A known
+noncommitted concurrency rejection can be corrected through explicit verified Apply; a hint,
+readback, partial receipt or unknown result cannot rearm the original operation.
+
 Dependencies are framework components, neutral BaseLib, CanvasLib, Gantt, Mermaid,
-the existing light RecordBrowsing controls and the dependency-free Planning.Contracts.
+the existing light RecordBrowsing controls, neutral Editing/Editing.UI and the
+dependency-free Planning.Contracts.
 The independent [sandbox](../../Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/README.md)
 provides synthetic controls without an application database. Native fault tests
 complement the isolated tests under `tests/Components/CanDoItAll.Workbench.Planning.UI.Tests`.

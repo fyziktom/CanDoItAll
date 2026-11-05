@@ -1,0 +1,91 @@
+@using CanDoItAll.Editing
+
+@if (State.IsOutdated || State.IsUnknown || Message is not null) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-affiliation-freshness">
+        <TextBlock Value="@(Message ?? (State.IsUnknown ? "The affiliation save outcome is unknown. Your submission and draft are retained; resubmission is blocked." : "Saved affiliations changed. Review their current values before saving."))" />
+        <Button Text="Review affiliations" ButtonStyle="ButtonStyle.Light" Disabled="@(Reading || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-affiliation-review-open" />
+    </Alert>
+}
+@if (State.CanUndo) {
+    <Button Text="Undo affiliation merge" ButtonStyle="ButtonStyle.Light" Disabled="@(State.IsSaving || State.IsUnknown)" Click="UndoRequested" />
+}
+<Dialog IsOpen="@(State.Review is not null)" Title="Review organization affiliations" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-affiliation-review-dialog">
+    <ChildContent>
+        @if (State.Review is { } review) {
+            <Stack GapScale="LayoutGap.Medium">
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Choose the intended version of each affiliation. Apply changes your draft; Save remains separate. Saved history must be kept or end-dated." /></Alert>
+                @if (State.ReviewIsStale) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-affiliation-review-stale"><TextBlock Value="Saved affiliations changed again. Refresh this comparison; your choices are retained." /></Alert>
+                }
+                @if (review.GroupError is { } error) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@error" /></Alert>
+                }
+                <Button Text="@(showAll ? "Show changed affiliations" : "Show all affiliations")" ButtonStyle="ButtonStyle.Light" Click="@(() => showAll = !showAll)" />
+                <PartyMergeRows TRow="PartyOrganizationAffiliationEditorModel" Title="Organization affiliations" Rows="review.Rows" Format="FormatRow" ShowUnchanged="@showAll" Changed="Changed">
+                    <ResultActions Context="row">
+                        @if (row.Field.IsResolved && row.Field.Result is { Exists: true, Value: { } value }) {
+                            <FormField Text="Primary in my merged draft">
+                                <CheckBox TValue="bool" Value="@value.IsPrimary" ValueChanged="@((bool primary) => SetPrimaryAsync(row, value, primary))" />
+                            </FormField>
+                            <Grid ColumnsXl="3" Gap="LayoutGap.Small">
+                                <FormField Text="Merged affiliation title"><TextBox Value="@value.JobTitle" Immediate="true" ValueChanged="@(text => SetTextAsync(row, AffiliationField.Title, text))" aria-label="Merged affiliation title" /></FormField>
+                                <FormField Text="Merged employee code"><TextBox Value="@value.EmployeeCode" Immediate="true" ValueChanged="@(text => SetTextAsync(row, AffiliationField.EmployeeCode, text))" aria-label="Merged employee code" /></FormField>
+                                <FormField Text="Merged affiliation notes"><TextArea Value="@value.Notes" Immediate="true" Rows="3" ValueChanged="@(text => SetTextAsync(row, AffiliationField.Notes, text))" aria-label="Merged affiliation notes" /></FormField>
+                            </Grid>
+                        }
+                    </ResultActions>
+                </PartyMergeRows>
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="@Reading" Click="ReviewRequested" data-testid="crmhr-affiliation-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(Reading || State.IsSaving || State.IsUnknown || State.ReviewIsStale || State.Review?.CanApply != true)" Click="ApplyRequested" data-testid="crmhr-affiliation-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private bool showAll;
+    [Parameter, EditorRequired] public AffiliationReconciliation State { get; set; } = default!;
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool Reading { get; set; }
+    [Parameter] public IReadOnlyDictionary<Guid, string> PartyNames { get; set; } = new Dictionary<Guid, string>();
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+    [Parameter] public EventCallback UndoRequested { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private string FormatRow(PartyOrganizationAffiliationEditorModel row) =>
+        $"Company: {Name(row.OrganizationPartyId)}\nKind: {row.AffiliationKind}\nPrimary: {row.IsPrimary}\nTitle: {row.JobTitle}\nEmployee code: {row.EmployeeCode}\nUnit: {Name(row.OrganizationUnitPartyId)}\nManager: {Name(row.ManagerPartyId)}\nFrom: {row.ValidFrom:yyyy-MM-dd}\nTo: {row.ValidTo:yyyy-MM-dd}\nNotes: {row.Notes}";
+    private string Name(Guid? id) => id is Guid key ? PartyNames.GetValueOrDefault(key) ?? key.ToString("D") : "None";
+    private async Task SetPrimaryAsync(KeyedMergeRow<Guid, PartyOrganizationAffiliationEditorModel> row, PartyOrganizationAffiliationEditorModel value, bool primary) {
+        var result = value.Snapshot();
+        result.IsPrimary = primary;
+        row.Field.SetResult(MergeEntry<PartyOrganizationAffiliationEditorModel>.Present(result));
+        await Changed.InvokeAsync();
+    }
+
+    private async Task SetTextAsync(KeyedMergeRow<Guid, PartyOrganizationAffiliationEditorModel> row, AffiliationField field, string? text) {
+        var result = row.Field.Result.Value!.Snapshot();
+        switch (field) {
+            case AffiliationField.Title:
+                result.JobTitle = text ?? string.Empty;
+                break;
+            case AffiliationField.EmployeeCode:
+                result.EmployeeCode = text ?? string.Empty;
+                break;
+            case AffiliationField.Notes:
+                result.Notes = text ?? string.Empty;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(field));
+        }
+        row.Field.SetResult(MergeEntry<PartyOrganizationAffiliationEditorModel>.Present(result));
+        await Changed.InvokeAsync();
+    }
+}

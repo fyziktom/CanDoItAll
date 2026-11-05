@@ -28,6 +28,26 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
+Workflow catalog list, search and lookup project the current head's metadata without
+loading its graph JSON. Six provenance and external-identity columns are populated by
+the same version append as the complete immutable definition. Existing rows are backfilled
+by `20261104001801_AddWorkflowCatalogMetadata`; the graph remains authoritative and
+unchanged. Selected definition/version reads still load the complete document.
+
+The native catalog page uses bounded search pages and an exact selected-ID metadata
+lookup. Committed definition create/content/status/delete changes publish dataset-scoped
+hints. Quiet catalog reads revalidate current Workflow read access and retain the open
+canvas definition, original version, filters, paging and expanded groups. Read failure
+keeps the previous catalog with an explicit warning. Notifications never grant write
+authority or replace the conditional head check. A lost hint cannot admit a stale save.
+
+Workflow definition saves and lifecycle commands require the original version for existing
+heads. Preserved-ID import accepts an explicit original version; null is create-only
+absence. Delete takes `WorkflowDefinitionDeleteRequest` with its original head version;
+the API requires `expectedVersionId` and returns409 for missing, empty, stale or retired
+observations. Native delete/save races use the existing head concurrency token and one
+transaction, preserving the winning history. Deletion retains runtime runs and components.
+
 The [complete Agent editor renderer](../../UI/CanDoItAll.AgentFramework.Editor.UI/README.md)
 owns the form shell, all ten sections, Memory/root child rendering and small confirmations. `AgentDetailsDialog` retains
 the single editor session and whole-agent commands, all authority and reconciliation,
@@ -54,6 +74,13 @@ durable approvals and cancellation. Usage queries retain their accepted UTC wind
 opening profile/actor lifetime; a later read cannot publish into a successor view.
 Voice and Floating Settings still use the canonical installation settings owner. Voice
 playback and SimpleChat floating dialogs retire only their own activation. The
+workflow settings value carries its original `UpdatedAtUtc` through reads and saves;
+Voice retains that original through its form instead of authorizing an old form with a
+new read. Native replacements use the existing timestamp column as an EF concurrency
+token, with monotonic microsecond revisions and create-only absence. Native authoring
+commits recheck a supplied UI admission after SQL and before transaction commit. Floating
+chat has its own settings key and remains a separate authoring adoption checkpoint.
+The
 Simple Chat workspace composes the existing SimpleChats UI leaf's complete
 Start/Rename/Archive forms while retaining authorization, revision pinning and persistence.
 The

@@ -1,4 +1,5 @@
 using System.Runtime.ExceptionServices;
+using CanDoItAll.Editing;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
@@ -21,6 +22,7 @@ public sealed class ProjectDefinitionWriter(
     CoordinatedDatabaseTransaction transactions,
     ProjectWriteAdmissionService admissions,
     ProjectDefinitionOperationProtocol operationProtocol,
+    ProjectChanges changes,
     ILogger<ProjectDefinitionWriter> logger) {
     public Task<ProjectDefinitionOutcome<ProjectEditorAcknowledgement>> ReplaceAsync(
         ProjectDefinitionRequest<ReplaceProjectDefinitionCommand> request, ProjectDefinitionInvocation invocation,
@@ -290,6 +292,7 @@ public sealed class ProjectDefinitionWriter(
             if (write.Attempt is { } current) {
                 await ProjectDefinitionCurrentWriteGuard.RequireAsync(current, cancellationToken);
             }
+            await changes.DemandCommitAsync(cancellationToken);
             var entity = await context.Set<Project>().SingleOrDefaultAsync(project => project.Id == targetId, cancellationToken);
             if (write.Expected is { } expected) {
                 if (entity is null) {
@@ -387,16 +390,31 @@ public sealed class ProjectDefinitionWriter(
             }
             try {
                 if (write.Attempt is { } committing) {
-                    await scope.CommitDefinitionAsync(committing, cancellationToken);
+                    await scope.CommitDefinitionAsync(committing, cancellationToken, changes.DemandCommitAsync);
                 } else {
-                    await scope.CommitAsync(cancellationToken);
+                    await scope.CommitAsync(cancellationToken, changes.DemandCommitAsync);
                 }
             } catch (Exception exception) when (scope.IsCommitted) {
                 LogPostCommit(exception, targetId, "source-cleanup");
+            } finally {
+                if (scope.IsCommitted) {
+                    if (write.Attempt is { } committed) {
+                        committed.Committed = true;
+                    }
+                    await RunPostCommitAsync(targetId, "definition-change-hint", () => {
+                        changes.Publish(targetId, write.Creation is null ? EditingChangeKind.EditableContentChanged : EditingChangeKind.Created,
+                            write.Attempt?.Operation.Id);
+                        if (parentId is { } linkedParent) {
+                            changes.Publish(linkedParent, EditingChangeKind.MetadataChanged, write.Attempt?.Operation.Id);
+                        }
+                        return Task.CompletedTask;
+                    });
+                }
             }
-            if (write.Attempt is { } committed) {
-                committed.Committed = true;
-            }
+        } catch (UnauthorizedAccessException exception) when (write.Creation is not null && write.Attempt is null &&
+                scope is { IsCommitted: false, CommitAttempted: false }) {
+            primaryFailure = exception;
+            throw new ProjectCreationWriteRejectedException(exception);
         } catch (Exception exception) {
             primaryFailure = exception;
             throw;

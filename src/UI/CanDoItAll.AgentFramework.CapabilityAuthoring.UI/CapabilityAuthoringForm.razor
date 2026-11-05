@@ -29,6 +29,15 @@
                     <Alert AlertStyle="@(owner.SaveUnknown ? AlertStyle.Danger : AlertStyle.Info)" data-testid="capability-authoring-status">@owner.Status</Alert>
                 }
                 <ValidationSummary />
+                @if (owner.HasExternalChanges) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="capability-changed-elsewhere">
+                        The capability changed elsewhere. Your draft is retained.
+                        <Button Text="Compare changes" ButtonStyle="ButtonStyle.Light" Disabled="@(owner.Busy || owner.SaveUnknown)" Click="owner.CompareAsync" data-testid="capability-compare" />
+                    </Alert>
+                }
+                @if (owner.Comparison is { } review) {
+                    <CapabilityComparisonSurface Review="review" Changed="StateHasChanged" />
+                }
                 @if (Mode == CapabilityAuthoringMode.Wizard) {
                     <Steps Value="step" ValueChanged="value => SelectStep(owner, value)" CanSelect="false" data-testid="agents-capability-setup-wizard">
                         <StepsItem Text="Identity" Icon="badge">
@@ -76,19 +85,27 @@
                 }
                 <StickyActionFooter StatusLabel="Capability catalog">
                     <SecondaryActions>
-                        <Button Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Light" Click="() => CancelAsync(owner)" />
-                        @if (Mode == CapabilityAuthoringMode.Wizard) {
-                            <Button Text="Back" Icon="arrow_back" ButtonStyle="ButtonStyle.Light" Disabled="@(step == 0)" Click="() => SelectStep(owner, step - 1)" data-testid="agents-capability-setup-back" />
+                        @if (owner.Comparison is not null) {
+                            <Button Text="Back to editor" ButtonStyle="ButtonStyle.Light" Click="owner.CancelComparison" data-testid="capability-comparison-cancel" />
+                        } else {
+                            <Button Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Light" Click="() => CancelAsync(owner)" />
+                            @if (Mode == CapabilityAuthoringMode.Wizard) {
+                                <Button Text="Back" Icon="arrow_back" ButtonStyle="ButtonStyle.Light" Disabled="@(step == 0)" Click="() => SelectStep(owner, step - 1)" data-testid="agents-capability-setup-back" />
+                            }
                         }
                     </SecondaryActions>
                     <PrimaryActions>
-                        @if (owner.AcceptedId.HasValue) {
-                            <Button Text="Use saved capability" ButtonStyle="ButtonStyle.Light" Click="() => CompleteAsync(owner)" data-testid="capability-use-saved" />
-                        }
-                        @if (Mode == CapabilityAuthoringMode.Wizard && step < 2) {
-                            <Button Text="Next" Icon="arrow_forward" Disabled="@owner.Busy" Click="() => Next(owner)" data-testid="agents-capability-setup-next" />
+                        @if (owner.Comparison is { } footerReview) {
+                            <Button Text="Apply to draft" Disabled="@(!footerReview.CanApply || owner.Busy)" Click="() => ApplyComparison(owner)" data-testid="capability-comparison-apply" />
                         } else {
-                            <Button Text="@(owner.Draft.Model.Id.HasValue ? "Save capability" : "Create capability")" Icon="check" Type="submit" Disabled="@(owner.Busy || owner.SaveUnknown)" IsBusy="@owner.Busy" data-testid="@(Mode == CapabilityAuthoringMode.Wizard ? "agents-capability-setup-create" : "agents-capability-details-save")" />
+                            @if (owner.AcceptedId.HasValue) {
+                                <Button Text="Use saved capability" ButtonStyle="ButtonStyle.Light" Click="() => CompleteAsync(owner)" data-testid="capability-use-saved" />
+                            }
+                            @if (Mode == CapabilityAuthoringMode.Wizard && step < 2) {
+                                <Button Text="Next" Icon="arrow_forward" Disabled="@owner.Busy" Click="() => Next(owner)" data-testid="agents-capability-setup-next" />
+                            } else {
+                                <Button Text="@(owner.Draft.Model.Id.HasValue ? "Save capability" : "Create capability")" Icon="check" Type="submit" Disabled="@(owner.Busy || owner.SaveUnknown || owner.HasExternalChanges || owner.Comparison is not null)" IsBusy="@owner.Busy" data-testid="@(Mode == CapabilityAuthoringMode.Wizard ? "agents-capability-setup-create" : "agents-capability-details-save")" />
+                            }
                         }
                     </PrimaryActions>
                 </StickyActionFooter>

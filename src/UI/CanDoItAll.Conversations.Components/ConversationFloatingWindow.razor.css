@@ -2,6 +2,10 @@
     display: contents;
 }
 
+.conversation-floating-window[hidden] {
+    display: none;
+}
+
 .conversation-floating-window ::deep .conversation-floating-window__body {
     display: flex;
     flex-direction: column;

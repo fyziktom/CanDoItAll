@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Logging
+@using CanDoItAll.Editing.UI
 @implements IDisposable
 @inject NotificationService Notifications
 @inject ILogger<TeamMetadataEditor> Logger
@@ -25,6 +26,27 @@
                     @if (owner.Status is not null) {
                         <Alert AlertStyle="@(owner.Unknown ? AlertStyle.Danger : AlertStyle.Info)" data-testid="agents-team-status">@owner.Status</Alert>
                     }
+                    @if (owner.Conflict || ChangeSequence != owner.ObservedSequence) {
+                        <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-team-changed">
+                            <TextBlock Value="Team configuration changed. Your draft is retained. Compare details before saving; membership is managed separately." />
+                            <Button Text="Compare team details" Disabled="@(owner.Busy || owner.Unknown || owner.Comparing)" Click="() => CompareAsync(owner)" data-testid="agents-team-compare" />
+                        </Alert>
+                    }
+                    @if (owner.Comparison is { } review) {
+                        <SurfaceCard data-testid="agents-team-comparison">
+                            <Stack GapScale="LayoutGap.Small">
+                                <TextBlock Value="Review the changed details. Applying changes this draft only." />
+                                <MergeFieldView TValue="string" ShowUnchanged="false" Label="Name" Field="review.Name" Format="@(value => value)" Changed="StateHasChanged" />
+                                <MergeFieldView TValue="string" ShowUnchanged="false" Label="Description" Field="review.Description.Field" Format="@(value => value)" Changed="StateHasChanged" />
+                                <MergeFieldView TValue="string" ShowUnchanged="false" Label="Icon" Field="review.Icon" Format="@(value => value)" Changed="StateHasChanged" />
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="() => owner.Comparison = null" />
+                                    <Button Text="Apply to draft" Disabled="@(!review.IsResolved || owner.Revision != owner.CompareRevision || ChangeSequence != owner.CompareSequence)"
+                                            Click="() => ApplyComparison(owner, review)" data-testid="agents-team-apply-comparison" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
+                    }
                     <div class="grid gap-2">
                         <span class="text-xs font-bold text-slate-600">Icon</span>
                         <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
@@ -48,7 +70,7 @@
                         @if (owner.AcceptedId.HasValue) {
                             <Button Text="Use saved team" Click="() => CompleteAsync(owner)" data-testid="agents-team-use-saved" />
                         }
-                        <Button Text="Save team" Icon="check" Type="submit" Disabled="@(owner.Busy || owner.Unknown)" IsBusy="@owner.Busy" data-testid="agents-team-save" />
+                        <Button Text="Save team" Icon="check" Type="submit" Disabled="@(owner.Busy || owner.Unknown || owner.NeedsAcceptedSnapshot || owner.Conflict || owner.Comparison is not null || ChangeSequence != owner.ObservedSequence)" IsBusy="@owner.Busy" data-testid="agents-team-save" />
                     </Cluster>
                 </Stack>
             </EditForm>
@@ -60,6 +82,7 @@
     [Parameter] public Guid? TeamId { get; set; }
     [Parameter, EditorRequired] public TeamMetadataOperations Operations { get; set; } = default!;
     [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [Parameter] public long ChangeSequence { get; set; }
     [Parameter] public EventCallback<Guid> Completed { get; set; }
     [Parameter] public EventCallback Cancelled { get; set; }
     private Draft? current;
@@ -76,6 +99,7 @@
         target = next;
         boundOperations = Operations;
         var owner = new Draft(TeamId, OwnerCancellationToken, Operations);
+        owner.ObservedSequence = ChangeSequence;
         current = owner;
         await LoadAsync(owner);
     }
@@ -98,6 +122,7 @@
                 throw new InvalidOperationException("The team owner returned a different identity.");
             }
             owner.Model = TeamMetadataSubmission.Capture(loaded).ToEditorModel();
+            owner.Original = TeamMetadataSubmission.Capture(loaded);
         } catch (Exception) when (!IsCurrent(owner)) {
         } catch (Exception error) {
             owner.LoadFailed = true;
@@ -123,7 +148,8 @@
     }
 
     private async Task SaveAsync(Draft owner) {
-        if (!IsCurrent(owner) || owner.Loading || owner.LoadFailed || owner.Busy || owner.Unknown) {
+        if (!IsCurrent(owner) || owner.Loading || owner.LoadFailed || owner.Busy || owner.Unknown || owner.NeedsAcceptedSnapshot || owner.Conflict ||
+            owner.Comparison is not null || ChangeSequence != owner.ObservedSequence) {
             return;
         }
         var submission = TeamMetadataSubmission.Capture(owner.Model);
@@ -135,7 +161,7 @@
         owner.Busy = true;
         TeamMetadataOutcome outcome;
         try {
-            outcome = await owner.Operations.Save(submission, CancellationToken.None);
+            outcome = await owner.Operations.Save(submission, owner.Token);
         } catch (Exception error) {
             Logger.LogWarning("Team save acknowledgement unavailable for {TeamId}: {FailureType}", submission.Id, error.GetType().Name);
             outcome = new TeamMetadataOutcome.Unknown();
@@ -149,11 +175,25 @@
                 && (!submission.Id.HasValue || submission.Id == accepted.TeamId):
                 owner.AcceptedId = accepted.TeamId;
                 owner.Model.Id = accepted.TeamId;
+                owner.NeedsAcceptedSnapshot = accepted.Snapshot is null;
+                if (accepted.Snapshot is { } snapshot) {
+                    owner.Model.ExpectedMetadata = snapshot.ExpectedMetadata;
+                    owner.Original = TeamMetadataSubmission.Capture(snapshot);
+                }
                 owner.Status = revision == owner.Revision ? "Team saved." : "Team saved. Later draft edits remain unsaved.";
-                Notifications.Success("Team saved", "Agent team metadata was saved; membership is managed separately.");
+                if (accepted.Warning is { } warning) {
+                    owner.Status = $"{owner.Status} {warning}";
+                    Notifications.Warning("Team saved with warning", warning);
+                } else {
+                    Notifications.Success("Team saved", "Agent team metadata was saved; membership is managed separately.");
+                }
                 if (revision == owner.Revision) {
                     await CompleteAsync(owner);
                 }
+                break;
+            case TeamMetadataOutcome.Conflict:
+                owner.Conflict = true;
+                owner.Status = "Team details changed elsewhere. Your draft is retained. Compare the current details before saving.";
                 break;
             case TeamMetadataOutcome.Rejected:
                 owner.Status = "The owner rejected this save. The name must be unique and an existing team must still exist. Your draft is retained.";
@@ -165,6 +205,49 @@
                 Notifications.Error("Team save failed", owner.Status);
                 break;
         }
+    }
+
+    private async Task CompareAsync(Draft owner) {
+        if (!IsCurrent(owner) || owner.Busy || owner.Comparing || owner.Unknown || owner.Original is null) {
+            return;
+        }
+        var local = TeamMetadataSubmission.Capture(owner.Model);
+        var revision = owner.Revision;
+        var sequence = ChangeSequence;
+        owner.Comparing = true;
+        try {
+            var currentModel = await owner.Operations.Load(local.Id, owner.Token);
+            if (!IsCurrent(owner)) {
+                return;
+            }
+            owner.Comparison = new(owner.Original.ToEditorModel(), local, currentModel);
+            owner.CompareRevision = revision;
+            owner.CompareSequence = sequence;
+        } catch (Exception error) when (IsCurrent(owner)) {
+            Logger.LogWarning("Team comparison read failed for {TeamId}: {FailureType}", local.Id, error.GetType().Name);
+            owner.Status = "The current team details could not be compared, or this team lifetime changed. Your draft is retained. Retry the read or reopen with current access.";
+        } finally {
+            if (IsCurrent(owner)) {
+                owner.Comparing = false;
+            }
+        }
+    }
+
+    private void ApplyComparison(Draft owner, TeamMetadataComparison review) {
+        if (!IsCurrent(owner) || !ReferenceEquals(owner.Comparison, review) || !review.IsResolved ||
+            owner.Revision != owner.CompareRevision || ChangeSequence != owner.CompareSequence) {
+            return;
+        }
+        owner.Model.Name = review.Name.Result;
+        owner.Model.Description = review.Description.Field.Result;
+        owner.Model.Icon = review.Icon.Result;
+        owner.Model.ExpectedMetadata = review.Current.ExpectedMetadata;
+        owner.Original = review.Current;
+        owner.ObservedSequence = owner.CompareSequence;
+        owner.Comparison = null;
+        owner.Conflict = false;
+        owner.Revision++;
+        owner.Status = "Comparison applied to this draft. Review and Save when ready.";
     }
 
     private async Task ChooseIconAsync(Draft owner) {
@@ -229,12 +312,20 @@
         public CancellationToken Token { get; }
         public TeamMetadataOperations Operations { get; }
         public AgentTeamEditorModel Model { get; set; } = new();
+        public TeamMetadataSubmission? Original { get; set; }
+        public TeamMetadataComparison? Comparison { get; set; }
+        public long ObservedSequence { get; set; }
+        public long CompareSequence { get; set; }
+        public long CompareRevision { get; set; }
+        public bool Comparing { get; set; }
+        public bool Conflict { get; set; }
         public long Revision { get; set; }
         public bool Loading { get; set; } = true;
         public bool LoadFailed { get; set; }
         public bool Busy { get; set; }
         public bool ChoosingIcon { get; set; }
         public bool Unknown { get; set; }
+        public bool NeedsAcceptedSnapshot { get; set; }
         public string? Status { get; set; }
         public Guid? AcceptedId { get; set; }
         public bool IsDisposed => disposed;

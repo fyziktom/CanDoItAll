@@ -9,9 +9,11 @@ namespace CanDoItAll.Tests.WorkbenchPlanning;
 
 public sealed class TaskEditorQuoteRawInputTests {
     [Theory]
-    [InlineData("effort")]
-    [InlineData("cost")]
-    public async Task Held_quote_cannot_replace_newer_invalid_raw_estimate_input(string field) {
+    [InlineData("effort", "-", false)]
+    [InlineData("cost", "-", false)]
+    [InlineData("effort", "2", true)]
+    [InlineData("cost", "222", true)]
+    public async Task Held_quote_cannot_replace_newer_raw_estimate_input(string field, string raw, bool unblurred) {
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
@@ -36,12 +38,23 @@ public sealed class TaskEditorQuoteRawInputTests {
             }));
         var selection = cut.Find($"[data-testid='project-structure-gantt-task-resource-person-{resourceId:N}']").ClickAsync(new MouseEventArgs());
         await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        cut.Find($"[data-testid='project-structure-gantt-task-estimate-{field}']").Change("-");
+        if (unblurred) {
+            await cut.InvokeAsync(() => cut.Find($"[data-testid='project-structure-gantt-task-estimate-{field}']").InputAsync(new() { Value = raw }));
+        } else {
+            await cut.InvokeAsync(() => cut.Find($"[data-testid='project-structure-gantt-task-estimate-{field}']").ChangeAsync(new() { Value = raw }));
+        }
         released.SetResult(new(ProjectStructureTaskResourceCostQuoteStatus.Available, 500, "EUR", "Late quote", "Obsolete amount", start, ProjectStructureTaskResourceCostSource.CrmWorkforceRate));
         await selection.WaitAsync(TimeSpan.FromSeconds(2));
-        Assert.Equal("-", cut.Find($"[data-testid='project-structure-gantt-task-estimate-{field}']").GetAttribute("value"));
+        Assert.Equal(raw, cut.Find($"[data-testid='project-structure-gantt-task-estimate-{field}']").GetAttribute("value"));
         Assert.DoesNotContain("Obsolete amount", cut.Markup);
         await cut.Find("[data-testid='project-structure-gantt-task-submit']").ClickAsync(new MouseEventArgs());
-        Assert.Empty(submissions);
+        if (unblurred) {
+            var saved = Assert.Single(submissions);
+            Assert.Equal(field == "effort" ? 2 : 8, saved.Estimate.ExpectedEffortHours);
+            Assert.Equal(field == "cost" ? 222 : 10, saved.Estimate.ExpectedCostAmount);
+            Assert.Equal("USD", saved.Estimate.ExpectedCostCurrencyCode);
+        } else {
+            Assert.Empty(submissions);
+        }
     }
 }

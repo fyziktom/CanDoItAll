@@ -72,11 +72,17 @@ public sealed record ProjectPartyAssignmentDetail(
     string Notes,
     ProjectPartyAffiliationContext? Affiliation = null,
     Guid? PartyAffiliationId = null,
-    Guid? ProjectLifetimeId = null);
+    Guid? ProjectLifetimeId = null) {
+    public ProjectAssignmentObservation? Original { get; init; }
+}
 
 public sealed class ProjectPartyAssignmentUpsertRequest
 {
     public Guid? AssignmentId { get; set; }
+
+    public ProjectAssignmentObservation? Original { get; set; }
+
+    public ProjectAssignmentPrimaryObservation? PrimaryOriginal { get; set; }
 
     public Guid ProjectId { get; set; }
 

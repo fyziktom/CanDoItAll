@@ -11,6 +11,50 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentVoiceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Voice_settings_do_not_bless_an_older_form_with_a_fresh_workflow_revision(bool missingOriginal) {
+        var catalog = new InMemoryWorkflowCatalogService(new WorkflowDefinitionValidator());
+        var original = await catalog.SaveSettingsAsync(WorkflowSettings.Default);
+        var driver = new CapturingVoiceDriver([]);
+        var service = new AgentVoiceService(catalog, new InMemoryProviderRegistry([]), new StaticVoiceDriverFactory(driver, driver),
+            new AgentVoiceSpeechTextPreprocessor());
+        var draft = await service.GetSettingsAsync();
+        Assert.Equal(original.UpdatedAtUtc, draft.UpdatedAtUtc);
+        draft.SampleText = "Unsaved local voice sample";
+        if (missingOriginal) {
+            draft.UpdatedAtUtc = null;
+        }
+        var winner = await catalog.SaveSettingsAsync(original with {
+            ArtifactPolicy = original.ArtifactPolicy with { MaxInlinePayloadCharacters = 512 }
+        });
+        await Assert.ThrowsAsync<WorkflowSettingsConcurrencyException>(() => service.SaveSettingsAsync(draft));
+        Assert.Equal(JsonSerializer.Serialize(winner), JsonSerializer.Serialize(await catalog.GetSettingsAsync()));
+        Assert.Equal("Unsaved local voice sample", draft.SampleText);
+    }
+
+    [Fact]
+    public async Task Voice_save_returns_the_new_original_and_preserves_other_workflow_settings() {
+        var catalog = new InMemoryWorkflowCatalogService(new WorkflowDefinitionValidator());
+        var original = await catalog.SaveSettingsAsync(WorkflowSettings.Default with {
+            ArtifactPolicy = WorkflowSettings.Default.ArtifactPolicy with { MaxInlinePayloadCharacters = 512 }
+        });
+        var driver = new CapturingVoiceDriver([]);
+        var service = new AgentVoiceService(catalog, new InMemoryProviderRegistry([]), new StaticVoiceDriverFactory(driver, driver),
+            new AgentVoiceSpeechTextPreprocessor());
+        var draft = await service.GetSettingsAsync();
+        draft.SampleText = "First voice sample";
+        var accepted = await service.SaveSettingsAsync(draft);
+        Assert.True(accepted.UpdatedAtUtc > original.UpdatedAtUtc);
+        Assert.Equal(accepted.UpdatedAtUtc, (await service.GetSettingsAsync()).UpdatedAtUtc);
+        accepted.SampleText = "Second voice sample";
+        var next = await service.SaveSettingsAsync(accepted);
+        Assert.True(next.UpdatedAtUtc > accepted.UpdatedAtUtc);
+        Assert.Equal("Second voice sample", (await service.GetSettingsAsync()).SampleText);
+        Assert.Equal(512, (await catalog.GetSettingsAsync()).ArtifactPolicy.MaxInlinePayloadCharacters);
+    }
+
     [Fact]
     public void VoiceAccessMetadata_WriteAndRead_RoundTrips()
     {

@@ -17,6 +17,7 @@ namespace CanDoItAll.CrmHr.UI.Recruiting;
 public interface ICrmHrRecruitingWorkspaceView : ICrmHrWorkspaceView
 {
     RecruitmentWorkspaceModel? CurrentWorkspace { get; }
+    Guid DatabaseProfileId { get; }
     RecruitmentApplicationEditorModel ApplicationEditor { get; }
     RecruitmentInterviewEditorModel InterviewEditor { get; }
     LifecycleTaskEditorModel TaskEditor { get; }
@@ -44,10 +45,10 @@ public interface ICrmHrRecruitingWorkspaceView : ICrmHrWorkspaceView
     Task ResetApplicationAsync();
     Task SaveInterviewAsync();
     Task ResetInterviewAsync();
-    Task DeleteInterviewAsync(Guid interviewId);
+    Task DeleteInterviewAsync(RecruitmentInterviewItemModel row);
     Task SaveTaskAsync();
     Task ResetTaskAsync();
-    Task DeleteTaskAsync(Guid taskId);
+    Task DeleteTaskAsync(LifecycleTaskItemModel row);
     Task SaveSupportAssignmentsAsync();
     Task ConvertCandidateAsync();
     Task SetConversionHomeUnitAsync(Guid? partyId);

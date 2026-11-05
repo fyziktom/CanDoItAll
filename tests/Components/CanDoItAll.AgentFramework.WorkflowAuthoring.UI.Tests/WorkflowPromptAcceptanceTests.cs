@@ -11,6 +11,64 @@ namespace CanDoItAll.Tests.Components.WorkflowAuthoring;
 
 public sealed class WorkflowPromptAcceptanceTests {
     [Fact]
+    public async Task Unknown_binding_displays_the_chosen_component_identity_and_blocks_picker_replay() {
+        await using var context = Context();
+        WorkflowPromptPickerContext? picker = null;
+        var componentId = WorkflowComponentId.New();
+        var calls = 0;
+        var cut = Render(context, value => picker = value, (_, _) => {
+            calls++;
+            return Task.FromResult<WorkflowPromptBindingOutcome>(new WorkflowPromptBindingOutcome.Unknown(componentId));
+        });
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-toggle-components']").ClickAsync());
+        await cut.InvokeAsync(() => picker!.Selected.InvokeAsync(Selection()));
+        Assert.Contains(componentId.Value.ToString("D"), cut.Markup);
+        Assert.Contains("Do not repeat this creation", cut.Markup);
+        Assert.True(picker!.Disabled);
+        await cut.InvokeAsync(() => picker.Selected.InvokeAsync(Selection()));
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task Library_update_notice_and_explicit_refresh_do_not_save_or_replace_the_open_draft() {
+        await using var context = Context();
+        var refreshes = 0;
+        var cut = Render(context, _ => { }, (_, _) => throw new InvalidOperationException());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-name']").Change("Retained library draft"));
+        cut.Render(p => p.Add(x => x.LibraryRefreshRequired, true).Add(x => x.LibraryRefreshRequested, () => refreshes++));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-toggle-components']").ClickAsync());
+        Assert.Contains("component library changed", cut.Find("[data-testid='workflow-canvas-component-updates']").TextContent);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-refresh-components']").ClickAsync());
+        Assert.Equal(1, refreshes);
+        Assert.Equal("Retained library draft", cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task A_committed_component_with_pending_refresh_remains_usable_and_is_not_reported_unknown() {
+        await using var context = Context();
+        WorkflowPromptPickerContext? picker = null;
+        var component = Component() with { RefreshRequired = true };
+        var calls = 0;
+        WorkflowDefinitionSaveRequest? saved = null;
+        var cut = Render(context, value => picker = value, (_, _) => {
+            calls++;
+            return Task.FromResult<WorkflowPromptBindingOutcome>(new WorkflowPromptBindingOutcome.Accepted(component));
+        });
+        cut.Render(p => p.Add(x => x.DocumentOperations, new((request, _) => {
+            saved = request;
+            return Task.FromResult<WorkflowDefinitionSaveOutcome>(new WorkflowDefinitionSaveOutcome.Rejected(WorkflowSaveRejection.Validation));
+        }, (_, _) => Task.FromResult(WorkflowValidationResult.Success))));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-toggle-components']").ClickAsync());
+        await cut.InvokeAsync(() => picker!.Selected.InvokeAsync(Selection()));
+        Assert.Contains("The component was saved. Refresh the library", cut.Markup);
+        Assert.DoesNotContain("save outcome is unknown", cut.Markup);
+        Assert.False(cut.Find("[data-testid='workflow-canvas-save']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-save']").ClickAsync());
+        Assert.Equal(component.Id, Assert.Single(saved!.Graph.Nodes, node => node.Kind == WorkflowNodeKind.LlmCall).Settings.ComponentId);
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
     public async Task A_new_node_picker_from_a_retired_document_cannot_create_a_component() {
         await using var context = Context();
         WorkflowPromptPickerContext? picker = null;

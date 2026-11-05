@@ -69,6 +69,7 @@ internal sealed record FileAccessHandleGrant(
     FileAccessHandleId Id,
     FileAccessGrantRequest Request,
     StorageObjectReference Reference,
+    string SourceFingerprint,
     DateTimeOffset IssuedAtUtc,
     DateTimeOffset ExpiresAtUtc,
     long RevocationGeneration,
@@ -76,7 +77,7 @@ internal sealed record FileAccessHandleGrant(
 
 internal interface IFileAccessHandleRegistry
 {
-    FileAccessHandleGrant Issue(FileAccessGrantRequest request, StorageObjectReference reference);
+    FileAccessHandleGrant Issue(FileAccessGrantRequest request, StorageObjectReference reference, string sourceFingerprint);
 
     FileAccessHandleGrant Resolve(
         FileAccessHandleId id,
@@ -103,10 +104,10 @@ internal sealed class FileAccessHandleRegistry : IFileAccessHandleRegistry
         _timeProvider = timeProvider;
     }
 
-    public FileAccessHandleGrant Issue(FileAccessGrantRequest request, StorageObjectReference reference)
-    {
+    public FileAccessHandleGrant Issue(FileAccessGrantRequest request, StorageObjectReference reference, string sourceFingerprint) {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(reference);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceFingerprint);
         lock (_gate)
         {
             DateTimeOffset now = _timeProvider.GetUtcNow();
@@ -127,6 +128,7 @@ internal sealed class FileAccessHandleRegistry : IFileAccessHandleRegistry
                 id,
                 request,
                 reference,
+                sourceFingerprint,
                 now,
                 now + _options.Lifetime,
                 _revocationGeneration);

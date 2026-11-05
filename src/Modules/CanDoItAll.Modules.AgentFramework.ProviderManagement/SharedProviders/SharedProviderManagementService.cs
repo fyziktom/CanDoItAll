@@ -3,20 +3,25 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using CanDoItAll.Infrastructure.ControlPlane;
+using System.Data;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderManagementService(
     IDbContextFactory<ProvidersDbContext> dbContextFactory,
     SecretReferenceQuery secretReferences,
-    SharedProviderPublicationStore publicationStore,
     SharedProviderPublicationApplicationService publicationApplicationService,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
     IProviderManifestCatalog providerManifestCatalog,
     SharedProviderSourceService sourceService,
     SharedProviderSourceSyncService sourceSyncService,
     IClock clock,
-    IEnumerable<IProviderProfileCommitObserver> providerProfileCommitObservers)
+    IEnumerable<IProviderProfileCommitObserver> providerProfileCommitObservers,
+    ProviderEditingWrites editing,
+    ICanonicalRuntimeDatabase database,
+    CoordinatedDatabaseTransaction transactions,
+    ProviderEditingChanges changes)
     : ISharedProviderManagementService
 {
     private readonly IReadOnlyList<IProviderProfileCommitObserver> commitObservers =
@@ -28,6 +33,8 @@ public sealed class SharedProviderManagementService(
     {
         ValidateProviderProfileId(providerProfileId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var read = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken) : null;
         var imported = await LoadImportedProfileAsync(
             dbContext,
             providerProfileId,
@@ -63,38 +70,45 @@ public sealed class SharedProviderManagementService(
                 profile.ConnectorPluginKey,
                 profile.ProviderKind),
             requiredSecretExists);
-        var publication = await publicationStore.FindAsync(
-            providerProfileId,
-            cancellationToken);
+        var publication = await dbContext.Set<ProviderSharePublication>().AsNoTracking()
+            .Where(item => item.ProviderProfileId == providerProfileId)
+            .Select(item => new SharedProviderPublicationWriteResult(item.Id, item.PublicId, item.IsPublished, item.ConcurrencyToken))
+            .SingleOrDefaultAsync(cancellationToken);
         return new SharedProviderProfileSharingSnapshot(
             providerProfileId,
             SharedProviderProfileOwnership.Local,
             publication,
             eligibility,
-            Import: null);
+            Import: null) { ProviderConcurrencyToken = profile.ConcurrencyToken };
     }
 
     public async Task<SharedProviderProfileSharingSnapshot> SetPublicationAsync(
         Guid providerProfileId,
         SharedProviderPublicationAction action,
         Guid? expectedConcurrencyToken,
+        Guid expectedProviderConcurrencyToken,
         CancellationToken cancellationToken = default)
     {
         var result = await publicationApplicationService.ChangeAsync(
             new SharedProviderPublicationChangeRequest(
                 providerProfileId,
                 action,
-                expectedConcurrencyToken),
+                expectedConcurrencyToken) { ExpectedProviderConcurrencyToken = expectedProviderConcurrencyToken },
             cancellationToken);
-        return await ReadCommittedSharingAsync(providerProfileId,
-            result.Change ?? new(SharedProviderChangeKind.Publication, [providerProfileId]), cancellationToken);
+        var accepted = result.Acceptance ?? throw new InvalidOperationException("The publication owner did not return its exact accepted configuration.");
+        return new(providerProfileId, SharedProviderProfileOwnership.Local, result, accepted.Eligibility, null) {
+            ProviderConcurrencyToken = accepted.ProviderConcurrencyToken, Change = result.Change
+        };
     }
 
     public async Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(
         CancellationToken cancellationToken = default)
     {
-        var sources = await sourceService.ListAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var read = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken) : null;
+        var sources = (await dbContext.Set<SharedProviderSource>().AsNoTracking().OrderBy(source => source.Name).ThenBy(source => source.Id)
+            .ToArrayAsync(cancellationToken)).Select(SharedProviderSourceService.CreateSnapshot).ToArray();
         var imports = await LoadImportedProfilesAsync(dbContext, cancellationToken);
         return Array.AsReadOnly(sources
             .Select(source => new SharedProviderSourceManagementSnapshot(
@@ -124,16 +138,16 @@ public sealed class SharedProviderManagementService(
             request.ApiTokenSecretId,
             request.IsEnabled,
             request.AllowInsecurePrivateNetwork, request.Id);
-        if (!request.Id.HasValue || !request.ExpectedConcurrencyToken.HasValue)
-        {
+        if (request.Id is null || request.ExpectedConcurrencyToken == Guid.Empty) {
+            if (request.ExpectedConcurrencyToken is { } unexpected && unexpected != Guid.Empty) {
+                throw new SharedProviderConcurrencyException(nameof(SharedProviderSource), Guid.Empty);
+            }
             return sourceService.CreateAsync(writeRequest, cancellationToken);
         }
 
         if (!request.ExpectedConcurrencyToken.HasValue)
         {
-            throw new ArgumentException(
-                "An existing source requires its expected concurrency token.",
-                nameof(request));
+            throw new SharedProviderConcurrencyException(nameof(SharedProviderSource), request.Id!.Value);
         }
 
         return sourceService.UpdateAsync(
@@ -177,77 +191,79 @@ public sealed class SharedProviderManagementService(
             selectedPublicationIds,
             cancellationToken);
 
-    public async Task<SharedProviderProfileSharingSnapshot> UpdateImportedProfileAsync(
+    public Task<SharedProviderSourceOperationResult> SynchronizeSourceAsync(Guid sourceId, SharedProviderSourceObservation original,
+        IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds, CancellationToken cancellationToken = default)
+        => sourceSyncService.SynchronizeAsync(sourceId, original, selectedPublicationIds, cancellationToken);
+
+    public Task<SharedProviderProfileSharingSnapshot> UpdateImportedProfileAsync(
         SharedProviderImportedProfileUpdateRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         var alias = SharedProviderLocalAliasPolicy.Normalize(request.LocalAlias);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var (import, profile) = await LoadImportedMutationAsync(
-            dbContext,
-            request.ImportId,
-            request.ProviderProfileId,
-            cancellationToken);
-        EnsureConcurrency(
-            import,
-            profile,
-            request.ExpectedImportConcurrencyToken,
-            request.ExpectedProviderConcurrencyToken);
-
-        profile.Name = alias;
-        profile.IsEnabled = request.IsEnabled;
-        await SaveImportedMutationAsync(
-            dbContext,
-            import,
-            profile,
-            cancellationToken);
-        var change = await SharedProviderCommitEffects.NotifySavedAsync(
-            new(SharedProviderChangeKind.ImportedSettings, [profile.Id],
-                retiredProviderProfileIds: [],
-                remoteOwnedFieldsChanged: false, catalogMembershipMayHaveChanged: false),
-            commitObservers);
-        return await ReadCommittedSharingAsync(profile.Id, change, cancellationToken);
+        return MutateImportAsync(request.ImportId, request.ProviderProfileId,
+            (request.ExpectedImportConcurrencyToken, request.ExpectedProviderConcurrencyToken),
+            (_, profile) => {
+                profile.Name = alias;
+                profile.IsEnabled = request.IsEnabled;
+            }, SharedProviderChangeKind.ImportedSettings, cancellationToken);
     }
 
-    public async Task<SharedProviderProfileSharingSnapshot> RetireImportedProfileAsync(
+    public Task<SharedProviderProfileSharingSnapshot> RetireImportedProfileAsync(
         SharedProviderImportedProfileRetireRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var (import, profile) = await LoadImportedMutationAsync(
-            dbContext,
-            request.ImportId,
-            request.ProviderProfileId,
-            cancellationToken);
-        EnsureConcurrency(
-            import,
-            profile,
-            request.ExpectedImportConcurrencyToken,
-            request.ExpectedProviderConcurrencyToken);
-
-        SharedProviderImportTransitions.Retire(import, clock.GetUtcNow());
-        await SaveImportedMutationAsync(
-            dbContext,
-            import,
-            profile,
-            cancellationToken);
-        var change = await SharedProviderCommitEffects.NotifySavedAsync(
-            new(SharedProviderChangeKind.ImportRetirement, [profile.Id],
-                retiredProviderProfileIds: [profile.Id],
-                remoteOwnedFieldsChanged: false, catalogMembershipMayHaveChanged: true),
-            commitObservers);
-        return await ReadCommittedSharingAsync(profile.Id, change, cancellationToken);
+        return MutateImportAsync(request.ImportId, request.ProviderProfileId,
+            (request.ExpectedImportConcurrencyToken, request.ExpectedProviderConcurrencyToken),
+            (import, _) => SharedProviderImportTransitions.Retire(import, clock.GetUtcNow()),
+            SharedProviderChangeKind.ImportRetirement, cancellationToken);
     }
 
-    private async Task<SharedProviderProfileSharingSnapshot> ReadCommittedSharingAsync(
-        Guid providerId, SharedProviderChange change, CancellationToken token) {
-        try {
-            return (await GetProfileSharingAsync(providerId, token)) with { Change = change };
-        } catch (Exception exception) {
-            throw new SharedProviderCommittedException(change, exception);
+    private async Task<SharedProviderProfileSharingSnapshot> MutateImportAsync(Guid importId, Guid providerId,
+        (Guid Import, Guid Provider) expected, Action<SharedProviderImport, ProviderProfile> apply,
+        SharedProviderChangeKind kind, CancellationToken cancellationToken) {
+        if (importId == Guid.Empty || providerId == Guid.Empty) {
+            throw new ArgumentException("Imported provider identities cannot be empty.");
         }
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var sourceId = await dbContext.Set<SharedProviderImport>().AsNoTracking()
+            .Where(import => import.Id == importId && import.ProviderProfileId == providerId)
+            .Select(import => (Guid?)import.SourceId).SingleOrDefaultAsync(cancellationToken)
+            ?? throw new KeyNotFoundException("The imported provider was not found.");
+        await using var mutation = await SharedProviderSourceService.BeginMutationAsync(dbContext, sourceId, cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
+        var (import, profile) = await LoadImportedMutationAsync(dbContext, importId, providerId, cancellationToken);
+        EnsureConcurrency(import, profile, expected.Import, expected.Provider);
+        var source = await dbContext.Set<SharedProviderSource>().AsNoTracking().SingleAsync(item => item.Id == sourceId, cancellationToken);
+        apply(import, profile);
+        SharedProviderImportedProfileSnapshot accepted;
+        try {
+            await editing.RequireAsync(database.Profile.Profile.Id, providerId, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await editing.RequireAsync(database.Profile.Profile.Id, providerId, cancellationToken);
+            accepted = CreateImportedSnapshot(new(import, source, profile));
+            await mutation.CommitAsync(cancellationToken);
+        } catch (Exception exception) when (exception is DbUpdateConcurrencyException || SerializableMutationScope.IsConflict(exception)) {
+            throw new SharedProviderConcurrencyException(nameof(SharedProviderImport), importId, exception);
+        }
+        var retired = kind == SharedProviderChangeKind.ImportRetirement;
+        var change = new SharedProviderChange(kind, [providerId], retired ? [providerId] : [],
+            remoteOwnedFieldsChanged: false, catalogMembershipMayHaveChanged: retired);
+        try {
+            coordination.Dispose();
+        } catch (Exception) {
+            change = change with { Warning = "The imported provider is saved, but transaction cleanup needs attention." };
+        }
+        change = await SharedProviderCommitEffects.CompleteAsync(change, async () => await mutation.DisposeAsync());
+        if (retired) {
+            change = await SharedProviderCommitEffects.CompleteAsync(change, () => {
+                changes.SourcesChanged(sourceId);
+                return Task.CompletedTask;
+            });
+        }
+        change = await SharedProviderCommitEffects.NotifySavedAsync(change, commitObservers);
+        return new(providerId, SharedProviderProfileOwnership.Imported, null, null, accepted) { Change = change };
     }
 
     private static async Task<SharedProviderImportedProfileSnapshot?> LoadImportedProfileAsync(
@@ -358,26 +374,6 @@ public sealed class SharedProviderManagementService(
                 profile.Id);
         }
     }
-
-    private static async Task SaveImportedMutationAsync(
-        ProvidersDbContext dbContext,
-        SharedProviderImport import,
-        ProviderProfile profile,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException exception)
-        {
-            throw new SharedProviderConcurrencyException(
-                nameof(SharedProviderImport),
-                import.Id,
-                exception);
-        }
-    }
-
 
     private static void ValidateProviderProfileId(Guid providerProfileId)
     {

@@ -4,6 +4,12 @@ using Microsoft.AspNetCore.Components;
 namespace CanDoItAll.Processes.UI;
 
 public interface IProcessWorkspaceSession {
+    bool AuthoringUpdatesAvailable => false;
+    ProcessDefinitionComparison? DefinitionComparison => null;
+    string? DefinitionComparisonError => null;
+    Task CompareDefinitionAsync() => throw new NotSupportedException();
+    Task ApplyDefinitionComparisonAsync() => throw new NotSupportedException();
+    void CancelDefinitionComparison() => throw new NotSupportedException();
     bool CanRecoverAuthoring => false;
     bool CanRetryOriginalAuthoring => false;
     Task RecoverAuthoringAsync() => Task.CompletedTask;

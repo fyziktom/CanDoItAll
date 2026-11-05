@@ -12,26 +12,29 @@ public sealed class AgentVoiceService(
     IAgentVoiceDriverFactory driverFactory,
     IAgentVoiceSpeechTextPreprocessor speechTextPreprocessor) : IAgentVoiceService
 {
-    public async Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
-    {
+    public async Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default) {
         var workflowSettings = await workflowSettingsService.GetSettingsAsync(cancellationToken);
         return workflowSettings.NormalizedVoiceSettings;
     }
 
     public async Task<AgentVoiceSettings> SaveSettingsAsync(
         AgentVoiceSettings settings,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(settings);
         var normalized = AgentVoiceSettingsNormalizer.Normalize(settings);
         var workflowSettings = await workflowSettingsService.GetSettingsAsync(cancellationToken);
-        await workflowSettingsService.SaveSettingsAsync(
-            workflowSettings with
-            {
-                VoiceSettings = normalized
-            },
-            cancellationToken);
-
-        return normalized;
+        if (settings.UpdatedAtUtc != workflowSettings.UpdatedAtUtc) {
+            throw new WorkflowSettingsConcurrencyException();
+        }
+        normalized.UpdatedAtUtc = null;
+        try {
+            var accepted = await workflowSettingsService.SaveSettingsAsync(workflowSettings with { VoiceSettings = normalized }, cancellationToken);
+            normalized.UpdatedAtUtc = accepted.UpdatedAtUtc;
+            return normalized;
+        } catch (SettingsCommittedException<WorkflowSettings> committed) {
+            normalized.UpdatedAtUtc = committed.Accepted.UpdatedAtUtc;
+            throw new SettingsCommittedException<AgentVoiceSettings>(normalized, committed);
+        }
     }
 
     public async Task<AgentVoiceTranscriptionResult> TranscribeAsync(

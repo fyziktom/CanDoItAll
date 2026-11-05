@@ -34,11 +34,15 @@ public sealed record SharedProviderProfileSharingSnapshot(
     SharedProviderPublicationEligibility? Eligibility,
     SharedProviderImportedProfileSnapshot? Import) {
     public SharedProviderChange? Change { get; init; }
+    public Guid? ProviderConcurrencyToken { get; init; }
 }
 
 public sealed record SharedProviderSourceManagementSnapshot(
     SharedProviderSourceSnapshot Source,
-    IReadOnlyList<SharedProviderImportedProfileSnapshot> Imports);
+    IReadOnlyList<SharedProviderImportedProfileSnapshot> Imports) {
+    public SharedProviderSourceObservation Observation { get; } = new(Source.ConcurrencyToken,
+        Imports.Select(import => KeyValuePair.Create(import.ImportId, import.ImportConcurrencyToken)));
+}
 
 public sealed record SharedProviderSourceEditorRequest(
     Guid? Id,
@@ -73,6 +77,7 @@ public interface ISharedProviderManagementService
         Guid providerProfileId,
         SharedProviderPublicationAction action,
         Guid? expectedConcurrencyToken,
+        Guid expectedProviderConcurrencyToken,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(
@@ -105,6 +110,12 @@ public interface ISharedProviderManagementService
         Guid sourceId,
         IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds,
         CancellationToken cancellationToken = default);
+
+    Task<SharedProviderSourceOperationResult> SynchronizeSourceAsync(
+        Guid sourceId,
+        SharedProviderSourceObservation original,
+        IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException("Original source selection synchronization is not supported by this owner.");
 
     Task<SharedProviderProfileSharingSnapshot> UpdateImportedProfileAsync(
         SharedProviderImportedProfileUpdateRequest request,

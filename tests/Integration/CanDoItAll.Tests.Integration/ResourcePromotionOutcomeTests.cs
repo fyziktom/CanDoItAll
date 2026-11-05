@@ -188,7 +188,8 @@ public sealed class ResourcePromotionOutcomeTests {
         public IOException Primary { get; } = new("Owned preview creation failure.");
         public FileReference? File { get; private set; }
         public int Releases { get; private set; }
-        public ValueTask<FileToolsKnownFileSession> CreateAsync(FileToolsKnownFileRequest request, CancellationToken cancellationToken = default) {
+        public ValueTask<FileToolsKnownFileSession> CreateAsync(FileToolsKnownFileRequest request, CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null, Func<CancellationToken, ValueTask>? authorizeWrite = null) {
             File = request.File;
             return ValueTask.FromException<FileToolsKnownFileSession>(Primary);
         }

@@ -55,6 +55,14 @@
     </Header>
 
     <ChildContent>
+        @if (Session.AuthoringUpdatesAvailable) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="processes-authoring-updates">
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock Value="Process definitions changed. Refresh to read the current version; your draft will be retained." />
+                    <Button Text="Refresh definitions" Icon="refresh" Disabled="@Session.IsBusy" Click="Session.RefreshAsync" />
+                </Stack>
+            </Alert>
+        }
         @if (!string.IsNullOrWhiteSpace(Session.ErrorMessage)) {
             <SurfaceCard Soft="true" data-testid="processes-shell-error">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
@@ -171,6 +179,26 @@
         }
     </ChildContent>
 </PageScaffold>
+
+@if (Session.DefinitionComparison is { } comparison) {
+    <Dialog IsOpen="true" Title="Compare definition fields" Size="ModalSize.Wide" DenseChrome="true"
+            TestId="processes-definition-comparison-dialog" OnClose="Session.CancelDefinitionComparison">
+        <ChildContent>
+            @if (Session.DefinitionComparisonError is { } comparisonError) {
+                <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@comparisonError" /></Alert>
+            }
+            <ProcessDefinitionComparisonSurface Review="comparison" Changed="StateHasChanged" />
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Compare again" Disabled="@Session.IsBusy" Click="Session.CompareDefinitionAsync" />
+                <Button Text="Apply to draft" Disabled="@(!comparison.IsResolved || Session.IsBusy)"
+                        Click="Session.ApplyDefinitionComparisonAsync" data-testid="processes-definition-comparison-apply" />
+                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Session.CancelDefinitionComparison" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
 
 @if (Session.RunDetailDialogOpen) {
     <Dialog IsOpen="true"
@@ -1615,9 +1643,10 @@
         }
 
         @if (Session.DefinitionDraft.HasConflict) {
-            <Alert AlertStyle="AlertStyle.Warning" data-testid="processes-definition-draft-conflict">A newer saved version is available. Your edits and original version are retained; discard them to load the current version.</Alert>
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="processes-definition-draft-conflict">A newer saved version is available. Your edits and original version are retained. Compare the saved fields before saving again.</Alert>
         }
         @if (Session.DefinitionDraft.IsDirty) {
+            <Button Text="Compare saved fields" Disabled="@Session.IsBusy" Click="Session.CompareDefinitionAsync" data-testid="processes-definition-compare" />
             <Button Text="Discard edits" Disabled="@Session.IsBusy" Click="@(() => Session.DefinitionDraft.Discard(editor))" data-testid="processes-definition-discard" />
         }
         <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-5" data-testid="processes-definition-editor-sections">

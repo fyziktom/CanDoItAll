@@ -53,6 +53,9 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             context.JSInterop.SetupModule("./_content/CanDoItAll.Projects.UI/project-editor.js")
                 .Setup<CanDoItAll.Modules.Projects.Pages.Components.ProjectFormValidity>("inspect", _ => true)
                 .SetResult(new(true, null, null));
+            context.JSInterop.SetupModule("./_content/CanDoItAll.Components.BaseLib/Components/Forms/NativeFormInspector.razor.js")
+                .Setup<CanDoItAll.Components.BaseLib.NativeFormValidity>("inspect", _ => true)
+                .SetResult(new(true));
             context.AddAuthorization();
             var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
 
@@ -61,6 +64,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
                 configuration,
                 testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Components"));
             context.Services.AddAgentFrameworkUi();
+            context.Services.AddSingleton<CanDoItAll.Editing.IEditingUiAccess>(new EditingUiTestAccess());
             context.Services.AddScoped<TuningCoordinator>();
             context.Services.AddHttpClient<DevelopmentManagerClient>();
             context.Services.AddSingleton<IProjectPendingSubmissionStore, ProjectPendingSubmissionTestStore>();

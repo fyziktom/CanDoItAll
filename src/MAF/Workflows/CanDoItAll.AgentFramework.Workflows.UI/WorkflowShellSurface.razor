@@ -30,7 +30,7 @@
             <Actions>
                 <PageHeaderActionButton Icon="refresh"
                                         Label="Refresh"
-                                        TooltipText="Refresh workflow definitions, runs, and settings."
+                                        TooltipText="Refresh workflow definitions, loaded component library, and runs."
                                         Click="RefreshAsync"
                                         Disabled="@Presentation.IsBusy"
                                         IsBusy="@Presentation.IsBusy"
@@ -40,7 +40,7 @@
                                         TooltipText="Create the starter workflow definition."
                                         ButtonStyle="ButtonStyle.Primary"
                                         Click="CreateStarterAsync"
-                                        Disabled="@Presentation.IsBusy"
+                                        Disabled="@(Presentation.IsBusy || Presentation.CreationBlocked)"
                                         data-testid="workflows-create-starter" />
                 @CuratorAction
                 <PageHeaderActionButton Icon="support_agent"
@@ -53,6 +53,29 @@
     </Header>
 
     <ChildContent>
+    @if (Presentation.Recovery is { } recovery) {
+        <SurfaceCard Soft="true" data-testid="workflows-draft-recovery">
+            <Stack Gap="LayoutGap.Small">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Creation outcome unconfirmed" />
+                <TextBlock Value="Inspect the saved resources before deciding what to do. A current read does not confirm the earlier creation; creation remains blocked until you explicitly open an existing workflow." />
+                <TextBlock Value="@($"Workflow {recovery.WorkflowId:D}: {recovery.WorkflowName ?? (recovery.Inspected ? "Not found" : "Not checked")}")" />
+                <TextBlock Value="@($"Component {recovery.ComponentId:D}: {recovery.ComponentName ?? (recovery.Inspected ? "Not found" : "Not checked")}")" />
+                @if (recovery.CurrentVersionId is { } versionId) {
+                    <TextBlock Value="@($"Current saved version: {versionId:D}")" />
+                }
+                @if (!string.IsNullOrEmpty(recovery.Error)) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="workflows-draft-inspection-error">@recovery.Error</Alert>
+                }
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Inspect saved resources" Icon="search" Click="InspectUnconfirmedDraftAsync"
+                            Disabled="Presentation.IsBusy" data-testid="workflows-inspect-unconfirmed-draft" />
+                    <Button Text="Open existing workflow" Icon="open_in_new" Click="OpenInspectedDraftAsync"
+                            Disabled="@(Presentation.IsBusy || recovery.CurrentVersionId is null)" data-testid="workflows-open-inspected-draft" />
+                </Cluster>
+                <TextBlock Value="Opening uses the current saved workflow as a new editing base. It does not retry creation." />
+            </Stack>
+        </SurfaceCard>
+    }
     @if (!string.IsNullOrWhiteSpace(Presentation.ErrorMessage)) {
         <SurfaceCard Soft="true" data-testid="workflows-error">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
@@ -112,6 +135,8 @@
     [Parameter] public RenderFragment? Overlays { get; set; }
     private Task RefreshAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.Refresh));
     private Task CreateStarterAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.CreateStarter));
+    private Task InspectUnconfirmedDraftAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.InspectUnconfirmedDraft));
+    private Task OpenInspectedDraftAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.OpenInspectedDraft));
     private Task OpenAgentsAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.OpenAgents));
     private Task ChangeTabAsync(int index) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.ChangeTab, Tab: (WorkflowTab)index));
 }

@@ -3,6 +3,7 @@
 <ProviderProfilesSurface View="this">
     <SharingSlot Context="slot">
         <SharedProviderManagementPanel @key="slot.Target.ProviderId" Revision="sharingRevision"
+                                       OriginalOpening="opening"
                                        ProviderRevision="session.Draft.ExpectedConcurrencyToken"
                                        ProviderProfileId="slot.Target.ProviderId"
                                        ProvidersChanged="@(delivery => RefreshSharedAsync(slot.Target, delivery))" />
@@ -18,6 +19,7 @@
     </HistorySlot>
     <ConnectionsSlot Context="slot">
         <SharedProviderSourcesDialog Secrets="session.Catalog.Secrets.Items"
+                                     OriginalOpening="opening"
                                      SecretMetadataError="@session.Catalog.Secrets.Error"
                                      ProvidersChanged="@(delivery => RefreshSharedAsync(slot.Target, delivery))"
                                      OnClose="@(() => CloseConnections(slot.Target))" />
@@ -25,6 +27,7 @@
     <SourceRefreshSlot Context="slot">
         @if (slot.Target.ProviderId is { } providerId && slot.SourceManaged) {
             <SharedProviderRefreshButton ProviderId="providerId"
+                                         OriginalOpening="opening"
                                          Refreshed="@(delivery => RefreshSharedAsync(slot.Target, delivery))" />
         }
     </SourceRefreshSlot>
