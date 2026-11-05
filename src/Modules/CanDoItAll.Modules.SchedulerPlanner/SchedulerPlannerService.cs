@@ -15,7 +15,7 @@ namespace CanDoItAll.Modules.SchedulerPlanner;
 public interface ISchedulerPlannerService
 {
     Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
-        SchedulerHistoryQuery? historyQuery = null,
+        SchedulerWorkspaceQuery? query = null,
         CancellationToken cancellationToken = default);
 
     Task<SchedulerPlanEditorModel> CreateDefaultEditorAsync(CancellationToken cancellationToken = default);
@@ -29,12 +29,12 @@ public interface ISchedulerPlannerService
         CancellationToken cancellationToken = default);
 
     Task SetPlanEnabledAsync(
-        Guid planId,
+        SchedulerPlanCondition expected,
         bool isEnabled,
         CancellationToken cancellationToken = default);
 
     Task DeletePlanAsync(
-        Guid planId,
+        SchedulerPlanCondition expected,
         CancellationToken cancellationToken = default);
 }
 
@@ -144,27 +144,47 @@ public sealed class SchedulerPlannerService(
     CoordinatedDatabaseTransaction? transactions = null) : ISchedulerPlannerService
 {
     public async Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
-        SchedulerHistoryQuery? historyQuery = null,
+        SchedulerWorkspaceQuery? query = null,
         CancellationToken cancellationToken = default)
     {
         var targetOptions = await ListTargetOptionsAsync(cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var plans = await dbContext.Set<SchedulerPlan>()
-            .AsNoTracking()
-            .OrderByDescending(item => item.IsEnabled)
-            .ThenBy(item => item.Name)
-            .ToListAsync(cancellationToken);
+        var requested = query?.Plans ?? new();
+        var plansQuery = FilterPlans(dbContext.Set<SchedulerPlan>().AsNoTracking(), requested);
+        var count = await plansQuery.CountAsync(cancellationToken);
+        var ordered = plansQuery.OrderByDescending(item => item.IsEnabled);
+        if (requested.OrderByNextFire) {
+            ordered = ordered.ThenBy(item => item.NextPlannedFireAtUtc == null).ThenBy(item => item.NextPlannedFireAtUtc);
+        }
+        var plans = await ordered.ThenBy(item => item.Name).ThenBy(item => item.Id)
+            .Skip(Math.Max(0, requested.Offset)).Take(Math.Clamp(requested.Take, 1, 250)).ToListAsync(cancellationToken);
         var summaries = plans
             .Select(MapPlan)
             .ToArray();
-        var history = await SearchHistoryAsync(dbContext, historyQuery ?? new SchedulerHistoryQuery(), cancellationToken);
+        var history = await SearchHistoryAsync(dbContext, query?.History ?? new SchedulerHistoryQuery(), cancellationToken);
 
         return new SchedulerPlannerWorkspace(
             summaries,
             history,
             targetOptions,
-            BuildCalendarSurface(summaries, history));
+            BuildCalendarSurface(summaries, history)) { PlanCount = count };
+    }
+
+    private static IQueryable<SchedulerPlan> FilterPlans(IQueryable<SchedulerPlan> plans, SchedulerPlanQuery query) {
+        if (query.TargetKind is { } kind) {
+            plans = plans.Where(plan => plan.TargetKind == kind);
+        }
+        if (query.IsEnabled is { } enabled) {
+            plans = plans.Where(plan => plan.IsEnabled == enabled);
+        }
+        if (!string.IsNullOrWhiteSpace(query.Search)) {
+            var text = query.Search.Trim().ToLowerInvariant();
+            plans = plans.Where(plan => plan.Name.ToLower().Contains(text) || plan.Description.ToLower().Contains(text) ||
+                plan.TargetNameSnapshot.ToLower().Contains(text) || plan.CronExpression.ToLower().Contains(text) ||
+                plan.CronDescription.ToLower().Contains(text) || plan.TimeZoneId.ToLower().Contains(text));
+        }
+        return plans;
     }
 
     public async Task<SchedulerPlanEditorModel> CreateDefaultEditorAsync(CancellationToken cancellationToken = default)
@@ -207,6 +227,9 @@ public sealed class SchedulerPlannerService(
         try {
             ArgumentNullException.ThrowIfNull(editor);
             ValidateEditor(editor);
+            if (editor.Id.HasValue != editor.ExpectedDefinitionRevision.HasValue) {
+                throw new SchedulerPlanValidationException("An existing schedule requires its original revision. Open the schedule before saving.");
+            }
 
             var target = await ResolveTargetAsync(editor.TargetKind, editor.TargetId, editor.TargetVersionId, cancellationToken);
             var normalizedInputJson = await ResolveValidatedInputJsonAsync(editor, target, cancellationToken);
@@ -227,8 +250,8 @@ public sealed class SchedulerPlannerService(
                 ? await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == editor.Id.Value, cancellationToken)
                 : null;
 
-            if (editor.Id.HasValue && plan is null) {
-                throw new KeyNotFoundException($"Scheduler plan '{editor.Id.Value:D}' was not found.");
+            if (editor.ExpectedDefinitionRevision is { } expectedRevision) {
+                RequireOriginalRevision(plan, expectedRevision);
             }
 
             if (plan is null) {
@@ -258,6 +281,7 @@ public sealed class SchedulerPlannerService(
             plan.EndAtUtc = editor.EndAtUtc;
             plan.InputJson = normalizedInputJson;
             plan.StructureAuthorityJson = SchedulerFireSnapshot.SerializeAuthority(preparedAuthority);
+            plan.DefinitionRevision = Guid.NewGuid();
             plan.LastError = string.Empty;
             plan.UpdatedAtUtc = now;
 
@@ -285,6 +309,9 @@ public sealed class SchedulerPlannerService(
                 }
                 coordination?.Dispose();
             }
+            if (editor.Id.HasValue) {
+                editor.ExpectedDefinitionRevision = committed!.Plan.DefinitionRevision;
+            }
             await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
             committed = committed! with { Stage = SchedulerMutationStage.ProjectionSynchronized };
             await dbContext.Entry(plan).ReloadAsync(cancellationToken);
@@ -298,29 +325,36 @@ public sealed class SchedulerPlannerService(
                 plan.CronExpression,
                 plan.TimeZoneId);
 
-            return MapPlan(plan);
+            return plan.DefinitionRevision == committed.Plan.DefinitionRevision
+                ? MapPlan(plan)
+                : committed.Plan;
         } catch (Exception exception) when (committed is not null) {
             throw new SchedulerPlanCommittedException(committed, exception);
+        } catch (Exception exception) when (SerializableMutationScope.IsConflict(exception)) {
+            throw new SchedulerPlanConflictException(exception);
         }
     }
 
     public async Task SetPlanEnabledAsync(
-        Guid planId,
+        SchedulerPlanCondition expected,
         bool isEnabled,
         CancellationToken cancellationToken = default) {
         SchedulerMutationFact? committed = null;
         try {
+            var planId = expected.PlanId;
             EnsurePlanId(planId);
 
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-            var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
-                ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
+            var plan = RequireOriginalRevision(
+                await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken),
+                expected.DefinitionRevision);
 
             if (plan.IsEnabled == isEnabled) {
                 return;
             }
 
             plan.IsEnabled = isEnabled;
+            plan.DefinitionRevision = Guid.NewGuid();
             plan.UpdatedAtUtc = clock.GetUtcNow();
             await dbContext.SaveChangesAsync(cancellationToken);
             committed = new(isEnabled ? SchedulerMutationKind.Enable : SchedulerMutationKind.Disable, plan.Id, SchedulerMutationStage.Persisted, MapPlan(plan) with { NextPlannedFireAtUtc = null }, plan.InputJson);
@@ -328,19 +362,23 @@ public sealed class SchedulerPlannerService(
             committed = committed! with { Stage = SchedulerMutationStage.ProjectionSynchronized };
         } catch (Exception exception) when (committed is not null) {
             throw new SchedulerPlanCommittedException(committed, exception);
+        } catch (Exception exception) when (SerializableMutationScope.IsConflict(exception)) {
+            throw new SchedulerPlanConflictException(exception);
         }
     }
 
     public async Task DeletePlanAsync(
-        Guid planId,
+        SchedulerPlanCondition expected,
         CancellationToken cancellationToken = default) {
         SchedulerMutationFact? committed = null;
         try {
+            var planId = expected.PlanId;
             EnsurePlanId(planId);
 
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-            var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
-                ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
+            var plan = RequireOriginalRevision(
+                await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken),
+                expected.DefinitionRevision);
 
             dbContext.Set<SchedulerPlan>().Remove(plan);
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -355,7 +393,16 @@ public sealed class SchedulerPlannerService(
                 plan.TargetId);
         } catch (Exception exception) when (committed is not null) {
             throw new SchedulerPlanCommittedException(committed, exception);
+        } catch (Exception exception) when (SerializableMutationScope.IsConflict(exception)) {
+            throw new SchedulerPlanConflictException(exception);
         }
+    }
+
+    private static SchedulerPlan RequireOriginalRevision(SchedulerPlan? plan, Guid revision) {
+        if (plan is null || plan.DefinitionRevision != revision) {
+            throw new SchedulerPlanConflictException();
+        }
+        return plan;
     }
 
     private async Task<IReadOnlyList<SchedulerTargetOption>> ListTargetOptionsAsync(CancellationToken cancellationToken)
@@ -654,7 +701,7 @@ public sealed class SchedulerPlannerService(
             plan.NextPlannedFireAtUtc,
             plan.LastFiredAtUtc,
             plan.LastError,
-            plan.UpdatedAtUtc);
+            plan.UpdatedAtUtc) { DefinitionRevision = plan.DefinitionRevision };
     }
 
     private static SchedulerPlanEditorModel MapEditor(SchedulerPlan plan)
@@ -662,6 +709,7 @@ public sealed class SchedulerPlannerService(
         return new SchedulerPlanEditorModel
         {
             Id = plan.Id,
+            ExpectedDefinitionRevision = plan.DefinitionRevision,
             Name = plan.Name,
             Description = plan.Description,
             TargetKind = plan.TargetKind,
@@ -1197,7 +1245,9 @@ public sealed record SchedulerPlanFireRequest(
     Guid SchedulerFireId,
     Guid? CorrelationId,
     DateTimeOffset FiredAtUtc,
-    DateTimeOffset? NextPlannedFireAtUtc);
+    DateTimeOffset? NextPlannedFireAtUtc) {
+    public Guid? ExpectedDefinitionRevision { get; init; }
+}
 
 public sealed class SchedulerPlannerRunDispatcher(
     SchedulerFireAdmissionStore admissions,

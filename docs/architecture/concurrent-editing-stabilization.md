@@ -10,7 +10,7 @@ all application writers.
 | Shared foundation and Prompt Gallery | The approved pilot established conditional writes, scoped change hints, typed comparisons, and native dialog and notification behavior. |
 | R1 CRM / HR, R2 Projects and Workbench, R3 Workflow and Process authoring | Passed their recorded owner, editor, and browser checkpoints. See the [execution record](concurrent-editing-prompt-pilot.md). Project Structure retains its existing polling and SSE contracts and explicit graph refresh. |
 | R4 Agents, teams, capabilities, providers, Simple Chats, and Agent settings | The scoped owner and UI checkpoints pass. Configuration edits retain the original version and authority; the editor compares local values with saved information and commits only on a separate Save. Floating Agent chats retain each unsent composer through focus changes, hiding, and idle expiry. Stopping an active chat explicitly discards only that chat's local draft. |
-| R5 Scheduler, Resources, TestLab | Pending owner and alternate writer audit, implementation, and validation. |
+| R5 Scheduler, Resources, TestLab | Scheduler and Test Lab require the revision captured at opening. Scheduler groups recurrence and target/input for review. Test Lab protects case and evidence replacements and preserves independently appended results. Resource metadata continues to use the native revision and binding protocol. Test Lab field-by-field comparison remains open. |
 | R6 Workspace, Security, Plugins, Memory, Collaboration | Pending. Includes administrative Agent catalog transfer, which still has a separate replacement path. |
 | R7 File editors and remaining mutable surfaces | Pending application-wide writer census and closure. |
 
@@ -21,6 +21,12 @@ an isolated PostgreSQL fixture. A task creation and inline title edits delivered
 in both directions. The checks covered local edit suppression, in-place refresh, removal
 of refreshed rows, one window across tab switches, and clearance below the Gantt toolbar.
 The Windows Debug Web build and ten Gantt renderer cases passed.
+
+Scheduler and Test Lab read plans in bounded pages. The existing plan-list filters apply
+to the displayed page. Scheduler's agent search applies its filters before pagination.
+The Windows PostgreSQL checkpoint passed 95 of 97 selected cases on its first run. Both
+Scheduler source authority cases passed after the service retained its own accepted
+revision in the caller's editor model.
 
 Voice settings share the native workflow settings row and its version. Floating chat
 settings use their own original row observation and reject stale replacements even when

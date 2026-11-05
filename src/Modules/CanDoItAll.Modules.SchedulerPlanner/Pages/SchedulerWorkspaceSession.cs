@@ -15,10 +15,10 @@ public sealed class SchedulerWorkspaceSession(
     private readonly Guid profileId = database.Profile.Profile.Id;
     private readonly long profileGeneration = database.Generation;
 
-    public async Task<SchedulerWorkspaceData> ReadAsync(SchedulerHistoryQuery query, CancellationToken token) {
+    public async Task<SchedulerWorkspaceData> ReadAsync(SchedulerWorkspaceQuery query, CancellationToken token) {
         RequireProfile();
         var workspace = await service.GetWorkspaceAsync(query, token);
-        return new(workspace.Plans, workspace.History, workspace.TargetOptions, workspace.CalendarSurface);
+        return new(workspace.Plans, workspace.History, workspace.TargetOptions, workspace.CalendarSurface) { PlanCount = workspace.PlanCount };
     }
     public async Task<SchedulerDraftValues> DefaultAsync(CancellationToken token) {
         RequireProfile();
@@ -58,15 +58,17 @@ public sealed class SchedulerWorkspaceSession(
             return Known(exception);
         } catch (SchedulerPlanValidationException exception) {
             return new(SchedulerMutationKind.Save, SchedulerMutationStatus.Refused, values.Id, SchedulerMutationStage.None, exception.Message);
+        } catch (SchedulerPlanConflictException exception) {
+            return new(SchedulerMutationKind.Save, SchedulerMutationStatus.Conflict, values.Id, SchedulerMutationStage.None, exception.Message);
         } catch (Exception exception) {
             Report(SchedulerMutationKind.Save, values.Id, exception);
             return new(SchedulerMutationKind.Save, ownerStarted ? SchedulerMutationStatus.Unknown : SchedulerMutationStatus.Refused,
                 values.Id, SchedulerMutationStage.None, ownerStarted ? "Save outcome unknown. Review the exact plan before retrying." : "Authority could not be captured for this submission.");
         }
     }
-    public Task<SchedulerMutationReceipt> ToggleAsync(Guid id, bool enabled) => ExecuteAsync(id,
-        enabled ? SchedulerMutationKind.Enable : SchedulerMutationKind.Disable, () => service.SetPlanEnabledAsync(id, enabled));
-    public Task<SchedulerMutationReceipt> DeleteAsync(Guid id) => ExecuteAsync(id, SchedulerMutationKind.Delete, () => service.DeletePlanAsync(id));
+    public Task<SchedulerMutationReceipt> ToggleAsync(SchedulerPlanCondition expected, bool enabled) => ExecuteAsync(expected.PlanId,
+        enabled ? SchedulerMutationKind.Enable : SchedulerMutationKind.Disable, () => service.SetPlanEnabledAsync(expected, enabled));
+    public Task<SchedulerMutationReceipt> DeleteAsync(SchedulerPlanCondition expected) => ExecuteAsync(expected.PlanId, SchedulerMutationKind.Delete, () => service.DeletePlanAsync(expected));
     private async Task<SchedulerMutationReceipt> ExecuteAsync(Guid id, SchedulerMutationKind kind, Func<Task> action) {
         try {
             RequireProfile();
@@ -76,6 +78,8 @@ public sealed class SchedulerWorkspaceSession(
                 kind == SchedulerMutationKind.Delete ? "Deletion and trigger projection completed." : "Enabled state request completed. An already matching state does not resynchronize projection.");
         } catch (SchedulerPlanCommittedException exception) {
             return Known(exception);
+        } catch (SchedulerPlanConflictException exception) {
+            return new(kind, SchedulerMutationStatus.Refused, id, SchedulerMutationStage.None, exception.Message);
         } catch (Exception exception) {
             Report(kind, id, exception);
             return new(kind, SchedulerMutationStatus.Unknown, id, SchedulerMutationStage.None, "Outcome unknown; review persistence and projection before another mutation.");
@@ -100,17 +104,17 @@ public sealed class SchedulerWorkspaceSession(
         }
     }
     private static SchedulerDraftValues FromSaved(SchedulerPlanSummary plan, string input) => new() {
-        Id = plan.Id, Name = plan.Name, Description = plan.Description, TargetKind = plan.TargetKind, TargetId = plan.TargetId,
+        Id = plan.Id, ExpectedDefinitionRevision = plan.DefinitionRevision, Name = plan.Name, Description = plan.Description, TargetKind = plan.TargetKind, TargetId = plan.TargetId,
         TargetVersionId = plan.TargetVersionId, CronExpression = plan.CronExpression, TimeZoneId = plan.TimeZoneId,
         MisfirePolicy = plan.MisfirePolicy, IsEnabled = plan.IsEnabled, StartAtUtc = plan.StartAtUtc, EndAtUtc = plan.EndAtUtc, InputJson = input
     };
     internal static SchedulerDraftValues ToValues(SchedulerPlanEditorModel editor) => new() {
-        Id = editor.Id, Name = editor.Name, Description = editor.Description, TargetKind = editor.TargetKind, TargetId = editor.TargetId,
+        Id = editor.Id, ExpectedDefinitionRevision = editor.ExpectedDefinitionRevision, Name = editor.Name, Description = editor.Description, TargetKind = editor.TargetKind, TargetId = editor.TargetId,
         TargetVersionId = editor.TargetVersionId, CronExpression = editor.CronExpression, TimeZoneId = editor.TimeZoneId,
         MisfirePolicy = editor.MisfirePolicy, IsEnabled = editor.IsEnabled, StartAtUtc = editor.StartAtUtc, EndAtUtc = editor.EndAtUtc, InputJson = editor.InputJson
     };
     private static SchedulerPlanEditorModel ToEditor(SchedulerDraftValues values) => new() {
-        Id = values.Id, Name = values.Name, Description = values.Description, TargetKind = values.TargetKind, TargetId = values.TargetId,
+        Id = values.Id, ExpectedDefinitionRevision = values.ExpectedDefinitionRevision, Name = values.Name, Description = values.Description, TargetKind = values.TargetKind, TargetId = values.TargetId,
         TargetVersionId = values.TargetVersionId, CronExpression = values.CronExpression, TimeZoneId = values.TimeZoneId,
         MisfirePolicy = values.MisfirePolicy, IsEnabled = values.IsEnabled, StartAtUtc = values.StartAtUtc, EndAtUtc = values.EndAtUtc, InputJson = values.InputJson
     };

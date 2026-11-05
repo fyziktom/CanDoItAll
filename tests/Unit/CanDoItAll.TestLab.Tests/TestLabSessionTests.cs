@@ -560,13 +560,13 @@ public sealed class TestLabSessionTests {
         public Func<Task>? BeforeWrite { get; set; }
         public TaskCompletionSource FallbackEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Task<IReadOnlyList<TestPlanSummary>> ListAsync(CancellationToken cancellationToken) {
+        public Task<TestLabPlanPage> ListAsync(int offset, CancellationToken cancellationToken) {
             Reads++;
-            return FailList ? Task.FromException<IReadOnlyList<TestPlanSummary>>(new InvalidOperationException("Controlled read failure")) :
-                Task.FromResult<IReadOnlyList<TestPlanSummary>>(Store.Values.Select(item => new TestPlanSummary(item.Id!.Value, item.ProjectId,
+            return FailList ? Task.FromException<TestLabPlanPage>(new InvalidOperationException("Controlled read failure")) :
+                Task.FromResult(new TestLabPlanPage(Store.Values.Select(item => new TestPlanSummary(item.Id!.Value, item.ProjectId,
                     item.Title, item.Phase, item.Cases.Count, item.Evidence.Count, item.Runs.LastOrDefault()?.Result, DateTimeOffset.UtcNow) {
                     ProjectLifetimeId = item.ExpectedProjectAdmission?.LifetimeId
-                }).ToArray());
+                }).ToArray(), false));
         }
         public Task<TestPlanEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) {
             Reads++;

@@ -1,3 +1,5 @@
+@using CanDoItAll.Editing.UI
+
 @if (Draft.Error.Length > 0) {
     <p role="alert" data-testid="scheduler-draft-error">@Draft.Error</p>
 }
@@ -12,11 +14,37 @@
             <label>Review exact saved plan ID <input value="@reviewId" @oninput="args => reviewId = args.Value?.ToString() ?? string.Empty" data-testid="scheduler-review-id" /></label>
             <Button Text="Read and review this exact plan" ButtonStyle="ButtonStyle.Light" Disabled="@(Draft.IsReviewing || !Guid.TryParse(reviewId, out _))" IsBusy="@Draft.IsReviewing" Click="ReviewAsync" data-testid="scheduler-review-unknown" />
         }
+        @if (receipt.Status == SchedulerMutationStatus.Conflict) {
+            <Button Text="Compare changes" ButtonStyle="ButtonStyle.Light" IsBusy="@Draft.IsReviewing"
+                    Click="@(() => Workspace.CompareChangesAsync(Draft))" data-testid="scheduler-compare-changes" />
+        }
     </SurfaceCard>
+}
+@if (Draft.ConflictReview is { } review) {
+    <Stack GapScale="LayoutGap.Small" data-testid="scheduler-schedule-comparison">
+        <TextBlock Value="Review the saved schedule, then apply your choices to the form. Save separately when ready." />
+        <MergeFieldView Label="Name" Field="@review.Name" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+        <MergeFieldView Label="Description" Field="@review.Description" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
+        <MergeFieldView Label="Recurrence and time window" Field="@review.Recurrence" Format="FormatRecurrence" ShowUnchanged="false" Changed="StateHasChanged" />
+        @if (review.HasUnfinishedInput) {
+            <TextBlock Value="Choose your draft to keep the unfinished input, or choose the saved target and input to replace it." />
+        }
+        <MergeFieldView Label="Workflow version and input" Field="@review.Target" Format="FormatTarget" ShowUnchanged="@review.HasUnfinishedInput" Changed="StateHasChanged" />
+        <MergeFieldView Label="Enabled state" Field="@review.Enabled" Format="@(value => value ? "Enabled" : "Paused")" ShowUnchanged="false" Changed="StateHasChanged" />
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Apply choices to form" Disabled="@(!review.IsResolved || Draft.Revision != review.Revision)"
+                    Click="@(() => Workspace.ApplyComparisonAsync(Draft, review))" data-testid="scheduler-apply-comparison" />
+            <Button Text="Close comparison" ButtonStyle="ButtonStyle.Light" Click="@(() => Workspace.CloseComparison(Draft))" />
+        </Cluster>
+    </Stack>
 }
 @code {
     [Parameter, EditorRequired] public ISchedulerWorkspace Workspace { get; set; } = null!;
     [Parameter, EditorRequired] public SchedulerDraft Draft { get; set; } = null!;
     private string reviewId = string.Empty;
     private Task ReviewAsync() => Guid.TryParse(reviewId, out var id) ? Workspace.ReviewUnknownAsync(Draft, id) : Task.CompletedTask;
+    private static string FormatRecurrence(SchedulerConflictReview.ScheduleRecurrence value)
+        => $"{value.Cron} · {value.TimeZone}\n{value.Start:u} → {value.End:u}\n{value.Misfire}";
+    private static string FormatTarget(SchedulerConflictReview.ScheduleTargetInput value)
+        => $"{value.Kind} {value.Id:D} · version {value.Version:D}\n{value.Input}";
 }

@@ -31,6 +31,8 @@ public sealed class TestLabSubmission {
             return;
         }
         draft.Model.Id = id;
+        draft.Model.ExpectedPlan = Model.ExpectedPlan;
+        draft.Model.OriginalRuns = Model.OriginalRuns;
         foreach (var row in cases.Where(row => row.IsPresent(draft.Model.Cases))) {
             row.Origin.Id = row.Submitted.Id;
         }
@@ -125,6 +127,8 @@ public sealed class TestLabSubmission {
 
     public static TestPlanEditorModel Clone(TestPlanEditorModel source) => new() {
         Id = source.Id,
+        ExpectedPlan = source.ExpectedPlan,
+        OriginalRuns = source.OriginalRuns,
         ProjectId = source.ProjectId,
         ExpectedProjectAdmission = source.ExpectedProjectAdmission,
         ResponsiblePartyId = source.ResponsiblePartyId,

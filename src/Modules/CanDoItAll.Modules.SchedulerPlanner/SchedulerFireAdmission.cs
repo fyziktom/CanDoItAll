@@ -172,6 +172,9 @@ public sealed class SchedulerFireAdmissionStore(
                 database.Add(admission);
             }
             if (admission is null) {
+                if (request.ExpectedDefinitionRevision is { } revision && plan?.DefinitionRevision != revision) {
+                    return null;
+                }
                 if (plan is null) {
                     throw new KeyNotFoundException($"Scheduler plan '{request.PlanId:D}' was not found.");
                 }

@@ -253,7 +253,7 @@ public sealed class TestLabWorkspaceSession(
             if (!planReads.Accept(read) || !IsCurrentCommit(origin, submission)) {
                 return false;
             }
-            if (accepted?.Id != id) {
+            if (accepted?.Id != id || accepted.ExpectedPlan != submission.Model.ExpectedPlan) {
                 State.EditorRead = TestLabReadState.Stale;
                 return false;
             }
@@ -271,15 +271,25 @@ public sealed class TestLabWorkspaceSession(
         }
     }
 
-    private async Task LoadListAsync() {
+    public Task MovePlanPageAsync(bool next) {
+        if (disposed || State.PlansRead == TestLabReadState.Loading || (next ? !State.HasMorePlans : State.PlanOffset == 0)) {
+            return Task.CompletedTask;
+        }
+        return LoadListAsync(State.PlanOffset + (next ? TestLabPlanPage.Size : -TestLabPlanPage.Size));
+    }
+
+    private async Task LoadListAsync(int? pageOffset = null) {
         using var read = listReads.Begin();
+        var offset = pageOffset ?? State.PlanOffset;
         State.PlansRead = TestLabReadState.Loading;
         Changed();
         try {
-            var plans = await owner.ListAsync(read.Token);
+            var page = await owner.ListAsync(offset, read.Token);
             if (!disposed && listReads.Accept(read)) {
-                State.Plans = plans;
-                State.PlansRead = plans.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
+                State.PlanOffset = offset;
+                State.HasMorePlans = page.HasNext;
+                State.Plans = page.Plans;
+                State.PlansRead = page.Plans.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
                 Changed();
             }
         } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {

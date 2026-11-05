@@ -713,10 +713,10 @@ public sealed partial class SchedulerPlannerPageTests
         public SchedulerHistoryQuery? LastHistoryQuery { get; private set; }
 
         public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
-            SchedulerHistoryQuery? historyQuery = null,
+            SchedulerWorkspaceQuery? query = null,
             CancellationToken cancellationToken = default)
         {
-            LastHistoryQuery = historyQuery;
+            LastHistoryQuery = query?.History;
             return Task.FromResult(workspace);
         }
 
@@ -798,7 +798,7 @@ public sealed partial class SchedulerPlannerPageTests
         }
 
         public Task SetPlanEnabledAsync(
-            Guid planId,
+            SchedulerPlanCondition expected,
             bool isEnabled,
             CancellationToken cancellationToken = default)
         {
@@ -806,11 +806,11 @@ public sealed partial class SchedulerPlannerPageTests
         }
 
         public Task DeletePlanAsync(
-            Guid planId,
+            SchedulerPlanCondition expected,
             CancellationToken cancellationToken = default)
         {
             DeleteCount++;
-            DeletedPlanId = planId;
+            DeletedPlanId = expected.PlanId;
             return Task.CompletedTask;
         }
     }
@@ -1541,7 +1541,7 @@ public sealed partial class SchedulerPlannerPageTests
             plan => new EditorRequest(CreateEditor(plan)));
 
         public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
-            SchedulerHistoryQuery? historyQuery = null,
+            SchedulerWorkspaceQuery? query = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult(workspace);
 
@@ -1563,12 +1563,12 @@ public sealed partial class SchedulerPlannerPageTests
             => Task.FromException<SchedulerPlanSummary>(new NotSupportedException());
 
         public Task SetPlanEnabledAsync(
-            Guid planId,
+            SchedulerPlanCondition expected,
             bool isEnabled,
             CancellationToken cancellationToken = default)
             => Task.FromException(new NotSupportedException());
 
-        public Task DeletePlanAsync(Guid planId, CancellationToken cancellationToken = default)
+        public Task DeletePlanAsync(SchedulerPlanCondition expected, CancellationToken cancellationToken = default)
             => Task.FromException(new NotSupportedException());
 
         public Task WaitForEditorRequestAsync(Guid planId)

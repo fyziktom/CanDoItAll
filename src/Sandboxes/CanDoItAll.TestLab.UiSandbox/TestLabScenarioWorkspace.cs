@@ -79,6 +79,16 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         }
     }
 
+    public Task MovePlanPageAsync(bool next) {
+        if (next ? !State.HasMorePlans : State.PlanOffset == 0) {
+            return Task.CompletedTask;
+        }
+        State.PlanOffset += next ? TestLabPlanPage.Size : -TestLabPlanPage.Size;
+        LoadPlanPage();
+        Changed();
+        return Task.CompletedTask;
+    }
+
     public Task NewAsync() {
         if (!disposed) {
             RetireReads();
@@ -248,8 +258,14 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
     }
 
     private void RefreshList() {
-        State.Plans = Store.List();
+        LoadPlanPage();
         State.PlansRead = State.Plans.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
+    }
+
+    private void LoadPlanPage() {
+        var plans = Store.List();
+        State.Plans = plans.Skip(State.PlanOffset).Take(TestLabPlanPage.Size).ToArray();
+        State.HasMorePlans = plans.Count > State.PlanOffset + TestLabPlanPage.Size;
     }
 
     private void Changed() {

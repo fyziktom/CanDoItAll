@@ -25,6 +25,15 @@
             @if (Workspace.Data is null) {
                 <SurfaceCard data-testid="scheduler-loading"><TextBlock Value="@($"Scheduler: {Workspace.ReadStatus}")" /></SurfaceCard>
             } else {
+                @if (Workspace.PlanOffset > 0 || Workspace.HasMorePlans) {
+                    <Cluster Gap="LayoutGap.Small" data-testid="scheduler-plan-pagination">
+                        <Button Text="Previous schedules" ButtonStyle="ButtonStyle.Light" Disabled="@(Workspace.PlanOffset == 0 || Workspace.ReadStatus == SchedulerReadStatus.Loading)"
+                                Click="@(() => Workspace.MovePlanPageAsync(-1))" />
+                        <TextBlock Value="@($"{Workspace.PlanOffset + 1}–{Workspace.PlanOffset + Plans.Count} of {Workspace.Data.PlanCount} schedules")" />
+                        <Button Text="Next schedules" ButtonStyle="ButtonStyle.Light" Disabled="@(!Workspace.HasMorePlans || Workspace.ReadStatus == SchedulerReadStatus.Loading)"
+                                Click="@(() => Workspace.MovePlanPageAsync(1))" />
+                    </Cluster>
+                }
                 <Tabs SelectedIndex="@((int)Workspace.Tab)" SelectedIndexChanged="index => Workspace.Tab = (SchedulerTab)index" RenderMode="TabRenderMode.Server" Variant="TabsVariant.WorkspacePrimary" OverflowMode="TabsOverflowMode.Wrap" AriaLabel="Scheduler planner tabs" data-testid="scheduler-tabs">
                     <TabsItem Text="Calendar" Icon="calendar_month" data-testid="scheduler-tab-calendar"><SchedulerCalendar Workspace="Workspace" Surface="Workspace.Data.CalendarSurface" /></TabsItem>
                     <TabsItem Text="Schedules" Icon="event_note" data-testid="scheduler-tab-schedules"><SchedulerSchedules Workspace="Workspace" /></TabsItem>

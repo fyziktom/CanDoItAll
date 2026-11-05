@@ -6959,6 +6959,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(160)
                         .HasColumnType("character varying(160)");
 
+                    b.Property<Guid>("DefinitionRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -7263,6 +7267,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DefinitionRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Phase")
                         .IsRequired()

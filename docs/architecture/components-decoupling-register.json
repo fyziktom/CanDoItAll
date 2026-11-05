@@ -33707,7 +33707,7 @@
     {
       "identity": "src/UI/CanDoItAll.SchedulerPlanner.UI/CanDoItAll.SchedulerPlanner.UI.csproj",
       "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/CanDoItAll.SchedulerPlanner.UI.csproj",
-      "sha256_lf": "47e53306cc8542627b08b13d80ee06e0387467fb84a2295b151253aef07a048c",
+      "sha256_lf": "ba15e29bf0e7cc919947eff99ac4bb81af6bf042ed6b490acff2afa68b557927",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -33809,7 +33809,7 @@
     {
       "identity": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDraftReceipt.razor",
       "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDraftReceipt.razor",
-      "sha256_lf": "5719b5054b231e5728e2443a5ae63e603debe1fffe77b35062b022f23cdabade",
+      "sha256_lf": "3663154674dc04c30f6c4f53c12b0333148eaa05362decb0d9598c1ae93fdce8",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.SchedulerPlanner.UI.SchedulerDraftReceipt",
@@ -33951,7 +33951,7 @@
     {
       "identity": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerWorkspaceSurface.razor",
-      "sha256_lf": "d409641f82681d421261949b29588566e2f1907b82a842b7d8130b977613ed06",
+      "sha256_lf": "df3d2954b90853bd9bb5ec891815556d3aa8cfd18c0bdea06633fdeb3f3f2cbe",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.SchedulerPlanner.UI.SchedulerWorkspaceSurface",
@@ -34059,7 +34059,7 @@
     {
       "identity": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
-      "sha256_lf": "23be6488d831c9eb5e117ea7867480717735cdb7af22fb7a72f460ea9abb5f5d",
+      "sha256_lf": "390f56fc58d5777fd7562b2baa128db338bbdba3c5f401579d8764d8eb3488d9",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.TestLab.UI.TestLabWorkspaceSurface",

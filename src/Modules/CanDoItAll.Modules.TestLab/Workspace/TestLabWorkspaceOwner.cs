@@ -9,7 +9,7 @@ public sealed class TestLabWorkspaceOwner(
     ProjectWriteSelectionQuery projects,
     IProjectPartyIntegrationBridge parties,
     ILogger<TestLabWorkspaceOwner> logger) : ITestLabWorkspaceOwner {
-    public Task<IReadOnlyList<TestPlanSummary>> ListAsync(CancellationToken cancellationToken) => plans.ListAsync(cancellationToken);
+    public Task<TestLabPlanPage> ListAsync(int offset, CancellationToken cancellationToken) => plans.ReadPageAsync(offset, cancellationToken);
 
     public async Task<TestPlanEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) {
         var plan = await plans.GetAsync(id, cancellationToken);
@@ -39,6 +39,8 @@ public sealed class TestLabWorkspaceOwner(
             return new(TestLabWriteOutcome.Refused, null, "The selected project admission is no longer valid. Select a current project explicitly before saving.");
         } catch (TestPlanBindingChangedException exception) {
             return new(TestLabWriteOutcome.Refused, null, exception.Message);
+        } catch (TestPlanContentConflictException exception) {
+            return new(TestLabWriteOutcome.Refused, null, exception.Message);
         } catch (Exception exception) {
             logger.LogError("TestLab write outcome is unknown. PlanId={PlanId} ProjectId={ProjectId} FailureType={FailureType}",
                 submission.Id, submission.ProjectId, exception.GetType().Name);
@@ -48,3 +50,6 @@ public sealed class TestLabWorkspaceOwner(
 }
 
 public sealed class TestPlanBindingChangedException() : InvalidOperationException("The test plan project binding changed. Reload Test Lab before saving.");
+
+public sealed class TestPlanContentConflictException(Exception? innerException = null)
+    : InvalidOperationException("The test plan or a reviewed result changed after it was opened. Open the current plan before saving.", innerException);

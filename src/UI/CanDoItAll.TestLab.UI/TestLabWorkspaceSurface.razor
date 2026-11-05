@@ -66,6 +66,15 @@
             <ListContent>
                 <p role="status" data-testid="testlab-list-state">@ListStatus</p>
                 <Button Text="Retry refresh" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="View.RetryAsync" data-testid="testlab-retry" />
+                @if (View.State.PlanOffset > 0 || View.State.HasMorePlans) {
+                    <Cluster Gap="LayoutGap.Small" data-testid="testlab-plan-pagination">
+                        <Button Text="Previous plans" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                Disabled="@(View.State.PlanOffset == 0 || View.State.PlansRead == TestLabReadState.Loading)" Click="@(() => View.MovePlanPageAsync(false))" />
+                        <TextBlock Value="@($"Page {View.State.PlanOffset / TestLabPlanPage.Size + 1}")" />
+                        <Button Text="Next plans" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                Disabled="@(!View.State.HasMorePlans || View.State.PlansRead == TestLabReadState.Loading)" Click="@(() => View.MovePlanPageAsync(true))" />
+                    </Cluster>
+                }
                 @if (visiblePlans.Count == 0 && View.State.PlansRead is TestLabReadState.Ready or TestLabReadState.Empty or TestLabReadState.Stale) {
                     <EmptyState Eyebrow="No plans"
                                 Title="@(View.State.PlansRead == TestLabReadState.Empty ? "Create the first test plan" : "No matching plans")"

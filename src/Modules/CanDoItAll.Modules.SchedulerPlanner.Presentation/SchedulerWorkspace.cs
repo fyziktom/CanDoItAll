@@ -10,6 +10,7 @@ namespace CanDoItAll.Modules.SchedulerPlanner.Presentation;
 public sealed class SchedulerWorkspace : ISchedulerWorkspace, IDisposable {
     private const string CalendarDateFormat = "yyyy-MM-dd";
     private const SchedulerCalendarView DefaultCalendarView = SchedulerCalendarView.Week;
+    private const int PlanPageSize = 100;
     private readonly ISchedulerWorkspaceOwner owner;
     private readonly SchedulerMutations mutations;
     public SchedulerWorkspace(ISchedulerWorkspaceOwner owner) {
@@ -54,6 +55,8 @@ public sealed class SchedulerWorkspace : ISchedulerWorkspace, IDisposable {
     }
     public SchedulerHistoryQuery HistoryQuery { get; } = new();
     public SchedulerScheduleFilters ScheduleFilters { get; private set; } = new();
+    public int PlanOffset { get; private set; }
+    public bool HasMorePlans => Data?.PlanCount > PlanOffset + PlanPageSize;
     public SchedulerDraft NewDraft { get; private set; } = new(new());
     public SchedulerDraft? EditDraft { get; private set; }
     public SchedulerDraft? PickerDraft { get; private set; }
@@ -143,7 +146,7 @@ public sealed class SchedulerWorkspace : ISchedulerWorkspace, IDisposable {
         ReadStatus = SchedulerReadStatus.Loading;
         Notify();
         try {
-            var data = await owner.ReadAsync(query, read.Token);
+            var data = await owner.ReadAsync(new(query, new(PlanOffset, PlanPageSize)), read.Token);
             if (!read.IsCurrent) {
                 return;
             }
@@ -161,6 +164,14 @@ public sealed class SchedulerWorkspace : ISchedulerWorkspace, IDisposable {
         } finally {
             Notify();
         }
+    }
+
+    public Task MovePlanPageAsync(int direction) {
+        if (disposed || ReadStatus == SchedulerReadStatus.Loading || direction < 0 && PlanOffset == 0 || direction > 0 && !HasMorePlans) {
+            return Task.CompletedTask;
+        }
+        PlanOffset += Math.Sign(direction) * PlanPageSize;
+        return RefreshAsync();
     }
 
     // Commits the history search draft: the committed query is the one every read uses.
@@ -330,6 +341,22 @@ public sealed class SchedulerWorkspace : ISchedulerWorkspace, IDisposable {
 
     public Task SaveAsync(SchedulerDraft draft) => mutations.SaveAsync(draft);
     public Task ReviewUnknownAsync(SchedulerDraft draft, Guid exactPlanId) => mutations.ReviewUnknownAsync(draft, exactPlanId);
+    public Task CompareChangesAsync(SchedulerDraft draft) {
+        var view = ViewGeneration;
+        return mutations.CompareChangesAsync(draft, () => view == ViewGeneration && IsActiveDraft(draft));
+    }
+    public async Task ApplyComparisonAsync(SchedulerDraft draft, SchedulerConflictReview review) {
+        if (IsActiveDraft(draft) && mutations.ApplyComparison(draft, review) && !review.RetainsInput) {
+            await Input(draft).LoadAsync();
+        }
+    }
+    public void CloseComparison(SchedulerDraft draft) {
+        if (IsActiveDraft(draft)) {
+            draft.ConflictReview = null;
+            Notify();
+        }
+    }
+    private bool IsActiveDraft(SchedulerDraft draft) => !disposed && (ReferenceEquals(EditDraft, draft) || ReferenceEquals(NewDraft, draft));
     public Task ReviewPlanAsync(Guid id) => mutations.ReviewPlanAsync(id);
     public void AcknowledgeReceipt(Guid id) => mutations.Acknowledge(id);
 
@@ -349,7 +376,7 @@ public sealed class SchedulerWorkspace : ISchedulerWorkspace, IDisposable {
             return;
         }
         var generation = ViewGeneration;
-        await mutations.DeleteAsync(plan.Id);
+        await mutations.DeleteAsync(plan);
         if (generation == ViewGeneration && mutations.Receipts.GetValueOrDefault(plan.Id)?.Status is SchedulerMutationStatus.Committed or SchedulerMutationStatus.CommittedWithWarning) {
             CloseDelete();
             if (EditingPlanId == plan.Id) {

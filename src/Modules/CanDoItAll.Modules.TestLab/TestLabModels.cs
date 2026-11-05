@@ -1,3 +1,4 @@
+using System.Data;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Projects;
@@ -11,6 +12,8 @@ namespace CanDoItAll.Modules.TestLab;
 public sealed class TestPlan
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid DefinitionRevision { get; set; }
 
     public Guid? ProjectId { get; set; }
 
@@ -82,6 +85,7 @@ internal sealed class TestPlanConfiguration : IEntityTypeConfiguration<TestPlan>
     {
         builder.ToTable("TestLab_TestPlans");
         builder.HasKey(plan => plan.Id);
+        builder.Property(plan => plan.DefinitionRevision).IsConcurrencyToken();
         builder.Property(plan => plan.Title).HasMaxLength(200).IsRequired();
         builder.Property(plan => plan.Phase).HasMaxLength(120);
         builder.Property(plan => plan.CoverageGoal).HasColumnType("TEXT");
@@ -184,35 +188,24 @@ public sealed class TestLabService(
     }
 
     public async Task<IReadOnlyList<TestPlanSummary>> ListAsync(CancellationToken cancellationToken = default)
+        => (await ReadPageAsync(0, cancellationToken)).Plans;
+
+    public async Task<TestLabPlanPage> ReadPageAsync(int offset, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var caseCounts = await dbContext.Set<TestCaseRecord>()
-            .GroupBy(item => item.TestPlanId)
-            .Select(group => new { group.Key, Count = group.Count() })
-            .ToDictionaryAsync(item => item.Key, item => item.Count, cancellationToken);
-        var evidenceCounts = await dbContext.Set<TestEvidenceRecord>()
-            .GroupBy(item => item.TestPlanId)
-            .Select(group => new { group.Key, Count = group.Count() })
-            .ToDictionaryAsync(item => item.Key, item => item.Count, cancellationToken);
-        var latestRuns = (await dbContext.Set<TestRunRecord>().ToListAsync(cancellationToken))
-            .GroupBy(item => item.TestPlanId)
-            .Select(group => group.OrderByDescending(item => item.ExecutedAtUtc).First())
-            .ToList();
-
-        var runLookup = latestRuns.ToDictionary(item => item.TestPlanId, item => (TestCaseStatus?)item.Result);
-        var plans = (await dbContext.Set<TestPlan>().ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToList();
-
-        return plans.Select(plan => new TestPlanSummary(
-            plan.Id,
-            plan.ProjectId,
-            plan.Title,
-            plan.Phase,
-            caseCounts.GetValueOrDefault(plan.Id),
-            evidenceCounts.GetValueOrDefault(plan.Id),
-            runLookup.GetValueOrDefault(plan.Id),
-            plan.UpdatedAtUtc) { ProjectLifetimeId = plan.ProjectLifetimeId }).ToList();
+        var plans = await dbContext.Set<TestPlan>().AsNoTracking()
+            .OrderByDescending(plan => plan.UpdatedAtUtc).ThenBy(plan => plan.Id)
+            .Skip(Math.Max(0, offset)).Take(TestLabPlanPage.Size + 1)
+            .Select(plan => new TestPlanSummary(
+                plan.Id, plan.ProjectId, plan.Title, plan.Phase,
+                dbContext.Set<TestCaseRecord>().Count(item => item.TestPlanId == plan.Id),
+                dbContext.Set<TestEvidenceRecord>().Count(item => item.TestPlanId == plan.Id),
+                dbContext.Set<TestRunRecord>().Where(item => item.TestPlanId == plan.Id)
+                    .OrderByDescending(item => item.ExecutedAtUtc).ThenBy(item => item.Id)
+                    .Select(item => (TestCaseStatus?)item.Result).FirstOrDefault(),
+                plan.UpdatedAtUtc) { ProjectLifetimeId = plan.ProjectLifetimeId })
+            .ToListAsync(cancellationToken);
+        return new(plans.Take(TestLabPlanPage.Size).ToArray(), plans.Count > TestLabPlanPage.Size);
     }
 
     public async Task<TestPlanEditorModel> GetAsync(Guid? id, CancellationToken cancellationToken = default)
@@ -223,19 +216,24 @@ public sealed class TestLabService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var plan = await dbContext.Set<TestPlan>().FirstOrDefaultAsync(item => item.Id == id.Value, cancellationToken);
+        await using var snapshot = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            : null;
+        var plan = await dbContext.Set<TestPlan>().AsNoTracking().FirstOrDefaultAsync(item => item.Id == id.Value, cancellationToken);
         if (plan is null)
         {
             return new TestPlanEditorModel();
         }
 
-        var runRecords = await dbContext.Set<TestRunRecord>()
+        var runRecords = await dbContext.Set<TestRunRecord>().AsNoTracking()
             .Where(item => item.TestPlanId == plan.Id)
+            .OrderByDescending(item => item.ExecutedAtUtc).ThenBy(item => item.Id)
             .ToListAsync(cancellationToken);
 
-        return new TestPlanEditorModel
+        var editor = new TestPlanEditorModel
         {
             Id = plan.Id,
+            ExpectedPlan = new(writeAdmissions.DatabaseProfileId, plan.Id, plan.DefinitionRevision),
             ProjectId = plan.ProjectId,
             ExpectedProjectAdmission = plan.ProjectLifetimeId is { } lifetimeId && plan.ProjectId is { } projectId && projectId != Guid.Empty
                 ? new(writeAdmissions.DatabaseProfileId, projectId, lifetimeId) : null,
@@ -255,10 +253,14 @@ public sealed class TestLabService(
                 .Select(item => new TestEvidenceEditorModel { Id = item.Id, EvidenceLabel = item.EvidenceLabel, ArtifactPath = item.ArtifactPath, EvidenceKind = item.EvidenceKind, Notes = item.Notes })
                 .ToListAsync(cancellationToken),
             Runs = runRecords
-                .OrderByDescending(item => item.ExecutedAtUtc)
                 .Select(item => new TestRunEditorModel { Id = item.Id, ExecutedAtUtc = item.ExecutedAtUtc, Runner = item.Runner, Result = item.Result, Summary = item.Summary })
-                .ToList()
+                .ToList(),
+            OriginalRuns = runRecords.Select(ObserveRun).ToArray()
         };
+        if (snapshot is not null) {
+            await snapshot.CommitAsync(cancellationToken);
+        }
+        return editor;
     }
 
     public async Task<Result<Guid>> SaveAsync(TestPlanEditorModel model, CancellationToken cancellationToken = default) {
@@ -272,6 +274,10 @@ public sealed class TestLabService(
         }
         var editing = model.Id.HasValue;
         var entityId = model.Id ?? Guid.NewGuid();
+        if (editing && (model.ExpectedPlan is not { } original || original.PlanId != entityId || original.DatabaseProfileId != writeAdmissions.DatabaseProfileId)
+            || !editing && model.ExpectedPlan.HasValue) {
+            return Result<Guid>.Failure(Error.Validation("An existing test plan requires its original revision and database profile. Open the plan before saving."));
+        }
         TestPlan entity;
         List<Action> committedIdentityUpdates = [];
         var committed = false;
@@ -284,6 +290,7 @@ public sealed class TestLabService(
                 }
                 var keys = BuildMutationKeys(entityId, previous?.ProjectId, admission?.ProjectId);
                 await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, keys, cancellationToken);
+                IReadOnlyList<TestRunObservation> acceptedRuns;
                 using (coordinatedTransaction.Enter(dbContext)) {
                     if (admission is not null) {
                         await writeAdmissions.RequireForMutationAsync(admission, cancellationToken);
@@ -291,6 +298,13 @@ public sealed class TestLabService(
                     var stored = await dbContext.Set<TestPlan>().SingleOrDefaultAsync(item => item.Id == entityId, cancellationToken);
                     if (previous is not null && (stored is null || stored.ProjectId != previous.ProjectId || stored.ProjectLifetimeId != previous.ProjectLifetimeId)) {
                         throw new TestPlanBindingChangedException();
+                    }
+                    if (editing && (stored is null || stored.DefinitionRevision != model.ExpectedPlan!.Value.DefinitionRevision)) {
+                        throw new TestPlanContentConflictException();
+                    }
+                    if (stored is { ProjectId: { } previousProject, ProjectLifetimeId: { } previousLifetime } &&
+                        (admission is null || admission.ProjectId != previousProject)) {
+                        await writeAdmissions.RequireForMutationAsync(new(writeAdmissions.DatabaseProfileId, previousProject, previousLifetime), cancellationToken);
                     }
                     entity = stored ?? new TestPlan { Id = entityId, CreatedAtUtc = clock.GetUtcNow() };
                     if (previous is null) {
@@ -303,20 +317,23 @@ public sealed class TestLabService(
                     entity.Phase = model.Phase?.Trim() ?? string.Empty;
                     entity.CoverageGoal = model.CoverageGoal?.Trim() ?? string.Empty;
                     entity.PlaywrightSpecPath = model.PlaywrightSpecPath?.Trim() ?? string.Empty;
+                    entity.DefinitionRevision = Guid.NewGuid();
                     entity.UpdatedAtUtc = clock.GetUtcNow();
                     await SyncCollectionAsync(dbContext.Set<TestCaseRecord>(), entity.Id, model.Cases, MapCase, committedIdentityUpdates, cancellationToken);
                     await SyncCollectionAsync(dbContext.Set<TestEvidenceRecord>(), entity.Id, model.Evidence, MapEvidence, committedIdentityUpdates, cancellationToken);
-                    await SyncCollectionAsync(dbContext.Set<TestRunRecord>(), entity.Id, model.Runs, MapRun, committedIdentityUpdates, cancellationToken);
+                    acceptedRuns = await ApplyRunChangesAsync(dbContext.Set<TestRunRecord>(), entity.Id, model, committedIdentityUpdates, cancellationToken);
                     await dbContext.SaveChangesAsync(cancellationToken);
                 }
                 await mutation.CommitAsync(cancellationToken);
                 committed = true;
                 model.Id = entity.Id;
+                model.ExpectedPlan = new(writeAdmissions.DatabaseProfileId, entity.Id, entity.DefinitionRevision);
+                model.OriginalRuns = acceptedRuns;
                 foreach (var retainIdentity in committedIdentityUpdates) {
                     retainIdentity();
                 }
             }
-            await UpsertSearchAsync(admission, new SearchDocumentInput(
+            await UpsertSearchAsync(entity, admission, new SearchDocumentInput(
                 "test-plan", entity.Id.ToString(), "Test Lab", entity.Title, entity.Phase,
                 $"{entity.CoverageGoal}\nPlaywright: {entity.PlaywrightSpecPath}", $"/test-lab?planId={entity.Id}", entity.ProjectId), cancellationToken);
             await activityStream.RecordAsync(new ActivityWriteRequest(
@@ -328,19 +345,22 @@ public sealed class TestLabService(
             logger?.LogError("Test plan {TestPlanId} was saved in profile {ProfileId}; a subsequent operation failed with {FailureType}.",
                 entityId, writeAdmissions.DatabaseProfileId, exception.GetType().FullName);
             throw new TestPlanCommittedSaveException(entityId, exception);
+        } catch (Exception exception) when (SerializableMutationScope.IsConflict(exception)) {
+            throw new TestPlanContentConflictException(exception);
         }
     }
 
-    private async Task UpsertSearchAsync(ProjectWriteAdmission? admission, SearchDocumentInput input, CancellationToken cancellationToken) {
-        if (admission is null) {
-            await searchIndexService.UpsertAsync(input, cancellationToken);
-            return;
-        }
+    private async Task UpsertSearchAsync(TestPlan plan, ProjectWriteAdmission? admission, SearchDocumentInput input, CancellationToken cancellationToken) {
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var mutation = await SerializableMutationScope.BeginAsync(context,
-            ProjectMutationScopeKeys.ForProject(admission.ProjectId), cancellationToken);
+            BuildMutationKeys(plan.Id, admission?.ProjectId), cancellationToken);
         using (coordinatedTransaction.Enter(context)) {
-            await writeAdmissions.RequireForMutationAsync(admission, cancellationToken);
+            if (!await context.Set<TestPlan>().AnyAsync(row => row.Id == plan.Id && row.DefinitionRevision == plan.DefinitionRevision, cancellationToken)) {
+                return;
+            }
+            if (admission is not null) {
+                await writeAdmissions.RequireForMutationAsync(admission, cancellationToken);
+            }
             await searchIndexService.UpsertForMutationAsync(input, cancellationToken);
         }
         await mutation.CommitAsync(cancellationToken);
@@ -371,10 +391,54 @@ public sealed class TestLabService(
     private static void MapRun(TestRunRecord entity, Guid planId, TestRunEditorModel model)
     {
         entity.TestPlanId = planId;
-        entity.ExecutedAtUtc = model.ExecutedAtUtc;
+        entity.ExecutedAtUtc = NormalizeRunTimestamp(model.ExecutedAtUtc);
         entity.Runner = string.IsNullOrWhiteSpace(model.Runner) ? "Playwright" : model.Runner.Trim();
         entity.Result = model.Result;
         entity.Summary = model.Summary?.Trim() ?? string.Empty;
+    }
+
+    private static TestRunObservation ObserveRun(TestRunRecord record)
+        => new(record.Id, NormalizeRunTimestamp(record.ExecutedAtUtc), record.Runner, record.Result, record.Summary);
+
+    private static DateTimeOffset NormalizeRunTimestamp(DateTimeOffset timestamp)
+        => new(timestamp.UtcTicks / TimeSpan.TicksPerMicrosecond * TimeSpan.TicksPerMicrosecond, TimeSpan.Zero);
+
+    private static async Task<IReadOnlyList<TestRunObservation>> ApplyRunChangesAsync(DbSet<TestRunRecord> runs, Guid planId,
+        TestPlanEditorModel model, List<Action> committedIdentityUpdates, CancellationToken cancellationToken) {
+        var originalIds = model.OriginalRuns.Select(run => run.Id).ToArray();
+        var submitted = model.Runs.Where(run => run.Id.HasValue).ToArray();
+        if (originalIds.Distinct().Count() != originalIds.Length || submitted.Select(run => run.Id).Distinct().Count() != submitted.Length ||
+            submitted.Any(run => !originalIds.Contains(run.Id!.Value))) {
+            throw new TestPlanContentConflictException();
+        }
+        var submittedById = submitted.ToDictionary(run => run.Id!.Value);
+        var current = await runs.Where(run => run.TestPlanId == planId && originalIds.Contains(run.Id))
+            .ToDictionaryAsync(run => run.Id, cancellationToken);
+        var accepted = new List<TestRunObservation>();
+        foreach (var original in model.OriginalRuns) {
+            var draft = submittedById.GetValueOrDefault(original.Id);
+            if (draft is not null && original == new TestRunObservation(original.Id, NormalizeRunTimestamp(draft.ExecutedAtUtc), draft.Runner, draft.Result, draft.Summary)) {
+                accepted.Add(original);
+                continue;
+            }
+            if (!current.TryGetValue(original.Id, out var record) || ObserveRun(record) != original) {
+                throw new TestPlanContentConflictException();
+            }
+            if (draft is null) {
+                runs.Remove(record);
+            } else {
+                MapRun(record, planId, draft);
+                accepted.Add(ObserveRun(record));
+            }
+        }
+        foreach (var draft in model.Runs.Where(run => !run.Id.HasValue)) {
+            var record = new TestRunRecord();
+            MapRun(record, planId, draft);
+            runs.Add(record);
+            accepted.Add(ObserveRun(record));
+            committedIdentityUpdates.Add(() => draft.Id = record.Id);
+        }
+        return accepted;
     }
 
     private static async Task SyncCollectionAsync<TEntity, TModel>(
@@ -388,7 +452,11 @@ public sealed class TestLabService(
         where TModel : class, ITestPlanChildEditor {
         var entities = await set.Where(entity => EF.Property<Guid>(entity, nameof(ITestPlanChildRecord.TestPlanId)) == planId)
             .ToDictionaryAsync(entity => entity.Id, cancellationToken);
-        var modelIds = models.Select(model => model.Id).ToHashSet();
+        var persistedIds = models.Where(model => model.Id.HasValue).Select(model => model.Id!.Value).ToArray();
+        var modelIds = persistedIds.ToHashSet();
+        if (modelIds.Count != persistedIds.Length || modelIds.Any(id => !entities.ContainsKey(id))) {
+            throw new TestPlanContentConflictException();
+        }
         set.RemoveRange(entities.Values.Where(entity => !modelIds.Contains(entity.Id)));
         foreach (var model in models) {
             var entity = model.Id is { } id ? entities.GetValueOrDefault(id) : null;

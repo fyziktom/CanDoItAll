@@ -6,7 +6,7 @@ public enum TestLabWriteOutcome { Refused, Committed, CommittedWithWarning, Unkn
 public sealed record TestLabWriteResult(TestLabWriteOutcome Outcome, Guid? PlanId, string Message);
 
 public interface ITestLabWorkspaceOwner {
-    Task<IReadOnlyList<TestPlanSummary>> ListAsync(CancellationToken cancellationToken);
+    Task<TestLabPlanPage> ListAsync(int offset, CancellationToken cancellationToken);
     Task<TestPlanEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken);
     Task<IReadOnlyList<TestLabProjectOption>> ProjectsAsync(CancellationToken cancellationToken);
     Task<IReadOnlyList<TestLabPartyOption>> PartiesAsync(Guid projectId, CancellationToken cancellationToken);
