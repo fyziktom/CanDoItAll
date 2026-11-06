@@ -169,7 +169,7 @@ public sealed partial class StorageCatalogService(
         if (existingStorage is not null)
         {
             EnsureAuthoritativeBootstrapStorage(systemDefaults, existingStorage, workspaceRoot);
-            RefreshBootstrapStorage(existingStorage, workspaceRoot);
+            RefreshBootstrapStorage(dbContext, existingStorage, workspaceRoot);
             await dbContext.SaveChangesAsync(cancellationToken);
             await MigrateLegacyRootBindingsAsync(dbContext, workspaceRoot, cancellationToken);
             await EnsureBootstrapRuleAsync(dbContext, existingStorage, cancellationToken);
@@ -630,7 +630,7 @@ public sealed partial class StorageCatalogService(
         }
 
         EnsureAuthoritativeBootstrapStorage(systemDefaults, storage, workspaceRoot);
-        RefreshBootstrapStorage(storage, workspaceRoot);
+        RefreshBootstrapStorage(dbContext, storage, workspaceRoot);
         await dbContext.SaveChangesAsync(cancellationToken);
         await EnsureBootstrapRuleAsync(dbContext, storage, cancellationToken);
         return storage;
@@ -676,7 +676,7 @@ public sealed partial class StorageCatalogService(
         }
     }
 
-    private void RefreshBootstrapStorage(StorageCatalogRecord storage, string workspaceRoot)
+    private void RefreshBootstrapStorage(StorageDbContext dbContext, StorageCatalogRecord storage, string workspaceRoot)
     {
         var capabilityMask =
             StorageCapability.Read |
@@ -696,11 +696,15 @@ public sealed partial class StorageCatalogService(
         storage.IsSystemDefault = true;
         storage.ConnectionMode = StorageConnectionMode.Local;
         storage.EndpointOrRoot = workspaceRoot;
-        StorageCatalogHostBindingPolicy.BindCurrent(storage, workspaceRoot, clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        StorageCatalogHostBindingPolicy.BindCurrent(storage, workspaceRoot, storage.RootLastValidatedAtUtc ?? now);
         storage.CapabilityMask = capabilityMask;
         storage.HealthStatus = StorageHealthStatus.Healthy;
         storage.LastHealthMessage = "Bootstrap workspace storage";
-        storage.UpdatedAtUtc = clock.GetUtcNow();
+        if (dbContext.Entry(storage).State == EntityState.Modified) {
+            storage.RootLastValidatedAtUtc = now;
+            storage.UpdatedAtUtc = now;
+        }
     }
 
     private static void ClearRootBinding(StorageCatalogRecord storage)

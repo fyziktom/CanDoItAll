@@ -10202,7 +10202,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "sha256_lf": "dba8aa37f2a05a5410bb70187e49f08ba53e1b6e8d4ee6b72f6e6e725af47dff",
+      "sha256_lf": "d86609427bd641284fb2785db8e8961741475a91c20a1415db022764370f0536",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialogResult, CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog, CanDoItAll.Modules.AgentFramework.Pages.Components.AgentWorkspaceRiskRequest",
@@ -10217,7 +10217,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Owns the editor opening, admitted reads and writes, and dialog results. Catalog delivery gaps require comparison once the draft has a saved identity."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDiagnosticsPanel.razor",

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-06T00:40:29.700293+00:00",
+  "generated_utc": "2026-11-06T11:55:03.818682+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -11866,6 +11866,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "347b7c083476e4839ee1cf52c0707bb67e5edb1dc2ecc87c0c54274e14d26e90",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "3680f50a01701e84a0a45291e808b0dd62a452d284b748a88239255407b703bb",
       "count": 1
     },
@@ -11896,13 +11902,13 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "5e702a82119c845dce784b86b721747f594bcf22eb59db90f0643d4a877c7e7b",
+      "source_fingerprint": "61027fdadaec954cfabebcb304f5b2d84d991cc52414d1da5a5c88ae95b378a8",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "61027fdadaec954cfabebcb304f5b2d84d991cc52414d1da5a5c88ae95b378a8",
+      "source_fingerprint": "664778ec92b1b5333621c50205da1973dd776b54312ca003bc352af0b204641d",
       "count": 1
     },
     {
@@ -11944,6 +11950,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "7d82540fa8456ea22608185e06f77f654b05519ee79063602e84a31d6a60e8c4",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "7e7f7f9bc678eb6652f893a9a598ec1c0a1ff2ecf6e5bbad770adb1efa9916ee",
       "count": 1
     },
@@ -11975,7 +11987,7 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "af181a19965edbb8dec462db81776979c5884ea420e4abd7378b2f0490839119",
-      "count": 2
+      "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
@@ -11992,6 +12004,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "b3ee2e97b9ae511f3cc014c9259377321d638344c3d3ab946472dbb259017773",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "bb484e7934ed28e87da7eaa4a7e00237694013b509318e8ef09885c7abe77de4",
       "count": 1
     },
@@ -11999,12 +12017,6 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "dbfd122fc773f53e962f330bffe454233f1b4d7001db18ef5ee9a7520e03043b",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "e0698757efb3a8b032a861e94e0f84cfa8541fbca7b07afefd4c98f2c52c73dd",
       "count": 1
     },
     {
@@ -12041,12 +12053,6 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "f05d6c927d9576c460254f36e65e2dabb625296dea8cd78c0df641f569339235",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "f9e6e0a0b3ba70bd071cbabd429cac2583bb85f9d2d8b826bf3bd03961c609fc",
       "count": 1
     },
     {

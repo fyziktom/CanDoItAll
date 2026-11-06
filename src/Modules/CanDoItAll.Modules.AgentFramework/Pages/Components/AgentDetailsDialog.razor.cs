@@ -291,11 +291,11 @@ public partial class AgentDetailsDialog : IAsyncDisposable {
             owner.Target.AgentId, owner.Origin.Value, () => IsCurrent(owner));
         configurationOpening = opening;
         await opening.StartAsync(batch => InvokeAsync(() => {
-            if (!IsCurrent(owner)) {
+            if (!IsCurrent(owner) || (owner.Target.AgentId ?? owner.Draft.Id) is not { } resourceId) {
                 return;
             }
             if (batch.RequiresResync || batch.Changes.Any(change => change.OriginEditorId != owner.Origin.Value &&
-                change.Resource.ResourceId == (owner.Target.AgentId ?? owner.Draft.Id) && change.Kind != EditingChangeKind.MetadataChanged)) {
+                change.Resource.ResourceId == resourceId && change.Kind != EditingChangeKind.MetadataChanged)) {
                 hasExternalChanges = true;
                 configurationChangeSequence++;
                 activeComparison?.Invalidate();
