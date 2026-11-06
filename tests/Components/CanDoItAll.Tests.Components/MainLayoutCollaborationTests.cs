@@ -43,13 +43,18 @@ public sealed class MainLayoutCollaborationTests
             Assert.Contains(">1<", cut.Markup);
         });
 
-        var replyResult = await collaborationService.AppendMessageAsync(CollaborationService.CreateLocalReplyRequest(createResult.Value, new() { MessageBody = "Read by the local reply" }));
+        var opening = (await collaborationService.GetWorkspaceAsync(createResult.Value)).SelectedThread!;
+        var reply = CollaborationService.CreateLocalReplyRequest(createResult.Value, new() { MessageBody = "Read by the local reply" }) with {
+            ReadObservation = CollaborationReadObservation.From(opening)
+        };
+        var replyResult = await collaborationService.AppendMessageAsync(reply);
         Assert.True(replyResult.IsSuccess);
         cut.WaitForAssertion(() => Assert.DoesNotContain("shell-nav-badge-collaboration", cut.Markup));
         var next = await collaborationService.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new() { Subject = "Second item", MessageBody = "Unread again" }));
         Assert.True(next.IsSuccess);
         cut.WaitForAssertion(() => Assert.Contains("shell-nav-badge-collaboration", cut.Markup));
-        Assert.True((await collaborationService.MarkThreadAsReadAsync(next.Value)).IsSuccess);
+        var nextOpening = (await collaborationService.GetWorkspaceAsync(next.Value)).SelectedThread!;
+        Assert.True((await collaborationService.MarkThreadAsReadAsync(CollaborationReadObservation.From(nextOpening))).IsSuccess);
         cut.WaitForAssertion(() => Assert.DoesNotContain("shell-nav-badge-collaboration", cut.Markup));
     }
 

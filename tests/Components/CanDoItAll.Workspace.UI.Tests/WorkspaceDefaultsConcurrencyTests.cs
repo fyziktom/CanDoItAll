@@ -6,6 +6,79 @@ namespace CanDoItAll.Tests.Components.WorkspaceUi;
 
 public sealed class WorkspaceDefaultsConcurrencyTests {
     [Fact]
+    public async Task Typed_review_applies_local_and_saved_fields_to_the_original_form_before_a_separate_save() {
+        var store = new WorkspaceScenarioStore();
+        using var first = new WorkspaceDefaultsController(store);
+        using var second = new WorkspaceDefaultsController(store);
+        await first.RefreshAsync();
+        await second.RefreshAsync();
+        var draft = second.Draft;
+        draft.Model.WorkspaceName = "Local name";
+        draft.Edited(DefaultsField.Name);
+        draft.Model.Notes = "Local operating notes";
+        draft.Edited(DefaultsField.Notes);
+        first.Draft.Model.WorkspaceName = "Saved name";
+        first.Draft.Model.CurrencyCode = "EUR";
+        first.Draft.Model.CurrencyCultureName = "de-DE";
+        await first.SaveAsync();
+        await second.SaveAsync();
+        await second.ReadCurrentAsync();
+        second.OpenComparison();
+        var review = Assert.IsType<WorkspaceDefaultsReview>(second.Comparison);
+        Assert.False(review.CanApply(draft));
+        Assert.Equal("Saved name", review.Name.Current);
+        review.Name.UseLocal();
+        second.ApplyComparison();
+        Assert.Same(draft, second.Draft);
+        Assert.Null(second.Comparison);
+        Assert.Equal("Local name", draft.Model.WorkspaceName);
+        Assert.Equal("Local operating notes", draft.Model.Notes);
+        Assert.Equal("EUR", draft.Model.CurrencyCode);
+        Assert.Equal("de-DE", draft.Model.CurrencyCultureName);
+        Assert.Equal(1, store.DurableWrites);
+        await second.SaveAsync();
+        var saved = await store.ReadAsync(default);
+        Assert.Equal("Local name", saved.Values.WorkspaceName);
+        Assert.Equal("Local operating notes", saved.Values.Notes);
+        Assert.Equal("EUR", saved.Values.CurrencyCode);
+        Assert.Equal(2, store.DurableWrites);
+    }
+
+    [Fact]
+    public async Task Unfinished_policy_requires_an_explicit_keep_choice_and_later_edits_invalidate_the_review() {
+        var store = new WorkspaceScenarioStore();
+        using var first = new WorkspaceDefaultsController(store);
+        using var second = new WorkspaceDefaultsController(store);
+        await first.RefreshAsync();
+        await second.RefreshAsync();
+        var draft = second.Draft;
+        first.Draft.Model.WorkspaceName = "Saved name";
+        await first.SaveAsync();
+        await second.SaveAsync();
+        await second.ReadCurrentAsync();
+        draft.Policy.MaximumWorkDuration = "00:0";
+        draft.Edited(DefaultsField.PolicyWorkDuration);
+        second.OpenComparison();
+        var review = Assert.IsType<WorkspaceDefaultsReview>(second.Comparison);
+        Assert.True(review.HasUnfinishedPolicy);
+        Assert.False(review.CanApply(draft));
+        review.KeepUnfinishedPolicy = true;
+        draft.Model.Notes = "Added after opening review";
+        draft.Edited(DefaultsField.Notes);
+        second.ApplyComparison();
+        Assert.Same(review, second.Comparison);
+        second.CloseComparison();
+        second.OpenComparison();
+        second.Comparison!.KeepUnfinishedPolicy = true;
+        second.ApplyComparison();
+        Assert.Equal("00:0", draft.Policy.MaximumWorkDuration);
+        Assert.Equal("Added after opening review", draft.Model.Notes);
+        Assert.True(draft.PolicyEditing);
+        await second.SaveAsync();
+        Assert.Equal(1, store.DurableWrites);
+    }
+
+    [Fact]
     public async Task Conflict_read_preserves_the_original_form_and_manual_reconciliation_starts_from_current_values() {
         var store = new WorkspaceScenarioStore();
         using var first = new WorkspaceDefaultsController(store);

@@ -1,11 +1,15 @@
 @namespace CanDoItAll.Workspace.UI
 @implements IDisposable
 @using CanDoItAll.AgentFramework.ProviderHistory
+@using CanDoItAll.Editing.UI
 
 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="history-policy-panel">
     <FormSection Title="Provider history policy" Description="Applies to history owned by this instance and database profile. Shared publishers and clients each apply their own policy.">
         <Button Text="Load current policy" ButtonStyle="ButtonStyle.Light" Click="State.LoadAsync" Disabled="@State.IsBusy"
                 IsBusy="@State.IsBusy" data-testid="history-policy-load" />
+        @if (State.CanCompare) {
+            <Button Text="Compare saved policy" ButtonStyle="ButtonStyle.Light" Click="State.OpenComparison" data-testid="history-policy-compare" />
+        }
     </FormSection>
     @if (State.Error is not null) {
         <Alert AlertStyle="AlertStyle.Danger" data-testid="history-policy-error">@State.Error</Alert>
@@ -87,11 +91,31 @@
         </Footer>
     </Dialog>
 }
+@if (State.Comparison is { } comparison) {
+    <Dialog IsOpen="true" Title="Compare provider history policy" Subtitle="Applying choices updates your draft. Shortening existing retention requires a fresh preview."
+            Size="ModalSize.Wide" DenseChrome="true" CloseOnBackdrop="false" OnClose="State.CloseComparison" TestId="history-policy-review">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Small">
+                <MergeFieldView Label="Capture mode and text limit" Field="comparison.Capture" Format="Capture" ShowUnchanged="false" Changed="StateHasChanged" />
+                <MergeFieldView Label="Retention and quota" Field="comparison.Retention" Format="Retention" ShowUnchanged="false" Changed="StateHasChanged" TestId="history-policy-review-retention" />
+                <MergeFieldView Label="Maintenance batch size" Field="comparison.Batch" Format="Batch" ShowUnchanged="false" Changed="StateHasChanged" />
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="State.CloseComparison" />
+            <Button Text="Apply choices to draft" Disabled="@(!State.CanApplyComparison)" Click="State.ApplyComparison" data-testid="history-policy-review-apply" />
+        </Footer>
+    </Dialog>
+}
 
 <SettingsReceipts Entries="State.Receipts" />
 @code {
     [Parameter, EditorRequired] public IWorkspaceHistoryState State { get; set; } = default!;
     private static readonly HistoryCaptureMode[] CaptureModes = Enum.GetValues<HistoryCaptureMode>();
+    private static string Capture((HistoryCaptureMode Mode, int MaximumTextBytes) value) => $"{value.Mode} · {value.MaximumTextBytes:N0} bytes per segment";
+    private static string Retention((int MetadataDays, int DetailDays, long QuotaBytes) value) =>
+        $"Metadata {value.MetadataDays} days\nDetail {value.DetailDays} days\nQuota {value.QuotaBytes:N0} bytes";
+    private static string Batch(int value) => value.ToString("N0");
     private IWorkspaceHistoryState? subscribed;
     protected override void OnParametersSet() {
         if (!ReferenceEquals(subscribed, State)) {

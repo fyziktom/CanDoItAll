@@ -60,6 +60,44 @@ public sealed class WorkspaceHistoryAndShellTests {
     }
 
     [Fact]
+    public async Task A_peer_policy_change_retires_the_preview_and_comparison_requires_a_new_preview() {
+        var store = new WorkspaceScenarioStore();
+        using var local = new WorkspaceHistoryController(store);
+        using var peer = new WorkspaceHistoryController(store);
+        await local.LoadAsync();
+        await peer.LoadAsync();
+        var editor = local.EditContext;
+        local.Draft.MetadataRetentionDays = 14;
+        local.Draft.DetailRetentionDays = 5;
+        await local.PreviewAsync();
+        Assert.NotNull(local.Preview);
+        peer.Draft.BatchSize = 18;
+        await peer.ApplyFutureAsync();
+
+        await local.ConfirmShorterAsync();
+        Assert.Equal(SettingsDiagnostic.Conflict, Assert.Single(local.Receipts).Diagnostic);
+        Assert.Null(local.Preview);
+        Assert.False(local.CanApply);
+        await local.LoadAsync();
+        local.OpenComparison();
+        var review = Assert.IsType<WorkspaceHistoryPolicyReview>(local.Comparison);
+        Assert.False(local.CanApplyComparison);
+        review.Retention.UseLocal();
+        local.ApplyComparison();
+
+        Assert.Same(editor, local.EditContext);
+        Assert.Equal(14, local.Draft.MetadataRetentionDays);
+        Assert.Equal(18, local.Draft.BatchSize);
+        Assert.Equal(1, store.DurableWrites);
+        await local.ConfirmShorterAsync();
+        Assert.Equal(1, store.DurableWrites);
+        await local.PreviewAsync();
+        Assert.Equal(2, local.Preview!.Version);
+        await local.ConfirmShorterAsync();
+        Assert.Equal(2, store.DurableWrites);
+    }
+
+    [Fact]
     public async Task Known_update_is_versioned_and_unknown_update_cannot_replay_after_observation() {
         var store = new WorkspaceScenarioStore();
         using var state = new WorkspaceHistoryController(store);

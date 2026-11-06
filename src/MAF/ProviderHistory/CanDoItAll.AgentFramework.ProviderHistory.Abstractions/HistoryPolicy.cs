@@ -11,11 +11,12 @@ public sealed record HistoryPolicy {
 
 public sealed record HistoryPolicySnapshot(HistoryPolicy Policy, long Version);
 public sealed record HistoryPolicyUpdate(HistoryPolicy Policy, long ExpectedVersion, bool ApplyShorterRetention);
+public sealed record HistoryPolicyPreviewRequest(HistoryPolicy Policy, long ExpectedVersion);
 
 public sealed record HistoryRetentionPreview(int MetadataRecords, int DetailRecords, int Limit, bool ExceedsLimit);
 
 public interface IProviderHistoryPolicyService {
     Task<HistoryPolicySnapshot> GetAsync(CancellationToken cancellationToken);
-    Task<HistoryRetentionPreview> PreviewShorterRetentionAsync(HistoryPolicy policy, CancellationToken cancellationToken);
+    Task<HistoryRetentionPreview> PreviewShorterRetentionAsync(HistoryPolicyPreviewRequest request, CancellationToken cancellationToken);
     Task<HistoryPolicySnapshot> UpdateAsync(HistoryPolicyUpdate update, CancellationToken cancellationToken);
 }

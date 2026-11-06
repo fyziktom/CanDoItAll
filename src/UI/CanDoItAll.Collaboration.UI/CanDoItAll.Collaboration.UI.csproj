@@ -7,6 +7,7 @@
     <SupportedPlatform Include="browser" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
     <ProjectReference Include="../../Modules/CanDoItAll.Modules.Collaboration.Contracts/CanDoItAll.Modules.Collaboration.Contracts.csproj" />
   </ItemGroup>
 </Project>

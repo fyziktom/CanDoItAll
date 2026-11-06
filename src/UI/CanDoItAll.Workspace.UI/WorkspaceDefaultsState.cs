@@ -20,9 +20,12 @@ public sealed class WorkspaceDefaultsDraft {
     public WorkspaceSettingsExpectation? PolicyBaselineExpectation { get; private set; }
     public EditContext EditContext { get; }
     public WorkspaceSettingsExpectation? Expectation { get; private set; }
+    internal WorkspaceSettingsValues? Baseline { get; private set; }
+    internal long Revision { get; private set; }
     public WorkspaceDefaultsDraft() => EditContext = new(Model);
     public void Edited(DefaultsField field) {
         versions[field] = versions.GetValueOrDefault(field) + 1;
+        Revision++;
         if (field >= DefaultsField.PolicyReadBasis) {
             PolicyEditing = true;
         }
@@ -50,6 +53,7 @@ public sealed class WorkspaceDefaultsDraft {
             throw new InvalidOperationException("An acquired Workspace draft cannot silently adopt another expectation.");
         }
         Expectation = snapshot.Expectation;
+        Baseline = snapshot.Values;
         Reconcile(snapshot.Values.ToEditorModel(), captured);
     }
 
@@ -71,6 +75,7 @@ public sealed class WorkspaceDefaultsDraft {
             PolicyBaselineExpectation = null;
         }
         Expectation = accepted.Expectation;
+        Baseline = accepted.Values;
         Reconcile(accepted.Values.ToEditorModel(), captured);
     }
 
@@ -93,6 +98,29 @@ public sealed class WorkspaceDefaultsDraft {
         HasPolicyBaseline = true;
         PolicyBaselineExpectation = expected;
         PolicyBaseline = policy;
+    }
+
+    public bool CanCompare(WorkspaceSettingsSnapshotV2 current) => Baseline is not null && HasPolicyBaseline &&
+        Expectation is { } original && original.Namespace == current.Expectation.Namespace &&
+        (original.Head is null || original.Head.Id == current.Expectation.Head?.Id);
+
+    public bool Apply(WorkspaceDefaultsReview review) {
+        if (!CanCompare(review.Current) || !review.CanApply(this)) {
+            return false;
+        }
+        Reconcile(review.ResolveValues().ToEditorModel(), CaptureVersions());
+        Expectation = review.Current.Expectation;
+        Baseline = review.Current.Values;
+        SetPolicyBaseline(review.Current.Expectation, review.Current.DecisionDataPolicy);
+        if (review.HasUnfinishedPolicy) {
+            PolicyEditing = true;
+        } else {
+            var policy = review.Policy.Result;
+            Policy.Reconcile(policy, (_, assign) => assign());
+            PolicyEditing = policy != PolicyBaseline;
+        }
+        Revision++;
+        return true;
     }
 
     private void Apply(DefaultsField field, IReadOnlyDictionary<DefaultsField, long> captured, Action assign) {
@@ -129,11 +157,16 @@ public interface IWorkspaceDefaultsState {
     WorkspaceDefaultsDraft? PreviousDraft { get; }
     WorkspaceSettingsRejectionReason? Rejection { get; }
     bool CanRecover { get; }
+    bool CanCompare { get; }
+    WorkspaceDefaultsReview? Comparison { get; }
     Task RefreshAsync();
     Task SaveAsync();
     Task ReviewAsync(SettingsReceipt receipt);
     Task ReadCurrentAsync();
     void ReloadCurrent();
     void BeginReconciliation();
+    void OpenComparison();
+    void CloseComparison();
+    void ApplyComparison();
     void DiscardPreviousDraft();
 }

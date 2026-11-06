@@ -51,21 +51,13 @@ public sealed partial class CollaborationService
         return errors;
     }
 
-    private static CollaborationThreadDetailModel? BuildThreadDetail(
-        Guid threadId,
-        IReadOnlyList<CollaborationThreadRecord> threads,
-        IReadOnlyDictionary<Guid, CollaborationInboxItemRecord> inboxByThreadId,
+    private static CollaborationThreadDetailModel BuildThreadDetail(
+        CollaborationThreadRecord thread,
+        CollaborationInboxItemRecord inboxItem,
         IReadOnlyList<CollaborationMessageRecord> messages,
         IReadOnlyList<CollaborationParticipantRecord> participants)
     {
-        var thread = threads.FirstOrDefault(item => item.Id == threadId);
-        if (thread is null || !inboxByThreadId.TryGetValue(threadId, out var inboxItem))
-        {
-            return null;
-        }
-
         var participantSummaries = participants
-            .Where(item => item.ThreadId == threadId)
             .Select(item => new CollaborationParticipantSummary(
                 item.Id,
                 item.ParticipantKey,
@@ -74,7 +66,6 @@ public sealed partial class CollaborationService
                 item.RoleLabel))
             .ToArray();
         var messageSummaries = messages
-            .Where(item => item.ThreadId == threadId)
             .Select(item => new CollaborationMessageSummary(
                 item.Id,
                 item.Kind,

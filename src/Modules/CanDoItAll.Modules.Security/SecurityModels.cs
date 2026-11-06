@@ -304,11 +304,12 @@ public sealed class SecretService(
             entity.EncryptedPayload = SecretVaultRecordReference.Create(newVaultKey);
         }
 
-        entity.Name = model.Name.Trim();
-        entity.Kind = model.Kind;
-        entity.Scope = string.IsNullOrWhiteSpace(model.Scope) ? "workspace" : model.Scope.Trim();
-        entity.RotationNote = model.RotationNote?.Trim();
-        entity.MetadataJson = string.IsNullOrWhiteSpace(model.MetadataJson) ? "{}" : model.MetadataJson;
+        var metadata = SecretEditorMetadata.Capture(model);
+        entity.Name = metadata.Name;
+        entity.Kind = metadata.Kind;
+        entity.Scope = metadata.Scope;
+        entity.RotationNote = metadata.RotationNote;
+        entity.MetadataJson = metadata.Json;
         var now = clock.GetUtcNow();
         const long precision = TimeSpan.TicksPerMicrosecond;
         entity.UpdatedAtUtc = new(Math.Max(now.UtcTicks / precision * precision, entity.UpdatedAtUtc.UtcTicks + precision), TimeSpan.Zero);

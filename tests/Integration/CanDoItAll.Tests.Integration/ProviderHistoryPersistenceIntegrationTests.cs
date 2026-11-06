@@ -429,7 +429,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
             await fixture.Capture.BeginAsync(fixture.Start(initial), new("bounded input", 0), default);
         }
         var shorter = initial.Policy with { MetadataRetentionDays = 2, DetailRetentionDays = 1, BatchSize = 2 };
-        var preview = await fixture.Policy.PreviewShorterRetentionAsync(shorter, default);
+        var preview = await fixture.Policy.PreviewShorterRetentionAsync(new(shorter, initial.Version), default);
         Assert.Equal(new HistoryRetentionPreview(3, 3, 2, true), preview);
         var failure = await Assert.ThrowsAsync<ProviderHistoryException>(() =>
             fixture.Policy.UpdateAsync(new(shorter, initial.Version, true), default));
@@ -442,6 +442,10 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         }
         var futureOnly = await fixture.Policy.UpdateAsync(new(shorter, initial.Version, false), default);
         Assert.Equal(initial.Version + 1, futureOnly.Version);
+        var stalePreview = await Assert.ThrowsAsync<ProviderHistoryException>(() =>
+            fixture.Policy.PreviewShorterRetentionAsync(new(shorter, initial.Version), default));
+        Assert.Equal(HistoryFailure.Conflict, stalePreview.Failure);
+        Assert.Equal(futureOnly, await fixture.Policy.GetAsync(default));
     }
 
     [Theory]

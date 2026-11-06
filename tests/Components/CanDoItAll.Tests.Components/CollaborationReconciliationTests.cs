@@ -111,14 +111,15 @@ public sealed class CollaborationReconciliationTests : BunitContext {
         public List<CollaborationMessageWriteRequest> Replies { get; } = [];
         public int Marks { get; private set; }
 
-        public Task<CollaborationWorkspaceModel> GetWorkspaceAsync(Guid? selectedThreadId = null, CancellationToken cancellationToken = default) => Read(selectedThreadId);
+        public Task<CollaborationWorkspaceModel> GetWorkspaceAsync(Guid? selectedThreadId = null, CancellationToken cancellationToken = default,
+            CollaborationListWindow window = default) => Read(selectedThreadId);
         public Task<Result<Guid>> CreateThreadAsync(CollaborationThreadCreateRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result> AppendMessageAsync(CollaborationMessageWriteRequest request, CancellationToken cancellationToken = default) {
             Replies.Add(request);
             return Task.FromResult(Result.Success());
         }
-        public Task<Result> MarkThreadAsReadAsync(Guid threadId, CancellationToken cancellationToken = default) {
-            Assert.Equal(A, threadId);
+        public Task<Result> MarkThreadAsReadAsync(CollaborationReadObservation expected, CancellationToken cancellationToken = default) {
+            Assert.Equal(A, expected.ThreadId);
             ++Marks;
             return Mark();
         }

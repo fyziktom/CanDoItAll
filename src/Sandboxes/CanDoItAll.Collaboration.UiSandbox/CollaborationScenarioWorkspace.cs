@@ -35,6 +35,7 @@ public sealed class CollaborationScenarioWorkspace : ICollaborationWorkspaceView
     public CollaborationSection Section { get; private set; }
     public CollaborationReadState ReadState { get; private set; }
     public bool UnreadOnly { get; private set; }
+    public int PageOffset { get; private set; }
     public bool IsMissing => Target is not null && Workspace is { SelectedThread: null };
     public bool IsReplyRetained => Workspace?.SelectedThread is { } selected && Target?.ThreadId == selected.ThreadId
         && !VisibleIds(Workspace).Contains(selected.ThreadId) && CollaborationReplyPolicy.MustRetain(Reply);
@@ -42,6 +43,7 @@ public sealed class CollaborationScenarioWorkspace : ICollaborationWorkspaceView
     public CollaborationDraft<CollaborationThreadEditorModel> NewThread { get; private set; } = new(new());
     public CollaborationDraft<CollaborationReplyEditorModel> Reply { get; private set; } = new(new());
     public CollaborationTarget? Target { get; private set; }
+    public CollaborationDraftStatus DraftStatus => CollaborationDraftLifetime.Status(NewThread, Reply, [], Target);
     public string? NavigationMessage { get; private set; }
 
     public CollaborationScenarioWorkspace(CollaborationScenario scenario, Action changed) {
@@ -121,6 +123,10 @@ public sealed class CollaborationScenarioWorkspace : ICollaborationWorkspaceView
             return;
         }
         Section = section;
+        PageOffset = 0;
+        if (Workspace is not null) {
+            Rebuild();
+        }
         ++selectionGeneration;
         await AlignAsync();
     }
@@ -130,8 +136,20 @@ public sealed class CollaborationScenarioWorkspace : ICollaborationWorkspaceView
             return;
         }
         UnreadOnly = unreadOnly;
+        PageOffset = 0;
+        if (Workspace is not null) {
+            Rebuild();
+        }
         ++selectionGeneration;
         await AlignAsync();
+    }
+
+    public Task SetPageAsync(int offset) {
+        if (disposed || Workspace is not { } workspace || offset < 0 || offset >= workspace.Totals.Visible(Section, UnreadOnly)) {
+            return Task.CompletedTask;
+        }
+        PageOffset = offset;
+        return ReadAsync(delayed: false);
     }
 
     private async Task AlignAsync() {
@@ -317,6 +335,13 @@ public sealed class CollaborationScenarioWorkspace : ICollaborationWorkspaceView
         Workspace = new(inbox, threads.Select(item => new CollaborationThreadSummary(item.ThreadId, item.Subject, item.ContextKind, item.ContextLabel, item.ItemKind, item.State, item.LastActivityAtUtc, item.Messages.Count)).ToArray(),
             inbox.Where(item => item.ItemKind == CollaborationInboxItemKind.Escalation).ToArray(), threads.Find(item => item.ThreadId == Target?.ThreadId),
             new(inbox.Sum(item => item.UnreadCount), inbox.Count(item => item.IsUnread && item.ItemKind == CollaborationInboxItemKind.Escalation)));
+        var window = new CollaborationListWindow(Section, UnreadOnly, PageOffset);
+        Workspace = Workspace with {
+            InboxItems = Page(Workspace.InboxItems.Where(item => !UnreadOnly || item.IsUnread), CollaborationSection.Inbox),
+            Escalations = Page(Workspace.Escalations.Where(item => !UnreadOnly || item.IsUnread), CollaborationSection.Escalations),
+            Threads = Page(Workspace.Threads, CollaborationSection.Threads)
+        };
+        T[] Page<T>(IEnumerable<T> items, CollaborationSection section) => items.Skip(window.OffsetFor(section)).Take(CollaborationListWindow.Size).ToArray();
     }
 
     private static Guid Id(int value) => new(value, 0, 0, new byte[8]);

@@ -156,6 +156,8 @@ public sealed partial class CollaborationService
 
         var inboxItem = await dbContext.Set<CollaborationInboxItemRecord>()
             .SingleAsync(item => item.ThreadId == request.ThreadId, cancellationToken);
+        var markObservedAsRead = !request.MarkAsUnread && request.ReadObservation is { } expected &&
+            expected.ThreadId == request.ThreadId && await MatchesMessagesAsync(dbContext, expected, cancellationToken);
         var now = clock.GetUtcNow();
         var normalizedAuthorKey = request.AuthorKey.Trim();
         var normalizedAuthorName = request.AuthorName.Trim();
@@ -206,10 +208,13 @@ public sealed partial class CollaborationService
             : inboxItem.ItemKind;
         inboxItem.PreviewText = BuildPreviewText(request.MessageBody);
         inboxItem.UpdatedAtUtc = now;
-        inboxItem.IsUnread = request.MarkAsUnread;
-        inboxItem.UnreadCount = request.MarkAsUnread
-            ? Math.Max(1, inboxItem.UnreadCount + 1)
-            : 0;
+        if (request.MarkAsUnread) {
+            inboxItem.IsUnread = true;
+            inboxItem.UnreadCount = Math.Max(1, inboxItem.UnreadCount + 1);
+        } else if (markObservedAsRead) {
+            inboxItem.IsUnread = false;
+            inboxItem.UnreadCount = 0;
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await CommitThreadMutationAsync(mutation, cancellationToken);
@@ -248,12 +253,12 @@ public sealed partial class CollaborationService
         return Result.Success();
     }
 
-    public async Task<Result> MarkThreadAsReadAsync(Guid threadId, CancellationToken cancellationToken = default)
+    public async Task<Result> MarkThreadAsReadAsync(CollaborationReadObservation expected, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutation = await EnterThreadMutationAsync(dbContext, threadId, cancellationToken);
+        await using var mutation = await EnterThreadMutationAsync(dbContext, expected.ThreadId, cancellationToken);
         var inboxItem = await dbContext.Set<CollaborationInboxItemRecord>()
-            .SingleOrDefaultAsync(item => item.ThreadId == threadId, cancellationToken);
+            .SingleOrDefaultAsync(item => item.ThreadId == expected.ThreadId, cancellationToken);
         if (inboxItem is null)
         {
             return Result.Failure(Error.Failure("The collaboration thread inbox item does not exist.", "collaboration.inbox-item-not-found"));
@@ -262,6 +267,11 @@ public sealed partial class CollaborationService
         if (!inboxItem.IsUnread && inboxItem.UnreadCount == 0)
         {
             return Result.Success();
+        }
+
+        if (!await MatchesMessagesAsync(dbContext, expected, cancellationToken)) {
+            return Result.Failure(Error.Failure("The thread has newer messages. Review them before marking it as read.",
+                CollaborationWriteConflict.ReadObservationChanged));
         }
 
         inboxItem.IsUnread = false;
@@ -273,6 +283,9 @@ public sealed partial class CollaborationService
         NotifyChanged();
         return Result.Success();
     }
+
+    private static async Task<bool> MatchesMessagesAsync(CollaborationDbContext database, CollaborationReadObservation expected, CancellationToken cancellationToken)
+        => await database.Set<CollaborationMessageRecord>().CountAsync(message => message.ThreadId == expected.ThreadId, cancellationToken) == expected.MessageCount;
 
     private static async Task<SerializableMutationScope?> EnterThreadMutationAsync(CollaborationDbContext database, Guid threadId, CancellationToken token) {
         var key = $"collaboration-thread:{threadId:D}";

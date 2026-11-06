@@ -37,6 +37,12 @@ public static class SecretEditorSnapshots {
     };
 }
 
+public sealed record SecretEditorMetadata(string Name, SecretKind Kind, string Scope, string? RotationNote, string Json) {
+    public static SecretEditorMetadata Capture(SecretEditorModel model) => new(model.Name.Trim(), model.Kind,
+        string.IsNullOrWhiteSpace(model.Scope) ? "workspace" : model.Scope.Trim(), model.RotationNote?.Trim(),
+        string.IsNullOrWhiteSpace(model.MetadataJson) ? "{}" : model.MetadataJson);
+}
+
 public enum SecretCommittedStage { Metadata, PayloadCleanup }
 public sealed class SecretCommittedException(Guid secretId, bool deleted, SecretCommittedStage stage)
     : Exception("Secret metadata was committed; secondary work needs attention.") {

@@ -43,7 +43,7 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
     public WorkspaceScenarioStore(WorkspaceScenario scenario = WorkspaceScenario.Populated) {
         this.scenario = scenario;
         if (scenario != WorkspaceScenario.Empty) {
-            secrets[SecretId] = new() { Id = SecretId, Name = "Synthetic secret", SecretValue = "sandbox-only-value", Kind = SecretKind.ApiKey };
+            secrets[SecretId] = new() { Id = SecretId, ExpectedUpdatedAtUtc = Timestamp, Name = "Synthetic secret", SecretValue = "sandbox-only-value", Kind = SecretKind.ApiKey };
             var extension = new WorkspaceFileExtension(".sample");
             files[extension] = new(extension, "/synthetic/viewer", scenario == WorkspaceScenario.RebindRequired);
         }
@@ -146,7 +146,15 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
 
     async Task<IReadOnlyList<SecretListItem>> IWorkspaceSecretsOwner.ListAsync(CancellationToken cancellationToken) {
         await EnterAsync(WorkspaceOperation.SecretList);
-        return secrets.Values.Select(item => new SecretListItem(item.Id!.Value, item.Name, item.Kind, item.Scope, Timestamp)).ToArray();
+        return secrets.Values.Select(item => new SecretListItem(item.Id!.Value, item.Name, item.Kind, item.Scope, item.ExpectedUpdatedAtUtc!.Value)).ToArray();
+    }
+
+    async Task<SecretEditorModel?> IWorkspaceSecretsOwner.GetAsync(Guid id, CancellationToken cancellationToken) {
+        var result = await GetAsync(id, cancellationToken);
+        if (result is not null) {
+            result.SecretValue = string.Empty;
+        }
+        return result;
     }
 
     public async Task<SecretEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) {
@@ -158,15 +166,24 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
         var captured = command.Copy();
         try {
             var fault = await EnterAsync(WorkspaceOperation.SecretSave);
-            if (fault == WorkspaceFault.Refused || string.IsNullOrWhiteSpace(captured.Name) || string.IsNullOrWhiteSpace(captured.SecretValue)) {
+            if (fault == WorkspaceFault.Refused || string.IsNullOrWhiteSpace(captured.Name) || captured.Id is null && string.IsNullOrWhiteSpace(captured.SecretValue)) {
                 return new(SettingsWriteState.Refused, captured.Id ?? Guid.Empty, SettingsDiagnostic.Validation);
             }
             if (captured.Id is { } existing && !secrets.ContainsKey(existing)) {
                 return new(SettingsWriteState.Refused, existing, SettingsDiagnostic.Missing);
             }
             var id = captured.Id ?? Guid.NewGuid();
+            var current = secrets.GetValueOrDefault(id);
+            if (current is not null && current.ExpectedUpdatedAtUtc != captured.ExpectedUpdatedAtUtc) {
+                return new(SettingsWriteState.Refused, id, SettingsDiagnostic.Conflict);
+            }
             captured.Id = id;
+            captured.ExpectedUpdatedAtUtc = (current?.ExpectedUpdatedAtUtc ?? Timestamp).AddTicks(10);
+            if (string.IsNullOrWhiteSpace(captured.SecretValue) && current is not null) {
+                captured.SecretValue = current.SecretValue;
+            }
             secrets[id] = captured.Copy();
+            command.ExpectedUpdatedAtUtc = captured.ExpectedUpdatedAtUtc;
             return Finish(fault, id);
         } finally {
             captured.SecretValue = string.Empty;
@@ -179,6 +196,9 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
         var fault = await EnterAsync(WorkspaceOperation.SecretDelete);
         if (fault == WorkspaceFault.Refused) {
             return new(SettingsWriteState.Refused, id, SettingsDiagnostic.ReferenceBlocked);
+        }
+        if (!secrets.TryGetValue(id, out var current) || current.ExpectedUpdatedAtUtc != expected.UpdatedAtUtc) {
+            return new(SettingsWriteState.Refused, id, SettingsDiagnostic.Conflict);
         }
         secrets.Remove(id);
         return Finish(fault, id);
@@ -224,9 +244,12 @@ public sealed class WorkspaceScenarioStore : IWorkspaceDefaultsOwner, IWorkspace
         return policy;
     }
 
-    public async Task<HistoryRetentionPreview> PreviewShorterRetentionAsync(HistoryPolicy proposed, CancellationToken cancellationToken) {
+    public async Task<HistoryRetentionPreview> PreviewShorterRetentionAsync(HistoryPolicyPreviewRequest request, CancellationToken cancellationToken) {
         await EnterAsync(WorkspaceOperation.PolicyPreview);
         CheckHistory();
+        if (request.ExpectedVersion != policy.Version) {
+            throw new ProviderHistoryException(HistoryFailure.Conflict, "Scenario preview revision changed.");
+        }
         return new(3, 2, 1000, scenario == WorkspaceScenario.OversizePreview);
     }
 

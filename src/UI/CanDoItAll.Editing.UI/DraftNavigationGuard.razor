@@ -23,10 +23,15 @@
     [Parameter] public bool MustRetain { get; set; }
     [Parameter] public bool IsBusy { get; set; }
     [Parameter] public bool OutcomeUnknown { get; set; }
+    [Parameter] public Func<string, bool>? KeepsEditor { get; set; }
     private string? target;
-    private bool leaving;
+    private string? permittedTarget;
     private Task BeforeNavigation(LocationChangingContext context) {
-        if (!leaving && MustRetain) {
+        if (context.TargetLocation == permittedTarget) {
+            permittedTarget = null;
+            return Task.CompletedTask;
+        }
+        if (MustRetain && KeepsEditor?.Invoke(context.TargetLocation) != true) {
             context.PreventNavigation();
             target = context.TargetLocation;
             StateHasChanged();
@@ -38,7 +43,8 @@
         if (IsBusy || OutcomeUnknown || target is null) {
             return;
         }
-        leaving = true;
-        Navigation.NavigateTo(target);
+        permittedTarget = target;
+        target = null;
+        Navigation.NavigateTo(permittedTarget);
     }
 }

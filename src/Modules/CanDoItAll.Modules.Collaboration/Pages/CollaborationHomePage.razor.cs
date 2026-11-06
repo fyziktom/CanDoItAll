@@ -48,6 +48,10 @@ public partial class CollaborationHomePage {
         }
     }
 
+    private bool KeepsCollaborationEditor(string target) => Uri.TryCreate(target, UriKind.Absolute, out var destination) &&
+        string.Equals(destination.GetLeftPart(UriPartial.Path).TrimEnd('/'), Navigation.ToAbsoluteUri("collaboration").GetLeftPart(UriPartial.Path),
+            StringComparison.OrdinalIgnoreCase);
+
     private void Notify(string message, bool error) {
         if (error) {
             Notifications.Error("Collaboration update failed", message);

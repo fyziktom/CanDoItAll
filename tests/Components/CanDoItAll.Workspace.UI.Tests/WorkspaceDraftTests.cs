@@ -192,6 +192,73 @@ public sealed class WorkspaceDraftTests {
     }
 
     [Fact]
+    public async Task Secret_conflict_requires_review_and_a_separate_save_without_disclosing_a_payload() {
+        var store = new WorkspaceScenarioStore();
+        using var local = new WorkspaceSecretsController(store);
+        using var peer = new WorkspaceSecretsController(store);
+        var id = WorkspaceScenarioStore.SecretId;
+        await local.SelectAsync(id);
+        await peer.SelectAsync(id);
+        var draft = local.Draft;
+        Assert.Empty(draft.Model.SecretValue);
+        draft.Model.Name = "My label";
+        draft.SetReplacement("local synthetic replacement");
+        peer.Draft.Model.Scope = "peer-scope";
+        peer.Draft.Model.MetadataJson = "private comparison sentinel";
+        peer.Draft.SetReplacement("peer synthetic replacement");
+        await peer.SaveAsync();
+
+        await local.SaveAsync();
+        await local.SelectAsync(id);
+        Assert.Same(draft, local.Draft);
+        Assert.False(local.CanMutate);
+        await local.CompareAsync();
+        var review = Assert.IsType<WorkspaceSecretReview>(local.Comparison);
+        using var context = Context();
+        var cut = context.Render<WorkspaceSecretReviewDialog>(p => p.Add(x => x.State, local).Add(x => x.Review, review));
+        Assert.DoesNotContain("private comparison sentinel", cut.Markup);
+        Assert.DoesNotContain("local synthetic replacement", cut.Markup);
+        Assert.DoesNotContain("peer synthetic replacement", cut.Markup);
+        local.ApplyComparison();
+        Assert.Same(review, local.Comparison);
+        review.Replacement!.UseCurrent();
+        local.ApplyComparison();
+
+        Assert.Same(draft, local.Draft);
+        Assert.Equal("My label", draft.Model.Name);
+        Assert.Equal("peer-scope", draft.Model.Scope);
+        Assert.Empty(draft.Model.SecretValue);
+        Assert.Equal(1, store.DurableWrites);
+        await local.SaveAsync();
+        var saved = (await store.GetAsync(id, default))!;
+        Assert.Equal("My label", saved.Name);
+        Assert.Equal("peer-scope", saved.Scope);
+        Assert.Equal("peer synthetic replacement", saved.SecretValue);
+        Assert.Equal(2, store.DurableWrites);
+    }
+
+    [Fact]
+    public async Task Accepted_rotation_clears_the_submitted_value_while_preserving_a_later_metadata_edit() {
+        var store = new WorkspaceScenarioStore();
+        using var state = new WorkspaceSecretsController(store);
+        await state.SelectAsync(WorkspaceScenarioStore.SecretId);
+        var draft = state.Draft;
+        draft.SetReplacement("submitted synthetic replacement");
+        var gate = store.HoldNext(WorkspaceOperation.SecretSave);
+        var pending = state.SaveAsync();
+        await gate.Entered.WaitAsync(TimeSpan.FromSeconds(10));
+        draft.Model.Name = "Changed while saving";
+        draft.Edited();
+        gate.Release();
+        await pending;
+
+        Assert.Same(draft, state.Draft);
+        Assert.Equal("Changed while saving", draft.Model.Name);
+        Assert.Empty(draft.Model.SecretValue);
+        Assert.Equal(1, store.DurableWrites);
+    }
+
+    [Fact]
     public async Task Missing_explicit_secret_stays_unacquired_and_same_id_can_retry() {
         var store = new WorkspaceScenarioStore(WorkspaceScenario.MissingSecret);
         using var state = new WorkspaceSecretsController(store);

@@ -73,6 +73,6 @@ public sealed class WorkspaceBoundaryTests {
     private static readonly HashSet<string> AllowedFeatureAssemblies = [
         "CanDoItAll.Workspace.UI", "CanDoItAll.Workspace.UiSandbox", "CanDoItAll.Modules.Workspace.Contracts", "CanDoItAll.Modules.Workspace.Presentation",
         "CanDoItAll.Security.Abstractions", "CanDoItAll.SharedKernel", "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
-        "CanDoItAll.Components.BaseLib", "CanDoItAll.Components.Common"
+        "CanDoItAll.Components.BaseLib", "CanDoItAll.Components.Common", "CanDoItAll.Editing", "CanDoItAll.Editing.UI"
     ];
 }

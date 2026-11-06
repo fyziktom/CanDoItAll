@@ -10,6 +10,9 @@ public partial class CollaborationWorkspaceSurface {
     [Parameter]
     public bool Interactive { get; set; }
 
+    [Parameter]
+    public Func<string, bool>? KeepsEditor { get; set; }
+
     private static readonly CollaborationWorkspaceModel EmptyWorkspace = new([], [], [], null, new(0, 0));
     private IReadOnlyList<CollaborationInboxItemSummary> VisibleInboxItems => (View.Workspace ?? EmptyWorkspace).InboxItems.Where(item => !View.UnreadOnly || item.IsUnread).ToArray();
     private IReadOnlyList<CollaborationInboxItemSummary> VisibleEscalations => (View.Workspace ?? EmptyWorkspace).Escalations.Where(item => !View.UnreadOnly || item.IsUnread).ToArray();
@@ -31,6 +34,20 @@ public partial class CollaborationWorkspaceSurface {
         if (ReferenceEquals(View.Reply, origin) && !origin.IsLocked) {
             origin.Model.MessageBody = args.Value?.ToString() ?? string.Empty;
             origin.Context.NotifyFieldChanged(new(origin.Model, nameof(CollaborationReplyEditorModel.MessageBody)));
+        }
+    }
+
+    private void CaptureThreadInput(CollaborationDraft<CollaborationThreadEditorModel> origin, ChangeEventArgs args, string field, Action<string> assign) {
+        if (ReferenceEquals(View.NewThread, origin) && !origin.IsLocked) {
+            assign(args.Value?.ToString() ?? string.Empty);
+            origin.Context.NotifyFieldChanged(new(origin.Model, field));
+        }
+    }
+
+    private void SetThreadKind(CollaborationDraft<CollaborationThreadEditorModel> origin, CollaborationInboxItemKind kind) {
+        if (ReferenceEquals(View.NewThread, origin) && !origin.IsLocked && origin.Model.ItemKind != kind) {
+            origin.Model.ItemKind = kind;
+            origin.Context.NotifyFieldChanged(new(origin.Model, nameof(origin.Model.ItemKind)));
         }
     }
 

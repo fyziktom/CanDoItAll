@@ -14,10 +14,17 @@
     }
     @if (State.CurrentSnapshot is { } current) {
         <Stack GapScale="LayoutGap.Medium" data-testid="defaults-current-comparison">
-            <WorkspaceDefaultsComparison Title="Current saved values" Values="current.Values" Providers="State.Providers" Policy="current.DecisionDataPolicy" PolicyKnown="true" />
-            <Button Text="Discard draft and reload these values" ButtonStyle="ButtonStyle.Light" Click="State.ReloadCurrent" Disabled="@(!State.CanRecover)" data-testid="defaults-reload" />
-            <Button Text="Keep draft for comparison and start reconciliation" ButtonStyle="ButtonStyle.Light" Click="State.BeginReconciliation"
-                    Disabled="@(!State.CanRecover || State.PreviousDraft is not null)" data-testid="defaults-reconcile" />
+            @if (!State.CanCompare) {
+                <WorkspaceDefaultsComparison Title="Current saved values" Values="current.Values" Providers="State.Providers" Policy="current.DecisionDataPolicy" PolicyKnown="true" />
+            }
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                @if (State.CanCompare) {
+                    <Button Text="Compare changes" Icon="compare" Click="State.OpenComparison" data-testid="defaults-compare" />
+                }
+                <Button Text="Discard draft and reload these values" ButtonStyle="ButtonStyle.Light" Click="State.ReloadCurrent" Disabled="@(!State.CanRecover)" data-testid="defaults-reload" />
+                <Button Text="Keep draft for manual reconciliation" ButtonStyle="ButtonStyle.Light" Click="State.BeginReconciliation"
+                        Disabled="@(!State.CanRecover || State.PreviousDraft is not null)" data-testid="defaults-reconcile" />
+            </Cluster>
         </Stack>
     }
     @if (State.PreviousDraft is { } previous) {
@@ -137,6 +144,9 @@
     </EditForm>
     <SettingsReceipts Entries="State.Receipts" Review="State.ReviewAsync" />
 </Stack>
+@if (State.Comparison is { } comparison) {
+    <WorkspaceDefaultsReviewDialog @key="comparison" Review="comparison" State="State" />
+}
 @code {
     [Parameter, EditorRequired] public IWorkspaceDefaultsState State { get; set; } = default!;
     private IWorkspaceDefaultsState? subscribed;

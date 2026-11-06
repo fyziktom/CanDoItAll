@@ -1,5 +1,5 @@
 using CanDoItAll.AppComponents.Navigation;
-using CanDoItAll.Collaboration.UI;
+using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.Collaboration.Pages;
 
 namespace CanDoItAll.Tests.Unit.Collaboration;
