@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
@@ -36,6 +37,16 @@ internal sealed record ApiEndpointDocumentation(string SuccessDescription, strin
 }
 
 internal static class ApiEndpointDocumentationExtensions {
+    public static RouteHandlerBuilder DescribeApiResponse(this RouteHandlerBuilder endpoint, int statusCode, string description) {
+        var status = statusCode.ToString(CultureInfo.InvariantCulture);
+        return endpoint.AddOpenApiOperationTransformer((operation, _, _) => {
+            if (operation.Responses?.TryGetValue(status, out var response) == true) {
+                response.Description = description;
+            }
+            return Task.CompletedTask;
+        });
+    }
+
     public static RouteHandlerBuilder DescribeApi(this RouteHandlerBuilder endpoint, string summary, string description,
         string successDescription, string? requestDescription = null) => endpoint.WithSummary(summary).WithDescription(description)
         .WithMetadata(new ApiEndpointDocumentation(successDescription, requestDescription));

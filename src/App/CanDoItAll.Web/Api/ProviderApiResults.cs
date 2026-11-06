@@ -1,15 +1,23 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 namespace CanDoItAll.Web.Api;
 
-public sealed record ProviderModelMaintenancePersistenceApiResponse(string Code, Guid ProviderId,
-    bool RemoteOperationCompleted,
+[Description("A completed remote model operation whose provider configuration requires review or reconciliation.")]
+public sealed record ProviderModelMaintenancePersistenceApiResponse(
+    [property: Description("Stable outcome code for model maintenance that requires review.")] string Code,
+    [property: Description("Identifier of the provider whose configuration was targeted.")] Guid ProviderId,
+    [property: Description("Whether the remote model operation completed before the configuration result.")] bool RemoteOperationCompleted,
+    [property: Description("Observed configuration persistence outcome.")]
     [property: JsonConverter(typeof(JsonStringEnumConverter<ProviderModelMaintenancePersistenceState>))]
     ProviderModelMaintenancePersistenceState ConfigurationState,
-    ProviderModelMaintenanceEditorResult Result, bool AutomaticReplaySafe, ProviderMutationAttempt? Attempt, string Message);
+    [property: Description("Result returned by the completed remote model operation.")] ProviderModelMaintenanceEditorResult Result,
+    [property: Description("Whether the server can safely repeat the operation automatically.")] bool AutomaticReplaySafe,
+    [property: Description("Receipt for read-only verification of the original configuration write, when available.")] ProviderMutationAttempt? Attempt,
+    [property: Description("Operator guidance for reviewing the saved configuration.")] string Message);
 
 /// <summary>
 /// HTTP 202 answer of a provider operation whose provider-profile change was stored but whose follow-up

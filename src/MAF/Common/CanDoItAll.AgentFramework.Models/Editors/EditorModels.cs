@@ -259,6 +259,7 @@ public sealed class AgentTeamEditorModel
     }
 }
 
+[Description("Original team lifetime and metadata as returned by the editor read for a conditional metadata update.")]
 public sealed record AgentTeamMetadataExpectation(
     [property: Description("Original server creation timestamp identifying this team lifetime.")] DateTimeOffset CreatedAtUtc,
     [property: Description("Original saved team name.")] string Name,

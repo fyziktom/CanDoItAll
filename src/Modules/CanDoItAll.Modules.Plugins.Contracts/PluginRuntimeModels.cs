@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Plugins.Abstractions;
 
@@ -78,6 +79,7 @@ public sealed record PluginGrantUpdateRequest(
     string ScopeKey = "",
     PluginGrantRiskKind RiskKind = PluginGrantRiskKind.Medium,
     string Reason = "") {
+    [Description("Original grant revision returned by the grants read. Omit it for a capability and scope with no saved grant.")]
     public Guid? ExpectedConcurrencyToken { get; init; }
 }
 
@@ -142,6 +144,7 @@ public sealed record PluginConnectionSaveRequest(
     string DisplayName,
     string SettingsJson,
     bool IsEnabled = true) {
+    [Description("Original connection revision returned by the connections read. Omit it when creating a new connection.")]
     public Guid? ExpectedConcurrencyToken { get; init; }
 }
 

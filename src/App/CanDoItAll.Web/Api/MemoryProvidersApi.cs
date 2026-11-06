@@ -30,6 +30,7 @@ internal static class MemoryProvidersApi
             .WithName("UpsertMemoryProvider")
             .Produces<MemoryProviderProfileApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, "The provider already exists or its original configuration revision changed. Read the current profile before writing.")
             .ApplyApiAuthorization(group, ApiAuthorizationPolicies.WriteMemoryProviders);
 
         providers.MapPost("/{providerId}/queries", QueryMemoryProviderAsync)

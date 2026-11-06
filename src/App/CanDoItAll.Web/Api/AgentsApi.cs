@@ -18,6 +18,11 @@ internal static class AgentsApi
     private const string AgentConfigurationConflictCode = "agents.configuration-conflict";
     private const string TeamConfigurationConflictCode = "agents.team-configuration-conflict";
     private const string CapabilityConfigurationConflictCode = "agents.capability-configuration-conflict";
+    private const string InvalidTeamEdit = "The team name, identity, or supplied metadata expectation is invalid.";
+    private const string TeamEditConflict = "The team or its reviewed metadata changed, or the original expectation is missing. Read the current team before saving.";
+    private const string InvalidTeamMembers = "The membership request or its team identifier is invalid.";
+    private const string TeamMembersConflict = "The reviewed team revision is missing or no longer matches. Read the current team before replacing members.";
+    private const string CapabilityEditConflict = "The capability fingerprint is missing or no longer matches. Read the current capability before writing.";
     public static RouteGroupBuilder MapAgentsApi(this RouteGroupBuilder group)
     {
         var agents = group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
@@ -51,7 +56,8 @@ internal static class AgentsApi
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status401Unauthorized,
                 StatusCodes.Status403Forbidden,
-                StatusCodes.Status409Conflict);
+                StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, "The original agent revision is missing or no longer matches. Read the current agent before saving.");
 
         agents.MapDelete("/{agentId:guid}", DeleteAgentAsync)
             .WithName("DeleteAgent")
@@ -112,27 +118,36 @@ internal static class AgentsApi
         agents.MapPost("/teams", SaveAgentTeamAsync)
             .WithName("SaveAgentTeam")
             .Produces<Guid>(StatusCodes.Status200OK)
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status400BadRequest, InvalidTeamEdit)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, TeamEditConflict);
 
         agents.MapPut("/teams/{teamId:guid}", UpdateAgentTeamAsync)
             .WithName("UpdateAgentTeam")
             .Produces<Guid>(StatusCodes.Status200OK)
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status400BadRequest, InvalidTeamEdit)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, TeamEditConflict);
 
         agents.MapPost("/teams/{teamId:guid}/members", UpdateAgentTeamMembersAsync)
             .WithName("UpdateAgentTeamMembers")
             .Produces<AgentTeamDefinition>(StatusCodes.Status200OK)
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status400BadRequest, InvalidTeamMembers)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, TeamMembersConflict);
 
         agents.MapPut("/teams/{teamId:guid}/members", ReplaceAgentTeamMembersAsync)
             .WithName("ReplaceAgentTeamMembers")
             .Produces<AgentTeamDefinition>(StatusCodes.Status200OK)
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status400BadRequest, InvalidTeamMembers)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, TeamMembersConflict);
 
         agents.MapDelete("/teams/{teamId:guid}", DeleteAgentTeamAsync)
             .WithName("DeleteAgentTeam")
             .Produces<ApiAck>(StatusCodes.Status200OK)
-            .ProducesApiErrors(StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, "The reviewed team revision is missing or no longer matches. Read the current team before deleting.");
     }
 
     private static void MapProviderEndpoints(RouteGroupBuilder agents)
@@ -202,12 +217,14 @@ internal static class AgentsApi
         agents.MapPost("/capabilities", SaveAgentCapabilityAsync)
             .WithName("SaveAgentCapability")
             .Produces<Guid>(StatusCodes.Status200OK)
-            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, CapabilityEditConflict);
 
         agents.MapDelete("/capabilities/{capabilityId:guid}", DeleteAgentCapabilityAsync)
             .WithName("DeleteAgentCapability")
             .Produces<ApiAck>(StatusCodes.Status200OK)
-            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, CapabilityEditConflict);
 
         agents.MapPost("/{agentId:guid}/capabilities/{capabilityId:guid}/verify", VerifyAgentCapabilityAsync)
             .WithName("VerifyAgentCapability").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
@@ -1232,7 +1249,7 @@ internal static class AgentsApi
     /// </response>
     internal static async Task<IResult> DeleteAgentProviderAsync(
         Guid providerId,
-        Guid? expectedConcurrencyToken,
+        [Description("Original configuration token returned by the provider editor read. Required for deleting an existing provider.")] Guid? expectedConcurrencyToken,
         HttpContext context,
         IProviderRuntimeAdministrationService providerAdministration,
         CancellationToken cancellationToken) =>
@@ -1498,7 +1515,7 @@ internal static class AgentsApi
     [Description("Deletes a capability and its assignments only when expectedFingerprint matches the reviewed configuration. Missing or stale originals return HTTP409; built-in capabilities are refused.")]
     internal static async Task<IResult> DeleteAgentCapabilityAsync(
         Guid capabilityId,
-        string? expectedFingerprint,
+        [Description("Original configuration fingerprint returned by the capability editor read. Required for deletion.")] string? expectedFingerprint,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {

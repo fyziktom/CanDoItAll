@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 public sealed record ProviderProfileObservation(AgentExecutionActivityWorkspaceIdentity Workspace,
@@ -19,6 +21,7 @@ public class ProviderConfigurationConflictException(Guid providerId, Exception? 
     public Guid ProviderId { get; } = providerId;
 }
 
+[Description("Persistence outcome for the local provider configuration after remote model maintenance completed.")]
 public enum ProviderModelMaintenancePersistenceState { Rejected, Conflict, Unconfirmed, CommittedWithWarning }
 
 public sealed class ProviderModelMaintenancePersistenceException(Guid providerId, ProviderModelMaintenanceEditorResult result,

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Security.Cryptography;
 using System.Text.Json;
 using EditorModel = CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
@@ -57,7 +58,7 @@ public sealed record ProviderMutationAttempt(
     Guid? ExpectedConcurrencyToken,
     Guid? IntendedConcurrencyToken = null,
     string? SubmissionFingerprint = null,
-    string? Witness = null) {
+    [property: Description("Opaque server attestation binding the receipt to the original provider write. Send it unchanged when verifying.")] string? Witness = null) {
     /// <summary>
     /// True when <c>kind</c> is 0 Create. Computed by the server; ignored when the receipt is sent back.
     /// </summary>

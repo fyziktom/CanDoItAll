@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
@@ -97,6 +98,7 @@ internal sealed record MemoryProviderProfileApiRequest(
     MemoryProviderCapabilitiesApiRequest Capabilities,
     MemoryProviderHttpTransportApiModel? Http,
     MemoryProviderMcpTransportApiModel? Mcp) {
+    [Description("Original configuration revision from a provider read. Omit it when creating a new provider.")]
     public Guid? ExpectedRevision { get; init; }
 }
 
@@ -160,6 +162,7 @@ internal sealed record MemoryProviderProfileApiResponse(
     MemoryProviderLimitsApiResponse Limits,
     MemoryProviderHttpTransportApiModel? Http,
     MemoryProviderMcpTransportApiModel? Mcp) {
+    [Description("Current provider configuration revision to send as expectedRevision on an update.")]
     public Guid? ConfigurationRevision { get; init; }
 }
 

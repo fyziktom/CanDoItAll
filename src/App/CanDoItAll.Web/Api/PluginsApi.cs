@@ -92,7 +92,8 @@ internal static class PluginsApi
         plugins.MapPut("/{pluginId}/grants", UpdateGrantAsync)
             .WithName("UpdatePluginGrant")
             .Produces<PluginCapabilityGrantItem>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, "The grant no longer matches the reviewed revision or a grant already exists for the addressed capability and scope.");
 
         plugins.MapGet("/{pluginId}/connections", ListConnectionsAsync)
             .WithName("ListPluginConnections")
@@ -102,7 +103,8 @@ internal static class PluginsApi
         plugins.MapPost("/{pluginId}/connections", SaveConnectionAsync)
             .WithName("SavePluginConnection")
             .Produces<PluginConnectionItem>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, "The connection no longer matches the reviewed revision or the requested new identity already exists.");
 
         plugins.MapGet("/{pluginId}/oauth/status", ListOAuthStatusesAsync)
             .WithName("ListPluginOAuthStatuses")
