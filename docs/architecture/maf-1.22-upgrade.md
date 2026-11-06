@@ -1,6 +1,6 @@
 # MAF 1.22 upgrade and retained state
 
-The adapter targets Microsoft.Agents.AI 1.22.0 and A2A preview 1.22.0-preview.260918.1. Shared dependency floors are Microsoft.Extensions.AI 10.10.0, relevant Microsoft.Extensions packages 10.0.12, OpenAI 2.13.0 and OpenTelemetry.Api 1.18.0. The resolved A2A SDK is 1.0.0-preview2. Existing provider-neutral project boundaries and signing settings remain in force.
+The adapter targets Microsoft.Agents.AI 1.22.0 and A2A preview 1.22.0-preview.260918.1. Shared dependency floors are Microsoft.Extensions.AI 10.11.0, relevant Microsoft.Extensions packages 10.0.14, OpenAI 2.14.0 and OpenTelemetry.Api 1.20.1. The resolved A2A SDK is 1.0.0-preview2.
 
 ## Runtime behavior
 
