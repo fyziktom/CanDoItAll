@@ -168,7 +168,9 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
     }
 
     private static string[] RemovedColumns(EvidenceTable table) => table switch {
-        EvidenceTable.Resources or EvidenceTable.TestPlans or EvidenceTable.WorkAssignments or EvidenceTable.Participation or EvidenceTable.Staffing => ["ProjectLifetimeId"],
+        EvidenceTable.Resources or EvidenceTable.WorkAssignments or EvidenceTable.Participation or EvidenceTable.Staffing => ["ProjectLifetimeId"],
+        EvidenceTable.TestPlans => ["ProjectLifetimeId", "DefinitionRevision"],
+        EvidenceTable.SchedulerPlans => ["DefinitionRevision"],
         EvidenceTable.MoveReceipts => ["DatabaseProfileId", "SourceProjectLifetimeId", "TargetProjectLifetimeId"],
         EvidenceTable.Retirements or EvidenceTable.Reservations => ["ImportedHistory"],
         EvidenceTable.WorkflowContributions or EvidenceTable.WorkflowAdmissions => ["DatabaseProfileId", "ProjectLifetimeId", "ImportedHistory"],

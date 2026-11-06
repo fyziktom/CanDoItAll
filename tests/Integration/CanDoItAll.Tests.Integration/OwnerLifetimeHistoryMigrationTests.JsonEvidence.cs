@@ -36,8 +36,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
                 JsonEvidence.ContributionFingerprint or JsonEvidence.OutputFingerprint => JsonValue.Create(Fingerprint),
                 _ => new JsonObject { ["projectScope"] = JsonSerializer.SerializeToNode(scope, WebJson) }
             };
-            database.Add(JsonRow(evidence, payload));
-            await database.SaveChangesAsync();
+            await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(database, JsonRow(evidence, payload));
         });
 
     [Theory]
@@ -50,8 +49,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
     [InlineData(JsonEvidence.FireAuthority, "agent-execution/project-scope-v1")]
     public Task New_authority_channel_alone_is_retained_when_its_scope_payload_is_missing(JsonEvidence evidence, string channel)
         => AssertDownBlockedAsync(async database => {
-            database.Add(JsonRow(evidence, new JsonObject { ["channel"] = channel }));
-            await database.SaveChangesAsync();
+            await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(database, JsonRow(evidence, new JsonObject { ["channel"] = channel }));
         });
 
     [Theory]

@@ -1,8 +1,11 @@
 using CanDoItAll.Processes.Persistence;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
+using CanDoItAll.Modules.SchedulerPlanner;
+using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workbench;
 using Microsoft.EntityFrameworkCore;
 
@@ -54,12 +57,48 @@ internal static class HistoricalProjectMigrationRows {
             case ProjectResource resource:
                 await InsertResourceAsync(database, resource);
                 break;
+            case SchedulerPlan schedule:
+                await InsertSchedulerPlanAsync(database, schedule);
+                break;
+            case TestPlan plan:
+                await InsertTestPlanAsync(database, plan);
+                break;
             default:
                 database.Add(row);
                 await database.SaveChangesAsync();
                 break;
         }
     }
+
+    internal static Task InsertWorkflowDefinitionAsync(AppDbContext database, WorkflowDefinitionRecord row)
+        => database.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "AgentFramework_WorkflowDefinitions"
+                ("WorkflowId", "VersionId", "Revision", "Name", "Description", "Status", "PreferredBackend", "DefinitionJson",
+                 "InstructionSnapshotSchemaVersion", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({row.WorkflowId}, {row.VersionId}, {row.Revision}, {row.Name}, {row.Description}, {(int)row.Status},
+                {(int)row.PreferredBackend}, {row.DefinitionJson}, {row.InstructionSnapshotSchemaVersion}, {row.CreatedAtUtc}, {row.UpdatedAtUtc})
+            """);
+
+    private static Task InsertSchedulerPlanAsync(AppDbContext database, SchedulerPlan row)
+        => database.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "SchedulerPlanner_Plans" ("Id", "Name", "Description", "TargetKind", "TargetId", "TargetVersionId",
+                "TargetNameSnapshot", "CronExpression", "CronDescription", "TimeZoneId", "MisfirePolicy", "IsEnabled",
+                "StartAtUtc", "EndAtUtc", "InputJson", "StructureAuthorityJson", "AutomationTriggerId", "AutomationTriggerKey",
+                "NextPlannedFireAtUtc", "LastFiredAtUtc", "LastError", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({row.Id}, {row.Name}, {row.Description}, {(int)row.TargetKind}, {row.TargetId}, {row.TargetVersionId},
+                {row.TargetNameSnapshot}, {row.CronExpression}, {row.CronDescription}, {row.TimeZoneId}, {(int)row.MisfirePolicy},
+                {row.IsEnabled}, {row.StartAtUtc}, {row.EndAtUtc}, {row.InputJson}, {row.StructureAuthorityJson}, {row.SchedulerTriggerId},
+                {row.SchedulerTriggerKey}, {row.NextPlannedFireAtUtc}, {row.LastFiredAtUtc}, {row.LastError}, {row.CreatedAtUtc}, {row.UpdatedAtUtc})
+            """);
+
+    private static Task InsertTestPlanAsync(AppDbContext database, TestPlan row)
+        => database.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "TestLab_TestPlans" ("Id", "ProjectId", "ProjectLifetimeId", "ResponsiblePartyId", "Title", "Phase",
+                "CoverageGoal", "PlaywrightSpecPath", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({row.Id}, {row.ProjectId}, {row.ProjectLifetimeId}, {row.ResponsiblePartyId}, {row.Title},
+                {row.Phase}, {row.CoverageGoal}, {row.PlaywrightSpecPath}, {row.CreatedAtUtc}, {row.UpdatedAtUtc})
+            """);
+
     internal static Task InsertPreparedLaunchAsync(AppDbContext context, ProcessPreparedLaunchEntity row)
         => context.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "process_prepared_launches"

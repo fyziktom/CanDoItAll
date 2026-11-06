@@ -330,7 +330,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         UNION ALL SELECT 'work:' || (to_jsonb(row) - 'ProjectLifetimeId')::text AS "Value" FROM "Workbench_WorkAssignments" row
         UNION ALL SELECT 'workflow:' || (to_jsonb(row) - ARRAY['DatabaseProfileId', 'ProjectId', 'ProjectLifetimeId'])::text AS "Value"
             FROM "AgentFramework_WorkflowStructureOutputs" row
-        UNION ALL SELECT 'schedule:' || (to_jsonb(row) - 'StructureAuthorityJson')::text AS "Value" FROM "SchedulerPlanner_Plans" row
+        UNION ALL SELECT 'schedule:' || (to_jsonb(row) - ARRAY['StructureAuthorityJson', 'DefinitionRevision'])::text AS "Value" FROM "SchedulerPlanner_Plans" row
         UNION ALL SELECT 'process:' || (to_jsonb(row) - ARRAY['LaunchAdmissionId', 'ProjectAdmissionDatabaseProfileId', 'ProjectAdmissionProjectId', 'ProjectAdmissionLifetimeId'])::text AS "Value"
             FROM "process_runtime_states" row
         ORDER BY "Value"
@@ -341,7 +341,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         UNION ALL SELECT 'fire:' || to_jsonb(row)::text AS "Value" FROM "SchedulerPlanner_FireAdmissions" row
         UNION ALL SELECT 'prepared:' || (to_jsonb(row) - ARRAY['AcceptedSourceVersion', 'AcceptedSourceHeaderJson', 'AcceptedSourceHeaderFingerprint'])::text AS "Value"
             FROM "process_prepared_launches" row
-        UNION ALL SELECT 'schedule:' || to_jsonb(row)::text AS "Value" FROM "SchedulerPlanner_Plans" row WHERE "StructureAuthorityJson" IS NOT NULL
+        UNION ALL SELECT 'schedule:' || (to_jsonb(row) - 'DefinitionRevision')::text AS "Value" FROM "SchedulerPlanner_Plans" row WHERE "StructureAuthorityJson" IS NOT NULL
         UNION ALL SELECT 'runtime:' || to_jsonb(row)::text AS "Value" FROM "process_runtime_states" row
             WHERE "LaunchAdmissionId" IS NOT NULL OR "ProjectAdmissionDatabaseProfileId" IS NOT NULL
                 OR "ProjectAdmissionProjectId" IS NOT NULL OR "ProjectAdmissionLifetimeId" IS NOT NULL

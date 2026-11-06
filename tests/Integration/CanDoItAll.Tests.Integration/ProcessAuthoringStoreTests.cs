@@ -41,8 +41,7 @@ public sealed class ProcessAuthoringStoreTests {
                 new(new("end"), WorkflowNodeKind.End, "End", [], new(null, null, null, null, "", WorkflowValueShape.Text, WorkflowValueShape.Text))
             ], [new(new("start-end"), new("start"), null, new("end"), null, WorkflowEdgeKind.Direct, "")]),
             new(WorkflowRuntimeBackendKind.InProcess, true, false, false, false), savedAt, savedAt);
-        context.Add(WorkflowDefinitionRecord.FromDefinition(workflow, 1));
-        await context.SaveChangesAsync();
+        await HistoricalProjectMigrationRows.InsertWorkflowDefinitionAsync(context, WorkflowDefinitionRecord.FromDefinition(workflow, 1));
         var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>().UseNpgsql(lease.ConnectionString).Options;
         var store = new EfProcessPreparedLaunchStore(new ContextFactory(options), options);
         var preparation = ProcessPreparedLaunchCodec.ToEntity(ProcessPreparedLaunchFixture.Create());

@@ -139,7 +139,8 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
         var deletion = Cleanup();
         deletion.MutationKind = ProjectCrossModuleMutationKind.DeleteProject;
         deletion.PayloadJson = JsonSerializer.Serialize(new DeleteProjectMutationPayload(["saved-node"], []), WebJson);
-        database.AddRange(usage, launch, schedule, fire);
+        await HistoricalProjectMigrationRows.InsertOwnerEvidenceAsync(database, schedule);
+        database.AddRange(usage, launch, fire);
         await database.SaveChangesAsync();
         foreach (var cleanup in new[] { Cleanup(), subtree, deletion }) {
             await HistoricalProjectMigrationRows.InsertCleanupAsync(database, cleanup);

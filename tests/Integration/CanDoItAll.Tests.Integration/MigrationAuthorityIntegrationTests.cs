@@ -182,7 +182,9 @@ public sealed partial class MigrationAuthorityIntegrationTests {
             Assert.False(column.TryGetDefaultValue(out _));
             Assert.Null(column.DefaultValueSql);
             Assert.Null(column.ComputedColumnSql);
-            return new ColumnDefinition(table.Name, column.Name, column.StoreType.ToLowerInvariant(), column.IsNullable, null, string.Empty, string.Empty);
+            var defaultSql = table.Name == SchedulerPlanRevision.Table && column.Name == SchedulerPlanRevision.Name
+                ? SchedulerPlanRevision.DefaultSql : null;
+            return new ColumnDefinition(table.Name, column.Name, column.StoreType.ToLowerInvariant(), column.IsNullable, defaultSql, string.Empty, string.Empty);
         })).OrderBy(column => column.Table, StringComparer.Ordinal).ThenBy(column => column.Name, StringComparer.Ordinal).ToArray();
         var indexes = tables.SelectMany(table => table.UniqueConstraints.Select(key =>
                 new IndexDefinition(table.Name, key.Name, key == table.PrimaryKey, true, "btree", JoinColumns(key.Columns),
@@ -287,10 +289,14 @@ public sealed partial class MigrationAuthorityIntegrationTests {
         Assert.Equal(expected.ForeignKeys, actual.ForeignKeys);
     }
 
+    private static readonly ColumnDefinition SchedulerPlanRevision = new("SchedulerPlanner_Plans", nameof(SchedulerPlan.DefinitionRevision),
+        "uuid", false, $"'{Guid.Empty:D}'::uuid", string.Empty, string.Empty);
+
     private static void AssertRetainedSchema(SchemaSnapshot legacy, SchemaSnapshot current) {
-        var addition = Assert.Single(current.Columns.Where(column => !legacy.Columns.Contains(column)));
-        Assert.Equal(new ColumnDefinition("SchedulerPlanner_Plans", "StructureAuthorityJson", "text", true, null, string.Empty, string.Empty), addition);
-        Assert.Equal(legacy.Columns, current.Columns.Where(column => column != addition));
+        var authority = new ColumnDefinition("SchedulerPlanner_Plans", nameof(SchedulerPlan.StructureAuthorityJson),
+            "text", true, null, string.Empty, string.Empty);
+        Assert.Equal([SchedulerPlanRevision, authority], current.Columns.Except(legacy.Columns));
+        Assert.Equal(legacy.Columns, current.Columns.Except([SchedulerPlanRevision, authority]));
         Assert.Equal(legacy.Indexes, current.Indexes);
         Assert.Equal(legacy.ForeignKeys, current.ForeignKeys);
     }
@@ -376,7 +382,7 @@ public sealed partial class MigrationAuthorityIntegrationTests {
         JsonSerializer.Serialize(await context.Set<PluginOAuthSessionRecord>().AsNoTracking().SingleAsync(row => row.Id == ids.OAuthSession)),
         JsonSerializer.Serialize(await context.Set<PluginLogRecord>().AsNoTracking().SingleAsync(row => row.Id == ids.Log)),
         await context.Database.SqlQuery<string>($"""
-            SELECT (to_jsonb(row) - 'StructureAuthorityJson')::text AS "Value"
+            SELECT (to_jsonb(row) - ARRAY['StructureAuthorityJson', 'DefinitionRevision'])::text AS "Value"
             FROM "SchedulerPlanner_Plans" row WHERE "Id" = {ids.Plan}
             """).SingleAsync(),
         JsonSerializer.Serialize(await context.Set<SchedulerPlanRun>().AsNoTracking().SingleAsync(row => row.Id == ids.Run))
