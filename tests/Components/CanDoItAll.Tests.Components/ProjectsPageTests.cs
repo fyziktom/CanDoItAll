@@ -11,6 +11,7 @@ using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -534,14 +535,14 @@ public sealed class ProjectsPageTests
             "# Portfolio interaction\n\nAuthorized aggregate content.");
         var cut = RenderProjectsPage(harness);
         cut.WaitForAssertion(() => Assert.Contains("Portfolio open project", cut.Markup));
-        cut.FindAll("button[role='tab']")
+        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']")
             .Single(tab => tab.TextContent.Contains("Files", StringComparison.Ordinal))
-            .Click();
+            .ClickAsync(new MouseEventArgs()));
         cut.WaitForAssertion(() => Assert.Contains("portfolio-open.md", cut.Markup));
 
-        cut.FindAll(".ft-file-browser__item-main")
+        await cut.InvokeAsync(() => cut.FindAll(".ft-file-browser__item-main")
             .Single(button => button.TextContent.Contains("portfolio-open.md", StringComparison.Ordinal))
-            .KeyUp("Enter");
+            .KeyUpAsync(new KeyboardEventArgs { Key = "Enter" }));
 
         cut.WaitForAssertion(() =>
         {
@@ -549,7 +550,7 @@ public sealed class ProjectsPageTests
             Assert.Empty(cut.FindAll(".ft-file-browser"));
             Assert.NotNull(cut.Find("[data-testid='project-files-portfolio-back']"));
         });
-        cut.Find("[data-testid='project-files-portfolio-back']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-files-portfolio-back']").ClickAsync(new MouseEventArgs()));
         cut.WaitForAssertion(() => Assert.Contains("portfolio-open.md", cut.Markup));
     }
 
