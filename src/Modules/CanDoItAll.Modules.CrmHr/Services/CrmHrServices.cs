@@ -575,7 +575,6 @@ public sealed partial class CrmService(
     ISearchIndexService searchIndexService,
     ProjectsService projectsService,
     IProjectRecordQueryService projectRecordQueryService,
-    IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     ProjectWriteAdmissionService admissions,
     ProjectPartyIntegrationService assignmentService,
     CrmHrChanges changes,

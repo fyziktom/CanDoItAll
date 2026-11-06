@@ -1404,7 +1404,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
         var originalNode = ResolveNode(nodeId);
-        var actionContext = CaptureActionContext(actionId, originalNode);
+        var createContext = ProjectStructureCanvasCatalog.TryResolveCreateDefinition(actionId, out var definition)
+            ? CaptureActionContext()
+            : null;
+        var actionContext = createContext ?? CaptureActionContext(actionId, originalNode);
         if (await TryHandleFileBrowserActionAsync(actionId, nodeId))
         {
             return;
@@ -1420,8 +1423,13 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             return;
         }
 
-        if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(actionId, out var definition))
+        if (createContext is not null)
         {
+            if (!IsCurrentAction(createContext))
+            {
+                return;
+            }
+
             var request = new CanvasWorkbenchCreateActionRequest(
                 actionId,
                 nodeId,
@@ -1450,7 +1458,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 await OpenSecretReferenceDialogAsync(action, request with
                 {
                     CreateMode = action.CreateMode
-                }, actionContext);
+                }, createContext);
                 return;
             }
 
@@ -1467,7 +1475,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 return;
             }
 
-            await CreateImmediateObjectAsync(actionContext, definition, request);
+            await CreateImmediateObjectAsync(createContext, definition, request);
             return;
         }
 

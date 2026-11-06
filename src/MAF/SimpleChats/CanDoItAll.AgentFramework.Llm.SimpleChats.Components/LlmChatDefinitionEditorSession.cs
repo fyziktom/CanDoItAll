@@ -76,7 +76,8 @@ public sealed class LlmChatDefinitionEditorSession(ILlmChatDefinitionUiGateway d
 
     public void UndoComparison(long expected) {
         if (!IsCurrent(expected) || Presentation.Phase != DefinitionEditorPhase.Ready || !Presentation.CanUndoComparison ||
-            mutation is not null || read is not null || mergeUndo is not { } undo || undo.InputRevision != inputRevision) {
+            mutation is not null || read is not null || accepted is not { } current ||
+            mergeUndo is not { } undo || undo.InputRevision != inputRevision) {
             return;
         }
         draft = undo.Draft;
@@ -84,7 +85,7 @@ public sealed class LlmChatDefinitionEditorSession(ILlmChatDefinitionUiGateway d
         reviewed = null;
         inputRevision++;
         Presentation = Presentation with { Source = draft, Comparison = null, CanUndoComparison = false, NeedsReview = true, Saved = false,
-            Definition = LlmChatDefinitionPresentationMapper.ToCatalogCard(accepted.Definition), Failure = DefinitionEditorFailure.Conflict,
+            Definition = LlmChatDefinitionPresentationMapper.ToCatalogCard(current.Definition), Failure = DefinitionEditorFailure.Conflict,
             Notice = "The pre-comparison draft is restored locally. Compare current state again before saving." };
         Publish();
     }

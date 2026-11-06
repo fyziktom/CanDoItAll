@@ -80,7 +80,11 @@ public sealed class ProjectDeletionLegacyQueryPlanTests(Xunit.Abstractions.ITest
 
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
             CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
-            if (command.CommandText.Contains("LIMIT 17", StringComparison.Ordinal)) {
+            const int bound = ProjectDeletionCompletionBinding.MaximumParticipants + 1;
+            var bounded = command.CommandText.Contains($"LIMIT {bound}", StringComparison.Ordinal) ||
+                command.Parameters.Cast<DbParameter>().Any(parameter => parameter.Value is int value && value == bound &&
+                    command.CommandText.Contains($"LIMIT @{parameter.ParameterName}", StringComparison.Ordinal));
+            if (bounded) {
                 Queries.Add(new(command.CommandText, command.Parameters.Cast<NpgsqlParameter>()
                     .Select(parameter => (NpgsqlParameter)((ICloneable)parameter).Clone()).ToArray()));
             }

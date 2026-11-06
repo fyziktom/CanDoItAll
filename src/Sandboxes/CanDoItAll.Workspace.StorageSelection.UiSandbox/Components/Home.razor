@@ -31,7 +31,7 @@
     <p data-testid="selection-counts">Owner reads: @Source.Reads; pending reads: @Source.PendingReads. No save or driver operations exist in this host.</p>
     <Alert AlertStyle="AlertStyle.Info">For late reads: enable Hold and Ignore cancellation, open a parent, retire it, replace the profile or reopen it, then release the old read. While dialogs are open, Alt+Shift+R releases one read, P replaces the profile, A retires parent A, B opens parent B, and C recovers the source. Closing a child leaves its parent open. Reopening A creates a new lifetime even with identical IDs.</Alert>
     <DialogHost />
-    <NotificationHost />
+    <Notification />
 </Stack>
 
 @code {

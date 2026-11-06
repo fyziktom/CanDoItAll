@@ -379,8 +379,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var refreshed = await RequirePlanning().RefreshAsync(agent, provider, original, request, automatic, cancellationToken);
         var startup = new AgentExecutionStartupAggregate(preparation.Blueprint, preparation.CatalogSnapshot, agent,
             provider, refreshed.ChatSession, refreshed.Run, UserMessage: null, InputAttachments: []);
-        var executionRequest = new ExecutionRunRequest(agent.Id, original.ToolAdmission!.OriginalInput.Content,
-            operation.StreamId.OperationId, original.ChatSessionId) { PlanningOwner = original.ToolAdmission.PlanningDecision!.Owner };
+        var admission = original.ToolAdmission ?? throw new InvalidOperationException("The original planning admission is missing.");
+        var decision = admission.PlanningDecision ?? throw new InvalidOperationException("The original planning decision is missing.");
+        var input = admission.RecoveryInputContent ?? throw new InvalidOperationException("The original planning input is missing.");
+        var executionRequest = new ExecutionRunRequest(agent.Id, input,
+            operation.StreamId.OperationId, original.ChatSessionId) { PlanningOwner = decision.Owner };
         await CompletePreparedExecutionRunAsync(startup, executionRequest, cancellationToken, operation, refreshed.Approvals);
         return await GetExecutionRunDetailAsync(original.Id, cancellationToken);
     }

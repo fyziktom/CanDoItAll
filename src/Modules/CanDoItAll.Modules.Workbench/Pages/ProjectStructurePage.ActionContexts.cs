@@ -271,7 +271,6 @@ public partial class ProjectStructurePage {
     private ProjectStructureActionContext? CaptureActionContext(string actionId, ProjectStructureNode? node) {
         var retainsTarget = actionId is "summary" or "export-image" or "transcript:create" or "transcript:summarize"
             or "transcript:find-my-tasks" or "transcript:find-others-deliveries" ||
-            IsSecretReferenceCreateAction(actionId) ||
             (actionId == ProjectStructureActionCatalogAdapter.EditActionId && node?.ObjectType == ProjectObjectType.SecretReference);
         return retainsTarget ? CaptureActionContext() : null;
     }

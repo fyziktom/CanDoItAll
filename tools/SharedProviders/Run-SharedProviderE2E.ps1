@@ -525,8 +525,8 @@ function Set-ChildEnvironmentAssignments {
         "E2E_APP_UID=$AppUid",
         "E2E_APP_GID=$AppGid",
         "DOCKER_CONTEXT=default",
-        "DOTNET_SDK_VERSION=10.0.402",
-        "DOTNET_RUNTIME_VERSION=10.0.13",
+        "DOTNET_SDK_VERSION=10.0.403",
+        "DOTNET_RUNTIME_VERSION=10.0.14",
         "POSTGRES_IMAGE_TAG=18.6-alpine",
         "BUSYBOX_VERSION=1.37.0-musl"
     )
@@ -822,10 +822,10 @@ function Write-AndValidateComposeConfig {
         "db" = "postgres:18.6-alpine"
         "deterministic-personal-upstream" = $UpstreamImage
         "deterministic-upstream" = $UpstreamImage
-        "e2e-central" = "mcr.microsoft.com/dotnet/aspnet:10.0.13"
-        "e2e-client-a" = "mcr.microsoft.com/dotnet/aspnet:10.0.13"
-        "e2e-client-b" = "mcr.microsoft.com/dotnet/aspnet:10.0.13"
-        "e2e-runner" = "mcr.microsoft.com/dotnet/aspnet:10.0.13"
+        "e2e-central" = "mcr.microsoft.com/dotnet/aspnet:10.0.14"
+        "e2e-client-a" = "mcr.microsoft.com/dotnet/aspnet:10.0.14"
+        "e2e-client-b" = "mcr.microsoft.com/dotnet/aspnet:10.0.14"
+        "e2e-runner" = "mcr.microsoft.com/dotnet/aspnet:10.0.14"
     }
     $expectedPorts = @{
         "central" = @($PortBase, 8080)

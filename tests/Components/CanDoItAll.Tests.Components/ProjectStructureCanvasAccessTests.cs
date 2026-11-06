@@ -26,6 +26,27 @@ public sealed class ProjectStructureCanvasAccessTests {
     public static IEnumerable<object[]> Commands => Enum.GetValues<Command>()
         .SelectMany(command => Enum.GetValues<AccessCondition>().Select(condition => new object[] { command, condition }));
 
+    [Fact]
+    public async Task Direct_canvas_create_uses_the_displayed_project_admission() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        var services = harness.Context.Services;
+        var project = (await services.GetRequiredService<ProjectsService>().SaveAsync(new() { Name = "Direct canvas create" })).Value;
+        var rootId = $"project:{project:D}";
+        services.GetRequiredService<NavigationManager>().NavigateTo($"/projects/{project:D}/structure");
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, project));
+        page.WaitForAssertion(() => Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes, node => node.Id == rootId));
+        Assert.True(ProjectStructureCanvasCatalog.TryResolveCreateDefinition(ProjectObjectType.Note, null, out var definition));
+
+        var canvas = page.FindComponent<CanvasWorkbench>().Instance;
+        await page.InvokeAsync(() => canvas.ContextActionRequested.InvokeAsync(new(rootId, definition.ActionId, 300, 300)));
+
+        var structure = await services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(project);
+        var note = Assert.Single(structure.Nodes, node => node.ObjectType == ProjectObjectType.Note);
+        Assert.Equal(rootId, note.ParentId);
+        Assert.Equal(project, note.ProjectId);
+    }
+
     [Theory]
     [MemberData(nameof(Commands))]
     public async Task Actual_Canvas_actions_and_preferences_require_current_access_at_physical_commit(Command command, AccessCondition condition) {

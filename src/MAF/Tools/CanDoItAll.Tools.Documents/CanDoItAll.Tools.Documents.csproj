@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.6.0" />
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="ManagedCode.MarkItDown" Version="10.0.7" />
-    <PackageReference Include="PdfPig" Version="0.1.13" />
+    <PackageReference Include="AngleSharp" Version="1.8.6" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="ManagedCode.MarkItDown" Version="10.0.8" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>

@@ -34,13 +34,16 @@ public sealed class ProjectWorkbenchDeletionRecoveryInspector(DbContextOptions<W
             if (await context.Set<ProjectObjectRecord>().AnyAsync(row => row.ProjectId == project.ProjectId, cancellationToken)) {
                 throw new InvalidDataException($"Workbench project {project.ProjectId} has residual native state; legacy deletion binding is refused.");
             }
-            string query = $$"""
+            const string query = """
                 SELECT "Id" AS "Value" FROM "Workbench_ProjectCrossModuleMutations"
-                WHERE "ProjectId" = {0} AND "MutationKind" = {{(int)ProjectCrossModuleMutationKind.DeleteProject}}
-                ORDER BY "Id" LIMIT {{ProjectDeletionCompletionBinding.MaximumParticipants + 1}}
+                WHERE "ProjectId" = {0} AND "MutationKind" = {1}
+                ORDER BY "Id" LIMIT {2}
                 """;
-            var ids = await context.Database.SqlQueryRaw<Guid>(query +
-                (mode == ProjectDeletionRecoveryReadMode.Exclusive ? " FOR UPDATE NOWAIT" : ""), project.ProjectId).ToArrayAsync(cancellationToken);
+            const string exclusiveQuery = query + " FOR UPDATE NOWAIT";
+            var ids = await context.Database.SqlQueryRaw<Guid>(
+                mode == ProjectDeletionRecoveryReadMode.Exclusive ? exclusiveQuery : query,
+                project.ProjectId, (int)ProjectCrossModuleMutationKind.DeleteProject, ProjectDeletionCompletionBinding.MaximumParticipants + 1)
+                .ToArrayAsync(cancellationToken);
             if (ids.Length > ProjectDeletionCompletionBinding.MaximumParticipants) {
                 throw new InvalidDataException($"Workbench project {project.ProjectId} exceeds the bounded legacy deletion inspection.");
             }
@@ -82,8 +85,9 @@ public sealed class ProjectWorkbenchDeletionRecoveryInspector(DbContextOptions<W
                 CASE WHEN octet_length("PayloadJson") BETWEEN 1 AND {1} THEN "PayloadJson" ELSE NULL END AS "PayloadJson"
             FROM "Workbench_ProjectCrossModuleMutations" WHERE "Id" = {0}
             """;
-        return await context.Database.SqlQueryRaw<RecoveryRow>(query +
-            (mode == ProjectDeletionRecoveryReadMode.Exclusive ? " FOR UPDATE NOWAIT" : ""), recoveryId, MaximumPayloadBytes)
+        const string exclusiveQuery = query + " FOR UPDATE NOWAIT";
+        return await context.Database.SqlQueryRaw<RecoveryRow>(
+            mode == ProjectDeletionRecoveryReadMode.Exclusive ? exclusiveQuery : query, recoveryId, MaximumPayloadBytes)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new InvalidDataException($"Workbench deletion {recoveryId} is missing.");
     }

@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -157,13 +156,10 @@ internal sealed class ProjectHierarchyLinkConfiguration : IEntityTypeConfigurati
 
 public sealed partial class ProjectsService(
     IDbContextFactory<ProjectsDbContext> dbContextFactory,
-    IClock clock,
     IActivityStream activityStream,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     IEnumerable<IProjectDeletionParticipant> deletionParticipants,
     ILogger<ProjectsService> logger,
-    SearchIndexService searchMutationService,
-    CoordinatedDatabaseTransaction coordinatedTransaction,
     ProjectWriteAdmissionService writeAdmissionService,
     ProjectDefinitionWriter definitionWriter,
     ProjectDefinitionReader definitionReader,

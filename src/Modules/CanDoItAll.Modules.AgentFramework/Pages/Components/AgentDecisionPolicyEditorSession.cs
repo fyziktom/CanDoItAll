@@ -123,7 +123,7 @@ internal sealed class AgentDecisionPolicyEditorSession(AgentDecisionPolicyEditor
                 return;
             }
             retained ??= earlier;
-            var outcome = retained?.Outcome ?? (earlier?.Command == command ? earlier.Outcome : null);
+            var outcome = retained?.Outcome ?? (earlier?.Command == command ? earlier?.Outcome : null);
             if (outcome is null) {
                 var lookup = await opening.ReadAsync(token => workspace.LookupAgentDecisionDataPolicyAsync(command!, token), cancellationToken);
                 if (lookup is not AgentDecisionDataPolicyLookup.Accepted accepted || accepted.Receipt.Command != command) {

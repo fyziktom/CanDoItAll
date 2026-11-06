@@ -14,7 +14,7 @@
         <EmptyState Eyebrow="Structure" Title="Unable to load project structure" Description="@shell.Error">
             <Actions><Button Text="Retry" data-testid="structure-load-retry" Click="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(shell.ContextId, StructureToolbarCommand.Retry)))" /></Actions>
         </EmptyState>
-    } else if (shell.Canvas is null) {
+    } else if (shell.Canvas is not { } canvasSurface) {
         <CanvasWorkbenchStage Eyebrow="" Title="" Description=""><Canvas><SkeletonStateOverlay Snapshot="@shell.Loading" /></Canvas></CanvasWorkbenchStage>
     } else {
         <Stack Gap="1.5rem" Class="project-structure-page__stack">
@@ -23,13 +23,13 @@
                   AriaLabel="Project structure views" Variant="TabsVariant.WorkspaceSecondary" RenderMode="TabRenderMode.Client">
                 <TabsItem Text="Canvas" Icon="account_tree">
         @{
-            var view = Presentation;
+            var view = shell;
         }
         <CanvasWorkbenchStage Eyebrow=""
                               Title=""
                               Description="">
             <Canvas>
-                <CanvasWorkbench @key="view.ContextId" Surface="view.Canvas"
+                <CanvasWorkbench @key="view.ContextId" Surface="canvasSurface"
                                  @ref="canvas"
                                  RequiresComposerAcknowledgement="true"
                                  SelectionChanged="@(value => Dispatch.InvokeAsync(new StructureSelectionIntent(view.ContextId, value)))"
@@ -71,7 +71,7 @@
                                                        RecomposeBranch="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Recompose)))" />
                         <div class="project-structure-toolbar-stats"
                              data-testid="project-structure-canvas-loaded">
-                            <StatusBadge Tone="info" Text="@($"Nodes {view.Canvas.Nodes.Count}")" />
+                            <StatusBadge Tone="info" Text="@($"Nodes {canvasSurface.Nodes.Count}")" />
                             <StatusBadge Tone="neutral" Text="@($"Selection {view.SelectionCount}")" />
                         </div>
                         @ToolbarSupplement

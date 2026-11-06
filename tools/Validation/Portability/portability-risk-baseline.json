@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-06T11:55:03.818682+00:00",
+  "generated_utc": "2026-11-06T16:48:28.482231+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -106,7 +106,7 @@
     {
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
-      "source_fingerprint": "bd98af3821d75a9f41c47dc208142633754ecf34b551c5e660817a0b10656079",
+      "source_fingerprint": "f82bc60e09bf3cb63a4c7ed1b36ac6d6f07a49ad0faa8cba07aef6a486b7c3c9",
       "count": 1
     },
     {
@@ -58318,7 +58318,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj",
       "category": "dpapi",
-      "source_fingerprint": "5fd93af4d76938fc902f78f7ac285b13a28fd48c885d715242d88422c89fd22d",
+      "source_fingerprint": "db2929a4abc57fa71f23bc9cec42b64d074b6f161191938446623d1e4d84a564",
       "count": 1
     },
     {
@@ -79546,7 +79546,7 @@
     {
       "path": "tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj",
       "category": "manager-discovery",
-      "source_fingerprint": "c09ead64b398ec6c1569c750e759b25ce14b187fd26a64682a4044af81fb2e7f",
+      "source_fingerprint": "8cea02b8edfbeb3baf1d7ed1846e07b94a51a20c1cfeac37b40d1958d1a7566e",
       "count": 1
     },
     {
