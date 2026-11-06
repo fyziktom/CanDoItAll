@@ -132,7 +132,7 @@ internal sealed class E2eScenarioRunner : IDisposable
                     .ToHashSet(StringComparer.Ordinal);
                 builder.Expect("six-central-fixtures", central.Fixtures.Count == 6);
                 builder.Expect("five-published", central.Fixtures.Count(item => item.IsPublished == true) == 5);
-                builder.Expect("unshared-default-off", unshared.IsPublished == false);
+                builder.Expect("unshared-default-off", unshared.IsPublished is not true);
                 builder.Expect("catalog-filters-unshared", catalog.Document.Providers.Count == 5 &&
                     catalog.Document.Providers.All(item => item.PublicationId.Value != unshared.PublicationId));
                 builder.Expect("openai-model-list-ok", modelsResponse.StatusCode == HttpStatusCode.OK);

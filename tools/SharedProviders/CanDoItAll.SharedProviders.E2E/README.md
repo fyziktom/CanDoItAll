@@ -19,9 +19,8 @@ files; those values must not be passed directly on the command line.
   marked root, creates all bind directories, and privately generates the database, signing-key,
   connection-string, and deterministic-upstream secrets without printing values.
 - `seed-central` creates or updates the six deterministic central provider fixtures, controls
-  publication through `SharedProviderPublicationStore` and
-  `SharedProviderPublicationApplicationService`, creates the stable service identity, and issues
-  central access tokens.
+  publication through `ISharedProviderManagementService`, creates the stable service identity,
+  and issues central access tokens. A provider with no publication starts unshared.
 - `seed-client-a` creates the personal provider through the AgentFramework workspace, creates or
   updates the central source, probes it, and imports the chat-completions fixture.
 - `seed-client-b` creates its service identity and access token, creates or updates the central
@@ -69,8 +68,8 @@ All writes use these strongly typed services:
 - `SecretService` for provider and source credential records;
 - `ICanDoItAllAgentWorkspaceFactory.GetOrganizationWorkspaceService().SaveProviderAsync` for
   personal provider profiles;
-- `SharedProviderPublicationStore` and `SharedProviderPublicationApplicationService` for
-  publication identity and state;
+- `ISharedProviderManagementService` for observed provider and publication revisions and
+  conditional publication changes;
 - `IApiTokenService` for access tokens;
 - `SharedProviderSourceService` and `SharedProviderSourceSyncService` for source configuration,
   probes, reconciliation, and imports.
