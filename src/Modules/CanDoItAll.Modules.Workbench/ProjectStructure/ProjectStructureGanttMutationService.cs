@@ -22,7 +22,8 @@ public sealed class ProjectStructureGanttMutationService(
         Guid projectId,
         GanttTaskTitleChangeRequest request,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var result = await ExecuteAsync(
@@ -46,7 +47,7 @@ public sealed class ProjectStructureGanttMutationService(
                 task.UpdatedAtUtc = now;
                 return Task.FromResult(Result([request.TaskId]));
             },
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, authorizeCommit);
 
         logger.LogInformation(
             "Applied Gantt title mutation for project {ProjectId} and task {TaskId}.",
@@ -59,7 +60,8 @@ public sealed class ProjectStructureGanttMutationService(
         Guid projectId,
         ProjectStructureGanttScheduleMutationRequest request,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var scheduleChange = request.ScheduleChange;
@@ -70,7 +72,7 @@ public sealed class ProjectStructureGanttMutationService(
                 scheduleChange,
                 request.ExpectedTaskSchedules,
                 now)),
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, authorizeCommit);
 
         logger.LogInformation(
             "Applied Gantt schedule mutation for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
@@ -83,7 +85,9 @@ public sealed class ProjectStructureGanttMutationService(
     internal async Task<ProjectStructureGanttMutationResult> ApplyTaskDetailsAsync(
         Guid projectId,
         ProjectStructureTaskDetailsMutationRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        Guid? expectedTaskOccurrence = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var expected = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission);
@@ -116,6 +120,9 @@ public sealed class ProjectStructureGanttMutationService(
             (_, state, now, _) =>
             {
                 var task = RequireEditableTask(state, request.TaskId);
+                if (expectedTaskOccurrence.HasValue && task.Id != expectedTaskOccurrence.Value) {
+                    throw StaleTask(request.TaskId, "occurrence");
+                }
                 if (!string.Equals(task.Title, request.CurrentTitle, StringComparison.Ordinal))
                 {
                     throw StaleTask(request.TaskId, "title");
@@ -207,11 +214,11 @@ public sealed class ProjectStructureGanttMutationService(
                     100 => "complete",
                     _ => "progress"
                 };
-                task.MetadataJson = ProjectObjectMetadataSerializer.Serialize(metadata);
+                task.MetadataJson = ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(task.MetadataJson, metadata);
                 task.UpdatedAtUtc = now;
                 return Task.FromResult(Result(affectedTaskIds));
             },
-            cancellationToken, request.MutationOwner);
+            cancellationToken, request.MutationOwner, authorizeCommit);
 
         logger.LogInformation(
             "Applied Gantt task detail mutation for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
@@ -225,7 +232,8 @@ public sealed class ProjectStructureGanttMutationService(
         Guid projectId,
         GanttDependencyMutationRequest request,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var result = await ExecuteAsync(
@@ -237,7 +245,7 @@ public sealed class ProjectStructureGanttMutationService(
                 GanttDependencyMutationKind.Reconnect => Task.FromResult(ReconnectDependency(state, request, now)),
                 _ => throw new ArgumentOutOfRangeException(nameof(request), request.Mutation, "The dependency mutation is not supported.")
             },
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, authorizeCommit);
 
         logger.LogInformation(
             "Applied Gantt dependency mutation {Mutation} for project {ProjectId}; added {AddedCount}, removed {RemovedCount}, affected {AffectedCount}.",
@@ -253,13 +261,14 @@ public sealed class ProjectStructureGanttMutationService(
         Guid projectId,
         GanttTaskInsertionRequest request,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var result = await ExecuteAsync(
             projectId,
             (context, state, now, token) => InsertTaskAsync(context, state, request, now, token),
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, authorizeCommit);
 
         logger.LogInformation(
             "Applied Gantt insertion for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
@@ -273,7 +282,8 @@ public sealed class ProjectStructureGanttMutationService(
         Guid projectId,
         Func<WorkbenchDbContext, MutationState, DateTimeOffset, CancellationToken, Task<ProjectStructureGanttMutationResult>> mutation,
         CancellationToken cancellationToken,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         if (projectId == Guid.Empty)
         {
@@ -288,10 +298,13 @@ public sealed class ProjectStructureGanttMutationService(
             await using var scope = await mutationScopes.BeginAsync(context,
                 ProjectMutationScopeKeys.ForProject(projectId), cancellationToken, [expected], mutationOwner?.ProcessMutationAdmission,
                 mutationOwner?.AgentMutationAdmission);
+            if (authorizeCommit is not null) {
+                await authorizeCommit(cancellationToken);
+            }
             var state = await LoadStateAsync(context, projectId, cancellationToken);
             var result = await mutation(context, state, clock.GetUtcNow(), cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
-            await scope.CommitAsync(cancellationToken);
+            await scope.CommitAsync(cancellationToken, authorizeCommit);
             return result;
         }
         catch (ProjectStructureGanttMutationException exception)

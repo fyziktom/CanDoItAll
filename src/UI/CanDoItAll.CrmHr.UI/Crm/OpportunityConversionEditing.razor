@@ -1,0 +1,121 @@
+@if (State.IsOutdated || State.IsUnknown || State.Accepted is not null || Message is not null) {
+    <Alert AlertStyle="@(State.IsUnknown || State.IsOutdated ? AlertStyle.Warning : AlertStyle.Info)" data-testid="crmhr-conversion-freshness">
+        <TextBlock Value="@(Message ?? (State.IsUnknown ? "The conversion outcome is unknown. Your submission and draft are retained; resubmission is blocked." : State.Accepted is not null ? "This conversion committed. Later input is retained and this completed command cannot be submitted again." : "The conversion basis changed. Your target request is retained; review the current source before submitting."))" />
+    </Alert>
+}
+@if (State.Accepted is { } accepted) {
+    <SmallText Text="@($"Committed project: {accepted.ProjectName}")" />
+}
+@if (RecoveryProject is { } project) {
+    <Button Text="Open project for review" Href="@($"/projects?projectId={project.ProjectId:D}")" Target="_blank"
+        ButtonStyle="ButtonStyle.Light" data-testid="crmhr-conversion-recovery-project" />
+}
+<Button Text="Review current conversion basis" ButtonStyle="ButtonStyle.Light" Disabled="@(Reading || State.IsSaving || State.PickerPending)"
+        Click="ReviewRequested" data-testid="crmhr-conversion-review-open" />
+<Dialog IsOpen="@(State.Review is not null)" Title="Review conversion basis" Size="ModalSize.Full" DenseChrome="true"
+        CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-conversion-review-dialog">
+    <ChildContent>
+        @if (State.Review is { } review) {
+            <Stack GapScale="LayoutGap.Medium">
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Review the opportunity and project handoff. Accepting updates only your draft; Save conversion remains a separate command." /></Alert>
+                @if (!string.IsNullOrWhiteSpace(Message)) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@Message" /></Alert>
+                }
+                @if (State.IsUnknown || State.Accepted is not null) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-conversion-review-outcome"><TextBlock Value="The previous command cannot be replayed. This read preserves your draft and does not authorize another conversion." /></Alert>
+                }
+                @if (State.ReviewStale) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-conversion-review-stale"><TextBlock Value="This comparison needs a current snapshot. Refresh it before accepting the conversion basis." /></Alert>
+                }
+                @if (review.Current.Stage != OpportunityStage.Won) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="The current opportunity is no longer won. It cannot be converted." /></Alert>
+                }
+                @if (review.TargetUnavailable) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="A current target snapshot is unavailable. Refresh the comparison or select the current project record again after reviewing the opportunity basis." /></Alert>
+                }
+                <Grid ColumnsLg="3" Gap="LayoutGap.Medium">
+                    <FormSection Title="Original opportunity"><ChildContent><TextBlock Value="@Describe(review.Original)" /></ChildContent></FormSection>
+                    <FormSection Title="Your target request"><ChildContent><TextBlock Value="@(State.Draft.LinkExistingProject ? State.Draft.ExpectedProjectBasis?.ProjectName ?? "Selected project awaiting observation" : State.Draft.ProjectName)" /><TextBlock Value="@State.Draft.ProjectDescription" /><TextBlock Value="@State.Draft.ProjectObjective" /></ChildContent></FormSection>
+                    <FormSection Title="Current saved opportunity"><ChildContent><TextBlock Value="@Describe(review.Current)" /></ChildContent></FormSection>
+                </Grid>
+                <FormSection Title="Project handoff changes" Description="Existing project assignments keep their identities and metadata. Conversion adds missing roles.">
+                    <ChildContent>
+                        <Stack GapScale="LayoutGap.Small">
+                            <SmallText Text="@($"Original: {review.OriginalProject?.Assignments.Count ?? 0} · Current: {(review.TargetUnavailable ? "Unavailable" : (review.CurrentProject?.Assignments.Count ?? 0).ToString())}")" />
+                            @foreach (var row in changes.Take(visibleRows)) {
+                                <PanelCard Soft="true" @key="row.Id">
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@($"{row.Kind} · {row.Label}")" />
+                                        @if (row.Before is not null) {
+                                            <TextBlock Value="@($"Original: {Describe(row.Before)}")" />
+                                        }
+                                        @if (row.After is not null) {
+                                            <TextBlock Value="@($"Current: {Describe(row.After)}")" />
+                                        }
+                                    </Stack>
+                                </PanelCard>
+                            }
+                            @if (changes.Length > visibleRows) {
+                                <Button Text="Show next 50 changed rows" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleRows += 50)" />
+                            }
+                        </Stack>
+                    </ChildContent>
+                </FormSection>
+                @if (review.Original.Parties.Count > visibleParties || review.Current.Parties.Count > visibleParties) {
+                    <Button Text="Show all pursuit links" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleParties = int.MaxValue)" />
+                }
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Click="ReviewRequested" Disabled="Reading" data-testid="crmhr-conversion-review-refresh" />
+            <Button Text="Use current conversion basis" Click="ApplyRequested" Disabled="@(Reading || !State.CanApplyReview)" data-testid="crmhr-conversion-review-apply" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private OpportunityConversionReview? configured;
+    private AssignmentChange[] changes = [];
+    private int visibleRows = 50;
+    private int visibleParties = 50;
+    [Parameter, EditorRequired] public OpportunityConversionState State { get; set; } = default!;
+    [Parameter] public bool Reading { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public CanDoItAll.Modules.Projects.ProjectWriteAdmission? RecoveryProject { get; set; }
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+
+    protected override void OnParametersSet() {
+        if (ReferenceEquals(configured, State.Review)) {
+            return;
+        }
+        configured = State.Review;
+        visibleRows = 50;
+        visibleParties = 50;
+        if (configured?.TargetUnavailable == true) {
+            changes = [];
+            return;
+        }
+        var before = (configured?.OriginalProject?.Assignments ?? []).ToDictionary(row => row.Id);
+        var after = (configured?.CurrentProject?.Assignments ?? []).ToDictionary(row => row.Id);
+        changes = before.Keys.Union(after.Keys).Select(id => (Id: id, Before: before.GetValueOrDefault(id), After: after.GetValueOrDefault(id)))
+            .Where(row => row.Before != row.After).Select(row => new AssignmentChange(row.Id,
+                row.Before is null ? "Added" : row.After is null ? "Removed" : "Changed",
+                ResolveParty((row.After ?? row.Before)!.PartyId), row.Before, row.After)).ToArray();
+    }
+
+    private string ResolveParty(Guid id) => configured?.CurrentProject?.PartyNames.GetValueOrDefault(id)
+        ?? configured?.OriginalProject?.PartyNames.GetValueOrDefault(id) ?? "Project member";
+
+    private string Describe(CrmOpportunityDetailModel row) =>
+        $"{row.Title} · {row.Stage} · {row.OpportunitySource} · {row.CurrencyCode} {row.Amount} · Account: {row.AccountDisplayName} · Owner: {row.OwnerDisplayName} · Delivery: {row.DeliveryUnitDisplayName} · Linked project: {row.LinkedProjectName} · Summary: {row.Summary} · {row.Parties.Count} pursuit links: {string.Join("; ", row.Parties.Take(visibleParties).Select(party => $"{party.Role}: {party.DisplayName}"))}";
+
+    private static string Describe(CrmOpportunityAssignmentOriginal row) =>
+        $"{row.AssignmentKind} · Phase: {row.PhaseName} · Primary: {row.IsPrimary} · Allocation: {row.AllocationPercent} · {row.StartsAtUtc:d}–{row.EndsAtUtc:d} · {row.Notes}";
+
+    private sealed record AssignmentChange(Guid Id, string Kind, string Label, CrmOpportunityAssignmentOriginal? Before, CrmOpportunityAssignmentOriginal? After);
+}

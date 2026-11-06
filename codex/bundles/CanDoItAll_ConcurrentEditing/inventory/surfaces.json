@@ -1,0 +1,1351 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "1a6c2cbd6383d548c4ea36cd5edc322f46282250",
+  "purpose": "Planned behavior and source-evidence map; not a completed per-file implementation or runtime proof.",
+  "policies": {
+    "LIST": "Quiet bounded list refresh preserving context",
+    "FORM": "Original-state write + explicit typed three-way merge + draft retention",
+    "CANVAS": "Change summary and explicit pull with independent draft/viewport preservation",
+    "COMMAND": "Owner-specific intent, conditional basis and known/unknown result, not generic merge",
+    "STREAM": "Append/stream identity; preserve unrelated local composer",
+    "READ_ONLY": "Read-only projection updates, no edit protocol",
+    "OVERLAY": "Shared modal and notification interaction layer",
+    "EXCLUDED_FROM_MERGE": "No universal editor merge; existing owner semantics remain"
+  },
+  "rows": [
+    {
+      "id": "PG01",
+      "module": "Prompts",
+      "surface": "Gallery seznam /prompt-gallery",
+      "policy": "LIST",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Prompts/Pages/PromptGalleryPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGallerySearchSession.cs"
+      ],
+      "conflict_scope": "profile + catalog/filter query",
+      "required_action": "Quiet refresh místo blocking resetu; events create/update/archive/favorite; zachovat URL, query/page a otevřený detail.",
+      "merge_policy": "Bez content merge; katalog není draft.",
+      "test_focus": "SearchSession generation, count/page clamp, two-window create/archive/filter; projection lag.",
+      "rollout_phase": "PILOT",
+      "source_refs": [
+        "S12",
+        "S13",
+        "S16"
+      ]
+    },
+    {
+      "id": "PG02",
+      "module": "Prompts",
+      "surface": "Prompt modal — scalars, text, tags, modely, consumers, recommendations",
+      "policy": "FORM",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/UI/CanDoItAll.Prompts.UI/Editor/PromptGalleryItemEditorSurface.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryEditorSession.cs",
+        "src/Modules/CanDoItAll.Modules.Prompts/PromptsService.Gallery.cs",
+        "src/Modules/CanDoItAll.Modules.Prompts/PromptsService.Persistence.cs"
+      ],
+      "conflict_scope": "prompt editable aggregate + lifecycle witness",
+      "required_action": "Coherent B/R, accepted baseline, hint banner, save admission, typed merge a dirty close guard.",
+      "merge_policy": "Scalar/text diff3; keyed modely; preferred invariant; množiny; raw čísla.",
+      "test_focus": "Coherent PostgreSQL read, third writer, invalid raw, close/navigation, unknown/no retry.",
+      "rollout_phase": "PILOT",
+      "source_refs": [
+        "S07",
+        "S08",
+        "S09",
+        "S11",
+        "S14",
+        "S15"
+      ]
+    },
+    {
+      "id": "PG03",
+      "module": "Prompts",
+      "surface": "Embedded editor v Gallery pickeru / chat a Workflow spotřebitelích",
+      "policy": "FORM",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryPickerDialog.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryItemEditorHost.razor"
+      ],
+      "conflict_scope": "same prompt owner; distinct opening/editor identity",
+      "required_action": "Použít stejný adapter; opravit parent close guard; nesmí zavřít cizí dialog ani změnit exact-version insertion.",
+      "merge_policy": "Shodné s PG02; consumer/provider compatibility dál samostatná.",
+      "test_focus": "Picker/composer target A→B→A, nested dialogs, selected immutable version, suppression.",
+      "rollout_phase": "PILOT-INTEGRATION",
+      "source_refs": [
+        "S16"
+      ]
+    },
+    {
+      "id": "PG04",
+      "module": "Prompts",
+      "surface": "Finalize, archive/restore, favorite, warning suppression, curator/import",
+      "policy": "COMMAND",
+      "evidence_status": "DIRECT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryEditorSession.cs",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Prompts/PromptsService.Gallery.cs",
+        "src/Modules/CanDoItAll.Modules.Prompts/PromptGalleryMutationService.cs",
+        "src/Modules/CanDoItAll.Modules.Prompts/PromptGallerySeedImporter.cs"
+      ],
+      "conflict_scope": "separate intent and content/lifecycle witness",
+      "required_action": "Inventarizovat všechny writery; publish po outer commit; lifecycle guard; favorites jako narrow intent, ne celý stale DTO.",
+      "merge_policy": "Neplést persistent content s immutable version nebo preference; žádné implicitní restore.",
+      "test_focus": "Expected timestamp, postcommit projection failure, transaction rollback/no event, curator emits one event.",
+      "rollout_phase": "PILOT",
+      "source_refs": [
+        "S07",
+        "S10",
+        "S11",
+        "S16"
+      ]
+    },
+    {
+      "id": "CR01",
+      "module": "CrmHr",
+      "surface": "Home, directory/account/workforce/recruiting/agents catalogy a pickery",
+      "policy": "LIST",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/UI/CanDoItAll.CrmHr.UI",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Pages"
+      ],
+      "conflict_scope": "query-specific scope; account/party directory projections",
+      "required_action": "Tiché bounded list refresh; retain explicit selected target i mimo filtr; role sensitive fields.",
+      "merge_policy": "Žádný full DTO reset při rerenderu.",
+      "test_focus": "CrmHrSameTargetRerenderTests, PagedRecordBrowser/picker regression, privacy.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18"
+      ]
+    },
+    {
+      "id": "CR02",
+      "module": "CrmHr",
+      "surface": "Directory Party — jméno, role, kontakty, adresy, poznámky",
+      "policy": "FORM",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrDirectoryPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs"
+      ],
+      "conflict_scope": "Party editable aggregate; collections membership; confidential notes",
+      "required_action": "Opravit SavePartyCore original expectation + all child writers; immutable baseline, guard close.",
+      "merge_policy": "Stable row IDs; delete/edit; sensitive note masking/access; no reinsert deleted rows.",
+      "test_focus": "Two independent DB contexts sequential stale save; row adds/removes; no blur; footer validation.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S17",
+        "S18"
+      ]
+    },
+    {
+      "id": "CR03",
+      "module": "CrmHr",
+      "surface": "Affiliations, Party relationships",
+      "policy": "FORM",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/UI/CanDoItAll.CrmHr.UI/Parties",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/PartyOrganizationAffiliationService.cs",
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/PartyDirectoryManagementService.cs",
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmPartyCommandService.cs"
+      ],
+      "conflict_scope": "relationship endpoints + membership witnesses",
+      "required_action": "Ověřit current conditional affiliation batch, doplnit deletions/replacement/import/merge perimeter.",
+      "merge_policy": "Graph-like relationship intent, stable keys; ne obecný union vztahů.",
+      "test_focus": "Foreign child insertion, deletion, overlap dates, ownership/privacy.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "CR04",
+      "module": "CrmHr",
+      "surface": "Account profile — stage, poznámky, lifecycle/customer role",
+      "policy": "FORM",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs"
+      ],
+      "conflict_scope": "account profile plus touched Party fields/roles",
+      "required_action": "Podmínky pro multi-entity zápis, včetně expected absence při prvním založení profilu.",
+      "merge_policy": "Field groups a revalidace lifecycle/role invariantů; nezaměnit absent za null DTO.",
+      "test_focus": "SaveAccountProfile two editors, concurrent create profile, role side effects.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S17",
+        "S18"
+      ]
+    },
+    {
+      "id": "CR05",
+      "module": "CrmHr",
+      "surface": "Opportunity editor a pipeline/board move",
+      "policy": "FORM+LIST",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/UI/CanDoItAll.CrmHr.UI/Crm",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs"
+      ],
+      "conflict_scope": "opportunity revision; referenced account/project authority",
+      "required_action": "Zachovat ExpectedUpdatedAtUtc; ověřit board drag, detail/create dialogs a tools; během drag nequiet-remountovat.",
+      "merge_policy": "Scalars, amount/currency group, dates, references; board move narrow intent.",
+      "test_focus": "Opportunity concurrency, drag versus modal save, same-target draft, nested detail overlay.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "CR06",
+      "module": "CrmHr",
+      "surface": "Opportunity conversion / linked records",
+      "policy": "COMMAND",
+      "evidence_status": "DOC_CURRENT/PERIMETER_OPEN",
+      "ui_entry": "src/UI/CanDoItAll.CrmHr.UI/Crm",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs"
+      ],
+      "conflict_scope": "opportunity + existing project admission + linked set",
+      "required_action": "Neopakovat business conversion po chybě readback; zachovat vlastní cross-owner recovery a expected membership.",
+      "merge_policy": "Explicit review changed conversion basis; ne generic field merge side effects.",
+      "test_focus": "CrmHrOpportunityConversionHostTests, stale linked project, duplicate create prevention.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "CR07",
+      "module": "CrmHr",
+      "surface": "Next action, activity/interaction edit, account connected records",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs"
+      ],
+      "conflict_scope": "per mutable next-action/interaction or linked-record set",
+      "required_action": "Uzavřít jednotlivé updates/delete; nové aktivity jsou append, nikoli přepis celé historie.",
+      "merge_policy": "Typed fields; stable linked record identity; timeline read-only invalidation.",
+      "test_focus": "Edit vs append distinction, late callbacks, current same account draft.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S17",
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "CR08",
+      "module": "CrmHr",
+      "surface": "Workforce profile, skills, capacity",
+      "policy": "FORM",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrWorkforcePage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs"
+      ],
+      "conflict_scope": "workforce configuration + skills/capacity intervals",
+      "required_action": "Ověřit a vynutit original-state replacement; capacity timeline drag je write, ne pouhý graf.",
+      "merge_policy": "Ranges/units a overlapping capacity; keyed skills; never blind array union.",
+      "test_focus": "CrmHrFooterSaveValidationTests, same-target retention, stale capacity row.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "CR09",
+      "module": "CrmHr",
+      "surface": "Recruiting — candidate, interviews, onboarding",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "DOC_CURRENT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrRecruitingPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs"
+      ],
+      "conflict_scope": "candidate profile + scheduled interviews/onboarding; technical agent evidence separate",
+      "required_action": "Zápisové expectations pro editable části; background evidence/recruiting run nesmí přepsat ruční návrh.",
+      "merge_policy": "Typed interview/time fields, keyed checklist; run/attempt execution separately.",
+      "test_focus": "Recruiting selection/read races, stale interviewer update, evidence command duplicate.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "CR10",
+      "module": "CrmHr",
+      "surface": "Business AI agent profile",
+      "policy": "FORM",
+      "evidence_status": "DOC_CURRENT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs"
+      ],
+      "conflict_scope": "business profile separate technical Agent definition",
+      "required_action": "Označit vlastníka každého editovaného pole; technical edits směřují na Agent owner, ne kopii v CRM.",
+      "merge_policy": "Business scalars only; projected technical evidence read-only.",
+      "test_focus": "CrmHrAgentProjectionJourneyTests; business/technical concurrent updates.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "CR11",
+      "module": "CrmHr",
+      "surface": "Assignments, staffing requests, project allocation a Gantt",
+      "policy": "FORM+CANVAS",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrAssignmentsPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs",
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/ProjectPartyAssignmentInvariantPolicy.cs"
+      ],
+      "conflict_scope": "assignment snapshot + project/lifetime/pricing/rate basis",
+      "required_action": "Zachovat existující replacement guards; audit single save/delete/move; nezavést broad project conflict pro nezávislé řádky.",
+      "merge_policy": "Dates/capacity/rates domain constraints; Gantt explicit review conflict.",
+      "test_focus": "CrmHrAssignmentsMutationTests, stale price/capacity, retarget while saving.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "CR12",
+      "module": "CrmHr",
+      "surface": "Party dedup merge, bulk import/export",
+      "policy": "COMMAND",
+      "evidence_status": "DOC_CURRENT/PERIMETER_OPEN",
+      "ui_entry": "src/UI/CanDoItAll.CrmHr.UI/Parties",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.CrmHr/Services/PartyDirectoryManagementService.cs"
+      ],
+      "conflict_scope": "several source parties + target + affected memberships",
+      "required_action": "PartyMergeDialog není nový concurrency merge renderer; zachovat domain merge, additions original witnesses, import dry-run recheck.",
+      "merge_policy": "Explicit business merge; no silent copying deleted/confidential records.",
+      "test_focus": "Two-source changed after preview; partial failure; postcommit event counts.",
+      "rollout_phase": "R1",
+      "source_refs": [
+        "S18",
+        "S38"
+      ]
+    },
+    {
+      "id": "PR01",
+      "module": "Projects",
+      "surface": "Project board / portfolio / hierarchy list",
+      "policy": "LIST",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Projects"
+      ],
+      "conflict_scope": "profile portfolio/hierarchy query",
+      "required_action": "Quiet refresh without changing open ProjectModalHost target, pending save refs or package form.",
+      "merge_policy": "List only; deletion status separate.",
+      "test_focus": "Projects board filter/selection; deleted card with retained draft.",
+      "rollout_phase": "R2",
+      "source_refs": [
+        "S21"
+      ]
+    },
+    {
+      "id": "PR02",
+      "module": "Projects",
+      "surface": "Project wizard/detail — identity, dates, phases, options",
+      "policy": "FORM",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/UI/CanDoItAll.Projects.UI/ProjectEditorDraft.cs",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Projects.Contracts/ProjectDefinitionContracts.cs"
+      ],
+      "conflict_scope": "ProjectDefinitionExpectation + lifecycle + child membership",
+      "required_action": "Doplnit skutečnou immutable B; adaptovat existing Conflict/StartFromCurrent; preserve pending recovery and accepted mapping.",
+      "merge_policy": "Scalar + stable child IDs/order; explicit new-base merge.",
+      "test_focus": "ProjectEditorDraft ack ABA, unresolved receipt, latest current while previous draft retained.",
+      "rollout_phase": "R2",
+      "source_refs": [
+        "S21",
+        "S22",
+        "S39"
+      ]
+    },
+    {
+      "id": "PR03",
+      "module": "Projects",
+      "surface": "Hierarchy edits, starter seeding, package import/export, delete/recovery",
+      "policy": "COMMAND",
+      "evidence_status": "DIRECT/DOC_CURRENT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Projects.Contracts"
+      ],
+      "conflict_scope": "native definition/lifecycle operation scopes",
+      "required_action": "Nezaměnit šablonu draftu s operation identity; seeding a delete mají vlastní accepted/unknown. Ověřit hierarchy dependencies.",
+      "merge_policy": "Command basis review, no whole-project auto-replay.",
+      "test_focus": "Pending refs, seeding duplicate prevention, lifetime recreation, package transaction.",
+      "rollout_phase": "R2",
+      "source_refs": [
+        "S21",
+        "S22"
+      ]
+    },
+    {
+      "id": "WB01",
+      "module": "Workbench",
+      "surface": "Project Structure graph + changes floating window",
+      "policy": "CANVAS",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureChangeObserver.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Changes/ProjectStructureChangeFeed.cs"
+      ],
+      "conflict_scope": "profile/project/lifetime + node/link/graph observations",
+      "required_action": "Zachovat current behavior; později optional migrate feed transport s parity, ne před pilotem.",
+      "merge_policy": "Explicit pull; no automatic graph overwrite; diff list scoped.",
+      "test_focus": "Existing inbox/feed/SSE gap + scope tests; pre-read high-water race.",
+      "rollout_phase": "R2",
+      "source_refs": [
+        "S19",
+        "S20"
+      ]
+    },
+    {
+      "id": "WB02",
+      "module": "Workbench",
+      "surface": "Node/detail inspector, metadata/content/assets",
+      "policy": "FORM",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/UI/CanDoItAll.Workbench.Structure.UI",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskDetailsService.cs"
+      ],
+      "conflict_scope": "owner-native node/task observations",
+      "required_action": "Adaptovat form merge na již existující očekávání; oddělit content/file bytes/technical runtime.",
+      "merge_policy": "Typed node forms; unknown extra config preserve.",
+      "test_focus": "Dirty inspector plus graph refresh; stale asset/reference; node delete.",
+      "rollout_phase": "R2",
+      "source_refs": [
+        "S06",
+        "S38"
+      ]
+    },
+    {
+      "id": "WB03",
+      "module": "Workbench",
+      "surface": "Gantt schedule/progress, assignee a pricing editors",
+      "policy": "FORM+CANVAS",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workbench/Pages",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureGanttMutationService.cs",
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskPricingCommitService.cs",
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkItemAssigneeService.cs"
+      ],
+      "conflict_scope": "separate task field/schedule/cost/assignment observations",
+      "required_action": "Použít stávající original-value witnesses; neproměnit každou live progress změnu v global definition konflikt.",
+      "merge_policy": "Meaningful times/units/rates; governed multi-field constraints.",
+      "test_focus": "Title vs schedule race, concurrent pricing, assignment eligibility, drag read freshness.",
+      "rollout_phase": "R2",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "WB04",
+      "module": "Workbench",
+      "surface": "Planning, calendar, kanban/task boards",
+      "policy": "LIST+FORM+CANVAS",
+      "evidence_status": "TREE_DISCOVERY",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workbench/Pages",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workbench/WorkManagement"
+      ],
+      "conflict_scope": "per task/calendar item and query membership",
+      "required_action": "Dohledat přesné editory/inline handlers v census, přiřadit existing owners; drag/edit are mutation surfaces.",
+      "merge_policy": "Forms merge; planning canvas explicit pull; readonly calendar quiet.",
+      "test_focus": "Calendar selection and timezone stability; board drag/remount; task draft retention.",
+      "rollout_phase": "R2",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "WB05",
+      "module": "Workbench",
+      "surface": "Insights, dashboards, timeline / technical runtime projections",
+      "policy": "READ_ONLY",
+      "evidence_status": "TREE_DISCOVERY",
+      "ui_entry": "src/UI/CanDoItAll.Workbench.Insights.UI",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workbench"
+      ],
+      "conflict_scope": "bounded readonly projection scopes",
+      "required_action": "Pouze quiet invalidation kde vhodná; bez merge, bez eventů per token/heartbeat do editor feedu.",
+      "merge_policy": "Not editable.",
+      "test_focus": "Bounded query counts, no draft reset via dashboard rerender.",
+      "rollout_phase": "R2",
+      "source_refs": [
+        "S06",
+        "S38"
+      ]
+    },
+    {
+      "id": "WF01",
+      "module": "AgentFramework",
+      "surface": "Workflow catalog a component/template browser",
+      "policy": "LIST",
+      "evidence_status": "DIRECT/DOC_CURRENT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs"
+      ],
+      "conflict_scope": "workflow catalog query; immutable version selection",
+      "required_action": "Quiet bounded refresh, selected editor definition nezávislá; neplnit celý JSON catalog při každém hintu.",
+      "merge_policy": "Read model; exact version unchanged.",
+      "test_focus": "Workflow catalog filter and selected version; large definitions query volume.",
+      "rollout_phase": "R3",
+      "source_refs": [
+        "S24",
+        "S25"
+      ]
+    },
+    {
+      "id": "WF02",
+      "module": "AgentFramework",
+      "surface": "Workflow canvas/inspectors/settings",
+      "policy": "CANVAS+FORM",
+      "evidence_status": "DIRECT/DOC_CURRENT",
+      "ui_entry": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Authoring/WorkflowDocumentOwner.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs"
+      ],
+      "conflict_scope": "whole definition original version + lossless graph",
+      "required_action": "Povinný ExpectedVersionId na existing replacement; všechny callers; explicit changes/pull; typed inspector merge jen s coherent whole-doc base.",
+      "merge_policy": "No generic topology merge; preserve hidden input/settings/null semantics.",
+      "test_focus": "WorkflowDocumentOwner unknown, head CAS, node selection/viewport, Prompt picker exact-version.",
+      "rollout_phase": "R3",
+      "source_refs": [
+        "S23",
+        "S24",
+        "S25"
+      ]
+    },
+    {
+      "id": "WF03",
+      "module": "AgentFramework",
+      "surface": "Workflow publish/status/import/component library mutations",
+      "policy": "COMMAND",
+      "evidence_status": "DIRECT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs"
+      ],
+      "conflict_scope": "current head or exact source version; separate runtime authority",
+      "required_action": "Audit status change, import/curator/legacy API for optional expectations; immutable runs untouched.",
+      "merge_policy": "Review changed basis; no automatic launch/replay during refresh.",
+      "test_focus": "Status vs save race; create ID collisions; unknown save no retry.",
+      "rollout_phase": "R3",
+      "source_refs": [
+        "S24",
+        "S25",
+        "S38"
+      ]
+    },
+    {
+      "id": "PC01",
+      "module": "Processes",
+      "surface": "Process catalog/global/project override browser",
+      "policy": "LIST",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/UI/CanDoItAll.Processes.UI",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Processes"
+      ],
+      "conflict_scope": "profile/project/lifetime/exact definition key",
+      "required_action": "Quiet metadata-only refresh; inherited/global invalidation reaches affected local views; selected key stable after rename.",
+      "merge_policy": "Catalog no merge.",
+      "test_focus": "Override inheritance change, archive/delete reveals global definition, metadata query bounds.",
+      "rollout_phase": "R3",
+      "source_refs": [
+        "S26"
+      ]
+    },
+    {
+      "id": "PC02",
+      "module": "Processes",
+      "surface": "Definition form, roles, steps, branches, artifacts, child mapping",
+      "policy": "FORM",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/UI/CanDoItAll.Processes.UI",
+      "owner_entries": [
+        "src/Processes/CanDoItAll.Processes.Persistence/EfProcessAuthoringStore.cs"
+      ],
+      "conflict_scope": "original local/inherited ProcessAuthoringObservation",
+      "required_action": "Znovupoužít existing aggregate/reconciler/receipt; field-owned patches, shared merge adapter only for suitable form scopes.",
+      "merge_policy": "Keyed domain elements, mappings validation; no reconstruction dropping governance.",
+      "test_focus": "Dirty read reconciliation, same native receipt, local/inherited concurrent change.",
+      "rollout_phase": "R3",
+      "source_refs": [
+        "S26"
+      ]
+    },
+    {
+      "id": "PC03",
+      "module": "Processes",
+      "surface": "Process canvas, imports, publish/archive/delete",
+      "policy": "CANVAS+COMMAND",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Processes",
+      "owner_entries": [
+        "src/Processes/CanDoItAll.Processes.Application/ProcessAuthoringStore.cs"
+      ],
+      "conflict_scope": "same durable aggregate, operation fingerprint and lifetime",
+      "required_action": "Explicit pull; persisted gestures not local-only undo; keep exact receipt recovery and publication capture.",
+      "merge_policy": "No generic graph merge; command-specific compensation only later.",
+      "test_focus": "All nine canvas commands, repeated import ID, current read cannot prove unknown operation.",
+      "rollout_phase": "R3",
+      "source_refs": [
+        "S26"
+      ]
+    },
+    {
+      "id": "AG01",
+      "module": "AgentFramework",
+      "surface": "Agent / team / chat catalog lists",
+      "policy": "LIST",
+      "evidence_status": "TREE_DISCOVERY",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages",
+      "owner_entries": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog"
+      ],
+      "conflict_scope": "profile-specific definition catalog not run history",
+      "required_action": "Quiet refresh with current selection and filters; history load frequency separate from config invalidation.",
+      "merge_policy": "No whole-agent remount.",
+      "test_focus": "Filtered catalog live create/delete; independent open agent forms.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S32",
+        "S38"
+      ]
+    },
+    {
+      "id": "AG02",
+      "module": "AgentFramework",
+      "surface": "Technical agent definition editor",
+      "policy": "FORM",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorVerification.cs",
+      "owner_entries": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs"
+      ],
+      "conflict_scope": "agent configuration revision; runtime state separate",
+      "required_action": "Reject missing expected revision for existing records; audit HR provisioning/tools/import and direct catalog mutations.",
+      "merge_policy": "Typed configuration, model/provider refs, text prompt; permissions separate explicit review.",
+      "test_focus": "Tokenless update refuses; same-user two tabs; deletion+same ID recreation; postcommit typing.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S32",
+        "S38"
+      ]
+    },
+    {
+      "id": "AG03",
+      "module": "AgentFramework",
+      "surface": "Teams, membership and capability assignment",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.AgentFramework/Services",
+      "owner_entries": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Teams.cs"
+      ],
+      "conflict_scope": "team config/member set and capability assignment witnesses",
+      "required_action": "Close set membership writers, concurrent add/delete and capability admission.",
+      "merge_policy": "Keyed membership; no blind union capabilities/privileges.",
+      "test_focus": "Team member insert during replacement; retired assignment attempt; policy changes.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "AG04",
+      "module": "AgentFramework",
+      "surface": "Tool/MCP capability authoring, setup/test and trusted settings",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI",
+      "owner_entries": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/CapabilityEditorConcurrency.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs"
+      ],
+      "conflict_scope": "capability fingerprint/config vs external setup attempt",
+      "required_action": "Make current required condition explicit; setup/run not replay on merge; preserve trust-selected renderer.",
+      "merge_policy": "Schema fields and secret refs only; unknown configuration preserved.",
+      "test_focus": "Missing fingerprint, external setup Unknown, same-target later edits, authority revoked.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S25",
+        "S38"
+      ]
+    },
+    {
+      "id": "AG05",
+      "module": "AgentFramework",
+      "surface": "Decision policy / project access / approvals",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages",
+      "owner_entries": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs"
+      ],
+      "conflict_scope": "policy revision + native historical operation receipts",
+      "required_action": "Preserve retained submissions/historical acceptance; no policy union; refresh current authority.",
+      "merge_policy": "Explicit policy group approval; old acceptance not fresh authority.",
+      "test_focus": "AgentDecisionPolicyRecoveryTests, current versus historical read, two tabs, deny after revoke.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S32",
+        "S38",
+        "S41"
+      ]
+    },
+    {
+      "id": "PV01",
+      "module": "AgentFramework.ProviderManagement",
+      "surface": "Provider profiles and runtime defaults",
+      "policy": "FORM+LIST",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorOperations.cs",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/DatabaseProviderProfileRegistry.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderRuntimeAdministrationService.cs"
+      ],
+      "conflict_scope": "configuration expected token separate from health/probe",
+      "required_action": "Audit optional token paths; defaults/config write intents; secret values not merge; list bounded.",
+      "merge_policy": "Typed schema/defaults; preserve unknown fields; probe results readonly.",
+      "test_focus": "ProviderEditor held calls, probe vs user change, missing expected token, secret redaction.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "PV02",
+      "module": "AgentFramework.ProviderManagement",
+      "surface": "Shared source/import/publication and sync configuration",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/UI/CanDoItAll.AgentFramework.SharedProviders.UI",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceService.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceSyncService.cs"
+      ],
+      "conflict_scope": "source/import/provider witnesses and connection lifecycle",
+      "required_action": "Preserve enforced paths; close sync/tokenless paths; background sync cannot revert human config.",
+      "merge_policy": "Explicit source and capability rights; no blind merge of shared access.",
+      "test_focus": "Sync vs config, disconnect vs callback, stale enable/delete, publish readback failure.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "CH01",
+      "module": "AgentFramework",
+      "surface": "Simple Chat definitions / personas",
+      "policy": "FORM+LIST",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.AgentFramework",
+      "owner_entries": [
+        "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/Repositories/EfLlmChatDefinitionRepository.cs"
+      ],
+      "conflict_scope": "chat definition expected token/current revision",
+      "required_action": "Preserve native CAS and verify adapters; live definition catalog independent of active conversation.",
+      "merge_policy": "Name/avatar/system prompt/temp; text merge, no transcript replacement.",
+      "test_focus": "Chat definition stale edit, raw temperature, ongoing conversation unaffected.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "CH02",
+      "module": "AgentFramework",
+      "surface": "Conversation metadata and message composer",
+      "policy": "FORM+STREAM",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/UI/CanDoItAll.Conversations.Shell",
+      "owner_entries": [
+        "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/Repositories/EfLlmChatConversationRepository.cs"
+      ],
+      "conflict_scope": "metadata token separate append/dispatch identity",
+      "required_action": "Mutable title/metadata form only; never overwrite or merge whole transcript; preserve unsent composer.",
+      "merge_policy": "Message append existing protocol; config hints do not reset composer.",
+      "test_focus": "Streaming while metadata changes, composer target retirement, own message dedupe.",
+      "rollout_phase": "R4",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "SC01",
+      "module": "SchedulerPlanner",
+      "surface": "Plan catalog/calendar/history",
+      "policy": "LIST",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/UI/CanDoItAll.SchedulerPlanner.UI",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs"
+      ],
+      "conflict_scope": "plan metadata query; fire history separate projection",
+      "required_action": "Quiet plans refresh and preserved date/view/selection; firing not constant config conflict.",
+      "merge_policy": "Calendar selection only; readonly history no merge.",
+      "test_focus": "SchedulerBrowserTests and selected event with pending edit; query bounds.",
+      "rollout_phase": "R5",
+      "source_refs": [
+        "S27",
+        "S28"
+      ]
+    },
+    {
+      "id": "SC02",
+      "module": "SchedulerPlanner",
+      "surface": "Plan form — cron/timezone/input/target/enabled",
+      "policy": "FORM",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs"
+      ],
+      "conflict_scope": "plan definition revision + exact target/source authority",
+      "required_action": "Add required original condition for SavePlan; owner captures expected not current auto adoption; preserve committed/projection warning.",
+      "merge_policy": "Cron+timezone+window grouped; schema input; target version exact.",
+      "test_focus": "Sequential stale Save, timezone validation, current fire history irrelevant, unknown/projection failure.",
+      "rollout_phase": "R5",
+      "source_refs": [
+        "S27",
+        "S28"
+      ]
+    },
+    {
+      "id": "SC03",
+      "module": "SchedulerPlanner",
+      "surface": "Pause/resume/delete and agent tools",
+      "policy": "COMMAND",
+      "evidence_status": "DIRECT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs"
+      ],
+      "conflict_scope": "narrow desired-state command or originally reviewed deletion target",
+      "required_action": "Choose explicit narrow intent semantics; no silent whole-form replacement; annotate conflicts, no Quartz repair on read.",
+      "merge_policy": "No generic merge of schedules with history; changed command basis review.",
+      "test_focus": "Save vs enable, delete vs edited plan, known committed failure, no duplicate fire.",
+      "rollout_phase": "R5",
+      "source_refs": [
+        "S27",
+        "S28",
+        "S38"
+      ]
+    },
+    {
+      "id": "RS01",
+      "module": "Resources",
+      "surface": "Registry list and metadata/connector config editor",
+      "policy": "FORM+LIST",
+      "evidence_status": "DIRECT_ADAPTER/DOC_OWNER",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Resources/ResourceRegistryOwner.cs",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+        "src/Modules/CanDoItAll.Modules.Resources.Contracts"
+      ],
+      "conflict_scope": "resource revision + dataset/project binding",
+      "required_action": "Use existing ReplaceResourceMetadataCommand; verify service CAS/migration active; readable typed config and quiet list.",
+      "merge_policy": "Metadata/schema/refs; bytes not merged.",
+      "test_focus": "Resource original revision, promotion conflict, retired dataset, invalid raw config preserved.",
+      "rollout_phase": "R5",
+      "source_refs": [
+        "S30",
+        "S31"
+      ]
+    },
+    {
+      "id": "RS02",
+      "module": "Resources",
+      "surface": "Promotion, delete, file binding and import",
+      "policy": "COMMAND",
+      "evidence_status": "DOC_CURRENT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Resources",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs"
+      ],
+      "conflict_scope": "revision + binding + file promotion authority",
+      "required_action": "Preserve exact accepted/deleted expectation; current read cannot prove previous unknown command.",
+      "merge_policy": "Explicit lifecycle/placement review; external bytes/checksums separate.",
+      "test_focus": "Migration mixed old writers, promotion race, delete vs metadata edit.",
+      "rollout_phase": "R5",
+      "source_refs": [
+        "S30",
+        "S31"
+      ]
+    },
+    {
+      "id": "TL01",
+      "module": "TestLab",
+      "surface": "Plan list and plan/case/evidence editors",
+      "policy": "FORM+LIST",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.TestLab/Workspace/TestLabWorkspaceOwner.cs",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.TestLab/TestLabModels.cs"
+      ],
+      "conflict_scope": "plan content revision + child set + project binding",
+      "required_action": "Add original-state owner contract; prevent replacement deleting foreign children; quiet list only after bounded query check.",
+      "merge_policy": "Stable child rows, evidence refs, no result-history replacement from stale form.",
+      "test_focus": "Concurrent add/remove case, project rebind, broad List query count, accepted readback warning.",
+      "rollout_phase": "R5",
+      "source_refs": [
+        "S29"
+      ]
+    },
+    {
+      "id": "TL02",
+      "module": "TestLab",
+      "surface": "Test runs/result history and execution commands",
+      "policy": "STREAM+COMMAND",
+      "evidence_status": "DIRECT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.TestLab",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.TestLab/TestLabModels.cs"
+      ],
+      "conflict_scope": "result append identity and optional explicit historical annotation",
+      "required_action": "Separate editable annotations from real execution result appends; no history-wide generic token.",
+      "merge_policy": "No automatic rerun or merge runtime outcome.",
+      "test_focus": "Plan edit during result append; no lost new run; manual run annotation witness.",
+      "rollout_phase": "R5",
+      "source_refs": [
+        "S29"
+      ]
+    },
+    {
+      "id": "WS01",
+      "module": "Workspace",
+      "surface": "Business defaults and decision data policy",
+      "policy": "FORM",
+      "evidence_status": "DIRECT_FACADE/OWNER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workspace"
+      ],
+      "conflict_scope": "WorkspaceSettingsWriter V1/V2 snapshot and native context",
+      "required_action": "Inspect both current writers and adapters; do not repeat old generic settings gap claim; integrate observation and typed merge.",
+      "merge_policy": "Currency/default provider/text; policy protected explicit review.",
+      "test_focus": "V1/V2 writer coexistence, missing settings first create, policy versus defaults edit.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S33",
+        "S34"
+      ]
+    },
+    {
+      "id": "WS02",
+      "module": "Workspace",
+      "surface": "Storage catalog/driver configuration",
+      "policy": "FORM+LIST",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageSettingsPanel.razor",
+      "owner_entries": [
+        "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs"
+      ],
+      "conflict_scope": "human storage config separate driver health",
+      "required_action": "Verify save/health paths; close original-state gaps only if still current; readonly health must not full-save config.",
+      "merge_policy": "Typed driver settings, secret refs and paths; health separate.",
+      "test_focus": "Probe/health vs save, config stale, name/path validation; quiet bounded list.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S34",
+        "S38"
+      ]
+    },
+    {
+      "id": "WS03",
+      "module": "Workspace",
+      "surface": "Storage routing / placement recovery",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "DOC_CURRENT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StoragePlacementRecoveryDialog.razor",
+      "owner_entries": [
+        "src/Foundation/CanDoItAll.Infrastructure/Storage"
+      ],
+      "conflict_scope": "routing set witness vs owner-specific durable recovery operation",
+      "required_action": "Routing edit needs set scope; recovery has exact target and effects, never merge/replay automatically.",
+      "merge_policy": "Typed rules and priorities; explicit recovery basis review.",
+      "test_focus": "Routing foreign insert; recovery unknown; remote bytes failure no repeated move.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S34",
+        "S38"
+      ]
+    },
+    {
+      "id": "WS04",
+      "module": "Workspace",
+      "surface": "Data Sources profile configuration, connection test",
+      "policy": "FORM+LIST",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workspace/Database/DatabaseProfileWorkspaceService.cs",
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs"
+      ],
+      "conflict_scope": "control-plane file revision; profile activation generation separate",
+      "required_action": "Preserve file owner; add/verify expected content, connection test writeback cannot overwrite human edit.",
+      "merge_policy": "Typed metadata, secret references only; no raw credentials.",
+      "test_focus": "File coordination on supported OS, test vs edit, active profile changes with open draft.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S34",
+        "S38"
+      ]
+    },
+    {
+      "id": "WS05",
+      "module": "Workspace",
+      "surface": "Data transfer, activate database, migrations/restore",
+      "policy": "COMMAND",
+      "evidence_status": "DOC_CURRENT/PERIMETER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
+      "owner_entries": [
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane"
+      ],
+      "conflict_scope": "activation/schema/data incarnation and native operation ledger",
+      "required_action": "Read/refresh must never activate or retry import; switching retires all affected subscriptions/drafts safely.",
+      "merge_policy": "No field auto-merge of restore state.",
+      "test_focus": "A→B→A profile fence, unknown transfer receipt, read-only refresh.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S34",
+        "S41"
+      ]
+    },
+    {
+      "id": "WS06",
+      "module": "Workspace",
+      "surface": "API accounts/password/scopes",
+      "policy": "FORM+LIST",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/WorkspaceApiAccessHost.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiUserAdministrationService.cs",
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs"
+      ],
+      "conflict_scope": "control-plane original version + authentication revision",
+      "required_action": "Preserve file CAS and auth invalidation; field merge only nonsecret metadata; privileges explicit.",
+      "merge_policy": "Passwords never diff; scopes not union; write authorization independently current.",
+      "test_focus": "File CAS, stale role/scopes, password rotation notification redaction.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S34",
+        "S38"
+      ]
+    },
+    {
+      "id": "WS07",
+      "module": "Workspace",
+      "surface": "API token issue/revoke/delete",
+      "policy": "COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/WorkspaceApiAccessHost.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiTokenAdministrationService.cs"
+      ],
+      "conflict_scope": "token lifecycle and secret one-time disclosure",
+      "required_action": "Lifecycle feedback/known vs unknown; no generic merge or secret value in event.",
+      "merge_policy": "Explicit narrow intents; list quiet after accepted.",
+      "test_focus": "Lost issue acknowledgement, revoke idempotence, no secret copies in diff/log.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S34",
+        "S38"
+      ]
+    },
+    {
+      "id": "WS08",
+      "module": "Workspace",
+      "surface": "Provider-history capture/retention policy",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ProviderHistoryPolicyPanel.razor",
+      "owner_entries": [
+        "src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryPolicyStore.cs"
+      ],
+      "conflict_scope": "ExpectedVersion + current profile policy; prune separate",
+      "required_action": "Preserve existing policy CAS; no reload-triggered prune; changed retention basis explicit review.",
+      "merge_policy": "Typed durations/capture flags, destructive policy grouping.",
+      "test_focus": "Retention shorten vs stale form; prune preview invalidation; scope switch.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S34",
+        "S38"
+      ]
+    },
+    {
+      "id": "WS09",
+      "module": "Workspace",
+      "surface": "Trusted dynamic settings renderers / schema fields",
+      "policy": "FORM",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Workspace"
+      ],
+      "conflict_scope": "actual feature owner, trusted renderer registry",
+      "required_action": "Renderer chooser remains authorized; preserve unknown JSON/raw values through feature adapter.",
+      "merge_policy": "Schema-aware typed controls; JSON debug not user merge default.",
+      "test_focus": "Unknown property roundtrip, trusted source denies, schema change during edit.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S25",
+        "S34"
+      ]
+    },
+    {
+      "id": "SE01",
+      "module": "Security",
+      "surface": "Secret metadata and vault rotation",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
+        "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
+        "src/Modules/CanDoItAll.Modules.Security/NativeSecretVaults.cs"
+      ],
+      "conflict_scope": "metadata revision separate vault effect/cleanup",
+      "required_action": "Current service audit before change; CAS metadata, explicit rotation result, preserve unknown/committed-warning.",
+      "merge_policy": "Never secret values; label/environment refs only where authorized.",
+      "test_focus": "Secret readback impossible/denied, rotation succeeds metadata fails, no repeat, draft privacy.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S34",
+        "S38"
+      ]
+    },
+    {
+      "id": "PL01",
+      "module": "Plugins",
+      "surface": "Plugin catalog/config/connection forms and grants",
+      "policy": "FORM+LIST",
+      "evidence_status": "DIRECT_GRANT/OTHER_OPEN",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Plugins.Presentation",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginPermissionServices.cs",
+        "src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginCatalogServices.cs"
+      ],
+      "conflict_scope": "grant key scope and connection revision",
+      "required_action": "PluginGrantStore original conditions; audit connection/tokenless writers, quiet config catalog, grants not blind union.",
+      "merge_policy": "Explicit permissions grouping, typed schema, secret refs.",
+      "test_focus": "Stale revoke vs grant edit, returned token propagation, setup outcome handling.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S36",
+        "S38"
+      ]
+    },
+    {
+      "id": "PL02",
+      "module": "Plugins",
+      "surface": "Install/restart/uninstall, OAuth callbacks/refresh/disconnect",
+      "policy": "COMMAND",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Plugins",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs"
+      ],
+      "conflict_scope": "external lifecycle + OAuth state/version + configuration",
+      "required_action": "No retry due to merge; callbacks cannot restore disconnected stale connection; preserve grants before effects.",
+      "merge_policy": "Not ordinary form merge.",
+      "test_focus": "OAuth callback versus disconnect, unknown install, failed projection known effect.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "ME01",
+      "module": "Memory",
+      "surface": "Provider profiles/configuration and capability transport",
+      "policy": "FORM+LIST",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Memory.Presentation",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileConfigurationService.cs",
+        "src/Memory/CanDoItAll.Memory.Persistence/EfMemoryProviderProfileStore.cs"
+      ],
+      "conflict_scope": "provider configuration revision separate runtime/query state",
+      "required_action": "Required original observation for configuration Save and store Upsert caller perimeter; keep provider-neutral architecture.",
+      "merge_policy": "Typed HTTP/MCP fields, selected transport, environment secret refs.",
+      "test_focus": "Missing expected; concurrent driver switch; runtime status not causing stale form.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S35",
+        "S38"
+      ]
+    },
+    {
+      "id": "ME02",
+      "module": "Memory",
+      "surface": "Memory query/ingestion/retention operations and results",
+      "policy": "COMMAND+READ_ONLY",
+      "evidence_status": "HISTORICAL_CHECK_REQUIRED",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Memory",
+      "owner_entries": [
+        "src/Memory"
+      ],
+      "conflict_scope": "native operation identity and query inputs",
+      "required_action": "Preserve local query form; readonly streamed status no entity merge; destructive retention command explicit.",
+      "merge_policy": "No rerun ingestion on hint/refresh.",
+      "test_focus": "Query response arrives after config/target switch; unknown ingestion no replay.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S38"
+      ]
+    },
+    {
+      "id": "CO01",
+      "module": "Collaboration",
+      "surface": "Threads/inbox list/detail and mutable metadata",
+      "policy": "FORM+LIST",
+      "evidence_status": "DOC_CURRENT/PERIMETER_OPEN",
+      "ui_entry": "src/UI/CanDoItAll.Collaboration.UI",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.Commands.cs",
+        "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationModels.cs"
+      ],
+      "conflict_scope": "mutable thread metadata separate unread state",
+      "required_action": "Quiet list; draft pinned selection; current metadata original conditions audit.",
+      "merge_policy": "Title/status typed; read/unread desired-state intent, not entire thread replacement.",
+      "test_focus": "Reply stays target leaving filter, unread changed concurrently, metadata form stale.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S37",
+        "S38"
+      ]
+    },
+    {
+      "id": "CO02",
+      "module": "Collaboration",
+      "surface": "New thread/reply composer/message stream",
+      "policy": "STREAM+FORM",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Collaboration",
+      "owner_entries": [
+        "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.Commands.cs"
+      ],
+      "conflict_scope": "append identity + independent create/reply draft",
+      "required_action": "Retain unsent text/unknown submission; avoid automatic selection reset; explicit navigation discard now guard required.",
+      "merge_policy": "Append existing semantics; no transcript merge.",
+      "test_focus": "Unknown append locked, duplicate submit, pending reply during quiet list refresh.",
+      "rollout_phase": "R6",
+      "source_refs": [
+        "S37"
+      ]
+    },
+    {
+      "id": "SH01",
+      "module": "App / shared Components",
+      "surface": "Notification host, modal/floating layers, navigation guard",
+      "policy": "OVERLAY",
+      "evidence_status": "DIRECT",
+      "ui_entry": "src/Modules/CanDoItAll.Modules.Prompts/Pages/PromptGalleryPage.razor",
+      "owner_entries": [
+        "src/CanDoItAll.Components.BaseLib/Components/Feedback/Notification.razor",
+        "src/CanDoItAll.Components.BaseLib/Components/Modals/Dialog.razor"
+      ],
+      "conflict_scope": "per circuit modal stack and single logical notification lifetime",
+      "required_action": "Sibling shared fix; one active outlet; no simple z-index-only patch; preserve raw form when closing denied.",
+      "merge_policy": "Human-friendly merge renderer in existing floating primitive.",
+      "test_focus": "Real pointer/focus/top-layer nested browser tests, single expiry clock.",
+      "rollout_phase": "PILOT",
+      "source_refs": [
+        "S12",
+        "S42",
+        "S43"
+      ]
+    },
+    {
+      "id": "SH02",
+      "module": "App / shared Components",
+      "surface": "FileTools editors exposed in main UI and managed files",
+      "policy": "FORM+COMMAND",
+      "evidence_status": "TREE_DISCOVERY",
+      "ui_entry": "src/UI/CanDoItAll.AppComponents",
+      "owner_entries": [
+        "Sibling CanDoItAll.FileTools + main owner integration"
+      ],
+      "conflict_scope": "file content/version/ETag vs app metadata and storage placement",
+      "required_action": "P0 census must identify actual editable main-UI file paths; use existing file conflict semantics; do not invent module-level JSON merge of file bytes.",
+      "merge_policy": "Text file diff only through file owner version; binary needs choose/copy, no auto merge.",
+      "test_focus": "External file change, stale save, placement recovery, dirty close with nested file editor.",
+      "rollout_phase": "R7",
+      "source_refs": [
+        "S05",
+        "S06",
+        "S34"
+      ]
+    },
+    {
+      "id": "SH03",
+      "module": "App / shared Components",
+      "surface": "Read-only audit/history, immutable versions, run telemetry",
+      "policy": "EXCLUDED_FROM_MERGE",
+      "evidence_status": "DOC_CURRENT",
+      "ui_entry": "src/App/CanDoItAll.Web",
+      "owner_entries": [
+        "Existing owner-specific append/history services"
+      ],
+      "conflict_scope": "append sequence / retention / runtime claim",
+      "required_action": "Keep current streams and bounded refresh; do not count as editable entity closure or lock entire history.",
+      "merge_policy": "Not applicable; editable annotations are separate scoped forms.",
+      "test_focus": "No lost append from config save, no dispatch from refresh, retained immutable exact version.",
+      "rollout_phase": "ALL",
+      "source_refs": [
+        "S25",
+        "S26",
+        "S28",
+        "S38"
+      ]
+    }
+  ],
+  "evidence_states": {
+    "DIRECT": "Current source inspected for the stated path; no automatic whole-module closure.",
+    "DOC_CURRENT": "Maintained repository document inspected; current implementation still needs local confirmation.",
+    "HISTORICAL_CHECK_REQUIRED": "Historical audit used only as a discovery seed, not proof of a current defect.",
+    "TREE_DISCOVERY": "Surface family identified; exact local renderer/handler decomposition is required.",
+    "DOC_CURRENT/PERIMETER_OPEN": "Documented behavior exists; all participating write paths were not directly inspected.",
+    "DIRECT/PERIMETER_OPEN": "A current path was directly inspected, but its complete write perimeter remains open.",
+    "DIRECT/DOC_CURRENT": "Current source and maintained architecture document jointly support the bounded entry.",
+    "DIRECT_ADAPTER/DOC_OWNER": "Current adapter inspected; owner guarantees are taken from a maintained document.",
+    "DIRECT_FACADE/OWNER_OPEN": "Current facade inspected; the underlying owner has not been directly closed.",
+    "DIRECT_GRANT/OTHER_OPEN": "Current grant implementation inspected; other connection/permission paths remain open."
+  }
+}

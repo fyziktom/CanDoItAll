@@ -62,7 +62,7 @@
                                PageChanged="PageChanged"
                                TestIdPrefix="crmhr-allocations">
                     <ItemTemplate Context="allocation">
-                        <ProjectAssignmentRecordCard Assignment="allocation"
+                        <ProjectAssignmentRecordCard WritesDisabled="WritesDisabled" Assignment="allocation"
                                                      ProjectName="@ProjectName"
                                                      TestIdPrefix="crmhr-allocation"
                                                      ShowDetails="ShowAssignmentDetailsAsync"
@@ -85,6 +85,14 @@
             TestId="crmhr-allocation-dialog"
             OnClose="CloseAllocationDialogAsync">
         <ChildContent>
+            <EditForm @key="Draft" EditContext="context" OnValidSubmit="SaveAllocationAsync">
+            <ValidationSummary />
+            @if (StatusMessage is not null) {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="crmhr-editor-status">@StatusMessage</Alert>
+            }
+            @Recovery
+
+
             <Stack GapScale="LayoutGap.Medium">
                 <SurfaceCard Soft="true" data-testid="crmhr-allocation-candidates-surface">
                     <Stack GapScale="LayoutGap.Medium">
@@ -226,7 +234,7 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Allocation role">
-                        <InputSelect @bind-Value="Draft.Role"
+                        <InputSelect @bind-Value="Draft.Role" @bind-Value:after="@(() => ScopeChangedAsync(AssignmentField.Role))"
                                      class="cda-input"
                                      data-testid="crmhr-allocation-role">
                             @foreach (var role in AllocationRoles) {
@@ -237,7 +245,7 @@
                     <PartyPicker Label="Party"
                                  TestIdPrefix="crmhr-allocation-party"
                                  SelectedPartyId="Draft.PartyId"
-                                 SelectedPartyIdChanged="HandlePartyChanged" />
+                                 SelectedPartyIdChanged="HandlePartyChanged" PendingChanged="@(value => ReportAsync(AssignmentField.Party, value))" />
                 </Grid>
 
                 <PartyAffiliationPicker PartyId="Draft.PartyId"
@@ -254,34 +262,41 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <FormField Text="Allocation %">
-                        <InputNumber @bind-Value="Draft.AllocationPercent"
+                        <NativeValueInput DisplayName="allocation percentage" TValue="decimal?" @bind-Value="Draft.AllocationPercent" PendingChanged="@(value => ReportAsync(AssignmentField.Allocation, value))"
                                      class="cda-input"
                                      data-testid="crmhr-allocation-percent" />
                     </FormField>
                     <FormField Text="Starts on">
-                        <InputDate @bind-Value="Draft.StartsOn"
+                        <NativeValueInput DisplayName="start date" TValue="DateOnly?" @bind-Value="Draft.StartsOn" PendingChanged="@(value => ReportAsync(AssignmentField.Start, value))"
                                    class="cda-input"
                                    data-testid="crmhr-allocation-start-date" />
                     </FormField>
                     <FormField Text="Ends on">
-                        <InputDate @bind-Value="Draft.EndsOn"
+                        <NativeValueInput DisplayName="end date" TValue="DateOnly?" @bind-Value="Draft.EndsOn" PendingChanged="@(value => ReportAsync(AssignmentField.End, value))"
                                    class="cda-input"
                                    data-testid="crmhr-allocation-end-date" />
                     </FormField>
                 </Grid>
 
                 <FormField Text="Notes">
-                    <InputTextArea @bind-Value="Draft.Notes"
+                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(AssignmentField.Notes))"
                                    class="cda-input cda-input--textarea min-h-[7rem]"
                                    data-testid="crmhr-allocation-notes" />
                 </FormField>
 
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                    <InputCheckbox @bind-Value="Draft.IsPrimary"
+                    <InputCheckbox @bind-Value="Draft.IsPrimary" @bind-Value:after="PrimaryChangedAsync"
                                    data-testid="crmhr-allocation-primary" />
                     <span>Mark as primary</span>
                 </label>
             </Stack>
+        @if (Draft.IsPrimary) {
+                <Stack GapScale="LayoutGap.Small">
+                    <SmallText Text="@(Draft.PrimaryOriginal is { } basis ? $"Reviewed primary scope: {basis.PrimaryIds.Length} current primary assignment(s)." : "Review the current primary for this role and node before saving.")" />
+                    <Button Text="Review current primary" ButtonStyle="ButtonStyle.Light" Disabled="@(isAllocationSaving || WritesDisabled)" Click="@(async () => { await ReviewPrimary(); })" />
+                </Stack>
+            }
+            </EditForm>
         </ChildContent>
         <Footer>
             <Split Breakpoint="LayoutBreakpoint.None"
@@ -291,16 +306,16 @@
                    Wrap="FlexWrap.Wrap">
                 <Button Text="Reset"
                         ButtonStyle="ButtonStyle.Light"
-                        Disabled="@isAllocationSaving"
-                        Click="ResetAllocation"
+                        Disabled="@(isAllocationSaving || WritesDisabled)"
+                        Click="ResetEditorAsync"
                         data-testid="crmhr-allocation-reset-button" />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Cancel"
                             ButtonStyle="ButtonStyle.Light"
-                            Disabled="@isAllocationSaving"
+                            Disabled="@(isAllocationSaving || WritesDisabled)"
                             Click="CloseAllocationDialogAsync" />
-                    <Button Text="Save allocation"
-                            Disabled="@isAllocationSaving"
+                    <Button Text="@(Draft.AssignmentId.HasValue ? "Save changes" : "Save allocation")"
+                            Disabled="@(isAllocationSaving || SaveDisabled || pending.Count > 0)"
                             IsBusy="@isAllocationSaving"
                             Click="SaveAllocationAsync"
                             data-testid="crmhr-allocation-save-button" />
@@ -319,6 +334,48 @@
                                 OpenGantt="OpenGantt" />
 
 @code {
+    private EditContext context = default!;
+    private readonly HashSet<AssignmentField> pending = [];
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public bool WritesDisabled { get; set; }
+    [Parameter] public string? StatusMessage { get; set; }
+    [Parameter] public RenderFragment? Recovery { get; set; }
+    [Parameter, EditorRequired] public Func<bool> HasChanges { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<Task<bool>> RequestDiscard { get; set; } = default!;
+    [Parameter] public EventCallback<CanDoItAll.Editing.RecordInput<AssignmentField>> InputChanged { get; set; }
+    private Task TextAsync(AssignmentField field) {
+
+        if (field == AssignmentField.Node) {
+            Draft.PrimaryOriginal = null;
+        }
+        return ReportAsync(field);
+    }
+    private Task ReportAsync(AssignmentField field, bool incomplete = false) {
+        if (incomplete) {
+            pending.Add(field);
+        } else {
+            pending.Remove(field);
+        }
+        return InputChanged.InvokeAsync(new(field, incomplete));
+    }
+    private async Task ResetEditorAsync() {
+        if (!WritesDisabled && !isAllocationSaving && (!HasChanges() || await RequestDiscard())) {
+            await ResetAllocation.InvokeAsync();
+        }
+    }
+
+    [Parameter, EditorRequired] public Func<Task<bool>> ReviewPrimary { get; set; } = default!;
+    private async Task ScopeChangedAsync(AssignmentField field) {
+        Draft.PrimaryOriginal = null;
+        await ReportAsync(field);
+    }
+    private async Task PrimaryChangedAsync() {
+        await ReportAsync(AssignmentField.Primary);
+        if (Draft.IsPrimary) {
+            await ReviewPrimary();
+        }
+    }
+
     private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllocationRoles =
     [
         ProjectPartyAssignmentRole.TeamMember,
@@ -417,7 +474,7 @@
     public EventCallback ResetAllocation { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> DeleteAllocation { get; set; }
+    public EventCallback<ProjectPartyAssignmentDetail> DeleteAllocation { get; set; }
 
     [Parameter, EditorRequired]
     public Func<ProjectPartyAssignmentDetail, Task<ProjectNodeDetails?>> LoadTaskDetails { get; set; } = default!;
@@ -439,7 +496,7 @@
 
     private StaffingCandidateItemModel? SelectedCandidate => selectedCandidate;
 
-    private string AllocationDialogTitle => SelectedCandidate is null
+    private string AllocationDialogTitle => Draft.AssignmentId.HasValue ? "Edit saved allocation" : SelectedCandidate is null
         ? "Create allocation"
         : $"Allocate {SelectedCandidate.DisplayName}";
 
@@ -452,6 +509,11 @@
         : $"Page {CandidatePageIndex + 1:N0} of {CandidateTotalPages:N0} · {CandidateTotalCount:N0} candidate(s)";
 
     protected override void OnParametersSet() {
+        if (context is null || !ReferenceEquals(context.Model, Draft)) {
+            context = new(Draft);
+            pending.Clear();
+        }
+
         var pageCandidate = Candidates.FirstOrDefault(item => item.PartyId == Draft.PartyId);
         if (pageCandidate is not null) {
             selectedCandidate = pageCandidate;
@@ -483,16 +545,19 @@
         return CandidateAvailabilityFilterChanged.InvokeAsync(value);
     }
 
-    private Task HandlePartyChanged(Guid? partyId) {
+    private async Task HandlePartyChanged(Guid? partyId) {
         Draft.PartyId = partyId ?? Guid.Empty;
         Draft.PartyAffiliationId = null;
         selectedCandidate = Candidates.FirstOrDefault(candidate => candidate.PartyId == Draft.PartyId);
-        return Task.CompletedTask;
+        context.NotifyFieldChanged(new(Draft, nameof(Draft.PartyId)));
+        await ReportAsync(AssignmentField.Affiliation);
+        await ReportAsync(AssignmentField.Party, pending.Contains(AssignmentField.Party));
     }
 
-    private Task HandleAffiliationChanged(Guid? affiliationId) {
+    private async Task HandleAffiliationChanged(Guid? affiliationId) {
         Draft.PartyAffiliationId = affiliationId;
-        return Task.CompletedTask;
+        context.NotifyFieldChanged(new(Draft, nameof(Draft.PartyAffiliationId)));
+        await ReportAsync(AssignmentField.Affiliation, pending.Contains(AssignmentField.Affiliation));
     }
 
     private async Task OpenCreateDialogAsync() {
@@ -513,24 +578,27 @@
         }
     }
 
-    private Task SelectCandidateAsync(StaffingCandidateItemModel candidate) {
+    private async Task SelectCandidateAsync(StaffingCandidateItemModel candidate) {
         selectedCandidate = candidate;
         Draft.PartyId = candidate.PartyId;
         Draft.PartyAffiliationId = null;
         Draft.Role = candidate.PartyType == PartyType.OrganizationUnit
             ? ProjectPartyAssignmentRole.DeliveryUnit
             : ProjectPartyAssignmentRole.TeamMember;
-        return Task.CompletedTask;
+        Draft.PrimaryOriginal = null;
+        await ReportAsync(AssignmentField.Party);
+        await ReportAsync(AssignmentField.Affiliation);
+        await ReportAsync(AssignmentField.Role);
     }
 
     private async Task SaveAllocationAsync() {
-        if (isAllocationSaving) {
+        if (isAllocationSaving || SaveDisabled || pending.Count > 0 || !context.Validate()) {
             return;
         }
 
         isAllocationSaving = true;
         try {
-            if (await SaveAllocation()) {
+            if (await SaveAllocation() && !HasChanges() && pending.Count == 0) {
                 isAllocationDialogOpen = false;
             }
         }
@@ -539,12 +607,17 @@
         }
     }
 
-    private Task CloseAllocationDialogAsync() {
-        if (!isAllocationSaving) {
-            isAllocationDialogOpen = false;
+    private async Task CloseAllocationDialogAsync() {
+        if (isAllocationSaving) {
+            return;
         }
-
-        return Task.CompletedTask;
+        if (HasChanges()) {
+            if (!await RequestDiscard()) {
+                return;
+            }
+            await ResetAllocation.InvokeAsync();
+        }
+        isAllocationDialogOpen = false;
     }
 
     private async Task ShowAssignmentDetailsAsync(ProjectPartyAssignmentDetail assignment) {

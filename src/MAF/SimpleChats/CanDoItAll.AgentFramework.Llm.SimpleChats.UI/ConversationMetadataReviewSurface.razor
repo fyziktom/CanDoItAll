@@ -1,0 +1,56 @@
+@using CanDoItAll.Editing.UI
+
+<Stack GapScale="LayoutGap.Small">
+    @if (!string.IsNullOrWhiteSpace(Presentation.StateInformation)) {
+        <TextBlock Value="@Presentation.StateInformation" data-testid="llm-chat-metadata-state" />
+    }
+    @if (!string.IsNullOrWhiteSpace(Presentation.Notice)) {
+        <TextBlock Value="@Presentation.Notice" data-testid="llm-chat-metadata-notice" />
+    }
+    @if (Presentation.ConfirmDiscard) {
+        <TextBlock Value="Discard the unsaved title and close this dialog?" />
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Keep editing" Click="@(() => SendAsync(ConversationDialogAction.KeepEditing))" />
+            <Button Text="Discard title and close" ButtonStyle="ButtonStyle.Danger" Click="@(() => SendAsync(ConversationDialogAction.Discard))" data-testid="llm-chat-metadata-discard" />
+        </Cluster>
+    }
+    @if (Presentation.Origin.Kind is ConversationDialogKind.Rename or ConversationDialogKind.Archive) {
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Compare current information" Icon="compare_arrows" Variant="Variant.Outlined" Disabled="@(Presentation.IsMutating || Presentation.IsLoading)"
+                    Click="@(() => SendAsync(ConversationDialogAction.Compare))" data-testid="llm-chat-metadata-compare" />
+            @if (Presentation.CanUndo) {
+                <Button Text="Undo local review" Variant="Variant.Text" Disabled="@Presentation.IsMutating"
+                        Click="@(() => SendAsync(ConversationDialogAction.Undo))" />
+            }
+        </Cluster>
+        @if (Presentation.TitleComparison is { } comparison) {
+            <MergeFieldView Label="Title" Field="comparison" Format="Text" Changed="@(() => SendAsync(ConversationDialogAction.ComparisonChanged))"
+                            TestId="llm-chat-metadata-review-title" />
+            @if (Presentation.RequiresAcknowledgement) {
+                <FormField Text="I reviewed current state and will start a new conditional command. The previous outcome remains unconfirmed.">
+                    <CheckBox TValue="bool" @bind-Value="acknowledged" data-testid="llm-chat-metadata-acknowledge" />
+                </FormField>
+            }
+            <Button Text="Apply to my draft" Disabled="@(!comparison.IsResolved || Presentation.RequiresAcknowledgement && !acknowledged || Presentation.IsMutating)"
+                    Click="@(() => SendAsync(ConversationDialogAction.ApplyComparison, acknowledged))" data-testid="llm-chat-metadata-apply" />
+        }
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public ConversationDialogPresentation Presentation { get; set; } = default!;
+    [Parameter] public EventCallback<ConversationDialogIntent> Intent { get; set; }
+    private CanDoItAll.Editing.MergeField<string>? observed;
+    private bool acknowledged;
+
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(observed, Presentation.TitleComparison)) {
+            observed = Presentation.TitleComparison;
+            acknowledged = false;
+        }
+    }
+
+    private Task SendAsync(ConversationDialogAction action, bool acknowledgement = false)
+        => Intent.InvokeAsync(new(Presentation.Origin, action, Acknowledged: acknowledgement));
+    private static string Text(string value) => value;
+}

@@ -25,7 +25,10 @@ internal sealed class ProjectStructureSerializableMutationScope : IAsyncDisposab
         return this;
     }
 
-    public async Task CommitAsync(CancellationToken cancellationToken) {
+    public async Task CommitAsync(CancellationToken cancellationToken, Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
         await (workflowScope?.CommitAsync(cancellationToken) ?? agentScope?.CommitAsync(cancellationToken) ??
             processScope?.CommitAsync(cancellationToken) ?? innerScope!.CommitAsync(cancellationToken));
         changes?.Publish();

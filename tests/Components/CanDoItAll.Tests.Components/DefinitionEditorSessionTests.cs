@@ -230,7 +230,8 @@ public sealed class DefinitionEditorSessionTests {
 
     private static LlmChatDefinitionEditorSession CreateSession(ILlmChatDefinitionUiGateway gateway,
         ILlmChatProviderUiGateway? providers = null, ILlmChatUiAuthorizationFacade? access = null)
-        => new(gateway, providers ?? new StubProviderGateway(), access ?? new StubAuthorization(true, true), NullLogger<LlmChatDefinitionEditorSession>.Instance);
+        => new(gateway, providers ?? new StubProviderGateway(), access ?? new StubAuthorization(true, true), NullLogger<LlmChatDefinitionEditorSession>.Instance,
+            new StubDefinitionEditorAccess(access ?? new StubAuthorization(true, true)), StubDefinitionEditorAccess.DispatchAsync);
 
     private sealed class ControlledProviders(Func<CancellationToken, Task<LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>>> read) : ILlmChatProviderUiGateway {
         public Task<LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>> ListAsync(CancellationToken cancellationToken = default) => read(cancellationToken);

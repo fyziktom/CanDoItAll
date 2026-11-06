@@ -11,7 +11,8 @@ internal sealed class ProviderRuntimeAdministrationService(
     IProviderProfileService providerProfileService,
     IProviderDiagnosticsService providerDiagnosticsService,
     IProviderProfileRegistry providerRegistry,
-    IProviderRuntimeProfileSource providerSource) :
+    IProviderRuntimeProfileSource providerSource,
+    ProviderMutationWitness witnesses) :
     IProviderRuntimeAdministrationService
 {
     public Task<IReadOnlyList<RuntimeProviderProfile>> ListProvidersAsync(
@@ -28,18 +29,23 @@ internal sealed class ProviderRuntimeAdministrationService(
         CancellationToken cancellationToken = default)
         => providerRegistry.SaveProviderAsync(model, cancellationToken);
 
+    public Task<RuntimeProviderProfileEditorModel> SaveProviderEditorAsync(RuntimeProviderProfileEditorModel model, CancellationToken cancellationToken = default)
+        => providerRegistry.SaveProviderEditorAsync(model, cancellationToken);
+
     public Task DeleteProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken = default)
         => providerRegistry.DeleteProviderAsync(providerId, cancellationToken);
 
+    public Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => providerRegistry.DeleteProviderAsync(providerId, expectedConcurrencyToken, cancellationToken);
+
     public async Task<ProviderHealthResult> TestProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken = default)
     {
-        var provider = await GetRequiredRuntimeProviderAsync(
-            providerId,
-            cancellationToken);
+        var snapshot = await providerRegistry.GetProviderObservationAsync(providerId, cancellationToken);
+        var provider = snapshot.Profile;
         if (IsSourceManagedProvider(provider) && !provider.IsEnabled)
         {
             return new ProviderHealthResult(
@@ -49,6 +55,9 @@ internal sealed class ProviderRuntimeAdministrationService(
         }
 
         ProviderHealthResult result;
+        if (!IsSourceManagedProvider(provider)) {
+            RequireSavedConfiguration(snapshot);
+        }
         try
         {
             result = await providerDiagnosticsService.TestProviderAsync(
@@ -79,15 +88,7 @@ internal sealed class ProviderRuntimeAdministrationService(
         }
 
         var checkedAtUtc = DateTimeOffset.UtcNow;
-        await PersistUpdateAsync(() => providerRegistry.UpdateProviderAsync(
-            providerId,
-            currentProvider => providerProfileService.ApplyHealthResult(
-                currentProvider,
-                result,
-                checkedAtUtc) with {
-                    HealthStatus = result.Success ? SharedProviderPublicHealthMapper.HealthyStatus : SharedProviderPublicHealthMapper.UnhealthyStatus
-                },
-            cancellationToken), ProviderMutationKind.HealthPersistence);
+        await providerRegistry.RecordProviderHealthAsync(snapshot, result, checkedAtUtc, cancellationToken);
         return result;
     }
 
@@ -124,36 +125,48 @@ internal sealed class ProviderRuntimeAdministrationService(
         ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
     {
-        var provider = await GetRequiredRuntimeProviderAsync(
-            providerId,
-            cancellationToken);
+        var snapshot = await providerRegistry.GetProviderObservationAsync(providerId, cancellationToken);
+        var provider = snapshot.Profile;
         if (IsSourceManagedProvider(provider)) {
             throw new ProviderProfileValidationException(
                 "Source-managed model maintenance is not supported. Manage remote models at their source.");
         }
 
         EnsureProviderAvailable(provider);
+        RequireSavedConfiguration(snapshot);
 
         var result = await providerDiagnosticsService.CreateOrUpdateProviderModelAsync(
             provider,
             request,
             cancellationToken);
         var checkedAtUtc = DateTimeOffset.UtcNow;
-        await PersistUpdateAsync(() => providerRegistry.UpdateProviderAsync(
-            providerId,
-            currentProvider => providerProfileService.ApplyProviderModelMaintenanceResult(
-                currentProvider,
-                result,
-                checkedAtUtc),
-            cancellationToken), ProviderMutationKind.ModelMaintenancePersistence);
+        try {
+            var updated = providerProfileService.ApplyProviderModelMaintenanceResult(provider, result, checkedAtUtc);
+            var editor = providerProfileService.CreateEditor(updated);
+            editor.ExpectedConcurrencyToken = snapshot.ExpectedConcurrencyToken;
+            await providerRegistry.SaveProviderEditorAsync(editor, cancellationToken);
+        } catch (ProviderMutationCommittedException exception) {
+            throw new ProviderModelMaintenancePersistenceException(providerId, result,
+                ProviderModelMaintenancePersistenceState.CommittedWithWarning, exception);
+        } catch (ProviderMutationUnconfirmedException exception) {
+            throw new ProviderModelMaintenancePersistenceException(providerId, result, ProviderModelMaintenancePersistenceState.Unconfirmed,
+                new ProviderMutationUnconfirmedException(witnesses.Sign(exception.Attempt with { Kind = ProviderMutationKind.ModelMaintenancePersistence }), exception));
+        } catch (ProviderConfigurationConflictException exception) {
+            throw new ProviderModelMaintenancePersistenceException(providerId, result,
+                ProviderModelMaintenancePersistenceState.Conflict, exception);
+        } catch (Exception exception) when (exception is ProviderProfileValidationException or UnauthorizedAccessException) {
+            throw new ProviderModelMaintenancePersistenceException(providerId, result,
+                ProviderModelMaintenancePersistenceState.Rejected, exception);
+        } catch (Exception exception) {
+            throw new ProviderModelMaintenancePersistenceException(providerId, result,
+                ProviderModelMaintenancePersistenceState.Unconfirmed, exception);
+        }
         return result;
     }
 
-    private static async Task PersistUpdateAsync(Func<Task<RuntimeProviderProfile>> write, ProviderMutationKind kind) {
-        try {
-            await write();
-        } catch (ProviderMutationUnconfirmedException exception) {
-            throw new ProviderMutationUnconfirmedException(exception.Attempt with { Kind = kind }, exception);
+    private static void RequireSavedConfiguration(ProviderProfileObservation observation) {
+        if (observation.ExpectedConcurrencyToken == Guid.Empty) {
+            throw new ProviderProfileValidationException("Save this provider configuration before running a persistent diagnostic or model-maintenance command.");
         }
     }
 

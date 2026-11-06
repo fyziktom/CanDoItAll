@@ -28,6 +28,9 @@ public sealed class DataSourcesEditAdmissionTests {
         var values = (await owner.ReadEditorAsync(saved.Value, CancellationToken.None)).Values with {
             Id = creating ? null : saved.Value, DisplayName = "Acknowledged catalog entry"
         };
+        if (creating) {
+            values = values with { ExpectedConfigurationRevision = null };
+        }
         var activePath = services.GetRequiredService<IControlPlanePathResolver>().ResolveActiveProfileStateFilePath();
         FileStream? selectionLock = null;
         held.BeforeEditorSave = () => selectionLock = new FileStream(activePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
@@ -70,7 +73,7 @@ public sealed class DataSourcesEditAdmissionTests {
         held.Hold = true;
         using var password = new ProfilePasswordIntent(string.Empty);
         var writing = deleting
-            ? owner.ExecuteAsync(new(original, b.Value, DataSourceAction.Delete))
+            ? owner.ExecuteAsync(new(original, b.Value, DataSourceAction.Delete) { ExpectedConfigurationRevision = editor.Values.ExpectedConfigurationRevision })
             : owner.SaveAsync(original, editor.Values with { DisplayName = "Old editor" }, password);
         await held.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
         try {
@@ -82,7 +85,9 @@ public sealed class DataSourcesEditAdmissionTests {
             if (deleting) {
                 Assert.True((await otherProfiles.ActivateAsync(b.Value)).IsSuccess);
             } else {
-                Assert.Equal(DataSourceOutcome.Confirmed, (await otherOwner.ExecuteAsync(new(otherOwner.Context, b.Value, DataSourceAction.Delete))).Outcome);
+                Assert.Equal(DataSourceOutcome.Confirmed, (await otherOwner.ExecuteAsync(new(otherOwner.Context, b.Value, DataSourceAction.Delete) {
+                    ExpectedConfigurationRevision = editor.Values.ExpectedConfigurationRevision
+                })).Outcome);
             }
         } finally {
             held.Release.TrySetResult();
@@ -124,7 +129,8 @@ public sealed class DataSourcesEditAdmissionTests {
             BeforeEditorSave?.Invoke();
             return inner.SaveEditorAsync(model, runtimeProfile, cancellationToken);
         }
-        public Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => inner.DeleteEditorAsync(id, runtimeProfile, cancellationToken);
+        public Task<Result> DeleteEditorAsync(Guid id, Guid? expectedConfigurationRevision, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default)
+            => inner.DeleteEditorAsync(id, expectedConfigurationRevision, runtimeProfile, cancellationToken);
         public Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
         public Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default) => inner.ActivateAsync(id, cancellationToken);
         public Task<Result> RebindWorkspaceAsync(Guid id, string workspaceRoot, CancellationToken cancellationToken = default) => inner.RebindWorkspaceAsync(id, workspaceRoot, cancellationToken);

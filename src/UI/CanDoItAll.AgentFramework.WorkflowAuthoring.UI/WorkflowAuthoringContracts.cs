@@ -8,8 +8,9 @@ namespace CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 public sealed record WorkflowSecretOption(Guid Id, string Name, string Kind);
 
 public sealed record WorkflowCanvasNodeSelection(WorkflowId WorkflowId, WorkflowNodeId NodeId, string Name, WorkflowNodeKind Kind);
+public sealed record WorkflowHeadObservation(WorkflowId Id, WorkflowVersionId? VersionId);
 
-public enum WorkflowSaveRejection { Validation, Conflict, Retired }
+public enum WorkflowSaveRejection { Validation, Conflict, Retired, Access }
 
 public abstract record WorkflowDefinitionSaveOutcome {
     public sealed record Accepted(WorkflowDefinition Definition) : WorkflowDefinitionSaveOutcome;
@@ -19,7 +20,9 @@ public abstract record WorkflowDefinitionSaveOutcome {
 
 public sealed record WorkflowDocumentOperations(
     Func<WorkflowDefinitionSaveRequest, CancellationToken, Task<WorkflowDefinitionSaveOutcome>> Save,
-    Func<WorkflowDefinition, CancellationToken, Task<WorkflowValidationResult>> Validate);
+    Func<WorkflowDefinition, CancellationToken, Task<WorkflowValidationResult>> Validate) {
+    public Func<WorkflowId, CancellationToken, Task<WorkflowDefinition?>>? ReadCurrent { get; init; }
+}
 
 public sealed record WorkflowPromptBindingRequest(PromptGallerySelection Selection,
     WorkflowProviderOption Provider, string Model, LlmCallComponent? Current);
@@ -27,7 +30,7 @@ public sealed record WorkflowPromptBindingRequest(PromptGallerySelection Selecti
 public abstract record WorkflowPromptBindingOutcome {
     public sealed record Accepted(LlmCallComponent Component) : WorkflowPromptBindingOutcome;
     public sealed record Rejected(string Message) : WorkflowPromptBindingOutcome;
-    public sealed record Unknown : WorkflowPromptBindingOutcome;
+    public sealed record Unknown(WorkflowComponentId ComponentId) : WorkflowPromptBindingOutcome;
 }
 
 public sealed record WorkflowPromptPickerContext(string Text, string? Provider, string? Model,

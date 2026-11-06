@@ -57,6 +57,7 @@ public static class ApiServiceCollectionExtensions
         services.TryAddScoped<ProjectDefinitionHttpAccess>();
         services.TryAddScoped<ProcessPlanningReviewHttpAccess>();
         services.TryAddScoped<ProcessCancellationHttpAccess>();
+        services.TryAddScoped<ProviderModelMaintenanceHttpAccess>();
         services.TryAddScoped<CanDoItAll.Modules.Processes.IProcessCancellationClient, WebProcessCancellationClient>();
         services.TryAddScoped<IStoragePlacementRecoveryAccess, WebStoragePlacementRecoveryAccess>();
         services.TryAddScoped<StoragePlacementRecoveryService>();

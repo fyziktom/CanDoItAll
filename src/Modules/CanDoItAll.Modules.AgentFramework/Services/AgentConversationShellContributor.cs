@@ -67,9 +67,7 @@ public sealed class AgentConversationShellContributor(
         var active = state.ActiveChats
             .Select(MapActiveChat)
             .ToArray();
-        ConversationShellWindowDescriptor[] windows = state.VisibleChat is { } visibleChat
-            ? [MapWindow(visibleChat)]
-            : [];
+        var windows = state.ActiveChats.Select(MapWindow).ToArray();
         return new(
             visibleAgents,
             active,
@@ -266,7 +264,7 @@ public sealed class AgentConversationShellContributor(
                 [nameof(AgentFloatingConversationContent.Chat)] = chat,
                 [nameof(AgentFloatingConversationContent.PreferredAgent)] = agents.FirstOrDefault(
                     agent => agent.Id == chat.Agent.AgentId)!
-            });
+            }, keepContentMounted: true);
 
     private IReadOnlyList<PresentationBadge> BuildStatusBadges(
         int visibleAgentCount,
@@ -385,6 +383,11 @@ public sealed class AgentConversationShellContributor(
 
         if (decision == FloatingAgentChatCloseDecision.Stop && chat.CanStop)
         {
+            if (coordinator.Snapshot().ActiveChats.FirstOrDefault(item => item.HandleId == handleId)?.HasUnsentDraft == true && !chat.HasUnsentDraft) {
+                notificationService.Warning("Draft retained", "A new draft appeared while close confirmation was open. Review it before stopping this chat.");
+                shell.FocusWindow(SourceIdentifier, BuildWindowId(handleId));
+                return;
+            }
             try
             {
                 coordinator.Stop(handleId);

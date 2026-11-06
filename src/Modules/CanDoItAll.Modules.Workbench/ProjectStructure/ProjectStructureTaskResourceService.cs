@@ -92,7 +92,8 @@ public sealed class ProjectStructureTaskResourceService(
         ProjectStructureTaskResourceSelection selection,
         ProjectStructureWorkflowInputSettings? workflowInputSettings,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         EnsureProjectId(projectId);
         ArgumentException.ThrowIfNullOrWhiteSpace(taskNodeId);
@@ -114,7 +115,7 @@ public sealed class ProjectStructureTaskResourceService(
                     taskNodeId,
                     selection,
                     AssignmentSource,
-                    cancellationToken, agent);
+                    cancellationToken, agent, authorizeCommit);
                 return new ProjectStructureTaskResourceAttachment(
                     selection.Kind,
                     CreatedNodeId: null,
@@ -126,14 +127,14 @@ public sealed class ProjectStructureTaskResourceService(
                     selection,
                     workflowInputSettings,
                     agent,
-                    cancellationToken);
+                    cancellationToken, authorizeCommit);
             case ProjectStructureTaskResourceKind.Process:
                 return await AttachProcessAsync(
                     projectId,
                     taskNodeId,
                     selection,
                     agent,
-                    cancellationToken);
+                    cancellationToken, authorizeCommit);
             default:
                 throw new ProjectStructureAgentException(
                     400,
@@ -203,7 +204,8 @@ public sealed class ProjectStructureTaskResourceService(
         ProjectStructureTaskResourceSelection selection,
         ProjectStructureWorkflowInputSettings? workflowInputSettings,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit)
     {
         WorkflowVersionId? versionId = selection.VersionId.HasValue
             ? new WorkflowVersionId(selection.VersionId.Value)
@@ -216,7 +218,7 @@ public sealed class ProjectStructureTaskResourceService(
                 versionId,
                 InputSettings: workflowInputSettings),
             agent,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
         return new ProjectStructureTaskResourceAttachment(
             ProjectStructureTaskResourceKind.Workflow,
             result.Node.Id,
@@ -228,7 +230,8 @@ public sealed class ProjectStructureTaskResourceService(
         string taskNodeId,
         ProjectStructureTaskResourceSelection selection,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit)
     {
         var catalog = await LoadProcessCatalogAsync(projectId, cancellationToken);
         var exists = catalog.Any(item =>
@@ -246,7 +249,7 @@ public sealed class ProjectStructureTaskResourceService(
             taskNodeId,
             new ProjectStructureProcessDefinitionLinkInput(selection.ResourceId),
             agent,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
         return new ProjectStructureTaskResourceAttachment(
             ProjectStructureTaskResourceKind.Process,
             CreatedNodeId: null,

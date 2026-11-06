@@ -15,5 +15,6 @@
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <ProjectReference Include="../../Processes/CanDoItAll.Processes.Projections/CanDoItAll.Processes.Projections.csproj" />
     <ProjectReference Include="../CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
   </ItemGroup>
 </Project>

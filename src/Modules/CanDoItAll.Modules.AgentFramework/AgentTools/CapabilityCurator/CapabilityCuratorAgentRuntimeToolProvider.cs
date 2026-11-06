@@ -305,6 +305,11 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         {
             savedId = await workspaceService.SaveCapabilityAsync(editor, cancellationToken);
         }
+        catch (AgentCatalogCommittedException<CapabilityEditorModel> exception) {
+            RecordCommitted(CapabilityEffectSourceKind, exception.Accepted.Id
+                ?? throw new InvalidOperationException("The accepted capability identity is missing.", exception));
+            throw;
+        }
         catch (CapabilityCatalogRejectedException exception)
         {
             // The catalog checks existence, identity and fingerprint before it persists anything.
@@ -427,7 +432,16 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
 
         editor.SelectedCapabilityIds = selected;
         editor.ExpectedUpdatedAtUtc = request.ExpectedUpdatedAtUtc;
-        var savedId = await workspaceService.SaveAgentAsync(editor, cancellationToken);
+        Guid savedId;
+        try {
+            savedId = await workspaceService.SaveAgentAsync(editor, cancellationToken);
+        } catch (AgentCatalogCommittedException<AgentDefinition> exception) {
+            RecordCommitted(AgentEffectSourceKind, exception.Accepted.Id);
+            throw;
+        } catch (AgentDirectoryProjectionSynchronizationException exception) {
+            RecordCommitted(AgentEffectSourceKind, exception.AgentId);
+            throw;
+        }
         RecordCommitted(AgentEffectSourceKind, savedId);
         if (savedId != request.AgentId)
         {

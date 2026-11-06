@@ -69,9 +69,24 @@
     <ChildContent>
         @if (fixture.Editor is { } editor)
         {
-            <PromptGalleryItemEditorSurface Presentation="@editor" Intent="HandleEditorIntent" />
+            <PromptGalleryItemEditorSurface @ref="editorSurface" Presentation="@editor" IsReviewing="@(fixture.Review is not null)" Intent="HandleEditorIntent" />
         }
     </ChildContent>
+</Dialog>
+
+<Dialog IsOpen="@(fixture.Review is not null)" Title="Review saved changes" Size="ModalSize.Full" DenseChrome="true"
+    CloseOnBackdrop="false" OnClose="@(() => fixture.CloseReview(false))" TestId="prompt-merge-dialog">
+    <ChildContent>
+        @if (fixture.Review is { } review) {
+            <PromptMergeReviewSurface Review="@review" Changed="StateHasChanged" />
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="@(() => fixture.CloseReview(false))" data-testid="prompt-merge-cancel" />
+            <Button Text="Apply to my draft" Disabled="@(fixture.Review?.CanApply != true)" Click="ApplyReview" data-testid="prompt-merge-apply" />
+        </Cluster>
+    </Footer>
 </Dialog>
 
 <Dialog IsOpen="@fixture.PickerOpen"
@@ -115,6 +130,13 @@
     private readonly PromptGallerySandboxFixture fixture = new();
     private PromptGallerySandboxContext context = new();
     private bool observed;
+    private PromptGalleryItemEditorSurface? editorSurface;
+    private void ApplyReview() {
+        if (fixture.Review?.CanApply == true) {
+            editorSurface?.Apply(fixture.Review.Result());
+            fixture.CloseReview(true);
+        }
+    }
 
     [Parameter]
     [SupplyParameterFromQuery(Name = "scenario")]

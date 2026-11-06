@@ -1,4 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Editing;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -15,6 +17,8 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
     private readonly IPromptGalleryProjectionCoordinator _projectionCoordinator;
     private readonly PromptGalleryCompatibilityEvaluator _compatibilityEvaluator;
     private readonly ILogger<PromptsService> _logger;
+    private readonly PromptGalleryChanges _changes;
+    internal CanDoItAll.Infrastructure.Editing.EditingOperationIdentity? CurrentOperation => _changes.CurrentOperation;
 
     public PromptsService(
         IDbContextFactory<PromptsDbContext> dbContextFactory,
@@ -23,7 +27,8 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         IPromptGallerySearchDriver searchDriver,
         IPromptGalleryProjectionCoordinator projectionCoordinator,
         PromptGalleryCompatibilityEvaluator compatibilityEvaluator,
-        ILogger<PromptsService> logger)
+        ILogger<PromptsService> logger,
+        PromptGalleryChanges changes)
     {
         _dbContextFactory = dbContextFactory;
         _clock = clock;
@@ -32,6 +37,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         _projectionCoordinator = projectionCoordinator;
         _compatibilityEvaluator = compatibilityEvaluator;
         _logger = logger;
+        _changes = changes;
     }
 
     public Task<PromptGalleryPage<PromptGallerySearchItem>> SearchAsync(
@@ -58,7 +64,8 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             return Result<PromptDraftSaveReceipt>.Failure(saved.Errors);
         }
         var state = saved.Value!;
-        await NotifyDraftSaveAsync(state.Artifact.Id, state.Artifact.ProjectId, state.Artifact.Title, state.IsNew, cancellationToken);
+        await NotifyDraftSaveAsync(state.Artifact.Id, state.Artifact.ProjectId, state.Artifact.Title, state.IsNew,
+            cancellationToken, CurrentOperation);
         return Result<PromptDraftSaveReceipt>.Success(new(state.Artifact.Id, state.Artifact.UpdatedAtUtc));
     }
 
@@ -89,6 +96,11 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
                 return Result<PromptDraftSaveState>.Failure(Error.Failure(
                     "The Prompt Gallery item changed after it was loaded. Reload it before saving.",
                     "prompts.gallery.concurrency-conflict"));
+            }
+
+            if (existing.IsArchived) {
+                return Result<PromptDraftSaveState>.Failure(Error.Failure(
+                    "Restore this archived Gallery item explicitly before editing its content.", PromptGalleryErrorCodes.ArchivedItem));
             }
 
             entity = existing;
@@ -124,6 +136,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             isNew,
             cancellationToken);
         try {
+            await _changes.DemandCommitAsync(cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
         } catch (DbUpdateConcurrencyException) {
             return Result<PromptDraftSaveState>.Failure(Error.Failure(
@@ -135,7 +148,9 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
     }
 
     internal async Task NotifyDraftSaveAsync(Guid promptId, Guid? projectId, string title, bool isNew,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, CanDoItAll.Infrastructure.Editing.EditingOperationIdentity? origin) {
+        using var propagation = _changes.Enter(origin);
+        PublishChange(promptId, isNew ? EditingChangeKind.Created : EditingChangeKind.EditableContentChanged);
         await ProjectCanonicalChangeAsync(promptId, cancellationToken);
         await RecordActivityAsync(isNew ? "create-draft" : "update-draft",
             isNew ? "Created prompt draft" : "Updated prompt draft",
@@ -147,60 +162,181 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
     public async Task<Result<PromptVersionSnapshot>> CreateVersionAsync(
         Guid promptArtifactId,
         PromptVersionCreateRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
+        var validation = ValidateVersionCreation(request);
+        if (validation.IsFailure) {
+            return Result<PromptVersionSnapshot>.Failure(validation.Errors);
+        }
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var result = await CreateVersionInContextAsync(dbContext, promptArtifactId, request, cancellationToken);
+        if (result.IsFailure) {
+            return Result<PromptVersionSnapshot>.Failure(result.Errors);
+        }
+        await NotifyVersionMutationAsync(result.Value!, _changes.CurrentOperation, cancellationToken);
+        return Result<PromptVersionSnapshot>.Success(result.Value!.Snapshot);
+    }
+
+    public async Task<Result<PromptVersionSnapshot>> ImportVersionAsync(
+        PromptGalleryImportRequest request,
+        CancellationToken cancellationToken = default) {
+        var validation = ValidateVersionImport(request);
+        if (validation.IsFailure) {
+            return Result<PromptVersionSnapshot>.Failure(validation.Errors);
+        }
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, ImportMutationScope, cancellationToken);
+        var result = await ImportVersionInContextAsync(dbContext, request, createOnly: false, cancellationToken);
+        if (result.IsFailure) {
+            return Result<PromptVersionSnapshot>.Failure(result.Errors);
+        }
+        await mutation.CommitAsync(cancellationToken);
+        await mutation.DisposeAsync();
+        await NotifyVersionMutationAsync(result.Value!, _changes.CurrentOperation, cancellationToken);
+        return Result<PromptVersionSnapshot>.Success(result.Value!.Snapshot);
+    }
+
+    private static Result ValidateVersionCreation(PromptVersionCreateRequest request) {
         ArgumentNullException.ThrowIfNull(request);
-        if (string.IsNullOrWhiteSpace(request.CreationReason) || request.CreationReason.Trim().Length > 200)
-        {
-            return Result<PromptVersionSnapshot>.Failure(
+        if (string.IsNullOrWhiteSpace(request.CreationReason) || request.CreationReason.Trim().Length > 200) {
+            return Result.Failure(
                 Error.Validation(
                     "A version creation reason containing 1 to 200 characters is required.",
                     "prompts.version.reason-invalid"));
         }
 
-        if (string.IsNullOrWhiteSpace(request.OutputFormat) || request.OutputFormat.Length > 80)
-        {
-            return Result<PromptVersionSnapshot>.Failure(
+        if (string.IsNullOrWhiteSpace(request.OutputFormat) || request.OutputFormat.Length > 80) {
+            return Result.Failure(
                 Error.Validation("Output format must contain 1 to 80 characters.", "prompts.version.output-format-invalid"));
         }
 
-        if (request.ExpectedUpdatedAtUtc == default)
-        {
-            return Result<PromptVersionSnapshot>.Failure(Error.Validation(
+        if (request.ExpectedUpdatedAtUtc == default) {
+            return Result.Failure(Error.Validation(
                 "ExpectedUpdatedAtUtc is required when creating a Prompt Gallery version.",
                 "prompts.version.expected-updated-at-required"));
         }
 
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await dbContext.Set<PromptArtifact>()
-            .FirstOrDefaultAsync(item => item.Id == promptArtifactId, cancellationToken);
-        if (entity is null)
-        {
-            return Result<PromptVersionSnapshot>.Failure(NotFound(promptArtifactId));
+        return Result.Success();
+    }
+
+    private static Result ValidateVersionImport(PromptGalleryImportRequest request) {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Draft);
+        ArgumentNullException.ThrowIfNull(request.Version);
+
+        var errors = PromptGalleryPersistence.ValidateDraft(request.Draft).ToList();
+        if (request.Draft.Id.HasValue) {
+            errors.Add(Error.Validation(
+                "Imported Gallery drafts cannot specify an artifact ID.",
+                "prompts.import.artifact-id-invalid"));
         }
 
-        if (entity.IsArchived)
-        {
-            return Result<PromptVersionSnapshot>.Failure(
+        if (!Enum.IsDefined(request.Provenance) ||
+            request.Provenance is PromptArtifactProvenance.User or PromptArtifactProvenance.PackagedComponentCatalog) {
+            errors.Add(Error.Validation(
+                "Prompt import provenance is invalid.",
+                "prompts.import.provenance-invalid"));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SourceKey) || request.SourceKey.Trim().Length > 200) {
+            errors.Add(Error.Validation(
+                "Prompt import source key must contain 1 to 200 characters.",
+                "prompts.import.source-key-invalid"));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SourceCatalog) || request.SourceCatalog.Trim().Length > 120) {
+            errors.Add(Error.Validation(
+                "Prompt import source catalog must contain 1 to 120 characters.",
+                "prompts.import.source-catalog-invalid"));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Draft.Content)) {
+            errors.Add(Error.Validation(
+                "Imported prompt content is required.",
+                "prompts.import.content-required"));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Version.CreationReason) ||
+            request.Version.CreationReason.Trim().Length > 200 ||
+            string.IsNullOrWhiteSpace(request.Version.OutputFormat) ||
+            request.Version.OutputFormat.Trim().Length > 80) {
+            errors.Add(Error.Validation(
+                "Imported prompt version metadata is invalid.",
+                "prompts.import.version-invalid"));
+        }
+
+        if (errors.Count > 0) {
+            return Result.Failure(errors);
+        }
+
+        return Result.Success();
+    }
+
+    internal enum PromptVersionMutationKind {
+        Unchanged,
+        Finalized,
+        ImportedNew,
+        ImportedVersion,
+        VerifiedImport
+    }
+
+    internal sealed record PromptVersionMutationState(
+        PromptVersionSnapshot Snapshot, PromptArtifact Artifact, PromptVersionMutationKind Kind);
+
+    internal async Task NotifyVersionMutationAsync(PromptVersionMutationState state,
+        EditingOperationIdentity? origin, CancellationToken cancellationToken) {
+        if (state.Kind == PromptVersionMutationKind.Unchanged) {
+            return;
+        }
+        using var propagation = _changes.Enter(origin);
+        var kind = state.Kind switch {
+            PromptVersionMutationKind.Finalized => EditingChangeKind.LifecycleChanged,
+            PromptVersionMutationKind.ImportedNew => EditingChangeKind.Created,
+            _ => EditingChangeKind.EditableContentChanged
+        };
+        PublishChange(state.Artifact.Id, kind);
+        await ProjectCanonicalChangeAsync(state.Artifact.Id, cancellationToken);
+        var (action, title) = state.Kind switch {
+            PromptVersionMutationKind.Finalized => ("finalize", $"Finalized prompt version {state.Snapshot.VersionNumber}"),
+            PromptVersionMutationKind.VerifiedImport => ("verify-import", "Verified imported prompt version"),
+            _ => ("import-version", "Imported prompt version")
+        };
+        await RecordActivityAsync(action, title, state.Artifact, cancellationToken);
+    }
+
+    internal async Task<Result<PromptVersionMutationState>> CreateVersionInContextAsync(
+        PromptsDbContext dbContext,
+        Guid promptArtifactId,
+        PromptVersionCreateRequest request,
+        CancellationToken cancellationToken = default) {
+        var validation = ValidateVersionCreation(request);
+        if (validation.IsFailure) {
+            return Result<PromptVersionMutationState>.Failure(validation.Errors);
+        }
+
+        var entity = await dbContext.Set<PromptArtifact>()
+            .FirstOrDefaultAsync(item => item.Id == promptArtifactId, cancellationToken);
+        if (entity is null) {
+            return Result<PromptVersionMutationState>.Failure(NotFound(promptArtifactId));
+        }
+
+        if (entity.IsArchived) {
+            return Result<PromptVersionMutationState>.Failure(
                 Error.Failure("Archived Gallery items cannot create new versions.", "prompts.version.artifact-archived"));
         }
 
-        if (entity.UpdatedAtUtc != request.ExpectedUpdatedAtUtc)
-        {
-            return Result<PromptVersionSnapshot>.Failure(Error.Failure(
+        if (entity.UpdatedAtUtc != request.ExpectedUpdatedAtUtc) {
+            return Result<PromptVersionMutationState>.Failure(Error.Failure(
                 "The Prompt Gallery item changed after it was reviewed. Reload it before creating a version.",
                 "prompts.gallery.concurrency-conflict"));
         }
 
-        if (string.IsNullOrWhiteSpace(entity.CurrentDraftText))
-        {
-            return Result<PromptVersionSnapshot>.Failure(
+        if (string.IsNullOrWhiteSpace(entity.CurrentDraftText)) {
+            return Result<PromptVersionMutationState>.Failure(
                 Error.Validation("Prompt content is required before creating a version.", "prompts.version.content-required"));
         }
 
-        if (entity.CurrentDraftText.Length > PromptGalleryLimits.MaximumContentLength)
-        {
-            return Result<PromptVersionSnapshot>.Failure(
+        if (entity.CurrentDraftText.Length > PromptGalleryLimits.MaximumContentLength) {
+            return Result<PromptVersionMutationState>.Failure(
                 Error.Validation(
                     $"Prompt content cannot exceed {PromptGalleryLimits.MaximumContentLength:N0} characters.",
                     "prompts.version.content-too-long"));
@@ -209,8 +345,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         entity.CurrentVersionNumber += 1;
         entity.Status = PromptArtifactStatus.Final;
         entity.UpdatedAtUtc = NextUpdatedAt(entity.UpdatedAtUtc);
-        var version = new PromptVersion
-        {
+        var version = new PromptVersion {
             PromptArtifactId = entity.Id,
             VersionNumber = entity.CurrentVersionNumber,
             Content = entity.CurrentDraftText,
@@ -225,111 +360,73 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             CreatedAtUtc = _clock.GetUtcNow()
         };
         await dbContext.Set<PromptVersion>().AddAsync(version, cancellationToken);
-        try
-        {
+        try {
+            await _changes.DemandCommitAsync(cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Result<PromptVersionSnapshot>.Failure(Error.Failure(
+        } catch (DbUpdateConcurrencyException) {
+            return Result<PromptVersionMutationState>.Failure(Error.Failure(
                 "The Prompt Gallery item changed while its version was being created. Reload it before retrying.",
                 "prompts.gallery.concurrency-conflict"));
         }
 
-        await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
-        await RecordActivityAsync(
-            "finalize",
-            $"Finalized prompt version {version.VersionNumber}",
-            entity,
-            cancellationToken);
-        return Result<PromptVersionSnapshot>.Success(ToSnapshot(version));
+        return Result<PromptVersionMutationState>.Success(new(ToSnapshot(version), entity, PromptVersionMutationKind.Finalized));
     }
 
-    public async Task<Result<PromptVersionSnapshot>> ImportVersionAsync(
+    internal async Task<Result<PromptVersionMutationState>> ImportVersionInContextAsync(
+        PromptsDbContext dbContext,
         PromptGalleryImportRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(request.Draft);
-        ArgumentNullException.ThrowIfNull(request.Version);
-
-        var errors = PromptGalleryPersistence.ValidateDraft(request.Draft).ToList();
-        if (request.Draft.Id.HasValue)
-        {
-            errors.Add(Error.Validation(
-                "Imported Gallery drafts cannot specify an artifact ID.",
-                "prompts.import.artifact-id-invalid"));
-        }
-
-        if (!Enum.IsDefined(request.Provenance) ||
-            request.Provenance is PromptArtifactProvenance.User or PromptArtifactProvenance.PackagedComponentCatalog)
-        {
-            errors.Add(Error.Validation(
-                "Prompt import provenance is invalid.",
-                "prompts.import.provenance-invalid"));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.SourceKey) || request.SourceKey.Trim().Length > 200)
-        {
-            errors.Add(Error.Validation(
-                "Prompt import source key must contain 1 to 200 characters.",
-                "prompts.import.source-key-invalid"));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.SourceCatalog) || request.SourceCatalog.Trim().Length > 120)
-        {
-            errors.Add(Error.Validation(
-                "Prompt import source catalog must contain 1 to 120 characters.",
-                "prompts.import.source-catalog-invalid"));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Draft.Content))
-        {
-            errors.Add(Error.Validation(
-                "Imported prompt content is required.",
-                "prompts.import.content-required"));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Version.CreationReason) ||
-            request.Version.CreationReason.Trim().Length > 200 ||
-            string.IsNullOrWhiteSpace(request.Version.OutputFormat) ||
-            request.Version.OutputFormat.Trim().Length > 80)
-        {
-            errors.Add(Error.Validation(
-                "Imported prompt version metadata is invalid.",
-                "prompts.import.version-invalid"));
-        }
-
-        if (errors.Count > 0)
-        {
-            return Result<PromptVersionSnapshot>.Failure(errors);
+        bool createOnly,
+        CancellationToken cancellationToken = default) {
+        var validation = ValidateVersionImport(request);
+        if (validation.IsFailure) {
+            return Result<PromptVersionMutationState>.Failure(validation.Errors);
         }
 
         var draft = request.Draft;
         var sourceKey = request.SourceKey.Trim();
         var now = _clock.GetUtcNow();
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, ImportMutationScope, cancellationToken);
+        await SerializableMutationScope.AcquireRelationalScopeLocksAsync(dbContext, [ImportMutationScope], cancellationToken);
         var entity = await dbContext.Set<PromptArtifact>()
             .SingleOrDefaultAsync(
                 artifact => artifact.Provenance == request.Provenance && artifact.SourceKey == sourceKey,
                 cancellationToken);
+        if (createOnly && (request.ExpectedUpdatedAtUtc.HasValue || entity is not null)) {
+            return Result<PromptVersionMutationState>.Failure(Error.Validation(
+                "An enlisted imported-version creation requires an absent item and cannot replace an existing import.",
+                PromptGalleryErrorCodes.ImportExpectationRequired));
+        }
         var isNew = entity is null;
-        if (entity is null)
-        {
-            entity = new PromptArtifact
-            {
+        if (entity is null) {
+            entity = new PromptArtifact {
                 CreatedAtUtc = now,
                 Provenance = request.Provenance,
                 SourceKey = sourceKey
             };
             await dbContext.Set<PromptArtifact>().AddAsync(entity, cancellationToken);
-        }
-        else if (entity.IsArchived)
-        {
-            return Result<PromptVersionSnapshot>.Failure(Error.Failure(
+        } else if (entity.IsArchived) {
+            return Result<PromptVersionMutationState>.Failure(Error.Failure(
                 "An archived Gallery import cannot be updated automatically.",
                 "prompts.import.artifact-archived"));
+        }
+
+        if (!isNew) {
+            if (request.ExpectedUpdatedAtUtc is { } expected && expected != entity.UpdatedAtUtc) {
+                return Result<PromptVersionMutationState>.Failure(ConcurrentMutation("import"));
+            }
+            if (request.ExpectedUpdatedAtUtc is null) {
+                var current = await PromptGalleryPersistence.LoadItemDetailsAsync(dbContext, entity.Id, cancellationToken);
+                if (current is not null && current.Status == PromptArtifactStatus.Final &&
+                        current.Source.Catalog == request.SourceCatalog.Trim() &&
+                        PromptGalleryPersistence.MatchesEditableDraft(current, draft)) {
+                    var existingVersion = await dbContext.Set<PromptVersion>().AsNoTracking()
+                        .SingleAsync(item => item.PromptArtifactId == entity.Id && item.VersionNumber == entity.CurrentVersionNumber,
+                            cancellationToken);
+                    return Result<PromptVersionMutationState>.Success(new(ToSnapshot(existingVersion), entity, PromptVersionMutationKind.Unchanged));
+                }
+                return Result<PromptVersionMutationState>.Failure(Error.Validation(
+                    "An original ExpectedUpdatedAtUtc is required to replace an existing imported prompt.",
+                    PromptGalleryErrorCodes.ImportExpectationRequired));
+            }
         }
 
         var createVersion = isNew || !MatchesCurrentSnapshot(entity, draft);
@@ -363,11 +460,9 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             cancellationToken);
 
         PromptVersion version;
-        if (createVersion)
-        {
+        if (createVersion) {
             entity.CurrentVersionNumber += 1;
-            version = new PromptVersion
-            {
+            version = new PromptVersion {
                 PromptArtifactId = entity.Id,
                 VersionNumber = entity.CurrentVersionNumber,
                 Content = entity.CurrentDraftText,
@@ -382,9 +477,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
                 CreatedAtUtc = now
             };
             await dbContext.Set<PromptVersion>().AddAsync(version, cancellationToken);
-        }
-        else
-        {
+        } else {
             version = await dbContext.Set<PromptVersion>()
                 .AsNoTracking()
                 .SingleOrDefaultAsync(
@@ -395,15 +488,15 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
                     $"Imported Gallery item '{entity.Id}' has no current immutable version.");
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await mutation.CommitAsync(cancellationToken);
-        await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
-        await RecordActivityAsync(
-            createVersion ? "import-version" : "verify-import",
-            createVersion ? "Imported prompt version" : "Verified imported prompt version",
-            entity,
-            cancellationToken);
-        return Result<PromptVersionSnapshot>.Success(ToSnapshot(version));
+        try {
+            await _changes.DemandCommitAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        } catch (DbUpdateConcurrencyException) {
+            return Result<PromptVersionMutationState>.Failure(ConcurrentMutation("import"));
+        }
+        var kind = isNew ? PromptVersionMutationKind.ImportedNew
+            : createVersion ? PromptVersionMutationKind.ImportedVersion : PromptVersionMutationKind.VerifiedImport;
+        return Result<PromptVersionMutationState>.Success(new(ToSnapshot(version), entity, kind));
     }
 
     public async Task<Result<PromptVersionSnapshot>> GetVersionSnapshotAsync(
@@ -582,6 +675,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         entity.UpdatedAtUtc = NextUpdatedAt(entity.UpdatedAtUtc);
         try
         {
+            await _changes.DemandCommitAsync(cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
@@ -589,6 +683,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             return Result.Failure(ConcurrentMutation("archive or restore"));
         }
 
+        PublishChange(entity.Id, EditingChangeKind.LifecycleChanged);
         await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
         await RecordActivityAsync(
             archived ? "archive" : "restore",
@@ -620,6 +715,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         entity.UpdatedAtUtc = NextUpdatedAt(entity.UpdatedAtUtc);
         try
         {
+            await _changes.DemandCommitAsync(cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
@@ -627,6 +723,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             return Result.Failure(ConcurrentMutation("favorite update"));
         }
 
+        PublishChange(entity.Id, EditingChangeKind.MetadataChanged);
         await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
         await RecordActivityAsync(
             favorite ? "favorite" : "unfavorite",
@@ -701,7 +798,9 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             if (preference is not null)
             {
                 dbContext.Remove(preference);
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await _changes.DemandCommitAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+                PublishChange(promptArtifactId, EditingChangeKind.MetadataChanged);
             }
 
             return Result.Success();
@@ -720,8 +819,18 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
 
         preference.IsSuppressed = true;
         preference.UpdatedAtUtc = _clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await _changes.DemandCommitAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        PublishChange(promptArtifactId, EditingChangeKind.MetadataChanged);
         return Result.Success();
+    }
+
+    private void PublishChange(Guid promptId, EditingChangeKind kind) {
+        try {
+            _changes.Publish(promptId, kind);
+        } catch (Exception exception) {
+            _logger.LogError(exception, "Prompt {PromptId} committed, but its {ChangeKind} hint could not be published.", promptId, kind);
+        }
     }
 
     private async Task RecordActivityAsync(

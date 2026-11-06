@@ -80,6 +80,7 @@ public sealed record ProjectStructureRuntimeLaunchPlan(
 {
     public ProjectStructureRuntimeLaunchTarget? Target => Targets.FirstOrDefault();
     internal ProjectStructureRuntimeSessionOwner? Owner { get; init; }
+    internal Func<CancellationToken, ValueTask>? AuthorizeLaunch { get; init; }
 
     internal ProjectStructureRuntimeLaunchPlan Capture() => this with {
         ExecutableCandidates = Array.AsReadOnly(ExecutableCandidates.ToArray()),

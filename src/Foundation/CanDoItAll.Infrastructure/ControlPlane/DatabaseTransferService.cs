@@ -122,7 +122,9 @@ public sealed class DatabaseTransferService(
             await EnsureCanOpenAsync(targetDbContext, cancellationToken);
         }
 
-        var context = new DatabaseTransferOperation(sourceProfile, targetProfile, request.ReplaceExisting);
+        var context = new DatabaseTransferOperation(sourceProfile, targetProfile, request.ReplaceExisting) {
+            Observations = new Dictionary<string, DatabaseTransferObservation>(request.Observations, StringComparer.Ordinal)
+        };
 
         foreach (var handler in selectedHandlers) {
             results.Add(await TransferHandlerAsync(handler, context, cancellationToken));

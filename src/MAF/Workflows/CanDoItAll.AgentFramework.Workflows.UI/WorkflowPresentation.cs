@@ -6,7 +6,8 @@ public enum WorkflowTab { Dashboard, Catalog, Editor, History, Analytics }
 public enum WorkflowAction {
     Refresh, CreateStarter, OpenAgents, ChangeTab, SelectDefinition, ToggleTree, OpenTemplates, Publish,
     TestInputChanged, RunTest, CancelRun, SelectRun, RunDetails, EventDetails, RunPage, EventPage,
-    ResponseChanged, Respond, TemplateSearch, SelectTemplate, PreviewTemplate
+    ResponseChanged, Respond, TemplateSearch, SelectTemplate, PreviewTemplate, CatalogSearch, CatalogPage,
+    InspectUnconfirmedDraft, OpenInspectedDraft
 }
 public readonly record struct WorkflowTreeKey(string Value);
 public readonly record struct WorkflowTemplateKey(string Value);
@@ -37,6 +38,9 @@ public sealed record WorkflowCatalogPresentation {
     public long Revision { get; init; }
     public bool IsBusy { get; init; }
     public int DefinitionCount { get; init; }
+    public string Search { get; init; } = "";
+    public WorkflowPager Page { get; init; } = new(0, 1, 0, "");
+    public string ReadError { get; init; } = "";
     public ImmutableArray<WorkflowTreeEntry> Tree { get; init; } = [];
     public WorkflowDefinitionView? Definition { get; init; }
     public bool DetailLoading { get; init; }
@@ -73,6 +77,8 @@ public sealed record WorkflowShellPresentation {
     public WorkflowTab ActiveTab { get; init; }
     public bool IsLoading { get; init; }
     public bool IsBusy { get; init; }
+    public bool CreationBlocked { get; init; }
+    public WorkflowDraftRecoveryView? Recovery { get; init; }
     public string ErrorMessage { get; init; } = "";
     public string DefinitionCount { get; init; } = "0";
     public string ComponentCount { get; init; } = "-";
@@ -83,6 +89,9 @@ public sealed record WorkflowShellPresentation {
     public bool EditorLoading { get; init; }
     public bool EditorUnavailable { get; init; }
 }
+
+public sealed record WorkflowDraftRecoveryView(Guid WorkflowId, Guid ComponentId, Guid? CurrentVersionId,
+    string? WorkflowName, string? ComponentName, bool Inspected, string Error);
 
 public sealed record WorkflowTemplateInput(string Label, string Description, string Key, string Kind, bool Required);
 public sealed record WorkflowTemplateView(WorkflowTemplateKey Key, string Name, string Description, string NodeKinds,

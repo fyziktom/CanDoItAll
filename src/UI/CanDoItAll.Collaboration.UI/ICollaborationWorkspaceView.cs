@@ -2,12 +2,6 @@ using CanDoItAll.Modules.Collaboration;
 
 namespace CanDoItAll.Collaboration.UI;
 
-public enum CollaborationSection {
-    Inbox,
-    Threads,
-    Escalations
-}
-
 public enum CollaborationReadState {
     Loading,
     Ready,
@@ -21,16 +15,19 @@ public interface ICollaborationWorkspaceView {
     CollaborationSection Section { get; }
     CollaborationReadState ReadState { get; }
     bool UnreadOnly { get; }
+    int PageOffset { get; }
     bool IsMissing { get; }
     bool IsReplyRetained { get; }
     string? ReadError { get; }
     CollaborationDraft<CollaborationThreadEditorModel> NewThread { get; }
     CollaborationDraft<CollaborationReplyEditorModel> Reply { get; }
     CollaborationTarget? Target { get; }
+    CollaborationDraftStatus DraftStatus { get; }
     Task RefreshAsync();
     Task SelectAsync(Guid threadId);
     Task SetSectionAsync(CollaborationSection section);
     Task SetUnreadOnlyAsync(bool unreadOnly);
+    Task SetPageAsync(int offset);
     void PrepareThread(CollaborationDraft<CollaborationThreadEditorModel> origin, CollaborationInboxItemKind kind);
     Task CreateAsync(CollaborationDraft<CollaborationThreadEditorModel> origin);
     Task ReplyAsync(CollaborationTarget target, CollaborationDraft<CollaborationReplyEditorModel> origin);

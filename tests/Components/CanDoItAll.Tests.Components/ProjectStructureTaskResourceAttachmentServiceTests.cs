@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Data.Common;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
@@ -33,6 +35,13 @@ public sealed class ProjectStructureTaskResourceAttachmentServiceTests
                 MetadataJson: ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope {
                     WorkItem = new() { WorkItemKind = ProjectWorkItemKind.Task, ExecutionState = ProjectTaskExecutionState.NotStarted }
                 })) { ExpectedProjectAdmission = admission });
+        var unknown = JsonNode.Parse(task.MetadataJson)!.AsObject();
+        unknown["futureTaskConfig"] = new JsonObject { ["keep"] = true };
+        unknown["workItem"]!.AsObject()["futureEffortPolicy"] = new JsonObject { ["keep"] = true };
+        task = (await workbench.UpdateObjectAsync(projectId, task.Id,
+            new(task.Title, task.Subtitle, task.Notes, task.StartUtc, task.EndUtc, unknown.ToJsonString(), task.DurationSeconds, task.NodeReferences) {
+                ExpectedProjectAdmission = admission, ExpectedNode = task
+            }))!;
         var resource = (await services.GetRequiredService<ProjectStructureTaskResourceService>().ListOptionsAsync(projectId))
             .First(option => option.Kind == ProjectStructureTaskResourceKind.Process);
         probe.TaskId = task.Id;
@@ -46,6 +55,9 @@ public sealed class ProjectStructureTaskResourceAttachmentServiceTests
         var persisted = ProjectStructureTaskEditStatePolicy.Read(Assert.Single(surface.Nodes, node => node.Id == task.Id));
         Assert.Equal(50m, persisted.Estimate.ExpectedCostAmount);
         Assert.Equal(resource.ResourceId, persisted.CostBasis?.ResourceId);
+        using var savedJson = JsonDocument.Parse(Assert.Single(surface.Nodes, node => node.Id == task.Id).MetadataJson);
+        Assert.True(savedJson.RootElement.GetProperty("futureTaskConfig").GetProperty("keep").GetBoolean());
+        Assert.True(savedJson.RootElement.GetProperty("workItem").GetProperty("futureEffortPolicy").GetProperty("keep").GetBoolean());
         Assert.Contains(surface.Links, link => link.SourceId == task.Id && link.Kind == ProjectObjectLinkKind.Uses &&
             link.TargetId == $"process-definition:{resource.ResourceId:D}");
     }

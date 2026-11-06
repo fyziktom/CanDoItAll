@@ -1,13 +1,16 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Search;
+using CanDoItAll.Editing;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace CanDoItAll.Modules.CrmHr;
 
@@ -61,7 +64,8 @@ public sealed partial class PartyDirectoryService(
     IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService)
+    ISearchIndexService searchIndexService,
+    CrmHrChanges changes)
 {
     private const string PartyNotFoundErrorCode = "crmhr.party.not-found";
     private const string MultiplePrimaryContactsErrorCode = "crmhr.party.multiple-primary-contacts";
@@ -131,7 +135,7 @@ public sealed partial class PartyDirectoryService(
         return parties
             .Select(party =>
             {
-                var tags = DeserializeTags(party.TagsJson, party.Id);
+                var tags = PartyEditorContent.ReadTags(party.TagsJson, party.Id);
                 var partyContacts = contactsByPartyId.GetValueOrDefault(party.Id) ?? [];
                 return new PartyDirectoryListItemModel(
                     party.Id,
@@ -153,6 +157,9 @@ public sealed partial class PartyDirectoryService(
     public async Task<PartyEditorModel?> GetPartyAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var observation = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            : null;
         var party = await dbContext.Set<Party>().SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (party is null)
         {
@@ -173,99 +180,78 @@ public sealed partial class PartyDirectoryService(
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ThenByDescending(item => item.CreatedAtUtc)
             .ToList();
-        var tags = DeserializeTags(party.TagsJson, party.Id);
-
-        return new PartyEditorModel
-        {
-            Id = party.Id,
-            PartyType = party.PartyType,
-            LifecycleStatus = party.LifecycleStatus,
-            DisplayName = party.DisplayName,
-            LegalName = party.LegalName,
-            PreferredName = party.PreferredName,
-            ExternalCode = party.ExternalCode,
-            Summary = party.Summary,
-            Notes = party.Notes,
-            Tags = tags,
-            Region = party.Region,
-            CountryCode = party.CountryCode,
-            TimeZone = party.TimeZone,
-            IsSensitive = party.IsSensitive,
-            ExtendedDataJson = party.ExtendedDataJson,
-            LastChangedBy = party.LastChangedBy,
-            UpdatedAtUtc = party.UpdatedAtUtc,
-            Roles = roles.Select(role => new PartyRoleAssignmentEditorModel
-            {
-                Id = role.Id,
-                RoleKind = role.RoleKind,
-                Title = role.Title,
-                IsPrimary = role.IsPrimary,
-                ValidFromUtc = role.ValidFromUtc,
-                ValidToUtc = role.ValidToUtc,
-                Notes = role.Notes
-            }).ToList(),
-            ContactPoints = contactPoints.Select(contactPoint => new PartyContactPointEditorModel
-            {
-                Id = contactPoint.Id,
-                ContactType = contactPoint.ContactType,
-                Label = contactPoint.Label,
-                Value = contactPoint.Value,
-                NormalizedValue = contactPoint.NormalizedValue,
-                IsPrimary = contactPoint.IsPrimary,
-                IsPublic = contactPoint.IsPublic,
-                Tags = DeserializeTags(contactPoint.TagsJson, party.Id),
-                Notes = contactPoint.Notes
-            }).ToList(),
-            Addresses = addresses.Select(address => new PartyAddressEditorModel
-            {
-                Id = address.Id,
-                AddressType = address.AddressType,
-                Line1 = address.Line1,
-                Line2 = address.Line2,
-                City = address.City,
-                Region = address.Region,
-                PostalCode = address.PostalCode,
-                CountryCode = address.CountryCode,
-                IsPrimary = address.IsPrimary,
-                Notes = address.Notes
-            }).ToList(),
-            ConfidentialNotes = confidentialNotes.Select(note => new PartyConfidentialNoteEditorModel
-            {
-                Id = note.Id,
-                Category = note.Category,
-                NoteText = note.NoteText,
-                CreatedBy = note.CreatedBy,
-                CreatedAtUtc = note.CreatedAtUtc,
-                UpdatedAtUtc = note.UpdatedAtUtc
-            }).ToList()
-        };
+        return PartyEditorContent.Map(party, roles, contactPoints, addresses, confidentialNotes);
     }
 
     public Task<Result<Guid>> SavePartyAsync(PartyEditorModel model, CancellationToken cancellationToken = default)
         => SavePartyObservedAsync(model, null, cancellationToken);
 
     internal async Task<Result<Guid>> SavePartyObservedAsync(PartyEditorModel model, Action<Guid>? onCommitted,
-        CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var saveResult = await SavePartyCoreAsync(dbContext, model, cancellationToken);
-        if (saveResult.IsFailure || saveResult.Value is null)
-        {
-            return Result<Guid>.Failure(saveResult.Errors);
-        }
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        var result = await SavePartyWithReceiptAsync(model, receipt => onCommitted?.Invoke(receipt.PartyId), cancellationToken, authorizeCommit);
+        return result.IsSuccess
+            ? Result<Guid>.Success(result.Value!.PartyId)
+            : Result<Guid>.Failure(result.Errors);
+    }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        onCommitted?.Invoke(saveResult.Value.PartyId);
-        await PublishPartySavedAsync(saveResult.Value, cancellationToken);
-        return Result<Guid>.Success(saveResult.Value.PartyId);
+    public async Task<Result<PartySaveReceipt>> SavePartyWithReceiptAsync(PartyEditorModel model,
+        Action<PartySaveReceipt>? onCommitted = null, CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        ArgumentNullException.ThrowIfNull(model);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
+        model = model.Snapshot();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var typeMutation = model.Id is Guid id && await dbContext.Set<Party>().AsNoTracking()
+            .AnyAsync(party => party.Id == id && party.PartyType != model.PartyType, cancellationToken)
+                ? await SerializableMutationScope.BeginAsync(dbContext, [PartyAffiliationEndpoints.ScopeKey(id), PartyRelationshipService.ScopeKey(id), OpportunityPartyReferences.ScopeKey(id)], cancellationToken)
+                : null;
+        await using var partyTransaction = typeMutation is null && dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken) : null;
+        PartySaveOperation operation;
+        PartySaveReceipt receipt;
+        try {
+            var saveResult = await SavePartyCoreAsync(dbContext, model, cancellationToken);
+            if (saveResult.IsFailure || saveResult.Value is null) {
+                return Result<PartySaveReceipt>.Failure(saveResult.Errors);
+            }
+            operation = saveResult.Value;
+            await changes.DemandCommitAsync(cancellationToken);
+            if (authorizeCommit is not null) {
+                await authorizeCommit(cancellationToken);
+            }
+            await dbContext.SaveChangesAsync(cancellationToken);
+            receipt = new PartySaveReceipt(operation.PartyId, PartyEditorContent.Accepted(dbContext, operation.PartyId));
+            await changes.DemandCommitAsync(cancellationToken);
+            if (authorizeCommit is not null) {
+                await authorizeCommit(cancellationToken);
+            }
+            if (typeMutation is not null) {
+                await typeMutation.CommitAsync(cancellationToken);
+            } else if (partyTransaction is not null) {
+                await partyTransaction.CommitAsync(cancellationToken);
+            }
+        } catch (Exception exception) when (exception is DbUpdateConcurrencyException || SerializableMutationScope.IsConflict(exception)) {
+            return Result<PartySaveReceipt>.Failure(PartyChanged());
+        }
+        onCommitted?.Invoke(receipt);
+        changes.PublishParty(receipt.PartyId, operation.IsNew ? EditingChangeKind.Created : EditingChangeKind.EditableContentChanged);
+        await PublishPartySavedAsync(operation, cancellationToken);
+        return Result<PartySaveReceipt>.Success(receipt);
     }
 
     public async Task<Result<int>> ImportPartiesAtomicallyAsync(
         IReadOnlyList<PartyEditorModel> models,
         string actor,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<int>? onCommitted = null)
     {
         ArgumentNullException.ThrowIfNull(models);
+        if (models.Count > PartyDuplicateAnalysis.MaximumInputs) {
+            return Result<int>.Failure(Error.Validation($"Split the import into batches of at most {PartyDuplicateAnalysis.MaximumInputs} rows.",
+                CrmHrEditingErrorCodes.PartyImportIntentInvalid));
+        }
         if (models.Count == 0)
         {
             return Result<int>.Failure(Error.Validation(
@@ -273,43 +259,59 @@ public sealed partial class PartyDirectoryService(
                 "crmhr.party.import-no-ready-rows"));
         }
 
+        models = models.Select(model => model.Snapshot()).ToArray();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        await SerializableMutationScope.AcquireRelationalScopeLocksAsync(dbContext,
+            models.Where(model => model.Id.HasValue).SelectMany(model => new[] {
+                PartyAffiliationEndpoints.ScopeKey(model.Id!.Value), PartyRelationshipService.ScopeKey(model.Id.Value), OpportunityPartyReferences.ScopeKey(model.Id.Value)
+            }).ToArray(), cancellationToken);
         var operations = new List<PartySaveOperation>(models.Count);
-        foreach (var model in models)
-        {
-            model.LastChangedBy = string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim();
-            var saveResult = await SavePartyCoreAsync(dbContext, model, cancellationToken);
-            if (saveResult.IsFailure || saveResult.Value is null)
-            {
-                return Result<int>.Failure(saveResult.Errors);
+        try {
+            var duplicateError = await PartyDuplicateAnalysis.ValidateNewImportsAsync(dbContext, models, cancellationToken);
+            if (duplicateError is not null) {
+                return Result<int>.Failure(duplicateError);
             }
-
-            operations.Add(saveResult.Value);
+            foreach (var model in models) {
+                model.LastChangedBy = string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim();
+                var saveResult = await SavePartyCoreAsync(dbContext, model, cancellationToken);
+                if (saveResult.IsFailure || saveResult.Value is null) {
+                    return Result<int>.Failure(saveResult.Errors);
+                }
+                operations.Add(saveResult.Value);
+            }
+            dbContext.Set<CrmHrAuditEntry>().Add(new CrmHrAuditEntry {
+                EntityType = nameof(Party),
+                EntityId = Guid.Empty,
+                Action = "CsvImport",
+                Summary = $"Imported {operations.Count} party row(s) from CSV.",
+                DetailJson = JsonSerializer.Serialize(new { ImportedCount = operations.Count }),
+                Actor = string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim(),
+                CreatedAtUtc = clock.GetUtcNow()
+            });
+            await changes.DemandCommitAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await changes.DemandCommitAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        } catch (Exception exception) when (exception is DbUpdateConcurrencyException || SerializableMutationScope.IsConflict(exception)) {
+            return Result<int>.Failure(PartyChanged());
         }
 
-        dbContext.Set<CrmHrAuditEntry>().Add(new CrmHrAuditEntry
-        {
-            EntityType = nameof(Party),
-            EntityId = Guid.Empty,
-            Action = "CsvImport",
-            Summary = $"Imported {operations.Count} party row(s) from CSV.",
-            DetailJson = JsonSerializer.Serialize(new { ImportedCount = operations.Count }),
-            Actor = string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim(),
-            CreatedAtUtc = clock.GetUtcNow()
-        });
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-
-        foreach (var operation in operations)
-        {
+        try {
+            foreach (var operation in operations) {
+                changes.PublishParty(operation.PartyId, operation.IsNew ? EditingChangeKind.Created : EditingChangeKind.EditableContentChanged);
+            }
+        } finally {
+            onCommitted?.Invoke(operations.Count);
+        }
+        foreach (var operation in operations) {
             await PublishPartySavedAsync(operation, cancellationToken);
         }
 
         return Result<int>.Success(operations.Count);
     }
 
-    private async Task<Result<PartySaveOperation>> SavePartyCoreAsync(
+    internal async Task<Result<PartySaveOperation>> SavePartyCoreAsync(
         CrmHrDbContext dbContext,
         PartyEditorModel model,
         CancellationToken cancellationToken)
@@ -320,8 +322,17 @@ public sealed partial class PartyDirectoryService(
             return Result<PartySaveOperation>.Failure([Error.Validation("Display name is required.", "crmhr.party.display-name-required")]);
         }
 
+        if (model.Id.HasValue && model.UpdatedAtUtc is null or { Ticks: 0 }) {
+            return Result<PartySaveOperation>.Failure(Error.Validation(
+                "The original UpdatedAtUtc is required when replacing a party.", CrmHrEditingErrorCodes.PartyOriginalRequired));
+        }
+        if (PartyEditorChildren.HasInvalidIdentities(model)) {
+            return Result<PartySaveOperation>.Failure(Error.Validation(
+                "Child rows must have distinct, nonempty identities.", CrmHrEditingErrorCodes.PartyChildIdentityInvalid));
+        }
+
         var duplicatePrimaryContactTypes = model.ContactPoints
-            .Where(item => item.IsPrimary)
+            .Where(item => item.IsPrimary && !string.IsNullOrWhiteSpace(item.Value))
             .GroupBy(item => item.ContactType)
             .Where(group => group.Skip(1).Any())
             .Select(group => group.Key)
@@ -358,6 +369,52 @@ public sealed partial class PartyDirectoryService(
                     PartyNotFoundErrorCode)]);
             }
 
+            if (existingParty.UpdatedAtUtc != model.UpdatedAtUtc) {
+                return Result<PartySaveOperation>.Failure(PartyChanged());
+            }
+            if (existingParty.PartyType != model.PartyType &&
+                await PartyAffiliationEndpoints.WouldInvalidateAsync(dbContext, existingPartyId, model.PartyType, cancellationToken)) {
+                return Result<PartySaveOperation>.Failure(Error.Validation(
+                    "This party's type is required by saved affiliation history. Keep its current type.",
+                    CrmHrEditingErrorCodes.PartyAffiliationTypeConflict));
+            }
+            if (existingParty.PartyType != model.PartyType &&
+                await OpportunityPartyReferences.WouldInvalidateAsync(dbContext, existingPartyId, model.PartyType, cancellationToken)) {
+                return Result<PartySaveOperation>.Failure(Error.Validation(
+                    "This party's type is required by saved opportunity account, owner or delivery references.", CrmHrEditingErrorCodes.OpportunityPartyTypeConflict));
+            }
+            if (existingParty.PartyType != model.PartyType &&
+                await AccountPartyReferences.WouldInvalidateAsync(dbContext, existingPartyId, model.PartyType, cancellationToken)) {
+                return Result<PartySaveOperation>.Failure(Error.Validation(
+                    "This organization's type is required by its saved CRM profile, connections or interaction history.",
+                    CrmHrEditingErrorCodes.AccountPartyTypeConflict));
+            }
+            if (existingParty.PartyType != model.PartyType &&
+                await WorkforcePartyReferences.WouldInvalidateAsync(dbContext, existingPartyId, model.PartyType, cancellationToken)) {
+                return Result<PartySaveOperation>.Failure(Error.Validation(
+                    "This party's type is required by saved workforce profiles, managers or home units.",
+                    CrmHrEditingErrorCodes.WorkforcePartyTypeConflict));
+            }
+            if (existingParty.PartyType != model.PartyType &&
+                await RecruitmentPartyReferences.WouldInvalidateAsync(dbContext, existingPartyId, model.PartyType, cancellationToken)) {
+                return Result<PartySaveOperation>.Failure(Error.Validation(
+                    "This party's type is required by saved recruitment applications, interviews or lifecycle tasks.", RecruitmentEditingErrors.PartyTypeConflict));
+            }
+            if (existingParty.PartyType != model.PartyType && (
+                await dbContext.Set<AiAgentProfile>().AnyAsync(profile =>
+                    (profile.PartyId == existingPartyId && model.PartyType != PartyType.AiAgent) ||
+                    (profile.OwnerPartyId == existingPartyId && model.PartyType != PartyType.Person), cancellationToken) ||
+                (model.PartyType != PartyType.AiAgent && await dbContext.Set<AiResourceBinding>()
+                    .AnyAsync(binding => binding.PartyId == existingPartyId, cancellationToken)))) {
+                return Result<PartySaveOperation>.Failure(Error.Validation(
+                    "This party's type is required by saved AI profiles or stewardship assignments.", AiStewardEditingErrors.PartyTypeConflict));
+            }
+            if (existingParty.PartyType != model.PartyType &&
+                await PartyRelationshipService.WouldInvalidateSupportPersonAsync(dbContext, existingPartyId, model.PartyType, cancellationToken)) {
+                return Result<PartySaveOperation>.Failure(Error.Validation(
+                    "This person's type is required by saved recruiting support assignments.", CrmHrEditingErrorCodes.RelationshipSupportTypeConflict));
+            }
+            dbContext.Entry(existingParty).Property(item => item.UpdatedAtUtc).OriginalValue = model.UpdatedAtUtc.Value;
             party = existingParty;
         }
         else
@@ -394,9 +451,9 @@ public sealed partial class PartyDirectoryService(
         party.IsSensitive = model.IsSensitive;
         party.ExtendedDataJson = normalizedExtendedDataResult;
         party.LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "system" : model.LastChangedBy.Trim();
-        party.UpdatedAtUtc = now;
+        party.UpdatedAtUtc = CrmHrEditVersions.Next(party.UpdatedAtUtc, now);
 
-        await ReplaceChildrenAsync(dbContext, party.Id, model, party.LastChangedBy, now, cancellationToken);
+        await PartyEditorChildren.ReplaceAsync(dbContext, party.Id, model, party.LastChangedBy, now, cancellationToken);
         var auditAction = isNew
             ? "PartyCreated"
             : previousLifecycleStatus == PartyLifecycleStatus.Archived && party.LifecycleStatus != PartyLifecycleStatus.Archived
@@ -439,10 +496,11 @@ public sealed partial class PartyDirectoryService(
             auditSummary,
             party.PartyType,
             party.LifecycleStatus,
-            party.LastChangedBy));
+            party.LastChangedBy,
+            isNew));
     }
 
-    private async Task PublishPartySavedAsync(PartySaveOperation operation, CancellationToken cancellationToken)
+    internal async Task PublishPartySavedAsync(PartySaveOperation operation, CancellationToken cancellationToken)
     {
         await UpsertPartySearchDocumentAsync(operation.PartyId, cancellationToken);
         await activityStream.RecordAsync(
@@ -458,125 +516,18 @@ public sealed partial class PartyDirectoryService(
             cancellationToken);
     }
 
-    private sealed record PartySaveOperation(
+    internal sealed record PartySaveOperation(
         Guid PartyId,
         string AuditAction,
         string AuditSummary,
         PartyType PartyType,
         PartyLifecycleStatus LifecycleStatus,
-        string Actor);
+        string Actor,
+        bool IsNew);
 
-    private static async Task ReplaceChildrenAsync(
-        CrmHrDbContext dbContext,
-        Guid partyId,
-        PartyEditorModel model,
-        string actor,
-        DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        var existingRoles = await dbContext.Set<PartyRoleAssignment>().Where(item => item.PartyId == partyId).ToListAsync(cancellationToken);
-        var existingContactPoints = await dbContext.Set<PartyContactPoint>().Where(item => item.PartyId == partyId).ToListAsync(cancellationToken);
-        var existingAddresses = await dbContext.Set<PartyAddress>().Where(item => item.PartyId == partyId).ToListAsync(cancellationToken);
-        var existingConfidentialNotes = await dbContext.Set<PartyConfidentialNote>().Where(item => item.PartyId == partyId).ToListAsync(cancellationToken);
-
-        dbContext.Set<PartyRoleAssignment>().RemoveRange(existingRoles);
-        dbContext.Set<PartyContactPoint>().RemoveRange(existingContactPoints);
-        dbContext.Set<PartyAddress>().RemoveRange(existingAddresses);
-
-        dbContext.Set<PartyRoleAssignment>().AddRange(model.Roles.Select(role => new PartyRoleAssignment
-        {
-            Id = role.Id ?? Guid.NewGuid(),
-            PartyId = partyId,
-            RoleKind = role.RoleKind,
-            Title = role.Title.Trim(),
-            IsPrimary = role.IsPrimary,
-            ValidFromUtc = role.ValidFromUtc,
-            ValidToUtc = role.ValidToUtc,
-            Notes = role.Notes.Trim()
-        }));
-
-        dbContext.Set<PartyContactPoint>().AddRange(model.ContactPoints.Select(contactPoint => new PartyContactPoint
-        {
-            Id = contactPoint.Id ?? Guid.NewGuid(),
-            PartyId = partyId,
-            ContactType = contactPoint.ContactType,
-            Label = contactPoint.Label.Trim(),
-            Value = contactPoint.Value.Trim(),
-            NormalizedValue = contactPoint.NormalizedValue.Trim(),
-            IsPrimary = contactPoint.IsPrimary,
-            IsPublic = contactPoint.IsPublic,
-            TagsJson = JsonSerializer.Serialize(contactPoint.Tags
-                .Where(tag => !string.IsNullOrWhiteSpace(tag))
-                .Select(tag => tag.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList()),
-            Notes = contactPoint.Notes.Trim()
-        }));
-
-        dbContext.Set<PartyAddress>().AddRange(model.Addresses.Select(address => new PartyAddress
-        {
-            Id = address.Id ?? Guid.NewGuid(),
-            PartyId = partyId,
-            AddressType = address.AddressType.Trim(),
-            Line1 = address.Line1.Trim(),
-            Line2 = address.Line2.Trim(),
-            City = address.City.Trim(),
-            Region = address.Region.Trim(),
-            PostalCode = address.PostalCode.Trim(),
-                CountryCode = address.CountryCode.Trim(),
-                IsPrimary = address.IsPrimary,
-                Notes = address.Notes.Trim()
-            }));
-
-        var retainedNoteIds = model.ConfidentialNotes
-            .Where(item => item.Id.HasValue)
-            .Select(item => item.Id!.Value)
-            .ToHashSet();
-        dbContext.Set<PartyConfidentialNote>().RemoveRange(existingConfidentialNotes.Where(item => !retainedNoteIds.Contains(item.Id)));
-
-        foreach (var item in model.ConfidentialNotes.Where(item => !string.IsNullOrWhiteSpace(item.NoteText)))
-        {
-            var note = item.Id.HasValue
-                ? existingConfidentialNotes.SingleOrDefault(existing => existing.Id == item.Id.Value)
-                : null;
-
-            if (note is null)
-            {
-                note = new PartyConfidentialNote
-                {
-                    Id = item.Id ?? Guid.NewGuid(),
-                    PartyId = partyId,
-                    CreatedBy = string.IsNullOrWhiteSpace(item.CreatedBy) ? actor : item.CreatedBy.Trim(),
-                    CreatedAtUtc = item.CreatedAtUtc == default ? now : item.CreatedAtUtc
-                };
-                dbContext.Set<PartyConfidentialNote>().Add(note);
-            }
-
-            note.Category = NormalizeConfidentialCategory(item.Category);
-            note.NoteText = item.NoteText.Trim();
-            note.UpdatedAtUtc = now;
-        }
-    }
-
-    private static string NormalizeConfidentialCategory(string? category)
-    {
-        var normalized = string.IsNullOrWhiteSpace(category) ? PartyConfidentialNoteCategories.Other : category.Trim();
-        return PartyConfidentialNoteCategories.All.Contains(normalized, StringComparer.Ordinal)
-            ? normalized
-            : PartyConfidentialNoteCategories.Other;
-    }
-
-    private static List<string> DeserializeTags(string json, Guid partyId)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<List<string>>(json) ?? [];
-        }
-        catch (JsonException)
-        {
-            throw new InvalidOperationException($"Party '{partyId}' contains invalid tags JSON.");
-        }
-    }
+    private static Error PartyChanged() => Error.Failure(
+        "The party changed since it was opened. Review the current values before saving.",
+        CrmHrEditingErrorCodes.PartyConflict);
 
     private static string? TryNormalizeJson(string json, string fallback)
     {
@@ -626,8 +577,9 @@ public sealed partial class CrmService(
     IProjectRecordQueryService projectRecordQueryService,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     ProjectWriteAdmissionService admissions,
-    ProjectPartyIntegrationService assignmentService)
-{
+    ProjectPartyIntegrationService assignmentService,
+    CrmHrChanges changes,
+    CoordinatedDatabaseTransaction opportunityTransaction) : ICrmOpportunityEditorService, ICrmOpportunityConversionService {
     private const string CrmAccountEntityType = "CrmAccount";
     private const string CrmAccountSearchSourceType = "crm-account";
     private const string CrmOpportunityEntityType = "Opportunity";
@@ -757,21 +709,37 @@ public sealed partial class CrmService(
             .ToList();
     }
 
-    public async Task<CrmOpportunityDetailModel?> GetOpportunityAsync(
-        Guid opportunityId,
-        CancellationToken cancellationToken = default)
-    {
+    public Task<CrmOpportunityDetailModel?> GetOpportunityAsync(Guid opportunityId, CancellationToken cancellationToken = default) =>
+        ReadOpportunityAsync(opportunityId, cancellationToken, includeHistory: true);
+
+    public Task<CrmOpportunityDetailModel?> GetOpportunityForEditingAsync(Guid opportunityId, CancellationToken cancellationToken = default,
+        int? maximumPartyLinks = null) {
+        if (maximumPartyLinks is < 1 or int.MaxValue) {
+            throw new ArgumentOutOfRangeException(nameof(maximumPartyLinks));
+        }
+        return ReadOpportunityAsync(opportunityId, cancellationToken, includeHistory: false, maximumPartyLinks);
+    }
+
+    private async Task<CrmOpportunityDetailModel?> ReadOpportunityAsync(Guid opportunityId, CancellationToken cancellationToken,
+        bool includeHistory, int? maximumPartyLinks = null) {
         if (opportunityId == Guid.Empty)
         {
             return null;
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return (await LoadOpportunityDetailsAsync(
+        await using var observation = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            : null;
+        var detail = (await LoadOpportunityDetailsAsync(
                 dbContext,
                 [opportunityId],
-                cancellationToken))
+                cancellationToken, includeHistory, maximumPartyLinks))
             .SingleOrDefault();
+        if (observation is not null) {
+            await observation.CommitAsync(cancellationToken);
+        }
+        return detail;
     }
 
     public async Task<int> CountAccountsAsync(CancellationToken cancellationToken = default)
@@ -786,9 +754,30 @@ public sealed partial class CrmService(
                 cancellationToken);
     }
 
+    public async Task<CrmAccountProfileEditorModel?> GetAccountProfileAsync(Guid accountPartyId, CancellationToken cancellationToken = default) {
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var observation = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            : null;
+        var party = await context.Set<Party>().AsNoTracking()
+            .Where(item => item.Id == accountPartyId && item.PartyType == PartyType.Organization)
+            .Select(item => new { item.Id, item.LifecycleStatus, item.UpdatedAtUtc }).SingleOrDefaultAsync(cancellationToken);
+        if (party is null) {
+            return null;
+        }
+        var profile = await context.Set<CrmAccountProfile>().AsNoTracking().SingleOrDefaultAsync(item => item.AccountPartyId == accountPartyId, cancellationToken);
+        var roles = profile is null
+            ? await context.Set<PartyRoleAssignment>().Where(item => item.PartyId == accountPartyId).Select(item => item.RoleKind).Distinct().ToListAsync(cancellationToken)
+            : [];
+        return CrmAccountProfileContent.Map(party.Id, party.UpdatedAtUtc, ResolveRelationshipStage(party.LifecycleStatus, roles, profile), profile);
+    }
+
     public async Task<CrmAccountWorkspaceModel?> GetAccountWorkspaceAsync(Guid accountPartyId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var observation = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            : null;
         var account = await dbContext.Set<Party>()
             .Select(item => new
             {
@@ -797,7 +786,8 @@ public sealed partial class CrmService(
                 item.Summary,
                 item.LifecycleStatus,
                 item.TagsJson,
-                item.PartyType
+                item.PartyType,
+                item.UpdatedAtUtc
             })
             .SingleOrDefaultAsync(item => item.Id == accountPartyId, cancellationToken);
 
@@ -851,7 +841,11 @@ public sealed partial class CrmService(
         var projects = projectIds.Count == 0
             ? new Dictionary<Guid, CrmAccountConnectionProjectItemModel>()
             : (await projectRecordQueryService.GetManyAsync(projectIds, cancellationToken))
-                .Select(item => new CrmAccountConnectionProjectItemModel(item.Id, item.Name, item.Status))
+                .Select(item => new CrmAccountConnectionProjectItemModel(item.Id, item.Name, item.Status) {
+                    Admission = item.LifetimeId is Guid lifetime
+                        ? new(admissions.DatabaseProfileId, item.Id, lifetime)
+                        : throw new InvalidOperationException($"Connection project '{item.Id}' has no observed lifetime.")
+                })
                 .ToDictionary(item => item.Id);
         var projectIdsByConnectionId = connectionProjectLinks
             .GroupBy(item => item.AccountConnectionId)
@@ -897,19 +891,10 @@ public sealed partial class CrmService(
             TryDeserializeTags(account.TagsJson),
             ResolvePrimaryContact(contactValues, PartyContactType.Email),
             ResolvePrimaryContact(contactValues, PartyContactType.Phone),
-            new CrmAccountProfileEditorModel
-            {
-                Id = profile?.Id,
-                AccountPartyId = account.Id,
-                RelationshipStage = ResolveRelationshipStage(account.LifecycleStatus, roleValues, profile),
-                CommercialNotes = profile?.CommercialNotes ?? string.Empty,
-                ConstraintNotes = profile?.ConstraintNotes ?? string.Empty,
-                TimingRiskNotes = profile?.TimingRiskNotes ?? string.Empty,
-                LastChangedBy = string.IsNullOrWhiteSpace(profile?.LastChangedBy) ? "crm-hr-ui" : profile.LastChangedBy
-            },
+            CrmAccountProfileContent.Map(account.Id, account.UpdatedAtUtc, ResolveRelationshipStage(account.LifecycleStatus, roleValues, profile), profile),
             connectedRecords,
             connectedParties,
-            opportunityCount);
+            opportunityCount) { ConnectionsOriginal = CrmAccountConnectionsContent.Capture(accountPartyId, connections, connectionProjectLinks) };
     }
 
     public async Task<CrmInteractionDetailModel?> GetAccountInteractionAsync(
@@ -966,26 +951,55 @@ public sealed partial class CrmService(
             cancellationToken);
     }
 
-    public async Task<Result<Guid>> SaveAccountProfileAsync(CrmAccountProfileEditorModel model, CancellationToken cancellationToken = default)
+    public async Task<Result<Guid>> SaveAccountProfileAsync(CrmAccountProfileEditorModel model, CancellationToken cancellationToken = default) {
+        var result = await SaveAccountProfileWithReceiptAsync(model, cancellationToken: cancellationToken);
+        return result.IsSuccess
+            ? Result<Guid>.Success(result.Value!.AccountPartyId)
+            : Result<Guid>.Failure(result.Errors);
+    }
+
+    public async Task<Result<CrmAccountProfileSaveReceipt>> SaveAccountProfileWithReceiptAsync(CrmAccountProfileEditorModel model,
+        Action<CrmAccountProfileSaveReceipt>? onCommitted = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
+        model = model.Snapshot();
 
         if (model.AccountPartyId == Guid.Empty)
         {
-            return Result<Guid>.Failure(Error.Validation("Choose an account before saving CRM details.", "crmhr.crm.account-required"));
+            return Result<CrmAccountProfileSaveReceipt>.Failure(Error.Validation("Choose an account before saving CRM details.", "crmhr.crm.account-required"));
+        }
+
+        if (model.Original is not { } original || original.PartyUpdatedAtUtc == default ||
+            original.ProfileId.HasValue != original.ProfileUpdatedAtUtc.HasValue || model.Id != original.ProfileId) {
+            return Result<CrmAccountProfileSaveReceipt>.Failure(Error.Validation(
+                "The original account and profile observation is required before saving CRM details.",
+                CrmHrEditingErrorCodes.AccountOriginalRequired));
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var profileTransaction = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken) : null;
         var party = await dbContext.Set<Party>()
             .SingleOrDefaultAsync(item => item.Id == model.AccountPartyId && item.PartyType == PartyType.Organization, cancellationToken);
         if (party is null)
         {
-            return Result<Guid>.Failure(Error.Failure("The selected account no longer exists.", "crmhr.crm.account-missing"));
+            return Result<CrmAccountProfileSaveReceipt>.Failure(Error.Failure("The selected account no longer exists.", "crmhr.crm.account-missing"));
         }
+
+        if (party.UpdatedAtUtc != original.PartyUpdatedAtUtc) {
+            return Result<CrmAccountProfileSaveReceipt>.Failure(AccountChanged());
+        }
+        dbContext.Entry(party).Property(item => item.UpdatedAtUtc).OriginalValue = original.PartyUpdatedAtUtc;
 
         var now = clock.GetUtcNow();
         var profile = await dbContext.Set<CrmAccountProfile>()
             .SingleOrDefaultAsync(item => item.AccountPartyId == model.AccountPartyId, cancellationToken);
+        if (profile?.Id != original.ProfileId || profile?.UpdatedAtUtc != original.ProfileUpdatedAtUtc) {
+            return Result<CrmAccountProfileSaveReceipt>.Failure(AccountChanged());
+        }
+        if (profile is not null) {
+            dbContext.Entry(profile).Property(item => item.UpdatedAtUtc).OriginalValue = original.ProfileUpdatedAtUtc!.Value;
+        }
         if (profile is null)
         {
             profile = new CrmAccountProfile
@@ -1001,10 +1015,10 @@ public sealed partial class CrmService(
         profile.ConstraintNotes = model.ConstraintNotes.Trim();
         profile.TimingRiskNotes = model.TimingRiskNotes.Trim();
         profile.LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "crm-hr-ui" : model.LastChangedBy.Trim();
-        profile.UpdatedAtUtc = now;
+        profile.UpdatedAtUtc = CrmHrEditVersions.Next(profile.UpdatedAtUtc, now);
 
         party.LastChangedBy = profile.LastChangedBy;
-        party.UpdatedAtUtc = now;
+        party.UpdatedAtUtc = CrmHrEditVersions.Next(party.UpdatedAtUtc, now);
         party.LifecycleStatus = model.RelationshipStage switch
         {
             CrmAccountRelationshipStage.Prospect => PartyLifecycleStatus.Prospect,
@@ -1046,7 +1060,23 @@ public sealed partial class CrmService(
             profile.LastChangedBy,
             party.IsSensitive);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await changes.DemandCommitAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await changes.DemandCommitAsync(cancellationToken);
+            if (profileTransaction is not null) {
+                await profileTransaction.CommitAsync(cancellationToken);
+            }
+        } catch (DbUpdateConcurrencyException) {
+            return Result<CrmAccountProfileSaveReceipt>.Failure(AccountChanged());
+        } catch (DbUpdateException exception) when (exception.InnerException is PostgresException {
+            SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: AccountProfileUniqueIndex }) {
+            return Result<CrmAccountProfileSaveReceipt>.Failure(AccountChanged());
+        }
+        var accepted = CrmAccountProfileContent.Map(party.Id, party.UpdatedAtUtc, profile.RelationshipStage, profile);
+        var receipt = new CrmAccountProfileSaveReceipt(party.Id, accepted);
+        onCommitted?.Invoke(receipt);
+        changes.PublishParty(receipt.AccountPartyId);
         await UpsertAccountSearchDocumentAsync(party.Id, cancellationToken);
         await activityStream.RecordAsync(
             new ActivityWriteRequest(
@@ -1060,15 +1090,31 @@ public sealed partial class CrmService(
                 Actor: profile.LastChangedBy),
             cancellationToken);
 
-        return Result<Guid>.Success(party.Id);
+        return Result<CrmAccountProfileSaveReceipt>.Success(receipt);
     }
+
+    private const string AccountProfileUniqueIndex = "IX_CrmHr_AccountProfiles_AccountPartyId";
+
+    private static Error AccountChanged() => Error.Failure(
+        "The account or profile changed since it was opened. Review the current values before saving.",
+        CrmHrEditingErrorCodes.AccountConflict);
 
     public async Task<Result> SaveConnectedRecordsAsync(
         Guid accountPartyId,
         IReadOnlyList<CrmAccountConnectionEditorModel> connectedRecords,
         string actor,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        CrmAccountConnectionsObservation? original = null,
+        Action<CrmAccountConnectionsSaveReceipt>? onCommitted = null)
     {
+        ArgumentNullException.ThrowIfNull(connectedRecords);
+        connectedRecords = connectedRecords.Select(row => row.Snapshot()).ToArray();
+        if (original is null) {
+            return Result.Failure(Error.Validation(
+                "The complete original connection observation is required, including an explicitly observed empty set.",
+                CrmHrEditingErrorCodes.ConnectionOriginalRequired));
+        }
+        original = original.Snapshot();
         if (accountPartyId == Guid.Empty)
         {
             return Result.Failure(Error.Validation(
@@ -1076,8 +1122,21 @@ public sealed partial class CrmService(
                 "crmhr.crm.account-required"));
         }
 
-        ArgumentNullException.ThrowIfNull(connectedRecords);
+        if (original.AccountPartyId != accountPartyId || original.Rows.Any(row => row.Id == Guid.Empty) ||
+            original.Rows.Select(row => row.Id).Distinct().Count() != original.Rows.Count ||
+            original.Projects.Any(link => link.Id == Guid.Empty || link.ProjectId == Guid.Empty || !original.Rows.Any(row => row.Id == link.AccountConnectionId)) ||
+            original.Projects.Select(link => link.Id).Distinct().Count() != original.Projects.Count) {
+            return Result.Failure(Error.Validation("The connection original does not identify a complete distinct set for this account.",
+                CrmHrEditingErrorCodes.ConnectionIdentityInvalid));
+        }
+        await changes.DemandCommitAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await SerializableMutationScope.BeginAsync(dbContext,
+            connectedRecords.SelectMany(row => row.ProjectIds).Concat(original.Projects.Select(row => row.ProjectId))
+                .Distinct().Select(ProjectMutationScopeKeys.ForProject)
+                .Append(CrmAccountConnectionsContent.ScopeKey(accountPartyId))
+                .Append(OpportunityPartyReferences.ScopeKey(accountPartyId)).ToArray(), cancellationToken);
+        using var ownerFrame = opportunityTransaction.Enter(dbContext);
         var party = await dbContext.Set<Party>()
             .SingleOrDefaultAsync(item => item.Id == accountPartyId && item.PartyType == PartyType.Organization, cancellationToken);
         if (party is null)
@@ -1097,7 +1156,8 @@ public sealed partial class CrmService(
                 ProjectIds = item.ProjectIds
                     .Where(projectId => projectId != Guid.Empty)
                     .Distinct()
-                    .ToList()
+                    .ToList(),
+                ProjectAdmissions = new(item.ProjectAdmissions)
             })
             .ToList();
         if (normalizedConnections.Any(item => item.RelatedPartyId == accountPartyId))
@@ -1149,6 +1209,15 @@ public sealed partial class CrmService(
                 "One or more related projects no longer exist.",
                 "crmhr.crm.connection-project-missing"));
         }
+        foreach (var projectId in requestedProjectIds) {
+            var bindings = normalizedConnections.Where(row => row.ProjectIds.Contains(projectId))
+                .Select(row => row.ProjectAdmissions.GetValueOrDefault(projectId)).Distinct().ToArray();
+            if (bindings.Length != 1 || bindings[0] is not { } project || project.ProjectId != projectId) {
+                return Result.Failure(Error.Validation("Each selected project requires its originally captured lifetime.",
+                    CrmHrEditingErrorCodes.ConnectionProjectOriginalRequired));
+            }
+            await admissions.RequireForMutationAsync(project, cancellationToken);
+        }
 
         var existingConnections = await dbContext.Set<CrmAccountConnection>()
             .Where(item => item.AccountPartyId == accountPartyId)
@@ -1159,6 +1228,11 @@ public sealed partial class CrmService(
             : await dbContext.Set<CrmAccountConnectionProjectLink>()
                 .Where(item => existingConnectionIds.Contains(item.AccountConnectionId))
                 .ToListAsync(cancellationToken);
+
+        if (!CrmAccountConnectionsContent.Matches(original,
+                CrmAccountConnectionsContent.Capture(accountPartyId, existingConnections, existingProjectLinks))) {
+            return Result.Failure(CrmAccountConnectionsContent.Conflict());
+        }
 
         var now = clock.GetUtcNow();
         var normalizedActor = string.IsNullOrWhiteSpace(actor) ? "crm-hr-ui" : actor.Trim();
@@ -1174,10 +1248,11 @@ public sealed partial class CrmService(
         }
 
         var existingConnectionById = existingConnections.ToDictionary(item => item.Id);
-        if (persistedEditorIds.Any(connectionId => !existingConnectionById.ContainsKey(connectionId)))
+        var newIds = persistedEditorIds.Where(id => !existingConnectionById.ContainsKey(id)).ToArray();
+        if (newIds.Contains(Guid.Empty) || await dbContext.Set<CrmAccountConnection>().AsNoTracking().AnyAsync(row => newIds.Contains(row.Id), cancellationToken))
         {
             return Result.Failure(Error.Validation(
-                "A connected record changed or belongs to another account. Reload and try again.",
+                "A new connection identity already exists or belongs to another account. Review its current state.",
                 "crmhr.crm.connection-stale"));
         }
 
@@ -1212,7 +1287,7 @@ public sealed partial class CrmService(
             connection.Role = editor.Role;
             connection.IsPrimary = editor.IsPrimary;
             connection.Notes = editor.Notes;
-            connection.UpdatedAtUtc = now;
+            connection.UpdatedAtUtc = CrmHrEditVersions.Next(connection.UpdatedAtUtc, now);
             if (dbContext.Entry(connection).State == EntityState.Detached)
             {
                 dbContext.Set<CrmAccountConnection>().Add(connection);
@@ -1260,7 +1335,20 @@ public sealed partial class CrmService(
             normalizedActor,
             party.IsSensitive);
 
+        await changes.DemandCommitAsync(cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        var acceptedOriginal = await CrmAccountConnectionsContent.ReadAsync(dbContext, accountPartyId, cancellationToken);
+        var accepted = acceptedOriginal.Rows.Select(row => new CrmAccountConnectionEditorModel {
+            Id = row.Id, RelatedPartyId = row.RelatedPartyId, Role = row.Role, IsPrimary = row.IsPrimary, Notes = row.Notes,
+            ProjectIds = acceptedOriginal.Projects.Where(link => link.AccountConnectionId == row.Id).Select(link => link.ProjectId).ToList(),
+            ProjectAdmissions = connectedRecords.SelectMany(source => source.ProjectAdmissions).Where(binding =>
+                acceptedOriginal.Projects.Any(link => link.AccountConnectionId == row.Id && link.ProjectId == binding.Key))
+                .DistinctBy(binding => binding.Key).ToDictionary()
+        }).ToArray();
+        await changes.DemandCommitAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        onCommitted?.Invoke(new(accountPartyId, accepted, acceptedOriginal));
+        changes.PublishAccountRecords(accountPartyId, EditingChangeKind.EditableContentChanged);
         await UpsertAccountSearchDocumentAsync(accountPartyId, cancellationToken);
         await activityStream.RecordAsync(
             new ActivityWriteRequest(
@@ -1281,9 +1369,11 @@ public sealed partial class CrmService(
         Guid accountPartyId,
         CrmInteractionEditorModel model,
         string actor,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<CrmInteractionAppendReceipt>? onCommitted = null)
     {
         ArgumentNullException.ThrowIfNull(model);
+        model = model.Snapshot();
 
         if (accountPartyId == Guid.Empty)
         {
@@ -1299,13 +1389,32 @@ public sealed partial class CrmService(
         {
             return Result<Guid>.Failure(Error.Validation("Choose a next-action owner when a next action is provided.", "crmhr.crm.next-action-owner-required"));
         }
+        if (!Enum.IsDefined(model.InteractionType) || model.Subject.Trim().Length > 200 || model.NextActionText.Trim().Length > 240 || model.NextActionOwnerPartyId == Guid.Empty) {
+            return Result<Guid>.Failure(Error.Validation("Choose a valid interaction type and owner, a subject up to 200 characters and next-action text up to 240 characters.",
+                CrmHrEditingErrorCodes.InteractionInputInvalid));
+        }
 
+        await changes.DemandCommitAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await SerializableMutationScope.BeginAsync(dbContext,
+            [OpportunityPartyReferences.ScopeKey(accountPartyId)], cancellationToken);
         var party = await dbContext.Set<Party>()
             .SingleOrDefaultAsync(item => item.Id == accountPartyId && item.PartyType == PartyType.Organization, cancellationToken);
         if (party is null)
         {
             return Result<Guid>.Failure(Error.Failure("The selected account no longer exists.", "crmhr.crm.account-missing"));
+        }
+        if (model.RelatedOpportunityId is Guid opportunityId && !await dbContext.Set<Opportunity>().AsNoTracking()
+                .AnyAsync(row => row.Id == opportunityId && row.AccountPartyId == accountPartyId, cancellationToken)) {
+            return Result<Guid>.Failure(Error.Validation("The selected opportunity is unavailable or belongs to another account.",
+                CrmHrEditingErrorCodes.InteractionReferenceInvalid));
+        }
+        var referencedParties = model.ParticipantPartyIds.Where(id => id != Guid.Empty && id != accountPartyId)
+            .Concat(model.NextActionOwnerPartyId is Guid ownerId ? [ownerId] : []).Distinct().ToArray();
+        if (referencedParties.Length > 0 && await dbContext.Set<Party>().AsNoTracking()
+                .CountAsync(row => referencedParties.Contains(row.Id), cancellationToken) != referencedParties.Length) {
+            return Result<Guid>.Failure(Error.Validation("A selected participant or next-action owner is unavailable. Choose its current directory record.",
+                CrmHrEditingErrorCodes.InteractionReferenceInvalid));
         }
 
         var now = clock.GetUtcNow();
@@ -1367,7 +1476,19 @@ public sealed partial class CrmService(
             normalizedActor,
             party.IsSensitive);
 
+        await changes.DemandCommitAsync(cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await changes.DemandCommitAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        var accepted = model.Snapshot();
+        accepted.Subject = interaction.Subject;
+        accepted.Summary = interaction.Summary;
+        accepted.Notes = interaction.Notes;
+        accepted.NextActionText = interaction.NextActionText;
+        accepted.ParticipantPartyIds = model.ParticipantPartyIds.Distinct()
+            .Where(id => id != Guid.Empty && id != accountPartyId).ToList();
+        onCommitted?.Invoke(new(accountPartyId, interaction.Id, accepted));
+        changes.PublishAccountRecords(accountPartyId, EditingChangeKind.Created);
         await UpsertAccountSearchDocumentAsync(accountPartyId, cancellationToken);
         await UpsertInteractionSearchDocumentAsync(interaction.Id, cancellationToken);
         await activityStream.RecordAsync(
@@ -1385,53 +1506,117 @@ public sealed partial class CrmService(
         return Result<Guid>.Success(interaction.Id);
     }
 
-    public async Task<Result<Guid>> SaveOpportunityAsync(
-        CrmOpportunityEditorModel model,
-        CancellationToken cancellationToken = default)
-    {
+    public async Task<Result<CrmOpportunityStageReceipt>> AdvanceOpportunityStageAsync(CrmOpportunityStageAdvance intent, string actor,
+        CancellationToken cancellationToken = default, Action<CrmOpportunityStageReceipt>? onCommitted = null) {
+        ArgumentNullException.ThrowIfNull(intent);
+        if (intent.OpportunityId == Guid.Empty || intent.AccountPartyId == Guid.Empty || intent.ExpectedUpdatedAtUtc == default ||
+            intent.DisplayedStage is OpportunityStage.Won or OpportunityStage.Lost) {
+            return Result<CrmOpportunityStageReceipt>.Failure(Error.Validation("Choose an open, observed opportunity before advancing.", CrmHrEditingErrorCodes.OpportunityConflict));
+        }
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var stageTransaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken) : null;
+        var opportunity = await context.Set<Opportunity>().SingleOrDefaultAsync(row => row.Id == intent.OpportunityId, cancellationToken);
+        if (opportunity is null || opportunity.AccountPartyId != intent.AccountPartyId || opportunity.Stage != intent.DisplayedStage ||
+            opportunity.UpdatedAtUtc != intent.ExpectedUpdatedAtUtc) {
+            return Result<CrmOpportunityStageReceipt>.Failure(Error.Failure("The displayed opportunity changed. Refresh the pipeline before advancing.", CrmHrEditingErrorCodes.OpportunityConflict));
+        }
+        var account = await context.Set<Party>().SingleAsync(row => row.Id == intent.AccountPartyId, cancellationToken);
+        var normalizedActor = NormalizeActor(actor);
+        var now = CrmHrEditVersions.Normalize(clock.GetUtcNow());
+        opportunity.Stage = intent.NextStage;
+        opportunity.UpdatedAtUtc = CrmHrEditVersions.Next(opportunity.UpdatedAtUtc, now);
+        account.LastChangedBy = normalizedActor;
+        account.UpdatedAtUtc = CrmHrEditVersions.Next(account.UpdatedAtUtc, now);
+        context.Set<OpportunityStageHistory>().Add(new() {
+            OpportunityId = opportunity.Id, Stage = opportunity.Stage, ChangedAtUtc = now, ChangedBy = normalizedActor,
+            Notes = $"Advanced from {intent.DisplayedStage} to {opportunity.Stage}.",
+            RecognizedAmount = opportunity.Stage == OpportunityStage.Won ? opportunity.Amount : null,
+            RecognizedCurrencyCode = opportunity.Stage == OpportunityStage.Won ? opportunity.CurrencyCode : string.Empty
+        });
+        AddAuditEntry(context, account.Id, "OpportunityStageChanged", $"Moved opportunity '{opportunity.Title}' to {opportunity.Stage}.",
+            new { opportunity.Id, opportunity.Stage }, normalizedActor, account.IsSensitive);
+        try {
+            await changes.DemandCommitAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+            await changes.DemandCommitAsync(cancellationToken);
+            if (stageTransaction is not null) {
+                await stageTransaction.CommitAsync(cancellationToken);
+            }
+        } catch (DbUpdateConcurrencyException) {
+            return Result<CrmOpportunityStageReceipt>.Failure(Error.Failure("The opportunity changed while advancing. Refresh the pipeline.", CrmHrEditingErrorCodes.OpportunityConflict));
+        }
+        var receipt = new CrmOpportunityStageReceipt(opportunity.Id, opportunity.Stage, opportunity.UpdatedAtUtc);
+        onCommitted?.Invoke(receipt);
+        changes.PublishOpportunity(opportunity.Id);
+        changes.PublishParty(account.Id);
+        await UpsertAccountSearchDocumentAsync(account.Id, cancellationToken);
+        await UpsertOpportunitySearchDocumentAsync(opportunity.Id, cancellationToken);
+        await activityStream.RecordAsync(new ActivityWriteRequest("CRM / HR", "OpportunityStageChanged", $"Updated opportunity {opportunity.Title}",
+            $"{account.DisplayName} / {opportunity.Stage}", ArtifactKind: CrmOpportunityEntityType, ArtifactId: opportunity.Id,
+            Route: BuildOpportunityRoute(account.Id, opportunity.Id), Actor: normalizedActor), cancellationToken);
+        return Result<CrmOpportunityStageReceipt>.Success(receipt);
+    }
+
+    public async Task<Result<Guid>> SaveOpportunityAsync(CrmOpportunityEditorModel model, CancellationToken cancellationToken = default) {
+        var result = await SaveOpportunityWithReceiptAsync(model, cancellationToken);
+        return result.IsSuccess ? Result<Guid>.Success(result.Value!.OpportunityId) : Result<Guid>.Failure(result.Errors);
+    }
+
+    public async Task<Result<CrmOpportunitySaveReceipt>> SaveOpportunityWithReceiptAsync(CrmOpportunityEditorModel model,
+        CancellationToken cancellationToken = default, Action<CrmOpportunitySaveReceipt>? onCommitted = null) {
         ArgumentNullException.ThrowIfNull(model);
+        model = model.Snapshot();
 
         if (model.AccountPartyId == Guid.Empty)
         {
-            return Result<Guid>.Failure(Error.Validation("Choose an account before saving an opportunity.", "crmhr.crm.opportunity-account-required"));
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation("Choose an account before saving an opportunity.", "crmhr.crm.opportunity-account-required"));
         }
 
         if (string.IsNullOrWhiteSpace(model.Title))
         {
-            return Result<Guid>.Failure(Error.Validation("Opportunity title is required.", "crmhr.crm.opportunity-title-required"));
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation("Opportunity title is required.", "crmhr.crm.opportunity-title-required"));
         }
 
         if (model.OwnerPartyId == Guid.Empty)
         {
-            return Result<Guid>.Failure(Error.Validation("Choose an owner before saving an opportunity.", "crmhr.crm.opportunity-owner-required"));
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation("Choose an owner before saving an opportunity.", "crmhr.crm.opportunity-owner-required"));
         }
 
         if (model.ProbabilityPercent is < 0 or > 100)
         {
-            return Result<Guid>.Failure(Error.Validation("Probability must stay between 0 and 100.", "crmhr.crm.opportunity-probability-range"));
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation("Probability must stay between 0 and 100.", "crmhr.crm.opportunity-probability-range"));
         }
 
         if (model.Stage == OpportunityStage.Lost && string.IsNullOrWhiteSpace(model.LostReason))
         {
-            return Result<Guid>.Failure(Error.Validation("Lost opportunities require a loss reason.", "crmhr.crm.opportunity-lost-reason-required"));
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation("Lost opportunities require a loss reason.", "crmhr.crm.opportunity-lost-reason-required"));
         }
 
         var normalizedCurrencyCode = NormalizeOpportunityCurrencyCode(model.CurrencyCode);
         if (normalizedCurrencyCode is null)
         {
-            return Result<Guid>.Failure(Error.Validation(
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation(
                 "Currency must be a three-letter ASCII code.",
                 "crmhr.crm.opportunity-currency-invalid"));
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var referenceTransaction = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken) : null;
+        using var opportunityEntry = opportunityTransaction.Enter(dbContext);
+        await SerializableMutationScope.AcquireRelationalScopeLocksAsync(dbContext,
+            model.Parties.Select(link => link.PartyId).Append(model.AccountPartyId).Append(model.OwnerPartyId)
+                .Concat(model.DeliveryUnitPartyId is Guid deliveryId ? [deliveryId] : []).Distinct()
+                .Select(OpportunityPartyReferences.ScopeKey)
+                .Concat(model.LinkedProjectId is Guid linkedId ? [ProjectMutationScopeKeys.ForProject(linkedId)] : []).ToArray(), cancellationToken);
         var account = await dbContext.Set<Party>()
             .SingleOrDefaultAsync(
                 item => item.Id == model.AccountPartyId && item.PartyType == PartyType.Organization,
                 cancellationToken);
         if (account is null)
         {
-            return Result<Guid>.Failure(Error.Failure("The selected account no longer exists.", "crmhr.crm.opportunity-account-missing"));
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Failure("The selected account no longer exists.", "crmhr.crm.opportunity-account-missing"));
         }
 
         var entity = model.Id.HasValue
@@ -1439,28 +1624,33 @@ public sealed partial class CrmService(
             : null;
         if (model.Id.HasValue && entity is null)
         {
-            return Result<Guid>.Failure(Error.Failure(
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Failure(
                 "The opportunity no longer exists.",
                 "crmhr.crm.opportunity-missing"));
         }
 
         if (entity is not null && !model.ExpectedUpdatedAtUtc.HasValue)
         {
-            return Result<Guid>.Failure(Error.Validation(
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation(
                 "Reload the opportunity before saving it.",
                 "crmhr.crm.opportunity-expected-updated-at-required"));
         }
 
         if (entity is not null && entity.UpdatedAtUtc != model.ExpectedUpdatedAtUtc)
         {
-            return Result<Guid>.Failure(Error.Failure(
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Failure(
                 "The opportunity changed after it was loaded. Reload it before saving.",
                 "crmhr.crm.opportunity-concurrency-conflict"));
         }
 
         if (entity is not null && entity.AccountPartyId != model.AccountPartyId)
         {
-            return Result<Guid>.Failure(Error.Validation("Move the account selection before editing a different opportunity.", "crmhr.crm.opportunity-account-mismatch"));
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation("Move the account selection before editing a different opportunity.", "crmhr.crm.opportunity-account-mismatch"));
+        }
+
+        if (entity is not null && entity.Stage == model.Stage && !string.IsNullOrWhiteSpace(model.StageNotes)) {
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation(
+                "A stage note requires a stage change. Keep ordinary updates in Notes.", CrmHrEditingErrorCodes.OpportunityStageNoteWithoutTransition));
         }
 
         var normalizedLinks = model.Parties
@@ -1482,14 +1672,14 @@ public sealed partial class CrmService(
                 .ToListAsync(cancellationToken);
         if (knownParties.Count != referencedPartyIds.Count)
         {
-            return Result<Guid>.Failure(Error.Failure("One or more selected opportunity parties no longer exist.", "crmhr.crm.opportunity-party-missing"));
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Failure("One or more selected opportunity parties no longer exist.", "crmhr.crm.opportunity-party-missing"));
         }
 
         var knownPartiesById = knownParties.ToDictionary(item => item.Id);
         var owner = knownPartiesById[model.OwnerPartyId];
         if (owner.PartyType is not (PartyType.Person or PartyType.OrganizationUnit or PartyType.AiAgent))
         {
-            return Result<Guid>.Failure(Error.Validation(
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation(
                 "Opportunity owners must be a person, organization unit, or AI agent.",
                 "crmhr.crm.opportunity-owner-type-invalid"));
         }
@@ -1497,24 +1687,34 @@ public sealed partial class CrmService(
         if (model.DeliveryUnitPartyId is Guid deliveryUnitPartyId &&
             knownPartiesById[deliveryUnitPartyId].PartyType != PartyType.OrganizationUnit)
         {
-            return Result<Guid>.Failure(Error.Validation(
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation(
                 "Opportunity delivery units must be organization units.",
                 "crmhr.crm.opportunity-delivery-unit-type-invalid"));
         }
 
         if (model.LinkedProjectId.HasValue)
         {
+            if (model.LinkedProjectAdmission is not { } observedProject || observedProject.ProjectId != model.LinkedProjectId) {
+                return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation(
+                    "Choose the linked project again to observe its current lifetime.", CrmHrEditingErrorCodes.OpportunityProjectOriginalRequired));
+            }
+            try {
+                await admissions.RequireForMutationAsync(observedProject, cancellationToken);
+            } catch (ProjectWriteAdmissionRejectedException) {
+                return Result<CrmOpportunitySaveReceipt>.Failure(Error.Failure(
+                    "The linked project was retired or replaced. Review this reference before saving.", CrmHrEditingErrorCodes.OpportunityProjectStale));
+            }
             var linkedProject = await projectRecordQueryService.GetAsync(
                 model.LinkedProjectId.Value,
                 cancellationToken);
             if (linkedProject is null)
             {
-                return Result<Guid>.Failure(Error.Validation("The linked project was not found.", "crmhr.crm.opportunity-linked-project-missing"));
+                return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation("The linked project was not found.", "crmhr.crm.opportunity-linked-project-missing"));
             }
         }
 
         var normalizedActor = NormalizeActor(model.LastChangedBy);
-        var now = clock.GetUtcNow();
+        var now = CrmHrEditVersions.Normalize(clock.GetUtcNow());
         var isNew = !model.Id.HasValue;
         var previousStage = entity?.Stage;
 
@@ -1556,21 +1756,30 @@ public sealed partial class CrmService(
             CompetitorName = model.CompetitorName.Trim(),
             PartnerContributionSummary = model.PartnerContributionSummary.Trim()
         });
-        entity.UpdatedAtUtc = !isNew && entity.UpdatedAtUtc >= now
-            ? entity.UpdatedAtUtc.AddTicks(1)
-            : now;
+        entity.UpdatedAtUtc = isNew ? now : CrmHrEditVersions.Next(entity.UpdatedAtUtc, now);
 
         var existingLinks = await dbContext.Set<OpportunityPartyLink>()
             .Where(item => item.OpportunityId == entity.Id)
             .ToListAsync(cancellationToken);
-        dbContext.Set<OpportunityPartyLink>().RemoveRange(existingLinks);
-        dbContext.Set<OpportunityPartyLink>().AddRange(normalizedLinks.Select(item => new OpportunityPartyLink
-        {
-            Id = item.Id ?? Guid.NewGuid(),
-            OpportunityId = entity.Id,
-            PartyId = item.PartyId,
-            Role = item.Role
-        }));
+        var suppliedIds = normalizedLinks.Where(link => link.Id.HasValue).Select(link => link.Id!.Value).ToArray();
+        if (suppliedIds.Contains(Guid.Empty) || suppliedIds.Distinct().Count() != suppliedIds.Length ||
+            await dbContext.Set<OpportunityPartyLink>().AnyAsync(link => suppliedIds.Contains(link.Id) && link.OpportunityId != entity.Id, cancellationToken)) {
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Validation(
+                "Linked-party row identities must be distinct and belong to this opportunity.", CrmHrEditingErrorCodes.OpportunityChildIdentityInvalid));
+        }
+        var existingById = existingLinks.ToDictionary(link => link.Id);
+        dbContext.Set<OpportunityPartyLink>().RemoveRange(existingLinks.Where(link => !suppliedIds.Contains(link.Id)));
+        var savedLinks = new List<OpportunityPartyLink>(normalizedLinks.Count);
+        foreach (var input in normalizedLinks) {
+            var link = input.Id is Guid linkId && existingById.TryGetValue(linkId, out var existing) ? existing :
+                new OpportunityPartyLink { Id = input.Id ?? Guid.NewGuid(), OpportunityId = entity.Id };
+            link.PartyId = input.PartyId;
+            link.Role = input.Role;
+            if (dbContext.Entry(link).State == EntityState.Detached) {
+                dbContext.Set<OpportunityPartyLink>().Add(link);
+            }
+            savedLinks.Add(link);
+        }
 
         if (isNew || previousStage != model.Stage)
         {
@@ -1589,7 +1798,7 @@ public sealed partial class CrmService(
         }
 
         account.LastChangedBy = normalizedActor;
-        account.UpdatedAtUtc = now;
+        account.UpdatedAtUtc = CrmHrEditVersions.Next(account.UpdatedAtUtc, now);
 
         var auditAction = isNew
             ? "OpportunityCreated"
@@ -1622,17 +1831,23 @@ public sealed partial class CrmService(
             normalizedActor,
             account.IsSensitive);
 
-        try
-        {
+        try {
+            await changes.DemandCommitAsync(cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Result<Guid>.Failure(Error.Failure(
+            if (referenceTransaction is not null) {
+                await changes.DemandCommitAsync(cancellationToken);
+                await referenceTransaction.CommitAsync(cancellationToken);
+            }
+        } catch (DbUpdateConcurrencyException) {
+            return Result<CrmOpportunitySaveReceipt>.Failure(Error.Failure(
                 "The opportunity changed while it was being saved. Reload it before retrying.",
                 "crmhr.crm.opportunity-concurrency-conflict"));
         }
 
+        var receipt = CaptureOpportunityAcceptance(entity, model, savedLinks, normalizedActor);
+        onCommitted?.Invoke(receipt);
+        changes.PublishOpportunity(entity.Id, isNew ? EditingChangeKind.Created : EditingChangeKind.EditableContentChanged);
+        changes.PublishParty(account.Id);
         await UpsertAccountSearchDocumentAsync(account.Id, cancellationToken);
         await UpsertOpportunitySearchDocumentAsync(entity.Id, cancellationToken);
         await activityStream.RecordAsync(
@@ -1647,12 +1862,68 @@ public sealed partial class CrmService(
                 Actor: normalizedActor),
             cancellationToken);
 
-        return Result<Guid>.Success(entity.Id);
+        return Result<CrmOpportunitySaveReceipt>.Success(receipt);
+    }
+
+    private static CrmOpportunitySaveReceipt CaptureOpportunityAcceptance(Opportunity entity, CrmOpportunityEditorModel submitted,
+        IReadOnlyList<OpportunityPartyLink> links, string actor) {
+        var accepted = submitted.Snapshot();
+        accepted.Id = entity.Id;
+        accepted.ExpectedUpdatedAtUtc = entity.UpdatedAtUtc;
+        accepted.Title = entity.Title;
+        accepted.RelationshipStage = entity.RelationshipStage;
+        accepted.CurrencyCode = entity.CurrencyCode;
+        accepted.LostReason = entity.LostReason;
+        accepted.Summary = entity.Summary;
+        accepted.Notes = entity.Notes;
+        accepted.CompetitorName = submitted.CompetitorName.Trim();
+        accepted.PartnerContributionSummary = submitted.PartnerContributionSummary.Trim();
+        accepted.StageNotes = string.Empty;
+        accepted.LinkedProjectAdmission = entity.LinkedProjectId.HasValue ? submitted.LinkedProjectAdmission : null;
+        accepted.LastChangedBy = actor;
+        accepted.Parties = links.Select(link => new CrmOpportunityPartyLinkEditorModel {
+            Id = link.Id, PartyId = link.PartyId, Role = link.Role
+        }).ToList();
+        return new(entity.Id, accepted);
+    }
+
+    public async Task<Result<CrmOpportunityConversionProjectBasis>> ObserveOpportunityProjectBasisAsync(Guid opportunityId,
+        DateTimeOffset expectedOpportunityUpdatedAtUtc, ProjectWriteAdmission project, CancellationToken cancellationToken = default) {
+        await admissions.RequireCurrentAsync(project, cancellationToken);
+        var projectRecord = await projectRecordQueryService.GetAsync(project.ProjectId, cancellationToken);
+        if (projectRecord?.LifetimeId != project.LifetimeId) {
+            throw new ProjectWriteAdmissionRejectedException(project);
+        }
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var observation = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken) : null;
+        var opportunity = (await LoadOpportunityDetailsAsync(context, [opportunityId], cancellationToken, includeHistory: false)).SingleOrDefault();
+        if (opportunity is null || opportunity.UpdatedAtUtc != expectedOpportunityUpdatedAtUtc) {
+            return Result<CrmOpportunityConversionProjectBasis>.Failure(Error.Failure(
+                "The conversion basis changed. Review the opportunity before choosing its project target.", CrmHrEditingErrorCodes.OpportunityConflict));
+        }
+        var kinds = BuildOpportunityProjectAssignments(opportunity, project.ProjectId)
+            .Select(item => ProjectPartyIntegrationService.MapRole(item.Role)).Distinct().ToArray();
+        var rows = await context.Set<ProjectPartyAssignment>().AsNoTracking().Where(row => row.ProjectId == project.ProjectId &&
+            row.ProjectLifetimeId == project.LifetimeId && row.NodeKey == string.Empty && kinds.Contains(row.AssignmentKind))
+            .ToArrayAsync(cancellationToken);
+        var partyIds = rows.Select(row => row.PartyId).Distinct().ToArray();
+        var partyNames = await context.Set<Party>().AsNoTracking().Where(party => partyIds.Contains(party.Id))
+            .ToDictionaryAsync(party => party.Id, party => party.DisplayName, cancellationToken);
+        var basis = new CrmOpportunityConversionProjectBasis(opportunity.Id, opportunity.UpdatedAtUtc, project,
+            rows.Select(row => CrmOpportunityAssignmentSnapshot.From(row).Original()).ToArray()) {
+                ProjectName = projectRecord.Name, PartyNames = partyNames
+            };
+        if (observation is not null) {
+            await observation.CommitAsync(cancellationToken);
+        }
+        return Result<CrmOpportunityConversionProjectBasis>.Success(basis);
     }
 
     public async Task<Result<CrmOpportunityConversionResult>> ConvertOpportunityToProjectAsync(
         CrmOpportunityConversionEditorModel model,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<CrmOpportunityConversionResult>? onCommitted = null)
     {
         ArgumentNullException.ThrowIfNull(model);
         model = model.Snapshot();
@@ -1699,7 +1970,7 @@ public sealed partial class CrmService(
         {
             return Result<CrmOpportunityConversionResult>.Failure(Error.Failure(
                 "The opportunity changed after it was loaded. Reload it before converting.",
-                "crmhr.crm.opportunity-conversion-concurrency-conflict"));
+                CrmHrEditingErrorCodes.OpportunityConversionConflict));
         }
 
         dbContext.Entry(opportunity)
@@ -1731,6 +2002,7 @@ public sealed partial class CrmService(
         string projectName;
         ProjectWriteAdmission projectAdmission;
 
+        await changes.DemandCommitAsync(cancellationToken);
         if (model.LinkExistingProject)
         {
             projectAdmission = ProjectAssignmentAdmission.Require(model.ExistingProjectId!.Value, model.ExpectedProjectAdmission);
@@ -1746,6 +2018,14 @@ public sealed partial class CrmService(
 
             if (projectAdmission.DatabaseProfileId != admissions.DatabaseProfileId || project.LifetimeId != projectAdmission.LifetimeId) {
                 throw new ProjectWriteAdmissionRejectedException(projectAdmission);
+            }
+            if (model.ExpectedProjectBasis is not { } basis || basis.OpportunityId != opportunity.Id ||
+                basis.OpportunityUpdatedAtUtc != model.ExpectedUpdatedAtUtc || basis.Project != projectAdmission ||
+                basis.Assignments.Any(row => row.ProjectId != projectAdmission.ProjectId || row.ProjectLifetimeId != projectAdmission.LifetimeId ||
+                    row.NodeKey != string.Empty || row.Id == Guid.Empty) ||
+                basis.Assignments.Select(row => row.Id).Distinct().Count() != basis.Assignments.Count) {
+                return Result<CrmOpportunityConversionResult>.Failure(Error.Validation(
+                    "Observe the selected project's complete handoff membership before converting.", CrmHrEditingErrorCodes.OpportunityConversionBasisRequired));
             }
             projectId = project.Id;
             projectName = project.Name;
@@ -1786,18 +2066,12 @@ public sealed partial class CrmService(
             .Select(assignment => assignment.Role)
             .Distinct()
             .ToList();
-        IReadOnlyList<ProjectPartyAssignmentDetail> existingProjectAssignments;
-        try {
-            existingProjectAssignments = await projectPartyIntegrationBridge.ListAssignmentsDetailedAsync(projectId, targetRoles, cancellationToken);
-        } catch (Exception exception) {
-            throw new CrmOpportunityConversionRequiresObservationException(projectAdmission, exception);
-        }
-        var originalRootAssignments = existingProjectAssignments
-            .Where(assignment => assignment.ProjectLifetimeId == projectAdmission.LifetimeId && string.IsNullOrWhiteSpace(assignment.NodeKey))
+        var originalAssignments = model.LinkExistingProject ? model.ExpectedProjectBasis!.Assignments : [];
+        var originalRootAssignments = originalAssignments
             .Select(ToProjectAssignmentRequest)
             .ToList();
-        var desiredProjectAssignments = opportunityAssignments
-            .Concat(originalRootAssignments)
+        var desiredProjectAssignments = originalRootAssignments
+            .Concat(opportunityAssignments)
             .GroupBy(assignment => new
             {
                 assignment.PartyId,
@@ -1808,7 +2082,8 @@ public sealed partial class CrmService(
         Result<CrmOpportunityAssignmentReceipt> assignmentResult;
         try {
             assignmentResult = await assignmentService.ReplaceOpportunityAssignmentsAsync(
-                projectId, desiredProjectAssignments, targetRoles, projectAdmission, cancellationToken);
+                projectId, desiredProjectAssignments, targetRoles, projectAdmission, cancellationToken,
+                changes.DemandCommitAsync, originalAssignments);
         } catch (Exception exception) {
             throw new CrmOpportunityConversionRequiresObservationException(projectAdmission, exception);
         }
@@ -1834,11 +2109,9 @@ public sealed partial class CrmService(
             ?? throw new InvalidOperationException("The CRM owner acknowledged replacement without its compensation receipt.");
         var now = clock.GetUtcNow();
         opportunity.LinkedProjectId = projectId;
-        opportunity.UpdatedAtUtc = opportunity.UpdatedAtUtc >= now
-            ? opportunity.UpdatedAtUtc.AddTicks(1)
-            : now;
+        opportunity.UpdatedAtUtc = CrmHrEditVersions.Next(opportunity.UpdatedAtUtc, now);
         account.LastChangedBy = normalizedActor;
-        account.UpdatedAtUtc = now;
+        account.UpdatedAtUtc = CrmHrEditVersions.Next(account.UpdatedAtUtc, now);
 
         AddAuditEntry(
             dbContext,
@@ -1854,12 +2127,27 @@ public sealed partial class CrmService(
             normalizedActor,
             account.IsSensitive);
 
+        var linkCommitAttempted = false;
         try
         {
+            await using var linkTransaction = dbContext.Database.IsRelational()
+                ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken) : null;
+            using var linkOwner = opportunityTransaction.Enter(dbContext);
+            await SerializableMutationScope.AcquireRelationalScopeLocksAsync(dbContext,
+                [ProjectMutationScopeKeys.ForProject(projectId)], cancellationToken);
+            await admissions.RequireForMutationAsync(projectAdmission, cancellationToken);
+            await changes.DemandCommitAsync(cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
+            await changes.DemandCommitAsync(cancellationToken);
+            linkCommitAttempted = true;
+            if (linkTransaction is not null) {
+                await linkTransaction.CommitAsync(cancellationToken);
+            }
         }
         catch (Exception exception) {
-            if (!SerializableMutationScope.IsConflict(exception)) {
+            var knownRollback = !linkCommitAttempted && (SerializableMutationScope.IsConflict(exception) ||
+                exception is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException);
+            if (!knownRollback) {
                 throw new CrmOpportunityConversionRequiresObservationException(projectAdmission, exception);
             }
             try {
@@ -1872,11 +2160,20 @@ public sealed partial class CrmService(
             } catch (Exception compensationFailure) {
                 throw new CrmOpportunityConversionRequiresObservationException(projectAdmission, new AggregateException(exception, compensationFailure));
             }
+            if (exception is UnauthorizedAccessException) {
+                throw;
+            }
             return Result<CrmOpportunityConversionResult>.Failure(Error.Failure(
                 "The opportunity changed while it was being converted. Reload it before retrying.",
-                "crmhr.crm.opportunity-conversion-concurrency-conflict"));
+                CrmHrEditingErrorCodes.OpportunityConversionConflict));
         }
 
+        var conversion = new CrmOpportunityConversionResult(opportunity.Id, projectId, createdNewProject) {
+            ProjectAdmission = projectAdmission, ProjectName = projectName, OpportunityUpdatedAtUtc = opportunity.UpdatedAtUtc
+        };
+        onCommitted?.Invoke(conversion);
+        changes.PublishOpportunity(opportunity.Id);
+        changes.PublishParty(account.Id);
         await UpsertAccountSearchDocumentAsync(account.Id, cancellationToken);
         await UpsertOpportunitySearchDocumentAsync(opportunity.Id, cancellationToken);
         await activityStream.RecordAsync(
@@ -1891,16 +2188,15 @@ public sealed partial class CrmService(
                 Actor: normalizedActor),
             cancellationToken);
 
-        return Result<CrmOpportunityConversionResult>.Success(new CrmOpportunityConversionResult(
-            opportunity.Id,
-            projectId,
-            createdNewProject));
+        return Result<CrmOpportunityConversionResult>.Success(conversion);
     }
 
     private async Task<IReadOnlyList<CrmOpportunityDetailModel>> LoadOpportunityDetailsAsync(
         CrmHrDbContext dbContext,
         IReadOnlyCollection<Guid> opportunityIds,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeHistory = true,
+        int? maximumPartyLinks = null)
     {
         if (opportunityIds.Count == 0)
         {
@@ -1931,12 +2227,18 @@ public sealed partial class CrmService(
                 item.UpdatedAtUtc
             })
             .ToListAsync(cancellationToken);
-        var partyLinks = await dbContext.Set<OpportunityPartyLink>()
+        var partyLinksQuery = dbContext.Set<OpportunityPartyLink>().AsNoTracking()
+            .Where(item => opportunityIds.Contains(item.OpportunityId));
+        if (maximumPartyLinks.HasValue) {
+            partyLinksQuery = partyLinksQuery.Take(maximumPartyLinks.Value + 1);
+        }
+        var partyLinks = await partyLinksQuery.ToListAsync(cancellationToken);
+        if (maximumPartyLinks.HasValue && partyLinks.Count > maximumPartyLinks.Value) {
+            throw new OpportunityReadLimitExceededException(maximumPartyLinks.Value);
+        }
+        var stageHistory = includeHistory ? await dbContext.Set<OpportunityStageHistory>()
             .Where(item => opportunityIds.Contains(item.OpportunityId))
-            .ToListAsync(cancellationToken);
-        var stageHistory = await dbContext.Set<OpportunityStageHistory>()
-            .Where(item => opportunityIds.Contains(item.OpportunityId))
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken) : [];
         var partyIds = opportunities
             .Select(item => item.AccountPartyId)
             .Concat(opportunities.Select(item => item.OwnerPartyId))
@@ -1956,10 +2258,10 @@ public sealed partial class CrmService(
             .Select(item => item.LinkedProjectId!.Value)
             .Distinct()
             .ToList();
-        var projectNamesById = linkedProjectIds.Count == 0
-            ? new Dictionary<Guid, string>()
+        var projectsById = linkedProjectIds.Count == 0
+            ? new Dictionary<Guid, ProjectRecordQueryItem>()
             : (await projectRecordQueryService.GetManyAsync(linkedProjectIds, cancellationToken))
-                .ToDictionary(item => item.Id, item => item.Name);
+                .ToDictionary(item => item.Id);
         var partyLinksByOpportunityId = partyLinks
             .GroupBy(item => item.OpportunityId)
             .ToDictionary(group => group.Key, group => group.ToList());
@@ -2019,10 +2321,19 @@ public sealed partial class CrmService(
                     : null;
                 var linkedProjectName = string.Empty;
                 if (item.LinkedProjectId is Guid linkedProjectId &&
-                    !projectNamesById.TryGetValue(linkedProjectId, out linkedProjectName))
+                    !projectsById.ContainsKey(linkedProjectId))
                 {
                     throw new InvalidOperationException(
                         $"Opportunity '{item.Id}' references missing project '{linkedProjectId}'.");
+                }
+                ProjectWriteAdmission? projectAdmission = null;
+                if (item.LinkedProjectId is Guid projectId) {
+                    var project = projectsById[projectId];
+                    linkedProjectName = project.Name;
+                    if (project.LifetimeId is not Guid lifetimeId) {
+                        throw new InvalidOperationException($"Opportunity '{item.Id}' received an unobserved project reference '{projectId}'.");
+                    }
+                    projectAdmission = new(admissions.DatabaseProfileId, projectId, lifetimeId);
                 }
 
                 return new CrmOpportunityDetailModel(
@@ -2050,7 +2361,7 @@ public sealed partial class CrmService(
                     linkedProjectName,
                     detailLinks,
                     detailHistory,
-                    item.UpdatedAtUtc);
+                    item.UpdatedAtUtc) { LinkedProjectAdmission = projectAdmission };
             })
             .ToList();
     }
@@ -2423,16 +2734,15 @@ public sealed partial class CrmService(
     }
 
     private static ProjectPartyAssignmentUpsertRequest ToProjectAssignmentRequest(
-        ProjectPartyAssignmentDetail assignment)
+        CrmOpportunityAssignmentOriginal assignment)
     {
         return new ProjectPartyAssignmentUpsertRequest
         {
             AssignmentId = assignment.Id,
             ProjectId = assignment.ProjectId,
             PartyId = assignment.PartyId,
-            PartyAffiliationId = assignment.PartyAffiliationId ??
-                assignment.Affiliation?.AffiliationId,
-            Role = assignment.Role,
+            PartyAffiliationId = assignment.PartyOrganizationAffiliationId,
+            Role = ProjectPartyIntegrationService.MapRole(assignment.AssignmentKind),
             NodeKey = assignment.NodeKey,
             IsPrimary = assignment.IsPrimary,
             AllocationPercent = assignment.AllocationPercent,
@@ -2702,15 +3012,13 @@ internal static class CrmActivityHistoryQueryComposer
         string DisplayName);
 }
 
-public sealed partial class HrService(
+public sealed class HrService(
     IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
-    IActivityStream activityStream,
-    ISearchIndexService searchIndexService,
     ProjectRecordQueryService projectRecordQueryService,
     IProjectWorkAssignmentQueries workAssignments,
-    ProjectWriteAdmissionService admissions,
-    CoordinatedDatabaseTransaction coordinatedTransaction)
+    IStaffingRequestEditing staffingRequests,
+    IWorkforceProfileEditing workforceProfiles, WorkforceSkillEditingService workforceSkills, WorkforceCapacityEditingService workforceCapacity)
 {
     public async Task<IReadOnlyList<WorkforceProfileSummaryModel>> ListWorkforceProfilesAsync(CancellationToken cancellationToken = default)
     {
@@ -2881,95 +3189,8 @@ public sealed partial class HrService(
             cancellationToken);
     }
 
-    private async Task<WorkforceProfileWorkspaceModel?> GetWorkforceProfileWorkspaceCoreAsync(
-        CrmHrDbContext dbContext,
-        Guid partyId,
-        CancellationToken cancellationToken)
-    {
-        var party = await dbContext.Set<Party>()
-            .Select(item => new
-            {
-                item.Id,
-                item.DisplayName,
-                item.Summary,
-                item.PartyType,
-                item.LifecycleStatus,
-                item.IsSensitive,
-                item.LastChangedBy,
-                item.UpdatedAtUtc
-            })
-            .SingleOrDefaultAsync(item => item.Id == partyId, cancellationToken);
-        if (party is null || party.PartyType == PartyType.AiAgent)
-        {
-            return null;
-        }
-
-        var roles = await dbContext.Set<PartyRoleAssignment>()
-            .Where(item => item.PartyId == partyId)
-            .OrderBy(item => item.RoleKind)
-            .Select(item => item.RoleKind)
-            .ToListAsync(cancellationToken);
-        var contactPoints = await dbContext.Set<PartyContactPoint>()
-            .Where(item => item.PartyId == partyId && item.IsPublic)
-            .OrderByDescending(item => item.IsPrimary)
-            .Select(item => new CrmPartyContactValue(item.PartyId, item.ContactType, item.Value, item.IsPrimary))
-            .ToListAsync(cancellationToken);
-        var profile = await dbContext.Set<WorkforceProfile>()
-            .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var relatedPartyIds = new[] { profile?.HomeUnitPartyId, profile?.ManagerPartyId }
-            .Where(item => item.HasValue)
-            .Select(item => item!.Value)
-            .Distinct()
-            .ToList();
-        var namesByPartyId = relatedPartyIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : await dbContext.Set<Party>()
-                .Where(item => relatedPartyIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
-        var skillCatalog = await GetSkillCatalogItemsAsync(dbContext, cancellationToken);
-        var partySkills = (await GetPartySkillMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId) ?? [];
-
-        return new WorkforceProfileWorkspaceModel(
-            party.Id,
-            party.DisplayName,
-            party.Summary,
-            party.PartyType,
-            party.LifecycleStatus,
-            party.IsSensitive,
-            string.IsNullOrWhiteSpace(party.LastChangedBy) ? "crm-hr-ui" : party.LastChangedBy,
-            party.UpdatedAtUtc,
-            roles,
-            party.IsSensitive ? string.Empty : ResolvePrimaryContact(contactPoints, PartyContactType.Email),
-            party.IsSensitive ? string.Empty : ResolvePrimaryContact(contactPoints, PartyContactType.Phone),
-            profile?.HomeUnitPartyId is Guid homeUnitPartyId ? namesByPartyId.GetValueOrDefault(homeUnitPartyId) ?? string.Empty : string.Empty,
-            profile?.ManagerPartyId is Guid managerPartyId ? namesByPartyId.GetValueOrDefault(managerPartyId) ?? string.Empty : string.Empty,
-            new WorkforceProfileEditorModel
-            {
-                Id = profile?.Id,
-                PartyId = party.Id,
-                WorkforceKind = ResolveDefaultWorkforceKind(party.PartyType, roles, profile),
-                EmployeeCode = profile?.EmployeeCode ?? string.Empty,
-                JobTitle = profile?.JobTitle ?? string.Empty,
-                Discipline = profile?.Discipline ?? string.Empty,
-                Seniority = profile?.Seniority ?? string.Empty,
-                HomeUnitPartyId = profile?.HomeUnitPartyId,
-                ManagerPartyId = profile?.ManagerPartyId,
-                StartDate = profile?.StartDateUtc is DateTimeOffset startDateUtc ? DateOnly.FromDateTime(startDateUtc.UtcDateTime) : null,
-                EndDate = profile?.EndDateUtc is DateTimeOffset endDateUtc ? DateOnly.FromDateTime(endDateUtc.UtcDateTime) : null,
-                Location = profile?.Location ?? string.Empty,
-                TimeZone = profile?.TimeZone ?? string.Empty,
-                InternalCostRate = profile?.InternalCostRate,
-                ExternalBillingRate = profile?.ExternalBillingRate,
-                RateUnit = profile?.RateUnit ?? ProjectResourceRateUnit.Hour,
-                RateCurrencyCode = string.IsNullOrWhiteSpace(profile?.RateCurrencyCode) ? "USD" : profile.RateCurrencyCode,
-                CapacityHoursPerWeek = profile?.CapacityHoursPerWeek ?? 40m,
-                Status = string.IsNullOrWhiteSpace(profile?.Status) ? ResolveDefaultStatus(party.LifecycleStatus) : profile.Status,
-                Notes = profile?.Notes ?? string.Empty,
-                LastChangedBy = string.IsNullOrWhiteSpace(party.LastChangedBy) ? "crm-hr-ui" : party.LastChangedBy
-            },
-            skillCatalog,
-            partySkills);
-    }
+    private static Task<WorkforceProfileWorkspaceModel?> GetWorkforceProfileWorkspaceCoreAsync(CrmHrDbContext context, Guid partyId, CancellationToken cancellationToken) =>
+        WorkforceProfileQueries.ReadWorkspaceAsync(context, partyId, cancellationToken);
 
     private async Task<WorkforceCapacityWorkspaceModel> GetWorkforceCapacityWorkspaceCoreAsync(
         CrmHrDbContext dbContext,
@@ -3013,362 +3234,35 @@ public sealed partial class HrService(
             capacityWorkspace.CapacitySummary);
     }
 
-    public async Task<Result<Guid>> SaveWorkforceProfileAsync(WorkforceProfileEditorModel model, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-
-        if (model.PartyId == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose a party before saving the workforce profile.", "crmhr.workforce.party-required"));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var party = await dbContext.Set<Party>()
-            .SingleOrDefaultAsync(item => item.Id == model.PartyId, cancellationToken);
-        if (party is null)
-        {
-            return Result<Guid>.Failure(Error.Failure("The selected party could not be found.", "crmhr.workforce.party-not-found"));
-        }
-
-        if (model.ManagerPartyId == model.PartyId)
-        {
-            return Result<Guid>.Failure(Error.Validation("A party cannot manage itself.", "crmhr.workforce.self-manager"));
-        }
-
-        if (model.HomeUnitPartyId == model.PartyId)
-        {
-            return Result<Guid>.Failure(Error.Validation("A party cannot reference itself as its home unit.", "crmhr.workforce.self-home-unit"));
-        }
-
-        if (model.InternalCostRate is < 0m || model.ExternalBillingRate is < 0m)
-        {
-            return Result<Guid>.Failure(Error.Validation(
-                "Workforce rates cannot be negative.",
-                "crmhr.workforce.rate-negative"));
-        }
-
-        if (!Enum.IsDefined(model.RateUnit))
-        {
-            return Result<Guid>.Failure(Error.Validation(
-                "Choose a supported workforce rate unit.",
-                "crmhr.workforce.rate-unit-invalid"));
-        }
-
-        var rateCurrencyCode = string.IsNullOrWhiteSpace(model.RateCurrencyCode)
-            ? "USD"
-            : model.RateCurrencyCode.Trim().ToUpperInvariant();
-        if (rateCurrencyCode.Length != 3 || rateCurrencyCode.Any(character => character is < 'A' or > 'Z'))
-        {
-            return Result<Guid>.Failure(Error.Validation(
-                "Rate currency must be a three-letter currency code.",
-                "crmhr.workforce.rate-currency-invalid"));
-        }
-
-        if (party.PartyType == PartyType.Person && model.WorkforceKind == WorkforceKind.DeliveryUnit)
-        {
-            return Result<Guid>.Failure(Error.Validation("People cannot be saved as delivery units.", "crmhr.workforce.person-delivery-unit"));
-        }
-
-        if ((party.PartyType == PartyType.Organization || party.PartyType == PartyType.OrganizationUnit) && model.WorkforceKind != WorkforceKind.DeliveryUnit)
-        {
-            return Result<Guid>.Failure(Error.Validation("Organizations and organization units can only use the delivery-unit workforce kind.", "crmhr.workforce.organization-kind"));
-        }
-
-        if (model.ManagerPartyId is Guid managerPartyId)
-        {
-            var manager = await dbContext.Set<Party>()
-                .Select(item => new
-                {
-                    item.Id,
-                    item.PartyType
-                })
-                .SingleOrDefaultAsync(item => item.Id == managerPartyId, cancellationToken);
-            if (manager is null || manager.PartyType != PartyType.Person)
-            {
-                return Result<Guid>.Failure(Error.Validation("Manager must reference an existing person.", "crmhr.workforce.manager-invalid"));
-            }
-        }
-
-        if (model.HomeUnitPartyId is Guid homeUnitPartyId)
-        {
-            var homeUnit = await dbContext.Set<Party>()
-                .Select(item => new
-                {
-                    item.Id,
-                    item.PartyType
-                })
-                .SingleOrDefaultAsync(item => item.Id == homeUnitPartyId, cancellationToken);
-            if (homeUnit is null || (homeUnit.PartyType != PartyType.Organization && homeUnit.PartyType != PartyType.OrganizationUnit))
-            {
-                return Result<Guid>.Failure(Error.Validation("Home unit must reference an existing organization or organization unit.", "crmhr.workforce.home-unit-invalid"));
-            }
-        }
-
-        var profile = await dbContext.Set<WorkforceProfile>()
-            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
-        if (profile is null)
-        {
-            profile = new WorkforceProfile
-            {
-                PartyId = model.PartyId
-            };
-            dbContext.Set<WorkforceProfile>().Add(profile);
-        }
-
-        profile.WorkforceKind = model.WorkforceKind;
-        profile.EmployeeCode = model.EmployeeCode.Trim();
-        profile.JobTitle = model.JobTitle.Trim();
-        profile.Discipline = model.Discipline.Trim();
-        profile.Seniority = model.Seniority.Trim();
-        profile.HomeUnitPartyId = model.HomeUnitPartyId;
-        profile.ManagerPartyId = model.ManagerPartyId;
-        profile.StartDateUtc = ToUtcDate(model.StartDate);
-        profile.EndDateUtc = ToUtcDate(model.EndDate);
-        profile.Location = model.Location.Trim();
-        profile.TimeZone = model.TimeZone.Trim();
-        profile.InternalCostRate = model.InternalCostRate;
-        profile.ExternalBillingRate = model.ExternalBillingRate;
-        profile.RateUnit = model.RateUnit;
-        profile.RateCurrencyCode = rateCurrencyCode;
-        profile.CapacityHoursPerWeek = model.CapacityHoursPerWeek <= 0m ? 40m : model.CapacityHoursPerWeek;
-        profile.Status = model.Status.Trim();
-        profile.Notes = model.Notes.Trim();
-
-        var workforceRole = ResolveWorkforceRole(model.WorkforceKind);
-        var currentRoles = await dbContext.Set<PartyRoleAssignment>()
-            .Where(item => item.PartyId == model.PartyId)
-            .ToListAsync(cancellationToken);
-        if (!currentRoles.Any(item => item.RoleKind == workforceRole))
-        {
-            dbContext.Set<PartyRoleAssignment>().Add(new PartyRoleAssignment
-            {
-                PartyId = model.PartyId,
-                RoleKind = workforceRole,
-                Title = workforceRole.ToString(),
-                IsPrimary = currentRoles.Count == 0
-            });
-        }
-
-        party.LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "crm-hr-ui" : model.LastChangedBy.Trim();
-        party.UpdatedAtUtc = clock.GetUtcNow();
-        CrmHrAuditWriter.AddEntry(
-            dbContext,
-            nameof(WorkforceProfile),
-            party.Id,
-            "WorkforceProfileSaved",
-            $"Saved workforce profile for '{party.DisplayName}'.",
-            new
-            {
-                profile.WorkforceKind,
-                profile.JobTitle,
-                profile.Discipline,
-                profile.Seniority,
-                profile.Status,
-                profile.HomeUnitPartyId,
-                profile.ManagerPartyId
-            },
-            party.LastChangedBy,
-            party.IsSensitive,
-            party.UpdatedAtUtc);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await UpsertWorkforceSearchDocumentAsync(party.Id, cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                "WorkforceProfileSaved",
-                $"Saved workforce profile for {party.DisplayName}",
-                $"{profile.WorkforceKind} / {profile.JobTitle} / {profile.Status}",
-                ArtifactKind: nameof(WorkforceProfile),
-                ArtifactId: party.Id,
-                Route: $"/crm-hr/workforce?partyId={party.Id}",
-                Actor: party.LastChangedBy),
-            cancellationToken);
-        return Result<Guid>.Success(profile.Id);
-    }
+    public Task<Result<Guid>> SaveWorkforceProfileAsync(WorkforceProfileEditorModel model, CancellationToken cancellationToken = default,
+        Action<WorkforceSaveReceipt<WorkforceProfileEditorModel>>? onCommitted = null) =>
+        workforceProfiles.SaveWorkforceProfileAsync(model, cancellationToken, onCommitted);
 
     public async Task<IReadOnlyList<SkillCatalogItemModel>> ListSkillCatalogAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await GetSkillCatalogItemsAsync(dbContext, cancellationToken);
+        return await WorkforceProfileQueries.ReadCatalogAsync(dbContext, cancellationToken);
     }
 
-    public async Task<Result<Guid>> SaveSkillDefinitionAsync(SkillDefinitionEditorModel model, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
+    public Task<Result<Guid>> SaveSkillDefinitionAsync(SkillDefinitionEditorModel model, CancellationToken cancellationToken = default,
+        Action<WorkforceSaveReceipt<SkillDefinitionEditorModel>>? onCommitted = null) =>
+        workforceSkills.SaveSkillDefinitionAsync(model, cancellationToken, onCommitted);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            return Result<Guid>.Failure(Error.Validation("Skill name is required.", "crmhr.skills.name-required"));
-        }
+    public Task<Result<Guid>> SavePartySkillAsync(PartySkillEditorModel model, CancellationToken cancellationToken = default,
+        Action<WorkforceSaveReceipt<PartySkillEditorModel>>? onCommitted = null) =>
+        workforceSkills.SavePartySkillAsync(model, cancellationToken, onCommitted);
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var normalizedName = model.Name.Trim();
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<SkillDefinition>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
+    public Task<Result> DeletePartySkillAsync(Guid partySkillId, CancellationToken cancellationToken = default,
+        PartySkillObservation? original = null, Action<WorkforceDeleteReceipt>? onCommitted = null) =>
+        workforceSkills.DeletePartySkillAsync(partySkillId, cancellationToken, original, onCommitted);
 
-        entity ??= await dbContext.Set<SkillDefinition>()
-            .SingleOrDefaultAsync(item => item.Name == normalizedName, cancellationToken);
+    public Task<Result<Guid>> SaveCapacityBlockAsync(CapacityBlockEditorModel model, CancellationToken cancellationToken = default,
+        Action<WorkforceSaveReceipt<CapacityBlockEditorModel>>? onCommitted = null) =>
+        workforceCapacity.SaveCapacityBlockAsync(model, cancellationToken, onCommitted);
 
-        if (entity is null)
-        {
-            entity = new SkillDefinition();
-            dbContext.Set<SkillDefinition>().Add(entity);
-        }
-
-        entity.Name = normalizedName;
-        entity.Category = model.Category.Trim();
-        entity.Description = model.Description.Trim();
-        entity.IsActive = model.IsActive;
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Result<Guid>.Success(entity.Id);
-    }
-
-    public async Task<Result<Guid>> SavePartySkillAsync(PartySkillEditorModel model, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-
-        if (model.PartyId == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose a party before saving a skill.", "crmhr.skills.party-required"));
-        }
-
-        if (model.SkillId == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose a skill before saving.", "crmhr.skills.skill-required"));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var partyExists = await dbContext.Set<Party>().AnyAsync(item => item.Id == model.PartyId, cancellationToken);
-        if (!partyExists)
-        {
-            return Result<Guid>.Failure(Error.Validation("The selected party was not found.", "crmhr.skills.party-not-found"));
-        }
-
-        var skillExists = await dbContext.Set<SkillDefinition>().AnyAsync(item => item.Id == model.SkillId, cancellationToken);
-        if (!skillExists)
-        {
-            return Result<Guid>.Failure(Error.Validation("The selected skill was not found.", "crmhr.skills.skill-not-found"));
-        }
-
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<PartySkill>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
-        entity ??= await dbContext.Set<PartySkill>()
-            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId && item.SkillId == model.SkillId, cancellationToken);
-
-        if (entity is null)
-        {
-            entity = new PartySkill
-            {
-                PartyId = model.PartyId,
-                SkillId = model.SkillId
-            };
-            dbContext.Set<PartySkill>().Add(entity);
-        }
-
-        entity.PartyId = model.PartyId;
-        entity.SkillId = model.SkillId;
-        entity.Proficiency = model.Proficiency;
-        entity.YearsExperience = Math.Max(0, model.YearsExperience);
-        entity.CertificationStatus = model.CertificationStatus.Trim();
-        entity.LastValidatedAtUtc = ToUtcDate(model.LastValidatedOn);
-        entity.Notes = model.Notes.Trim();
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Result<Guid>.Success(entity.Id);
-    }
-
-    public async Task DeletePartySkillAsync(Guid partySkillId, CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await dbContext.Set<PartySkill>().SingleOrDefaultAsync(item => item.Id == partySkillId, cancellationToken);
-        if (entity is null)
-        {
-            return;
-        }
-
-        dbContext.Set<PartySkill>().Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task<Result<Guid>> SaveCapacityBlockAsync(CapacityBlockEditorModel model, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-
-        if (model.PartyId == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose a party before saving a capacity block.", "crmhr.capacity.party-required"));
-        }
-
-        if (!model.StartDate.HasValue || !model.EndDate.HasValue)
-        {
-            return Result<Guid>.Failure(Error.Validation("Capacity block start and end dates are required.", "crmhr.capacity.date-required"));
-        }
-
-        if (model.EndDate.Value < model.StartDate.Value)
-        {
-            return Result<Guid>.Failure(Error.Validation("Capacity block end date must be on or after the start date.", "crmhr.capacity.date-range-invalid"));
-        }
-
-        if (model.Percentage is <= 0m or > 100m)
-        {
-            return Result<Guid>.Failure(Error.Validation("Capacity block percentage must stay between 0 and 100.", "crmhr.capacity.percentage-range"));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var partyExists = await dbContext.Set<Party>().AnyAsync(item => item.Id == model.PartyId, cancellationToken);
-        if (!partyExists)
-        {
-            return Result<Guid>.Failure(Error.Validation("The selected party was not found.", "crmhr.capacity.party-not-found"));
-        }
-
-        if (model.RelatedProjectId.HasValue)
-        {
-            var projectExists = await projectRecordQueryService.GetAsync(model.RelatedProjectId.Value, cancellationToken) is not null;
-            if (!projectExists)
-            {
-                return Result<Guid>.Failure(Error.Validation("The related project was not found.", "crmhr.capacity.project-not-found"));
-            }
-        }
-
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<CapacityBlock>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
-        if (entity is null)
-        {
-            entity = new CapacityBlock
-            {
-                PartyId = model.PartyId
-            };
-            dbContext.Set<CapacityBlock>().Add(entity);
-        }
-
-        entity.PartyId = model.PartyId;
-        entity.BlockKind = model.BlockKind;
-        entity.StartDateUtc = ToUtcDate(model.StartDate)!.Value;
-        entity.EndDateUtc = ToUtcDate(model.EndDate)!.Value;
-        entity.Percentage = model.Percentage;
-        entity.RelatedProjectId = model.RelatedProjectId;
-        entity.Notes = model.Notes.Trim();
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Result<Guid>.Success(entity.Id);
-    }
-
-    public async Task DeleteCapacityBlockAsync(Guid capacityBlockId, CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await dbContext.Set<CapacityBlock>().SingleOrDefaultAsync(item => item.Id == capacityBlockId, cancellationToken);
-        if (entity is null)
-        {
-            return;
-        }
-
-        dbContext.Set<CapacityBlock>().Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
+    public Task<Result> DeleteCapacityBlockAsync(Guid capacityBlockId, CancellationToken cancellationToken = default,
+        CapacityBlockObservation? original = null, Action<WorkforceDeleteReceipt>? onCommitted = null) =>
+        workforceCapacity.DeleteCapacityBlockAsync(capacityBlockId, cancellationToken, original, onCommitted);
 
     public async Task<StaffingRequestPage> SearchStaffingRequestsAsync(
         StaffingRequestQuery query,
@@ -3413,22 +3307,6 @@ public sealed partial class HrService(
             .ThenBy(item => item.Id)
             .Skip(normalized.PageIndex * normalized.PageSize)
             .Take(normalized.PageSize)
-            .Select(item => new
-            {
-                item.Id,
-                item.ProjectId,
-                item.ProjectLifetimeId,
-                item.RequestedByPartyId,
-                item.DeliveryUnitPartyId,
-                item.Title,
-                item.NeededRole,
-                item.NeededSkillsJson,
-                item.StartDateUtc,
-                item.EndDateUtc,
-                item.AllocationPercent,
-                item.Status,
-                item.Notes
-            })
             .ToListAsync(cancellationToken);
         if (requests.Count == 0)
         {
@@ -3494,7 +3372,7 @@ public sealed partial class HrService(
                 item.AllocationPercent,
                 item.Status,
                 item.Notes,
-                item.ProjectLifetimeId))
+                item.ProjectLifetimeId) { Original = StaffingRequestEditValues.Observe(item) })
             .ToList();
         return new StaffingRequestPage(
             items,
@@ -3503,131 +3381,15 @@ public sealed partial class HrService(
             totalCount);
     }
 
-    public async Task<Result<Guid>> SaveStaffingRequestAsync(StaffingRequestEditorModel model, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-        model = model.Snapshot();
-        var expected = model.ProjectId is { } projectId
-            ? ProjectAssignmentAdmission.Require(projectId, model.ExpectedProjectAdmission)
-            : null;
-        if (expected is null && model.ExpectedProjectAdmission is not null) {
-            throw new InvalidOperationException("A global staffing request cannot carry a project admission.");
+    public Task<Result<Guid>> SaveStaffingRequestAsync(StaffingRequestEditorModel model, CancellationToken cancellationToken = default,
+        Action<StaffingRequestSaveReceipt>? onCommitted = null) => staffingRequests.SaveAsync(model, cancellationToken, onCommitted);
+
+    public async Task DeleteStaffingRequestAsync(Guid staffingRequestId, CancellationToken cancellationToken = default,
+        StaffingRequestObservation? original = null, Action<StaffingRequestDeleteReceipt>? onCommitted = null) {
+        var result = await staffingRequests.DeleteAsync(staffingRequestId, original, cancellationToken, onCommitted);
+        if (result.IsFailure) {
+            throw new InvalidOperationException(string.Join(" ", result.Errors.Select(error => $"{error.Code}: {error.Message}")));
         }
-
-        if (string.IsNullOrWhiteSpace(model.Title))
-        {
-            return Result<Guid>.Failure(Error.Validation("Staffing request title is required.", "crmhr.staffing-request.title-required"));
-        }
-
-        if (string.IsNullOrWhiteSpace(model.NeededRole))
-        {
-            return Result<Guid>.Failure(Error.Validation("Needed role is required.", "crmhr.staffing-request.role-required"));
-        }
-
-        if (model.AllocationPercent is <= 0m or > 100m)
-        {
-            return Result<Guid>.Failure(Error.Validation("Allocation must stay between 0 and 100.", "crmhr.staffing-request.allocation-range"));
-        }
-
-        if (model.StartDate.HasValue && model.EndDate.HasValue && model.EndDate.Value < model.StartDate.Value)
-        {
-            return Result<Guid>.Failure(Error.Validation("Staffing request end date must be on or after the start date.", "crmhr.staffing-request.date-range-invalid"));
-        }
-
-        var mutationId = model.Id ?? Guid.NewGuid();
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var projectKeys = new[] { expected?.ProjectId, model.ExpectedSourceProjectReference?.ProjectId }
-            .OfType<Guid>().Distinct().Select(ProjectMutationScopeKeys.ForProject);
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(dbContext,
-            projectKeys.Append(StaffingRequestMutationKey(mutationId)).ToArray(), cancellationToken);
-        using var ownerEntry = coordinatedTransaction.Enter(dbContext);
-        if (expected is not null) {
-            await admissions.RequireForMutationAsync(expected, cancellationToken);
-        }
-
-        if (model.RequestedByPartyId.HasValue)
-        {
-            var requesterExists = await dbContext.Set<Party>().AnyAsync(item => item.Id == model.RequestedByPartyId.Value, cancellationToken);
-            if (!requesterExists)
-            {
-                return Result<Guid>.Failure(Error.Validation("The requester was not found.", "crmhr.staffing-request.requester-not-found"));
-            }
-        }
-
-        if (model.DeliveryUnitPartyId.HasValue)
-        {
-            var deliveryUnitExists = await dbContext.Set<Party>().AnyAsync(item => item.Id == model.DeliveryUnitPartyId.Value, cancellationToken);
-            if (!deliveryUnitExists)
-            {
-                return Result<Guid>.Failure(Error.Validation("The selected delivery unit was not found.", "crmhr.staffing-request.delivery-unit-not-found"));
-            }
-        }
-
-        var normalizedSkillIds = model.SkillIds.Where(item => item != Guid.Empty).Distinct().ToList();
-        if (normalizedSkillIds.Count > 0)
-        {
-            var knownSkillIds = await dbContext.Set<SkillDefinition>()
-                .Where(item => normalizedSkillIds.Contains(item.Id))
-                .Select(item => item.Id)
-                .ToListAsync(cancellationToken);
-            if (knownSkillIds.Count != normalizedSkillIds.Count)
-            {
-                return Result<Guid>.Failure(Error.Validation("One or more selected skills no longer exist.", "crmhr.staffing-request.skill-not-found"));
-            }
-        }
-
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<StaffingRequest>().SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
-        if (entity is not null && model.ExpectedSourceProjectReference is { } sourceReference) {
-            sourceReference.RequireProfile(admissions.DatabaseProfileId, entity.ProjectId
-                ?? throw new InvalidOperationException("The staffing request no longer has the captured source project."));
-            if (sourceReference.LifetimeId is null || entity.ProjectLifetimeId != sourceReference.LifetimeId) {
-                throw new InvalidOperationException("The staffing request source lifetime changed or requires reconciliation.");
-            }
-        }
-        if (entity?.ProjectId is not null &&
-                (entity.ProjectId != model.ProjectId || entity.ProjectLifetimeId != expected?.LifetimeId) &&
-                model.ExpectedSourceProjectReference is null) {
-            throw new InvalidOperationException("Changing the staffing request's project requires its captured source reference.");
-        }
-        if (entity is null)
-        {
-            entity = new StaffingRequest { Id = mutationId };
-            dbContext.Set<StaffingRequest>().Add(entity);
-        }
-
-        entity.ProjectId = model.ProjectId;
-        entity.ProjectLifetimeId = expected?.LifetimeId;
-        entity.RequestedByPartyId = model.RequestedByPartyId;
-        entity.DeliveryUnitPartyId = model.DeliveryUnitPartyId;
-        entity.Title = model.Title.Trim();
-        entity.NeededRole = model.NeededRole.Trim();
-        entity.NeededSkillsJson = JsonSerializer.Serialize(normalizedSkillIds);
-        entity.StartDateUtc = ToUtcDate(model.StartDate);
-        entity.EndDateUtc = ToUtcDate(model.EndDate);
-        entity.AllocationPercent = model.AllocationPercent;
-        entity.Status = model.Status;
-        entity.Notes = model.Notes.Trim();
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
-        return Result<Guid>.Success(entity.Id);
-    }
-
-    private static string StaffingRequestMutationKey(Guid id) => $"crmhr:staffing-request:{id:D}";
-
-    public async Task DeleteStaffingRequestAsync(Guid staffingRequestId, CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await dbContext.Set<StaffingRequest>().SingleOrDefaultAsync(item => item.Id == staffingRequestId, cancellationToken);
-        if (entity is null)
-        {
-            return;
-        }
-
-        dbContext.Set<StaffingRequest>().Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<StaffingCandidatePage> SearchStaffingCandidatesAsync(
@@ -4135,65 +3897,8 @@ public sealed partial class HrService(
         }
     }
 
-    private async Task<IReadOnlyList<SkillCatalogItemModel>> GetSkillCatalogItemsAsync(CrmHrDbContext dbContext, CancellationToken cancellationToken)
-    {
-        return await dbContext.Set<SkillDefinition>()
-            .OrderByDescending(item => item.IsActive)
-            .ThenBy(item => item.Category)
-            .ThenBy(item => item.Name)
-            .Select(item => new SkillCatalogItemModel(item.Id, item.Name, item.Category, item.Description, item.IsActive))
-            .ToListAsync(cancellationToken);
-    }
-
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<PartySkillItemModel>>> GetPartySkillMapAsync(
-        CrmHrDbContext dbContext,
-        IReadOnlyList<Guid> partyIds,
-        CancellationToken cancellationToken)
-    {
-        if (partyIds.Count == 0)
-        {
-            return new Dictionary<Guid, IReadOnlyList<PartySkillItemModel>>();
-        }
-
-        var items = await dbContext.Set<PartySkill>()
-            .Where(item => partyIds.Contains(item.PartyId))
-            .Join(
-                dbContext.Set<SkillDefinition>(),
-                partySkill => partySkill.SkillId,
-                skill => skill.Id,
-                (partySkill, skill) => new
-                {
-                    partySkill.PartyId,
-                    partySkill.Id,
-                    SkillId = skill.Id,
-                    SkillName = skill.Name,
-                    SkillCategory = skill.Category,
-                    partySkill.Proficiency,
-                    partySkill.YearsExperience,
-                    partySkill.CertificationStatus,
-                    partySkill.LastValidatedAtUtc,
-                    partySkill.Notes
-                })
-            .OrderBy(item => item.SkillCategory)
-            .ThenBy(item => item.SkillName)
-            .ToListAsync(cancellationToken);
-
-        return items
-            .GroupBy(item => item.PartyId)
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<PartySkillItemModel>)group.Select(item =>
-                    new PartySkillItemModel(
-                        item.Id,
-                        item.SkillId,
-                        item.SkillName,
-                        item.SkillCategory,
-                        item.Proficiency,
-                        item.YearsExperience,
-                        item.CertificationStatus,
-                        ToDateOnly(item.LastValidatedAtUtc),
-                        item.Notes)).ToList());
-    }
+    private static Task<IReadOnlyDictionary<Guid, IReadOnlyList<PartySkillItemModel>>> GetPartySkillMapAsync(CrmHrDbContext context,
+        IReadOnlyList<Guid> partyIds, CancellationToken cancellationToken) => WorkforceProfileQueries.ReadSkillsAsync(context, partyIds, cancellationToken);
 
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<CapacityBlockItemModel>>> GetCapacityBlockMapAsync(
         CrmHrDbContext dbContext,
@@ -4244,7 +3949,7 @@ public sealed partial class HrService(
                         item.RelatedProjectId.HasValue ? projectNames.GetValueOrDefault(item.RelatedProjectId.Value) ?? string.Empty : string.Empty,
                         item.Notes,
                         startDate <= today && endDate >= today,
-                        startDate > today);
+                        startDate > today) { Original = WorkforceEditValues.Capacity(item) };
                 })
                 .OrderBy(item => item.StartDate)
                 .ThenBy(item => item.BlockKind)
@@ -4332,52 +4037,6 @@ public sealed partial class HrService(
                 });
     }
 
-    private static WorkforceKind ResolveDefaultWorkforceKind(PartyType partyType, IReadOnlyList<PartyRoleKind> roles, WorkforceProfile? profile)
-    {
-        if (profile is not null)
-        {
-            return profile.WorkforceKind;
-        }
-
-        if (partyType == PartyType.Organization || partyType == PartyType.OrganizationUnit)
-        {
-            return WorkforceKind.DeliveryUnit;
-        }
-
-        if (roles.Contains(PartyRoleKind.Contractor))
-        {
-            return WorkforceKind.Contractor;
-        }
-
-        if (roles.Contains(PartyRoleKind.Freelancer))
-        {
-            return WorkforceKind.Freelancer;
-        }
-
-        return WorkforceKind.Employee;
-    }
-
-    private static string ResolveDefaultStatus(PartyLifecycleStatus lifecycleStatus)
-    {
-        return lifecycleStatus switch
-        {
-            PartyLifecycleStatus.Active => "Active",
-            PartyLifecycleStatus.Inactive => "Inactive",
-            _ => "Planned"
-        };
-    }
-
-    private static PartyRoleKind ResolveWorkforceRole(WorkforceKind workforceKind)
-    {
-        return workforceKind switch
-        {
-            WorkforceKind.Contractor => PartyRoleKind.Contractor,
-            WorkforceKind.Freelancer => PartyRoleKind.Freelancer,
-            WorkforceKind.DeliveryUnit => PartyRoleKind.DeliveryUnit,
-            _ => PartyRoleKind.Employee
-        };
-    }
-
     private static DateTimeOffset? ToUtcDate(DateOnly? value)
     {
         return value.HasValue
@@ -4414,698 +4073,7 @@ public sealed partial class HrService(
         };
     }
 
-    private static string ResolvePrimaryContact(IEnumerable<CrmPartyContactValue> contacts, PartyContactType contactType)
-    {
-        return contacts
-            .Where(item => item.ContactType == contactType)
-            .OrderByDescending(item => item.IsPrimary)
-            .Select(item => item.Value)
-            .FirstOrDefault()
-            ?? string.Empty;
-    }
-}
 
-public sealed partial class AiAgentService(
-    IDbContextFactory<CrmHrDbContext> dbContextFactory,
-    IClock clock,
-    IActivityStream activityStream,
-    ISearchIndexService searchIndexService,
-    PartyDirectoryService partyDirectoryService,
-    IAiTechnicalAgentBridge technicalAgentBridge)
-{
-    private const int LegacyDirectorySnapshotLimit = AiAgentDirectoryQueryLimits.MaximumPageSize;
-
-    public Task SynchronizeDirectoryProjectionAsync(CancellationToken cancellationToken = default)
-    {
-        return technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryAsync(CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await ListAgentDirectoryFromProjectionAsync(dbContext, cancellationToken);
-    }
-
-    public Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectorySnapshotAsync(
-        CrmHrDbContext dbContext,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-
-        return ListAgentDirectoryFromProjectionAsync(dbContext, cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<AiAgentStaffingFactListItemModel>> ListAgentStaffingFactsAsync(
-        IReadOnlyList<Guid>? partyIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        return await ListAgentStaffingFactsSnapshotAsync(partyIds, cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<AiAgentStaffingFactListItemModel>> ListAgentStaffingFactsSnapshotAsync(
-        IReadOnlyList<Guid>? partyIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        var resolvedPartyIds = partyIds?
-            .Where(item => item != Guid.Empty)
-            .Distinct()
-            .ToList()
-            ?? [];
-        if (resolvedPartyIds.Count == 0)
-        {
-            throw new ArgumentException(
-                "AI agent staffing facts require at least one party identifier.",
-                nameof(partyIds));
-        }
-
-        var facts = await technicalAgentBridge.GetStaffingFactsAsync(resolvedPartyIds, cancellationToken);
-
-        return facts.Values
-            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .Select(item => new AiAgentStaffingFactListItemModel(
-                item.PartyId,
-                item.TechnicalAgentId,
-                item.DisplayName,
-                item.RoleTitle,
-                item.Summary,
-                item.Instructions,
-                item.BindingStatus,
-                item.BindingSummary,
-                item.ExecutionMode,
-                item.ProviderName,
-                item.DefaultModel,
-                item.TemplateKey,
-                item.Tags,
-                item.Capabilities,
-                item.AgentsRoute))
-            .ToList();
-    }
-
-    public async Task<IReadOnlyList<AiAgentStaffingFactListItemModel>> ListAgentStaffingFactsProjectionAsync(
-        CrmHrDbContext dbContext,
-        IReadOnlyList<Guid>? partyIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-
-        var resolvedPartyIds = partyIds?
-            .Where(item => item != Guid.Empty)
-            .Distinct()
-            .ToList()
-            ?? [];
-        if (resolvedPartyIds.Count == 0)
-        {
-            throw new ArgumentException(
-                "AI agent staffing facts require at least one party identifier.",
-                nameof(partyIds));
-        }
-
-        var partiesQuery = dbContext.Set<Party>()
-            .AsNoTracking()
-            .Where(item => item.PartyType == PartyType.AiAgent)
-            .Where(item => resolvedPartyIds.Contains(item.Id));
-
-        var parties = await partiesQuery
-            .OrderBy(item => item.DisplayName)
-            .Select(item => new
-            {
-                item.Id,
-                item.DisplayName,
-                item.Summary,
-                item.TagsJson
-            })
-            .ToListAsync(cancellationToken);
-        if (parties.Count == 0)
-        {
-            return [];
-        }
-
-        var partyIdsToLoad = parties.Select(item => item.Id).ToList();
-        var technicalFacts = await technicalAgentBridge.GetStaffingFactsAsync(partyIdsToLoad, cancellationToken);
-
-        return parties
-            .Select(party =>
-            {
-                technicalFacts.TryGetValue(party.Id, out var technicalFact);
-                if (technicalFact is null)
-                {
-                    throw new InvalidOperationException(
-                        $"AI agent party '{party.Id:D}' did not receive a technical projection fact.");
-                }
-
-                return new AiAgentStaffingFactListItemModel(
-                    party.Id,
-                    technicalFact.TechnicalAgentId,
-                    party.DisplayName,
-                    technicalFact.RoleTitle,
-                    party.Summary,
-                    technicalFact.Instructions,
-                    technicalFact.BindingStatus,
-                    technicalFact.BindingSummary,
-                    technicalFact.ExecutionMode,
-                    technicalFact.ProviderName,
-                    technicalFact.DefaultModel,
-                    technicalFact.TemplateKey,
-                    ResolveAiProjectionTags(party.TagsJson, party.Id, technicalFact.Tags),
-                    technicalFact.Capabilities,
-                    technicalFact.AgentsRoute);
-            })
-            .ToList();
-    }
-
-    private async Task<IReadOnlyList<AiAgentListItemModel>> ListAgentDirectoryFromProjectionAsync(
-        CrmHrDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var parties = await dbContext.Set<Party>()
-            .Where(item => item.PartyType == PartyType.AiAgent)
-            .OrderBy(item => item.DisplayName)
-            .Take(LegacyDirectorySnapshotLimit + 1)
-            .Select(item => new
-            {
-                item.Id,
-                item.DisplayName,
-                item.Summary,
-                item.LifecycleStatus,
-                item.UpdatedAtUtc
-            })
-            .ToListAsync(cancellationToken);
-        if (parties.Count > LegacyDirectorySnapshotLimit)
-        {
-            throw new InvalidOperationException(
-                $"The legacy AI agent directory snapshot is limited to {LegacyDirectorySnapshotLimit} records. Use {nameof(IAiAgentDirectoryQueryService)} for paged access.");
-        }
-        if (parties.Count == 0)
-        {
-            return [];
-        }
-
-        var partyIds = parties.Select(item => item.Id).ToList();
-        var profiles = await dbContext.Set<AiAgentProfile>()
-            .Where(item => partyIds.Contains(item.PartyId))
-            .ToListAsync(cancellationToken);
-        var technicalSummaries = await technicalAgentBridge.GetDirectorySummariesAsync(partyIds, cancellationToken);
-        var ownerIds = profiles
-            .Where(item => item.OwnerPartyId.HasValue)
-            .Select(item => item.OwnerPartyId!.Value)
-            .Distinct()
-            .ToList();
-
-        var ownerNames = ownerIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : await dbContext.Set<Party>()
-                .Where(item => ownerIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
-        var profileByPartyId = profiles.ToDictionary(item => item.PartyId);
-
-        return parties
-            .Where(item => technicalSummaries.GetValueOrDefault(item.Id)?.HasTechnicalProfile == true)
-            .Select(item =>
-            {
-                profileByPartyId.TryGetValue(item.Id, out var profile);
-                technicalSummaries.TryGetValue(item.Id, out var technicalSummary);
-                var hasTechnicalProfile = technicalSummary?.HasTechnicalProfile == true;
-                var hasProfile = hasTechnicalProfile || profile is not null;
-                var validationStatus = profile?.ValidationStatus ?? (hasTechnicalProfile ? AiValidationStatus.Draft : null);
-                var executionMode = technicalSummary?.ExecutionMode;
-                return new AiAgentListItemModel(
-                    item.Id,
-                    item.DisplayName,
-                    item.Summary,
-                    item.LifecycleStatus,
-                    technicalSummary?.TechnicalAgentId,
-                    technicalSummary?.BindingStatus ?? AiResourceBindingStatus.Unbound,
-                    technicalSummary?.BindingSummary ?? "No technical binding.",
-                    executionMode,
-                    validationStatus,
-                    technicalSummary?.ProviderName ?? string.Empty,
-                    technicalSummary?.DefaultModel ?? string.Empty,
-                    profile?.OwnerPartyId is Guid ownerPartyId ? ownerNames.GetValueOrDefault(ownerPartyId) ?? string.Empty : string.Empty,
-                    technicalSummary?.CapabilityCount ?? 0,
-                    hasProfile,
-                    technicalSummary?.AgentsRoute ?? "/agents?tab=agents",
-                    item.UpdatedAtUtc);
-            })
-            .ToList();
-    }
-
-    public async Task<Result<Guid>> CreateAgentAsync(
-        string displayName,
-        string externalCode = "",
-        string summary = "",
-        string lastChangedBy = "crm-hr-ui",
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(displayName))
-        {
-            return Result<Guid>.Failure(Error.Validation("AI agent name is required.", "crmhr.ai-agent.display-name-required"));
-        }
-
-        var createResult = await partyDirectoryService.SavePartyAsync(
-            new PartyEditorModel
-            {
-                PartyType = PartyType.AiAgent,
-                LifecycleStatus = PartyLifecycleStatus.Active,
-                DisplayName = displayName.Trim(),
-                ExternalCode = externalCode.Trim(),
-                Summary = summary.Trim(),
-                LastChangedBy = string.IsNullOrWhiteSpace(lastChangedBy) ? "crm-hr-ui" : lastChangedBy.Trim()
-            },
-            cancellationToken);
-        if (createResult.IsFailure)
-        {
-            return createResult;
-        }
-
-        var partyId = createResult.Value;
-        var profileSaveResult = await SaveAgentProfileAsync(
-            new AiAgentProfileEditorModel
-            {
-                PartyId = partyId,
-                Notes = summary.Trim(),
-                LastChangedBy = string.IsNullOrWhiteSpace(lastChangedBy) ? "crm-hr-ui" : lastChangedBy.Trim()
-            },
-            cancellationToken);
-        if (profileSaveResult.IsSuccess)
-        {
-            return Result<Guid>.Success(partyId);
-        }
-
-        await RollBackFailedAgentCreationAsync(partyId, cancellationToken);
-        return Result<Guid>.Failure(profileSaveResult.Errors);
-    }
-
-    public async Task<AiAgentWorkspaceModel?> GetAgentWorkspaceAsync(Guid partyId, CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var party = await dbContext.Set<Party>()
-            .Select(item => new
-            {
-                item.Id,
-                item.DisplayName,
-                item.Summary,
-                item.LifecycleStatus,
-                item.PartyType
-            })
-            .SingleOrDefaultAsync(item => item.Id == partyId, cancellationToken);
-        if (party is null || party.PartyType != PartyType.AiAgent)
-        {
-            return null;
-        }
-
-        var contactPoints = await dbContext.Set<PartyContactPoint>()
-            .Where(item => item.PartyId == partyId)
-            .OrderByDescending(item => item.IsPrimary)
-            .Select(item => new CrmPartyContactValue(item.PartyId, item.ContactType, item.Value, item.IsPrimary))
-            .ToListAsync(cancellationToken);
-        var profile = await dbContext.Set<AiAgentProfile>()
-            .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var technicalSummaries = await technicalAgentBridge.GetDirectorySummariesAsync(
-            [partyId],
-            cancellationToken);
-        if (!technicalSummaries.TryGetValue(partyId, out var technicalSummary) ||
-            !technicalSummary.HasTechnicalProfile)
-        {
-            return null;
-        }
-
-        var ownerName = profile?.OwnerPartyId is Guid ownerPartyId
-            ? await dbContext.Set<Party>()
-                .AsNoTracking()
-                .Where(item => item.Id == ownerPartyId)
-                .Select(item => item.DisplayName)
-                .SingleOrDefaultAsync(cancellationToken)
-                ?? string.Empty
-            : string.Empty;
-
-        return new AiAgentWorkspaceModel(
-            party.Id,
-            party.DisplayName,
-            party.Summary,
-            party.LifecycleStatus,
-            ResolvePrimaryContactValue(contactPoints, PartyContactType.Email),
-            ResolvePrimaryContactValue(contactPoints, PartyContactType.Phone),
-            technicalSummary.TechnicalAgentId,
-            technicalSummary.BindingStatus,
-            technicalSummary.BindingSummary,
-            technicalSummary.AgentsRoute,
-            technicalSummary.ProviderName,
-            ownerName,
-            technicalSummary.CapabilityCount,
-            new AiAgentProfileEditorModel
-            {
-                Id = profile?.Id,
-                PartyId = party.Id,
-                DefaultModel = technicalSummary.DefaultModel,
-                ExecutionMode = technicalSummary.ExecutionMode ?? AiExecutionMode.Remote,
-                OwnerPartyId = profile?.OwnerPartyId,
-                ValidationStatus = profile?.ValidationStatus ?? AiValidationStatus.Draft,
-                LastReviewedOn = profile?.LastReviewedAtUtc is DateTimeOffset reviewedAtUtc ? DateOnly.FromDateTime(reviewedAtUtc.UtcDateTime) : null,
-                Notes = profile?.Notes ?? string.Empty,
-                ExtendedDataJson = profile?.ExtendedDataJson ?? "{}",
-                LastChangedBy = "crm-hr-ui"
-            });
-    }
-
-    public async Task<Result<Guid>> SaveAgentProfileAsync(AiAgentProfileEditorModel model, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-
-        if (model.PartyId == Guid.Empty)
-        {
-            return Result<Guid>.Failure(Error.Validation("Choose an AI agent before saving the profile.", "crmhr.ai-agent.party-required"));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var party = await dbContext.Set<Party>()
-            .SingleOrDefaultAsync(item => item.Id == model.PartyId, cancellationToken);
-        if (party is null)
-        {
-            return Result<Guid>.Failure(Error.Failure("The selected AI agent party could not be found.", "crmhr.ai-agent.party-not-found"));
-        }
-
-        if (party.PartyType != PartyType.AiAgent)
-        {
-            return Result<Guid>.Failure(Error.Validation("Only AI agent parties can carry AI agent operational profiles.", "crmhr.ai-agent.party-type-invalid"));
-        }
-
-        if (model.OwnerPartyId == model.PartyId)
-        {
-            return Result<Guid>.Failure(Error.Validation("An AI agent cannot own itself.", "crmhr.ai-agent.self-owner"));
-        }
-
-        Party? owner = null;
-        if (model.OwnerPartyId is Guid ownerPartyId)
-        {
-            owner = await dbContext.Set<Party>()
-                .SingleOrDefaultAsync(item => item.Id == ownerPartyId, cancellationToken);
-            if (owner is null || owner.PartyType != PartyType.Person)
-            {
-                return Result<Guid>.Failure(Error.Validation("Owner must reference an existing person.", "crmhr.ai-agent.owner-invalid"));
-            }
-        }
-
-        var normalizedExtendedData = NormalizeJson(model.ExtendedDataJson, "{}");
-        if (normalizedExtendedData is null)
-        {
-            return Result<Guid>.Failure(Error.Validation("Extended data must be valid JSON.", "crmhr.ai-agent.extended-data-invalid"));
-        }
-
-        if (owner is not null)
-        {
-            var ownerRoles = await dbContext.Set<PartyRoleAssignment>()
-                .Where(item => item.PartyId == owner.Id)
-                .ToListAsync(cancellationToken);
-            if (!ownerRoles.Any(item => item.RoleKind == PartyRoleKind.AiSteward))
-            {
-                dbContext.Set<PartyRoleAssignment>().Add(new PartyRoleAssignment
-                {
-                    PartyId = owner.Id,
-                    RoleKind = PartyRoleKind.AiSteward,
-                    Title = "AI steward",
-                    IsPrimary = ownerRoles.Count == 0
-                });
-            }
-        }
-
-        var technicalSaveResult = await technicalAgentBridge.SaveAsync(model, cancellationToken);
-        if (technicalSaveResult.IsFailure)
-        {
-            return Result<Guid>.Failure(technicalSaveResult.Errors);
-        }
-        var technicalAgentSave = technicalSaveResult.Value!;
-
-        try {
-            var profile = await dbContext.Set<AiAgentProfile>()
-                .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
-            if (profile is null)
-            {
-                profile = new AiAgentProfile
-                {
-                    PartyId = model.PartyId
-                };
-                dbContext.Set<AiAgentProfile>().Add(profile);
-            }
-
-            profile.OwnerPartyId = model.OwnerPartyId;
-            profile.ValidationStatus = model.ValidationStatus;
-            profile.LastReviewedAtUtc = ToUtcDate(model.LastReviewedOn);
-            profile.Notes = model.Notes.Trim();
-            profile.ExtendedDataJson = normalizedExtendedData;
-
-            party.LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "crm-hr-ui" : model.LastChangedBy.Trim();
-            party.UpdatedAtUtc = clock.GetUtcNow();
-            CrmHrAuditWriter.AddEntry(
-                dbContext,
-                nameof(AiAgentProfile),
-                party.Id,
-                "AiAgentProfileSaved",
-                $"Saved AI agent profile for '{party.DisplayName}'.",
-                new
-                {
-                    model.ExecutionMode,
-                    profile.ValidationStatus,
-                    model.ProviderProfileId,
-                    profile.OwnerPartyId,
-                    TechnicalAgentId = technicalAgentSave.TechnicalAgentId,
-                    technicalAgentSave.BindingStatus
-                },
-                party.LastChangedBy,
-                party.IsSensitive,
-                party.UpdatedAtUtc);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await UpsertAiAgentSearchDocumentAsync(party.Id, cancellationToken);
-            await activityStream.RecordAsync(
-                new ActivityWriteRequest(
-                    "CRM / HR",
-                    "AiAgentProfileSaved",
-                    $"Saved AI agent profile for {party.DisplayName}",
-                    $"{model.ExecutionMode} / {profile.ValidationStatus}",
-                    ArtifactKind: nameof(AiAgentProfile),
-                    ArtifactId: party.Id,
-                    Route: $"/crm-hr/agents?partyId={party.Id}",
-                    Actor: party.LastChangedBy),
-                cancellationToken);
-            return Result<Guid>.Success(profile.Id);
-        } catch (AiTechnicalAgentCommittedSaveException) {
-            throw;
-        } catch (Exception exception) when (technicalAgentSave.TechnicalAgentId is { } technicalAgentId) {
-            throw new AiTechnicalAgentCommittedSaveException(technicalAgentId, model.PartyId, exception);
-        }
-    }
-
-    private async Task RollBackFailedAgentCreationAsync(Guid partyId, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var party = await dbContext.Set<Party>()
-            .SingleOrDefaultAsync(item => item.Id == partyId, cancellationToken);
-        var profile = await dbContext.Set<AiAgentProfile>()
-            .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var binding = await dbContext.Set<AiResourceBinding>()
-            .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var auditEntries = await dbContext.Set<CrmHrAuditEntry>()
-            .Where(item =>
-                item.EntityId == partyId &&
-                (item.EntityType == nameof(Party) || item.EntityType == nameof(AiAgentProfile)))
-            .ToListAsync(cancellationToken);
-
-        if (profile is not null)
-        {
-            dbContext.Set<AiAgentProfile>().Remove(profile);
-        }
-
-        if (binding is not null)
-        {
-            dbContext.Set<AiResourceBinding>().Remove(binding);
-        }
-
-        if (party is not null)
-        {
-            dbContext.Set<Party>().Remove(party);
-        }
-
-        if (auditEntries.Count > 0)
-        {
-            dbContext.Set<CrmHrAuditEntry>().RemoveRange(auditEntries);
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await searchIndexService.DeleteAsync(CrmHrSearchSourceTypes.Party, partyId.ToString("N"), cancellationToken);
-        await searchIndexService.DeleteAsync(CrmHrSearchSourceTypes.AiAgent, partyId.ToString("N"), cancellationToken);
-        await activityStream.RecordAsync(
-            new ActivityWriteRequest(
-                "CRM / HR",
-                "AiAgentCreationRolledBack",
-                $"Rolled back AI agent creation for {partyId:D}",
-                "Technical registration failed",
-                ArtifactKind: nameof(Party),
-                ArtifactId: partyId,
-                Route: "/crm-hr/agents",
-                Actor: "crm-hr-ui"),
-            cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<AiAgentProfileSummaryModel>> ListAgentProfilesAsync(CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<AiAgentProfile>()
-            .OrderBy(item => item.ValidationStatus)
-            .ThenBy(item => item.DefaultModel)
-            .Select(item => new AiAgentProfileSummaryModel(item.Id, item.PartyId, item.ProviderProfileId, item.ExecutionMode, item.ValidationStatus))
-            .ToListAsync(cancellationToken);
-    }
-
-    private static List<AiCapabilityEditorModel> DeserializeCapabilities(string json, Guid profileId)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return [];
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<List<AiCapabilityEditorModel>>(json)?
-                .Select(CloneCapability)
-                .ToList()
-                ?? [];
-        }
-        catch (JsonException)
-        {
-            throw new InvalidOperationException($"AI agent profile '{profileId}' contains invalid capability JSON.");
-        }
-    }
-
-    private static string SerializeCapabilities(IEnumerable<AiCapabilityEditorModel> capabilities)
-    {
-        return JsonSerializer.Serialize(capabilities
-            .Select(CloneCapability)
-            .Where(HasCapabilityContent)
-            .ToList());
-    }
-
-    private static AiCapabilityEditorModel CloneCapability(AiCapabilityEditorModel capability)
-    {
-        return new AiCapabilityEditorModel
-        {
-            Name = capability.Name.Trim(),
-            Scope = capability.Scope.Trim(),
-            ToolAccess = capability.ToolAccess.Trim(),
-            Limitations = capability.Limitations.Trim(),
-            Notes = capability.Notes.Trim()
-        };
-    }
-
-    private static bool HasCapabilityContent(AiCapabilityEditorModel capability)
-    {
-        return !string.IsNullOrWhiteSpace(capability.Name)
-            || !string.IsNullOrWhiteSpace(capability.Scope)
-            || !string.IsNullOrWhiteSpace(capability.ToolAccess)
-            || !string.IsNullOrWhiteSpace(capability.Limitations)
-            || !string.IsNullOrWhiteSpace(capability.Notes);
-    }
-
-    private static string ResolveDefaultModel(string requestedModel, string? providerDefaultModel)
-    {
-        if (!string.IsNullOrWhiteSpace(requestedModel))
-        {
-            return requestedModel.Trim();
-        }
-
-        return providerDefaultModel?.Trim() ?? string.Empty;
-    }
-
-    private static string ResolveAiProjectionBindingSummary(AiResourceBinding? binding)
-    {
-        if (binding is null)
-        {
-            return "No technical binding.";
-        }
-
-        if (!string.IsNullOrWhiteSpace(binding.LastError))
-        {
-            return $"{binding.BindingStatus}: {binding.LastError.Trim()}";
-        }
-
-        if (!string.IsNullOrWhiteSpace(binding.BindingReason))
-        {
-            return binding.BindingReason.Trim();
-        }
-
-        return binding.BindingStatus.ToString();
-    }
-
-    private static IReadOnlyList<string> DeserializeAiProjectionTags(string json, Guid partyId)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return [];
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<List<string>>(json) ?? [];
-        }
-        catch (JsonException)
-        {
-            throw new InvalidOperationException($"AI agent party '{partyId}' contains invalid tags JSON.");
-        }
-    }
-
-    private static IReadOnlyList<string> ResolveAiProjectionTags(
-        string json,
-        Guid partyId,
-        IReadOnlyList<string> technicalTags)
-    {
-        return DeserializeAiProjectionTags(json, partyId)
-            .Concat(technicalTags)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(item => item.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string BuildAgentsRoute(Guid? technicalAgentId)
-    {
-        return technicalAgentId.HasValue
-            ? $"/agents?tab=agents&agentId={technicalAgentId.Value:D}"
-            : "/agents?tab=agents";
-    }
-
-    private static DateTimeOffset? ToUtcDate(DateOnly? value)
-    {
-        return value.HasValue
-            ? new DateTimeOffset(value.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero)
-            : null;
-    }
-
-    private static string ResolvePrimaryContactValue(IEnumerable<CrmPartyContactValue> contacts, PartyContactType contactType)
-    {
-        return contacts
-            .Where(item => item.ContactType == contactType)
-            .OrderByDescending(item => item.IsPrimary)
-            .Select(item => item.Value)
-            .FirstOrDefault()
-            ?? string.Empty;
-    }
-
-    private static string? NormalizeJson(string json, string fallback)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return fallback;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            return document.RootElement.GetRawText();
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
 }
 
 public sealed class ProjectPartyIntegrationService(
@@ -5120,6 +4088,7 @@ public sealed class ProjectPartyIntegrationService(
     ProjectRecordQueryService projectRecordQueryService,
     ProjectWriteAdmissionService admissions,
     DbContextOptions<CrmHrDbContext> contextOptions,
+    ProjectAssignmentChanges assignmentChanges,
     ILogger<ProjectPartyIntegrationService>? logger = null) :
     IProjectPartyIntegrationBridge,
     IProjectPartyCostRateBridge,
@@ -5481,6 +4450,8 @@ public sealed class ProjectPartyIntegrationService(
                 assignment.EndsAtUtc,
                 assignment.Source,
                 assignment.Notes,
+                assignment.PhaseName,
+                assignment.OpportunityId,
                 party.DisplayName,
                 party.PartyType,
                 party.IsSensitive
@@ -5558,7 +4529,9 @@ public sealed class ProjectPartyIntegrationService(
                 item.Notes,
                 affiliationContexts.GetValueOrDefault(item.Id),
                 item.PartyOrganizationAffiliationId,
-                item.ProjectLifetimeId))
+                item.ProjectLifetimeId) { Original = new(item.Id, item.ProjectId, item.ProjectLifetimeId, item.PartyId,
+                    item.PartyOrganizationAffiliationId, MapRole(item.AssignmentKind), item.NodeKey, item.PhaseName, item.OpportunityId,
+                    item.IsPrimary, item.AllocationPercent, item.StartsAtUtc, item.EndsAtUtc, item.Source, item.Notes) })
             .ToList();
         return new(
             items,
@@ -5734,6 +4707,8 @@ public sealed class ProjectPartyIntegrationService(
                     assignment.EndsAtUtc,
                     assignment.Source,
                     assignment.Notes,
+                assignment.PhaseName,
+                assignment.OpportunityId,
                     party.DisplayName,
                     party.PartyType,
                     party.IsSensitive
@@ -5778,186 +4753,263 @@ public sealed class ProjectPartyIntegrationService(
                 item.Notes,
                 affiliationContexts.GetValueOrDefault(item.Id),
                 item.PartyOrganizationAffiliationId,
-                item.ProjectLifetimeId))
+                item.ProjectLifetimeId) { Original = new(item.Id, item.ProjectId, item.ProjectLifetimeId, item.PartyId,
+                    item.PartyOrganizationAffiliationId, MapRole(item.AssignmentKind), item.NodeKey, item.PhaseName, item.OpportunityId,
+                    item.IsPrimary, item.AllocationPercent, item.StartsAtUtc, item.EndsAtUtc, item.Source, item.Notes) })
             .ToList();
+    }
+
+    public async Task<ProjectAssignmentObservation?> ReadAssignmentForEditingAsync(ProjectWriteAdmission project, Guid id,
+        CancellationToken cancellationToken = default) {
+        if (project.DatabaseProfileId != admissions.DatabaseProfileId) {
+            throw new InvalidOperationException("The assignment observation belongs to another database profile.");
+        }
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var rows = await ProjectAssignmentReporting.ForProjectsAsync(context, workAssignments, projectRecordQueryService,
+            [project.ProjectId], cancellationToken);
+        var row = await rows.Where(item => item.Id == id && item.ProjectLifetimeId == project.LifetimeId &&
+            item.CurrentProjectLifetimeId == project.LifetimeId).SingleAssignmentReportOrDefaultAsync(cancellationToken);
+        return row is null ? null : new(row.Id, row.ProjectId, row.ProjectLifetimeId, row.PartyId,
+            row.PartyOrganizationAffiliationId, MapRole(row.AssignmentKind), row.NodeKey, row.PhaseName, row.OpportunityId,
+            row.IsPrimary, row.AllocationPercent, row.StartsAtUtc, row.EndsAtUtc, row.Source, row.Notes);
+    }
+
+    public async Task<ProjectAssignmentPrimaryObservation> ReadPrimaryObservationAsync(ProjectWriteAdmission project,
+        ProjectPartyAssignmentRole role, string nodeKey, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(project);
+        if (project.DatabaseProfileId != admissions.DatabaseProfileId) {
+            throw new InvalidOperationException("The assignment observation belongs to another database profile.");
+        }
+        nodeKey = nodeKey.Trim();
+        if (role == ProjectPartyAssignmentRole.WorkItemAssignee) {
+            return await workAssignments.ReadPrimaryObservationAsync(project, nodeKey, cancellationToken);
+        }
+        var kind = MapRole(role);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var ids = await context.Set<ProjectPartyAssignment>().AsNoTracking().Where(item =>
+            item.ProjectId == project.ProjectId && item.ProjectLifetimeId == project.LifetimeId &&
+            item.AssignmentKind == kind && item.NodeKey == nodeKey && item.IsPrimary).Select(item => item.Id).ToArrayAsync(cancellationToken);
+        return new(project.ProjectId, project.LifetimeId, role, nodeKey, System.Collections.Immutable.ImmutableArray.CreateRange(ids.Order()));
     }
 
     public async Task<Result<Guid>> SaveAssignmentAsync(
         ProjectPartyAssignmentUpsertRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default, Action<ProjectAssignmentSaveReceipt>? onCommitted = null) {
         ArgumentNullException.ThrowIfNull(request);
         request = request.Snapshot();
         var expected = ProjectAssignmentAdmission.Require(request.ProjectId, request.ExpectedProjectAdmission);
-        if (request.ProjectId == Guid.Empty)
-        {
+        if (ProjectAssignmentEditingErrors.ValidateOriginal(request) is { } observationError) {
+            return Result<Guid>.Failure(observationError);
+        }
+        if (request.ProjectId == Guid.Empty) {
             return Result<Guid>.Failure(Error.Validation("Project is required.", "crmhr.project-assignment.project-required"));
         }
 
-        if (request.PartyId == Guid.Empty)
-        {
+        if (request.PartyId == Guid.Empty) {
             return Result<Guid>.Failure(Error.Validation("Party is required.", "crmhr.project-assignment.party-required"));
         }
 
         var valueError = ProjectPartyAssignmentInvariantPolicy.ValidateValues(request);
-        if (valueError is not null)
-        {
+        if (valueError is not null) {
             return Result<Guid>.Failure(valueError);
         }
 
-        var newAssignmentId = Guid.NewGuid();
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(
-            dbContext,
-            new[] { ProjectMutationScopeKeys.ForProject(request.ProjectId),
-                ProjectAssignmentMutationKeys.ForAssignment(newAssignmentId),
-                ProjectAssignmentMutationKeys.ForAssignment(request.AssignmentId ?? newAssignmentId) },
-            cancellationToken);
-        using var ownerEntry = coordinatedTransaction.Enter(dbContext);
-        await admissions.RequireForMutationAsync(expected, cancellationToken);
-
-        var partyType = await dbContext.Set<Party>()
-            .Where(item => item.Id == request.PartyId)
-            .Select(item => (PartyType?)item.PartyType)
-            .SingleOrDefaultAsync(cancellationToken);
-        if (!partyType.HasValue)
-        {
-            return Result<Guid>.Failure(Error.Validation("Party was not found.", "crmhr.project-assignment.party-not-found"));
-        }
-
-        var partyTypeError = ProjectPartyAssignmentInvariantPolicy.ValidatePartyType(request.Role, partyType.Value);
-        if (partyTypeError is not null)
-        {
-            return Result<Guid>.Failure(partyTypeError);
-        }
-
-        var affiliationError =
-            await projectPartyAffiliationContextService.ValidateAsync(
+        var committed = false;
+        try {
+            var newAssignmentId = Guid.NewGuid();
+            await assignmentChanges.DemandCommitAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var mutationScope = await SerializableMutationScope.BeginAsync(
                 dbContext,
-                request.PartyId,
-                request.PartyAffiliationId,
-                ToUtcDate(request.StartsOn),
-                ToUtcDate(request.EndsOn),
+                new[] { ProjectMutationScopeKeys.ForProject(request.ProjectId),
+                    ProjectAssignmentMutationKeys.ForAssignment(newAssignmentId),
+                    ProjectAssignmentMutationKeys.ForAssignment(request.AssignmentId ?? newAssignmentId) },
                 cancellationToken);
-        if (affiliationError is not null)
-        {
-            return Result<Guid>.Failure(affiliationError);
-        }
+            using var ownerEntry = coordinatedTransaction.Enter(dbContext);
+            await admissions.RequireForMutationAsync(expected, cancellationToken);
 
-        var normalizedNodeKey = request.NodeKey?.Trim() ?? string.Empty;
-        var (nodeScope, nodeScopeError) = await projectPartyAssignmentNodePolicy.ResolveScopeAsync(
-            request.ProjectId,
-            normalizedNodeKey,
-            [request.Role],
-            allowUnresolvedNamedScope: true,
-            cancellationToken);
-        if (nodeScopeError is not null)
-        {
-            return Result<Guid>.Failure(nodeScopeError);
-        }
-        var roleError = projectPartyAssignmentNodePolicy.ValidateRole(request.Role, nodeScope);
-        if (roleError is not null)
-        {
-            return Result<Guid>.Failure(roleError);
-        }
+            var partyType = await dbContext.Set<Party>()
+                .Where(item => item.Id == request.PartyId)
+                .Select(item => (PartyType?)item.PartyType)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (!partyType.HasValue) {
+                return Result<Guid>.Failure(Error.Validation("Party was not found.", "crmhr.project-assignment.party-not-found"));
+            }
 
-        var ownedWorkAssignment = request.AssignmentId.HasValue
-            ? await workAssignments.GetForMutationAsync(request.AssignmentId.Value, cancellationToken)
-            : null;
-        var assignmentKind = MapRole(request.Role);
-        var entity = request.AssignmentId.HasValue
-            ? await dbContext.Set<ProjectPartyAssignment>()
-                .SingleOrDefaultAsync(item => item.Id == request.AssignmentId.Value, cancellationToken)
-            : null;
-        if (entity is null && ownedWorkAssignment is null)
-        {
-            entity = await dbContext.Set<ProjectPartyAssignment>()
-                .SingleOrDefaultAsync(item =>
-                    item.ProjectId == request.ProjectId && item.ProjectLifetimeId == expected.LifetimeId &&
-                    item.PartyId == request.PartyId &&
-                    item.AssignmentKind == assignmentKind &&
-                    item.NodeKey == normalizedNodeKey,
+            var partyTypeError = ProjectPartyAssignmentInvariantPolicy.ValidatePartyType(request.Role, partyType.Value);
+            if (partyTypeError is not null) {
+                return Result<Guid>.Failure(partyTypeError);
+            }
+
+            var affiliationError =
+                await projectPartyAffiliationContextService.ValidateAsync(
+                    dbContext,
+                    request.PartyId,
+                    request.PartyAffiliationId,
+                    ToUtcDate(request.StartsOn),
+                    ToUtcDate(request.EndsOn),
+                    cancellationToken);
+            if (affiliationError is not null) {
+                return Result<Guid>.Failure(affiliationError);
+            }
+
+            var normalizedNodeKey = request.NodeKey?.Trim() ?? string.Empty;
+            var (nodeScope, nodeScopeError) = await projectPartyAssignmentNodePolicy.ResolveScopeAsync(
+                request.ProjectId,
+                normalizedNodeKey,
+                [request.Role],
+                allowUnresolvedNamedScope: true,
                 cancellationToken);
-        }
-
-        if (entity is not null && (entity.ProjectId != request.ProjectId || entity.ProjectLifetimeId != expected.LifetimeId))
-        {
-            return Result<Guid>.Failure(Error.Validation(
-                "The assignment does not belong to the requested project.",
-                "crmhr.project-assignment.project-mismatch"));
-        }
-
-        if (ownedWorkAssignment is not null && (ownedWorkAssignment.ProjectId != request.ProjectId || ownedWorkAssignment.ProjectLifetimeId != expected.LifetimeId)) {
-            return Result<Guid>.Failure(Error.Validation(
-                "The assignment does not belong to the requested project.", "crmhr.project-assignment.project-mismatch"));
-        }
-        if (request.Role == ProjectPartyAssignmentRole.WorkItemAssignee) {
-            ProjectWorkAssignmentCarryOver? carryOver = null;
-            if (entity is not null) {
-                carryOver = new(entity.Id, entity.PhaseName, entity.OpportunityId, entity.ProjectLifetimeId);
-                dbContext.Remove(entity);
-                await dbContext.SaveChangesAsync(cancellationToken);
+            if (nodeScopeError is not null) {
+                return Result<Guid>.Failure(nodeScopeError);
             }
-            var saved = await workAssignments.StageSaveAsync(request, newAssignmentId, carryOver, cancellationToken);
-            if (saved.IsSuccess) {
-                await mutationScope.CommitAsync(cancellationToken);
+            var roleError = projectPartyAssignmentNodePolicy.ValidateRole(request.Role, nodeScope);
+            if (roleError is not null) {
+                return Result<Guid>.Failure(roleError);
             }
-            return saved;
-        }
-        if (ownedWorkAssignment is not null) {
-            if (entity is not null) {
+
+            var ownedWorkAssignment = request.AssignmentId.HasValue
+                ? await workAssignments.GetForMutationAsync(request.AssignmentId.Value, cancellationToken)
+                : null;
+            var workNodeTargets = new List<(Guid ProjectId, string NodeKey)>();
+            if (ownedWorkAssignment is not null && !string.IsNullOrWhiteSpace(ownedWorkAssignment.NodeKey)) {
+                workNodeTargets.Add((ownedWorkAssignment.ProjectId, ownedWorkAssignment.NodeKey));
+            }
+            if (request.Role == ProjectPartyAssignmentRole.WorkItemAssignee) {
+                workNodeTargets.Add((request.ProjectId, normalizedNodeKey));
+            }
+            var assignmentKind = MapRole(request.Role);
+            var entity = request.AssignmentId.HasValue
+                ? await dbContext.Set<ProjectPartyAssignment>()
+                    .SingleOrDefaultAsync(item => item.Id == request.AssignmentId.Value, cancellationToken)
+                : null;
+            if (entity is not null && ownedWorkAssignment is not null) {
                 throw new InvalidOperationException("An assignment identity is occupied by both owners.");
             }
-            entity = new ProjectPartyAssignment {
-                Id = ownedWorkAssignment.Id,
-                PhaseName = ownedWorkAssignment.PhaseName,
-                OpportunityId = ownedWorkAssignment.OpportunityId
-            };
-            dbContext.Add(entity);
-            await workAssignments.StageDeleteAsync(ownedWorkAssignment.Id, cancellationToken, ProjectAssignmentReference.From(expected));
-        }
-
-        if (entity is null)
-        {
-            if (await workAssignments.GetForMutationAsync(newAssignmentId, cancellationToken) is not null) {
-                throw new InvalidOperationException("An assignment identity is already occupied by the Work owner.");
+            var currentOriginal = entity is not null ? ProjectAssignmentEditValues.Observe(entity) : ownedWorkAssignment?.Original;
+            if (request.Original is not null && currentOriginal != request.Original) {
+                return Result<Guid>.Failure(ProjectAssignmentEditingErrors.Stale());
             }
-            entity = new ProjectPartyAssignment { Id = newAssignmentId };
-            dbContext.Set<ProjectPartyAssignment>().Add(entity);
-        }
-
-        entity.ProjectId = request.ProjectId;
-        entity.ProjectLifetimeId = expected.LifetimeId;
-        entity.PartyId = request.PartyId;
-        entity.PartyOrganizationAffiliationId =
-            request.PartyAffiliationId;
-        entity.AssignmentKind = assignmentKind;
-        entity.NodeKey = normalizedNodeKey;
-        entity.IsPrimary = request.IsPrimary;
-        entity.AllocationPercent = request.AllocationPercent;
-        entity.StartsAtUtc = ToUtcDate(request.StartsOn);
-        entity.EndsAtUtc = ToUtcDate(request.EndsOn);
-        entity.Source = string.IsNullOrWhiteSpace(request.Source) ? "crm-hr-ui" : request.Source.Trim();
-        entity.Notes = request.Notes?.Trim() ?? string.Empty;
-
-        if (entity.IsPrimary)
-        {
-            var primaryAssignments = await dbContext.Set<ProjectPartyAssignment>()
-                .Where(item =>
+            if (await dbContext.Set<ProjectPartyAssignment>().AnyAsync(item =>
+                item.ProjectId == request.ProjectId && item.ProjectLifetimeId == expected.LifetimeId &&
+                item.PartyId == request.PartyId && item.AssignmentKind == assignmentKind &&
+                item.NodeKey == normalizedNodeKey && item.Id != (request.AssignmentId ?? Guid.Empty), cancellationToken)) {
+                return Result<Guid>.Failure(ProjectAssignmentEditingErrors.DuplicateAssignment());
+            }
+            if (request.Role != ProjectPartyAssignmentRole.WorkItemAssignee &&
+                ProjectAssignmentEditingErrors.RequiresPrimaryObservation(request, normalizedNodeKey)) {
+                var primaryIds = await dbContext.Set<ProjectPartyAssignment>().Where(item =>
                     item.ProjectId == request.ProjectId && item.ProjectLifetimeId == expected.LifetimeId &&
-                    item.AssignmentKind == assignmentKind &&
-                    item.NodeKey == normalizedNodeKey &&
-                    item.Id != entity.Id)
-                .ToListAsync(cancellationToken);
-            foreach (var primaryAssignment in primaryAssignments)
-            {
-                primaryAssignment.IsPrimary = false;
+                    item.AssignmentKind == assignmentKind && item.NodeKey == normalizedNodeKey && item.IsPrimary)
+                    .Select(item => item.Id).ToArrayAsync(cancellationToken);
+                if (request.PrimaryOriginal?.Matches(expected, request.Role, normalizedNodeKey, primaryIds) != true) {
+                    return Result<Guid>.Failure(ProjectAssignmentEditingErrors.StalePrimary());
+                }
             }
-        }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
-        return Result<Guid>.Success(entity.Id);
+            if (entity is not null && (entity.ProjectId != request.ProjectId || entity.ProjectLifetimeId != expected.LifetimeId)) {
+                return Result<Guid>.Failure(Error.Validation(
+                    "The assignment does not belong to the requested project.",
+                    "crmhr.project-assignment.project-mismatch"));
+            }
+
+            if (ownedWorkAssignment is not null && (ownedWorkAssignment.ProjectId != request.ProjectId || ownedWorkAssignment.ProjectLifetimeId != expected.LifetimeId)) {
+                return Result<Guid>.Failure(Error.Validation(
+                    "The assignment does not belong to the requested project.", "crmhr.project-assignment.project-mismatch"));
+            }
+            if (request.Role == ProjectPartyAssignmentRole.WorkItemAssignee) {
+                ProjectWorkAssignmentCarryOver? carryOver = null;
+                if (entity is not null) {
+                    carryOver = new(entity.Id, entity.PhaseName, entity.OpportunityId, entity.ProjectLifetimeId);
+
+                }
+                var saved = await workAssignments.StageSaveAsync(request, newAssignmentId, carryOver, cancellationToken);
+                if (saved.IsSuccess) {
+                    if (entity is not null) {
+                        dbContext.Remove(entity);
+                        await dbContext.SaveChangesAsync(cancellationToken);
+                    }
+                    var accepted = (await workAssignments.GetForMutationAsync(saved.Value, cancellationToken))!.Original;
+                    var nodeChanges = await workAssignments.ReadExistingNodeChangesForMutationAsync(workNodeTargets, cancellationToken);
+                    await assignmentChanges.DemandCommitAsync(cancellationToken);
+                    await mutationScope.CommitAsync(cancellationToken);
+                    committed = true;
+                    try {
+                        workAssignments.PublishCommittedNodeChanges(nodeChanges);
+                        assignmentChanges.Publish(saved.Value, request.ProjectId);
+                    } finally {
+                        onCommitted?.Invoke(new(saved.Value, accepted));
+                    }
+                }
+                return saved;
+            }
+            if (ownedWorkAssignment is not null) {
+                if (entity is not null) {
+                    throw new InvalidOperationException("An assignment identity is occupied by both owners.");
+                }
+                entity = new ProjectPartyAssignment {
+                    Id = ownedWorkAssignment.Id,
+                    PhaseName = ownedWorkAssignment.PhaseName,
+                    OpportunityId = ownedWorkAssignment.OpportunityId
+                };
+                dbContext.Add(entity);
+                await workAssignments.StageDeleteAsync(ownedWorkAssignment.Id, cancellationToken, ProjectAssignmentReference.From(expected), request.Original);
+            }
+
+            if (entity is null) {
+                if (await workAssignments.GetForMutationAsync(newAssignmentId, cancellationToken) is not null) {
+                    throw new InvalidOperationException("An assignment identity is already occupied by the Work owner.");
+                }
+                entity = new ProjectPartyAssignment { Id = newAssignmentId };
+                dbContext.Set<ProjectPartyAssignment>().Add(entity);
+            }
+
+            entity.ProjectId = request.ProjectId;
+            entity.ProjectLifetimeId = expected.LifetimeId;
+            entity.PartyId = request.PartyId;
+            entity.PartyOrganizationAffiliationId =
+                request.PartyAffiliationId;
+            entity.AssignmentKind = assignmentKind;
+            entity.NodeKey = normalizedNodeKey;
+            entity.IsPrimary = request.IsPrimary;
+            entity.AllocationPercent = request.AllocationPercent;
+            entity.StartsAtUtc = ToUtcDate(request.StartsOn);
+            entity.EndsAtUtc = ToUtcDate(request.EndsOn);
+            entity.Source = string.IsNullOrWhiteSpace(request.Source) ? "crm-hr-ui" : request.Source.Trim();
+            entity.Notes = request.Notes?.Trim() ?? string.Empty;
+
+            if (entity.IsPrimary) {
+                var primaryAssignments = await dbContext.Set<ProjectPartyAssignment>()
+                    .Where(item =>
+                        item.ProjectId == request.ProjectId && item.ProjectLifetimeId == expected.LifetimeId &&
+                        item.AssignmentKind == assignmentKind &&
+                        item.NodeKey == normalizedNodeKey &&
+                        item.Id != entity.Id)
+                    .ToListAsync(cancellationToken);
+                foreach (var primaryAssignment in primaryAssignments) {
+                    primaryAssignment.IsPrimary = false;
+                }
+            }
+
+            await assignmentChanges.DemandCommitAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await assignmentChanges.DemandCommitAsync(cancellationToken);
+            var acceptedParticipation = ProjectAssignmentEditValues.Observe(entity);
+            var participationNodeChanges = await workAssignments.ReadExistingNodeChangesForMutationAsync(workNodeTargets, cancellationToken);
+            await assignmentChanges.DemandCommitAsync(cancellationToken);
+            await mutationScope.CommitAsync(cancellationToken);
+            committed = true;
+            try {
+                workAssignments.PublishCommittedNodeChanges(participationNodeChanges);
+                assignmentChanges.Publish(entity.Id, request.ProjectId);
+            } finally {
+                onCommitted?.Invoke(new(entity.Id, acceptedParticipation));
+            }
+            return Result<Guid>.Success(entity.Id);
+        } catch (Exception exception) when (!committed && SerializableMutationScope.IsConflict(exception)) {
+            logger?.LogInformation("Assignment save conflicted for {AssignmentId} in project {ProjectId}.", request.AssignmentId, request.ProjectId);
+            return Result<Guid>.Failure(ProjectAssignmentEditingErrors.Stale());
+        }
     }
 
     public Task<Result> ReplaceProjectAssignmentsAsync(
@@ -5965,13 +5017,14 @@ public sealed class ProjectPartyIntegrationService(
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
         => ReplaceAssignmentsCoreAsync(
             projectId,
             string.Empty,
             desiredAssignments,
             targetRoles,
-            expectedAssignments: null,
+            expectedAssignments: expectedAssignments ?? [],
             expectedDirectAssignmentRevision: null,
             cancellationToken,
             expectedProjectAdmission);
@@ -5982,13 +5035,14 @@ public sealed class ProjectPartyIntegrationService(
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
         => ReplaceAssignmentsCoreAsync(
             projectId,
             nodeReference.NodeKey,
             desiredAssignments,
             targetRoles,
-            expectedAssignments: null,
+            expectedAssignments: expectedAssignments ?? [],
             expectedDirectAssignmentRevision: null,
             cancellationToken,
             expectedProjectAdmission);
@@ -6023,7 +5077,8 @@ public sealed class ProjectPartyIntegrationService(
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot> expectedAssignments,
         ProjectPartyNodeOccurrence expectedNode, CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null) {
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ArgumentNullException.ThrowIfNull(expectedNode);
         ArgumentNullException.ThrowIfNull(expectedAssignments);
         ArgumentNullException.ThrowIfNull(targetRoles);
@@ -6036,7 +5091,7 @@ public sealed class ProjectPartyIntegrationService(
         try {
             var result = await ReplaceAssignmentsCoreAsync(projectId, nodeReference.NodeKey, desiredAssignments, targetRoles,
                 expectedAssignments, null, cancellationToken, expectedProjectAdmission,
-                expectedNode: expectedNode, captureAssignments: ids => committed = new(ids));
+                expectedNode: expectedNode, captureAssignments: ids => committed = new(ids), demandCommit: authorizeCommit);
             return result.IsSuccess
                 ? Result<ProjectNodeAssignmentCommit>.Success(committed
                     ?? throw new InvalidOperationException("The replacement has no native commit receipt."))
@@ -6061,7 +5116,9 @@ public sealed class ProjectPartyIntegrationService(
         ProjectWriteAdmission? expectedProjectAdmission,
         Action<CrmOpportunityAssignmentReceipt>? captureReceipt = null,
         ProjectPartyNodeOccurrence? expectedNode = null,
-        Action<IReadOnlyList<Guid>>? captureAssignments = null)
+        Action<IReadOnlyList<Guid>>? captureAssignments = null,
+        Func<CancellationToken, ValueTask>? demandCommit = null,
+        IReadOnlyCollection<CrmOpportunityAssignmentOriginal>? expectedOpportunityAssignments = null)
     {
         var expected = ProjectAssignmentAdmission.Require(projectId, expectedProjectAdmission);
         desiredAssignments = ProjectAssignmentAdmission.Snapshot(projectId, desiredAssignments, expected);
@@ -6248,7 +5305,7 @@ public sealed class ProjectPartyIntegrationService(
                 .Where(item => item.ProjectLifetimeId == expected.LifetimeId && item.NodeKey == normalizedNodeKey).ToArray()
             : [];
         var existingIds = existingAssignments.Select(item => item.Id).Concat(workRows.Select(item => item.Id)).ToHashSet();
-        var retained = expectedNode is null ? [] : existingAssignments.Where(row => desiredAssignments.Any(request =>
+        var retained = expectedNode is null && expectedOpportunityAssignments is null ? [] : existingAssignments.Where(row => desiredAssignments.Any(request =>
             request.AssignmentId == row.Id && request.PartyId == row.PartyId && MapRole(request.Role) == row.AssignmentKind)).ToArray();
         var retainedIds = retained.Select(row => row.Id).ToHashSet();
         var resolvedReplacementIds = desiredAssignments.Select((item, index) =>
@@ -6263,10 +5320,10 @@ public sealed class ProjectPartyIntegrationService(
                 .ToDictionaryAsync(item => item.Id, item => item.PartyType, cancellationToken);
             var currentSnapshots = existingAssignments.Where(item => currentPartyTypes.ContainsKey(item.PartyId))
                 .Select(item => new ProjectPartyAssignmentConcurrencySnapshot(item.Id, item.PartyId,
-                    MapProjectPartyType(currentPartyTypes[item.PartyId]), item.IsPrimary, item.PartyOrganizationAffiliationId))
+                    MapProjectPartyType(currentPartyTypes[item.PartyId]), item.IsPrimary, item.PartyOrganizationAffiliationId, ProjectAssignmentEditValues.Observe(item)))
                 .Concat(workRows.Where(item => currentPartyTypes.ContainsKey(item.PartyId))
                     .Select(item => new ProjectPartyAssignmentConcurrencySnapshot(item.Id, item.PartyId,
-                        MapProjectPartyType(currentPartyTypes[item.PartyId]), item.IsPrimary, item.PartyOrganizationAffiliationId)))
+                        MapProjectPartyType(currentPartyTypes[item.PartyId]), item.IsPrimary, item.PartyOrganizationAffiliationId, item.Original)))
                 .ToHashSet();
             if (currentSnapshots.Count != existingAssignments.Count + workRows.Length || !currentSnapshots.SetEquals(expectedAssignments)) {
                 return Result.Failure(Error.Failure(
@@ -6274,6 +5331,11 @@ public sealed class ProjectPartyIntegrationService(
             }
         }
 
+        if (expectedOpportunityAssignments is not null && !existingAssignments
+                .Select(row => CrmOpportunityAssignmentSnapshot.From(row).Original()).ToHashSet().SetEquals(expectedOpportunityAssignments)) {
+            return Result.Failure(Error.Failure("The selected project's handoff membership changed. Review its current state before converting.",
+                ProjectPartyIntegrationErrorCodes.StaleAssignmentSnapshot));
+        }
         var before = captureReceipt is null ? null : existingAssignments.Select(CrmOpportunityAssignmentSnapshot.From).ToArray();
         if (existingAssignments.Count > 0)
         {
@@ -6353,12 +5415,16 @@ public sealed class ProjectPartyIntegrationService(
             var staged = await workAssignments.StageReplaceAsync(projectId, new ProjectNodeReference(normalizedNodeKey),
                 workRequests.Select(item => WithAssignmentId(item.request, resolvedReplacementIds[item.index])).ToArray(),
                 workRequests.Select(item => replacementIds[item.index]).ToArray(),
+                expectedAssignments: expectedAssignments?.Where(item => item.Original?.Role == ProjectPartyAssignmentRole.WorkItemAssignee).ToArray() ?? [],
                 expectedRevision: expectedDirectAssignmentRevision, cancellationToken: cancellationToken, expectedProjectAdmission: expected);
             if (staged.IsFailure) {
                 return staged;
             }
         }
 
+        if (demandCommit is not null) {
+            await demandCommit(cancellationToken);
+        }
         await dbContext.SaveChangesAsync(cancellationToken);
         CrmOpportunityAssignmentReceipt? receipt = null;
         if (captureReceipt is not null) {
@@ -6367,7 +5433,17 @@ public sealed class ProjectPartyIntegrationService(
                 targetAssignmentKinds.Contains(row.AssignmentKind)).ToArrayAsync(cancellationToken);
             receipt = new(expected, targetAssignmentKinds, before!, after.Select(CrmOpportunityAssignmentSnapshot.From));
         }
+        if (demandCommit is not null) {
+            await demandCommit(cancellationToken);
+        }
+        IReadOnlyList<ProjectWorkAssignmentNodeChange> nodeChanges = targetRoleSet.Contains(ProjectPartyAssignmentRole.WorkItemAssignee)
+            ? await workAssignments.ReadExistingNodeChangesForMutationAsync([(projectId, normalizedNodeKey)], cancellationToken)
+            : [];
+        if (demandCommit is not null) {
+            await demandCommit(cancellationToken);
+        }
         await mutationScope.CommitAsync(cancellationToken);
+        workAssignments.PublishCommittedNodeChanges(nodeChanges);
         captureAssignments?.Invoke(resolvedReplacementIds);
         if (receipt is not null) {
             captureReceipt!(receipt);
@@ -6377,13 +5453,16 @@ public sealed class ProjectPartyIntegrationService(
 
     internal async Task<Result<CrmOpportunityAssignmentReceipt>> ReplaceOpportunityAssignmentsAsync(Guid projectId,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desired, IReadOnlyList<ProjectPartyAssignmentRole> roles,
-        ProjectWriteAdmission expected, CancellationToken cancellationToken) {
+        ProjectWriteAdmission expected, CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask> demandCommit,
+        IReadOnlyCollection<CrmOpportunityAssignmentOriginal> expectedAssignments) {
         if (roles.Count == 0 || roles.Contains(ProjectPartyAssignmentRole.WorkItemAssignee)) {
             throw new InvalidOperationException("Opportunity conversion requires explicit project participation roles.");
         }
         CrmOpportunityAssignmentReceipt? receipt = null;
         var result = await ReplaceAssignmentsCoreAsync(projectId, string.Empty, desired, roles, null, null,
-            cancellationToken, expected, captured => receipt = captured);
+            cancellationToken, expected, captured => receipt = captured, demandCommit: demandCommit,
+            expectedOpportunityAssignments: expectedAssignments);
         return result.IsSuccess
             ? Result<CrmOpportunityAssignmentReceipt>.Success(receipt
                 ?? throw new InvalidOperationException("The committed opportunity assignments have no original owner receipt."))
@@ -6424,61 +5503,55 @@ public sealed class ProjectPartyIntegrationService(
     }
 
     public async Task DeleteAssignmentAsync(Guid assignmentId, CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null)
-    {
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+        Action<ProjectAssignmentDeleteReceipt>? onCommitted = null) {
+        if (original is null || original.Id != assignmentId) {
+            throw new InvalidOperationException(ProjectAssignmentEditingErrors.OriginalRequired);
+        }
         ArgumentNullException.ThrowIfNull(expectedReference);
-        expectedReference.RequireProfile(admissions.DatabaseProfileId, expectedReference.ProjectId);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var assignmentScope = await dbContext.Set<ProjectPartyAssignment>()
-            .AsNoTracking()
-            .Where(item => item.Id == assignmentId)
-            .Select(item => new
-            {
-                item.ProjectId,
-                item.ProjectLifetimeId,
-                item.NodeKey,
-                item.AssignmentKind
-            })
-            .SingleOrDefaultAsync(cancellationToken);
-        var initialWork = await workAssignments.GetAsync(assignmentId, cancellationToken);
-        var projectId = assignmentScope?.ProjectId ?? initialWork?.ProjectId;
-        if (!projectId.HasValue) {
-            return;
-        }
-
-        RequireAssignmentReference(projectId.Value, assignmentScope?.ProjectLifetimeId ?? initialWork?.ProjectLifetimeId, expectedReference);
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(
-            dbContext,
-            new[] { ProjectMutationScopeKeys.ForProject(projectId.Value),
-                ProjectAssignmentMutationKeys.ForAssignment(assignmentId) },
-            cancellationToken);
-        using var ownerEntry = coordinatedTransaction.Enter(dbContext);
-        var currentWork = await workAssignments.GetForMutationAsync(assignmentId, cancellationToken);
-        if (currentWork is not null) {
-            if (currentWork.ProjectId != projectId.Value) {
-                throw new InvalidOperationException("The assignment project changed while it was being deleted.");
+        expectedReference.RequireProfile(admissions.DatabaseProfileId, original.ProjectId);
+        RequireAssignmentReference(original.ProjectId, original.ProjectLifetimeId, expectedReference);
+        var committed = false;
+        try {
+            await assignmentChanges.DemandCommitAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var mutationScope = await SerializableMutationScope.BeginAsync(dbContext,
+                [ProjectMutationScopeKeys.ForProject(original.ProjectId), ProjectAssignmentMutationKeys.ForAssignment(assignmentId)], cancellationToken);
+            using var ownerEntry = coordinatedTransaction.Enter(dbContext);
+            var work = await workAssignments.GetForMutationAsync(assignmentId, cancellationToken);
+            var entity = await dbContext.Set<ProjectPartyAssignment>().SingleOrDefaultAsync(item => item.Id == assignmentId, cancellationToken);
+            if (work is not null && entity is not null) {
+                throw new InvalidOperationException("An assignment identity is occupied by both owners.");
             }
-            await workAssignments.StageDeleteAsync(assignmentId, cancellationToken, expectedReference);
+            var current = entity is not null ? ProjectAssignmentEditValues.Observe(entity) : work?.Original;
+            if (current != original) {
+                throw new ProjectAssignmentConflictException();
+            }
+            if (work is not null) {
+                await workAssignments.StageDeleteAsync(assignmentId, cancellationToken, expectedReference, original);
+            } else {
+                dbContext.Remove(entity!);
+                await assignmentChanges.DemandCommitAsync(cancellationToken);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await assignmentChanges.DemandCommitAsync(cancellationToken);
+            }
+            await assignmentChanges.DemandCommitAsync(cancellationToken);
+            IReadOnlyList<ProjectWorkAssignmentNodeChange> nodeChanges = work is not null && !string.IsNullOrWhiteSpace(work.NodeKey)
+                ? await workAssignments.ReadExistingNodeChangesForMutationAsync([(work.ProjectId, work.NodeKey)], cancellationToken)
+                : [];
+            await assignmentChanges.DemandCommitAsync(cancellationToken);
             await mutationScope.CommitAsync(cancellationToken);
-            return;
+            committed = true;
+            try {
+                workAssignments.PublishCommittedNodeChanges(nodeChanges);
+                assignmentChanges.Publish(assignmentId, original.ProjectId, EditingChangeKind.Deleted);
+            } finally {
+                onCommitted?.Invoke(new(assignmentId, original));
+            }
+        } catch (Exception exception) when (!committed && SerializableMutationScope.IsConflict(exception)) {
+            logger?.LogInformation("Assignment deletion conflicted for {AssignmentId}.", assignmentId);
+            throw new ProjectAssignmentConflictException(exception);
         }
-        var entity = await dbContext.Set<ProjectPartyAssignment>()
-            .SingleOrDefaultAsync(item => item.Id == assignmentId, cancellationToken);
-        if (entity is null)
-        {
-            return;
-        }
-
-        if (entity.ProjectId != projectId.Value)
-        {
-            throw new InvalidOperationException(
-                "The assignment project changed while it was being deleted.");
-        }
-
-        RequireAssignmentReference(entity.ProjectId, entity.ProjectLifetimeId, expectedReference);
-        dbContext.Set<ProjectPartyAssignment>().Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
     }
 
     public async Task DeleteAssignmentsForNodesAsync(
@@ -6673,9 +5746,14 @@ public sealed class ProjectPartyIntegrationService(
 
     public async Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
         ProjectPartyQuickCreateRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         if (string.IsNullOrWhiteSpace(request.DisplayName))
         {
             return Result<ProjectPartyQuickCreateResult>.Failure(Error.Validation(
@@ -6710,11 +5788,17 @@ public sealed class ProjectPartyIntegrationService(
 
         Guid? committed = null;
         try {
-            var saveResult = await partyDirectoryService.SavePartyObservedAsync(editor, id => committed = id, cancellationToken);
+            var saveResult = await partyDirectoryService.SavePartyObservedAsync(editor, id => committed = id, cancellationToken, authorizeCommit);
             if (!saveResult.IsSuccess) {
                 return Result<ProjectPartyQuickCreateResult>.Failure(saveResult.Errors.ToArray());
             }
+            if (authorizeRead is not null) {
+                await authorizeRead(cancellationToken);
+            }
             var option = await GetPartyOptionAsync(saveResult.Value, cancellationToken);
+            if (authorizeRead is not null) {
+                await authorizeRead(cancellationToken);
+            }
             return Result<ProjectPartyQuickCreateResult>.Success(new(saveResult.Value,
                 option?.DisplayName ?? editor.DisplayName, option?.PartyTypeLabel ?? ResolvePartyTypeLabel(partyType)) {
                 ObservationWarning = option is null ? "The party was created, but its directory option could not be loaded." : null
@@ -6769,48 +5853,8 @@ public sealed class ProjectPartyIntegrationService(
             .FirstOrDefault() ?? string.Empty;
     }
 
-    private static ProjectPartyAssignmentRole MapRole(ProjectPartyAssignmentKind role)
-    {
-        return role switch
-        {
-            ProjectPartyAssignmentKind.Customer => ProjectPartyAssignmentRole.Customer,
-            ProjectPartyAssignmentKind.CustomerContact => ProjectPartyAssignmentRole.CustomerContact,
-            ProjectPartyAssignmentKind.DeliveryUnit => ProjectPartyAssignmentRole.DeliveryUnit,
-            ProjectPartyAssignmentKind.TeamMember => ProjectPartyAssignmentRole.TeamMember,
-            ProjectPartyAssignmentKind.Manager => ProjectPartyAssignmentRole.Manager,
-            ProjectPartyAssignmentKind.Partner => ProjectPartyAssignmentRole.Partner,
-            ProjectPartyAssignmentKind.Vendor => ProjectPartyAssignmentRole.Vendor,
-            ProjectPartyAssignmentKind.Stakeholder => ProjectPartyAssignmentRole.Stakeholder,
-            ProjectPartyAssignmentKind.MeetingParticipant => ProjectPartyAssignmentRole.MeetingParticipant,
-            ProjectPartyAssignmentKind.WorkItemAssignee => ProjectPartyAssignmentRole.WorkItemAssignee,
-            ProjectPartyAssignmentKind.Reviewer => ProjectPartyAssignmentRole.Reviewer,
-            ProjectPartyAssignmentKind.AiAgent => ProjectPartyAssignmentRole.AiAgent,
-            ProjectPartyAssignmentKind.BillingContact => ProjectPartyAssignmentRole.BillingContact,
-            _ => ProjectPartyAssignmentRole.TechnicalContact
-        };
-    }
-
-    private static ProjectPartyAssignmentKind MapRole(ProjectPartyAssignmentRole role)
-    {
-        return role switch
-        {
-            ProjectPartyAssignmentRole.Customer => ProjectPartyAssignmentKind.Customer,
-            ProjectPartyAssignmentRole.CustomerContact => ProjectPartyAssignmentKind.CustomerContact,
-            ProjectPartyAssignmentRole.DeliveryUnit => ProjectPartyAssignmentKind.DeliveryUnit,
-            ProjectPartyAssignmentRole.TeamMember => ProjectPartyAssignmentKind.TeamMember,
-            ProjectPartyAssignmentRole.Manager => ProjectPartyAssignmentKind.Manager,
-            ProjectPartyAssignmentRole.Partner => ProjectPartyAssignmentKind.Partner,
-            ProjectPartyAssignmentRole.Vendor => ProjectPartyAssignmentKind.Vendor,
-            ProjectPartyAssignmentRole.Stakeholder => ProjectPartyAssignmentKind.Stakeholder,
-            ProjectPartyAssignmentRole.MeetingParticipant => ProjectPartyAssignmentKind.MeetingParticipant,
-            ProjectPartyAssignmentRole.WorkItemAssignee => ProjectPartyAssignmentKind.WorkItemAssignee,
-            ProjectPartyAssignmentRole.Reviewer => ProjectPartyAssignmentKind.Reviewer,
-            ProjectPartyAssignmentRole.AiAgent => ProjectPartyAssignmentKind.AiAgent,
-            ProjectPartyAssignmentRole.BillingContact => ProjectPartyAssignmentKind.BillingContact,
-            ProjectPartyAssignmentRole.TechnicalContact => ProjectPartyAssignmentKind.TechnicalContact,
-            _ => throw new ArgumentOutOfRangeException(nameof(role), role, "The project assignment role is not supported.")
-        };
-    }
+    internal static ProjectPartyAssignmentRole MapRole(ProjectPartyAssignmentKind role) => ProjectAssignmentRoleMapping.MapRole(role);
+    internal static ProjectPartyAssignmentKind MapRole(ProjectPartyAssignmentRole role) => ProjectAssignmentRoleMapping.MapRole(role);
 
     private static ProjectPartyPortfolioCategory MapPortfolioCategory(ProjectPartyAssignmentKind assignmentKind)
     {

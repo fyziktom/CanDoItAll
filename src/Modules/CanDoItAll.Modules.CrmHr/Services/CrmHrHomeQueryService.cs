@@ -69,7 +69,7 @@ public sealed class CrmHrHomeQueryService(
                 item.PartyType,
                 item.LifecycleStatus,
                 item.IsSensitive,
-                item.Summary,
+                item.IsSensitive ? string.Empty : item.Summary,
                 item.UpdatedAtUtc))
             .ToListAsync(cancellationToken);
         var sensitivePreview = await parties
@@ -84,7 +84,7 @@ public sealed class CrmHrHomeQueryService(
                 item.PartyType,
                 item.LifecycleStatus,
                 item.IsSensitive,
-                item.Summary,
+                string.Empty,
                 item.UpdatedAtUtc))
             .ToListAsync(cancellationToken);
 

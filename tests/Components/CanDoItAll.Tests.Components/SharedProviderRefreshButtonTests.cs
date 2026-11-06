@@ -5,6 +5,9 @@ using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using CanDoItAll.Editing;
+using CanDoItAll.Tests.Support;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
@@ -12,13 +15,45 @@ public sealed class SharedProviderRefreshButtonTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Refresh_preserves_selected_imports_and_emits_explicit_scope(bool fail) {
-        using var context = new BunitContext();
-        var service = DispatchProxy.Create<ISharedProviderManagementService, RefreshProxy>();
+    public async Task Source_refresh_does_not_read_or_dispatch_without_an_interactive_original_grant(bool interactive) {
+        var access = new EditingUiTestAccess { Allowed = !interactive };
+        await using var harness = await HarnessAsync(access);
+        var context = harness.Context;
+        context.SetRendererInfo(new RendererInfo(interactive ? "Server" : "Static", interactive));
+        var proxy = (RefreshProxy)(object)context.Services.GetRequiredService<ISharedProviderManagementService>();
+        var cut = context.Render<SharedProviderRefreshButton>(p => p.Add(c => c.ProviderId, proxy.Selected.ProviderProfileId));
+        await cut.Find("[data-testid='shared-provider-refresh-capabilities']").ClickAsync();
+        Assert.Equal(0, proxy.ListCalls);
+        Assert.Empty(proxy.SynchronizedIds);
+        Assert.Null(context.Services.GetRequiredService<SharedProviderRecovery>().Source);
+    }
+
+    [Fact]
+    public async Task A_held_refresh_read_cannot_dispatch_for_a_different_actor() {
+        var access = new EditingUiTestAccess();
+        await using var harness = await HarnessAsync(access);
+        var context = harness.Context;
+        var proxy = (RefreshProxy)(object)context.Services.GetRequiredService<ISharedProviderManagementService>();
+        proxy.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cut = context.Render<SharedProviderRefreshButton>(p => p.Add(c => c.ProviderId, proxy.Selected.ProviderProfileId));
+        var refresh = cut.Find("[data-testid='shared-provider-refresh-capabilities']").ClickAsync();
+        cut.WaitForAssertion(() => Assert.Equal(1, proxy.ListCalls));
+        access.Principal = "another-refresh-actor";
+        await cut.InvokeAsync(() => proxy.Pending.SetResult(proxy.Sources()));
+        await refresh;
+        Assert.Empty(proxy.SynchronizedIds);
+        Assert.Null(context.Services.GetRequiredService<SharedProviderRecovery>().Source);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Refresh_preserves_selected_imports_and_emits_explicit_scope(bool fail) {
+        await using var harness = await HarnessAsync();
+        var context = harness.Context;
+        var service = context.Services.GetRequiredService<ISharedProviderManagementService>();
         var proxy = (RefreshProxy)(object)service;
         proxy.Fail = fail;
-        context.Services.AddSingleton(service);
-        context.Services.AddScoped<SharedProviderRecovery>();
         var notified = false;
         SharedProviderChange? change = null;
         var cut = context.Render<SharedProviderRefreshButton>(p => p
@@ -45,12 +80,11 @@ public sealed class SharedProviderRefreshButtonTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Superseded_refresh_read_keeps_its_token_until_completion(bool dispose) {
-        using var context = new BunitContext();
-        var service = DispatchProxy.Create<ISharedProviderManagementService, RefreshProxy>();
+        await using var harness = await HarnessAsync();
+        var context = harness.Context;
+        var service = context.Services.GetRequiredService<ISharedProviderManagementService>();
         var proxy = (RefreshProxy)(object)service;
         proxy.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        context.Services.AddSingleton(service);
-        context.Services.AddScoped<SharedProviderRecovery>();
         var notifications = 0;
         var cut = context.Render<SharedProviderRefreshButton>(parameters => parameters
             .Add(component => component.ProviderId, proxy.Selected.ProviderProfileId)
@@ -74,6 +108,14 @@ public sealed class SharedProviderRefreshButtonTests {
         Assert.Equal(0, notifications);
     }
 
+    private static Task<ComponentTestHarness> HarnessAsync(EditingUiTestAccess? access = null) =>
+        ComponentTestHarness.CreateAsync(services => {
+            if (access is not null) {
+                services.AddSingleton<IEditingUiAccess>(access);
+            }
+            services.AddScoped(_ => DispatchProxy.Create<ISharedProviderManagementService, RefreshProxy>());
+        });
+
     public class RefreshProxy : DispatchProxy {
         public bool Fail { get; set; }
         public TaskCompletionSource<IReadOnlyList<SharedProviderSourceManagementSnapshot>>? Pending { get; set; }
@@ -83,6 +125,13 @@ public sealed class SharedProviderRefreshButtonTests {
         public SharedProviderImportedProfileSnapshot Retired { get; } = Import(SharedProviderSelectionState.Retired);
         public IReadOnlyList<SharedProviderPublicationId> SynchronizedIds { get; private set; } = [];
 
+        public IReadOnlyList<SharedProviderSourceManagementSnapshot> Sources() {
+            var source = new SharedProviderSourceSnapshot(Selected.SourceId, "Source", new Uri("http://source.invalid/"),
+                Guid.NewGuid(), true, SharedProviderSourceNetworkPolicy.AllowPrivateNetwork, SharedProviderSourceStatus.Available,
+                null, null, null, null, "", Guid.NewGuid());
+            return [new(source, [Selected, Retired])];
+        }
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
             if (targetMethod?.Name == nameof(ISharedProviderManagementService.ListSourcesAsync)) {
                 ListCalls++;
@@ -90,14 +139,13 @@ public sealed class SharedProviderRefreshButtonTests {
                 if (Pending is not null) {
                     return Pending.Task;
                 }
-                var source = new SharedProviderSourceSnapshot(Selected.SourceId, "Source", new Uri("http://source.invalid/"),
-                    Guid.NewGuid(), true, SharedProviderSourceNetworkPolicy.AllowPrivateNetwork, SharedProviderSourceStatus.Available,
-                    null, null, null, null, "", Guid.NewGuid());
-                return Task.FromResult<IReadOnlyList<SharedProviderSourceManagementSnapshot>>([new(source, [Selected, Retired])]);
+                return Task.FromResult(Sources());
             }
             if (targetMethod?.Name == nameof(ISharedProviderManagementService.SynchronizeSourceAsync)) {
                 Assert.Equal(Selected.SourceId, args![0]);
-                SynchronizedIds = ((IReadOnlySet<SharedProviderPublicationId>)args[1]!).ToArray();
+                var original = Assert.IsType<SharedProviderSourceObservation>(args[1]);
+                Assert.Equal(2, original.ImportVersions.Count);
+                SynchronizedIds = ((IReadOnlySet<SharedProviderPublicationId>)args[2]!).ToArray();
                 return Fail
                     ? Task.FromException<SharedProviderSourceOperationResult>(new InvalidOperationException("Source unavailable"))
                     : Task.FromResult(SharedProviderSourceOperationResult.NotModified(new SharedProviderCatalogEntityTag($"\"sha256:{new string('a', 64)}\"")) with {

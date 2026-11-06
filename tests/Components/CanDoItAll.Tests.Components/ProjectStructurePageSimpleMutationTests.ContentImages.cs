@@ -9,6 +9,8 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Content.UI.Generation;
+using CanDoItAll.Editing;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -18,6 +20,128 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed partial class ProjectStructurePageSimpleMutationTests {
+    public enum ImageGrantBoundary { Allowed, BeforeWorker, RunningSql, AfterProvider, MediaSql, MediaCommit }
+
+    [Theory]
+    [InlineData(ImageGrantBoundary.Allowed)]
+    [InlineData(ImageGrantBoundary.BeforeWorker)]
+    [InlineData(ImageGrantBoundary.RunningSql)]
+    [InlineData(ImageGrantBoundary.AfterProvider)]
+    [InlineData(ImageGrantBoundary.MediaSql)]
+    [InlineData(ImageGrantBoundary.MediaCommit)]
+    public async Task Queued_image_preserves_original_UI_authority_at_native_worker_and_media_boundaries(ImageGrantBoundary boundary) {
+        var access = new EditingUiTestAccess();
+        var probe = new ImageAccessProbe(access, boundary);
+        var image = new RecordingAgentImageGenerationService(waitForRelease: boundary == ImageGrantBoundary.AfterProvider);
+        await using var harness = await ImageHarnessAsync(image, configure: services => {
+            services.AddSingleton<IEditingUiAccess>(access);
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(probe), ServiceLifetime.Singleton);
+        });
+        var (page, queue) = await QueueNativeImageAsync(harness);
+        var request = queue.Request!;
+        var shownImage = JsonSerializer.Serialize(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes.Single(node => node.Id == request.NodeId));
+        var contexts = harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>();
+        probe.Contexts = contexts;
+        probe.Record = request.Origin!.Placeholder.RecordId!.Value;
+        probe.Armed = true;
+        var before = await CaptureImageRecordAsync(contexts, probe.Record);
+        var worker = harness.Context.Services.GetRequiredService<ProjectStructureDeferredNodeCompletionWorker>();
+        if (boundary == ImageGrantBoundary.BeforeWorker) {
+            access.Allowed = false;
+        }
+        try {
+            await worker.StartAsync(CancellationToken.None);
+            if (boundary == ImageGrantBoundary.AfterProvider) {
+                await image.WaitForFirstRequestAsync();
+                before = await CaptureImageRecordAsync(contexts, probe.Record);
+                access.Allowed = false;
+                image.CompleteGeneration();
+            }
+            var result = await queue.Handle!.Completion.WaitAsync(TimeSpan.FromSeconds(20));
+            if (boundary is ImageGrantBoundary.RunningSql or ImageGrantBoundary.MediaSql or ImageGrantBoundary.MediaCommit) {
+                Assert.True(probe.Reached);
+            }
+            Assert.Equal(request.OperationId, result.OperationId);
+            Assert.Equal(request.ProjectId, result.ProjectId);
+            Assert.Equal(request.NodeId, result.NodeId);
+            if (boundary is ImageGrantBoundary.Allowed or ImageGrantBoundary.MediaCommit) {
+                Assert.True(result.IsSuccess);
+                Assert.True(result.ProviderCompleted);
+                Assert.NotNull(result.StoredMedia);
+                Assert.Equal(probe.Record, result.UpdatedNode?.RecordId);
+                Assert.Equal("image/png", result.UpdatedNode?.MediaContentType);
+                if (boundary == ImageGrantBoundary.MediaCommit) {
+                    page.WaitForAssertion(() => Assert.Equal(ContentImagePhase.MediaSaved,
+                        page.FindComponent<ContentImageDialog>().Instance.State.Receipt!.Phase));
+                    Assert.All(page.FindComponents<CanvasWorkbench>().SelectMany(component => component.Instance.Surface.Nodes).Where(node => node.Id == request.NodeId),
+                        node => Assert.Equal(shownImage, JsonSerializer.Serialize(node)));
+                    Assert.Contains(page.Instance.AuthoringOutcomes, outcome => outcome.Node?.RecordId == probe.Record && outcome.Failure is not null);
+                }
+            } else {
+                Assert.False(result.IsSuccess);
+                Assert.Equal(boundary is ImageGrantBoundary.AfterProvider or ImageGrantBoundary.MediaSql, result.ProviderInvoked);
+                Assert.Equal(result.ProviderInvoked, result.ProviderCompleted);
+                Assert.Equal(boundary == ImageGrantBoundary.MediaSql, result.PersistenceAttempted);
+                Assert.Equal(boundary == ImageGrantBoundary.MediaSql, result.StoredMedia is not null);
+                Assert.Equal(boundary == ImageGrantBoundary.MediaSql ? probe.BeforeWrite : before,
+                    await CaptureImageRecordAsync(contexts, probe.Record));
+            }
+            Assert.Equal(boundary is ImageGrantBoundary.BeforeWorker or ImageGrantBoundary.RunningSql ? 0 : 1, image.Requests.Count);
+        } finally {
+            image.CompleteGeneration();
+            await worker.StopAsync(CancellationToken.None);
+        }
+    }
+
+    private static async Task<string> CaptureImageRecordAsync(IDbContextFactory<WorkbenchDbContext> contexts, Guid id) {
+        await using var context = await contexts.CreateDbContextAsync();
+        Assert.Null(context.Database.CurrentTransaction);
+        var node = await context.Set<ProjectObjectRecord>().AsNoTracking().SingleAsync(node => node.Id == id);
+        await ProjectNodeBindingStorage.LoadAsync(context, [node]);
+        return JsonSerializer.Serialize(new { Node = node, node.Binding.StorageObjectReferenceJson, node.NodeReferences });
+    }
+
+    private sealed class ImageAccessProbe(EditingUiTestAccess access, ImageGrantBoundary boundary) : SaveChangesInterceptor, IDbTransactionInterceptor {
+        public IDbContextFactory<WorkbenchDbContext> Contexts { get; set; } = default!;
+        public Guid Record { get; set; }
+        public bool Armed { get; set; }
+        public bool Reached { get; private set; }
+        public string? BeforeWrite { get; private set; }
+        private DbContext? committed;
+
+        public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default) {
+            if (!Armed || result == 0 || eventData.Context is not WorkbenchDbContext context ||
+                    context.ChangeTracker.Entries<ProjectObjectRecord>().FirstOrDefault(entry => entry.Entity.Id == Record) is not { } entry) {
+                return result;
+            }
+            var state = ProjectObjectMetadataSerializer.Parse(entry.Entity.MetadataJson).DeferredCompletion?.State;
+            if (boundary == ImageGrantBoundary.RunningSql && state == ProjectStructureDeferredNodeCompletionState.Running ||
+                    boundary is ImageGrantBoundary.MediaSql or ImageGrantBoundary.MediaCommit && state == ProjectStructureDeferredNodeCompletionState.Completed) {
+                Assert.NotNull(context.Database.CurrentTransaction);
+                BeforeWrite = await CaptureImageRecordAsync(Contexts, Record);
+                if (boundary == ImageGrantBoundary.MediaCommit) {
+                    committed = context;
+                } else {
+                    Revoke();
+                }
+            }
+            return result;
+        }
+
+        public Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) {
+            if (Armed && committed is not null && ReferenceEquals(eventData.Context, committed)) {
+                Revoke();
+            }
+            return Task.CompletedTask;
+        }
+
+        private void Revoke() {
+            Armed = false;
+            Reached = true;
+            access.Allowed = false;
+        }
+    }
+
     public enum ImageTargetLoss { ProjectLifetime, PlaceholderOccurrence, Actor, Provider, ContentRevision }
 
     [Theory]
@@ -169,7 +293,8 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
             outcome.Kind == ProjectStructureAuthoringResultKind.PartialCommit && outcome.ExternalEffect == ProjectStructureExternalEffectState.NotStarted);
     }
 
-    private static Task<ComponentTestHarness> ImageHarnessAsync(RecordingAgentImageGenerationService image, ImageMediaFault? fault = null)
+    private static Task<ComponentTestHarness> ImageHarnessAsync(RecordingAgentImageGenerationService image, ImageMediaFault? fault = null,
+        Action<IServiceCollection>? configure = null)
         => ComponentTestHarness.CreateAsync(services => {
             services.Replace(ServiceDescriptor.Singleton<IAgentImageGenerationService>(image));
             services.AddSingleton<NativeImageQueueProbe>();
@@ -178,6 +303,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
                 services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(sp => new PooledDbContextFactory<WorkbenchDbContext>(
                     new DbContextOptionsBuilder<WorkbenchDbContext>(sp.GetRequiredService<DbContextOptions<WorkbenchDbContext>>()).AddInterceptors(fault).Options));
             }
+            configure?.Invoke(services);
         });
 
     private static async Task<(IRenderedComponent<ProjectStructurePage> Page, NativeImageQueueProbe Queue)> QueueNativeImageAsync(ComponentTestHarness harness) {

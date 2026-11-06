@@ -34,7 +34,7 @@ components by role. See the
 [completion record](../../../docs/architecture/crm-hr-ui-completion.md) and
 [UI component seams](../../../docs/architecture/ui-component-seams.md).
 
-Two helpers in `Components/` keep the hosts' editing invariants. `CrmHrMutationGate` admits one
+The helpers in `Components/` keep the hosts' editing invariants. `CrmHrMutationGate` admits one
 write per editor lifetime, so a double dispatch, Enter on the form and an alternate action of the
 same form cannot produce two writes. `CrmHrDraftReconciler` decides what a read-back does to the
 drafts: a host records the submission it dispatched before its first await, so the read-back of its
@@ -44,6 +44,14 @@ fresh draft; something typed after it means the draft instance and its `EditCont
 those later values, while every other field, and a list row's owner identity, comes from what the
 owner accepted. A rejected or retired write retires its submission and can never be read as a
 commit.
+
+Directory Party, affiliation and relationship editing now use their explicit typed
+controllers and exact owner receipts. Relationship replacement is owned by
+`PartyRelationshipService` through `IPartyRelationshipService`; the broad directory
+management service delegates to it. HTTP and recruiting support use the same original
+membership/native row-version admission. The recruiting bridge preserves its observed
+subset, while its full comparison UI remains part of the ongoing rollout. See the
+[concurrent editing record](../../../docs/architecture/concurrent-editing-prompt-pilot.md).
 
 Directory, Workforce, CRM, and Recruiting use the shared typed `PagedRecordBrowser`; party-backed routes compose it through the library's `PartyRecordBrowser` over the `IPartyRecordQueryService` read port. Queries perform source paging with deterministic ordering, the route catalogue owns an opt-in bounded card-results scroll, and complete record workspaces open in controlled full-size dialogs without displacing or recreating the catalogue. Recruiting separates application, interview, lifecycle, and conversion work into server-rendered dialog tabs. Picker-dialog consumers keep the browser's default non-bounded scroll behavior.
 
@@ -186,3 +194,53 @@ and canonical participation semantics remain separate required work.
 Participation, Work assignments and project-linked Staffing requests retain nullable project-lifetime provenance. New assignment saves and replacements, including an empty replacement, require the caller's captured `ProjectWriteAdmission`. Existing editors retain the displayed selection through asynchronous work; legacy selections without a binding require refresh. Opportunity conversion uses the selected project snapshot or the exact new-project commit receipt for both its assignment commit and compensation.
 
 Global and orphan history remains readable. Current project/allocation reports filter another incarnation before SQL paging; historical Party reports retain old rows and do not label them with a replacement project's name. Reference backfill is limited to unambiguous current projects and never creates actor permission. Assignment move receipts bind both source and target lifetimes. Recorded-source cleanup does not require the source project to remain live.
+
+### Opportunity editing
+
+`ICrmOpportunityEditorService` is the narrow editing port implemented by the existing
+native `CrmService`. Reads take a coherent header/link snapshot and omit immutable
+stage history for automatic editing refresh. A bounded read refuses a partial result;
+manual comparison can request the complete record. Saves snapshot the submission,
+require its original root version and preserve linked-party identities. The commit
+callback carries exact accepted values before projections; a later read is not a receipt.
+
+`OpportunityEditingSession` owns grants, observations, opening/submission fences and
+unknown outcomes. A linked project requires the observed `ProjectWriteAdmission`;
+the native owner validates it in the write transaction. Party type changes/imports
+cannot invalidate an Opportunity account, owner or delivery role. Board advance is a
+narrow stage intent conditioned on the displayed stage/version. Stage notes require
+a transition and never silently disappear on an ordinary update.
+
+`ICrmOpportunityConversionService` is a separate narrow port on that same native owner.
+`OpportunityConversionSession` owns current access, exact-source observations, local
+comparison and command recovery. Existing project handoff membership carries a complete
+value witness and the selected project lifetime. The native owner validates it under
+project exclusion and rechecks authority after SQL before physical commit. Existing
+assignment identities and metadata survive; conversion adds missing roles.
+
+Conversion acknowledgement precedes fallible follow-up reads and projections. Later
+typing stays local, and unknown commands retain their recovery target without replay.
+Project membership has explicit complete review and conditional writes; its live hints
+remain deferred to the R2 assignment owner rather than a broad subscription.
+
+Account connected-record replacement requires a complete original row/project-link
+observation and selected project lifetimes. The native transaction checks that witness
+and current UI authority before physical commit, then returns its exact accepted receipt.
+Journal entries and their initial next action are append-only; the receipt clears only
+unchanged submitted input before fallible refresh. Unknown outcomes retain submission and
+block replay. One exact account-record observation freezes stale connections and refreshes
+the active paged timeline without replacing a journal draft.
+
+Workforce profile, skill and capacity writes live in `WorkforceProfileEditingService`,
+`WorkforceSkillEditingService` and `WorkforceCapacityEditingService`. `HrService` retains
+compatible forwarding methods and the remaining staffing/read responsibilities. The
+extracted owners work without constructing that facade. Complete original observations
+protect updates/deletes; creation never turns into an implicit name/key upsert, and a row
+cannot move to another worker. Selected capacity project labels require the frozen project
+admission at write time and stay informational rather than becoming assignments.
+
+`WorkforceProfileSession` owns three scoped observations, current UI grants, native profile
+receipt handling and explicit-pull review. Reads of related rows do not install a newer
+profile draft without an explicit refresh. The routed host owns child commands, keeps
+exact accepted state separate from fallible context reload, and blocks replay after an
+unknown result. Native owners recheck current UI authority after SQL before physical commit.

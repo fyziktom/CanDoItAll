@@ -1,6 +1,8 @@
+using System.ComponentModel;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.CrmHr;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Web.Api;
 
@@ -28,6 +30,7 @@ internal static class CrmHrApi
         MapPartyEndpoints(crmHr);
         MapWorkforceEndpoints(crmHr);
         MapRecruitingEndpoints(crmHr);
+        MapAiStewardEndpoints(crmHr);
 
         return group;
     }
@@ -56,8 +59,92 @@ internal static class CrmHrApi
 
         crmHr.MapPut("/parties/{partyId:guid}/relationships", ReplacePartyRelationshipsAsync)
             .WithName("ReplaceCrmHrPartyRelationships")
-            .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+            .DescribeApi("Conditionally replace all relationships of a CRM/HR party.",
+                "Send the complete desired set and the complete original relationship identities and versions returned by the relationship read. Original is required even for an originally empty set. Concurrent additions, changes or deletions reject the entire replacement with HTTP 409. An empty desired set removes all observed relationships. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The exact accepted complete relationship set and its new owner-issued versions, wrapped with the addressed party identifier.",
+                "Complete desired relationships and the unchanged original relationship-set observation for the route party.")
+            .Produces<PartyRelationshipSaveReceipt>()
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
+    }
+
+    private static void MapAiStewardEndpoints(RouteGroupBuilder crmHr) {
+        crmHr.MapGet("/ai-stewards/{partyId:guid}", GetAiStewardAsync)
+            .WithName("GetCrmHrAiSteward")
+            .DescribeApi("Read the business stewardship editor and original of an AI party.",
+                "Returns business ownership, review state, notes and the exact original, including an absent-profile observation for a party with no stewardship profile. Technical Agent settings are excluded. The current principal is checked before and after the read; both CRM/HR read and write capabilities are required when authorization is enabled. Original is a state precondition and never grants authority.",
+                "The stewardship editor and owner-issued original for the addressed AI party; a null profile ID records profile absence.")
+            .WithApiPermission(ApiAccessScopeNames.WriteCrmHr)
+            .Produces<AiStewardProfileEditorModel>().ProducesApiErrors(StatusCodes.Status404NotFound);
+        crmHr.MapPut("/ai-stewards/{partyId:guid}", SaveAiStewardAsync)
+            .WithName("ReplaceCrmHrAiSteward")
+            .DescribeApi("Conditionally save an AI party business stewardship profile.",
+                "Read the stewardship editor first and send its Original unchanged, even for an absent profile. The route party, profile identity, party type and original business fields must still match. Peer changes reject the write with HTTP 409. Technical Agent provider, model, capabilities and execution settings are unchanged. The current principal and both CRM/HR read and write capabilities are rechecked at admission when authorization is enabled. Original is a state precondition and never grants authority.",
+                "The native accepted stewardship profile identifier and normalized editor, including its new original for a later conditional save.",
+                "Complete proposed business stewardship fields and the unchanged original from the stewardship GET for the route party.")
+            .Produces<AiStewardProfileSaveReceipt>()
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+    }
+
+    private static async Task<IResult> GetAiStewardAsync(
+        [Description("GUID of the AI party owning the business stewardship profile; this is not a technical Agent identifier.")] Guid partyId, IAiStewardProfileEditing editing,
+        WebCurrentPrincipalResolver principals, IOptions<ApiAccessOptions> options, CancellationToken cancellationToken) {
+        try {
+            var demand = await AiStewardAuthorityAsync(principals, options, cancellationToken);
+            var model = await editing.ReadAsync(partyId, cancellationToken);
+            await demand(cancellationToken);
+            return model is null ? ApiEndpointResults.NotFound("The AI party was not found.", "crmhr.ai-steward.not-found") : Results.Ok(model);
+        } catch (WebCurrentPrincipalDeniedException) {
+            return Results.Forbid();
+        }
+    }
+
+    private static async Task<IResult> SaveAiStewardAsync(
+        [Description("GUID of the AI party owning the business stewardship profile; this is not a technical Agent identifier.")] Guid partyId, AiStewardProfileSaveApiRequest request,
+        IAiStewardProfileEditing editing, CrmHrChanges changes, WebCurrentPrincipalResolver principals,
+        IOptions<ApiAccessOptions> options, CancellationToken cancellationToken) {
+        try {
+            var demand = await AiStewardAuthorityAsync(principals, options, cancellationToken);
+            using var admission = changes.EnterUiWrite(demand);
+            return await SaveAiStewardAdmittedAsync(partyId, request, editing, cancellationToken);
+        } catch (WebCurrentPrincipalDeniedException) {
+            return Results.Forbid();
+        }
+    }
+
+    private static async Task<IResult> SaveAiStewardAdmittedAsync(Guid partyId, AiStewardProfileSaveApiRequest request,
+        IAiStewardProfileEditing editing, CancellationToken cancellationToken) {
+        AiStewardProfileSaveReceipt? accepted = null;
+        var result = await editing.SaveAsync(new() {
+            Id = request.Id,
+            PartyId = partyId,
+            OwnerPartyId = request.OwnerPartyId,
+            ValidationStatus = request.ValidationStatus,
+            LastReviewedOn = request.LastReviewedOn,
+            Notes = request.Notes,
+            LastChangedBy = request.Actor,
+            Original = request.Original
+        }, cancellationToken, receipt => accepted = receipt);
+        return result.IsSuccess
+            ? Results.Ok(accepted ?? throw new InvalidOperationException("The stewardship owner did not acknowledge its accepted write."))
+            : CrmHrEditingResult(result);
+    }
+
+    private static async Task<Func<CancellationToken, ValueTask>> AiStewardAuthorityAsync(WebCurrentPrincipalResolver principals,
+        IOptions<ApiAccessOptions> options, CancellationToken cancellationToken) {
+        if (!options.Value.Authorization.Enabled) {
+            return _ => ValueTask.CompletedTask;
+        }
+        var initial = await principals.ResolveAsync(cancellationToken);
+        async ValueTask Demand(CancellationToken token) {
+            var current = await principals.ResolveAsync(token);
+            if (current.Stamp != initial.Stamp) {
+                throw new WebCurrentPrincipalDeniedException();
+            }
+            await principals.RequireScopeAsync(current, ApiAccessScopeNames.ReadCrmHr, ApiAccessScopeNames.ReadCrmHr, token);
+            await principals.RequireScopeAsync(current, ApiAccessScopeNames.WriteCrmHr, ApiAccessScopeNames.WriteCrmHr, token);
+        }
+        await Demand(cancellationToken);
+        return Demand;
     }
 
     private static void MapWorkforceEndpoints(RouteGroupBuilder crmHr)
@@ -74,8 +161,12 @@ internal static class CrmHrApi
 
         crmHr.MapPost("/workforce/profiles", SaveWorkforceProfileAsync)
             .WithName("SaveCrmHrWorkforceProfile")
+            .DescribeApi("Create or conditionally replace a party workforce profile.",
+                "Read the workforce workspace and send its profile Original unchanged for replacement. Omission permits only creation while no profile exists. A profile that appeared or changed since the original was read rejects the entire save with HTTP 409. The party type, manager, unit and workforce values must satisfy their documented constraints. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The workforce profile identifier as a JSON GUID string; read the workforce workspace for its accepted values and next original.",
+                "Complete proposed workforce profile values for PartyId and the original profile observation for conditional replacement.")
             .Produces<Guid>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         crmHr.MapGet("/workforce/skills", ListSkillDefinitionsAsync)
             .WithName("ListCrmHrSkillDefinitions")
@@ -83,18 +174,30 @@ internal static class CrmHrApi
 
         crmHr.MapPost("/workforce/skills", SaveSkillDefinitionAsync)
             .WithName("SaveCrmHrSkillDefinition")
+            .DescribeApi("Create or conditionally replace a workforce skill definition.",
+                "Omit Id for create-only intent. For replacement send the existing Id and unchanged Original from the skill catalog. Unknown identifiers, peer changes and same-name collisions never silently overwrite another definition; state conflicts return HTTP 409. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The accepted skill definition identifier as a JSON GUID string; reread the skill catalog before another replacement.",
+                "Complete proposed skill definition values, with the existing identifier and unchanged catalog Original for replacement.")
             .Produces<Guid>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         crmHr.MapPost("/workforce/party-skills", SavePartySkillAsync)
             .WithName("SaveCrmHrPartySkill")
+            .DescribeApi("Create or conditionally replace a worker skill row.",
+                "Omit Id for creation; for replacement send Id and unchanged Original from the workforce workspace. The row cannot move to another worker. A changed or missing original row or an occupied worker/skill pair rejects the save with HTTP 409. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The accepted worker skill row identifier as a JSON GUID string; read the worker workspace for accepted values and the next original.",
+                "Complete proposed worker skill values and the unchanged row Original when replacing an existing identifier.")
             .Produces<Guid>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         crmHr.MapPost("/workforce/capacity-blocks", SaveCapacityBlockAsync)
             .WithName("SaveCrmHrCapacityBlock")
+            .DescribeApi("Create or conditionally replace a worker capacity block.",
+                "Omit Id for creation; replacement requires the exact row Original from the workforce workspace. Unknown update identifiers do not create rows or move them to another worker. A related project requires the owner-issued RelatedProjectAdmission captured when choosing that project. Peer changes reject the save with HTTP 409. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The accepted capacity block identifier as a JSON GUID string; reread the workforce workspace before a later replacement.",
+                "Complete proposed capacity block, its row Original for replacement, and the original project lifetime admission whenever RelatedProjectId is supplied.")
             .Produces<Guid>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
     }
 
     private static void MapRecruitingEndpoints(RouteGroupBuilder crmHr)
@@ -111,28 +214,48 @@ internal static class CrmHrApi
 
         crmHr.MapPost("/recruiting/applications", SaveRecruitmentApplicationAsync)
             .WithName("SaveCrmHrRecruitmentApplication")
+            .DescribeApi("Create or conditionally replace a recruitment application.",
+                "Omit Id for create-only application intent. Creation can use an existing PartyId or the documented new-candidate fields. Replacement requires Id and unchanged Original from the recruitment workspace and cannot move the application to another party. A changed or missing original rejects the save with HTTP 409. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The accepted application identifier as a JSON GUID string; read its recruitment workspace for accepted values and next original.",
+                "Complete proposed application values, candidate identity or creation fields, and the unchanged application Original for replacement.")
             .Produces<Guid>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         crmHr.MapPost("/recruiting/interviews", SaveRecruitmentInterviewAsync)
             .WithName("SaveCrmHrRecruitmentInterview")
+            .DescribeApi("Create or conditionally replace a recruitment interview.",
+                "Omit Id for a new interview. Replacement requires Id and unchanged Original read with the recruitment workspace; it cannot move an interview to another application. A changed or missing original rejects the save with HTTP 409. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The accepted interview identifier as a JSON GUID string; reread the recruitment workspace for its next original.",
+                "Complete proposed interview fields and the unchanged row Original when replacing an existing interview.")
             .Produces<Guid>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         crmHr.MapPost("/recruiting/lifecycle-tasks", SaveLifecycleTaskAsync)
             .WithName("SaveCrmHrLifecycleTask")
+            .DescribeApi("Create or conditionally replace a party lifecycle task.",
+                "This is an onboarding, offboarding or training task, separate from Project Structure tasks. Omit Id for creation. Replacement requires the exact row Original from the recruitment workspace and cannot move the task to another party. A related project requires its captured RelatedProjectAdmission. A changed or missing original rejects the save with HTTP 409. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The accepted lifecycle task identifier as a JSON GUID string; reread the recruitment workspace for its accepted fields and next original.",
+                "Complete proposed lifecycle task, row Original for replacement, and the captured project lifetime admission when a related project is supplied.")
             .Produces<Guid>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         crmHr.MapPost("/recruiting/support-assignments", SaveSupportAssignmentsAsync)
             .WithName("SaveCrmHrRecruitmentSupportAssignments")
-            .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+            .DescribeApi("Conditionally replace a party manager, buddy and mentor.",
+                "Send the complete desired support assignments and unchanged complete relationship-set Original read with the recruitment workspace. Null assignments remove the corresponding support roles; unrelated relationships are preserved. A peer relationship change rejects the entire replacement with HTTP 409. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The exact accepted complete relationship set with owner-issued versions, wrapped with the party identifier.",
+                "Party identifier, complete desired manager, buddy and mentor assignments, and the unchanged complete relationship-set Original.")
+            .Produces<PartyRelationshipSaveReceipt>()
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         crmHr.MapPost("/recruiting/conversions", ConvertCandidateAsync)
             .WithName("ConvertCrmHrRecruitmentCandidate")
+            .DescribeApi("Conditionally convert an approved candidate into workforce.",
+                "Read the recruitment conversion editor and submit its entire Original unchanged. Conversion checks the original application, workforce and party lifecycle together; a peer change rejects the conversion with HTTP 409. The application must have an approved decision and an eligible stage; AI candidates also require the documented ready assessment. The requested workforce values must satisfy workforce rules. When API authorization is enabled, the caller must satisfy the CRM/HR capability policy; Original is a state precondition and never grants authority.",
+                "The candidate party identifier as a JSON GUID string, rather than a workforce profile identifier; reread its workforce and recruitment workspaces.",
+                "Application identifier, complete proposed workforce values and the unchanged composite conversion Original.")
             .Produces<Guid>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
     }
 
     /// <summary>
@@ -313,8 +436,7 @@ internal static class CrmHrApi
     /// </param>
     /// <param name="request">The complete intended list of the party's relationships.</param>
     /// <response code="200">
-    /// The relationships were replaced. Read them back with <c>GET /api/crm-hr/parties/{partyId}/relationships</c> to
-    /// get their new identifiers.
+    /// The relationships were replaced.
     /// </response>
     /// <response code="400">
     /// Nothing was changed: <c>crmhr.party.relationship-invalid</c> (an item has no related party or points to the
@@ -329,17 +451,16 @@ internal static class CrmHrApi
         Guid partyId,
         PartyRelationshipsReplaceApiRequest request,
         PartyDirectoryManagementService managementService,
-        CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
-            await managementService.SaveRelationshipsAsync(
-                partyId,
-                request.Relationships
-                    .Select(relationship => relationship.ToEditorModel())
-                    .ToList(),
-                CrmHrApiContractDefaults.Actor,
-                cancellationToken),
-            PartyNotFoundCode,
-            RelationshipPartyNotFoundCode);
+        CancellationToken cancellationToken) {
+        var result = await managementService.SaveRelationshipsAsync(partyId,
+            request.Relationships.Select(relationship => relationship.ToEditorModel()).ToList(),
+            CrmHrApiContractDefaults.Actor, cancellationToken, request.Original);
+        if (result.IsFailure && result.Errors.Any(error => error.Code == CrmHrEditingErrorCodes.RelationshipConflict)) {
+            var conflict = result.Errors.First(error => error.Code == CrmHrEditingErrorCodes.RelationshipConflict);
+            return ApiEndpointResults.Conflict(conflict.Message, conflict.Code);
+        }
+        return ApiEndpointResults.FromResult(result, PartyNotFoundCode, RelationshipPartyNotFoundCode);
+    }
 
     /// <summary>
     /// List CRM/HR parties of the workforce population, one page at a time.
@@ -417,26 +538,6 @@ internal static class CrmHrApi
     /// <summary>
     /// Create or replace the workforce profile of a CRM/HR party.
     /// </summary>
-    /// <remarks>
-    /// A workforce profile holds the work classification, reporting line, employment dates, rates and weekly capacity
-    /// of a party; it is not a person identity or a login account. A party has at most one profile, found by
-    /// <c>partyId</c>: the first save creates it and every later save overwrites all of its fields with the values
-    /// sent. Start from <c>profile</c> in <c>GET /api/crm-hr/workforce/{partyId}</c> and send every field.
-    ///
-    /// Rules checked before saving:
-    ///
-    /// - People cannot use the DeliveryUnit workforce kind; organizations and organization units must use it.
-    /// - <c>managerPartyId</c> must identify another existing person, and <c>homeUnitPartyId</c> an existing
-    /// organization or organization unit other than the party itself.
-    /// - Rates cannot be negative and <c>rateCurrencyCode</c> must consist of three letters A to Z after trimming and
-    /// upper-casing (a format check only; blank means USD).
-    ///
-    /// The save also gives the party the role that matches the workforce kind (Employee, Contractor, Freelancer or
-    /// DeliveryUnit) when it is missing. The search index and the activity feed are updated after the profile is saved,
-    /// so after a server error read the workspace before retrying.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">All fields of the party's workforce profile.</param>
     /// <response code="200">
     /// The profile was saved. The body is the workforce profile identifier as a JSON string (a GUID), which is not the
@@ -455,7 +556,7 @@ internal static class CrmHrApi
         WorkforceProfileSaveApiRequest request,
         HrService hrService,
         CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
+        => CrmHrEditingResult(
             await hrService.SaveWorkforceProfileAsync(
                 request.ToEditorModel(),
                 cancellationToken),
@@ -482,15 +583,6 @@ internal static class CrmHrApi
     /// <summary>
     /// Create or update a skill definition in the workforce skill catalog.
     /// </summary>
-    /// <remarks>
-    /// The definition to update is found by <c>id</c> and, when <c>id</c> is omitted or unknown, by the same trimmed
-    /// name. When neither matches, a new definition with a new identifier is created; a sent <c>id</c> is never used as
-    /// the new identifier. All fields are overwritten with the values sent. Skill names are unique in the catalog, so
-    /// renaming a definition to the name of another one fails with a server error. Setting <c>isActive</c> to false
-    /// keeps the definition and the party skills that refer to it.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">The skill definition fields.</param>
     /// <response code="200">
     /// The definition was saved. The body is its identifier as a JSON string (a GUID); use it as <c>skillId</c> of a
@@ -504,22 +596,13 @@ internal static class CrmHrApi
         SkillDefinitionSaveApiRequest request,
         HrService hrService,
         CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(await hrService.SaveSkillDefinitionAsync(
+        => CrmHrEditingResult(await hrService.SaveSkillDefinitionAsync(
             request.ToEditorModel(),
             cancellationToken));
 
     /// <summary>
     /// Record or update a CRM/HR party's proficiency in a catalog skill.
     /// </summary>
-    /// <remarks>
-    /// A party skill links a party to a skill definition from <c>GET /api/crm-hr/workforce/skills</c> with a
-    /// proficiency level, years of experience and certification details. A party has at most one record per skill. The
-    /// record to update is found by <c>id</c> and otherwise by the <c>partyId</c> and <c>skillId</c> pair; when neither
-    /// matches, a new record with a new identifier is created. All fields, including the party and the skill, are
-    /// overwritten with the values sent. Negative years of experience are saved as 0.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">The party, the skill and the proficiency details.</param>
     /// <response code="200">
     /// The party skill was saved. The body is its identifier as a JSON string (a GUID); read it back in <c>skills</c>
@@ -538,7 +621,7 @@ internal static class CrmHrApi
         PartySkillSaveApiRequest request,
         HrService hrService,
         CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
+        => CrmHrEditingResult(
             await hrService.SavePartySkillAsync(
                 request.ToEditorModel(),
                 cancellationToken),
@@ -548,17 +631,6 @@ internal static class CrmHrApi
     /// <summary>
     /// Create or update a capacity block that reduces the availability of a CRM/HR party for a date range.
     /// </summary>
-    /// <remarks>
-    /// A capacity block records leave, unavailability, a reservation or a tentative hold as a percentage of the party's
-    /// capacity between two dates. It is not a task or a project assignment; a related project is informational. Blocks
-    /// active on the current UTC date reduce <c>availablePercent</c> in the workforce workspace.
-    ///
-    /// The block is found by <c>id</c>; without <c>id</c>, or when no block has it, a new block with a new identifier
-    /// is created. All fields are overwritten with the values sent. <c>startDate</c> and <c>endDate</c> are required,
-    /// the end date cannot be before the start date and <c>percentage</c> must be greater than 0 and at most 100.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">The party, the block kind, the date range, the percentage and an optional project.</param>
     /// <response code="200">
     /// The block was saved. The body is its identifier as a JSON string (a GUID); read it back in
@@ -577,7 +649,7 @@ internal static class CrmHrApi
         CapacityBlockSaveApiRequest request,
         HrService hrService,
         CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
+        => CrmHrEditingResult(
             await hrService.SaveCapacityBlockAsync(
                 request.ToEditorModel(),
                 cancellationToken),
@@ -660,26 +732,6 @@ internal static class CrmHrApi
     /// <summary>
     /// Create or update a recruitment application, creating the candidate party when needed.
     /// </summary>
-    /// <remarks>
-    /// Candidate: send <c>partyId</c> of an existing person or AI agent party, or omit it and send
-    /// <c>candidateName</c> (with optional <c>candidateEmail</c>, <c>candidatePhone</c> and <c>candidateSummary</c>) to
-    /// create a new person party with lifecycle status Candidate, the Candidate role and public contact points. The
-    /// candidate fields are ignored when <c>partyId</c> is sent. When updating, always send the <c>partyId</c> from the
-    /// read: without it a new candidate party is created and the application is moved to it.
-    ///
-    /// Application: the application is found by <c>id</c>; without <c>id</c>, or when no application has it, a new
-    /// application with a new identifier is created. All application fields are overwritten with the values sent, so
-    /// start from <c>application</c> in <c>GET /api/crm-hr/recruiting/applications/{applicationId}</c>. Stage and
-    /// decision are stored as sent; no transition order is enforced. <c>stageNotes</c> is recorded in the stage history
-    /// only when the application is created or its stage changes.
-    ///
-    /// The steps are saved separately: a new candidate party is saved before the recruiter, hiring manager and target
-    /// unit are checked, so a 400 response can follow a created party, and the search index and activity feed are
-    /// updated after the application is saved. After a failure, search for the candidate and the application before
-    /// retrying.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">
     /// The application fields and either the candidate party or the new candidate's details.
     /// </param>
@@ -699,21 +751,13 @@ internal static class CrmHrApi
         RecruitmentApplicationSaveApiRequest request,
         RecruitingService recruitingService,
         CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(await recruitingService.SaveRecruitmentApplicationAsync(
+        => CrmHrEditingResult(await recruitingService.SaveRecruitmentApplicationAsync(
             request.ToEditorModel(),
             cancellationToken));
 
     /// <summary>
     /// Schedule or update an interview of a recruitment application.
     /// </summary>
-    /// <remarks>
-    /// The interview is found by <c>id</c>; without <c>id</c>, or when no interview has it, a new interview with a new
-    /// identifier is created. All interview fields are overwritten with the values sent, including the application it
-    /// belongs to. <c>scheduledAtUtc</c> is required and is stored in UTC. The interviewer, when set, must be an
-    /// existing person party. Saving an interview or its outcome does not change the application's stage or decision.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">The application, schedule, interview type, interviewer, outcome and feedback.</param>
     /// <response code="200">
     /// The interview was saved. The body is the interview identifier as a JSON string (a GUID); read it back in
@@ -731,7 +775,7 @@ internal static class CrmHrApi
         RecruitmentInterviewSaveApiRequest request,
         RecruitingService recruitingService,
         CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
+        => CrmHrEditingResult(
             await recruitingService.SaveRecruitmentInterviewAsync(
                 request.ToEditorModel(),
                 cancellationToken),
@@ -740,17 +784,6 @@ internal static class CrmHrApi
     /// <summary>
     /// Create or update an onboarding, offboarding or training task of a CRM/HR party.
     /// </summary>
-    /// <remarks>
-    /// A lifecycle task is a recruiting checklist item for a party, owned by a person and optionally linked to a
-    /// project. It is not a canonical Project Structure task and does not appear in a project plan. The task is found
-    /// by <c>id</c>; without <c>id</c>, or when no task has it, a new task with a new identifier is created. All task
-    /// fields are overwritten with the values sent.
-    ///
-    /// Required: <c>partyId</c> of an existing party, a non-blank <c>title</c>, <c>ownerPartyId</c> of an existing
-    /// person and <c>dueDate</c>. <c>relatedProjectId</c>, when set, must identify an existing project.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">The party, kind, title, owner, due date, status and optional project of the task.</param>
     /// <response code="200">
     /// The task was saved. The body is the lifecycle task identifier as a JSON string (a GUID); read it back in
@@ -770,7 +803,7 @@ internal static class CrmHrApi
         LifecycleTaskSaveApiRequest request,
         RecruitingService recruitingService,
         CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
+        => CrmHrEditingResult(
             await recruitingService.SaveLifecycleTaskAsync(
                 request.ToEditorModel(),
                 cancellationToken),
@@ -780,18 +813,6 @@ internal static class CrmHrApi
     /// <summary>
     /// Replace the manager, buddy and mentor of a CRM/HR party.
     /// </summary>
-    /// <remarks>
-    /// Support assignments are stored as party relationships and replaced together: all ManagedBy relationships in
-    /// which the party is the source and its Supports relationships labelled Buddy or Mentor are deleted, then one
-    /// relationship is created for each of <c>managerPartyId</c>, <c>buddyPartyId</c> and <c>mentorPartyId</c> that is
-    /// set. An omitted or null value removes that assignment. This also deletes ManagedBy relationships saved through
-    /// <c>PUT /api/crm-hr/parties/{partyId}/relationships</c>, and a later relationship replacement can delete these
-    /// assignments. The <c>managerPartyId</c> of the workforce profile is a separate value and is not changed.
-    ///
-    /// Each assigned party must be an existing person other than the party itself.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">The party and its complete set of support assignments.</param>
     /// <response code="200">
     /// The assignments were replaced. Read them back in <c>supportAssignments</c> of the recruitment workspace or in
@@ -807,38 +828,18 @@ internal static class CrmHrApi
     internal static async Task<IResult> SaveSupportAssignmentsAsync(
         RecruitmentSupportAssignmentsSaveApiRequest request,
         RecruitingService recruitingService,
-        CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
-            await recruitingService.SaveSupportAssignmentsAsync(
-                request.ToEditorModel(),
-                cancellationToken),
-            SupportPartyNotFoundCode);
+        CancellationToken cancellationToken) {
+        var result = await recruitingService.SaveSupportAssignmentsAsync(request.ToEditorModel(), cancellationToken);
+        if (result.IsFailure && result.Errors.Any(error => error.Code == CrmHrEditingErrorCodes.RelationshipConflict)) {
+            var conflict = result.Errors.First(error => error.Code == CrmHrEditingErrorCodes.RelationshipConflict);
+            return ApiEndpointResults.Conflict(conflict.Message, conflict.Code);
+        }
+        return ApiEndpointResults.FromResult(result, SupportPartyNotFoundCode);
+    }
 
     /// <summary>
     /// Convert the candidate of an approved recruitment application into workforce.
     /// </summary>
-    /// <remarks>
-    /// Conversion saves the candidate party's workforce profile, then marks the application Hired with decision
-    /// Approved and sets the party's lifecycle status to Active. Start from <c>conversion</c> in
-    /// <c>GET /api/crm-hr/recruiting/applications/{applicationId}</c>.
-    ///
-    /// Prerequisites: the application must not be Rejected or Withdrawn and its decision must be Approved (save it with
-    /// <c>POST /api/crm-hr/recruiting/applications</c> first). An AI agent candidate also needs a bound technical agent
-    /// with a completed application-specific technical assessment and human approval.
-    ///
-    /// Profile values: an empty <c>jobTitle</c> uses the application's desired role, an empty <c>homeUnitPartyId</c>
-    /// the application's target unit, an empty <c>managerPartyId</c> the candidate's support manager or else the hiring
-    /// manager, a capacity of 0 or less 40 hours and an empty status Active. The profile is saved as by
-    /// <c>POST /api/crm-hr/workforce/profiles</c>: profile fields that this request does not carry (employee code, end
-    /// date, rates, rate unit and rate currency) are saved empty or with their defaults, replacing the values of an
-    /// existing profile.
-    ///
-    /// The steps are saved separately: when the call fails after the profile was saved, read the workforce workspace
-    /// and the application before retrying. Converting a converted candidate again saves the profile again and keeps
-    /// the application Hired.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
     /// <param name="request">The application to convert and the workforce profile values.</param>
     /// <response code="200">
     /// The candidate was converted. The body is the candidate's party identifier as a JSON string (a GUID), not the
@@ -860,12 +861,21 @@ internal static class CrmHrApi
         RecruitmentConversionApiRequest request,
         RecruitingService recruitingService,
         CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
+        => CrmHrEditingResult(
             await recruitingService.ConvertCandidateAsync(
                 request.ToEditorModel(),
                 cancellationToken),
             ConversionApplicationNotFoundCode,
             ConversionPartyNotFoundCode);
+
+    private static IResult CrmHrEditingResult<T>(CanDoItAll.SharedKernel.Result<T> result, params string[] notFoundCodes) {
+        if (result.IsFailure && result.Errors.FirstOrDefault(error => error.Code is CrmHrEditingErrorCodes.WorkforceConflict or
+            CrmHrEditingErrorCodes.SkillConflict or CrmHrEditingErrorCodes.CapacityConflict or
+            RecruitmentEditingErrors.Conflict or RecruitmentEditingErrors.ConversionConflict or AiStewardEditingErrors.Conflict) is { } conflict) {
+            return ApiEndpointResults.Conflict(conflict.Message, conflict.Code);
+        }
+        return ApiEndpointResults.FromResult(result, notFoundCodes);
+    }
 
     private static async Task<IResult> ExecuteBoundedQueryAsync(
         Func<Task<IResult>> query,

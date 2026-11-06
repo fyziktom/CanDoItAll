@@ -14,12 +14,237 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Data.Common;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
 
 public sealed class LlmChatTransactionalConcurrencyIntegrationTests
 {
+    [Theory]
+    [InlineData(LlmConversationFailureKind.TurnAlreadyActive, LlmChatErrorCodes.ActiveTurnConflict)]
+    [InlineData(LlmConversationFailureKind.RevisionConflict, LlmChatErrorCodes.TranscriptRevisionConflict)]
+    [InlineData(LlmConversationFailureKind.ConcurrencyConflict, LlmChatErrorCodes.StorageConflict)]
+    public async Task Native_rename_engine_rejection_rolls_back_metadata_and_returns_a_known_refusal(LlmConversationFailureKind kind, string code) {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatmetadataknownrefusal");
+        var id = await SeedConversationAsync(database, await SeedDefinitionAsync(database));
+        await using var owner = database.CreateSimpleChatsDbContext();
+        var service = CreateConversationService(owner, new EfLlmChatConversationRepository(owner),
+            renameFailure: new LlmConversationException(kind, id.Value));
+
+        var result = await service.RenameAsync(new(id, "Rejected title", 0, 0));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(code, Assert.Single(result.Errors).Code);
+        await using var assertion = database.CreateSimpleChatsDbContext();
+        var row = await assertion.Set<LlmChatConversationRow>().AsNoTracking().SingleAsync();
+        Assert.Equal("Conversation", row.Title);
+        Assert.Equal(0, row.ConcurrencyToken);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Conversation_original_operation_authority_is_required_at_SQL_and_commit(bool revokeAfterSql, bool foreignTarget) {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatoperationoriginalauthority");
+        var seed = await SeedRecoverableOperationAsync(database);
+        await using var owner = database.CreateSimpleChatsDbContext();
+        var repository = new EfLlmChatOperationRepository(owner);
+        var unit = new EfLlmChatUnitOfWork(owner, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(owner));
+        var sqlWritten = false;
+        using var opening = LlmChatWriteAdmission.Enter(foreignTarget ? Guid.NewGuid() : seed.ConversationId.Value, _ => {
+            if (!revokeAfterSql || sqlWritten) {
+                throw new UnauthorizedAccessException("Original conversation execution access retired.");
+            }
+            return ValueTask.CompletedTask;
+        }, resource: LlmChatWriteResource.ConversationOperation);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => unit.ExecuteAsync(async token => {
+            var original = (await repository.TryGetAsync(seed.OperationId, token))!;
+            Assert.True(await repository.TryReplaceAsync(original with {
+                FailureCode = "uncommitted", ConcurrencyToken = original.ConcurrencyToken + 1
+            }, original.ConcurrencyToken, token));
+            sqlWritten = true;
+            return original;
+        }));
+        Assert.Equal(revokeAfterSql, sqlWritten);
+        await using var assertion = database.CreateSimpleChatsDbContext();
+        var current = await assertion.Set<LlmChatOperationRow>().AsNoTracking().SingleAsync();
+        Assert.NotEqual("uncommitted", current.FailureCode);
+        Assert.Equal(0, current.ConcurrencyToken);
+    }
+
+    [Theory]
+    [InlineData(ConversationMetadataCommand.Create)]
+    [InlineData(ConversationMetadataCommand.Rename)]
+    [InlineData(ConversationMetadataCommand.Archive)]
+    public async Task Conversation_metadata_primary_acceptance_survives_all_observer_failures(ConversationMetadataCommand command) {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatmetadataknownacceptance");
+        var definitionId = await SeedDefinitionAsync(database);
+        var id = await SeedConversationAsync(database, definitionId);
+        await using var owner = database.CreateSimpleChatsDbContext();
+        var laterObserverCalls = 0;
+        var service = CreateConversationService(owner, new EfLlmChatConversationRepository(owner), observers: [
+            new ConversationObserver((_, _) => throw new IOException("Private observer failure.")),
+            new ConversationObserver((_, _) => laterObserverCalls++)
+        ]);
+        Task<Result<LlmChatConversationDetails>> Write() => command switch {
+            ConversationMetadataCommand.Create => service.CreateAsync(new(definitionId, "Accepted title", LlmChatConversationOrigin.Application)),
+            ConversationMetadataCommand.Rename => service.RenameAsync(new(id, "Accepted title", 0, 0)),
+            ConversationMetadataCommand.Archive => service.ArchiveAsync(new(id, 0)),
+            _ => throw new ArgumentOutOfRangeException(nameof(command))
+        };
+        var failure = await Assert.ThrowsAsync<LlmChatCommittedException<Result<LlmChatConversationDetails>>>(Write);
+        Assert.True(failure.Accepted.IsSuccess);
+        var accepted = failure.Accepted.Value!;
+        Assert.Equal(1, laterObserverCalls);
+        await using var assertion = database.CreateSimpleChatsDbContext();
+        var row = await assertion.Set<LlmChatConversationRow>().AsNoTracking().SingleAsync(item => item.Id == accepted.Conversation.Id.Value);
+        Assert.Equal(accepted.Conversation.Title, row.Title);
+        Assert.Equal(accepted.Conversation.Status, row.Status);
+        Assert.Equal(accepted.Conversation.ConcurrencyToken, row.ConcurrencyToken);
+        if (command == ConversationMetadataCommand.Rename) {
+            var peer = await CreateConversationService(assertion, new EfLlmChatConversationRepository(assertion))
+                .RenameAsync(new(id, "Later peer title", 1, accepted.Transcript.TranscriptRevision));
+            Assert.True(peer.IsSuccess);
+            Assert.Equal("Accepted title", accepted.Conversation.Title);
+            Assert.Equal(1, accepted.Conversation.ConcurrencyToken);
+        }
+        Assert.DoesNotContain("Private", failure.Message, StringComparison.Ordinal);
+    }
+
+    public enum ConversationMetadataCommand { Create, Rename, Archive }
+    private sealed class ConversationObserver(Action<Guid, bool> committed) : ILlmChatConversationCommitObserver {
+        public void Committed(Guid conversationId, bool lifecycle) => committed(conversationId, lifecycle);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Conversation_original_metadata_authority_is_required_at_SQL_and_commit(bool revokeAfterSql, bool foreignTarget) {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatconversationoriginalauthority");
+        var id = await SeedConversationAsync(database, await SeedDefinitionAsync(database));
+        await using var owner = database.CreateSimpleChatsDbContext();
+        var repository = new EfLlmChatConversationRepository(owner);
+        var unit = new EfLlmChatUnitOfWork(owner, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(owner));
+        var sqlWritten = false;
+        using var opening = LlmChatWriteAdmission.Enter(foreignTarget ? Guid.NewGuid() : id.Value, _ => {
+            if (!revokeAfterSql || sqlWritten) {
+                throw new UnauthorizedAccessException("Original actor or dataset retired.");
+            }
+            return ValueTask.CompletedTask;
+        }, resource: LlmChatWriteResource.ConversationMetadata);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => unit.ExecuteAsync(async token => {
+            var original = (await repository.TryGetAsync(id, token))!;
+            var updated = new LlmChatConversation(id, original.DefinitionId, original.DefinitionRevision,
+                "Uncommitted title", original.Status, original.Origin, original.CreatedAtUtc, original.UpdatedAtUtc.AddSeconds(1), 1);
+            await repository.ReplaceAsync(updated, 0, token);
+            sqlWritten = true;
+            return updated;
+        }));
+        Assert.Equal(revokeAfterSql, sqlWritten);
+        await using var assertion = database.CreateSimpleChatsDbContext();
+        var row = await assertion.Set<LlmChatConversationRow>().AsNoTracking().SingleAsync();
+        Assert.Equal("Conversation", row.Title);
+        Assert.Equal(0, row.ConcurrencyToken);
+    }
+
+    [Fact]
+    public async Task Definition_comparison_read_keeps_tags_with_the_same_native_revision() {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatdefinitioncoherentcomparison");
+        var id = await SeedDefinitionAsync(database);
+        var interception = new BeforeDefinitionTags(async () => {
+            await using var peer = database.CreateSimpleChatsDbContext();
+            var update = CreateUpdateCommand(id, "peer") with { Tags = ["peer-tag"] };
+            Assert.True((await CreateDefinitionService(peer, new EfLlmChatDefinitionRepository(peer)).UpdateAsync(update)).IsSuccess);
+        });
+        await using var owner = database.CreateSimpleChatsDbContext(interception);
+        var read = (await new EfLlmChatDefinitionReadStore(owner).TryGetAsync(id))!;
+        Assert.Equal(1, interception.Calls);
+        Assert.Equal(0, read.Definition.ConcurrencyToken);
+        Assert.Empty(read.Tags);
+        await using var assertion = database.CreateSimpleChatsDbContext();
+        var current = (await new EfLlmChatDefinitionReadStore(assertion).TryGetAsync(id))!;
+        Assert.Equal(1, current.Definition.ConcurrencyToken);
+        Assert.Equal(["peer-tag"], current.Tags);
+    }
+
+    private sealed class BeforeDefinitionTags(Func<Task> peer) : DbCommandInterceptor {
+        public int Calls { get; private set; }
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
+            if (Calls == 0 && command.CommandText.Contains("LlmChats_DefinitionTags", StringComparison.Ordinal)) {
+                Calls++;
+                await peer();
+            }
+            return result;
+        }
+    }
+
+    [Fact]
+    public async Task Definition_native_primary_acceptance_survives_all_observer_failures_and_a_later_peer() {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatdefinitionexactacceptance");
+        var id = await SeedDefinitionAsync(database);
+        await using var owner = database.CreateSimpleChatsDbContext();
+        var laterObserverCalls = 0;
+        var service = new LlmChatDefinitionApplicationService(new EfLlmChatDefinitionRepository(owner), new EfLlmChatDefinitionReadStore(owner),
+            new EfLlmChatUnitOfWork(owner, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(owner)),
+            FixedProviderResolver.Instance, TimeProvider.System, new EfLlmChatDefinitionRepository(owner),
+            [new DefinitionObserver((_, _) => throw new IOException("Private notification failure.")), new DefinitionObserver((_, _) => laterObserverCalls++)]);
+        var failure = await Assert.ThrowsAsync<LlmChatCommittedException<Result<LlmChatDefinitionDetails>>>(() => service.UpdateAsync(CreateUpdateCommand(id, "accepted")));
+        Assert.Equal(1, laterObserverCalls);
+        Assert.True(failure.Accepted.IsSuccess);
+        var accepted = failure.Accepted.Value!;
+        Assert.Equal("Definition accepted", accepted.Definition.Name);
+        Assert.Equal(1, accepted.Definition.ConcurrencyToken);
+        await using var peer = database.CreateSimpleChatsDbContext();
+        var later = await CreateDefinitionService(peer, new EfLlmChatDefinitionRepository(peer))
+            .UpdateAsync(CreateUpdateCommand(id, "peer") with { ExpectedConcurrencyToken = 1 });
+        Assert.True(later.IsSuccess);
+        Assert.Equal("Definition peer", later.Value!.Definition.Name);
+        Assert.Equal("Definition accepted", accepted.Definition.Name);
+        Assert.Equal(1, accepted.Definition.ConcurrencyToken);
+        Assert.DoesNotContain("Private", failure.Message, StringComparison.Ordinal);
+    }
+
+    private sealed class DefinitionObserver(Action<Guid, bool> committed) : ILlmChatDefinitionCommitObserver {
+        public void Committed(Guid id, bool lifecycle) => committed(id, lifecycle);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Definition_original_opening_rejection_keeps_real_SQL_unchanged(bool revokeAfterSql, bool foreignTarget) {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatdefinitionoriginalauthority");
+        var id = await SeedDefinitionAsync(database);
+        await using var owner = database.CreateSimpleChatsDbContext();
+        var repository = new EfLlmChatDefinitionRepository(owner);
+        var unit = new EfLlmChatUnitOfWork(owner, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(owner));
+        var sqlWritten = false;
+        using var opening = LlmChatWriteAdmission.Enter(foreignTarget ? Guid.NewGuid() : id.Value, _ => {
+            if (!revokeAfterSql || sqlWritten) {
+                throw new UnauthorizedAccessException("Original actor or dataset retired.");
+            }
+            return ValueTask.CompletedTask;
+        });
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => unit.ExecuteAsync(async token => {
+            var original = (await repository.TryGetAsync(id, token))!;
+            var updated = new LlmChatDefinition(id, "Uncommitted replacement", original.Summary, original.AvatarImageUrl,
+                original.Status, original.CurrentRevision, original.CreatedAtUtc, original.UpdatedAtUtc.AddSeconds(1), 1);
+            await repository.ReplaceAsync(updated, 0, null, token);
+            sqlWritten = true;
+            return updated;
+        }));
+        Assert.Equal(revokeAfterSql, sqlWritten);
+        await using var assertion = database.CreateSimpleChatsDbContext();
+        var row = await assertion.Set<LlmChatDefinitionRow>().AsNoTracking().SingleAsync();
+        Assert.Equal("Definition", row.Name);
+        Assert.Equal(0, row.ConcurrencyToken);
+    }
+
     [Fact]
     public async Task Concurrent_definition_update_loser_returns_stable_conflict()
     {
@@ -345,15 +570,17 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     private static LlmChatConversationApplicationService CreateConversationService(
         SimpleChatsDbContext dbContext,
         ILlmChatConversationRepository conversationRepository,
-        ILlmChatDefinitionRepository? definitionRepository = null)
+        ILlmChatDefinitionRepository? definitionRepository = null,
+        IEnumerable<ILlmChatConversationCommitObserver>? observers = null,
+        Exception? renameFailure = null)
         => new(
             definitionRepository ?? new EfLlmChatDefinitionRepository(dbContext),
             conversationRepository,
             new EfLlmChatConversationReadStore(dbContext),
             ExistingTurnStateRepository.Instance,
             new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(dbContext)),
-            new DeterministicConversationEngine(dbContext),
-            TimeProvider.System);
+            new DeterministicConversationEngine(dbContext, renameFailure),
+            TimeProvider.System, observers);
 
     private static UpdateLlmChatDefinitionCommand CreateUpdateCommand(
         LlmChatDefinitionId definitionId,
@@ -822,7 +1049,7 @@ internal sealed class PostgreSqlReconciliationConversationEngine(SimpleChatsDbCo
         => throw new NotSupportedException();
 }
 
-internal sealed class DeterministicConversationEngine(SimpleChatsDbContext dbContext) : ILlmChatConversationEngine
+internal sealed class DeterministicConversationEngine(SimpleChatsDbContext dbContext, Exception? renameFailure = null) : ILlmChatConversationEngine
 {
     public Task<LlmChatConversationEngineState> CreateAsync(LlmChatConversationId conversationId, LlmChatDefinitionRevision definitionRevision, string title, CancellationToken cancellationToken = default)
     {
@@ -840,7 +1067,8 @@ internal sealed class DeterministicConversationEngine(SimpleChatsDbContext dbCon
     }
 
     public Task<LlmChatConversationEngineState> RenameAsync(LlmChatConversationId conversationId, string title, long expectedTranscriptRevision, CancellationToken cancellationToken = default)
-        => Task.FromResult(State(conversationId, expectedTranscriptRevision));
+        => renameFailure is not null ? Task.FromException<LlmChatConversationEngineState>(renameFailure)
+            : Task.FromResult(State(conversationId, expectedTranscriptRevision));
 
     public Task<LlmChatConversationEngineState?> TryGetAsync(LlmChatConversationId conversationId, CancellationToken cancellationToken = default)
         => Task.FromResult<LlmChatConversationEngineState?>(State(conversationId, 0));

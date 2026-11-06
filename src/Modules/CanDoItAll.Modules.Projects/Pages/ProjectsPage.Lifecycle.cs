@@ -9,6 +9,13 @@ public partial class ProjectsPage {
     [Inject] private IProjectLifecyclePendingStore LifecycleStore { get; set; } = default!;
     [Inject] private IProjectLifecycleRecoveryCodec LifecycleCodec { get; set; } = default!;
     [Inject] private ProjectLifecyclePendingStoreLimits LifecycleLimits { get; set; } = default!;
+
+    private async Task<ProjectLifecycleOutcome> DispatchLifecycleAsync(ProjectLifecycleSubmission submitted, CancellationToken cancellationToken) {
+        var current = catalog ?? throw new UnauthorizedAccessException("Open current Project access before dispatching a lifecycle command.");
+        await current.AuthorizeWriteAsync(cancellationToken);
+        using var admission = ProjectChanges.EnterUiWrite(current.AuthorizeWriteAsync);
+        return await NativeLifecycle.DispatchAsync(submitted, cancellationToken);
+    }
     private readonly Dictionary<ProjectLifecycleOperation, ProjectLifecyclePageOperation> lifecycleOperations = [];
     private IReadOnlyList<ProjectLifecyclePendingMetadata> lifecycleRows = [];
     private ProjectLifecycleWriteContext? lifecycleContext;
@@ -67,6 +74,7 @@ public partial class ProjectsPage {
         lifecycleLoading = true;
         lifecycleReady = false;
         try {
+            await catalog!.AuthorizeReadAsync(readLifetime.Token);
             var before = await NativeLifecycle.GetContextAsync(readLifetime.Token);
             await LifecycleStore.InitializeAsync(readLifetime.Token);
             var scope = ProjectNativeLifecycleOperations.Scope(before);
@@ -90,6 +98,7 @@ public partial class ProjectsPage {
             if (disposed) {
                 return;
             }
+            await catalog.AuthorizeReadAsync(readLifetime.Token);
             lifecycleContext = current;
             lifecycleRows = rows;
             lifecycleVisible = Math.Max(lifecycleVisible, LifecycleLimits.MaximumPageSize);
@@ -128,7 +137,7 @@ public partial class ProjectsPage {
                 operation.RetireEditor();
                 return;
             }
-            await operation.Pending.DispatchAsync(context, DateTimeOffset.UtcNow, false, NativeLifecycle.DispatchAsync, operation.DispatchLifetime.Token);
+            await operation.Pending.DispatchAsync(context, DateTimeOffset.UtcNow, false, DispatchLifecycleAsync, operation.DispatchLifetime.Token);
             ApplyLifecycleIfOriginal(operation);
             RememberLifecycleMessage(operation);
         } catch (Exception failure) {
@@ -158,11 +167,12 @@ public partial class ProjectsPage {
         lifecycleActionBusy = true;
         lifecycleError = null;
         try {
+            await catalog!.AuthorizeReadAsync(readLifetime.Token);
             var current = await NativeLifecycle.GetContextAsync(readLifetime.Token);
             if (!ProjectNativeLifecycleOperations.Scope(current).Contains(original)) {
                 throw new InvalidOperationException("The retained operation belongs to another workspace or caller.");
             }
-            var record = await LifecycleStore.ReadAsync(original, readLifetime.Token)
+            var record = await catalog!.ReadAsync(async token => await LifecycleStore.ReadAsync(original, token), readLifetime.Token)
                 ?? throw new InvalidOperationException("The retained lifecycle operation is missing.");
             var after = await NativeLifecycle.GetContextAsync(readLifetime.Token);
             if (!ProjectNativeLifecycleOperations.Scope(after).Contains(original)) {
@@ -200,11 +210,11 @@ public partial class ProjectsPage {
             var view = LifecycleView!;
             switch (intent.Action) {
                 case ProjectLifecyclePendingAction.Check:
-                    await operation.Pending.LookupAsync(NativeLifecycle.LookupAsync, readLifetime.Token);
+                    await operation.Pending.LookupAsync((operation, token) => catalog!.ReadAsync(inner => NativeLifecycle.LookupAsync(operation, inner), token), readLifetime.Token);
                     break;
                 case ProjectLifecyclePendingAction.RetryOriginal when view.CanRetry:
                     var context = await NativeLifecycle.GetContextAsync(readLifetime.Token);
-                    await operation.Pending.DispatchAsync(context, DateTimeOffset.UtcNow, true, NativeLifecycle.DispatchAsync);
+                    await operation.Pending.DispatchAsync(context, DateTimeOffset.UtcNow, true, DispatchLifecycleAsync);
                     break;
                 case ProjectLifecyclePendingAction.ApplyAccepted when view.CanApply:
                     ApplyLifecycleIfOriginal(operation);

@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class AssignmentEditorAdmissionTests {
     [Fact]
-    public async Task Open_conversion_editor_keeps_captured_project_when_parent_model_is_replaced() {
+    public async Task Conversion_renderer_uses_the_explicit_host_draft_and_preserves_its_supplied_project_admission() {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var original = new ProjectWriteAdmission(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         var model = new CrmOpportunityConversionEditorModel {
@@ -22,13 +22,17 @@ public sealed class AssignmentEditorAdmissionTests {
             .Add(component => component.Model, model)
             .Add(component => component.Save, value => submitted = value));
         var replacement = new ProjectWriteAdmission(original.DatabaseProfileId, Guid.NewGuid(), Guid.NewGuid());
-        model.ExistingProjectId = replacement.ProjectId;
-        model.ExpectedProjectAdmission = replacement;
-        cut.Render(parameters => parameters.Add(component => component.Model, model));
+        var replacementDraft = model.Snapshot();
+        replacementDraft.ExistingProjectId = replacement.ProjectId;
+        replacementDraft.ExpectedProjectAdmission = replacement;
+        cut.Render(parameters => parameters.Add(component => component.Model, replacementDraft).Add(component => component.Opening, 1));
         cut.FindAll("button").Single(button => button.TextContent.Contains("Save conversion", StringComparison.Ordinal)).Click();
         Assert.NotNull(submitted);
-        Assert.Equal(original.ProjectId, submitted.ExistingProjectId);
-        Assert.Equal(original, submitted.ExpectedProjectAdmission);
+        Assert.Same(replacementDraft, submitted);
+        Assert.Equal(replacement.ProjectId, submitted.ExistingProjectId);
+        Assert.Equal(replacement, submitted.ExpectedProjectAdmission);
+        Assert.Equal(original.ProjectId, model.ExistingProjectId);
+        Assert.Equal(original, model.ExpectedProjectAdmission);
     }
 
     [Fact]

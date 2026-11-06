@@ -8,6 +8,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="../../MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
     <ProjectReference Include="../../MAF/Mcp/CanDoItAll.AgentFramework.Mcp.Abstractions/CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />
   </ItemGroup>
 </Project>

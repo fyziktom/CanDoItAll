@@ -30,6 +30,7 @@
 @inject IDatabaseSwitchNotificationService DatabaseChanges
 @inject TimeProvider TimeProvider
 @inject IAgentChatExecutionOrchestrator ChatExecutionOrchestrator
+@inject Func<ProcessEditingSession> CreateEditingSession
 
 @{
     var agentChatContextPublication = ResolveAgentChatPublication();
@@ -39,6 +40,14 @@
                                  ContributorPublications="@agentChatContextPublication.ContributorPublications"
                                  ContextNavigationIdentity="@AgentChatNavigationFence" />
 
+@if (!RendererInfo.IsInteractive || !processEditing.IsReady) {
+    <SurfaceCard data-testid="processes-editing-access">
+        <TextBlock Value="@(processEditing.IsUnavailable ? "Process editing access is unavailable. Reopen with current access." : "Initializing Process editing access.")" />
+        @if (processEditing.IsUnavailable) {
+            <Button Text="Reopen with current access" Icon="refresh" Click="RefreshAsync" />
+        }
+    </SurfaceCard>
+} else {
 <ChatWorkspacePanel Agent="@managerChatAgent"
                                     Session="@managerChatWorkspace?.SelectedSession"
                                     ActiveRun="@managerChatWorkspace?.SelectedRun"
@@ -72,6 +81,7 @@
         <ProcessWorkspaceSurface Session="@this" ManagerChat="chat" />
     </ChildContent>
 </ChatWorkspacePanel>
+}
 
 @code {
     [Parameter]
@@ -159,6 +169,7 @@
     private ProcessAgentChatContextPublication? agentChatPublication;
     private ProcessAgentChatFreshnessLease? agentChatFreshnessLease;
     private bool isDisposed;
+    private ProcessEditingSession processEditing = default!;
     private bool isBusy;
     private string? errorMessage;
     private long workspaceGeneration;
@@ -183,6 +194,8 @@
     private bool CanStartAnotherLaunch => pendingLaunchAccepted && pendingLaunchRequest?.ProjectId == ProjectId &&
         pendingLaunchRequest?.DefinitionKey == shell?.DefinitionCatalog.SelectedItem?.Key.Value;
     private ProcessDefinitionDraft definitionDraft = new();
+    private ProcessDefinitionComparison? definitionComparison;
+    private string? definitionComparisonError;
     private ProcessRoleEditorState roleEditorState = new();
     private ProcessTemplateBrowserState templateBrowserState = new();
     private ProcessStepEditorState stepEditorState = new();
@@ -470,6 +483,7 @@
 
     protected override void OnInitialized() {
         url = new(Navigation, ProcessWorkspaceUrlCodec.Instance, NavigationHistory);
+        processEditing = CreateEditingSession();
         DatabaseChanges.Changed += OnDatabaseChanged;
     }
 
@@ -492,7 +506,7 @@
 
     protected override async Task OnParametersSetAsync() {
         var path = UrlLocation.Split(Navigation.Uri).Path;
-        var reload = !routeApplied || routeProjectId != ProjectId;
+        var reload = !routeApplied || routeProjectId != ProjectId || !processEditing.IsReady;
         if (!reload && !string.Equals(path, routePath, StringComparison.OrdinalIgnoreCase)) {
             // Another page's location: the router replaces this page and its state stays untouched.
             return;
@@ -503,6 +517,9 @@
         routePath = path;
         routeProjectId = ProjectId;
         var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!RendererInfo.IsInteractive) {
+            return;
+        }
         if (!reload && !change.IsChanged) {
             return;
         }
@@ -577,14 +594,35 @@
     }
 
     private async Task RefreshAsync() {
+        if (processEditing.IsUnavailable) {
+            await processEditing.DisposeAsync();
+            processEditing = CreateEditingSession();
+            shell = null;
+            RetireDefinitionEditor();
+            ResetManagerChatForSelectedRunChange();
+        }
         await LoadAsync(forceRefresh: true);
     }
+
+    private Task RetireProcessEditingAsync() => InvokeAsync(() => {
+        if (isDisposed) {
+            return;
+        }
+        workspaceGeneration++;
+        shell = null;
+        RetireDefinitionEditor();
+        ResetManagerChatForSelectedRunChange();
+        errorMessage = "Process editing access changed. Reopen this workspace with current access.";
+        StateHasChanged();
+    });
 
     private async Task LoadAsync(bool forceRefresh) {
         var generation = Interlocked.Increment(ref workspaceGeneration);
         var originScope = ResolveScope();
         var originProfileGeneration = DatabaseRuntimeState.GetSnapshot().Generation;
         var completionSequence = definitionCompletionSequence;
+        var changeSequence = processEditing.ChangeSequence;
+        CancellationToken readLifetime = default;
         var route = Route;
         if (shell is not null && (shell.Scope != originScope || acceptedProfileGeneration != originProfileGeneration)) {
             shell = null;
@@ -597,6 +635,9 @@
         errorMessage = definitionOutcomeUnknown ? UnknownAuthoringOutcome : null;
 
         try {
+            await processEditing.EnsureAsync(originScope.ProjectId, () => InvokeAsync(StateHasChanged), RetireProcessEditingAsync);
+            readLifetime = processEditing.Lifetime;
+            await processEditing.AuthorizeAsync(false, readLifetime);
             var detailTabKey = route.EffectiveTab;
             var definitionLoadOptions = CreateDefinitionLoadOptions(detailTabKey);
             var runtimeLoadOptions = CreateRuntimeLoadOptions(route);
@@ -635,7 +676,8 @@
                 },
                 definitionLoadOptions) { ProjectBinding = shell?.ProjectBinding };
 
-            var loadedShell = await ProjectionClient.GetShellAsync(request);
+            var loadedShell = await ProjectionClient.GetShellAsync(request, readLifetime);
+            await processEditing.AuthorizeAsync(false, readLifetime);
             if (!OwnsWorkspaceRead()) {
                 return;
             }
@@ -649,6 +691,7 @@
                 loadedShell = ReconcileDefinitionRead(loadedShell, completionSequence);
             }
             shell = loadedShell;
+            processEditing.Acknowledge(changeSequence);
             loadedRunId = route.RunId;
             acceptedProfileGeneration = originProfileGeneration;
             if (lifetimeChanged && (Route.RunDialog || Route.EventId.HasValue)) {
@@ -677,6 +720,12 @@
 
             if (!HasUnresolvedRouteSelection && ActiveTab == ProcessWorkspaceDetailTabKey.ManagerChat) {
                 await EnsureManagerChatLoadedAsync();
+            }
+        } catch (OperationCanceledException) when (readLifetime.IsCancellationRequested || !OwnsWorkspaceRead() || isDisposed) {
+        } catch (UnauthorizedAccessException) {
+            if (OwnsWorkspaceRead()) {
+                processEditing.Retire();
+                await RetireProcessEditingAsync();
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
             if (!OwnsWorkspaceRead()) {
@@ -760,6 +809,8 @@
     }
 
     private void RetireDefinitionEditor() {
+        definitionComparison = null;
+        definitionComparisonError = null;
         definitionOperation = null;
         definitionOutcomeUnknown = false;
         definitionOutcomeKnown = false;
@@ -1086,7 +1137,8 @@
         isBusy = true;
         errorMessage = null;
         try {
-            var receipt = await ProjectionClient.FeedDefaultDefinitionsAsync(new(scope));
+            var authority = await processEditing.CaptureAsync(true, () => OwnsWorkspaceOperation(generation) && ResolveScope() == scope);
+            var receipt = await ProjectionClient.WithUiAuthority(authority).FeedDefaultDefinitionsAsync(new(scope));
             if (!OwnsWorkspaceOperation(generation)) {
                 return;
             }
@@ -1903,7 +1955,8 @@
             command.OperationId, () => ExecuteDefinitionEditorCommandAsync(command));
         var submitted = command.Draft;
         try {
-            var result = await ProjectionClient.ExecuteDefinitionEditorCommandAsync(command);
+            var authority = await processEditing.CaptureAsync(true, () => IsCurrentDefinitionEditorOperation(operation.Value));
+            var result = await ProjectionClient.WithUiAuthority(authority).ExecuteDefinitionEditorCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
@@ -1963,7 +2016,8 @@
         RetainAuthoringRecovery(operation.Value, command.Scope, command.DefinitionKey, command.ExpectedVersionToken?.Value,
             command.OperationId, () => ExecuteDefinitionRoleEditorCommandAsync(command));
         try {
-            var result = await ProjectionClient.ExecuteDefinitionRoleEditorCommandAsync(command);
+            var authority = await processEditing.CaptureAsync(true, () => IsCurrentDefinitionEditorOperation(operation.Value));
+            var result = await ProjectionClient.WithUiAuthority(authority).ExecuteDefinitionRoleEditorCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
@@ -2013,7 +2067,8 @@
             command.OperationId, () => ExecuteTemplateImportCommandAsync(command));
         var querySequence = templateQuerySequence;
         try {
-            var result = await ProjectionClient.ExecuteTemplateImportCommandAsync(command);
+            var authority = await processEditing.CaptureAsync(true, () => IsCurrentDefinitionEditorOperation(operation.Value));
+            var result = await ProjectionClient.WithUiAuthority(authority).ExecuteTemplateImportCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
@@ -2102,7 +2157,8 @@
         RetainAuthoringRecovery(operation.Value, command.Scope, command.DefinitionKey, command.ExpectedVersionToken?.Value,
             command.OperationId, () => ExecuteDefinitionCanvasCommandAsync(command));
         try {
-            var result = await ProjectionClient.ExecuteDefinitionCanvasCommandAsync(command);
+            var authority = await processEditing.CaptureAsync(true, () => IsCurrentDefinitionEditorOperation(operation.Value));
+            var result = await ProjectionClient.WithUiAuthority(authority).ExecuteDefinitionCanvasCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
@@ -2147,7 +2203,8 @@
         RetainAuthoringRecovery(operation.Value, command.Scope, command.DefinitionKey, command.ExpectedVersionToken?.Value,
             command.OperationId, () => ExecuteDefinitionStepEditorCommandAsync(command));
         try {
-            var result = await ProjectionClient.ExecuteDefinitionStepEditorCommandAsync(command);
+            var authority = await processEditing.CaptureAsync(true, () => IsCurrentDefinitionEditorOperation(operation.Value));
+            var result = await ProjectionClient.WithUiAuthority(authority).ExecuteDefinitionStepEditorCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
@@ -2287,7 +2344,8 @@
         authoringRecoveryBusy = true;
         var recoverySequence = ++authoringRecoverySequence;
         try {
-            var status = await ProjectionClient.GetAuthoringOperationAsync(recovery.Query);
+            var authority = await processEditing.CaptureAsync(false, () => OwnsAuthoringRecovery(recovery));
+            var status = await ProjectionClient.WithUiAuthority(authority).GetAuthoringOperationAsync(recovery.Query);
             if (!OwnsAuthoringRecovery(recovery)) {
                 return;
             }
@@ -2382,6 +2440,7 @@
         }
 
         isDisposed = true;
+        await processEditing.DisposeAsync();
         DatabaseChanges.Changed -= OnDatabaseChanged;
         RetireDefinitionEditor();
         agentChatFreshnessLease?.Dispose();
@@ -2457,6 +2516,46 @@
     string IProcessWorkspaceSession.ProjectionTone => ProjectionTone;
     string IProcessWorkspaceSession.ProjectionTooltip => ProjectionTooltip;
     Task IProcessWorkspaceSession.RefreshAsync() => DispatchViewActionAsync(() => RefreshAsync());
+    bool IProcessWorkspaceSession.AuthoringUpdatesAvailable => processEditing.UpdatesAvailable;
+    ProcessDefinitionComparison? IProcessWorkspaceSession.DefinitionComparison => definitionComparison;
+    string? IProcessWorkspaceSession.DefinitionComparisonError => definitionComparisonError;
+    void IProcessWorkspaceSession.CancelDefinitionComparison() {
+        definitionComparison = null;
+        definitionComparisonError = null;
+    }
+
+    async Task IProcessWorkspaceSession.CompareDefinitionAsync() {
+        if (WorkspaceBusy) {
+            return;
+        }
+        await RefreshAsync();
+        if (!WorkspaceBusy && processEditing.IsReady && shell?.DefinitionCatalog.SelectedEditor is { } editor) {
+            definitionComparison = definitionDraft.Compare(editor);
+            definitionComparisonError = null;
+        }
+    }
+
+    async Task IProcessWorkspaceSession.ApplyDefinitionComparisonAsync() {
+        if (WorkspaceBusy || definitionComparison is not { } comparison) {
+            return;
+        }
+        try {
+            await processEditing.AuthorizeAsync(false, processEditing.Lifetime);
+            if (definitionComparison != comparison || WorkspaceBusy || shell?.DefinitionCatalog.SelectedEditor is not { } editor) {
+                return;
+            }
+            definitionDraft.Apply(comparison, editor);
+            definitionComparison = null;
+            definitionComparisonError = null;
+        } catch (Exception exception) when (exception is UnauthorizedAccessException or OperationCanceledException) {
+            if (!isDisposed && definitionComparison == comparison) {
+                processEditing.Retire();
+                await RetireProcessEditingAsync();
+            }
+        } catch (InvalidOperationException exception) {
+            definitionComparisonError = exception.Message;
+        }
+    }
     Task IProcessWorkspaceSession.ReloadManagerChatAsync() => DispatchViewActionAsync(() => ReloadManagerChatAsync());
     ProcessWorkspaceShellScope IProcessWorkspaceSession.ResolveScope() => ResolveScope();
     string IProcessWorkspaceSession.ScopeEyebrow => ScopeEyebrow;

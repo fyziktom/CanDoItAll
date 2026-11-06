@@ -15,6 +15,7 @@ public sealed class AgentCapabilitiesHostTests {
     public void SelectedAgentChanged_matches_the_authoritative_selection() {
         using var fixture = new AgentCapabilitiesHostFixture();
         var selected = new List<AgentDefinition?>();
+        fixture.Context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = fixture.Context.Render<AgentCapabilitiesPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, fixture.Alpha.Id)
             .Add(component => component.SelectedAgentChanged, agent => selected.Add(agent)));
@@ -31,6 +32,7 @@ public sealed class AgentCapabilitiesHostTests {
     public void ContextAccessStateChanged_deduplicates_equivalent_state() {
         using var fixture = new AgentCapabilitiesHostFixture();
         var states = new List<AgentChatContextAccessState>();
+        fixture.Context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = fixture.Context.Render<AgentCapabilitiesPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, fixture.Alpha.Id)
             .Add(component => component.ContextAccessStateChanged, state => states.Add(state)));

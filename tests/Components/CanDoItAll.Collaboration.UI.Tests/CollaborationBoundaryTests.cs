@@ -68,5 +68,6 @@ public sealed class CollaborationBoundaryTests {
     }
 
     private static bool Framework(string name) => name is "mscorlib" or "netstandard" or "Microsoft.AspNetCore" || name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal) || name == "Microsoft.JSInterop";
-    private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.Collaboration.UI" or "CanDoItAll.Collaboration.UiSandbox" or "CanDoItAll.Modules.Collaboration.Contracts" or "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common";
+    private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.Collaboration.UI" or "CanDoItAll.Collaboration.UiSandbox" or
+        "CanDoItAll.Modules.Collaboration.Contracts" or "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common" or "CanDoItAll.Editing" or "CanDoItAll.Editing.UI";
 }

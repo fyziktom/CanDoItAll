@@ -153,7 +153,7 @@ public sealed class CrmHrWorkspaceSandboxTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='crmhr-workforce-job-title']")));
 
         cut.Find("[data-testid='crmhr-workforce-job-title']").Change("Senior Delivery Lead");
-        cut.Find("#crmhr-workforce-profile-form").Submit();
+        cut.Find("[data-testid='crmhr-workforce-profile-form']").Submit();
 
         cut.WaitForAssertion(() => Assert.Equal("Save workforce profile", cut.Find("[data-testid='crmhr-sandbox-intent']").TextContent));
     }

@@ -1,4 +1,9 @@
-@if (Presentation.Phase == PromptGalleryEditorPhase.Loading)
+@if (Presentation.AccessRetired) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="prompt-gallery-access-retired">
+        <TextBlock Value="Gallery access changed. Your draft is retained privately in this editor. Reopen with current access before continuing." />
+    </Alert>
+}
+else if (Presentation.Phase == PromptGalleryEditorPhase.Loading)
 {
     <LoadingState Eyebrow="Prompt editor"
                   Title="Loading prompt item"
@@ -18,7 +23,7 @@ else if (Presentation.Phase == PromptGalleryEditorPhase.Failed)
 else if (form is not null && editContext is not null)
 {
     <EditForm EditContext="editContext" OnValidSubmit="SaveAsync" OnInvalidSubmit="ShowValidationMessages">
-        <fieldset class="prompt-gallery-item-editor__fieldset" disabled="@Presentation.IsBusy" aria-busy="@(Presentation.IsBusy ? "true" : "false")">
+        <fieldset class="prompt-gallery-item-editor__fieldset" disabled="@(Presentation.IsBusy || IsReviewing)" aria-busy="@(Presentation.IsBusy ? "true" : "false")">
         <Stack GapScale="LayoutGap.XXLarge" data-testid="prompt-gallery-item-editor">
             @if (Presentation.HasExternalChange)
             {
@@ -26,12 +31,12 @@ else if (form is not null && editContext is not null)
                     <Stack GapScale="LayoutGap.Small">
                         <TextBlock Value="@Presentation.ExternalChange" />
                         <Cluster Gap="LayoutGap.Small">
-                            <Button Text="Reload latest and discard my draft"
+                            <Button Text="Review changes"
                                     Icon="refresh"
                                     ButtonStyle="ButtonStyle.Light"
                                     Size="ButtonSize.Small"
-                                    Click="RetryAsync"
-                                    data-testid="prompt-gallery-editor-reload" />
+                                    Click="ReviewAsync"
+                                    data-testid="prompt-gallery-editor-review" />
                         </Cluster>
                     </Stack>
                 </Alert>
@@ -53,12 +58,12 @@ else if (form is not null && editContext is not null)
                          Description="Name and classify this reusable instruction without coupling it to a workflow or agent runtime.">
                 <Grid Gap="LayoutGap.Large" ColumnsXl="2">
                     <FormField Text="Name">
-                        <InputText @bind-Value="form.Title"
+                        <InputText @bind-Value="form.Title" @oninput="@(e => ChangeText(PromptDraftField.Title, e))"
                                    class="cda-input"
                                    data-testid="prompt-gallery-editor-title" />
                     </FormField>
                     <FormField Text="Kind">
-                        <InputSelect @bind-Value="form.Kind"
+                        <InputSelect @bind-Value="form.Kind" @bind-Value:after="@(() => Touch(PromptDraftField.Kind))"
                                      class="cda-input"
                                      data-testid="prompt-gallery-editor-kind">
                             @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
@@ -70,18 +75,18 @@ else if (form is not null && editContext is not null)
                 </Grid>
                 <Grid Gap="LayoutGap.Large" ColumnsXl="2">
                     <FormField Text="Summary">
-                        <InputText @bind-Value="form.Summary"
+                        <InputText @bind-Value="form.Summary" @oninput="@(e => ChangeText(PromptDraftField.Summary, e))"
                                    class="cda-input"
                                    data-testid="prompt-gallery-editor-summary" />
                     </FormField>
                     <FormField Text="Phase or group">
-                        <InputText @bind-Value="form.Phase"
+                        <InputText @bind-Value="form.Phase" @oninput="@(e => ChangeText(PromptDraftField.Phase, e))"
                                    class="cda-input"
                                    data-testid="prompt-gallery-editor-phase" />
                     </FormField>
                 </Grid>
-                <FormField Text="Tags">
-                    <TagEditor Value="@form.Tags"
+                <FormField Text="Tags" @oninput="@(() => Touch(PromptDraftField.Tags))">
+                    <TagEditor @ref="tagEditor" Value="@form.Tags"
                                ValueChanged="HandleTagsChanged"
                                Placeholder="Add a tag"
                                MaxTags="20"
@@ -93,7 +98,7 @@ else if (form is not null && editContext is not null)
             <FormSection Title="Reusable content"
                          Description="Keep the editable draft here. Finalization creates a separate immutable version.">
                 <FormField Text="Prompt or prompt-part content">
-                    <InputTextArea @bind-Value="form.Content"
+                    <InputTextArea @bind-Value="form.Content" @oninput="@(e => ChangeText(PromptDraftField.Content, e))"
                                    class="cda-input cda-input--textarea cda-input--mono min-h-80"
                                    data-testid="prompt-gallery-editor-content" />
                 </FormField>
@@ -107,7 +112,7 @@ else if (form is not null && editContext is not null)
                         <label class="prompt-gallery-item-editor__choice">
                             <CheckBox TValue="bool"
                                       Value="@form.SupportedConsumers.Contains(consumer)"
-                                      ValueChanged="@((bool value) => form.SetConsumer(consumer, value))"
+                                      ValueChanged="@((bool value) => SetConsumer(consumer, value))"
                                       aria-label="@($"Support {consumer}")" />
                             <span>@PromptGalleryText.FormatConsumer(consumer)</span>
                         </label>
@@ -147,13 +152,13 @@ else if (form is not null && editContext is not null)
                          Description="Add only combinations verified for this item. Mark one optional preferred pair to preload consumers; an empty list means the item is model-agnostic.">
                 <Grid Gap="LayoutGap.Medium" ColumnsXl="3">
                     <FormField Text="Provider">
-                        <InputText @bind-Value="providerToAdd"
+                        <InputText @bind-Value="providerToAdd" @oninput="@(e => PendingModel(e, true))"
                                    class="cda-input"
                                    placeholder="OpenAI, Ollama, ..."
                                    data-testid="prompt-gallery-editor-provider-to-add" />
                     </FormField>
                     <FormField Text="Model">
-                        <InputText @bind-Value="modelToAdd"
+                        <InputText @bind-Value="modelToAdd" @oninput="@(e => PendingModel(e, false))"
                                    class="cda-input"
                                    placeholder="Model identifier"
                                    data-testid="prompt-gallery-editor-model-to-add" />
@@ -188,7 +193,7 @@ else if (form is not null && editContext is not null)
                                 <Template Context="supported">
                                     <CheckBox TValue="bool"
                                               Value="@supported.IsPreferred"
-                                              ValueChanged="@((bool value) => form.SetPreferredModel(supported, value))"
+                                              ValueChanged="@((bool value) => SetPreferred(supported, value))"
                                               aria-label="@($"Prefer {supported.Provider} {supported.Model}")" />
                                 </Template>
                             </DataGridColumn>
@@ -204,7 +209,7 @@ else if (form is not null && editContext is not null)
                                             Icon="delete"
                                             ButtonStyle="ButtonStyle.Light"
                                             Size="ButtonSize.Small"
-                                            Click="@(() => form.RemoveSupportedModel(supported))" />
+                                            Click="@(() => RemoveModel(supported))" />
                                 </Template>
                             </DataGridColumn>
                         </Columns>
@@ -216,7 +221,7 @@ else if (form is not null && editContext is not null)
                          Description="Optional recommendations preload compatible workflow and chat settings without becoming runtime policy.">
                 <Grid Gap="LayoutGap.Large" ColumnsXl="3">
                     <FormField Text="Temperature">
-                        <InputNumber @bind-Value="form.Temperature"
+                        <DraftNumber TValue="double?" @ref="temperatureInput" type="text" inputmode="decimal" @oninput="@(e => ChangeNumber(PromptDraftField.Temperature, e))" @bind-Value="form.Temperature"
                                      class="cda-input"
                                      min="0"
                                      max="2"
@@ -225,7 +230,7 @@ else if (form is not null && editContext is not null)
                         <ValidationMessage For="@(() => form.Temperature)" />
                     </FormField>
                     <FormField Text="Top-p">
-                        <InputNumber @bind-Value="form.TopP"
+                        <DraftNumber TValue="double?" @ref="topPInput" type="text" inputmode="decimal" @oninput="@(e => ChangeNumber(PromptDraftField.TopP, e))" @bind-Value="form.TopP"
                                      class="cda-input"
                                      min="0"
                                      max="1"
@@ -234,7 +239,7 @@ else if (form is not null && editContext is not null)
                         <ValidationMessage For="@(() => form.TopP)" />
                     </FormField>
                     <FormField Text="Maximum output tokens">
-                        <InputNumber @bind-Value="form.MaxOutputTokens"
+                        <DraftNumber TValue="int?" @ref="maxTokensInput" type="text" inputmode="decimal" @oninput="@(e => ChangeNumber(PromptDraftField.MaxOutputTokens, e))" @bind-Value="form.MaxOutputTokens"
                                      class="cda-input"
                                      min="1"
                                      data-testid="prompt-gallery-editor-max-output-tokens" />
@@ -279,7 +284,7 @@ else if (form is not null && editContext is not null)
                                 Icon="@(Presentation.IsArchived ? "unarchive" : "archive")"
                                 ButtonStyle="ButtonStyle.Warning"
                                 Variant="Variant.Outlined"
-                                Disabled="@Presentation.IsBusy"
+                                Disabled="@(Presentation.IsBusy || Presentation.IsOutcomeUnknown || IsReviewing)"
                                 Click="ToggleArchivedAsync"
                                 data-testid="prompt-gallery-editor-archive" />
                     }
@@ -288,13 +293,13 @@ else if (form is not null && editContext is not null)
                     <Button Text="Save draft"
                             Icon="save"
                             Type="submit"
-                            Disabled="@Presentation.IsBusy"
+                            Disabled="@(!Presentation.CanWrite || IsReviewing)"
                             IsBusy="@Presentation.IsBusy"
                             data-testid="prompt-gallery-editor-save" />
                     <Button Text="Create final version"
                             Icon="verified"
                             ButtonStyle="ButtonStyle.Success"
-                            Disabled="@Presentation.IsBusy"
+                            Disabled="@(!Presentation.CanWrite || IsReviewing)"
                             Click="CreateVersionAsync"
                             data-testid="prompt-gallery-editor-finalize" />
                 </PrimaryActions>
@@ -319,6 +324,109 @@ else if (form is not null && editContext is not null)
         PromptCompatibilityIssueCode.ProviderModelNotSupported
     ];
 
+    private DraftNumber<double?>? temperatureInput;
+    private TagEditor? tagEditor;
+    private DraftNumber<double?>? topPInput;
+    private DraftNumber<int?>? maxTokensInput;
+    [Parameter] public bool IsReviewing { get; set; }
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback DirtyChanged { get; set; }
+    public bool IsDirty => form?.IsDirty == true;
+    public EditContext? CurrentEditContext => editContext;
+
+    public PromptGalleryDraftCapture? Capture() => form is null ? null : form.Capture(
+        temperatureInput?.RawValue ?? PromptGalleryDraftCapture.Format(form.Temperature),
+        maxTokensInput?.RawValue ?? PromptGalleryDraftCapture.Format(form.MaxOutputTokens),
+        topPInput?.RawValue ?? PromptGalleryDraftCapture.Format(form.TopP), providerToAdd, modelToAdd) with { PendingTag = tagEditor?.PendingInput ?? string.Empty };
+
+    public void Apply(PromptGalleryDraftCapture patch) {
+        if (form is null || editContext is null) {
+            throw new InvalidOperationException("The editor draft is unavailable.");
+        }
+        form.Patch(patch.Values);
+        temperatureInput?.SetRaw(patch.Temperature);
+        maxTokensInput?.SetRaw(patch.MaxOutputTokens);
+        topPInput?.SetRaw(patch.TopP);
+        providerToAdd = patch.PendingProvider;
+        modelToAdd = patch.PendingModel;
+        foreach (var property in new[] { nameof(form.Title), nameof(form.Summary), nameof(form.Kind), nameof(form.Phase),
+            nameof(form.Content), nameof(form.Tags), nameof(form.SupportedModels), nameof(form.SupportedConsumers) }) {
+            editContext.NotifyFieldChanged(new(form, property));
+        }
+        StateHasChanged();
+    }
+
+    public void Acknowledge(PromptGalleryDraftCapture submitted) {
+        form?.MarkAccepted(submitted);
+        StateHasChanged();
+    }
+
+    private Task ReviewAsync() => ReviewRequested.InvokeAsync();
+    private void Touch(PromptDraftField field) {
+        var wasDirty = IsDirty;
+        form?.Touch(field);
+        if (!wasDirty) {
+            _ = DirtyChanged.InvokeAsync();
+        }
+    }
+    private void ChangeText(PromptDraftField field, ChangeEventArgs args) {
+        if (form is null) {
+            return;
+        }
+        var value = args.Value?.ToString() ?? string.Empty;
+        switch (field) {
+            case PromptDraftField.Title:
+                form.Title = value;
+                break;
+            case PromptDraftField.Summary:
+                form.Summary = value;
+                break;
+            case PromptDraftField.Phase:
+                form.Phase = value;
+                break;
+            case PromptDraftField.Content:
+                form.Content = value;
+                break;
+            default: throw new ArgumentOutOfRangeException(nameof(field));
+        }
+        Touch(field);
+    }
+    private void ChangeNumber(PromptDraftField field, ChangeEventArgs args) {
+        var raw = args.Value?.ToString() ?? string.Empty;
+        switch (field) {
+            case PromptDraftField.Temperature:
+                temperatureInput?.SetRaw(raw);
+                break;
+            case PromptDraftField.TopP:
+                topPInput?.SetRaw(raw);
+                break;
+            case PromptDraftField.MaxOutputTokens:
+                maxTokensInput?.SetRaw(raw);
+                break;
+            default: throw new ArgumentOutOfRangeException(nameof(field));
+        }
+        Touch(field);
+    }
+    private void PendingModel(ChangeEventArgs args, bool provider) {
+        if (provider) {
+            providerToAdd = args.Value?.ToString() ?? string.Empty;
+        } else {
+            modelToAdd = args.Value?.ToString() ?? string.Empty;
+        }
+        Touch(PromptDraftField.PendingModel);
+    }
+    private void SetConsumer(PromptGalleryConsumer value, bool enabled) {
+        form?.SetConsumer(value, enabled);
+        Touch(PromptDraftField.Consumers);
+    }
+    private void SetPreferred(PromptProviderModel value, bool preferred) {
+        form?.SetPreferredModel(value, preferred);
+        Touch(PromptDraftField.Models);
+    }
+    private void RemoveModel(PromptProviderModel value) {
+        form?.RemoveSupportedModel(value);
+        Touch(PromptDraftField.Models);
+    }
     private PromptGalleryEditorForm? form;
     private EditContext? editContext;
     private PromptGalleryEditorSource? acceptedSource;
@@ -347,6 +455,22 @@ else if (form is not null && editContext is not null)
         acceptedSource = Presentation.Source;
         form = acceptedSource is null ? null : PromptGalleryEditorForm.FromSource(acceptedSource);
         editContext = form is null ? null : new EditContext(form);
+        if (editContext is not null) {
+            editContext.OnFieldChanged += (_, args) => {
+                var field = args.FieldIdentifier.FieldName switch {
+                    nameof(PromptGalleryEditorForm.Title) => PromptDraftField.Title,
+                    nameof(PromptGalleryEditorForm.Summary) => PromptDraftField.Summary,
+                    nameof(PromptGalleryEditorForm.Kind) => PromptDraftField.Kind,
+                    nameof(PromptGalleryEditorForm.Phase) => PromptDraftField.Phase,
+                    nameof(PromptGalleryEditorForm.Content) => PromptDraftField.Content,
+                    nameof(PromptGalleryEditorForm.Temperature) => PromptDraftField.Temperature,
+                    nameof(PromptGalleryEditorForm.MaxOutputTokens) => PromptDraftField.MaxOutputTokens,
+                    nameof(PromptGalleryEditorForm.TopP) => PromptDraftField.TopP,
+                    _ => PromptDraftField.PendingModel
+                };
+                Touch(field);
+            };
+        }
         providerToAdd = string.Empty;
         modelToAdd = string.Empty;
         validationMessage = null;
@@ -362,7 +486,7 @@ else if (form is not null && editContext is not null)
     // Both mutation entry points pass through the same edit context, so parsing errors block finalization as well.
     private Task SubmitAsync(Func<PromptGalleryEditorSubmission, PromptGalleryEditorIntent> createIntent)
     {
-        if (form is null || editContext is null || Presentation.IsBusy)
+        if (form is null || editContext is null || !Presentation.CanWrite || IsReviewing || tagEditor?.IsInputFocused == true)
         {
             return Task.CompletedTask;
         }
@@ -412,6 +536,7 @@ else if (form is not null && editContext is not null)
         if (form is not null)
         {
             form.Tags = [.. value];
+            Touch(PromptDraftField.Tags);
         }
     }
 
@@ -427,6 +552,7 @@ else if (form is not null && editContext is not null)
         {
             providerToAdd = string.Empty;
             modelToAdd = string.Empty;
+            Touch(PromptDraftField.Models);
         }
     }
 }

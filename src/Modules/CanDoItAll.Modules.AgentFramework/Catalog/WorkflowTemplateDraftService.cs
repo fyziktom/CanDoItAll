@@ -23,6 +23,19 @@ public sealed class WorkflowTemplateDraftService(
     IWorkflowCatalogService catalog,
     IWorkflowDefinitionValidator validator,
     ILogger<WorkflowTemplateDraftService> logger) {
+    public async Task<WorkflowDraftInspection> InspectAsync(WorkflowId workflowId, WorkflowComponentId componentId,
+        CancellationToken cancellationToken = default) {
+        var definitionRead = catalog.GetDefinitionAsync(workflowId, cancellationToken: cancellationToken);
+        var componentRead = components.GetComponentAsync(componentId, cancellationToken);
+        await Task.WhenAll(definitionRead, componentRead);
+        var definition = (await definitionRead)?.Definition;
+        var component = await componentRead;
+        if (definition is not null && definition.Id != workflowId || component is not null && component.Id != componentId) {
+            throw new InvalidOperationException("Draft inspection returned a different resource identity.");
+        }
+        return new(definition, component);
+    }
+
     public IReadOnlyList<WorkflowTemplateCatalogItem> List() {
         var pack = templates.Load();
         return pack.Workflows.Select(template => new WorkflowTemplateCatalogItem(template.Key, template.Name, template.Description,
@@ -53,33 +66,56 @@ public sealed class WorkflowTemplateDraftService(
             Id = workflowId, Name = name, Status = WorkflowLifecycleStatus.Draft,
             RuntimePolicy = pack.RuntimePolicy, InputParameters = pack.CreateInputParameters(template)
         };
+        return await SavePreparedDraftAsync(candidate, definition, cancellationToken);
+    }
+
+    internal async Task<WorkflowDefinition> SavePreparedDraftAsync(LlmCallComponent candidate, WorkflowDefinition definition,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(definition);
+        var componentId = candidate.Id;
+        var workflowId = definition.Id;
+        if (componentId.Value == Guid.Empty || workflowId.Value == Guid.Empty || candidate.Revision != Guid.Empty) {
+            throw new ArgumentException("A prepared creation requires fresh, explicit workflow and component identities.");
+        }
         var validation = validator.Validate(definition, [candidate]);
         if (validation.Issues.Count > 0) {
-            throw new InvalidOperationException("The workflow template does not produce a valid draft.");
+            throw new WorkflowDefinitionValidationException("The prepared workflow does not produce a valid draft.");
         }
+        LlmCallComponent? acknowledgedComponent = null;
         try {
-            await components.SaveComponentAsync(new(candidate.Id, candidate.Name, candidate.ProviderProfileId,
+            acknowledgedComponent = await components.SaveComponentAsync(new(candidate.Id, candidate.Name, candidate.ProviderProfileId,
                 candidate.Model, candidate.Modality, candidate.ModelSettings, candidate.Instructions, candidate.InputShape,
-                candidate.ResultShape, candidate.Permissions), cancellationToken);
+                candidate.ResultShape, candidate.Permissions) {
+                PromptArtifactId = candidate.PromptArtifactId,
+                PromptVersionId = candidate.PromptVersionId
+            }, cancellationToken);
             return await catalog.SaveDefinitionAsync(new(workflowId, null, definition.Name, definition.Description,
                 WorkflowLifecycleStatus.Draft, definition.Graph, definition.RuntimePolicy) {
-                InputParameters = definition.InputParameters
+                InputParameters = definition.InputParameters,
+                TemplateProvenance = string.IsNullOrEmpty(definition.TemplateKey) ? null
+                    : new(definition.TemplateKey, definition.TemplatePackKey, definition.TemplatePackVersion, definition.SourceHash),
+                ExternalNamespace = definition.ExternalNamespace,
+                ExternalKey = definition.ExternalKey
             }, cancellationToken);
-        } catch {
-            using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            try {
-                var committed = await catalog.GetDefinitionAsync(workflowId, cancellationToken: cleanup.Token);
-                if (committed is not null) {
-                    logger.LogWarning("Workflow draft {WorkflowId} committed before its save response failed; returning the stored draft.", workflowId.Value);
-                    return committed.Definition;
-                }
-                await components.DeleteComponentAsync(componentId, cleanup.Token);
-            } catch (Exception exception) {
-                logger.LogError("Cannot remove component {ComponentId} after workflow draft {WorkflowId} failed: {ErrorType}.",
-                    componentId.Value, workflowId.Value, exception.GetType().Name);
-                throw new InvalidOperationException("Workflow draft creation failed and component cleanup needs operator review.");
+        } catch (Exception error) {
+            if (acknowledgedComponent is null && error is WorkflowComponentConcurrencyException) {
+                throw;
             }
-            throw;
+            if (acknowledgedComponent is not null && error is WorkflowDefinitionConcurrencyException or WorkflowDefinitionValidationException) {
+                using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                try {
+                    await components.DeleteComponentAsync(new(componentId, acknowledgedComponent.Revision), cleanup.Token);
+                } catch (Exception cleanupError) {
+                    logger.LogError("Conditional cleanup needs review for component {ComponentId}, workflow {WorkflowId}: {ErrorType}.",
+                        componentId.Value, workflowId.Value, cleanupError.GetType().Name);
+                    throw new WorkflowDraftCreationUnknownException(workflowId, componentId, new AggregateException(error, cleanupError));
+                }
+                throw;
+            }
+            logger.LogWarning("Creation acknowledgement needs review for workflow {WorkflowId}, component {ComponentId}: {FailureType}.",
+                workflowId.Value, componentId.Value, error.GetType().Name);
+            throw new WorkflowDraftCreationUnknownException(workflowId, componentId, error);
         }
     }
 
@@ -108,3 +144,11 @@ public sealed class WorkflowTemplateDraftService(
         throw new InvalidOperationException("No numbered draft name is available for this template.");
     }
 }
+
+public sealed class WorkflowDraftCreationUnknownException(WorkflowId workflowId, WorkflowComponentId componentId, Exception inner)
+    : Exception($"Draft creation could not be confirmed. Review workflow {workflowId.Value:D} and component {componentId.Value:D} in the catalog. Do not repeat this creation while its outcome is unconfirmed.", inner) {
+    public WorkflowId WorkflowId { get; } = workflowId;
+    public WorkflowComponentId ComponentId { get; } = componentId;
+}
+
+public sealed record WorkflowDraftInspection(WorkflowDefinition? Definition, LlmCallComponent? Component);

@@ -7,9 +7,17 @@ public sealed partial class FileSandboxWorkspaceStore
 {
     private const string AgentDeletionCommitJournalVersion = "1.0";
 
-    public async Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(
-        Guid agentId,
+    public Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(Guid agentId, CancellationToken cancellationToken = default)
+        => DeleteAgentWorkspaceCoreAsync(agentId, null, cancellationToken);
+
+    public Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc,
         CancellationToken cancellationToken = default)
+        => DeleteAgentWorkspaceCoreAsync(agentId, expectedUpdatedAtUtc, cancellationToken);
+
+    private async Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceCoreAsync(
+        Guid agentId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken)
     {
         if (agentId == Guid.Empty)
         {
@@ -33,6 +41,9 @@ public sealed partial class FileSandboxWorkspaceStore
             }
 
             EnsureAgentCanBeDeleted(agent);
+            if (expectedUpdatedAtUtc is null || agent.UpdatedAtUtc != expectedUpdatedAtUtc) {
+                throw new AgentCatalogConcurrencyException(agentId, expectedUpdatedAtUtc, agent.UpdatedAtUtc);
+            }
             var deletedAtUtc = DateTimeOffset.UtcNow;
             var currentExecutionIndex = await executionSliceStore
                 .LoadIndexForAgentDeletionAsync(cancellationToken);
@@ -131,6 +142,7 @@ public sealed partial class FileSandboxWorkspaceStore
             AgentDeletionCommitStage.ExecutionSlicesPersisted);
 
         await jsonStore.WriteJsonAtomicallyAsync(layout.CatalogPath, journal.TargetCatalog, cancellationToken);
+        catalogCommits?.Committed(journal.SourceCatalog, journal.TargetCatalog);
         agentDeletionCommitBoundary?.Invoke(
             AgentDeletionCommitStage.CatalogPersisted);
         await SaveWorkspaceIndexCoreAsync(

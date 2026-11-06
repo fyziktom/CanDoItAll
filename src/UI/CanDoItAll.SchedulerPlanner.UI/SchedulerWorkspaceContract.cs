@@ -6,7 +6,7 @@ namespace CanDoItAll.SchedulerPlanner.UI;
 
 public enum SchedulerTab { Calendar, Schedules, NewSchedule, History }
 public enum SchedulerReadStatus { Initial, Loading, Ready, Stale, Unavailable }
-public enum SchedulerMutationStatus { Pending, Refused, Committed, CommittedWithWarning, Unknown }
+public enum SchedulerMutationStatus { Pending, Refused, Committed, CommittedWithWarning, Unknown, Conflict }
 
 public sealed record SchedulerMutationReceipt(
     SchedulerMutationKind Kind, SchedulerMutationStatus Status, Guid? PlanId,
@@ -14,6 +14,7 @@ public sealed record SchedulerMutationReceipt(
 
 public sealed record SchedulerDraftValues {
     public Guid? Id { get; init; }
+    public Guid? ExpectedDefinitionRevision { get; init; }
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public SchedulerPlanTargetKind TargetKind { get; init; } = SchedulerPlanTargetKind.Workflow;
@@ -93,8 +94,9 @@ public sealed class SchedulerDraft(SchedulerDraftValues values) {
         HasUnappliedInput = true;
     }
     public SchedulerMutationReceipt? Receipt { get; set; }
+    public SchedulerConflictReview? ConflictReview { get; set; }
     public bool IsReviewing { get; set; }
-    public bool IsLocked => Receipt?.Status is SchedulerMutationStatus.Pending or SchedulerMutationStatus.Unknown;
+    public bool IsLocked => Receipt?.Status is SchedulerMutationStatus.Pending or SchedulerMutationStatus.Unknown or SchedulerMutationStatus.Conflict;
     public string Error { get; set; } = string.Empty;
     public SchedulerReadStatus SchemaStatus { get; set; }
     public SchedulerWorkflowInputSchema? Schema { get; set; }
@@ -108,7 +110,9 @@ public sealed record SchedulerInputOptions(SchedulerReadStatus Status,
 
 public sealed record SchedulerWorkspaceData(
     IReadOnlyList<SchedulerPlanSummary> Plans, IReadOnlyList<SchedulerPlanRunSummary> History,
-    IReadOnlyList<SchedulerTargetOption> TargetOptions, CanvasCalendarSurface CalendarSurface);
+    IReadOnlyList<SchedulerTargetOption> TargetOptions, CanvasCalendarSurface CalendarSurface) {
+    public int? PlanCount { get; init; }
+}
 
 public interface ISchedulerWorkspace {
     event Action? Changed;
@@ -120,6 +124,9 @@ public interface ISchedulerWorkspace {
     // The history search draft; SearchHistoryAsync commits it.
     SchedulerHistoryQuery HistoryQuery { get; }
     SchedulerScheduleFilters ScheduleFilters { get; }
+    int PlanOffset { get; }
+    bool HasMorePlans { get; }
+    Task MovePlanPageAsync(int direction);
     SchedulerDraft NewDraft { get; }
     SchedulerDraft? EditDraft { get; }
     SchedulerDraft? PickerDraft { get; }
@@ -151,6 +158,9 @@ public interface ISchedulerWorkspace {
     void CloseDelete();
     Task DeleteAsync();
     Task ReviewUnknownAsync(SchedulerDraft draft, Guid exactPlanId);
+    Task CompareChangesAsync(SchedulerDraft draft);
+    Task ApplyComparisonAsync(SchedulerDraft draft, SchedulerConflictReview review);
+    void CloseComparison(SchedulerDraft draft);
     Task ReviewPlanAsync(Guid id);
     void AcknowledgeReceipt(Guid id);
     void SelectCalendar(CanvasCalendarEvent? item);

@@ -47,7 +47,7 @@ public sealed class PartyMergeIntegrationTests
                     Notes = "Retained relationship"
                 }
             ],
-            "integration-tests");
+            "integration-tests", original: new([]));
         var mergedRelationshipResult = await managementService.SaveRelationshipsAsync(
             mergedPartyId,
             [
@@ -60,7 +60,7 @@ public sealed class PartyMergeIntegrationTests
                     Notes = "Merged relationship"
                 }
             ],
-            "integration-tests");
+            "integration-tests", original: new([]));
 
         Assert.True(retainedRelationshipResult.IsSuccess);
         Assert.True(mergedRelationshipResult.IsSuccess);
@@ -100,7 +100,7 @@ public sealed class PartyMergeIntegrationTests
             retainedPartyId,
             mergedPartyId,
             "integration-tests",
-            "Duplicate cleanup");
+            "Duplicate cleanup", original: (await managementService.PreviewMergeAsync(retainedPartyId, mergedPartyId)).Value!.Original);
 
         Assert.True(mergeResult.IsSuccess);
 
@@ -235,7 +235,7 @@ public sealed class PartyMergeIntegrationTests
             retainedPartyId,
             mergedPartyId,
             "integration-tests",
-            "Duplicate person cleanup");
+            "Duplicate person cleanup", original: (await managementService.PreviewMergeAsync(retainedPartyId, mergedPartyId)).Value!.Original);
 
         Assert.True(mergeResult.IsSuccess);
 
@@ -353,7 +353,7 @@ public sealed class PartyMergeIntegrationTests
             retainedPartyId,
             mergedPartyId,
             "integration-tests",
-            "Duplicate person with distinct primary relationships");
+            "Duplicate person with distinct primary relationships", original: (await managementService.PreviewMergeAsync(retainedPartyId, mergedPartyId)).Value!.Original);
 
         Assert.True(mergeResult.IsSuccess);
 
@@ -411,7 +411,7 @@ public sealed class PartyMergeIntegrationTests
             retainedPartyId,
             mergedPartyId,
             "integration-tests",
-            "Should not merge");
+            "Should not merge", original: (await managementService.PreviewMergeAsync(retainedPartyId, mergedPartyId)).Value!.Original);
 
         Assert.False(mergeResult.IsSuccess);
         Assert.Contains(

@@ -1,0 +1,101 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+@using CanDoItAll.CrmHr.UI.Parties
+
+@if (State.IsOutdated || State.IsUnknown) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-connections-freshness">
+        <TextBlock Value="@(State.IsUnknown ? "The save outcome is unknown. Your submission and draft are retained; reading current values does not authorize resubmission." : "Saved connections changed. Your draft is retained; review their current values before saving.")" />
+    </Alert>
+}
+@if (State.ValidationMessage is { } validation) {
+    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@validation" /></Alert>
+}
+<Button Text="Review saved connections" ButtonStyle="ButtonStyle.Light" Disabled="@(State.Reading || State.IsSaving || State.PickerPending)"
+    Click="ReviewRequested" data-testid="crmhr-connections-review-open" />
+@if (State.CanUndo) {
+    <Button Text="Undo merge edits" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" data-testid="crmhr-connections-undo" />
+}
+<Dialog IsOpen="@(State.Review is not null)" Title="Review connected records" Size="ModalSize.Full" DenseChrome="true"
+    CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-connections-review-dialog">
+    <ChildContent>
+        @if (State.Review is { } review) {
+            <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Compare original, local and current connections. Apply changes only your draft; Save remains separate." /></Alert>
+                @if (State.ReviewStale) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-connections-review-stale"><TextBlock Value="The comparison changed again or its refresh failed. Refresh before applying; your choices remain available." /></Alert>
+                }
+                @if (State.IsUnknown) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="The previous command cannot be replayed. This comparison preserves your draft and does not resolve its unknown outcome." /></Alert>
+                }
+                @if (review.GroupError is { } error) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-connections-review-error"><TextBlock Value="@error" /></Alert>
+                }
+                <Button Text="@(showAll ? "Show changed connections" : "Show all connections")" ButtonStyle="ButtonStyle.Light" Click="@(() => showAll = !showAll)" />
+                @if (review.WholeCollection is not null) {
+                    <PartyMergeRows TItem="CrmAccountConnectionEditorModel" Title="Complete connection set" Rows="review.Rows"
+                        WholeCollection="review.WholeCollection" Format="Format" ShowUnchanged="showAll" Changed="Changed" />
+                } else {
+                    @foreach (var row in review.Rows.Where(row => showAll || row.Field.LocalChanged || row.Field.CurrentChanged).Take(displayCount)) {
+                        <PanelCard @key="row.Key" Class="w-full">
+                            <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                                @if (review.Fields.TryGetValue(row.Key, out var fields)) {
+                                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="@Party(fields.Party.Local)" />
+                                    <MergeFieldView TValue="Guid" Label="Directory record" Field="fields.Party" Format="Party" ShowUnchanged="showAll" Changed="Changed" />
+                                    <MergeFieldView TValue="CrmAccountConnectionRole" Label="Relationship role" Field="fields.Role" Format="@(value => value.ToString())" ShowUnchanged="showAll" Changed="Changed" />
+                                    <MergeFieldView TValue="bool" Label="Primary" Field="fields.Primary" Format="@(value => value ? "Yes" : "No")" ShowUnchanged="showAll" Changed="Changed" />
+                                    <MergeFieldView TValue="string" Label="Relationship notes" Field="fields.Notes" Format="@(value => value)" ShowUnchanged="showAll" Changed="Changed">
+                                        <ResultEditor Context="value"><TextArea Value="@value" Rows="4" Immediate="true" ValueChanged="@(text => SetNotesAsync(fields, text))" aria-label="Merged connection notes" /></ResultEditor>
+                                    </MergeFieldView>
+                                    @if (showAll || !fields.OriginalProjects.ToHashSet().SetEquals(fields.LocalProjects) || !fields.OriginalProjects.ToHashSet().SetEquals(fields.CurrentProjects)) {
+                                        <Grid ColumnsLg="3" Gap="LayoutGap.Small">
+                                            <SmallText Text="@($"Original projects: {Projects(fields.OriginalProjects)}")" />
+                                            <SmallText Text="@($"My projects: {Projects(fields.LocalProjects)}")" />
+                                            <SmallText Text="@($"Current projects: {Projects(fields.CurrentProjects)}")" />
+                                        </Grid>
+                                        <SmallText Text="@($"Merged project links: {Projects(fields.Projects)}")" />
+                                    }
+                                } else {
+                                    <MergeFieldView TValue="MergeEntry<CrmAccountConnectionEditorModel>" Label="Connection membership" Field="row.Field"
+                                        Format="@(entry => entry.Exists ? Format(entry.Value!) : "Removed")" ShowUnchanged="showAll" Changed="Changed" />
+                                }
+                            </Stack>
+                        </PanelCard>
+                    }
+                    @if (review.Rows.Count(row => showAll || row.Field.LocalChanged || row.Field.CurrentChanged) > displayCount) {
+                        <Button Text="Show more connections" ButtonStyle="ButtonStyle.Light" Click="@(() => displayCount += 50)" />
+                    }
+                }
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="State.Reading" Click="ReviewRequested" data-testid="crmhr-connections-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(!State.CanApply)" Click="ApplyRequested" data-testid="crmhr-connections-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private bool showAll;
+    private int displayCount = 50;
+    [Parameter, EditorRequired] public ConnectionReconciliation State { get; set; } = default!;
+    [Parameter] public IReadOnlyDictionary<Guid, string> PartyNames { get; set; } = new Dictionary<Guid, string>();
+    [Parameter] public IReadOnlyDictionary<Guid, string> ProjectNames { get; set; } = new Dictionary<Guid, string>();
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+    [Parameter] public EventCallback UndoRequested { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private string Party(Guid id) => PartyNames.GetValueOrDefault(id) ?? $"Unavailable directory record ({id:D})";
+    private string Project(Guid id) => ProjectNames.GetValueOrDefault(id) ?? $"Unavailable project ({id:D})";
+    private string Projects(IReadOnlyList<Guid> ids) => ids.Count == 0 ? "None" : string.Join(", ", ids.Select(Project));
+    private string Format(CrmAccountConnectionEditorModel row) => $"{Party(row.RelatedPartyId)} · {row.Role} · Primary: {row.IsPrimary} · {row.Notes} · Projects: {string.Join(", ", row.ProjectIds.Select(Project))}";
+    private async Task SetNotesAsync(ConnectionRowReview row, string? text) {
+        row.Notes.SetResult(text ?? string.Empty);
+        await Changed.InvokeAsync();
+    }
+}

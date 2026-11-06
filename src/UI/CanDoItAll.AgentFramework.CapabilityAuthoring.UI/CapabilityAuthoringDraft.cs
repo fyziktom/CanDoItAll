@@ -29,6 +29,7 @@ public sealed class CapabilityAuthoringDraft : IDisposable {
     public SkillCapabilityDraft Skill { get; private set; } = new();
     public ToolCapabilityDraft Tool { get; private set; } = new();
     public string RawConfigurationJson { get; set; }
+    public string PendingTagInput { get; set; } = string.Empty;
     public string? ConfigurationError { get; private set; }
     public CapabilitySkillInputMode SkillMode { get; set; }
     public string UploadedFileName { get; set; } = string.Empty;
@@ -69,6 +70,25 @@ public sealed class CapabilityAuthoringDraft : IDisposable {
     public void Changed() {
         Revision++;
         messages.Clear();
+        Context.NotifyValidationStateChanged();
+    }
+
+    public void ApplyComparison(CapabilityEditorModel result, bool replaceConfiguration) {
+        Model.Name = result.Name;
+        Model.Description = result.Description;
+        Model.Tags = result.Tags.ToList();
+        Model.ExpectedFingerprint = result.ExpectedFingerprint;
+        if (replaceConfiguration) {
+            Model.Kind = result.Kind;
+            Model.Key = result.Key;
+            Model.EndpointOrPath = result.EndpointOrPath;
+            Model.ConfigurationJson = CapabilityConfigurationCodec.RemoveForbiddenPlaintext(result.Kind, result.ConfigurationJson, out var removed);
+            RemovedPlaintext |= removed;
+            Model.IsBuiltIn = result.IsBuiltIn;
+            RawConfigurationJson = Model.ConfigurationJson;
+            RefreshConfiguration();
+        }
+        Revision++;
         Context.NotifyValidationStateChanged();
     }
 

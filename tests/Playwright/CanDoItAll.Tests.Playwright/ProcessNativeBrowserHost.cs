@@ -233,8 +233,10 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
             }
         }
     }
-    private sealed class ObservedProjectionClient(ProcessWorkspaceProjectionClient native, AcceptedRunReadFault fault,
+    private sealed class ObservedProjectionClient(IProcessWorkspaceProjectionClient native, AcceptedRunReadFault fault,
         ProcessAuthoringBrowserControl? authoring) : IProcessWorkspaceProjectionClient {
+        public IProcessWorkspaceProjectionClient WithUiAuthority(ProcessAuthoringUiAuthority authority)
+            => new ObservedProjectionClient(native.WithUiAuthority(authority), fault, authoring);
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(ProcessWorkspaceShellRequest request, CancellationToken cancellationToken = default) {
             var result = await native.GetShellAsync(request, cancellationToken);
             fault.AfterRead(request);

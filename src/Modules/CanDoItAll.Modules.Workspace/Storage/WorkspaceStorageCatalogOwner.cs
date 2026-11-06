@@ -32,7 +32,9 @@ public sealed class WorkspaceStorageCatalogOwner : IStorageCatalogOwner {
         [.. (await workspace.ListSecretsAsync(cancellationToken)).Select(secret => new CatalogSecret(secret.Id, secret.Name, true))];
     public async Task<ImmutableArray<CatalogRoute>> ReadRoutesAsync(CancellationToken cancellationToken) =>
         [.. (await workspace.ListStorageRoutingDefaultsAsync(cancellationToken)).Select(route =>
-            new CatalogRoute((CatalogPurpose)route.UsagePurpose, route.PreferredStorageId, route.PreferredStorageName, route.IsEnabled))];
+            new CatalogRoute((CatalogPurpose)route.UsagePurpose, route.PreferredStorageId, route.PreferredStorageName, route.IsEnabled) {
+                RoutingRevision = route.RoutingRevision
+            })];
     public async Task<CatalogEdit?> ReadEditorAsync(Guid id, CancellationToken cancellationToken) {
         var editor = await catalog.GetEditorAsync(id, cancellationToken);
         return editor is null ? null : StorageCatalogProjection.Editor(editor, await catalog.ListRulesAsync(cancellationToken));

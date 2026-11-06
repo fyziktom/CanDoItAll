@@ -265,7 +265,10 @@ public sealed class ProjectStructurePageWebPreviewTests
             => throw new InvalidOperationException("This scenario must only stop the existing runtime.");
 
         public async Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
-            CancellationToken cancellationToken = default) {
+            CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? authorizeStop = null) {
+            if (authorizeStop is not null) {
+                await authorizeStop(cancellationToken);
+            }
             Assert.Equal(identity, expected);
             StoppedNodeIds.Add(nodeId);
             StopEntered.TrySetResult();

@@ -1,5 +1,8 @@
 @implements IAsyncDisposable
 @inject IPromptGalleryService Gallery
+@inject PromptGalleryChanges Changes
+@inject IPromptGalleryUiAccess Access
+@inject Microsoft.Extensions.Logging.ILogger<PromptGalleryObservation> ObserverLog
 @inject NotificationService Notifications
 
 <PromptGallerySearchSurface Presentation="@session.Presentation"
@@ -11,6 +14,7 @@
 
 @code {
     private PromptGallerySearchSession session = default!;
+    private PromptGalleryObservation observation = default!;
     private PromptGallerySearchRequest? appliedRequest;
 
     [Parameter]
@@ -55,11 +59,13 @@
 
     public PromptGallerySearchPresentation Presentation => session.Presentation;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        observation = new(Changes, Access, ObserverLog);
         session = new PromptGallerySearchSession(Gallery)
         {
             Changed = () => InvokeAsync(StateHasChanged),
+            Authorize = observation.AuthorizeAsync,
             NoticeRaised = notice =>
             {
                 PromptGalleryNotices.Show(Notifications, notice);
@@ -67,6 +73,12 @@
             },
             Committed = HandleCommittedAsync
         };
+        try {
+            await observation.StartAsync(null, batch => InvokeAsync(() => session.InvalidateAsync()),
+                () => InvokeAsync(() => session.RetireAccessAsync()), catalog: true);
+        } catch (Exception exception) when (exception is UnauthorizedAccessException or InvalidOperationException) {
+            await session.RetireAccessAsync();
+        }
     }
 
     protected override Task OnParametersSetAsync()
@@ -89,7 +101,7 @@
     }
 
     // Reloads the current page and clamps to the last page when the list shrank; filters and paging survive.
-    public Task RefreshAsync() => session.RefreshAsync();
+    public Task RefreshAsync() => session.InvalidateAsync();
 
     private Task HandleCommittedAsync(PromptGallerySearchCommit commit)
     {
@@ -97,12 +109,17 @@
         return Committed.InvokeAsync(commit);
     }
 
-    private Task HandleIntentAsync(PromptGallerySearchIntent intent) => intent switch
-    {
+    private async Task HandleIntentAsync(PromptGallerySearchIntent intent) {
+        using var admission = Changes.EnterUiWrite(token => observation.AuthorizeAsync(write: true, token));
+        await (intent switch {
         PromptGallerySearchIntent.Select select => Selected.InvokeAsync(select.Item),
         PromptGallerySearchIntent.Edit edit => EditRequested.InvokeAsync(edit.ItemId),
         _ => session.ApplyAsync(intent)
-    };
+        });
+    }
 
-    public ValueTask DisposeAsync() => session.DisposeAsync();
+    public async ValueTask DisposeAsync() {
+        await session.DisposeAsync();
+        await observation.DisposeAsync();
+    }
 }

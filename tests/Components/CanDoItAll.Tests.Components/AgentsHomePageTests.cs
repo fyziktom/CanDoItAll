@@ -20,6 +20,35 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public sealed class AgentsHomePageTests
 {
     [Fact]
+    public async Task Leaving_simple_chats_keeps_its_owner_and_unsent_input_until_navigation_is_accepted() {
+        var original = LlmChats.LlmChatConversationWorkspaceTests.CreateConversation();
+        var conversations = new LlmChats.LlmChatConversationWorkspaceTests.StubConversationGateway();
+        conversations.ListPages.Enqueue(new([original], null));
+        conversations.TranscriptPages.Enqueue(LlmChats.LlmChatConversationWorkspaceTests.CreateView(original, []));
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSimpleChatsComponents();
+            services.AddSingleton<ILlmChatUiAuthorizationFacade>(new AllowSimpleChatsAuthorization());
+            services.AddSingleton<ILlmChatConversationUiGateway>(conversations);
+            services.AddSingleton<ILlmChatOperationUiGateway>(new LlmChats.LlmChatConversationWorkspaceTests.StubOperationGateway());
+            services.AddSingleton<ILlmChatConversationEditorAccess>(new LlmChats.LlmChatConversationWorkspaceTests.StubConversationEditorAccess());
+        });
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/agents?tab=simple-chats&simpleChatView=conversations&conversationId={original.ConversationId:D}");
+        var cut = harness.Context.Render<AgentsHomePage>();
+        await cut.WaitForElement("[data-testid='llm-chat-prompt']", TimeSpan.FromSeconds(10)).InputAsync("Unsent parent tab draft");
+        var owner = cut.FindComponent<LlmChatConversationWorkspace>().Instance;
+
+        await FindTab(cut, "Providers").ClickAsync();
+
+        cut.WaitForAssertion(() => {
+            Assert.Same(owner, cut.FindComponent<LlmChatConversationWorkspace>().Instance);
+            Assert.Equal("Unsent parent tab draft", cut.Find("[data-testid='llm-chat-prompt']").GetAttribute("value"));
+            Assert.Single(cut.FindAll("[data-testid='llm-chat-draft-discard']"));
+            Assert.Contains("tab=simple-chats", navigation.Uri, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public async Task Header_chat_launch_retains_its_canceled_token_until_completion() {
         var launcher = new RecordingAgentChatLauncher { Pending = new(TaskCreationOptions.RunContinuationsAsynchronously) };
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IAgentChatLauncher>(launcher));
@@ -155,6 +184,8 @@ public sealed class AgentsHomePageTests
         {
             services.AddSingleton<ILlmChatUiAuthorizationFacade>(new AllowSimpleChatsAuthorization());
             services.AddSimpleChatsComponents();
+            services.AddSingleton<ILlmChatDefinitionEditorAccess>(new LlmChats.LlmChatDefinitionUiTests.StubDefinitionEditorAccess(new LlmChats.LlmChatConversationWorkspaceTests.StubAuthorization()));
+            services.AddSingleton<ILlmChatConversationEditorAccess>(new LlmChats.LlmChatConversationWorkspaceTests.StubConversationEditorAccess());
             services.AddScoped<ObservedConversationGateway>(provider => new(
                 ActivatorUtilities.CreateInstance<LlmChatConversationUiGateway>(provider)));
             services.AddScoped<ILlmChatConversationUiGateway>(provider => provider.GetRequiredService<ObservedConversationGateway>());
@@ -245,6 +276,8 @@ public sealed class AgentsHomePageTests
         {
             services.AddSingleton<ILlmChatUiAuthorizationFacade>(new AllowSimpleChatsAuthorization());
             services.AddSimpleChatsComponents();
+            services.AddSingleton<ILlmChatDefinitionEditorAccess>(new LlmChats.LlmChatDefinitionUiTests.StubDefinitionEditorAccess(new LlmChats.LlmChatConversationWorkspaceTests.StubAuthorization()));
+            services.AddSingleton<ILlmChatConversationEditorAccess>(new LlmChats.LlmChatConversationWorkspaceTests.StubConversationEditorAccess());
         });
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/agents?tab=simple-chats&simpleChatView=definitions");

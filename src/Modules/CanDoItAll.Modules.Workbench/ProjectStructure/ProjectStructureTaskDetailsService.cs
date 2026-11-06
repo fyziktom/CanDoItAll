@@ -22,7 +22,9 @@ public sealed class ProjectStructureTaskDetailsService(
         UpdateWithPricingAsync(
             Guid projectId,
             ProjectStructureTaskDetailsUpdateRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            Guid? expectedTaskOccurrence = null)
     {
         Validate(projectId, request);
         var expected = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission);
@@ -77,9 +79,9 @@ public sealed class ProjectStructureTaskDetailsService(
                     return ganttMutationService.ApplyTaskDetailsAsync(
                         projectId,
                         mutationRequest,
-                        token);
+                        token, authorizeCommit, expectedTaskOccurrence);
                 },
-                cancellationToken);
+                cancellationToken, authorizeCommit);
             return new ProjectStructureTaskDetailsUpdateResult(
                 result.PersistenceResult,
                 result.Pricing);

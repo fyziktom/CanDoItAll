@@ -110,9 +110,9 @@ public sealed class TestLabPageUrlTests : BunitContext {
         public Task<IReadOnlyList<TestLabProjectOption>> ProjectsAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TestLabProjectOption>>([]);
         public Task<IReadOnlyList<TestLabPartyOption>> PartiesAsync(Guid projectId, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TestLabPartyOption>>([]);
         public Task<TestLabPartyOption?> PartyAsync(Guid partyId, CancellationToken cancellationToken) => Task.FromResult<TestLabPartyOption?>(null);
-        public Task<IReadOnlyList<TestPlanSummary>> ListAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<TestPlanSummary>>(stored.Values.Select(plan => new TestPlanSummary(plan.Id!.Value, plan.ProjectId, plan.Title,
-                plan.Phase, plan.Cases.Count, plan.Evidence.Count, null, DateTimeOffset.UtcNow)).ToArray());
+        public Task<TestLabPlanPage> ListAsync(int offset, CancellationToken cancellationToken) =>
+            Task.FromResult(new TestLabPlanPage(stored.Values.Select(plan => new TestPlanSummary(plan.Id!.Value, plan.ProjectId, plan.Title,
+                plan.Phase, plan.Cases.Count, plan.Evidence.Count, null, DateTimeOffset.UtcNow)).ToArray(), false));
         public Task<TestPlanEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) =>
             Task.FromResult(stored.TryGetValue(id, out var plan) ? TestLabSubmission.Clone(plan) : null);
         public Task<TestLabWriteResult> SaveAsync(TestPlanEditorModel submission) {

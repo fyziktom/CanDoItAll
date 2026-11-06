@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using CanDoItAll.AgentFramework.SharedProviders.UI;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -6,21 +7,135 @@ public sealed class SharedProviderRecovery {
     private readonly object gate = new();
     private readonly Dictionary<Guid, SharedProviderTargetAttempt> targets = [];
     private readonly Dictionary<Guid, SharedProviderChangeDelivery> deliveries = [];
+    private readonly Dictionary<Guid, SharedProviderImportDraft> targetDrafts = [];
+    private readonly Queue<SharedProviderTargetAttempt> reviewedTargets = [];
     private SharedProviderSourceMutationAttempt? source;
-    private bool sourceRetryAllowed;
+    private ProviderRecoveryAddress? address;
+    private SharedProviderSourceDraft? retainedSourceDraft;
+    private SharedProviderCatalogSelection? retainedSourceCatalog;
+    private readonly Queue<SharedProviderSourceMutationAttempt> reviewedSources = [];
+    private const int MaximumReviewedSources = 32;
+
+    public IReadOnlyList<SharedProviderTargetAttempt> ReviewedTargets {
+        get {
+            lock (gate) {
+                return reviewedTargets.ToArray();
+            }
+        }
+    }
+
+    public SharedProviderImportDraft? TargetDraft(Guid? providerId) {
+        lock (gate) {
+            return providerId is { } id ? targetDrafts.GetValueOrDefault(id) : null;
+        }
+    }
+
+    public void RetainTargetDraft(SharedProviderTargetAttempt attempt, SharedProviderImportDraft? draft) {
+        lock (gate) {
+            if (IsCurrent(attempt) && draft is not null && draft.Baseline.ProviderId == attempt.ProviderId) {
+                targetDrafts[attempt.ProviderId] = draft;
+            }
+        }
+    }
+
+    public bool AcknowledgeTargetCurrent(SharedProviderTargetAttempt attempt) {
+        lock (gate) {
+            if (!IsCurrent(attempt) || deliveries.ContainsKey(attempt.AttemptId)) {
+                return false;
+            }
+            if (reviewedTargets.Count == MaximumReviewedSources) {
+                reviewedTargets.Dequeue();
+            }
+            reviewedTargets.Enqueue(attempt);
+            targets.Remove(attempt.ProviderId);
+            targetDrafts.Remove(attempt.ProviderId);
+            return true;
+        }
+    }
+
+    public SharedProviderSourceDraft? SourceDraft {
+        get {
+            lock (gate) {
+                return retainedSourceDraft;
+            }
+        }
+    }
+
+    public IReadOnlyList<SharedProviderSourceMutationAttempt> ReviewedSources {
+        get {
+            lock (gate) {
+                return reviewedSources.ToArray();
+            }
+        }
+    }
+
+    public SharedProviderCatalogSelection? SourceCatalog {
+        get {
+            lock (gate) {
+                return retainedSourceCatalog;
+            }
+        }
+    }
+
+    public void RetainSourceCatalog(SharedProviderSourceMutationAttempt attempt, SharedProviderCatalogSelection catalog) {
+        lock (gate) {
+            if (source?.AttemptId == attempt.AttemptId && attempt.Kind == SharedProviderSourceMutationKind.Synchronize &&
+                catalog.Origin.SourceId == attempt.SourceId) {
+                retainedSourceCatalog = catalog;
+            }
+        }
+    }
+
+    public void Bind(ProviderRecoveryAddress opening) {
+        lock (gate) {
+            if (address is not null && address != opening) {
+                if (source is not null || targets.Count > 0 || deliveries.Count > 0) {
+                    throw new UnauthorizedAccessException("Pending shared-provider attempts belong to another original dataset or actor.");
+                }
+                retainedSourceDraft = null;
+                retainedSourceCatalog = null;
+                reviewedSources.Clear();
+                reviewedTargets.Clear();
+                targetDrafts.Clear();
+            }
+            address = opening;
+        }
+    }
+
+    public void RetainSourceDraft(SharedProviderSourceMutationAttempt attempt, SharedProviderSourceDraft draft) {
+        lock (gate) {
+            if (source?.AttemptId == attempt.AttemptId && draft.SourceId == attempt.SourceId) {
+                retainedSourceDraft = draft;
+            }
+        }
+    }
+
+    public bool AcknowledgeSourceCurrent(SharedProviderSourceMutationAttempt attempt) => AcknowledgeSource(attempt,
+        attempt.Kind is SharedProviderSourceMutationKind.Create or SharedProviderSourceMutationKind.Update or SharedProviderSourceMutationKind.Synchronize);
+
+    public bool AcknowledgeSourceStatus(SharedProviderSourceMutationAttempt attempt) => AcknowledgeSource(attempt,
+        attempt.Kind is SharedProviderSourceMutationKind.Enablement or SharedProviderSourceMutationKind.Delete or SharedProviderSourceMutationKind.Test or SharedProviderSourceMutationKind.Synchronize);
+
+    private bool AcknowledgeSource(SharedProviderSourceMutationAttempt attempt, bool allowed) {
+        lock (gate) {
+            if (!allowed || source?.AttemptId != attempt.AttemptId || deliveries.ContainsKey(attempt.AttemptId)) {
+                return false;
+            }
+            if (reviewedSources.Count == MaximumReviewedSources) {
+                reviewedSources.Dequeue();
+            }
+            reviewedSources.Enqueue(attempt);
+            source = null;
+            retainedSourceDraft = null;
+            retainedSourceCatalog = null;
+            return true;
+        }
+    }
 
     public SharedProviderSourceMutationAttempt? Source {
         get {
             lock (gate) {
                 return source;
-            }
-        }
-    }
-
-    public bool SourceRetryAllowed {
-        get {
-            lock (gate) {
-                return sourceRetryAllowed;
             }
         }
     }
@@ -49,25 +164,22 @@ public sealed class SharedProviderRecovery {
 
     public bool CompleteTarget(SharedProviderTargetAttempt attempt) {
         lock (gate) {
-            return IsCurrent(attempt) && !deliveries.ContainsKey(attempt.AttemptId) && targets.Remove(attempt.ProviderId);
+            if (!IsCurrent(attempt) || deliveries.ContainsKey(attempt.AttemptId) || !targets.Remove(attempt.ProviderId)) {
+                return false;
+            }
+            targetDrafts.Remove(attempt.ProviderId);
+            return true;
         }
     }
 
     public void BeginSource(SharedProviderSourceMutationAttempt attempt) {
         lock (gate) {
-            if (source is not null && (!sourceRetryAllowed || source.AttemptId != attempt.AttemptId || deliveries.ContainsKey(attempt.AttemptId))) {
+            if (source is not null) {
                 throw new InvalidOperationException("Resolve the pending source attempt before another write.");
             }
+            retainedSourceDraft = null;
+            retainedSourceCatalog = null;
             source = attempt;
-            sourceRetryAllowed = false;
-        }
-    }
-
-    public void AllowSourceRetry(SharedProviderSourceMutationAttempt attempt) {
-        lock (gate) {
-            if (source?.AttemptId == attempt.AttemptId && !deliveries.ContainsKey(attempt.AttemptId)) {
-                sourceRetryAllowed = true;
-            }
         }
     }
 
@@ -77,7 +189,8 @@ public sealed class SharedProviderRecovery {
                 return false;
             }
             source = null;
-            sourceRetryAllowed = false;
+            retainedSourceDraft = null;
+            retainedSourceCatalog = null;
             return true;
         }
     }
@@ -86,9 +199,6 @@ public sealed class SharedProviderRecovery {
         lock (gate) {
             if (IsActive(attemptId) && change is { CommitState: SharedProviderCommitState.Committed }) {
                 deliveries.TryAdd(attemptId, new(attemptId, change));
-                if (source?.AttemptId == attemptId) {
-                    sourceRetryAllowed = false;
-                }
             }
         }
     }
@@ -102,14 +212,18 @@ public sealed class SharedProviderRecovery {
     public Task<SharedProviderDeliveryDisposition> DeliverTargetAsync(SharedProviderTargetAttempt attempt,
         Guid? providerId, Func<bool> ownerIsCurrent, Func<SharedProviderChangeDelivery, Task> callback) =>
         DeliverAsync(attempt.AttemptId, () => providerId == attempt.ProviderId && IsCurrent(attempt) && ownerIsCurrent(),
-            () => targets.Remove(attempt.ProviderId), callback);
+            () => {
+                targets.Remove(attempt.ProviderId);
+                targetDrafts.Remove(attempt.ProviderId);
+            }, callback);
 
     public Task<SharedProviderDeliveryDisposition> DeliverSourceAsync(SharedProviderSourceMutationAttempt attempt,
         Guid sourceId, Func<bool> ownerIsCurrent, Func<SharedProviderChangeDelivery, Task> callback) =>
         DeliverAsync(attempt.AttemptId, () => sourceId == attempt.SourceId && source?.AttemptId == attempt.AttemptId && ownerIsCurrent(),
             () => {
                 source = null;
-                sourceRetryAllowed = false;
+                retainedSourceDraft = null;
+                retainedSourceCatalog = null;
             }, callback);
 
     private async Task<SharedProviderDeliveryDisposition> DeliverAsync(Guid attemptId, Func<bool> isCurrent,

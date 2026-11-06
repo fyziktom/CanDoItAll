@@ -1,31 +1,38 @@
+using System.ComponentModel;
 using System.Globalization;
 using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Web.Api;
 
 namespace CanDoItAll.Web;
 
 internal static class ProjectStructureChangesApi {
     internal static void MapProjectStructureChanges(this RouteGroupBuilder group) {
         group.MapGet("/projects/{projectId:guid}/changes", PollAsync)
-            .WithSummary("Poll committed project structure changes.")
-            .WithDescription("Returns a bounded page of node and relationship changes in this server process and active database profile. Omit after to establish a current cursor without history. Resume with after={cursor.streamId:N}:{cursor.sequence}; take is 1–100 (default 100). requiresRefresh means replay was lost or the process restarted. This is a refresh notification feed, not a durable audit log. Uses the Project Structure API authorization policy; no write lease is needed.")
+            .DescribeApi("Poll committed project structure changes.",
+                "Returns a bounded page of node and relationship changes in this server process and active database profile. Omit after to establish a current cursor without history. Resume with after={cursor.streamId:N}:{cursor.sequence}; take is 1–100 (default 100). requiresRefresh means replay was lost or the process restarted. This is a refresh notification feed, not a durable audit log. Uses the Project Structure API authorization policy; no write lease is needed.",
+                "The next bounded committed-change page and resume cursor. An empty page is valid; RequiresRefresh requires an explicit canonical structure refresh.")
             .Produces<ProjectStructureChanges>()
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
         group.MapGet("/projects/{projectId:guid}/changes/stream", StreamAsync)
-            .WithSummary("Follow committed project structure changes with SSE.")
-            .WithDescription("Same scope and cursor as polling. Resume with after or Last-Event-ID (matching values if both supplied). Each SSE id is a 32-digit hexadecimal stream GUID, a colon, and the sequence. Events project.structure.ready, project.structure.changed, project.structure.gap and stream.heartbeat carry the polling response. A gap requires an explicit structure refresh. Heartbeats occur at least every 15 seconds while idle. A database-profile switch ends the stream with a gap; reconnect in the new profile. The request is cancelled on disconnect. Uses the Project Structure API authorization policy; no write lease is needed.")
+            .DescribeApi("Follow committed project structure changes with SSE.",
+                "Same scope and cursor as polling. Resume with after or Last-Event-ID (matching values if both supplied). Each SSE id is a 32-digit hexadecimal stream GUID, a colon, and the sequence. Events project.structure.ready, project.structure.changed, project.structure.gap and stream.heartbeat carry the polling response. A gap requires an explicit structure refresh. Heartbeats occur at least every 15 seconds while idle. A database-profile switch ends the stream with a gap; reconnect in the new profile. The request is cancelled on disconnect. Uses the Project Structure API authorization policy; no write lease is needed.",
+                "An event-stream of ready, changed, gap and heartbeat events. Read each event ID as the next cursor; a gap requires explicit canonical structure refresh.")
             .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
     }
 
-    private static async Task<IResult> PollAsync(Guid projectId, HttpContext http,
+    private static async Task<IResult> PollAsync(
+        [Description("GUID of the existing project in the active database profile whose committed structure changes are observed.")] Guid projectId,
+        HttpContext http,
         ProjectStructureChangeFeed feed, ProjectWriteAdmissionService admissions, ProjectRecordQueryService projects,
-        int? take, CancellationToken cancellationToken) {
+        [Description("Maximum change records to return, from 1 to 100; omitted means 100. Continue with the returned cursor.")] int? take,
+        CancellationToken cancellationToken) {
         if (!TryCursor(http.Request, out var cursor) || take is < 1 or > 100) {
             return Error(StatusCodes.Status400BadRequest, "ProjectStructureChangeCursorInvalid",
                 "Use one matching non-negative streamId:sequence cursor and a take value from 1 to 100.");
@@ -37,7 +44,9 @@ internal static class ProjectStructureChangesApi {
             ProjectStructureHttpJsonContract.SerializerOptions);
     }
 
-    private static async Task<IResult> StreamAsync(Guid projectId, HttpContext http,
+    private static async Task<IResult> StreamAsync(
+        [Description("GUID of the existing project in the active database profile whose committed structure changes are observed.")] Guid projectId,
+        HttpContext http,
         ProjectStructureChangeFeed feed, ProjectWriteAdmissionService admissions, ProjectRecordQueryService projects,
         IDatabaseRuntimeState runtime, CancellationToken cancellationToken) {
         if (!TryCursor(http.Request, out var cursor)) {

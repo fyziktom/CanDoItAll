@@ -4,6 +4,13 @@ using CanDoItAll.SharedKernel;
 namespace CanDoItAll.Tests.Components;
 
 internal class ProjectWorkAssignmentTestCommands(IProjectWorkAssignmentCommands inner) : IProjectWorkAssignmentCommands {
+    public Task<IReadOnlyList<ProjectWorkAssignmentNodeChange>> ReadExistingNodeChangesForMutationAsync(
+        IReadOnlyCollection<(Guid ProjectId, string NodeKey)> nodes, CancellationToken cancellationToken = default) =>
+        inner.ReadExistingNodeChangesForMutationAsync(nodes, cancellationToken);
+
+    public void PublishCommittedNodeChanges(IReadOnlyList<ProjectWorkAssignmentNodeChange> nodes) =>
+        inner.PublishCommittedNodeChanges(nodes);
+
     public Task<Result> ReplaceAsync(Guid projectId, ProjectNodeReference node,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null,
@@ -17,9 +24,10 @@ internal class ProjectWorkAssignmentTestCommands(IProjectWorkAssignmentCommands 
     public Task<IReadOnlyList<ProjectWorkAssignmentFact>> ListForProjectsForMutationAsync(IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken = default) => throw Unused();
     public Task<ProjectWorkAssignmentFact?> GetAsync(Guid assignmentId, CancellationToken cancellationToken = default) => throw Unused();
     public Task<ProjectWorkAssignmentFact?> GetForMutationAsync(Guid assignmentId, CancellationToken cancellationToken = default) => throw Unused();
-    public Task<IReadOnlyList<Guid>> ListPartyMergeProjectsAsync(Guid retainedPartyId, Guid mergedPartyId,
-        IReadOnlyCollection<Guid> affiliationIds, CancellationToken cancellationToken = default) => throw Unused();
-    public Task<Result<Guid>> SaveAsync(ProjectPartyAssignmentUpsertRequest request, CancellationToken cancellationToken = default) => throw Unused();
+    public Task<ProjectWorkPartyMergeObservation> ReadPartyMergeForMutationAsync(Guid retainedPartyId, Guid mergedPartyId,
+        IReadOnlyCollection<Guid> affiliationIds, int maximumRows, CancellationToken cancellationToken = default) => throw Unused();
+    public Task<Result<Guid>> SaveAsync(ProjectPartyAssignmentUpsertRequest request, CancellationToken cancellationToken = default,
+        Action<ProjectAssignmentSaveReceipt>? onCommitted = null) => throw Unused();
     public Task<Result<Guid>> StageSaveAsync(ProjectPartyAssignmentUpsertRequest request, Guid newAssignmentId,
         ProjectWorkAssignmentCarryOver? carryOver = null, CancellationToken cancellationToken = default) => throw Unused();
     public virtual Task<Result> StageReplaceAsync(Guid projectId, ProjectNodeReference node,
@@ -30,9 +38,10 @@ internal class ProjectWorkAssignmentTestCommands(IProjectWorkAssignmentCommands 
         inner.StageReplaceAsync(projectId, node, desiredAssignments, newAssignmentIds, expectedAssignments,
             expectedRevision, cancellationToken, expectedProjectAdmission);
     public Task DeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null) => throw Unused();
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+        Action<ProjectAssignmentDeleteReceipt>? onCommitted = null) => throw Unused();
     public Task StageDeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null) => throw Unused();
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null) => throw Unused();
     public Task StageDeleteForNodesAsync(Guid projectId, IReadOnlyCollection<ProjectNodeReference> nodes, CancellationToken cancellationToken = default,
         ProjectAssignmentReference? expectedReference = null) => throw Unused();
     public Task StageDeleteForProjectAsync(Guid projectId, CancellationToken cancellationToken = default,
@@ -40,7 +49,10 @@ internal class ProjectWorkAssignmentTestCommands(IProjectWorkAssignmentCommands 
     public Task StageMoveAsync(Guid sourceProjectId, Guid targetProjectId, IReadOnlyCollection<ProjectNodeReference> nodes, CancellationToken cancellationToken = default,
         ProjectAssignmentReference? sourceReference = null,
         ProjectWriteAdmission? expectedTargetAdmission = null) => throw Unused();
-    public Task StagePartyMergeAsync(ProjectWorkAssignmentPartyMerge merge, CancellationToken cancellationToken = default) => throw Unused();
+    public Task<IReadOnlyList<ProjectWorkAssignmentPartyMergeChange>> StagePartyMergeAsync(ProjectWorkAssignmentPartyMerge merge, CancellationToken cancellationToken = default) => throw Unused();
+
+    public Task<ProjectAssignmentPrimaryObservation> ReadPrimaryObservationAsync(ProjectWriteAdmission project, string nodeKey,
+        CancellationToken cancellationToken = default) => inner.ReadPrimaryObservationAsync(project, nodeKey, cancellationToken);
 
     private static NotSupportedException Unused() => new("This component fixture only substitutes assignment replacement.");
 }

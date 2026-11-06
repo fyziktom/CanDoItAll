@@ -12,6 +12,65 @@ namespace CanDoItAll.Tests.WorkbenchPlanning;
 public sealed class TaskEditorDraftTests {
     private static readonly DateTimeOffset Start = new DateTimeOffset(2026, 10, 5, 8, 0, 0, TimeSpan.Zero).AddTicks(1234567);
 
+    [Theory]
+    [InlineData("start", "2026-11-")]
+    [InlineData("duration", "2e")]
+    [InlineData("estimate-cost", "2e")]
+    [InlineData("execution-started", "2026-11-")]
+    public async Task Unblurred_Gantt_input_is_captured_and_an_old_discard_cannot_remove_newer_input(string field, string raw) {
+        await using var context = CreateContext();
+        var execution = field == "execution-started"
+            ? new ProjectTaskExecutionSnapshot(ProjectTaskExecutionState.Started, Start, null)
+            : ProjectTaskExecutionSnapshot.NotStarted;
+        var model = new PlanningGanttTaskEditModel(new("retained-task"), "Original", Start, Start.AddHours(8),
+            0, new(8, ProjectWorkItemEffortUnit.Hours, null, "USD"), null, false, true, execution);
+        var cut = context.Render<PlanningGanttTaskEditor>(parameters => parameters
+            .Add(component => component.ProjectId, Guid.NewGuid()).Add(component => component.EditModel, model));
+        Assert.False(cut.Instance.ReadCloseRequest().IsDirty);
+
+        await cut.InvokeAsync(() => cut.Find($"[data-testid='project-structure-gantt-task-{field}']").InputAsync(new() { Value = raw }));
+
+        var capture = cut.Instance.ReadCloseRequest();
+        var input = Assert.IsType<PlanningTaskEditorInput.Gantt>(capture.Input);
+        Assert.True(capture.IsDirty);
+        Assert.Equal(raw, field switch {
+            "start" => input.Start,
+            "duration" => input.Duration,
+            "estimate-cost" => input.Estimate!.Cost,
+            "execution-started" => input.Execution!.Started,
+            _ => throw new InvalidOperationException("Unknown test field.")
+        });
+        var leaving = cut.InvokeAsync(cut.Instance.ConfirmLeaveAsync);
+        cut.WaitForElement("[data-testid='planning-task-dirty-close']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-gantt-task-title']").InputAsync(new() { Value = "Newer input" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='planning-task-dirty-discard']").ClickAsync(new()));
+        Assert.False(await leaving);
+        Assert.Equal("Newer input", cut.Find("[data-testid='project-structure-gantt-task-title']").GetAttribute("value"));
+        Assert.Equal(raw, cut.Find($"[data-testid='project-structure-gantt-task-{field}']").GetAttribute("value"));
+    }
+
+    [Theory]
+    [InlineData("due", "2026-11-")]
+    [InlineData("estimate-cost", "2e")]
+    public async Task Unblurred_canvas_Task_input_survives_Continue(string field, string raw) {
+        await using var context = CreateContext();
+        var cut = context.Render<PlanningStructureTaskEditor>(parameters => parameters
+            .Add(component => component.ProjectId, Guid.NewGuid()).Add(component => component.CreateRequest, Request([])));
+        Assert.False(cut.Instance.ReadCloseRequest().IsDirty);
+
+        await cut.InvokeAsync(() => cut.Find($"[data-testid='project-structure-task-create-{field}']").InputAsync(new() { Value = raw }));
+
+        var capture = cut.Instance.ReadCloseRequest();
+        var input = Assert.IsType<PlanningTaskEditorInput.Structure>(capture.Input);
+        Assert.True(capture.IsDirty);
+        Assert.Equal(raw, field == "due" ? input.Due : input.Estimate!.Cost);
+        var leaving = cut.InvokeAsync(cut.Instance.ConfirmLeaveAsync);
+        cut.WaitForElement("[data-testid='planning-task-dirty-close']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='planning-task-dirty-continue']").ClickAsync(new()));
+        Assert.False(await leaving);
+        Assert.Equal(raw, cut.Find($"[data-testid='project-structure-task-create-{field}']").GetAttribute("value"));
+    }
+
     [Fact]
     public async Task Correcting_an_invalid_cost_preserves_man_day_effort() {
         using var context = CreateContext();

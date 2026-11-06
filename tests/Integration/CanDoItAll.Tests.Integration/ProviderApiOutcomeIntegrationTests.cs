@@ -59,14 +59,14 @@ public sealed class ProviderApiOutcomeIntegrationTests(ProviderApiOutcomeFixture
         var application = ActivatorUtilities.CreateInstance<SharedProviderPublicationApplicationService>(scope.ServiceProvider,
             (IEnumerable<ISharedProviderPublicationCommitObserver>)[observer]);
         var management = ActivatorUtilities.CreateInstance<SharedProviderManagementService>(scope.ServiceProvider, application);
-        if (cancelOwner) {
-            var committed = await Assert.ThrowsAsync<SharedProviderCommittedException>(() =>
-                management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null, owner.Token));
-            Assert.Equal([id], committed.Change.AffectedProviderProfileIds);
-            Assert.Equal(SharedProviderCommitState.Committed, committed.Change.CommitState);
-        } else {
-            var result = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null, owner.Token);
-            Assert.True(result.Publication!.IsPublished);
+        var original = await management.GetProfileSharingAsync(id);
+        var result = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null,
+            original.ProviderConcurrencyToken!.Value, owner.Token);
+        Assert.True(result.Publication!.IsPublished);
+        Assert.Equal(original.ProviderConcurrencyToken, result.ProviderConcurrencyToken);
+        Assert.Equal([id], result.Change!.AffectedProviderProfileIds);
+        Assert.Equal(SharedProviderCommitState.Committed, result.Change.CommitState);
+        if (!cancelOwner) {
             Assert.NotNull(result.Change!.Warning);
         }
         await using var db = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();

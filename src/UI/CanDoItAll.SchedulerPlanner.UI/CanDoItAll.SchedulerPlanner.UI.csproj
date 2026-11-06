@@ -5,5 +5,6 @@
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="../../Modules/CanDoItAll.Modules.SchedulerPlanner.Contracts/CanDoItAll.Modules.SchedulerPlanner.Contracts.csproj" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
   </ItemGroup>
 </Project>

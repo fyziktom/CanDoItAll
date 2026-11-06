@@ -338,6 +338,7 @@ public sealed class CrmHrCrmWorkspaceJourneyTests
             var profile = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
             {
                 AccountPartyId = id,
+                Original = (await crmService.GetAccountProfileAsync(id))!.Original,
                 RelationshipStage = CrmAccountRelationshipStage.Prospect,
                 CommercialNotes = notes,
                 LastChangedBy = "playwright-tests"

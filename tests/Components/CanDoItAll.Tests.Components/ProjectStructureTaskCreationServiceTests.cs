@@ -918,9 +918,9 @@ public sealed class ProjectStructureTaskCreationServiceTests
 
         public Task<Result<Guid>> SaveAssignmentAsync(
             ProjectPartyAssignmentUpsertRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, Action<ProjectAssignmentSaveReceipt>? onCommitted = null)
         {
-            return inner.SaveAssignmentAsync(request, cancellationToken);
+            return inner.SaveAssignmentAsync(request, cancellationToken, onCommitted);
         }
 
         public Task<Result> ReplaceNodeAssignmentsAsync(
@@ -929,16 +929,18 @@ public sealed class ProjectStructureTaskCreationServiceTests
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
             CancellationToken cancellationToken = default,
-            ProjectWriteAdmission? expectedProjectAdmission = null)
+            ProjectWriteAdmission? expectedProjectAdmission = null,
+            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
             => inner.ReplaceNodeAssignmentsAsync(projectId, nodeReference, desiredAssignments, targetRoles,
-                cancellationToken, expectedProjectAdmission);
+                cancellationToken, expectedProjectAdmission, expectedAssignments);
 
         public Task DeleteAssignmentAsync(
             Guid assignmentId,
             CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null)
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+            Action<ProjectAssignmentDeleteReceipt>? onCommitted = null)
         {
-            return inner.DeleteAssignmentAsync(assignmentId, cancellationToken, expectedReference);
+            return inner.DeleteAssignmentAsync(assignmentId, cancellationToken, expectedReference, original, onCommitted);
         }
 
         public Task DeleteAssignmentsForNodesAsync(
@@ -977,9 +979,11 @@ public sealed class ProjectStructureTaskCreationServiceTests
 
         public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
             ProjectPartyQuickCreateRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
-            return inner.CreatePartyAsync(request, cancellationToken);
+            return inner.CreatePartyAsync(request, cancellationToken, authorizeCommit, authorizeRead);
         }
     }
 }

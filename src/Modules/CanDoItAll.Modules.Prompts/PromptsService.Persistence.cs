@@ -1,6 +1,8 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
+using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Modules.Prompts;
 
@@ -14,7 +16,7 @@ internal static class PromptGalleryPersistence
             errors.Add(Error.Validation("Prompt ID cannot be empty.", "prompts.gallery.id-invalid"));
         }
 
-        if (draft.Id.HasValue && !draft.ExpectedUpdatedAtUtc.HasValue)
+        if (draft.Id.HasValue && (!draft.ExpectedUpdatedAtUtc.HasValue || draft.ExpectedUpdatedAtUtc.Value == default))
         {
             errors.Add(Error.Validation(
                 "ExpectedUpdatedAtUtc is required when updating a Prompt Gallery item.",
@@ -60,7 +62,7 @@ internal static class PromptGalleryPersistence
             errors.Add(Error.Validation("Prompt item kind is invalid.", "prompts.gallery.kind-invalid"));
         }
 
-        if (draft.Tags is { Count: > 50 } ||
+        if (draft.Tags?.Count > PromptGalleryLimits.MaximumTags ||
             draft.Tags?.Any(tag => string.IsNullOrWhiteSpace(tag) || tag.Trim().Length > 120) == true)
         {
             errors.Add(Error.Validation(
@@ -68,7 +70,7 @@ internal static class PromptGalleryPersistence
                 "prompts.gallery.tags-invalid"));
         }
 
-        if (draft.SupportedModels is { Count: > 100 } ||
+        if (draft.SupportedModels?.Count > PromptGalleryLimits.MaximumSupportedModels ||
             draft.SupportedModels?.Any(model =>
                 model is null ||
                 string.IsNullOrWhiteSpace(model.Provider) ||
@@ -107,7 +109,7 @@ internal static class PromptGalleryPersistence
                 "prompts.gallery.consumers-invalid"));
         }
 
-        if (draft.Recommendations?.Temperature is < 0 or > 2)
+        if (draft.Recommendations?.Temperature is { } temperature && (!double.IsFinite(temperature) || temperature is < 0 or > 2))
         {
             errors.Add(Error.Validation(
                 "Recommended temperature must be between 0 and 2.",
@@ -121,7 +123,7 @@ internal static class PromptGalleryPersistence
                 "prompts.gallery.max-output-tokens-invalid"));
         }
 
-        if (draft.Recommendations?.TopP is < 0 or > 1)
+        if (draft.Recommendations?.TopP is { } topP && (!double.IsFinite(topP) || topP is < 0 or > 1))
         {
             errors.Add(Error.Validation(
                 "Recommended top-p must be between 0 and 1.",
@@ -131,11 +133,22 @@ internal static class PromptGalleryPersistence
         return errors;
     }
 
+    internal static void DemandSnapshotIsolation(PromptsDbContext dbContext) {
+        if (dbContext.Database.CurrentTransaction is { } outer &&
+            outer.GetDbTransaction().IsolationLevel is not (IsolationLevel.RepeatableRead or IsolationLevel.Serializable)) {
+            throw new InvalidOperationException("An editable Prompt snapshot requires repeatable-read or serializable isolation.");
+        }
+    }
+
     internal static async Task<PromptGalleryItemDetails?> LoadItemDetailsAsync(
         PromptsDbContext dbContext,
         Guid promptArtifactId,
         CancellationToken cancellationToken)
     {
+        DemandSnapshotIsolation(dbContext);
+        await using var snapshot = dbContext.Database.IsRelational() && dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            : null;
         var artifact = await dbContext.Set<PromptArtifact>()
             .AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == promptArtifactId, cancellationToken);
@@ -190,7 +203,7 @@ internal static class PromptGalleryPersistence
                 item.CreatedAtUtc))
             .ToListAsync(cancellationToken);
 
-        return new PromptGalleryItemDetails(
+        var details = new PromptGalleryItemDetails(
             artifact.Id,
             artifact.ProjectId,
             artifact.CollectionId,
@@ -223,6 +236,10 @@ internal static class PromptGalleryPersistence
             artifact.CreatedAtUtc,
             artifact.UpdatedAtUtc,
             artifact.IsFavorite);
+        if (snapshot is not null) {
+            await snapshot.CommitAsync(cancellationToken);
+        }
+        return details;
     }
 
     internal static async Task SyncTagsAsync(
@@ -373,6 +390,20 @@ internal static class PromptGalleryPersistence
 
     internal static string NormalizeRequiredKey(string value)
         => value.Trim().ToUpperInvariant();
+
+    internal static bool MatchesEditableDraft(PromptGalleryItemDetails item, PromptGalleryDraft draft) {
+        return item.ProjectId == draft.ProjectId && item.CollectionId == draft.CollectionId &&
+            item.Title == draft.Title.Trim() && item.Summary == draft.Summary.Trim() && item.Kind == draft.Kind &&
+            item.Phase == draft.Phase.Trim() && item.DraftContent == draft.Content &&
+            item.Recommendations == (draft.Recommendations ?? new PromptModelRecommendations()) &&
+            item.Tags.Select(NormalizeRequiredKey).ToHashSet(StringComparer.Ordinal)
+                .SetEquals((draft.Tags ?? []).Select(NormalizeRequiredKey)) &&
+            item.SupportedModels.Select(ModelIdentity).ToHashSet().SetEquals((draft.SupportedModels ?? []).Select(ModelIdentity)) &&
+            item.SupportedConsumers.ToHashSet().SetEquals(draft.SupportedConsumers ?? []);
+    }
+
+    private static (string Provider, string Model, bool Preferred) ModelIdentity(PromptProviderModel model)
+        => (NormalizeRequiredKey(model.Provider), NormalizeRequiredKey(model.Model), model.IsPreferred);
 
     internal static string BuildSearchText(PromptArtifact artifact)
     {

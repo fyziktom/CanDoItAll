@@ -8,9 +8,19 @@ public partial class ProjectsPage {
     [Inject] private ProjectNativeDefinitionOperations NativeDefinitions { get; set; } = default!;
     [Inject] private IProjectPendingSubmissionStore PendingStore { get; set; } = default!;
     [Inject] private ProjectPendingStoreLimits PendingLimits { get; set; } = default!;
+
+    private async Task<ProjectPendingDispatchOutcome> DispatchDefinitionAsync(ProjectDefinitionSubmission submitted, CancellationToken cancellationToken) {
+        var current = catalog ?? throw new UnauthorizedAccessException("Open current Project access before dispatching a save.");
+        await current.AuthorizeWriteAsync(cancellationToken);
+        using var admission = ProjectChanges.EnterUiWrite(current.AuthorizeWriteAsync);
+        var owner = editorOperations.Values.Single(session => session.Operation == submitted.Operation);
+        using var identity = ProjectChanges.Enter(new(owner.Draft.Definition.OpeningId, submitted.Operation.Id));
+        return await NativeDefinitions.DispatchAsync(submitted, cancellationToken);
+    }
     private readonly Dictionary<ProjectEditorDraft, ProjectEditorOperationSession> editorOperations = [];
     private IReadOnlyList<ProjectPendingSubmissionMetadata> pendingSaves = [];
     private ProjectDefinitionWriteContext? pendingContext;
+    private long pendingOpenIntent;
     private bool pendingReady;
     private bool pendingLoading;
     private bool pendingActionBusy;
@@ -72,6 +82,7 @@ public partial class ProjectsPage {
         pendingLoading = true;
         pendingReady = false;
         try {
+            await catalog!.AuthorizeReadAsync(readLifetime.Token);
             var before = await NativeDefinitions.GetContextAsync(readLifetime.Token);
             await PendingStore.InitializeAsync(readLifetime.Token);
             var scope = ProjectNativeDefinitionOperations.Scope(before);
@@ -95,6 +106,7 @@ public partial class ProjectsPage {
             if (disposed) {
                 return;
             }
+            await catalog.AuthorizeReadAsync(readLifetime.Token);
             pendingContext = current;
             pendingSaves = rows;
             pendingError = null;
@@ -131,18 +143,20 @@ public partial class ProjectsPage {
         if (disposed || pendingLoading || pendingClears > 0) {
             return;
         }
-        var intent = ++editorIntent;
+        var intent = editorIntent;
+        var selection = ++pendingOpenIntent;
         var recoveryGeneration = pendingRecoveryGeneration;
         editorRead?.Cancel();
         try {
+            await catalog!.AuthorizeReadAsync(readLifetime.Token);
             var context = await NativeDefinitions.GetContextAsync(readLifetime.Token);
             if (!ProjectNativeDefinitionOperations.Scope(context).Contains(operation)) {
                 throw new InvalidOperationException("This retained save belongs to another dataset or caller.");
             }
-            var record = await PendingStore.ReadAsync(operation, readLifetime.Token)
+            var record = await catalog!.ReadAsync(async token => await PendingStore.ReadAsync(operation, token), readLifetime.Token)
                 ?? throw new InvalidOperationException("The retained save changed. Refresh the pending list.");
             var after = await NativeDefinitions.GetContextAsync(readLifetime.Token);
-            if (disposed || intent != editorIntent) {
+            if (disposed || intent != editorIntent || selection != pendingOpenIntent) {
                 return;
             }
             if (pendingClears > 0 || recoveryGeneration != pendingRecoveryGeneration) {
@@ -152,6 +166,12 @@ public partial class ProjectsPage {
                 throw new InvalidOperationException("The dataset or caller changed while the retained save was being read.");
             }
             var retained = editorOperations.Values.FirstOrDefault(item => item.Operation == operation);
+            if (showProjectModal && !await MayReplaceEditorAsync()) {
+                return;
+            }
+            if (disposed || intent != editorIntent || selection != pendingOpenIntent) {
+                return;
+            }
             RetireEditor();
             draft = retained?.Draft ?? ProjectEditorDraft.Restore(record.Frozen.Submission);
             draft.Mutation = ProjectEditorMutationState.PendingRecovery;
@@ -164,7 +184,7 @@ public partial class ProjectsPage {
                 : "Your retained live draft was reopened. Check the original save's accepted outcome before continuing.";
         } catch (OperationCanceledException) when (readLifetime.IsCancellationRequested) {
         } catch (Exception exception) {
-            if (disposed || intent != editorIntent) {
+            if (disposed || intent != editorIntent || selection != pendingOpenIntent) {
                 return;
             }
             Logger.LogError(exception, "Retained Project save {OperationId} could not be opened.", operation.Id);
@@ -188,8 +208,12 @@ public partial class ProjectsPage {
             var frozen = NativeDefinitions.Freeze(submitted, target.Scope ?? throw new InvalidOperationException("Reopen this draft to capture its dataset binding."), context);
             session = new(target, submitted, new(PendingStore, frozen, submitted.Seeds.Count > 0));
             editorOperations.Add(target, session);
+            if (submitted.Model.Id is null) {
+                recentProjectChanges.Clear();
+                recentProjectGap = false;
+            }
             await session.PrepareAsync(readLifetime.Token);
-            await session.Pending.DispatchAsync(context, DateTimeOffset.UtcNow, false, NativeDefinitions.DispatchAsync);
+            await session.Pending.DispatchAsync(context, DateTimeOffset.UtcNow, false, DispatchDefinitionAsync);
             RememberAcceptance(session);
             if (!IsActiveEditor(target, intent) || session.IsRetired) {
                 return null;
@@ -233,8 +257,12 @@ public partial class ProjectsPage {
             return null;
         }
         var accepted = full.Result.Acknowledgement;
+        await catalog!.AuthorizeReadAsync(readLifetime.Token);
         mutationTargets[accepted.Project.ProjectId] = target;
         session.Reconcile();
+        if (session.Submitted.Model.Id is null) {
+            target.Definition.Observe(new(recentProjectChanges.ToArray(), recentProjectGap));
+        }
         if (session.Submitted.Model.Id is null && IsActiveEditor(target, intent)) {
             PublishCreatedProject(accepted.Project.ProjectId);
         }
@@ -243,8 +271,9 @@ public partial class ProjectsPage {
         if (session.CanSeed && IsActiveEditor(target, intent)) {
             session.BeginSeedAttempt();
             try {
-                await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(accepted.Project, session.Submitted.Seeds.Select(seed => seed.Value).ToArray());
-            } catch (ProjectWriteAdmissionRejectedException exception) {
+                await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(accepted.Project, session.Submitted.Seeds.Select(seed => seed.Value).ToArray(),
+                    requireCurrentWrite: catalog!.AuthorizeWriteAsync);
+            } catch (Exception exception) when (exception is ProjectWriteAdmissionRejectedException or UnauthorizedAccessException) {
                 if (session.IsEvidenceDiscarded) {
                     return null;
                 }
@@ -253,7 +282,9 @@ public partial class ProjectsPage {
                     return null;
                 }
                 target.Mutation = ProjectEditorMutationState.AdmissionRefused;
-                target.Message = "Project saved. Starter objects were refused before writes because their original project admission is no longer current. Inspect the current project explicitly.";
+                target.Message = exception is UnauthorizedAccessException
+                    ? "Project saved. Starter objects were not committed because current write access changed. Reopen with current access before planning new objects."
+                    : "Project saved. Starter objects were refused before writes because their original project admission is no longer current. Inspect the current project explicitly.";
                 target.IsError = true;
                 Logger.LogWarning(exception, "Starter-object admission refused after accepted Project operation {OperationId}.", session.Operation.Id);
                 return null;
@@ -289,12 +320,12 @@ public partial class ProjectsPage {
         try {
             switch (action.Action) {
                 case ProjectPendingEditorAction.Check:
-                    await session.Pending.ObserveLookupAsync(await NativeDefinitions.LookupAsync(session.Operation, readLifetime.Token), readLifetime.Token);
+                    await session.Pending.ObserveLookupAsync(await catalog!.ReadAsync(token => NativeDefinitions.LookupAsync(session.Operation, token), readLifetime.Token), readLifetime.Token);
                     RememberAcceptance(session);
                     break;
                 case ProjectPendingEditorAction.Retry:
                     var context = await NativeDefinitions.GetContextAsync(readLifetime.Token);
-                    var lookup = await NativeDefinitions.LookupAsync(session.Operation, readLifetime.Token);
+                    var lookup = await catalog!.ReadAsync(token => NativeDefinitions.LookupAsync(session.Operation, token), readLifetime.Token);
                     await session.Pending.ObserveLookupAsync(lookup, readLifetime.Token);
                     if (lookup is not ProjectDefinitionLookup.NotObserved { State: ProjectOperationObservationState.Open } || !IsActiveEditor(target, intent)) {
                         break;
@@ -303,7 +334,7 @@ public partial class ProjectsPage {
                         await session.PrepareAsync(readLifetime.Token);
                     }
                     await session.Pending.DispatchAsync(context, DateTimeOffset.UtcNow,
-                        session.Pending.Record?.Stage != ProjectPendingStage.Prepared, NativeDefinitions.DispatchAsync);
+                        session.Pending.Record?.Stage != ProjectPendingStage.Prepared, DispatchDefinitionAsync);
                     RememberAcceptance(session);
                     break;
                 case ProjectPendingEditorAction.ApplyAccepted:
@@ -342,7 +373,7 @@ public partial class ProjectsPage {
                 case ProjectPendingEditorAction.ReadCurrent:
                     var id = target.Model.Id ?? target.AcceptedOutcome?.Accepted.Project.ProjectId;
                     if (id is { } projectId) {
-                        var current = await NativeDefinitions.ReadCurrentAsync(projectId, target.Scope!, readLifetime.Token);
+                        var current = await catalog!.ReadAsync(token => NativeDefinitions.ReadCurrentAsync(projectId, target.Scope!, token), readLifetime.Token);
                         if (IsActiveEditor(target, intent) && current.IsSuccess) {
                             target.InspectCurrent(current.Value!);
                         } else if (current.IsFailure) {

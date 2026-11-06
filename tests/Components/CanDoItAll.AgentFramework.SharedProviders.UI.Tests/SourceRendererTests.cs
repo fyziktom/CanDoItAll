@@ -57,7 +57,6 @@ public sealed class SourceRendererTests {
     }
 
     [Theory]
-    [InlineData(SharingScenario.Unknown)]
     [InlineData(SharingScenario.CommittedReadFailure)]
     [InlineData(SharingScenario.DeliveryFailure)]
     public async Task Original_receipt_reconciles_once_without_replaying_source_or_erasing_later_text(SharingScenario scenario) {
@@ -83,7 +82,7 @@ public sealed class SourceRendererTests {
     }
 
     [Fact]
-    public async Task Unknown_before_commit_requires_read_only_verification_then_explicit_retry_of_original_candidate() {
+    public async Task Unknown_absent_create_stays_blocked_after_read_only_verification_without_replay() {
         using var context = Context();
         var session = new SharedProviderScenarioSession(SharingScenario.UnknownBeforeCommit);
         var cut = Sources(context, session);
@@ -93,17 +92,18 @@ public sealed class SourceRendererTests {
         cut.Find("[data-testid='shared-provider-source-uri']").Input("https://candidate.example.test/");
         await cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
         var recovery = session.Sources.Recovery!;
-        await session.RetryVerifiedAsync(recovery.AttemptId);
+        await session.AcknowledgeCurrentAsync(recovery.AttemptId);
         Assert.Equal(0, session.Store.Writes);
         cut.Find("[data-testid='shared-provider-source-name']").Input("Later draft");
         await cut.Find("[data-testid='shared-provider-source-verify']").ClickAsync();
-        Assert.True(session.Sources.Recovery!.RetryAllowed);
+        Assert.False(session.Sources.Recovery!.CanAcknowledge);
         Assert.Equal(recovery.AttemptId, session.Sources.Recovery.AttemptId);
         Assert.Equal(0, session.Store.Writes);
-        await cut.Find("[data-testid='shared-provider-source-retry-verified']").ClickAsync();
-        Assert.Equal("Original candidate", session.Store.Sources[draft.SourceId].Values.Name);
+        await session.AcknowledgeCurrentAsync(recovery.AttemptId);
+        Assert.False(session.Store.Sources.ContainsKey(draft.SourceId));
         Assert.Equal("Later draft", draft.Name);
-        Assert.Equal(1, session.Store.Writes);
+        Assert.Equal(0, session.Store.Writes);
+        Assert.Empty(cut.FindAll("[data-testid='shared-provider-source-retry-verified']"));
         await context.DisposeRenderedComponentsAsync();
     }
 

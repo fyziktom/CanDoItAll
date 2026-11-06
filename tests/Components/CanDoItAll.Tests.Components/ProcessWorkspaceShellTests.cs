@@ -10,6 +10,9 @@ using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.Charts;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
@@ -29,6 +32,193 @@ namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed partial class ProcessWorkspaceShellTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Same_field_comparison_requires_a_choice_and_never_saves_the_chosen_draft(bool useCurrent) {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        var editor = session.DefinitionCatalog.SelectedEditor!;
+        session.DefinitionDraft.Name = "My conflicting name";
+        client.ShellResultTransform = (_, projection) => projection with { DefinitionCatalog = projection.DefinitionCatalog with {
+            SelectedEditor = editor with { VersionToken = new("conflicting-peer-version"), Identity = editor.Identity with { Name = "Peer conflicting name" } }
+        } };
+        await cut.InvokeAsync(session.CompareDefinitionAsync);
+        var comparison = Assert.IsType<CanDoItAll.Processes.UI.ProcessDefinitionComparison>(session.DefinitionComparison);
+        Assert.False(comparison.IsResolved);
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        Assert.Equal("My conflicting name", session.DefinitionDraft.Name);
+        Assert.NotNull(session.DefinitionComparisonError);
+        var name = Assert.Single(comparison.Text, item => item.Label == "Name");
+        if (useCurrent) {
+            name.Value.UseCurrent();
+        } else {
+            name.Value.UseLocal();
+        }
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        Assert.Equal(useCurrent ? "Peer conflicting name" : "My conflicting name", session.DefinitionDraft.Name);
+        Assert.Equal("conflicting-peer-version", session.DefinitionDraft.VersionToken!.Value.Value);
+        Assert.Null(session.DefinitionComparison);
+        Assert.Equal(0, client.AuthoringCommandCount);
+    }
+
+    [Fact]
+    public async Task Revoked_access_during_comparison_hides_the_editor_and_releases_observations_without_writing() {
+        var access = new EditingUiTestAccess();
+        using var context = CreateContext(out var client, services: services => services.AddSingleton<IEditingUiAccess>(access));
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        session.DefinitionDraft.Name = "Retained private draft";
+        await cut.InvokeAsync(session.CompareDefinitionAsync);
+        Assert.NotNull(session.DefinitionComparison);
+        access.Allowed = false;
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        cut.WaitForAssertion(() => {
+            Assert.Null(session.Shell);
+            Assert.Null(session.DefinitionComparison);
+            Assert.Equal(0, context.Services.GetRequiredService<EditingChangeFeed>().ActiveSubscriptions);
+        });
+        Assert.Equal(0, client.AuthoringCommandCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Late_authoring_projection_is_hidden_after_access_or_actor_changes(bool changeActor) {
+        var access = new EditingUiTestAccess();
+        using var context = CreateContext(out var client, services: services => services.AddSingleton<IEditingUiAccess>(access));
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        client.DeferShellRequests = true;
+        var read = cut.InvokeAsync(session.RefreshAsync);
+        cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
+        if (changeActor) {
+            access.Principal = "replacement-principal";
+        } else {
+            access.Allowed = false;
+        }
+        client.CompleteShellRequest(0);
+        await read;
+        cut.WaitForAssertion(() => {
+            Assert.Null(session.Shell);
+            Assert.Empty(cut.FindAll("[data-testid='processes-definition-editor-name']"));
+        });
+        Assert.Equal(0, client.AuthoringCommandCount);
+    }
+
+    [Fact]
+    public async Task Peer_hint_is_metadata_only_and_explicit_pull_retains_dirty_original_until_comparison_applies_without_writing() {
+        var scope = new EditingScope(EditingScopeKind.Dataset, Guid.NewGuid());
+        using var context = CreateContext(out var client, services: services => {
+            services.AddSingleton<Func<ProcessEditingSession>>(provider => () => new(provider.GetRequiredService<EditingChangeFeed>(),
+                provider.GetRequiredService<IEditingUiAccess>(), () => scope,
+                provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<EditingObservation>>()));
+        });
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        var original = session.DefinitionDraft.Capture();
+        var originalToken = session.DefinitionDraft.VersionToken;
+        var originalEditor = session.DefinitionCatalog.SelectedEditor!;
+        session.DefinitionDraft.Name = "My local name";
+        var feed = context.Services.GetRequiredService<EditingChangeFeed>();
+        var currentRequests = client.Requests.Count;
+        feed.Publish(new(scope, EditingOwner.ProcessAuthoring, ProcessAuthoringChanges.GlobalResourceId), EditingChangeKind.EditableContentChanged);
+        cut.WaitForElement("[data-testid='processes-authoring-updates']");
+        Assert.Equal(currentRequests, client.Requests.Count);
+        Assert.Equal("My local name", session.DefinitionDraft.Name);
+        client.ShellResultTransform = (_, projection) => projection with { DefinitionCatalog = projection.DefinitionCatalog with {
+            SelectedEditor = originalEditor with { VersionToken = new("peer-version"), Identity = originalEditor.Identity with { OwnerName = "Peer owner" } }
+        } };
+        await cut.InvokeAsync(session.CompareDefinitionAsync);
+        Assert.Equal("My local name", session.DefinitionDraft.Name);
+        Assert.Equal(originalToken, session.DefinitionDraft.VersionToken);
+        Assert.True(session.DefinitionDraft.HasConflict);
+        Assert.NotNull(session.DefinitionComparison);
+        Assert.True(session.DefinitionComparison.IsResolved);
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        Assert.Equal("My local name", session.DefinitionDraft.Name);
+        Assert.Equal("Peer owner", session.DefinitionDraft.OwnerName);
+        Assert.Equal("peer-version", session.DefinitionDraft.VersionToken!.Value.Value);
+        Assert.Null(session.DefinitionComparison);
+        Assert.False(session.AuthoringUpdatesAvailable);
+        Assert.Equal(0, client.AuthoringCommandCount);
+        Assert.Equal(original.Identity.Summary, session.DefinitionDraft.Summary);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Process_observation_filters_project_and_own_origins_and_releases_every_subscription(bool projectScoped) {
+        var feed = new EditingChangeFeed();
+        var scope = new EditingScope(EditingScopeKind.Dataset, Guid.NewGuid());
+        Guid? project = projectScoped ? Guid.NewGuid() : null;
+        await using var editing = new ProcessEditingSession(feed, new EditingUiTestAccess(), () => scope,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<EditingObservation>.Instance);
+        var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await editing.EnsureAsync(project, () => { changed.TrySetResult(); return Task.CompletedTask; }, () => throw new InvalidOperationException("Unexpected retirement."));
+        Assert.Equal(projectScoped ? 2 : 1, feed.ActiveSubscriptions);
+        feed.Publish(new(scope, EditingOwner.ProcessAuthoring, Guid.NewGuid()), EditingChangeKind.EditableContentChanged);
+        Assert.Equal(0, feed.DeliveredHints);
+        feed.Publish(new(scope, EditingOwner.ProcessAuthoring, ProcessAuthoringChanges.GlobalResourceId), EditingChangeKind.EditableContentChanged, editing.EditorId);
+        Assert.False(editing.UpdatesAvailable);
+        feed.Publish(new(scope, EditingOwner.ProcessAuthoring, project ?? ProcessAuthoringChanges.GlobalResourceId), EditingChangeKind.EditableContentChanged);
+        await changed.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.True(editing.UpdatesAvailable);
+        editing.Acknowledge(editing.ChangeSequence - 1);
+        Assert.True(editing.UpdatesAvailable);
+        editing.Acknowledge(editing.ChangeSequence);
+        Assert.False(editing.UpdatesAvailable);
+        await editing.DisposeAsync();
+        Assert.Equal(0, feed.ActiveSubscriptions);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Definition_comparison_refuses_a_later_local_or_saved_change_without_rebasing(bool localChange) {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        session.DefinitionDraft.Name = "Local comparison";
+        await cut.InvokeAsync(session.CompareDefinitionAsync);
+        var originalToken = session.DefinitionDraft.VersionToken;
+        if (localChange) {
+            session.DefinitionDraft.Summary = "Later input";
+        } else {
+            client.ShellResultTransform = (_, projection) => projection with { DefinitionCatalog = projection.DefinitionCatalog with {
+                SelectedEditor = projection.DefinitionCatalog.SelectedEditor! with { VersionToken = new("newer-peer") }
+            } };
+            await cut.InvokeAsync(session.RefreshAsync);
+        }
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        Assert.NotNull(session.DefinitionComparison);
+        Assert.Contains("changed during comparison", session.DefinitionComparisonError, StringComparison.Ordinal);
+        Assert.Equal(originalToken, session.DefinitionDraft.VersionToken);
+        Assert.Equal("Local comparison", session.DefinitionDraft.Name);
+        Assert.Equal(0, client.AuthoringCommandCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Authoring_projection_is_not_read_during_prerender_or_without_current_editing_access(bool interactive) {
+        using var context = CreateContext(out var client, services: services => {
+            services.AddSingleton<IEditingUiAccess>(new EditingUiTestAccess { Allowed = false });
+        });
+        context.SetRendererInfo(new RendererInfo(interactive ? "Server" : "Static", interactive));
+
+        var cut = context.Render<ProcessWorkspaceShell>();
+
+        Assert.Empty(client.Requests);
+        Assert.DoesNotContain("data-testid=\"processes-definition-name\"", cut.Markup, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -60,15 +250,18 @@ public sealed partial class ProcessWorkspaceShellTests
             return result;
         };
         var cut = context.Render<T>(parameters => parameters.Add(projectParameter, projectId));
-        cut.WaitForAssertion(() => Assert.NotNull(held));
+        cut.WaitForAssertion(() => {
+            Assert.NotNull(held);
+            Assert.False(cut.Find($"[data-testid='{refreshTestId}']").HasAttribute("disabled"));
+        });
         if (typeof(T) == typeof(ProcessWorkspaceShell)) {
-            cut.Find("[data-testid='processes-detail-tab-runs']").Click();
+            await cut.InvokeAsync(() => cut.Find("[data-testid='processes-detail-tab-runs']").ClickAsync());
             cut.WaitForAssertion(() => Assert.NotEmpty(held!.Runtime.Events));
         }
         var oldRun = held!.Runtime.Runs.First();
         object oldDetail = secondDetail == "AgentDetailAgent" ? held.Runtime.ActiveAgents.First() : held.Runtime.Events.First();
         replace = true;
-        cut.Find($"[data-testid='{refreshTestId}']").Click();
+        await cut.InvokeAsync(() => cut.Find($"[data-testid='{refreshTestId}']").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(successor,
             ((ProcessWorkspaceShellProjection)typeof(T).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)!).ProjectBinding));
         var location = CurrentLocation(context);
@@ -2478,6 +2671,17 @@ public sealed partial class ProcessWorkspaceShellTests
         context.Services.AddSingleton<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(_ => new ProcessTestHostLifetime());
         context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         context.Services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
+        context.Services.AddSingleton<EditingChangeFeed>();
+        context.Services.AddSingleton<IEditingUiAccess, EditingUiTestAccess>();
+        var editingProfileId = Guid.NewGuid();
+        context.Services.AddSingleton<Func<ProcessEditingSession>>(provider => {
+            var changes = provider.GetRequiredService<EditingChangeFeed>();
+            var access = provider.GetRequiredService<IEditingUiAccess>();
+            var runtime = provider.GetRequiredService<IDatabaseRuntimeState>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<EditingObservation>>();
+            return () => new(changes, access,
+                () => new(EditingScopeKind.Dataset, editingProfileId, runtime.GetSnapshot().Generation), logger);
+        });
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
         context.Services.AddSingleton<IProcessCancellationClient, UnavailableCancellationClient>();
         var contextRegistry = new AgentChatContextRegistry(effectiveTimeProvider);
@@ -3491,6 +3695,8 @@ public sealed partial class ProcessWorkspaceShellTests
 
     private sealed class RecordingProcessWorkspaceProjectionClient : IProcessWorkspaceProjectionClient
     {
+        public IProcessWorkspaceProjectionClient WithUiAuthority(ProcessAuthoringUiAuthority authority) => this;
+
         private readonly List<TaskCompletionSource> shellRequestCompletions = [];
         private readonly List<TaskCompletionSource> editorCommandCompletions = [];
         private int completedShellRequestCount;

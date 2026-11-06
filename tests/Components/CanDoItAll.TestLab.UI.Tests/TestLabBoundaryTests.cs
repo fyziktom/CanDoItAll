@@ -68,5 +68,7 @@ public sealed class TestLabBoundaryTests {
     }
 
     private static bool Framework(string name) => name is "mscorlib" or "netstandard" or "Microsoft.AspNetCore" || name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal) || name == "Microsoft.JSInterop";
-    private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.TestLab.UI" or "CanDoItAll.TestLab.UiSandbox" or "CanDoItAll.Modules.TestLab.Contracts" or "CanDoItAll.Modules.Projects.Contracts" or "CanDoItAll.SharedKernel" or "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common";
+    private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.TestLab.UI" or "CanDoItAll.TestLab.UiSandbox" or
+        "CanDoItAll.Modules.TestLab.Contracts" or "CanDoItAll.Modules.Projects.Contracts" or "CanDoItAll.SharedKernel" or
+        "CanDoItAll.Editing" or "CanDoItAll.Editing.UI" or "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common";
 }

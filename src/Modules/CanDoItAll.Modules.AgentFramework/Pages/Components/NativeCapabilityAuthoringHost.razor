@@ -3,15 +3,23 @@
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Editing
 @using Microsoft.Extensions.Logging
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IAgentFrameworkWorkspaceService Workspace
 @inject IAgentCapabilitySetupFlowService Setup
 @inject IDatabaseSwitchNotificationService ProfileChanges
 @inject ILogger<NativeCapabilityAuthoringHost> Logger
+@inject AgentConfigurationChanges Changes
 
+@if (ready) {
 <CapabilityAuthoringForm @ref="form" Operations="operations!" Mode="Mode" CapabilityId="CapabilityId" InitialKind="InitialKind"
-                         TagSuggestions="TagSuggestions" OwnerCancellationToken="ownerToken" Completed="CompleteAsync" Cancelled="CancelAsync" />
+                         TagSuggestions="TagSuggestions" OwnerCancellationToken="ownerToken" ChangeSequence="changeSequence" Completed="CompleteAsync" Cancelled="CancelAsync" />
+} else {
+    <Alert AlertStyle="@(accessError is null ? AlertStyle.Info : AlertStyle.Warning)" data-testid="capability-access-unavailable">
+        @(accessError ?? "Initializing capability editor access.")
+    </Alert>
+}
 
 @code {
     [Parameter] public CapabilityAuthoringMode Mode { get; set; }
@@ -24,43 +32,134 @@
     private CapabilityAuthoringForm? form;
     private readonly CancellationTokenSource lifetime = new();
     private CancellationTokenSource? owner;
+    private CancellationTokenRegistration ownerRegistration;
     private CancellationToken ownerToken;
-    private CancellationToken previousOwner;
     private bool disposed;
+    private bool ready;
+    private string? accessError;
+    private Guid? boundId;
+    private long changeSequence;
+    private AgentConfigurationOpening? opening;
+    private (CapabilityAuthoringMode Mode, Guid? Id, CapabilityKind Kind, CancellationToken Token)? target;
 
     protected override void OnInitialized() {
         ProfileChanges.Changed += ProfileChanged;
         operations = new(
-            (id, token) => Workspace.GetCapabilityEditorAsync(id, token),
+            (id, token) => RequireOpening(token).ReadAsync(current => Workspace.GetCapabilityEditorAsync(id, current), token),
             SaveAsync,
-            (submission, input, token) => Setup.TestToolSetupAsync(new() { Capability = submission.ToEditorModel(), JsonInput = input }, token),
-            (submission, token) => Setup.TestMcpSetupAsync(new() { Capability = submission.ToEditorModel() }, token),
+            (submission, input, token) => RunSetupAsync(submission,
+                current => Setup.TestToolSetupAsync(new() { Capability = submission.ToEditorModel(), JsonInput = input }, current), token),
+            (submission, token) => RunSetupAsync(submission,
+                current => Setup.TestMcpSetupAsync(new() { Capability = submission.ToEditorModel() }, current), token),
             new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer);
     }
 
-    protected override void OnParametersSet() {
-        if (owner is not null && previousOwner == OwnerCancellationToken) {
+    protected override async Task OnParametersSetAsync() {
+        if (!RendererInfo.IsInteractive || disposed || lifetime.IsCancellationRequested) {
             return;
         }
+        var requested = (Mode, CapabilityId, InitialKind, OwnerCancellationToken);
+        if (target == requested) {
+            return;
+        }
+        ready = false;
+        ownerRegistration.Dispose();
         owner?.Cancel();
         owner?.Dispose();
-        previousOwner = OwnerCancellationToken;
-        owner = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, OwnerCancellationToken);
-        ownerToken = owner.Token;
+        if (opening is not null) {
+            await opening.DisposeAsync();
+        }
+        target = requested;
+        boundId = Mode == CapabilityAuthoringMode.Details ? CapabilityId : null;
+        changeSequence = 0;
+        AgentConfigurationOpening? next = null;
+        next = new(Changes, EditingOwner.AgentCapability, boundId, Guid.NewGuid(),
+            () => !disposed && !lifetime.IsCancellationRequested && !requested.OwnerCancellationToken.IsCancellationRequested && ReferenceEquals(opening, next));
+        opening = next;
+        ownerRegistration = OwnerCancellationToken.Register(next.Stop);
+        try {
+            await next.StartAsync(batch => InvokeAsync(() => {
+                if (disposed || !ReferenceEquals(opening, next) || boundId is not { } id) {
+                    return;
+                }
+                if (batch.RequiresResync || batch.Changes.Any(change => change.Resource.ResourceId == id &&
+                    change.OriginEditorId != next.EditorId && change.Kind != EditingChangeKind.MetadataChanged)) {
+                    changeSequence++;
+                    StateHasChanged();
+                }
+            }), () => InvokeAsync(() => {
+                if (disposed || !ReferenceEquals(opening, next)) {
+                    return;
+                }
+                ready = false;
+                owner?.Cancel();
+                accessError = "Capability editing access changed. Close and reopen with current access.";
+                StateHasChanged();
+            }), catalog: boundId is null);
+            owner = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, OwnerCancellationToken, next.Lifetime);
+            ownerToken = owner.Token;
+            accessError = null;
+            ready = true;
+        } catch (Exception error) {
+            await next.DisposeAsync();
+            accessError = "Capability editing access is unavailable. Close and reopen with current access.";
+            Logger.LogWarning("Capability editor admission failed for {CapabilityId}: {FailureType}", boundId, error.GetType().Name);
+        }
+    }
+
+    private AgentConfigurationOpening RequireOpening(CancellationToken token) {
+        token.ThrowIfCancellationRequested();
+        return !disposed && ready && opening is { IsReady: true } current ? current
+            : throw new UnauthorizedAccessException("The original capability editor is no longer current.");
     }
 
     private async Task<CapabilityAuthoringSaveOutcome> SaveAsync(CapabilityAuthoringSubmission submission, CancellationToken token) {
         if (disposed || ownerToken.IsCancellationRequested) {
             return new CapabilityAuthoringSaveOutcome.Rejected(false);
         }
+        var dispatchedOpening = opening;
         try {
-            var accepted = await Workspace.SaveCapabilityEditorAsync(submission.ToEditorModel(), token);
+            var current = RequireOpening(token);
+            var accepted = await current.WriteAsync(request => Workspace.SaveCapabilityEditorAsync(submission.ToEditorModel(), request), token);
+            if (ReferenceEquals(opening, current)) {
+                boundId = accepted.Id;
+            }
             return new CapabilityAuthoringSaveOutcome.Accepted(CapabilityAuthoringSubmission.Capture(accepted));
+        } catch (AgentCatalogCommittedException<CapabilityEditorModel> exception) {
+            if (ReferenceEquals(opening, dispatchedOpening) && !token.IsCancellationRequested &&
+                (submission.Id is null || exception.Accepted.Id == submission.Id)) {
+                boundId = exception.Accepted.Id;
+            }
+            return new CapabilityAuthoringSaveOutcome.Accepted(CapabilityAuthoringSubmission.Capture(exception.Accepted), exception.Message);
         } catch (CapabilityCatalogRejectedException error) {
             return new CapabilityAuthoringSaveOutcome.Rejected(error.IsConcurrencyConflict);
+        } catch (UnauthorizedAccessException) {
+            return new CapabilityAuthoringSaveOutcome.Rejected(false);
         } catch (Exception error) {
             Logger.LogWarning("Native capability save acknowledgement unavailable for {CapabilityId}: {FailureType}", submission.Id, error.GetType().Name);
             return new CapabilityAuthoringSaveOutcome.Unknown();
+        }
+    }
+
+    private async Task<T> RunSetupAsync<T>(CapabilityAuthoringSubmission submission, Func<CancellationToken, Task<T>> run,
+        CancellationToken token) {
+        var dispatched = false;
+        try {
+            var original = RequireOpening(token);
+            return await original.WriteAsync(async current => {
+                if (submission.Id is { } id) {
+                    var saved = await original.ReadAsync(request => Workspace.GetCapabilityEditorAsync(id, request), current);
+                    if (string.IsNullOrWhiteSpace(submission.ExpectedFingerprint) || saved.ExpectedFingerprint != submission.ExpectedFingerprint) {
+                        throw new CapabilityCatalogRejectedException("Review the changed capability before testing setup.", isConcurrencyConflict: true);
+                    }
+                }
+                await original.AuthorizeAsync(true, current);
+                current.ThrowIfCancellationRequested();
+                dispatched = true;
+                return await run(current);
+            }, token);
+        } catch (Exception error) when (!dispatched && (error is UnauthorizedAccessException or CapabilityCatalogRejectedException)) {
+            throw new CapabilitySetupNotStartedException();
         }
     }
 
@@ -73,14 +172,17 @@
             return;
         }
         lifetime.Cancel();
+        opening?.Stop();
         _ = InvokeAsync(() => {
             if (!disposed) {
+                ready = false;
+                accessError = "The database changed. Close and reopen this capability in the current workspace.";
                 StateHasChanged();
             }
         });
     }
 
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
         if (disposed) {
             return;
         }
@@ -88,6 +190,10 @@
         ProfileChanges.Changed -= ProfileChanged;
         lifetime.Cancel();
         form?.Dispose();
+        ownerRegistration.Dispose();
+        if (opening is not null) {
+            await opening.DisposeAsync();
+        }
         owner?.Dispose();
         lifetime.Dispose();
     }

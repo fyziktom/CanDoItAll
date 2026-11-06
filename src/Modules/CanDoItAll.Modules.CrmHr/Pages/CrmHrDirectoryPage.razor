@@ -1,11 +1,24 @@
-@using static CanDoItAll.CrmHr.UI.Parties.CrmHrDirectoryWorkspacePresentation
+﻿@using static CanDoItAll.CrmHr.UI.Parties.CrmHrDirectoryWorkspacePresentation
 @page "/crm-hr/directory"
-@implements IDisposable
+@implements IAsyncDisposable
+@using CanDoItAll.Editing
+@using CanDoItAll.Infrastructure.Editing
+@using Microsoft.AspNetCore.Components.Routing
+@inject CrmHrChanges Changes
+@inject EditingChangeFeed ChangeFeed
+@inject IEditingUiAccess EditingAccess
+@inject ILogger<EditingObservation> ObservationLog
+@inject ILogger<PartyDirectoryEditor> EditingLog
+@inject ILogger<AffiliationEditor> AffiliationLog
+@inject ILogger<RelationshipEditor> RelationshipLog
+@inject ILogger<PartyMergeSession> MergeLog
 @using CanDoItAll.SharedKernel
+@inject IClock Clock
 @using Microsoft.Extensions.Logging
 @inject PartyDirectoryService PartyDirectoryService
 @inject PartyDirectoryManagementService ManagementService
 @inject IPartyOrganizationAffiliationService AffiliationService
+@inject IPartyRelationshipService RelationshipService
 @inject NavigationManager Navigation
 @inject IAppNavigationHistory History
 @inject NotificationService NotificationService
@@ -17,7 +30,38 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<CrmHrDirectoryWorkspaceSurface View="this">
+<CrmHrLiveCatalog Owner="EditingOwner.CrmHrParty" Ignore="editing.IsOwn" Changed="RefreshDirectoryCatalog">
+<CrmHrDirectoryWorkspaceSurface @ref="workspace" View="this" DirtyChanged="MarkDraftInput"
+    InputChanged="HandlePartyInput" ValidationChanged="HandlePartyValidation" ChildInputChanged="HandleChildInput"
+    PendingTagInput="@editing.State.PendingTagInput" PendingTagInputChanged="HandlePendingTag" AffiliationRevision="@affiliationEditing.RenderRevision" AffiliationInputChanged="HandleAffiliationInput" AffiliationPendingChanged="HandleAffiliationPending"
+    RelationshipRevision="@relationshipEditing.RenderRevision" RelationshipInputChanged="HandleRelationshipInput" RelationshipPendingChanged="HandleRelationshipPending"
+    SaveDisabled="@(editing.ReadingReview || editing.State.IsSaving || editing.State.IsOutdated || editing.State.IsUnknown || editing.State.Review is not null || AffiliationSaveBlocked || RelationshipSaveBlocked)">
+    <EditingStatus>
+        <PartyEditingStatus State="@editing.State" Message="@editing.Message" ReadingReview="@editing.ReadingReview"
+            ReviewRequested="ReviewPartyAsync" UndoRequested="UndoPartyMerge" />
+        <AffiliationEditing State="@affiliationEditing.State" Message="@affiliationEditing.Message" Reading="@affiliationEditing.ReadingReview" PartyNames="@affiliationPartyDisplayNames"
+            ReviewRequested="ReviewAffiliationsAsync" ApplyRequested="ApplyAffiliationReview" UndoRequested="affiliationEditing.Undo" Cancelled="affiliationEditing.CancelReview" Changed="StateHasChanged" />
+        <RelationshipEditing State="@relationshipEditing.State" Message="@relationshipEditing.Message" Reading="@relationshipEditing.ReadingReview"
+            ReviewRequested="ReviewRelationshipsAsync" ApplyRequested="ApplyRelationshipReview" UndoRequested="relationshipEditing.Undo" Cancelled="relationshipEditing.CancelReview" Changed="StateHasChanged" />
+    </EditingStatus>
+    <EditorOverlays>
+        <PartyReviewDialog State="@editing.State" ReadingReview="@editing.ReadingReview" Changed="StateHasChanged"
+            Cancelled="CancelPartyReview" RefreshRequested="ReviewPartyAsync" ApplyRequested="ApplyPartyReview" />
+        <CrmHrEditorLeaveGuard @ref="leaveGuard" HasLocalChanges="HasUnsavedChanges" IsSameEditorRoute="IsSameEditorRoute"
+            InputRevision="@draftInputRevision" HasInput="@hasDraftInput" IsBusy="@(() => editing.State.IsSaving || affiliationEditing.State.IsSaving || relationshipEditing.State.IsSaving || mergeState.IsBusy)" Unknown="@(editing.State.IsUnknown || affiliationEditing.State.IsUnknown || relationshipEditing.State.IsUnknown || mergeState.IsUnknown)" />
+    </EditorOverlays>
+    <ImportOverlays>
+        <CrmHrEditorLeaveGuard @ref="importLeaveGuard" TestIdPrefix="crmhr-import"
+            HasLocalChanges="@(() => importStatus.HasInput)" IsSameEditorRoute="IsSameImportRoute"
+            InputRevision="@importStatus.InputRevision" HasInput="@importStatus.HasInput"
+            IsBusy="@(() => importStatus.IsBusy)" Unknown="@importStatus.IsUnknown" />
+    </ImportOverlays>
+    <MergeOverlays>
+        <CrmHrEditorLeaveGuard @ref="mergeLeaveGuard" TestIdPrefix="crmhr-merge"
+            HasLocalChanges="@(() => merge.HasLocalChanges)"
+            IsSameEditorRoute="IsSameEditorRoute" InputRevision="@mergeNote.Revision" HasInput="@mergeNote.HasInput"
+            IsBusy="@(() => mergeState.IsBusy)" Unknown="@mergeState.IsUnknown" />
+    </MergeOverlays>
     <SecondaryNavigation>
         <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Directory" />
     </SecondaryNavigation>
@@ -33,6 +77,7 @@
                             EmptyDescription="Save the party and related CRM-HR workflows to start building a shared history." />
     </ActivityTimeline>
 </CrmHrDirectoryWorkspaceSurface>
+</CrmHrLiveCatalog>
 
 @code {
     // What the history lane accepted for the selected party, and its failure copy; the surface never sees the session.
@@ -63,29 +108,40 @@
     public string? PageQuery { get; set; }
 
     private UrlStateBinding<DirectoryUrlState> url = default!;
-    private PartyEditorViewModel editor = PartyEditorViewModel.CreateNew();
+    private PartyDirectoryEditor editing = default!;
+    private AffiliationEditor affiliationEditing = default!;
+    private RelationshipEditor relationshipEditing = default!;
+    private CrmHrDirectoryWorkspaceSurface? workspace;
+    private PartyEditorViewModel editor => editing.Draft;
+    private bool hasDraftInput;
+    private long draftInputRevision;
+    private CrmHrEditorLeaveGuard? leaveGuard;
     private IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliationItems = [];
-    private IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliationEditors = [];
+    private IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliationEditors => affiliationEditing.State.Draft;
     private IReadOnlyDictionary<Guid, string> affiliationPartyDisplayNames =
         new Dictionary<Guid, string>();
-    private List<PartyRelationshipEditorModel> relationships = [];
+    private List<PartyRelationshipEditorModel> relationships => relationshipEditing.State.Draft;
     private IReadOnlyList<PartyDuplicateCandidateModel> duplicateCandidates = [];
     private CrmHrActivityHistorySession partyActivity = default!;
     private long partyActivityGeneration;
     private PartyProjectAssignmentPage projectAssignmentsPage = PartyProjectAssignmentPage.Empty();
-    private PartyDuplicateCandidateModel? mergeCandidate;
+    private PartyDuplicateCandidateModel? mergeCandidate => merge.Candidate;
     private bool isEditorDialogOpen;
-    private bool isMergeDialogOpen;
+    private bool isMergeDialogOpen => mergeState.IsOpen;
+    private PartyMergeSession merge = default!;
+    private PartyMergePresentation mergeState => merge.Presentation;
+    private PartyMergeNoteStatus mergeNote => merge.Note;
+    private CrmHrEditorLeaveGuard? mergeLeaveGuard;
     private bool isImportExportDialogOpen;
+    private CrmHrEditorLeaveGuard? importLeaveGuard;
+    private PartyImportStatus importStatus = new(0, false, PartyImportPhase.Editing);
+    private long importOpening;
+    private enum StewardshipRead { Export, ImportPreview }
     private bool isRelationshipsLoading;
     private bool isProjectAssignmentsLoading;
     private bool isDisposed;
     private long directoryLoadGeneration;
     private readonly CrmHrMutationGate mutationGate = new();
-    private readonly CrmHrDraftReconciler drafts = new();
-    private const string PartyDraft = "party";
-    private const string AffiliationsDraft = "affiliations";
-    private const string RelationshipsDraft = "relationships";
     private long directoryBrowserVersion;
     private string relationshipsLoadError = string.Empty;
     private string projectAssignmentsLoadError = string.Empty;
@@ -143,7 +199,44 @@
 
     protected override void OnInitialized()
     {
+        editing = new(PartyDirectoryService, Changes, ChangeFeed, EditingAccess, ObservationLog, EditingLog) {
+            Dispatch = action => InvokeAsync(action),
+            Changed = StateHasChanged,
+            Retired = () => {
+                Interlocked.Increment(ref directoryLoadGeneration);
+                isEditorDialogOpen = false;
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                affiliationEditing.Clear();
+                ResetDirectoryDetailState();
+                NotificationService.Warning("Editing access changed", "The full party editor was retired. Reopen it with current CRM editing access.");
+            },
+            Notice = () => NotificationService.Warning("Party changed", "Another editor changed this party. Your local draft is retained; review the saved values before saving.")
+        };
+        affiliationEditing = new(AffiliationService, Changes, ChangeFeed, EditingAccess, Clock, ObservationLog, AffiliationLog) {
+            Dispatch = action => InvokeAsync(action),
+            Changed = () => {
+                ApplyAffiliationItems(affiliationEditing.Saved);
+                StateHasChanged();
+            },
+            Retired = () => {
+                isEditorDialogOpen = false;
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                NotificationService.Warning("Affiliation access changed", "Reopen the person with current CRM editing access.");
+            },
+            Notice = () => NotificationService.Warning("Affiliations changed", "Your local affiliation draft is retained. Review the saved affiliations before saving.")
+        };
+        relationshipEditing = new(RelationshipService, Changes, ChangeFeed, EditingAccess, ObservationLog, RelationshipLog) {
+            Dispatch = action => InvokeAsync(action),
+            Changed = StateHasChanged,
+            Retired = () => {
+                isEditorDialogOpen = false;
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                NotificationService.Warning("Relationship access changed", "Reopen the party with current CRM editing access.");
+            },
+            Notice = () => NotificationService.Warning("Relationships changed", "Your local relationship draft is retained. Review the saved relationships before saving.")
+        };
         url = new UrlStateBinding<DirectoryUrlState>(Navigation, DirectoryUrlCodec.Instance, History, typeof(CrmHrDirectoryPage));
+        merge = new(ManagementService, Changes, EditingAccess, MergeLog);
         partyActivity = new CrmHrActivityHistorySession(
             (query, cancellationToken) => PartyDirectoryService.SearchPartyActivityAsync(query, cancellationToken),
             initialFailureMessage: "Activity and project assignments could not be loaded.",
@@ -184,13 +277,13 @@
     {
         if (route.Dialog == DirectoryDialog.NewParty)
         {
-            StartNewParty();
+            await StartNewPartyAsync();
             return;
         }
 
         if (route.PartyId is not { } requestedPartyId)
         {
-            RetireRecord();
+            await RetireRecordAsync();
             return;
         }
 
@@ -246,15 +339,12 @@
     }
 
     // A card opens its record over the catalog as a new history entry; Back closes it again.
-    private Task SelectPartyAsync(Guid partyId)
-    {
-        if (url.State.PartyId == partyId && isEditorDialogOpen)
-        {
-            return Task.CompletedTask;
+    private async Task SelectPartyAsync(Guid partyId) {
+        if (url.State.PartyId == partyId && isEditorDialogOpen || !await RequestLeaveAsync()) {
+            return;
         }
-
         url.OpenOverlay(url.State.WithoutRecord() with { PartyId = partyId });
-        return OpenRouteRecordAsync(url.State);
+        await OpenRouteRecordAsync(url.State);
     }
 
     private DirectoryLoadRequest BeginDirectoryLoad(
@@ -305,19 +395,20 @@
             return DirectoryLoadSnapshot.ForNewParty();
         }
 
-        var party = await PartyDirectoryService.GetPartyAsync(requestedPartyId.Value);
+        var read = await editing.ReadAsync(requestedPartyId.Value);
+        var party = read.Content;
         if (party is null)
         {
             return DirectoryLoadSnapshot.ForMissingParty();
         }
 
-        var affiliations = party.PartyType == PartyType.Person
-            ? await AffiliationService.ListAsync(requestedPartyId.Value)
-            : [];
+        var affiliationRead = party.PartyType == PartyType.Person ? await affiliationEditing.ReadAsync(requestedPartyId.Value) : null;
         return new DirectoryLoadSnapshot(
             PartyEditorViewModel.FromEditorModel(party),
-            affiliations,
-            RequestedPartyFound: true);
+            affiliationRead?.Rows ?? [],
+            RequestedPartyFound: true,
+            read,
+            affiliationRead);
     }
 
     // The read-back of a record already on screen. Another party replaces the form; the form's own commit takes the
@@ -326,21 +417,15 @@
     private void CommitDirectorySnapshot(DirectoryLoadSnapshot snapshot, bool committed = false)
     {
         var isPartySelectionChanged = editor.Id != snapshot.Editor.Id;
-        var retainEditedRelationships = committed &&
-                                        !isPartySelectionChanged &&
-                                        drafts.ChangedAfterSubmission(RelationshipsDraft, relationships);
-        // The detail reset below clears the affiliation editors, so the rows the operator is holding are captured
-        // first; the reconciliation after a commit needs them, not the empty list the reset leaves behind.
-        var editedAffiliations = affiliationEditors;
-        editor = drafts.Reconcile(
-            PartyDraft,
-            editor,
-            () => snapshot.Editor,
-            isPartySelectionChanged,
-            committed,
-            static (current, owner) => current.AdoptOwnerContactPoints(owner));
-        ResetDirectoryDetailState(retainEditedRelationships);
-        ApplyAffiliations(snapshot.Affiliations, committed, editedAffiliations);
+        editing.Observe(snapshot.Editor, snapshot.Observation);
+        ResetDirectoryDetailState(retainRelationships: !isPartySelectionChanged);
+        if (snapshot.AffiliationObservation is { } affiliations) {
+            affiliationEditing.Observe(affiliations);
+            ApplyAffiliationItems(affiliationEditing.Saved);
+        } else {
+            affiliationEditing.Clear();
+            ApplyAffiliationItems([]);
+        }
     }
 
     private bool IsCurrentDirectoryLoad(DirectoryLoadRequest request)
@@ -349,42 +434,38 @@
             url.State.PartyId == request.RoutePartyId);
 
     // The new-party editor opens over the catalog as a new history entry; Back closes it again.
-    private Task CreateNewAsync()
-    {
-        url.OpenOverlay(url.State.WithoutRecord() with { Dialog = DirectoryDialog.NewParty });
-        StartNewParty();
-        return Task.CompletedTask;
-    }
-
-    private Task CloseEditorDialogAsync()
-    {
-        if (!isEditorDialogOpen)
-        {
-            return Task.CompletedTask;
+    private async Task CreateNewAsync() {
+        if (!await RequestLeaveAsync()) {
+            return;
         }
-
-        RetireRecord();
-        return url.CloseOverlayAsync(url.State.WithoutRecord());
+        url.OpenOverlay(url.State.WithoutRecord() with { Dialog = DirectoryDialog.NewParty });
+        await StartNewPartyAsync();
     }
 
-    // An empty editor for a new party: any earlier record and its drafts are retired.
-    private void StartNewParty()
-    {
+    private async Task CloseEditorDialogAsync() {
+        if (!isEditorDialogOpen || !await RequestLeaveAsync()) {
+            return;
+        }
+        await RetireRecordAsync();
+        await url.CloseOverlayAsync(url.State.WithoutRecord());
+    }
+
+    private async Task StartNewPartyAsync() {
         Interlocked.Increment(ref directoryLoadGeneration);
-        drafts.Reset();
-        editor = drafts.Replace(PartyDraft, PartyEditorViewModel.CreateNew());
+        affiliationEditing.Clear();
+        await editing.NewDraftAsync();
+        hasDraftInput = false;
         ResetDirectoryDetailState();
         agentChatContextAccessState = AgentChatContextAccessState.Ready;
         isEditorDialogOpen = true;
     }
 
-    // The catalog without a record: the open record, its drafts and every load of it are retired.
-    private void RetireRecord()
-    {
+    private async Task RetireRecordAsync() {
         Interlocked.Increment(ref directoryLoadGeneration);
-        drafts.Reset();
+        affiliationEditing.Clear();
         isEditorDialogOpen = false;
-        editor = drafts.Replace(PartyDraft, PartyEditorViewModel.CreateNew());
+        await editing.NewDraftAsync();
+        hasDraftInput = false;
         ResetDirectoryDetailState();
         agentChatContextAccessState = AgentChatContextAccessState.Ready;
     }
@@ -401,30 +482,34 @@
             return;
         }
 
-        var submission = drafts.Submit(PartyDraft, editor, static current => current.ToEditorModel());
-        var affiliationSubmission = drafts.Submit(
-            AffiliationsDraft,
-            affiliationEditors,
-            static rows => rows.Select(affiliation => affiliation.Snapshot()).ToArray());
-        var relationshipSubmission = drafts.Submit(
-            RelationshipsDraft,
-            relationships,
-            static rows => rows.Select(relationship => relationship.Snapshot()).ToList());
-        var result = await PartyDirectoryService.SavePartyAsync(submission);
+        if (AffiliationSaveBlocked || RelationshipSaveBlocked || !await ValidatePartyInputAsync() || !IsCurrentDirectoryAction(action)) {
+            return;
+        }
+        var affiliationSubmission = affiliationsLoadedPartyId.HasValue && affiliationsLoadedPartyId == editor.Id && affiliationEditing.State.IsDirty
+            ? affiliationEditing.PrepareSave() : null;
+        var relationshipSubmission = relationshipsLoadedPartyId.HasValue && relationshipsLoadedPartyId == editor.Id && relationshipEditing.State.IsDirty
+            ? relationshipEditing.PrepareSave() : null;
+        var result = await editing.SaveAsync();
         if (!IsCurrentDirectoryAction(action))
         {
-            RetireDirectorySubmissions();
+            if (affiliationSubmission is not null) {
+                affiliationEditing.CancelSubmission(affiliationSubmission);
+            }
+            CancelDirectorySubmissions(affiliationSubmission, relationshipSubmission);
             return;
         }
 
         if (result.IsFailure)
         {
-            // Nothing was written: every draft stays as the operator left it and owns all of its fields again.
-            RetireDirectorySubmissions();
-            NotificationService.Warning("Party was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+            if (affiliationSubmission is not null) {
+                affiliationEditing.CancelSubmission(affiliationSubmission);
+            }
+            CancelDirectorySubmissions(affiliationSubmission, relationshipSubmission);
+            NotificationService.Warning(editing.State.IsUnknown ? "Party save outcome unknown" : "Party was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
+        hasDraftInput = editing.State.IsDirty(editor);
         var savedPartyId = result.Value;
         editor.Id = savedPartyId;
         // A created party is the open record from now on: the new-party entry names it, so a refresh, a copied link
@@ -435,21 +520,18 @@
             action = action with { RoutePartyId = savedPartyId };
         }
 
-        if (affiliationsLoadedPartyId == savedPartyId)
+        if (affiliationSubmission is not null)
         {
-            var affiliationSaveResult = await AffiliationService.ReplaceAsync(
-                savedPartyId,
-                affiliationSubmission,
-                submission.LastChangedBy);
+            var affiliationSaveResult = await affiliationEditing.CommitAsync(affiliationSubmission);
             if (!IsCurrentDirectoryAction(action))
             {
-                RetireDirectorySubmissions();
+                CancelDirectorySubmissions(affiliationSubmission, relationshipSubmission);
                 return;
             }
 
             if (affiliationSaveResult.IsFailure)
             {
-                RetireDirectorySubmissions();
+                CancelDirectorySubmissions(affiliationSubmission, relationshipSubmission);
                 directoryBrowserVersion++;
                 NotificationService.Warning(
                     "Party saved with affiliation issue",
@@ -457,31 +539,22 @@
                 return;
             }
 
-            ApplyAffiliationItems(affiliationSaveResult.Value ?? []);
+            ApplyAffiliationItems(affiliationEditing.Saved);
         }
 
-        if (relationshipsLoadedPartyId == savedPartyId)
+        if (relationshipSubmission is not null)
         {
-            var relationshipSaveResult = await ManagementService.SaveRelationshipsAsync(
-                savedPartyId,
-                relationshipSubmission,
-                submission.LastChangedBy);
+            var relationshipSaveResult = await relationshipEditing.CommitAsync(relationshipSubmission);
             if (!IsCurrentDirectoryAction(action))
             {
-                RetireDirectorySubmissions();
+                CancelDirectorySubmissions(affiliationSubmission, relationshipSubmission);
                 return;
             }
 
             if (relationshipSaveResult.IsFailure)
             {
-                RetireDirectorySubmissions();
+                CancelDirectorySubmissions(affiliationSubmission, relationshipSubmission);
                 directoryBrowserVersion++;
-                duplicateCandidates = await ManagementService.FindPotentialDuplicatesAsync(savedPartyId);
-                if (!IsCurrentDirectoryAction(action))
-                {
-                    return;
-                }
-
                 NotificationService.Warning(
                     "Party saved with relationship issue",
                     $"Relationships were not updated. {string.Join(" ", relationshipSaveResult.Errors.Select(error => error.Message))}");
@@ -489,7 +562,11 @@
             }
         }
 
-        NotificationService.Success("Party saved", "Party saved.");
+        if (editing.Message is { } postCommitMessage) {
+            NotificationService.Warning("Party saved", postCommitMessage);
+        } else {
+            NotificationService.Success("Party saved", "Party saved.");
+        }
         directoryBrowserVersion++;
         await RefreshAfterCommitAsync(savedPartyId, committed: true);
     }
@@ -497,36 +574,79 @@
     // CSV stewardship effects of the import and export region: the directory management owner exports, previews and
     // applies; the renderer only calls these.
     private Task<string> ExportPartyCsvAsync(PartyCsvExportScope scope, IReadOnlyList<Guid> partyIds)
-        => scope switch
+        => ReadStewardshipAsync(StewardshipRead.Export, token => scope switch
         {
-            PartyCsvExportScope.SelectedParties => ManagementService.ExportPartiesCsvAsync(partyIds),
-            PartyCsvExportScope.EntireDirectory => ManagementService.ExportAllPartiesCsvAsync(),
+            PartyCsvExportScope.SelectedParties => ManagementService.ExportPartiesCsvAsync(partyIds, token),
+            PartyCsvExportScope.EntireDirectory => ManagementService.ExportAllPartiesCsvAsync(token),
             _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unsupported party CSV export scope.")
-        };
+        });
 
     private Task<Result<PartyCsvImportPreviewModel>> PreviewPartyImportAsync(string csvContent)
-        => ManagementService.PreviewImportAsync(csvContent);
+        => ReadStewardshipAsync(StewardshipRead.ImportPreview, token => ManagementService.PreviewImportAsync(csvContent, token));
 
-    private Task<Result<int>> ApplyPartyImportAsync(IReadOnlyList<PartyCsvImportPreviewRowModel> rows)
-        => ManagementService.ApplyImportAsync(rows, "crm-hr-ui");
+    private async Task<T> ReadStewardshipAsync<T>(StewardshipRead operation, Func<CancellationToken, Task<T>> read) {
+        try {
+            using var grant = await EditingAccess.OpenAsync(new(Changes.Scope, EditingOwner.CrmHrParty), CancellationToken.None);
+            using var reading = CancellationTokenSource.CreateLinkedTokenSource(grant.Lifetime);
+            await EditingAccess.ValidateAsync(grant, write: true, reading.Token);
+            var result = await read(reading.Token);
+            await EditingAccess.ValidateAsync(grant, write: true, reading.Token);
+            return result;
+        } catch (Exception exception) {
+            Logger.LogWarning("Directory stewardship {Operation} read failed after {FailureType}.", operation, exception.GetType().Name);
+            throw;
+        }
+    }
 
-    private async Task HandleImportAppliedAsync()
-    {
+    private async Task<Result<int>> ApplyPartyImportAsync(IReadOnlyList<PartyCsvImportPreviewRowModel> rows) {
+        var opening = importOpening;
+        int? acceptedCount = null;
+        try {
+            using var grant = await EditingAccess.OpenAsync(new(Changes.Scope, EditingOwner.CrmHrParty), CancellationToken.None);
+            await EditingAccess.ValidateAsync(grant, write: true, CancellationToken.None);
+            using var admission = Changes.EnterUiWrite(token => EditingAccess.ValidateAsync(grant, write: true, token));
+            return await ManagementService.ApplyImportAsync(rows, grant.Actor, onCommitted: count => acceptedCount = count);
+        } catch (Exception exception) when (acceptedCount.HasValue) {
+            Logger.LogWarning("Directory import committed {Count} rows but follow-up failed after {FailureType}.", acceptedCount, exception.GetType().Name);
+            if (!isDisposed && opening == importOpening) {
+                NotificationService.Warning("Import saved", "The import was saved, but a follow-up notification failed. Refresh the directory before continuing.");
+            }
+            return Result<int>.Success(acceptedCount.Value);
+        } catch (UnauthorizedAccessException) {
+            return Result<int>.Failure(Error.Validation("Current CRM write access is required to apply an import.", CrmHrEditingErrorCodes.EditingAccessDenied));
+        }
+    }
+
+    private Task HandleImportAppliedAsync() {
         directoryBrowserVersion++;
-        await LoadAsync(editor.Id, clearMessage: false);
-        isImportExportDialogOpen = false;
+        return Task.CompletedTask;
     }
 
     private void OpenImportExportDialog()
     {
+        if (isImportExportDialogOpen) {
+            return;
+        }
+        importOpening++;
+        importStatus = new(0, false, PartyImportPhase.Editing);
         isImportExportDialogOpen = true;
     }
 
-    private Task CloseImportExportDialogAsync()
-    {
+    private async Task CloseImportExportDialogAsync() {
+        if (!isImportExportDialogOpen) {
+            return;
+        }
+        var opening = importOpening;
+        if (!await (importLeaveGuard ?? throw new InvalidOperationException("An open CSV workspace requires its leave guard.")).RequestLeaveAsync() ||
+            isDisposed || opening != importOpening) {
+            return;
+        }
+        importOpening++;
         isImportExportDialogOpen = false;
-        return Task.CompletedTask;
+        importStatus = new(0, false, PartyImportPhase.Editing);
     }
+
+    private bool IsSameImportRoute(string target) => Navigation.ToAbsoluteUri(target).AbsolutePath == new Uri(Navigation.Uri).AbsolutePath;
 
     // A section of the open record refines its entry; it loads only the data that section shows.
     private async Task HandleEditorTabChangedAsync(int index)
@@ -586,7 +706,7 @@
     {
         try
         {
-            var relationshipsTask = ManagementService.ListRelationshipsAsync(partyId);
+            var relationshipsTask = relationshipEditing.ReadAsync(partyId);
             var duplicatesTask = ManagementService.FindPotentialDuplicatesAsync(partyId);
             await Task.WhenAll(relationshipsTask, duplicatesTask);
             if (!IsCurrentDetailLoad(partyId, generation))
@@ -594,7 +714,7 @@
                 return;
             }
 
-            relationships = (await relationshipsTask).Select(MapRelationship).ToList();
+            relationshipEditing.Observe(await relationshipsTask);
             duplicateCandidates = await duplicatesTask;
             relationshipsLoadedPartyId = partyId;
         }
@@ -762,8 +882,10 @@
 
     private void AddAdditionalRole()
     {
+        MarkDraftInput();
         editor.AdditionalRoles.Add(new PartyRoleAssignmentEditorModel
         {
+            Id = Guid.NewGuid(),
             RoleKind = PartyRoleKind.Stakeholder,
             Title = "Stakeholder"
         });
@@ -771,8 +893,10 @@
 
     private void AddConfidentialNote()
     {
+        MarkDraftInput();
         editor.ConfidentialNotes.Add(new PartyConfidentialNoteEditorModel
         {
+            Id = Guid.NewGuid(),
             Category = PartyConfidentialNoteCategories.HumanResources,
             CreatedBy = editor.LastChangedBy,
             CreatedAtUtc = DateTimeOffset.UtcNow,
@@ -784,75 +908,64 @@
     // editor) removes nothing.
     private void RemoveAdditionalRole(PartyRoleAssignmentEditorModel role)
     {
+        MarkDraftInput();
         editor.AdditionalRoles.Remove(role);
     }
 
     private void RemoveConfidentialNote(PartyConfidentialNoteEditorModel note)
     {
+        MarkDraftInput();
         editor.ConfidentialNotes.Remove(note);
     }
 
-    private void OpenMergeDialog(PartyDuplicateCandidateModel candidate)
-    {
-        mergeCandidate = candidate;
-        isMergeDialogOpen = true;
-    }
-
-    private Task HandleMergeCloseAsync()
-    {
-        isMergeDialogOpen = false;
-        mergeCandidate = null;
-        return Task.CompletedTask;
-    }
-
-    private async Task HandleMergeConfirmAsync(string reason)
-    {
-        if (editor.Id is not Guid retainedPartyId || mergeCandidate is null)
-        {
+    private async Task OpenMergeDialogAsync(PartyDuplicateCandidateModel candidate) {
+        if (editor.Id is not Guid retained || retained == candidate.Id || mergeState.IsBusy) {
             return;
         }
+        if (HasUnsavedChanges() || editing.State.IsUnknown || affiliationEditing.State.IsUnknown || relationshipEditing.State.IsUnknown) {
+            NotificationService.Warning("Local changes remain", "Save or discard the current party drafts before preparing a business merge.");
+            return;
+        }
+        await merge.OpenAsync(retained, candidate);
+    }
 
+    private async Task HandleMergeCloseAsync() {
+        if (!mergeState.IsOpen) {
+            return;
+        }
+        var opening = mergeState.Opening;
+        if (!await (mergeLeaveGuard ?? throw new InvalidOperationException("An open merge requires its leave guard.")).RequestLeaveAsync() ||
+            isDisposed || opening != mergeState.Opening) {
+            return;
+        }
+        var acceptedTarget = merge.AcceptedTarget;
+        merge.Reset();
+        if (acceptedTarget is Guid id) {
+            await RefreshAfterCommitAsync(id, committed: true);
+        }
+    }
+
+    private Task RefreshMergePreviewAsync() => merge.RefreshAsync();
+
+    private async Task HandleMergeConfirmAsync(string reason) {
+        if (!mergeState.CanConfirm || mergeState.Preview is not { } preview || editor.Id != preview.Retained.Id ||
+            mergeCandidate?.Id != preview.Duplicate.Id || HasUnsavedChanges()) {
+            return;
+        }
         var action = CaptureDirectoryAction();
         using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
+        if (admission is not null && await merge.ConfirmAsync(reason) && IsCurrentDirectoryAction(action)) {
+            directoryBrowserVersion++;
         }
-
-        var candidateId = mergeCandidate.Id;
-        var result = await ManagementService.MergePartyAsync(
-            retainedPartyId,
-            candidateId,
-            editor.LastChangedBy,
-            reason);
-        if (!IsCurrentDirectoryAction(action) ||
-            !isMergeDialogOpen ||
-            mergeCandidate?.Id != candidateId)
-        {
-            return;
-        }
-
-        if (result.IsFailure || result.Value is not PartyMergeSummaryModel summary)
-        {
-            NotificationService.Warning("Party merge failed", string.Join(" ", result.Errors.Select(error => error.Message)));
-            return;
-        }
-
-        await HandleMergeCloseAsync();
-        NotificationService.Success("Party merged", summary.Summary);
-        directoryBrowserVersion++;
-        await RefreshAfterCommitAsync(retainedPartyId);
     }
 
-    // The owner committed and the saved identity is already bound. A failed read-back is a warning: it never repeats
-    // the write and never turns the saved party back into a new draft; the operator can reload to reconcile the view.
-    // Every path that leaves a save without reading the record back: the drafts keep owning every field they hold,
-    // and no later reload may mistake a dispatched submission for the values this editor is based on.
-    private void RetireDirectorySubmissions()
-    {
-        drafts.Retire(PartyDraft);
-        drafts.Retire(AffiliationsDraft);
-        drafts.Retire(RelationshipsDraft);
+    private void CancelDirectorySubmissions(AffiliationSubmission? affiliations, RelationshipSubmission? relationships) {
+        if (affiliations is not null) {
+            affiliationEditing.CancelSubmission(affiliations);
+        }
+        if (relationships is not null) {
+            relationshipEditing.CancelSubmission(relationships);
+        }
     }
 
     private async Task<bool> RefreshAfterCommitAsync(Guid committedPartyId, bool committed = false)
@@ -865,7 +978,6 @@
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             // The read-back never ran, so the drafts keep owning every field they hold until the operator reloads.
-            RetireDirectorySubmissions();
             Logger.LogWarning(exception, "The directory record {PartyId} could not be refreshed after a committed change.", committedPartyId);
             NotificationService.Warning(
                 "Saved, refresh failed",
@@ -887,16 +999,13 @@
            action.RoutePartyId == url.State.PartyId &&
            ReferenceEquals(action.Editor, editor);
 
-    // A merge, an import and a new selection re-read the record detail lanes. Only the relationship rows the
-    // operator kept editing while their own save was in flight are retained; everything else is owner state.
-    private void ResetDirectoryDetailState(bool retainEditedRelationships = false)
+    private void ResetDirectoryDetailState(bool retainRelationships = false)
     {
         affiliationItems = [];
-        affiliationEditors = [];
         affiliationPartyDisplayNames = new Dictionary<Guid, string>();
-        if (!retainEditedRelationships)
+        if (!retainRelationships)
         {
-            relationships = [];
+            relationshipEditing.Clear();
             relationshipsLoadedPartyId = null;
         }
 
@@ -914,8 +1023,7 @@
         isProjectAssignmentsLoading = false;
         relationshipsLoadError = string.Empty;
         projectAssignmentsLoadError = string.Empty;
-        mergeCandidate = null;
-        isMergeDialogOpen = false;
+        merge.Reset();
     }
 
     private void CancelProjectAssignmentsLoad()
@@ -925,43 +1033,181 @@
         projectAssignmentsLoadCancellation = null;
     }
 
-    public void Dispose()
-    {
+    private void HandlePartyInput(PartyEditorInputChange change) {
+        editing.State.InputChanged(change);
+        MarkDraftInput();
+    }
+
+    private void HandlePartyValidation(bool hasErrors) {
+        editing.State.ReportValidation(hasErrors);
+        hasDraftInput |= hasErrors;
+    }
+
+    private void HandlePendingTag(string value) {
+        editing.State.SetPendingTagInput(value);
+        MarkDraftInput();
+    }
+
+    private void HandleChildInput(bool pending) {
+        editing.State.ReportChildInput(pending);
+        MarkDraftInput();
+        if (!pending) {
+            hasDraftInput = editing.State.IsDirty(editor);
+        }
+    }
+
+    private async Task<bool> ValidatePartyInputAsync() {
+        if (editing.State.HasPendingChildInput || affiliationEditing.State.HasPendingPicker || relationshipEditing.State.HasPendingPicker) {
+            editing.ReportInputProblem();
+            return false;
+        }
+        try {
+            if (!await (workspace ?? throw new InvalidOperationException("The active Party workspace is unavailable.")).ValidateInputsAsync()) {
+                editing.State.ReportValidation(true);
+                affiliationEditing.State.ReportValidation(true);
+                relationshipEditing.State.ReportValidation(true);
+                editing.ReportInputProblem();
+                return false;
+            }
+            editing.ConfirmParsedInput();
+            affiliationEditing.State.ReportValidation(false);
+            relationshipEditing.State.ReportValidation(false);
+            return true;
+        } catch (Exception exception) when (exception is Microsoft.JSInterop.JSException or OperationCanceledException) {
+            if (!isDisposed) {
+                Logger.LogWarning(exception, "Party input validation could not inspect the active form.");
+                editing.ReportInputProblem();
+            }
+            return false;
+        }
+    }
+
+    private async Task ReviewPartyAsync() {
+        var draft = editor;
+        if (await ValidatePartyInputAsync() && ReferenceEquals(draft, editor)) {
+            await editing.ReviewAsync();
+        }
+    }
+
+    private void MarkDraftInput() {
+        hasDraftInput = true;
+        draftInputRevision++;
+    }
+
+    private void RefreshDirectoryCatalog() => directoryBrowserVersion++;
+
+    private void ApplyPartyReview() {
+        if (editing.ApplyReview()) {
+            MarkDraftInput();
+            hasDraftInput = editing.State.IsDirty(editor);
+        }
+    }
+
+    private void UndoPartyMerge() {
+        editing.State.Undo(editor);
+        MarkDraftInput();
+    }
+
+    private Task CancelPartyReview() {
+        editing.CancelReview();
+        return Task.CompletedTask;
+    }
+
+    private bool HasUnsavedChanges() => editing.State.IsDirty(editor) || editing.State.Review is not null ||
+        affiliationEditing.State.IsDirty || affiliationEditing.State.Review is not null || relationshipEditing.State.IsDirty || relationshipEditing.State.Review is not null;
+
+    private bool AffiliationSaveBlocked => affiliationEditing.ReadingReview || affiliationEditing.State.IsSaving ||
+        affiliationEditing.State.IsUnknown || affiliationEditing.State.IsOutdated || affiliationEditing.State.Review is not null;
+
+    private bool RelationshipSaveBlocked => isRelationshipsLoading || !string.IsNullOrWhiteSpace(relationshipsLoadError) || relationshipEditing.ReadingReview || relationshipEditing.State.IsSaving ||
+        relationshipEditing.State.IsUnknown || relationshipEditing.State.IsOutdated || relationshipEditing.State.Review is not null;
+
+    private void HandleRelationshipInput(RelationshipInput input) {
+        relationshipEditing.State.InputChanged(input);
+        MarkDraftInput();
+    }
+
+    private void HandleRelationshipPending(bool pending) {
+        relationshipEditing.State.ReportPicker(pending);
+        MarkDraftInput();
+    }
+
+    private Task HandleRelationshipsChangedAsync(IReadOnlyList<PartyRelationshipEditorModel> rows) {
+        relationshipEditing.State.TakeInput(rows);
+        MarkDraftInput();
+        return Task.CompletedTask;
+    }
+
+    private async Task ReviewRelationshipsAsync() {
+        var draft = editor;
+        if (await ValidatePartyInputAsync() && ReferenceEquals(draft, editor)) {
+            await relationshipEditing.ReviewAsync();
+        }
+    }
+
+    private void ApplyRelationshipReview() {
+        if (relationshipEditing.ApplyReview()) {
+            MarkDraftInput();
+        }
+    }
+
+    private void HandleAffiliationInput(AffiliationInput input) {
+        affiliationEditing.State.InputChanged(input);
+        MarkDraftInput();
+    }
+
+    private void HandleAffiliationPending(bool pending) {
+        affiliationEditing.State.ReportPicker(pending);
+        MarkDraftInput();
+    }
+
+    private async Task ReviewAffiliationsAsync() {
+        var draft = editor;
+        if (await ValidatePartyInputAsync() && ReferenceEquals(draft, editor)) {
+            await affiliationEditing.ReviewAsync();
+        }
+    }
+
+    private void ApplyAffiliationReview() {
+        if (affiliationEditing.ApplyReview()) {
+            MarkDraftInput();
+        }
+    }
+
+    private Task<bool> RequestLeaveAsync() {
+        if (!HasUnsavedChanges() && !editing.State.IsSaving && !editing.State.IsUnknown && !affiliationEditing.State.IsSaving && !affiliationEditing.State.IsUnknown &&
+            !relationshipEditing.State.IsSaving && !relationshipEditing.State.IsUnknown) {
+            return Task.FromResult(true);
+        }
+        return (leaveGuard ?? throw new InvalidOperationException("An active dirty party editor requires its leave guard.")).RequestLeaveAsync();
+    }
+
+    private bool IsSameEditorRoute(string target) {
+        var destination = Navigation.ToAbsoluteUri(target);
+        var current = new Uri(Navigation.Uri);
+        var state = DirectoryUrlCodec.Instance.Read(destination.AbsoluteUri);
+        return destination.AbsolutePath == current.AbsolutePath && state.PartyId == url.State.PartyId && state.Dialog == url.State.Dialog;
+    }
+
+    public async ValueTask DisposeAsync() {
         isDisposed = true;
+        merge.Reset();
         Interlocked.Increment(ref directoryLoadGeneration);
         partyActivity.Dispose();
         CancelProjectAssignmentsLoad();
+        await editing.DisposeAsync();
+        await affiliationEditing.DisposeAsync();
+        await relationshipEditing.DisposeAsync();
     }
 
     private Task HandleAffiliationsChangedAsync(
         IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliations)
     {
-        affiliationEditors = affiliations;
+        MarkDraftInput();
+        affiliationEditing.State.TakeInput(affiliations);
         return Task.CompletedTask;
     }
 
-    // The owner accepted these rows. The editors keep whatever the operator typed into them after the submission was
-    // dispatched and pair with the accepted rows by person, organization and affiliation kind, so a row this commit
-    // created adopts its owner identity and expected version instead of being recreated by the next save.
-    private void ApplyAffiliations(
-        IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliations,
-        bool committed = false,
-        IReadOnlyList<PartyOrganizationAffiliationEditorModel>? edited = null)
-    {
-        ApplyAffiliationItems(affiliations);
-        affiliationEditors = drafts.ReconcileList(
-            AffiliationsDraft,
-            (edited ?? affiliationEditors).ToList(),
-            () => affiliations.Select(MapAffiliation).ToList(),
-            targetChanged: !committed,
-            committed: committed,
-            nameof(PartyOrganizationAffiliationEditorModel.PersonPartyId),
-            nameof(PartyOrganizationAffiliationEditorModel.OrganizationPartyId),
-            nameof(PartyOrganizationAffiliationEditorModel.AffiliationKind));
-    }
-
-    // The rows the owner accepted, without touching the editors: the read-back of the same commit reconciles those
-    // once, so the operator's later edits are compared against their submission exactly one time.
     private void ApplyAffiliationItems(
         IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliations)
     {
@@ -989,43 +1235,6 @@
             : null;
     }
 
-    private static PartyOrganizationAffiliationEditorModel MapAffiliation(
-        PartyOrganizationAffiliationListItemModel affiliation)
-    {
-        return new PartyOrganizationAffiliationEditorModel
-        {
-            Id = affiliation.Id,
-            PersonPartyId = affiliation.PersonPartyId,
-            OrganizationPartyId = affiliation.OrganizationPartyId,
-            AffiliationKind = affiliation.AffiliationKind,
-            IsPrimary = affiliation.IsPrimary,
-            JobTitle = affiliation.JobTitle,
-            EmployeeCode = affiliation.EmployeeCode,
-            OrganizationUnitPartyId = affiliation.OrganizationUnitPartyId,
-            ManagerPartyId = affiliation.ManagerPartyId,
-            ValidFrom = affiliation.ValidFrom,
-            ValidTo = affiliation.ValidTo,
-            Notes = affiliation.Notes,
-            ExpectedUpdatedAtUtc = affiliation.UpdatedAtUtc
-        };
-    }
-
-    private static PartyRelationshipEditorModel MapRelationship(PartyRelationshipListItemModel relationship)
-    {
-        return new PartyRelationshipEditorModel
-        {
-            Id = relationship.Id,
-            RelatedPartyId = relationship.RelatedPartyId,
-            RelatedPartyDisplayName = relationship.RelatedPartyDisplayName,
-            RelatedPartyType = relationship.RelatedPartyType,
-            RelationshipKind = relationship.RelationshipKind,
-            IsOutgoing = relationship.IsOutgoing,
-            IsPrimary = relationship.IsPrimary,
-            StartDateUtc = relationship.StartDateUtc,
-            EndDateUtc = relationship.EndDateUtc,
-            Notes = relationship.Notes
-        };
-    }
 
     private string ProjectAssignmentsPageText => projectAssignmentsPage.TotalPages == 0
         ? "No pages"
@@ -1065,7 +1274,9 @@
     private sealed record DirectoryLoadSnapshot(
         PartyEditorViewModel Editor,
         IReadOnlyList<PartyOrganizationAffiliationListItemModel> Affiliations,
-        bool RequestedPartyFound)
+        bool RequestedPartyFound,
+        PartyDirectoryRead? Observation = null,
+        AffiliationRead? AffiliationObservation = null)
     {
         public static DirectoryLoadSnapshot ForNewParty()
             => Empty(requestedPartyFound: true);

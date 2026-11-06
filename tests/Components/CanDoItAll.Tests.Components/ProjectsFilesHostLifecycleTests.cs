@@ -232,7 +232,8 @@ public sealed class ProjectsFilesHostLifecycleTests {
     private sealed class FailingSessionFactory(IFileToolsKnownFileSessionFactory original) : IFileToolsKnownFileSessionFactory {
         public IFileToolsKnownFileSessionFactory Original { get; } = original;
         public FileToolsKnownFileRequest? Request { get; private set; }
-        public ValueTask<FileToolsKnownFileSession> CreateAsync(FileToolsKnownFileRequest request, CancellationToken cancellationToken = default) {
+        public ValueTask<FileToolsKnownFileSession> CreateAsync(FileToolsKnownFileRequest request, CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null, Func<CancellationToken, ValueTask>? authorizeWrite = null) {
             Request = request;
             return ValueTask.FromException<FileToolsKnownFileSession>(new IOException("Injected primary construction failure"));
         }

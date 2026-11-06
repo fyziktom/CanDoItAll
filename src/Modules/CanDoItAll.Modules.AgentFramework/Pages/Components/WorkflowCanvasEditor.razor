@@ -3,11 +3,12 @@
 @using CanDoItAll.Modules.Prompts.Components
 
 @if (ready && !lifetime.IsCancellationRequested) {
-    <WorkflowCanvasSurface Definition="Definition" Components="Components" ProviderOptions="ProviderOptions"
+    <WorkflowCanvasSurface Definition="Definition" HeadObservation="HeadObservation" Components="Components" ProviderOptions="ProviderOptions"
+                           LibraryRefreshRequired="LibraryRefreshRequired" LibraryRefreshRequested="LibraryRefreshRequested"
                            Executors="@ExecutorCatalog.ListExecutors()" Backends="@RuntimeBackendCatalog.ListBackends()"
                            Secrets="secretOptions" SecretLoadError="@secretLoadError" OwnerToken="lifetime.Token"
                            NewDraftRequested="NewDraftRequested" DocumentOperations="DocumentOwner.Operations" BindPrompt="BindingOwner.BindAsync"
-                           PreviewOperations="PreviewOwner.Operations" DefinitionSaved="DefinitionSaved"
+                           PreviewOperations="PreviewOwner.Operations" DefinitionSaved="DefinitionSaved" DefinitionPulled="DefinitionPulled"
                            PreviewRunCompleted="PreviewRunCompleted" ComponentLibraryChanged="ComponentLibraryChanged"
                            SelectedNodeChanged="HandleSelectedNodeChangedAsync">
         <PromptPicker Context="picker">

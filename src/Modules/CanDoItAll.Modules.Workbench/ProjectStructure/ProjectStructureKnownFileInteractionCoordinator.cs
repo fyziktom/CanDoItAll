@@ -22,13 +22,19 @@ internal sealed class ProjectStructureKnownFileInteractionCoordinator(
     }
 
     public ValueTask<ProjectStructureKnownFileInteraction> OpenBoundAsync(Guid projectId, string nodeId,
-        Func<CancellationToken, Task> ensureOrigin, CancellationToken cancellationToken = default) {
+        Func<CancellationToken, Task> ensureOrigin, CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null,
+        Func<CancellationToken, ValueTask>? authorizeWrite = null,
+        IAsyncDisposable? ownedLifetime = null) {
         ArgumentNullException.ThrowIfNull(ensureOrigin);
-        return OpenCoreAsync(projectId, nodeId, ensureOrigin, cancellationToken);
+        return OpenCoreAsync(projectId, nodeId, ensureOrigin, cancellationToken, authorizeRead, authorizeWrite, ownedLifetime);
     }
 
     private async ValueTask<ProjectStructureKnownFileInteraction> OpenCoreAsync(Guid projectId, string nodeId,
-        Func<CancellationToken, Task>? ensureOrigin, CancellationToken cancellationToken) {
+        Func<CancellationToken, Task>? ensureOrigin, CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeRead = null,
+        Func<CancellationToken, ValueTask>? authorizeWrite = null,
+        IAsyncDisposable? ownedLifetime = null) {
         if (ensureOrigin is not null) {
             await ensureOrigin(cancellationToken);
         }
@@ -62,7 +68,7 @@ internal sealed class ProjectStructureKnownFileInteractionCoordinator(
         {
             FileToolsKnownFileSession session = await sessionFactory.CreateAsync(
                 activation.Request,
-                cancellationToken);
+                cancellationToken, authorizeRead, authorizeWrite);
             if (intent == FileToolsKnownFileIntent.Edit && session.SaveTarget is null)
             {
                 throw new InvalidOperationException(
@@ -85,7 +91,7 @@ internal sealed class ProjectStructureKnownFileInteractionCoordinator(
             if (ensureOrigin is not null) {
                 await ensureOrigin(cancellationToken);
             }
-            return new ProjectStructureKnownFileInteraction(request, session, sessionReleaser, ensureOrigin);
+            return new ProjectStructureKnownFileInteraction(request, session, sessionReleaser, ensureOrigin, ownedLifetime);
         }
         catch
         {
@@ -100,6 +106,7 @@ public sealed class ProjectStructureKnownFileInteraction : IAsyncDisposable
 {
     private readonly IFileToolsKnownFileSessionReleaser releaser;
     private readonly Func<CancellationToken, Task>? ensureOrigin;
+    private readonly IAsyncDisposable? ownedLifetime;
     private FileContentRevision? persistedRevision;
     private int disposed;
 
@@ -107,12 +114,13 @@ public sealed class ProjectStructureKnownFileInteraction : IAsyncDisposable
         FileInteractionRequest request,
         FileToolsKnownFileSession session,
         IFileToolsKnownFileSessionReleaser releaser,
-        Func<CancellationToken, Task>? ensureOrigin = null)
-    {
+        Func<CancellationToken, Task>? ensureOrigin = null,
+        IAsyncDisposable? ownedLifetime = null) {
         Request = request ?? throw new ArgumentNullException(nameof(request));
         Session = session ?? throw new ArgumentNullException(nameof(session));
         this.releaser = releaser ?? throw new ArgumentNullException(nameof(releaser));
         this.ensureOrigin = ensureOrigin;
+        this.ownedLifetime = ownedLifetime;
         persistedRevision = request.ContentRevision;
     }
 
@@ -182,6 +190,12 @@ public sealed class ProjectStructureKnownFileInteraction : IAsyncDisposable
             return;
         }
 
-        await releaser.ReleaseAsync(Session.File);
+        try {
+            await releaser.ReleaseAsync(Session.File);
+        } finally {
+            if (ownedLifetime is not null) {
+                await ownedLifetime.DisposeAsync();
+            }
+        }
     }
 }

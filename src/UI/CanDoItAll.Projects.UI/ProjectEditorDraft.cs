@@ -34,10 +34,15 @@ public sealed record ProjectEditorAcceptedOutcome(ProjectEditorSubmission Submit
 public sealed class ProjectEditorDraft {
     private readonly Dictionary<FieldIdentifier, long> revisions = [];
     private readonly ValidationMessageStore validation;
+    private readonly HashSet<FieldIdentifier> pendingInputs = [];
 
-    public ProjectEditorDraft(ProjectEditorModel model, ProjectPendingScope? scope = null) {
+    public ProjectEditorDraft(ProjectEditorModel model, ProjectPendingScope? scope = null, ProjectDefinitionSnapshot? original = null) {
+        if (original is not null && model.ExpectedDefinition != original.Expectation) {
+            throw new ArgumentException("The original snapshot must match this acquired definition expectation.", nameof(original));
+        }
         Model = model;
         Scope = scope;
+        Definition = new(original);
         EditContext = new(model);
         validation = new(EditContext);
         EditContext.OnFieldChanged += (_, args) => {
@@ -47,6 +52,8 @@ public sealed class ProjectEditorDraft {
     }
 
     public ProjectEditorModel Model { get; }
+    public ProjectDefinitionReconciliation Definition { get; }
+    public ProjectDefinitionSnapshot? Original => Definition.Original;
     public ProjectPendingScope? Scope { get; }
     public EditContext EditContext { get; }
     public List<StarterObjectDraft> StarterObjects { get; } = [];
@@ -59,15 +66,73 @@ public sealed class ProjectEditorDraft {
     public ProjectEditorModel? InspectedModel { get; private set; }
     public bool HasCurrentDefinition => Conflict?.Current is not null || InspectedDefinition is not null;
     public ProjectEditorModel? ComparisonModel => Conflict?.CurrentModel ?? InspectedModel ?? PreviousDraft?.Model;
-    public bool CanMutate => Mutation == ProjectEditorMutationState.Ready;
+    public bool HasPendingInput => pendingInputs.Count > 0;
+    public bool HasLocalChanges => HasPendingInput || Definition.Review is not null ||
+        StarterObjects.Any(row => !row.IsSeeded) ||
+        !ProjectEditorValues.MatchesOriginal(Model, Original);
+    public bool CanCompare => Model.Id.HasValue && Original is not null && !Definition.Missing &&
+        Mutation is ProjectEditorMutationState.Ready or ProjectEditorMutationState.Conflict;
+    public bool CanMutate => Mutation == ProjectEditorMutationState.Ready && !HasPendingInput && !Definition.IsOutdated &&
+        !Definition.Reading && Definition.Review is null;
+    public bool CanApplyMerge => CanCompare && !HasPendingInput && Definition.CanApply(Model, EditRevision);
+    public bool CanUndoMerge => Mutation == ProjectEditorMutationState.Ready && !HasPendingInput && Definition.CanUndoFor(Model, EditRevision);
     public string? Message { get; set; }
     public bool IsError { get; set; }
     public long EditRevision { get; private set; }
 
     public void RecordStructureEdit() => EditRevision++;
 
-    public void RecordAcceptedOutcome(ProjectEditorSubmission submitted, ProjectEditorAcknowledgement accepted)
-        => AcceptedOutcome = new(submitted, accepted);
+    public void PendingInput(FieldIdentifier field, bool pending) {
+        var wasPending = pendingInputs.Contains(field);
+        if (pending) {
+            pendingInputs.Add(field);
+        } else {
+            pendingInputs.Remove(field);
+        }
+        if (pending || wasPending) {
+            revisions[field] = Revision(field) + 1;
+            RecordStructureEdit();
+        }
+    }
+
+    public void BeginMerge() {
+        if (!CanCompare || HasPendingInput) {
+            throw new InvalidOperationException("Resolve pending input and native operation outcomes before comparing this Project.");
+        }
+        Definition.Begin(Capture());
+    }
+
+    public void ApplyMerge() {
+        if (!CanApplyMerge) {
+            throw new InvalidOperationException("The Project comparison or its live input changed. Read current again before applying.");
+        }
+        Definition.Apply(Model, EditRevision);
+        Conflict = null;
+        InspectedDefinition = null;
+        InspectedModel = null;
+        Mutation = ProjectEditorMutationState.Ready;
+        RecordStructureEdit();
+        Definition.Applied(Capture());
+        Message = "The comparison was applied to your draft. Review it and Save explicitly to commit.";
+        IsError = false;
+    }
+
+    public void UndoMerge() {
+        if (!CanUndoMerge) {
+            throw new InvalidOperationException("This Project merge cannot be undone while an operation or unfinished input is pending.");
+        }
+        Definition.Undo(Model, EditRevision);
+        RecordStructureEdit();
+        Message = "Your previous local values are restored against the verified current basis. Removed saved rows are new draft rows. Save remains separate.";
+        IsError = false;
+    }
+
+    public void RecordAcceptedOutcome(ProjectEditorSubmission submitted, ProjectEditorAcknowledgement accepted, Guid? operationId = null) {
+        AcceptedOutcome = new(submitted, accepted);
+        if (operationId is { } id) {
+            Definition.AcceptedOperation(id);
+        }
+    }
 
     public bool Validate() {
         validation.Clear();
@@ -96,14 +161,15 @@ public sealed class ProjectEditorDraft {
         Conflict = new(conflict.Submitted, ProjectEditorConflictReadState.Loading);
     }
 
-    public void CompleteConflictRead(ProjectDefinitionSnapshot current) {
+    public void CompleteConflictRead(ProjectDefinitionSnapshot current, long? readHint = null) {
         var conflict = Conflict ?? throw new InvalidOperationException("There is no conflicting definition to inspect.");
         var original = conflict.Submitted.Model.ExpectedDefinition
             ?? throw new InvalidOperationException("The conflicting submission has no original definition expectation.");
-        if (current.Expectation.Project.ProjectId != original.Project.ProjectId ||
-            current.Expectation.Project.DatabaseProfileId != original.Project.DatabaseProfileId) {
-            throw new InvalidOperationException("The current definition belongs to a different project or database profile.");
+        if (current.Expectation.Project != original.Project) {
+            Definition.Unavailable();
+            throw new InvalidOperationException("The current definition belongs to a different Project lifetime or database profile.");
         }
+        Definition.ReadCurrent(current, readHint ?? Definition.HintRevision);
         Conflict = new(conflict.Submitted, ProjectEditorConflictReadState.Ready, current, CreateModel(current));
     }
 
@@ -114,10 +180,10 @@ public sealed class ProjectEditorDraft {
 
     public ProjectEditorDraft StartFromCurrent(bool preservePrevious) {
         var current = Conflict?.Current ?? InspectedDefinition;
-        if (current is null) {
+        if (current is null || Definition.Missing) {
             throw new InvalidOperationException("Read the current definition before replacing the editor.");
         }
-        return new(CreateModel(current), Scope) {
+        return new(CreateModel(current), Scope, current) {
             PreviousDraft = preservePrevious ? this : null,
             Message = preservePrevious
                 ? "Reconcile selected changes in this current-based draft. The previous draft remains beside it for comparison and copying."
@@ -125,11 +191,12 @@ public sealed class ProjectEditorDraft {
         };
     }
 
-    public void InspectCurrent(ProjectDefinitionSnapshot current) {
+    public void InspectCurrent(ProjectDefinitionSnapshot current, long? readHint = null) {
         var target = Model.Id ?? AcceptedOutcome?.Accepted.Project.ProjectId;
         if (target != current.Expectation.Project.ProjectId) {
             throw new InvalidOperationException("The inspected definition belongs to another project.");
         }
+        Definition.ReadCurrent(current, readHint ?? Definition.HintRevision);
         InspectedDefinition = current;
         InspectedModel = CreateModel(current);
     }
@@ -188,6 +255,7 @@ public sealed class ProjectEditorDraft {
             Merge(live, nameof(live.OptionName), live.OptionName, sent.OptionName, option.OptionName, value => live.OptionName = value);
             Merge(live, nameof(live.Notes), live.Notes, sent.Notes, option.Notes, value => live.Notes = value);
         }
+        Definition.Accept(accepted);
 
         void Merge<T>(object row, string field, T live, T sent, T value, Action<T> apply) {
             if (Unchanged(row, field, live, sent)) {
@@ -314,7 +382,7 @@ public sealed class ProjectEditorDraft {
         }
     }
 
-    private static ProjectEditorModel Clone(ProjectEditorModel source) => new() {
+    internal static ProjectEditorModel Clone(ProjectEditorModel source) => new() {
         Id = source.Id,
         ExpectedLifetimeId = source.ExpectedLifetimeId,
         ExpectedProjectAdmission = source.ExpectedProjectAdmission,

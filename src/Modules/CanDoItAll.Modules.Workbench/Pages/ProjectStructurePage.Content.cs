@@ -45,21 +45,26 @@ public partial class ProjectStructurePage {
         var outcome = NewContentOutcome(opening, action);
         var invoked = false;
         summaryDialog = summaryDialog! with { IsBusy = true, Message = string.Empty };
+        await using var access = ObserveActionAccess();
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             if (action == ProjectStructureAuthoringOperation.SummaryStatus) {
                 var row = context.Surface.Nodes.FirstOrDefault(node => node.Id == nodeId);
                 if (row is null || !snapshot.Summary.Rows.Any(item => item.NodeId == row.Id) || !SummaryStatusOptions.Contains(status)) {
                     throw new ArgumentException("The original summary row or status is unavailable.");
                 }
                 invoked = true;
-                var accepted = await ProjectWorkbenchService.UpdateContentStatusesAsync(context.Admission, [row], status!);
+                var accepted = await ProjectWorkbenchService.UpdateContentStatusesAsync(context.Admission, [row], status!, deferredCompletionCts.Token,
+                    token => AuthorizeActionAsync(context, access, write: true, token));
                 if (accepted.Count == 0) {
                     throw new ProjectStructureEditConflictException();
                 }
                 outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Nodes = accepted,
                     Message = "The original summary status was saved." };
-                RecordAuthoringOutcome(opening, outcome);
+                RecordCurrentAuthoringOutcome(opening, outcome);
                 if (IsCurrentAuthoring(opening, summaryOpening)) {
+                    await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
                     await ApplySurfaceNodeUpdatesAsync(accepted);
                 }
             } else {
@@ -86,25 +91,24 @@ public partial class ProjectStructurePage {
                 } else {
                     throw new ArgumentException("Unknown summary export.");
                 }
-                if (!HasOriginalContentAuthority(context)) {
-                    throw new ProjectStructureEditConflictException();
-                }
+                await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
                 invoked = true;
                 var created = await ProjectWorkbenchService.CreateObjectAsync(context.Surface.ProjectId,
                     new(ProjectObjectType.File, title, "Progress summary export", "Generated from the structure progress summary modal.",
                         snapshot.RootNodeId, ObjectSubtype: subtype, Media: media, MetadataJson: metadata) {
                         ExpectedProjectAdmission = context.Admission, ExpectedParticipants = [opening.Node]
-                    }, deferredCompletionCts.Token);
+                    }, deferredCompletionCts.Token, token => AuthorizeActionAsync(context, access, write: true, token));
                 outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = created,
                     Message = $"{created.Title} was saved ({created.Id})." };
-                RecordAuthoringOutcome(opening, outcome);
+                RecordCurrentAuthoringOutcome(opening, outcome);
                 if (IsCurrentAuthoring(opening, summaryOpening)) {
+                    await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
                     await RefreshCreatedActionAsync(context, created);
                 }
             }
         } catch (Exception failure) {
             outcome = ContentFailure(opening, outcome, invoked, failure);
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
         } finally {
             opening.IsBusy = false;
             if (ReferenceEquals(opening, summaryOpening) && summaryDialog is not null) {
@@ -141,24 +145,29 @@ public partial class ProjectStructurePage {
         }
         var outcome = NewContentOutcome(opening, ProjectStructureAuthoringOperation.ExportCanvasImage);
         var invoked = false;
+        await using var access = ObserveActionAccess();
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             var base64 = await canvas.CaptureImageAsync();
-            if (string.IsNullOrWhiteSpace(base64) || !HasOriginalContentAuthority(context)) {
+            if (string.IsNullOrWhiteSpace(base64)) {
                 throw new ProjectStructureEditConflictException();
             }
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             invoked = true;
             var created = await ProjectWorkbenchService.CreateObjectAsync(context.Surface.ProjectId,
                 new(ProjectObjectType.ImageAsset, $"{target.Title} mindmap image", "Canvas export",
                     "Generated from the current structure canvas viewport.", target.Id, ObjectSubtype: "png",
                     Media: new($"{SanitizeExportName(target.Title)}-mindmap.png", "image/png", base64)) {
                     ExpectedProjectAdmission = context.Admission, ExpectedParticipants = [target]
-                });
+                }, deferredCompletionCts.Token, token => AuthorizeActionAsync(context, access, write: true, token));
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = created,
                 Message = $"{created.Title} was saved ({created.Id})." };
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
             await RefreshCreatedActionAsync(context, created);
         } catch (Exception failure) {
-            RecordAuthoringOutcome(opening, ContentFailure(opening, outcome, invoked, failure));
+            RecordCurrentAuthoringOutcome(opening, ContentFailure(opening, outcome, invoked, failure));
         } finally {
             EndContentAction(opening, ProjectStructureAuthoringOperation.ExportCanvasImage);
             await RenderAuthoringOutcomeAsync();
@@ -176,25 +185,31 @@ public partial class ProjectStructurePage {
             return;
         }
         var outcome = NewContentOutcome(opening, ProjectStructureAuthoringOperation.CreateTranscript);
+        await using var access = ObserveActionAccess();
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             var created = await ProjectWorkbenchService.CreateObjectAsync(context.Surface.ProjectId,
                 new(ProjectObjectType.Transcript, $"{target.Title} transcript", "Generated from recording",
                     $"Transcript scaffold created from recording '{target.Title}'.", target.Id, target.X + 280, target.Y + 120,
                     MetadataJson: ProjectObjectMetadataSerializer.Serialize(new() { Transcript = new() { TranscriptText = string.Empty } }),
                     NodeReferences: new() { TranscriptRecordingNodeId = TryParseCustomNodeArtifactId(target.Id) }) {
                     ExpectedProjectAdmission = context.Admission, ExpectedParticipants = [target]
-                });
+                }, deferredCompletionCts.Token, token => AuthorizeActionAsync(context, access, write: true, token));
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.PartialCommit, Node = created,
                 Message = $"Transcript scaffold {created.Id} was saved; its recording link is pending." };
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             var link = await ProjectWorkbenchService.LinkObjectsDetailedAsync(context.Admission, target.Id, created.Id,
-                ProjectObjectLinkKind.DerivedFrom, [target, created]);
+                ProjectObjectLinkKind.DerivedFrom, [target, created], deferredCompletionCts.Token,
+                token => AuthorizeActionAsync(context, access, write: true, token));
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Link = link,
                 Message = $"Transcript scaffold {created.Id} was saved and linked to its recording. No audio recognition was requested." };
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
             await RefreshCreatedActionAsync(context, created);
         } catch (Exception failure) {
-            RecordAuthoringOutcome(opening, ContentFailure(opening, outcome, true, failure));
+            RecordCurrentAuthoringOutcome(opening, ContentFailure(opening, outcome, true, failure));
         } finally {
             EndContentAction(opening, ProjectStructureAuthoringOperation.CreateTranscript);
             await RenderAuthoringOutcomeAsync();
@@ -214,9 +229,13 @@ public partial class ProjectStructurePage {
             metadata.Transcript?.LastProviderName ?? string.Empty, [], string.Empty) {
             OpeningId = opening.Id, Phase = ContentConfirmationPhase.Loading
         };
+        await using var access = ObserveActionAccess();
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
             var providers = (await ProviderRuntimeProfileSource.ListProvidersAsync(deferredCompletionCts.Token))
                 .Where(provider => provider.IsEnabled && provider.Purpose == ProviderProfilePurpose.Chat).ToArray();
+            await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
             if (IsCurrentAuthoring(opening, transcriptOpening)) {
                 pendingTranscriptAction = pendingTranscriptAction! with { Providers = providers,
                     SelectedProviderId = providers.FirstOrDefault(provider => provider.Id == node.NodeReferences?.TranscriptProviderProfileId)?.Id ?? providers.FirstOrDefault()?.Id,
@@ -247,7 +266,10 @@ public partial class ProjectStructurePage {
         var context = opening.Context;
         var node = opening.Node;
         var outcome = NewContentOutcome(opening, ProjectStructureAuthoringOperation.TranscriptAnalysis);
+        await using var access = ObserveActionAccess();
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             var provider = dialog.Providers.FirstOrDefault(provider => provider.Id == dialog.SelectedProviderId)
                 ?? throw new ArgumentException("Select an available provider before sending this transcript.");
             var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
@@ -256,9 +278,7 @@ public partial class ProjectStructurePage {
                 throw new ArgumentException("Transcript text is required before running an LLM action.");
             }
             await ProjectWorkbenchService.RequireContentCurrentAsync(context.Admission, node, deferredCompletionCts.Token);
-            if (!HasOriginalContentAuthority(context)) {
-                throw new ProjectStructureEditConflictException();
-            }
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             pendingTranscriptAction = dialog with { Phase = ContentConfirmationPhase.Submitting, Error = string.Empty };
             opening.RequiresObservation = true;
             outcome = outcome with { ProviderId = provider.Id, ExternalEffect = ProjectStructureExternalEffectState.Dispatched };
@@ -268,10 +288,8 @@ public partial class ProjectStructurePage {
             if (result.IsFailure || result.Value is null) {
                 throw new InvalidOperationException("The provider did not return an accepted result. Observe the original request before sending it again.");
             }
-            outcome = outcome with { ExternalEffect = ProjectStructureExternalEffectState.Completed };
-            if (!HasOriginalContentAuthority(context)) {
-                throw new ProjectStructureEditConflictException();
-            }
+            outcome = outcome with { ExternalEffect = ProjectStructureExternalEffectState.Completed, TranscriptResponse = result.Value };
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             metadata.Transcript ??= new();
             metadata.Transcript.TranscriptText = transcriptText;
             metadata.Transcript.LastActionKind = dialog.ActionKind;
@@ -294,18 +312,20 @@ public partial class ProjectStructurePage {
                     throw new ArgumentException("Unknown transcript action.");
             }
             var updated = await ProjectWorkbenchService.UpdateContentMetadataAsync(context.Admission, node,
-                ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(node.MetadataJson, metadata), "Review", references, deferredCompletionCts.Token)
+                ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(node.MetadataJson, metadata), "Review", references, deferredCompletionCts.Token,
+                token => AuthorizeActionAsync(context, access, write: true, token))
                 ?? throw new ProjectStructureEditConflictException();
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = updated,
                 Message = $"{ResolveTranscriptActionLabel(dialog.ActionKind)} was saved for the original transcript." };
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
             if (IsCurrentAuthoring(opening, transcriptOpening)) {
+                await AuthorizeActionAsync(context, access, write: false, deferredCompletionCts.Token);
                 pendingTranscriptAction = dialog with { Phase = ContentConfirmationPhase.Completed, Error = outcome.Message };
                 await ApplySurfaceNodeUpdatesAsync([updated]);
             }
         } catch (Exception failure) {
             outcome = ContentFailure(opening, outcome, outcome.ExternalEffect != ProjectStructureExternalEffectState.NotStarted, failure);
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
             if (IsCurrentAuthoring(opening, transcriptOpening)) {
                 pendingTranscriptAction = dialog with { Error = outcome.Message,
                     Phase = opening.RequiresObservation ? ContentConfirmationPhase.ObservationRequired : ContentConfirmationPhase.Ready };
@@ -334,6 +354,7 @@ public partial class ProjectStructurePage {
         opening.RequiresObservation |= saved && outcome.Kind == ProjectStructureAuthoringResultKind.PartialCommit ||
             outcome.ExternalEffect != ProjectStructureExternalEffectState.NotStarted || invoked && !IsKnownGraphRejection(failure);
         return outcome with {
+            Failure = failure,
             Kind = saved ? outcome.Kind : outcome.ExternalEffect == ProjectStructureExternalEffectState.Completed
                 ? ProjectStructureAuthoringResultKind.PartialCommit : opening.RequiresObservation
                     ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,

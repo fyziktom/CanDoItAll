@@ -6,11 +6,15 @@
 @using CanDoItAll.AppComponents
 @using CanDoItAll.Components.BaseLib
 
+<PlanningTaskLeaveGuard @ref="leaveGuard" ReadCurrent="ReadCloseRequest" />
 <Stack GapScale="LayoutGap.Large"
        AlignItems="AlignItems.Stretch"
        Class="project-structure-gantt-task-dialog"
        data-testid="project-structure-gantt-task-dialog-content">
-    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch" inert="@(submissionState.IsBusy ? string.Empty : null)">
+    <PlanningTaskComparison @ref="comparison" Owner="ComparisonOwner" ReadInput="CaptureInput" OriginalInput="initialInput"
+                            ApplyLocal="ApplyComparison" ResourceOptions="ResourceOptions" IsSaving="submissionState.IsBusy"
+                            CanAccept="submissionState.CanAcceptComparison" Changed="ComparisonChanged" />
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch" inert="@(submissionState.IsBusy || comparison?.BlocksInput == true ? string.Empty : null)">
     @if (ResourceWarnings.Count > 0)
     {
         <Alert AlertStyle="AlertStyle.Warning"
@@ -49,7 +53,7 @@
                    aria-label="Task length in hours"
                    disabled="@IsScheduleReadOnly"
                    data-testid="project-structure-gantt-task-duration"
-                   @onchange="HandleDurationChanged" />
+                   @oninput="HandleDurationChanged" @onchange="HandleDurationChanged" />
         </FormField>
 
         <FormField Text="Start (UTC)">
@@ -59,7 +63,7 @@
                    aria-label="Task start in UTC"
                    disabled="@IsScheduleReadOnly"
                    data-testid="project-structure-gantt-task-start"
-                   @onchange="HandleStartChanged" />
+                   @oninput="HandleStartChanged" @onchange="HandleStartChanged" />
         </FormField>
 
         <FormField Text="End (UTC)">
@@ -69,7 +73,7 @@
                    aria-label="Task end in UTC"
                    disabled="@IsScheduleReadOnly"
                    data-testid="project-structure-gantt-task-end"
-                   @onchange="HandleEndChanged" />
+                   @oninput="HandleEndChanged" @onchange="HandleEndChanged" />
         </FormField>
     </Grid>
 
@@ -117,7 +121,7 @@
                    title="@(IsProgressExecutionControlled ? "Execution state determines the displayed progress." : null)"
                    aria-label="Actual task progress percent"
                    data-testid="project-structure-gantt-task-progress"
-                   @onchange="HandleProgressChanged" />
+                   @oninput="HandleProgressChanged" @onchange="HandleProgressChanged" />
         </FormField>
 
         <ProjectStructureTaskExecutionEditor @ref="executionEditor"
@@ -190,12 +194,88 @@
     </Stack>
 
     <PlanningTaskFormActions Result="@submissionState.Result" IsBusy="@submissionState.IsBusy" IsEditMode="@IsEditMode"
+                             SubmitBlocked="@(comparison?.BlocksInput == true || ComparisonOwner is { IsActive: false })"
                              TestIdPrefix="project-structure-gantt-task" Submitted="SubmitAsync" Cancelled="Cancelled"
                              Readback="@(Readback is null ? default : EventCallback.Factory.Create(this, ReadbackAsync))" />
 </Stack>
 
 @code {
     private readonly TaskEditorSubmissionState submissionState = new();
+    private PlanningTaskLeaveGuard? leaveGuard;
+    private PlanningTaskEditorInput? initialInput;
+    private PlanningTaskComparison? comparison;
+    private PlanningTaskComparisonCurrent? acceptedComparison;
+    private int? acceptedProgressPercent;
+    [Parameter] public IPlanningTaskComparisonOwner? ComparisonOwner { get; set; }
+    private Task ComparisonChanged() {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private bool ApplyComparison(PlanningTaskLocalPatch patch, Func<bool> accept) {
+        if (!submissionState.CanAcceptComparison || CaptureInput() != patch.Expected ||
+            patch.Result is not PlanningTaskEditorInput.Gantt { Estimate: { } rawEstimate, Execution: { } rawExecution } result ||
+            patch.Current.Input is not PlanningTaskEditorInput.Gantt { Execution: { } currentExecution } current ||
+            !Enum.IsDefined(rawExecution.State) || !Enum.IsDefined(currentExecution.State) ||
+            !int.TryParse(current.Progress, NumberStyles.Integer, CultureInfo.InvariantCulture, out var currentProgress) ||
+            currentProgress != ProjectProgressPolicy.UntrackedPercent && !ProjectProgressPolicy.IsTrackedPercent(currentProgress) ||
+            estimateEditor is null || executionEditor is null || !accept()) {
+            return false;
+        }
+        acceptedComparison = patch.Current;
+        acceptedProgressPercent = currentProgress;
+        initialInput = patch.Current.Input;
+        title = result.Title;
+        startText = result.Start;
+        endText = result.End;
+        durationText = result.Duration;
+        progressText = result.Progress;
+        if (TryParseUtc(startText, out var start)) {
+            startUtc = start;
+        }
+        if (TryParseUtc(endText, out var end)) {
+            endUtc = end;
+        }
+        if (int.TryParse(progressText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var progress)) {
+            progressPercent = progress;
+        }
+        initialAssignee = current.Assignee;
+        proposedAssignee = result.Assignee;
+        resourceToAttach = result.Attachment;
+        selectedResource = result.SelectedResource;
+        estimateBeforeDefinitionSelection = null;
+        estimateBeforeDirectAssigneeSelection = null;
+        estimateEditor.ApplyInput(rawEstimate);
+        estimateInputValid = estimateEditor.TryGetValue(out var parsedEstimate, out validationError);
+        if (estimateInputValid) {
+            estimate = parsedEstimate;
+        }
+        execution = executionEditor.ApplyInput(rawExecution, currentExecution);
+        if (!executionEditor.TryGetValue(out _, out var executionError)) {
+            validationError = executionError;
+        }
+        estimateInputRevision++;
+        submissionState.AcceptComparison();
+        return true;
+    }
+
+    private PlanningTaskEditorInput CaptureInput() => new PlanningTaskEditorInput.Gantt(title, startText, endText,
+        durationText, progressText, estimateEditor?.CaptureInput(), executionEditor?.CaptureInput(), proposedAssignee,
+        resourceToAttach, selectedResource);
+
+    public PlanningTaskCloseRequest ReadCloseRequest() {
+        var input = CaptureInput();
+        return new(QuoteContext.OpeningId, input, input != initialInput, submissionState.IsBusy, submissionState.Result) { Comparison = comparison?.CaptureState() };
+    }
+
+    public Task<bool> ConfirmLeaveAsync() => leaveGuard?.RequestLeaveAsync() ?? Task.FromResult(false);
+
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            initialInput = CaptureInput();
+            StateHasChanged();
+        }
+    }
     private long estimateInputRevision;
     private bool estimateInputValid = true;
     private void EstimateInputChanged(bool valid) {
@@ -289,9 +369,9 @@
 
     private bool IsEditMode => EditModel is not null;
 
-    private bool IsScheduleReadOnly => EditModel?.ScheduleReadOnly == true;
+    private bool IsScheduleReadOnly => acceptedComparison?.ScheduleReadOnly ?? EditModel?.ScheduleReadOnly == true;
 
-    private bool CanChangeDirectAssignee => EditModel?.CanChangeDirectAssignee != false;
+    private bool CanChangeDirectAssignee => acceptedComparison?.CanChangeDirectAssignee ?? EditModel?.CanChangeDirectAssignee != false;
 
     private bool CanClearSelectedResource =>
         selectedResource is not null &&
@@ -416,7 +496,8 @@
         }
         if (IsEditMode && (!int.TryParse(progressText, NumberStyles.Integer, CultureInfo.InvariantCulture, out progressPercent) ||
             !ProjectProgressPolicy.IsTrackedPercent(progressPercent) &&
-            !(progressPercent == ProjectProgressPolicy.UntrackedPercent && EditModel!.ProgressPercent == ProjectProgressPolicy.UntrackedPercent))) {
+            !(progressPercent == ProjectProgressPolicy.UntrackedPercent &&
+                (acceptedProgressPercent ?? EditModel!.ProgressPercent) == ProjectProgressPolicy.UntrackedPercent))) {
             validationError = "Keep the original untracked value (-1), or enter actual progress between 0 and 100 percent.";
             return false;
         }
@@ -534,7 +615,7 @@
 
     private async Task SubmitAsync()
     {
-        if (!submissionState.CanSubmit) {
+        if (!submissionState.CanSubmit || comparison?.BlocksInput == true || ComparisonOwner is { IsActive: false }) {
             return;
         }
         var normalizedTitle = title.Trim();

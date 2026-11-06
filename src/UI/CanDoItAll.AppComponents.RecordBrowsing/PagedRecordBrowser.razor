@@ -351,6 +351,11 @@
     // takes over is silently lost. Controls therefore stay disabled until the first interactive render, which is
     // the only render that runs OnAfterRender (it never runs during prerendering or static rendering).
     private bool isInteractive;
+    private long appliedRefreshVersion;
+    private bool refreshPending;
+    private bool searchPending;
+
+    [Parameter] public long RefreshVersion { get; set; }
 
     [Parameter, EditorRequired]
     public PagedRecordLoader<TKey, TFilter>? Loader { get; set; }
@@ -559,6 +564,7 @@
             committedQuery = CaptureQuery(0);
         }
 
+        appliedRefreshVersion = RefreshVersion;
         page = new PagedRecordPage<TKey>([], 0, PageSize, 0);
         await LoadPageAsync(initialPageIndex);
     }
@@ -568,16 +574,18 @@
     // changes nothing.
     protected override Task OnParametersSetAsync()
     {
+        refreshPending |= appliedRefreshVersion != RefreshVersion;
+        appliedRefreshVersion = RefreshVersion;
         if (Query is not { } query || query.Equals(ownerQuery))
         {
             ownerQuery = Query;
-            return Task.CompletedTask;
+            return RefreshIfReadyAsync();
         }
 
         ownerQuery = query;
         if (query.Equals(committedQuery))
         {
-            return Task.CompletedTask;
+            return RefreshIfReadyAsync();
         }
 
         ApplyQuery(query);
@@ -598,6 +606,7 @@
     private async Task HandleSearchChangedAsync(string? value)
     {
         searchText = value ?? string.Empty;
+        searchPending = true;
         var currentOperation = ReplaceOperation();
         var generation = ++loadGeneration;
         try
@@ -613,6 +622,12 @@
         }
         catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
         {
+        }
+        finally {
+            if (IsCurrent(currentOperation, generation)) {
+                searchPending = false;
+                await RefreshIfReadyAsync();
+            }
         }
     }
 
@@ -714,6 +729,7 @@
 
     private Task LoadPageAsync(int pageIndex)
     {
+        searchPending = false;
         var currentOperation = ReplaceOperation();
         var generation = ++loadGeneration;
         return LoadPageCoreAsync(pageIndex, currentOperation, generation);
@@ -729,6 +745,7 @@
             return;
         }
 
+        refreshPending = false;
         isLoading = true;
         loadError = null;
         try
@@ -777,9 +794,14 @@
             if (IsCurrent(currentOperation, generation))
             {
                 isLoading = false;
+                await RefreshIfReadyAsync();
             }
         }
     }
+
+    private Task RefreshIfReadyAsync() => !disposed && refreshPending && !isLoading && !searchPending
+        ? LoadPageAsync(page.PageIndex)
+        : Task.CompletedTask;
 
     // An owner-supplied page that no longer exists, for example from a bookmark after records were removed. Only a
     // browser whose owner keeps the query corrects it; the last page is reported as a correction and loaded instead.

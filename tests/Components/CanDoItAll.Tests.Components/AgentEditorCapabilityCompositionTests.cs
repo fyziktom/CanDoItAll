@@ -27,7 +27,7 @@ public sealed class AgentEditorCapabilityCompositionTests {
         draft.Name = "Unsaved whole draft";
         draft.Summary = "Must be saved with assignment";
         draft.VoiceAccess = new() { CanUseVoiceMode = true, PreferredVoiceId = "alloy" };
-        probe.Save = request => probe.Target.SaveAgentAsync(request);
+        probe.Save = request => probe.Target.SaveAgentDefinitionAsync(request);
         await cut.FindAll("[data-testid='agents-details-capability-toggle']").First().ClickAsync();
         var capabilityId = Assert.Single(draft.SelectedCapabilityIds);
         Assert.Equal(existing ? 1 : 0, probe.AcceptedSaves);
@@ -63,7 +63,7 @@ public sealed class AgentEditorCapabilityCompositionTests {
         var draft = (AgentEditorModel)cut.FindComponent<EditForm>().Instance.EditContext!.Model;
         draft.Name = "Wizard whole draft";
         draft.Instructions = "Unsaved instructions travel with assignment";
-        probe.Save = request => probe.Target.SaveAgentAsync(request);
+        probe.Save = request => probe.Target.SaveAgentDefinitionAsync(request);
         var opened = cut.Find("[data-testid='agents-details-new-skill']").ClickAsync();
         var wizard = host.WaitForComponent<CapabilitySetupWizardDialog>();
         wizard.Find("[data-testid='agents-capability-setup-name']").Change("Seams inline skill");
@@ -89,11 +89,11 @@ public sealed class AgentEditorCapabilityCompositionTests {
             await cut.Find("[data-testid='agents-created-capability-review']").ClickAsync();
             Assert.Equal(0, probe.AcceptedSaves);
             if (existing) {
-                probe.Save = _ => Task.FromException<Guid>(new AgentEditorValidationException("Controlled assignment refusal."));
+                probe.Save = _ => Task.FromException<AgentDefinition>(new AgentEditorValidationException("Controlled assignment refusal."));
                 await cut.Find("[data-testid='agents-created-capability-assign']").ClickAsync();
                 Assert.Empty((await workspace.GetAgentEditorAsync(agentId)).SelectedCapabilityIds);
                 Assert.Contains(created.Id.ToString(), cut.Find("[data-testid='agents-created-capability-result']").TextContent);
-                probe.Save = request => probe.Target.SaveAgentAsync(request);
+                probe.Save = request => probe.Target.SaveAgentDefinitionAsync(request);
             }
             await cut.Find("[data-testid='agents-created-capability-assign']").ClickAsync();
             Assert.Single(await workspace.ListCapabilitiesAsync(), item => item.Name == "Seams inline skill");

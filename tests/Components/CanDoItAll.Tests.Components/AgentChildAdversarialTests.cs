@@ -38,7 +38,7 @@ public sealed class AgentChildAdversarialTests {
         using var context = CreateContext(out _);
         var setup = (ChildWorkspace)context.Services.GetRequiredService<IAgentCapabilitySetupFlowService>();
         Task operation;
-        Action stop;
+        Func<ValueTask> stop;
         Func<string> markup;
         if (wizard) {
             var child = context.Render<CapabilitySetupWizardDialog>();
@@ -47,18 +47,18 @@ public sealed class AgentChildAdversarialTests {
             child.Find("[data-testid='agents-capability-setup-mcp-transport']").Change("logical");
             child.Find("[data-testid='agents-capability-setup-mcp-server']").Change("fixture-server");
             operation = child.Find("[data-testid='agents-capability-setup-test']").ClickAsync();
-            stop = child.Instance.Dispose;
+            stop = child.Instance.DisposeAsync;
             markup = () => child.Markup;
         } else {
             var child = context.Render<CapabilityDetailsDialog>(parameters => parameters.Add(component => component.CapabilityId, Guid.NewGuid()));
             await child.InvokeAsync(() => child.FindComponent<Tabs>().Instance.SelectedIndexChanged.InvokeAsync(1));
             operation = child.Find("[data-testid='agents-capability-details-test-setup']").ClickAsync();
-            stop = child.Instance.Dispose;
+            stop = child.Instance.DisposeAsync;
             markup = () => child.Markup;
         }
         Assert.Equal(1, setup.SetupCalls);
         if (dispose) {
-            stop();
+            await stop();
             Assert.True(setup.Token.IsCancellationRequested);
             var callbacks = 0;
             using var registration = setup.Token.Register(() => callbacks++);
@@ -108,11 +108,11 @@ public sealed class AgentChildAdversarialTests {
         if (team) {
             var child = context.Render<AgentTeamDetailsDialog>();
             waitForAssertion = assertion => child.WaitForAssertion(assertion);
-            await child.InvokeAsync(child.Instance.Dispose);
+            await child.InvokeAsync(() => child.Instance.DisposeAsync().AsTask());
         } else {
             var child = context.Render<CapabilityDetailsDialog>(parameters => parameters.Add(component => component.CapabilityId, Guid.NewGuid()));
             waitForAssertion = assertion => child.WaitForAssertion(assertion);
-            await child.InvokeAsync(child.Instance.Dispose);
+            await child.InvokeAsync(() => child.Instance.DisposeAsync().AsTask());
         }
         Assert.True(workspace.Token.IsCancellationRequested);
         var callbacks = 0;
@@ -157,11 +157,13 @@ public sealed class AgentChildAdversarialTests {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddAgentConfigurationFixture();
         context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, ChildWorkspace>();
         workspace = (ChildWorkspace)(object)service;
         context.Services.AddSingleton(service);
         context.Services.AddSingleton(DispatchProxy.Create<IAgentCapabilitySetupFlowService, ChildWorkspace>());
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         return context;
     }
 
@@ -200,6 +202,7 @@ public sealed class AgentChildAdversarialTests {
                 nameof(IAgentFrameworkWorkspaceService.GetCapabilityEditorAsync) => Delay ? capability.Task
                     : Fail ? Task.FromException<CapabilityEditorModel>(new IOException(Poison)) : Task.FromResult(new CapabilityEditorModel {
                         Id = (Guid?)args![0], Name = "Fixture capability", Key = "fixture-capability", Kind = CapabilityKind.McpServer,
+                        ExpectedFingerprint = "original-child-capability-fingerprint",
                         ConfigurationJson = """{"transport":"logical","serverName":"fixture-server","allowedTools":["fixture"]}"""
                     }),
                 nameof(IAgentFrameworkWorkspaceService.GetAgentTeamEditorAsync) => Delay ? team.Task

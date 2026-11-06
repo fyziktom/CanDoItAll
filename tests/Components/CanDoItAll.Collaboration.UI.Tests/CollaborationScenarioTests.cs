@@ -1,5 +1,6 @@
 using CanDoItAll.Collaboration.UI;
 using CanDoItAll.Collaboration.UiSandbox;
+using CanDoItAll.Modules.Collaboration;
 
 namespace CanDoItAll.Tests.Components.Collaboration;
 

@@ -190,15 +190,15 @@ public sealed class SchedulerReviewRegressionTests : BunitContext {
         public SchedulerScenarioStore Store { get; } = new(SchedulerScenario.UnknownSave);
         public Func<Guid, CancellationToken, Task<SchedulerDraftValues>>? Editor { get; set; }
         public bool UnknownPlans { get; set; }
-        public Task<SchedulerWorkspaceData> ReadAsync(SchedulerHistoryQuery query, CancellationToken token) => Store.ReadAsync(query, token);
+        public Task<SchedulerWorkspaceData> ReadAsync(SchedulerWorkspaceQuery query, CancellationToken token) => Store.ReadAsync(query, token);
         public Task<SchedulerDraftValues> DefaultAsync(CancellationToken token) => Store.DefaultAsync(token);
         public Task<SchedulerDraftValues> EditorAsync(Guid id, CancellationToken token) => Editor?.Invoke(id, token) ?? Store.EditorAsync(id, token);
         public Task<SchedulerWorkflowInputSchema> SchemaAsync(SchedulerDraftValues values, CancellationToken token) => Store.SchemaAsync(values, token);
         public Task<IReadOnlyList<WorkflowInputParameterOption>> OptionsAsync(WorkflowInputParameterDescriptor parameter, IReadOnlyDictionary<string, string> values, CancellationToken token) => Store.OptionsAsync(parameter, values, token);
         public Task<SchedulerWorkflowInputValidationResult> ValidateAsync(SchedulerDraftValues values, CancellationToken token) => Store.ValidateAsync(values, token);
         public Task<SchedulerMutationReceipt> SaveAsync(SchedulerDraftValues values) => Store.SaveAsync(values);
-        public Task<SchedulerMutationReceipt> ToggleAsync(Guid id, bool enabled) => UnknownPlans ? Task.FromResult(new SchedulerMutationReceipt(SchedulerMutationKind.Disable, SchedulerMutationStatus.Unknown, id, SchedulerMutationStage.None, "Unknown")) : Store.ToggleAsync(id, enabled);
-        public Task<SchedulerMutationReceipt> DeleteAsync(Guid id) => UnknownPlans ? Task.FromResult(new SchedulerMutationReceipt(SchedulerMutationKind.Delete, SchedulerMutationStatus.Unknown, id, SchedulerMutationStage.None, "Unknown")) : Store.DeleteAsync(id);
+        public Task<SchedulerMutationReceipt> ToggleAsync(SchedulerPlanCondition expected, bool enabled) => UnknownPlans ? Task.FromResult(new SchedulerMutationReceipt(SchedulerMutationKind.Disable, SchedulerMutationStatus.Unknown, expected.PlanId, SchedulerMutationStage.None, "Unknown")) : Store.ToggleAsync(expected, enabled);
+        public Task<SchedulerMutationReceipt> DeleteAsync(SchedulerPlanCondition expected) => UnknownPlans ? Task.FromResult(new SchedulerMutationReceipt(SchedulerMutationKind.Delete, SchedulerMutationStatus.Unknown, expected.PlanId, SchedulerMutationStage.None, "Unknown")) : Store.DeleteAsync(expected);
         public string DescribeCron(string expression, string zone) => Store.DescribeCron(expression, zone);
     }
 }

@@ -1,6 +1,8 @@
 using System.Data.Common;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Editing;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
@@ -114,9 +116,14 @@ public sealed class PromptsOwnerPersistenceTests {
         var options = new DbContextOptionsBuilder<PromptsDbContext>(services.GetRequiredService<DbContextOptions<PromptsDbContext>>())
             .AddInterceptors(probe).Options;
         var activity = new RecordingActivity();
+        var changes = services.GetRequiredService<PromptGalleryChanges>();
+        var feed = services.GetRequiredService<EditingChangeFeed>();
+        using var notifications = changes.Subscribe();
+        var originalOperation = new EditingOperationIdentity(Guid.NewGuid(), Guid.NewGuid());
         var service = new PromptsService(factory, new SystemClock(), activity, new EfPromptGallerySearchDriver(factory),
             new PromptGalleryProjectionCoordinator(factory, new DisabledPromptGalleryProjectionDriver()),
-            new PromptGalleryCompatibilityEvaluator(), NullLogger<PromptsService>.Instance);
+            new PromptGalleryCompatibilityEvaluator(), NullLogger<PromptsService>.Instance,
+            changes);
         var mutation = new PromptGalleryMutationService(service, factory, options, transactions);
         var queries = new PromptArtifactProjectionQueryService(factory, options, transactions);
         await using var owner = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
@@ -125,6 +132,7 @@ public sealed class PromptsOwnerPersistenceTests {
         owner.Add(project);
         await owner.SaveChangesAsync();
         PromptDraftCreationPreparation preparation;
+        using (changes.Enter(originalOperation))
         using (transactions.Enter(owner)) {
             var result = await mutation.StageCreateDraftAsync(new(null, project.Id, null, "Original title", "Exact activity summary",
                 PromptGalleryItemKind.FullPrompt, "Review", "", Tags: ["atomic"], SupportedConsumers: [PromptGalleryConsumer.ProjectWorkbench]));
@@ -138,12 +146,14 @@ public sealed class PromptsOwnerPersistenceTests {
             });
             Assert.Empty(await queries.ListProjectFactsAsync(project.Id));
             Assert.Empty(activity.Requests);
+            Assert.Equal(0, feed.DeliveredHints);
         }
         if (!commit) {
             await transaction.RollbackAsync();
             Assert.True((await service.GetItemAsync(preparation.Receipt.PromptArtifactId)).IsFailure);
             await Assert.ThrowsAsync<InvalidOperationException>(() => mutation.CompleteDraftCreationAsync(preparation));
             Assert.Empty(activity.Requests);
+            Assert.Equal(0, feed.DeliveredHints);
             return;
         }
         await transaction.CommitAsync();
@@ -152,7 +162,15 @@ public sealed class PromptsOwnerPersistenceTests {
             "Intervening human edit", details.Summary, details.Kind, details.Phase, details.DraftContent,
             details.Tags, details.SupportedModels, details.SupportedConsumers, ExpectedUpdatedAtUtc: details.UpdatedAtUtc));
         Assert.True(humanEdit.IsSuccess);
-        await mutation.CompleteDraftCreationAsync(preparation);
+        using (changes.Enter(new(Guid.NewGuid(), Guid.NewGuid()))) {
+            await mutation.CompleteDraftCreationAsync(preparation);
+            await mutation.CompleteDraftCreationAsync(preparation);
+        }
+        var delivered = await notifications.ReadAsync(default);
+        var creation = Assert.Single(delivered.Changes, hint => hint.Kind == EditingChangeKind.Created);
+        Assert.Equal(originalOperation.EditorId, creation.OriginEditorId);
+        Assert.Equal(originalOperation.OperationId, creation.OperationId);
+        Assert.Equal(2, feed.DeliveredHints);
         Assert.Equal("Original title", Assert.Single(activity.Requests).Description);
         Assert.Equal("Intervening human edit", (await service.GetItemAsync(details.Id)).Value!.Title);
         await Assert.ThrowsAsync<InvalidOperationException>(() => queries.ListProjectFactsForMutationAsync(project.Id));

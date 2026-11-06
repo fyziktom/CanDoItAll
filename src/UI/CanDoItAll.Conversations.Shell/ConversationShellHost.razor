@@ -67,7 +67,7 @@
         </ConversationFloatingWindow>
     }
 
-    @if (FocusedWindow is { } window)
+    @foreach (var window in RenderedWindows)
     {
         <ConversationFloatingWindow @key="window.Key"
                                     WindowId="@window.Key.WindowId"
@@ -92,6 +92,14 @@
 
 @code {
     private RenderFragment CatalogControls => @<Stack GapScale="LayoutGap.Small">
+        @foreach (var source in ContributorSnapshots.Where(source => MatchesKind(source.Kind) && source.Snapshot.Refresh is not null)) {
+            <Button Text="@(source.Snapshot.UpdatesAvailable ? "Updates available — refresh conversations" : "Refresh conversations")"
+                    Icon="refresh" Disabled="@isRefreshing" Click="@(() => RefreshAsync(source.Snapshot.Refresh!))"
+                    data-testid="@($"conversation-shell-refresh-{source.SourceId}")" />
+        }
+        @if (!string.IsNullOrEmpty(refreshFailure)) {
+            <Alert AlertStyle="AlertStyle.Danger">@refreshFailure</Alert>
+        }
         <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" data-testid="conversation-shell-kind-filter">
             @foreach (var option in KindFilters)
             {

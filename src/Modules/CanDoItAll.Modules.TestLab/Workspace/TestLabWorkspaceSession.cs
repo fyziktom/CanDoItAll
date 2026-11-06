@@ -149,6 +149,7 @@ public sealed class TestLabWorkspaceSession(
             return Task.CompletedTask;
         }
         origin.Model.ResponsiblePartyId = partyId;
+        origin.Edited();
         return LoadPartiesAsync(origin);
     }
 
@@ -169,9 +170,13 @@ public sealed class TestLabWorkspaceSession(
             return;
         }
         var current = submission.BelongsTo(State.Draft);
-        if (result.Outcome is TestLabWriteOutcome.Refused or TestLabWriteOutcome.Unknown) {
+        if (result.Outcome is TestLabWriteOutcome.Refused or TestLabWriteOutcome.Unknown or TestLabWriteOutcome.Conflict) {
             if (current) {
-                var status = result.Outcome == TestLabWriteOutcome.Refused ? TestLabSaveState.Refused : TestLabSaveState.Unknown;
+                var status = result.Outcome switch {
+                    TestLabWriteOutcome.Refused => TestLabSaveState.Refused,
+                    TestLabWriteOutcome.Conflict => TestLabSaveState.Conflict,
+                    _ => TestLabSaveState.Unknown
+                };
                 origin.Finish(submission, status, result.Message);
                 Receipt(new(status, null, result.Message));
             }
@@ -210,6 +215,48 @@ public sealed class TestLabWorkspaceSession(
             origin.Finish(submission, statusAfterSave, message);
         }
         Receipt(new(statusAfterSave, id, message));
+    }
+
+    public async Task CompareChangesAsync(TestLabDraft origin) {
+        if (!AcceptIntent(origin, null) || origin.SaveState != TestLabSaveState.Conflict || origin.IsComparing || origin.Model.Id is not { } id) {
+            return;
+        }
+        var revision = origin.Revision;
+        using var read = planReads.Begin();
+        origin.IsComparing = true;
+        origin.Comparison = null;
+        Changed();
+        try {
+            var current = await owner.GetAsync(id, read.Token);
+            if (!AcceptIntent(origin, null) || !planReads.Accept(read)) {
+                return;
+            }
+            if (current?.Id != id || current.ExpectedPlan is null) {
+                origin.Message = "The saved plan is unavailable. Your draft is retained.";
+            } else if (origin.Revision != revision) {
+                origin.Message = "The draft changed during the read. Compare changes again.";
+            } else {
+                origin.Comparison = new(origin, current);
+                origin.Message = "Review the current plan and choose how to combine your changes.";
+            }
+        } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (AcceptIntent(origin, null) && planReads.Accept(read)) {
+                origin.Message = "The plan comparison could not be prepared. Your draft is retained.";
+                ReadFailed(exception, "plan comparison", id);
+            }
+        } finally {
+            origin.IsComparing = false;
+            Changed();
+        }
+    }
+
+    public async Task ApplyComparisonAsync(TestLabDraft origin, TestLabPlanComparison comparison) {
+        if (AcceptIntent(origin, null) && origin.SaveState == TestLabSaveState.Conflict && origin.ApplyComparison(comparison)) {
+            State.Receipt = null;
+            Changed();
+            await LoadPartiesAsync(origin);
+        }
     }
 
     public async Task RetryAsync() {
@@ -253,7 +300,7 @@ public sealed class TestLabWorkspaceSession(
             if (!planReads.Accept(read) || !IsCurrentCommit(origin, submission)) {
                 return false;
             }
-            if (accepted?.Id != id) {
+            if (accepted?.Id != id || accepted.ExpectedPlan != submission.Model.ExpectedPlan) {
                 State.EditorRead = TestLabReadState.Stale;
                 return false;
             }
@@ -271,15 +318,25 @@ public sealed class TestLabWorkspaceSession(
         }
     }
 
-    private async Task LoadListAsync() {
+    public Task MovePlanPageAsync(bool next) {
+        if (disposed || State.PlansRead == TestLabReadState.Loading || (next ? !State.HasMorePlans : State.PlanOffset == 0)) {
+            return Task.CompletedTask;
+        }
+        return LoadListAsync(State.PlanOffset + (next ? TestLabPlanPage.Size : -TestLabPlanPage.Size));
+    }
+
+    private async Task LoadListAsync(int? pageOffset = null) {
         using var read = listReads.Begin();
+        var offset = pageOffset ?? State.PlanOffset;
         State.PlansRead = TestLabReadState.Loading;
         Changed();
         try {
-            var plans = await owner.ListAsync(read.Token);
+            var page = await owner.ListAsync(offset, read.Token);
             if (!disposed && listReads.Accept(read)) {
-                State.Plans = plans;
-                State.PlansRead = plans.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
+                State.PlanOffset = offset;
+                State.HasMorePlans = page.HasNext;
+                State.Plans = page.Plans;
+                State.PlansRead = page.Plans.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
                 Changed();
             }
         } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {

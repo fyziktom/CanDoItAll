@@ -1,6 +1,8 @@
 using System.Data.Common;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Prompts.Components;
 using CanDoItAll.Prompts.UI.Editor;
@@ -13,10 +15,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.Prompts;
 
-// The Prompt Gallery detail loader reads the artifact header and its collections with separate statements and no
-// snapshot transaction. Under PostgreSQL's default Read Committed isolation another editor can commit between those
-// statements, so a read-back can carry this editor's own header token together with the other editor's collections.
-// The editor session must not let such a read-back authorize a later overwrite of the other editor's collection edit.
+// Intervene between real root and collection statements. Snapshot reads and accepted-receipt reconciliation must
+// preserve a foreign editor's committed collections even when no UI hint is delivered.
 public sealed class PromptGalleryMixedReadBackPersistenceIntegrationTests
 {
     private const string SupportedModelsTable = "Prompts_PromptSupportedProviderModels";
@@ -43,6 +43,76 @@ public sealed class PromptGalleryMixedReadBackPersistenceIntegrationTests
     [
         new("Anthropic", "claude-sonnet-5", IsPreferred: true)
     ];
+
+    [Fact]
+    public async Task PostgreSql_detail_read_keeps_root_and_children_in_one_snapshot_during_a_foreign_commit() {
+        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+        await using var database = PostgresTestDatabaseLease.Create("promptgallerycoherent");
+        await using (var db = new WorkflowUsagePostgresDbContextFactory(database.CreateAppDbContextOptions()).CreateDbContext()) {
+            await db.Database.EnsureCreatedAsync();
+        }
+        var barrier = new SupportedModelReadBarrier();
+        var reader = CreateGallery(database.ConnectionString, barrier);
+        var writer = CreateGallery(database.ConnectionString, interceptor: null);
+        var created = await writer.SaveDraftAsync(ToDraft(DraftA, null, null));
+        Assert.True(created.IsSuccess);
+        var id = created.Value.PromptArtifactId;
+        barrier.Arm();
+        var read = reader.GetItemAsync(id);
+        await barrier.Reached.WaitAsync(Bound);
+        try {
+            var changed = await writer.SaveDraftAsync(ToDraft(DraftA with { Title = "Foreign title", SupportedModels = ModelsB },
+                id, created.Value.UpdatedAtUtc));
+            Assert.True(changed.IsSuccess);
+        } finally {
+            barrier.Release();
+        }
+        var observed = (await read.WaitAsync(Bound)).Value!;
+        Assert.Equal(created.Value.UpdatedAtUtc, observed.UpdatedAtUtc);
+        Assert.Equal(DraftA.Title, observed.Title);
+        Assert.Equal(DraftA.SupportedModels, observed.SupportedModels);
+        var stale = await writer.SaveDraftAsync(ToDraft(DraftA, id, observed.UpdatedAtUtc));
+        Assert.True(stale.IsFailure);
+        var current = (await writer.GetItemAsync(id)).Value!;
+        Assert.Equal("Foreign title", current.Title);
+        Assert.Equal(ModelsB, current.SupportedModels);
+    }
+
+    [Fact]
+    public async Task PostgreSql_overlapping_replacements_reject_the_loser_and_roll_back_all_child_writes() {
+        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+        await using var database = PostgresTestDatabaseLease.Create("promptgallerycas");
+        await using (var db = new WorkflowUsagePostgresDbContextFactory(database.CreateAppDbContextOptions()).CreateDbContext()) {
+            await db.Database.EnsureCreatedAsync();
+        }
+        var feed = new EditingChangeFeed();
+        var changes = PromptGalleryObservationTestSupport.Create(feed);
+        var barrier = new WriteBarrier();
+        var first = CreateGallery(database.ConnectionString, barrier, changes);
+        var second = CreateGallery(database.ConnectionString, null, changes);
+        var created = (await second.SaveDraftAsync(ToDraft(DraftA, null, null))).Value;
+        using var subscription = changes.Subscribe(created.PromptArtifactId);
+        barrier.Arm();
+        var losing = first.SaveDraftAsync(ToDraft(DraftA with { Title = "Losing title", Tags = ["losing-tag"], SupportedModels = ModelsA },
+            created.PromptArtifactId, created.UpdatedAtUtc));
+        await barrier.Reached.WaitAsync(Bound);
+        try {
+            var winner = await second.SaveDraftAsync(ToDraft(DraftA with { Title = "Winning title", Tags = ["winning-tag"], SupportedModels = ModelsB },
+                created.PromptArtifactId, created.UpdatedAtUtc));
+            Assert.True(winner.IsSuccess);
+        } finally {
+            barrier.Release();
+        }
+        Assert.True(barrier.HadTransaction);
+        var rejected = await losing.WaitAsync(Bound);
+        Assert.Contains(rejected.Errors, error => error.Code == PromptGalleryErrorCodes.ConcurrencyConflict);
+        var current = (await second.GetItemAsync(created.PromptArtifactId)).Value!;
+        Assert.Equal("Winning title", current.Title);
+        Assert.Equal(new[] { "winning-tag" }, current.Tags);
+        Assert.Equal(ModelsB, current.SupportedModels);
+        Assert.Equal(EditingChangeKind.EditableContentChanged, Assert.Single((await subscription.ReadAsync(default)).Changes).Kind);
+        Assert.Equal(1, feed.DeliveredHints);
+    }
 
     [Fact]
     public async Task PostgreSql_MixedReadBackAfterOwnReceipt_DoesNotAuthorizeOverwritingAnotherEditorsModelSet()
@@ -93,9 +163,9 @@ public sealed class PromptGalleryMixedReadBackPersistenceIntegrationTests
         barrier.Release();
         await saveA.WaitAsync(Bound);
 
-        // The mixed read-back (A's header token, B's models) neither replaces the accepted baseline nor stays silent.
+        // A's complete snapshot belongs to A's receipt; B's later commit is not part of that acknowledgement.
         Assert.Equal(receiptA.Value.UpdatedAtUtc, editorA.AcceptedToken);
-        Assert.True(editorA.Presentation.HasExternalChange);
+        Assert.False(editorA.Presentation.HasExternalChange);
         Assert.Same(sourceBefore, editorA.Presentation.Source);
         Assert.Single(notices, notice => notice.Summary == "Prompt draft saved");
 
@@ -110,7 +180,7 @@ public sealed class PromptGalleryMixedReadBackPersistenceIntegrationTests
             editorA.Presentation.Generation,
             DraftA with { SupportedModels = ModelsA }));
         var rejected = Assert.Single(notices, notice => notice.Summary == "Prompt draft was not saved");
-        Assert.Contains("Reload it before saving", rejected.Detail, StringComparison.Ordinal);
+        Assert.Contains("explicitly", rejected.Detail, StringComparison.Ordinal);
 
         var persisted = await serviceB.GetItemAsync(itemId);
         Assert.True(persisted.IsSuccess);
@@ -129,7 +199,7 @@ public sealed class PromptGalleryMixedReadBackPersistenceIntegrationTests
         Assert.Equal(persisted.Value.UpdatedAtUtc, editorA.AcceptedToken);
     }
 
-    private static PromptsService CreateGallery(string connectionString, IInterceptor? interceptor)
+    private static PromptsService CreateGallery(string connectionString, IInterceptor? interceptor, PromptGalleryChanges? changes = null)
     {
         var options = new DbContextOptionsBuilder<PromptsDbContext>().UseNpgsql(connectionString);
         if (interceptor is not null)
@@ -145,7 +215,8 @@ public sealed class PromptGalleryMixedReadBackPersistenceIntegrationTests
             new EfPromptGallerySearchDriver(factory),
             new PromptGalleryProjectionCoordinator(factory, new DisabledPromptGalleryProjectionDriver()),
             new PromptGalleryCompatibilityEvaluator(),
-            NullLogger<PromptsService>.Instance);
+            NullLogger<PromptsService>.Instance,
+            changes ?? PromptGalleryObservationTestSupport.Create());
     }
 
     private static PromptGalleryDraft ToDraft(PromptGalleryEditorSubmission submission, Guid? id, DateTimeOffset? expected)
@@ -190,6 +261,29 @@ public sealed class PromptGalleryMixedReadBackPersistenceIntegrationTests
                 await release.Task.WaitAsync(Bound, cancellationToken);
             }
 
+            return result;
+        }
+    }
+
+    private sealed class WriteBarrier : DbCommandInterceptor {
+        private readonly TaskCompletionSource reached = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int armed;
+
+        public Task Reached => reached.Task;
+        public bool HadTransaction { get; private set; }
+
+        public void Arm() => armed = 1;
+        public void Release() => release.TrySetResult();
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
+            if (command.CommandText.Contains("UPDATE \"Prompts_PromptArtifacts\"", StringComparison.Ordinal) &&
+                    Interlocked.Exchange(ref armed, 0) == 1) {
+                HadTransaction = command.Transaction is not null;
+                reached.TrySetResult();
+                await release.Task.WaitAsync(Bound, cancellationToken);
+            }
             return result;
         }
     }

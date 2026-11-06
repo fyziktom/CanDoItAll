@@ -69,6 +69,7 @@ internal sealed class StorageCatalogRecordConfiguration : IEntityTypeConfigurati
     {
         builder.ToTable("Storage_Catalog");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.UpdatedAtUtc).IsConcurrencyToken();
         builder.Property(item => item.Name).HasMaxLength(200).IsRequired();
         builder.Property(item => item.EndpointOrRoot).HasMaxLength(1200).IsRequired();
         builder.Property(item => item.RootHostBindingId).HasMaxLength(128).IsRequired();

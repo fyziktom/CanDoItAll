@@ -91,10 +91,3 @@ public static class CrmHrWorkforceWorkspacePresentation
         return string.Join(", ", skills.Select(item => item.SkillName));
     }
 }
-
-public sealed class DeliveryUnitQuickCreateModel
-{
-    public string Name { get; set; } = string.Empty;
-    public string ExternalCode { get; set; } = string.Empty;
-    public string Summary { get; set; } = string.Empty;
-}

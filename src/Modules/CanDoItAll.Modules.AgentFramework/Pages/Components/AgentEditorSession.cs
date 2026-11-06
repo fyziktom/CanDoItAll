@@ -20,6 +20,7 @@ public sealed class AgentEditorSession : IDisposable {
         Target = target;
         Draft = new();
         Context = new(Draft);
+        Context.OnFieldChanged += FieldChanged;
         Access = new(Origin, Draft);
         Memory = new(Draft.MemoryAccess);
         CancellationToken = cancellation.Token;
@@ -28,13 +29,19 @@ public sealed class AgentEditorSession : IDisposable {
     public AgentEditorOrigin Origin { get; } = new(Guid.NewGuid());
     public AgentEditorTarget Target { get; private set; }
     public AgentEditorModel Draft { get; private set; }
+    public AgentEditorModel? Original { get; private set; }
+    public DateTimeOffset? OriginalCreatedAtUtc { get; private set; }
     public EditContext Context { get; private set; }
     public AgentEditorAccessState Access { get; }
     public AgentMemoryEditorState Memory { get; }
     public AgentRootEntry RootEntry { get; } = new();
+    public string PendingTagInput { get; set; } = string.Empty;
     public string EntryFormId => $"agent-entry-{Origin.Value:N}";
     public CancellationToken CancellationToken { get; }
     public bool IsDisposed { get; private set; }
+    public long InputRevision { get; private set; }
+    public void NoteInput() => InputRevision++;
+    private void FieldChanged(object? sender, FieldChangedEventArgs args) => NoteInput();
     public AgentEditorPendingRefresh? PendingRefresh { get; private set; }
     public bool HasUnconfirmedWrite { get; private set; }
     public string? CommitWarning { get; private set; }
@@ -52,13 +59,17 @@ public sealed class AgentEditorSession : IDisposable {
 
     public void MarkWriteUnconfirmed() => HasUnconfirmedWrite = true;
 
-    public void Load(AgentEditorModel draft) {
+    public void Load(AgentEditorModel draft, DateTimeOffset? createdAtUtc = null) {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
         ArgumentNullException.ThrowIfNull(draft);
         Draft = draft;
+        Original = AgentEditorDraftPolicy.Copy(draft);
+        OriginalCreatedAtUtc = createdAtUtc;
         Access.Draft = draft;
         Memory.UpdateValue(draft.MemoryAccess);
+        Context.OnFieldChanged -= FieldChanged;
         Context = new(draft);
+        Context.OnFieldChanged += FieldChanged;
         Target = new(draft.Id);
     }
 
@@ -68,11 +79,17 @@ public sealed class AgentEditorSession : IDisposable {
         Target = new(agentId);
     }
 
+    public void AcceptOriginal(AgentEditorModel accepted, DateTimeOffset? createdAtUtc = null) {
+        Original = AgentEditorDraftPolicy.Copy(accepted);
+        OriginalCreatedAtUtc = createdAtUtc ?? OriginalCreatedAtUtc;
+    }
+
     public void Dispose() {
         if (IsDisposed) {
             return;
         }
         IsDisposed = true;
+        Context.OnFieldChanged -= FieldChanged;
         cancellation.Cancel();
         cancellation.Dispose();
     }

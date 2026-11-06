@@ -10,8 +10,16 @@
             TestId="crmhr-agent-record-dialog"
             OnClose="Close">
         <ChildContent>
-            @if (IsLoading)
-            {
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh saved information" ButtonStyle="ButtonStyle.Light" Disabled="IsLoading"
+                    Click="Refresh" data-testid="crmhr-agent-record-refresh" />
+                @if (IsOutdated) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-agent-record-outdated">
+                        <TextBlock Value="The displayed record may be out of date. Refresh it to read current saved information." />
+                    </Alert>
+                }
+            </Cluster>
+            @if (IsLoading && Workspace is null) {
                 <LoadingState Eyebrow="Agent projection"
                               Title="Loading CRM-HR agent details"
                               Description="The business profile and cached technical catalog record are being joined." />
@@ -217,7 +225,7 @@
     [Parameter]
     public RenderFragment<Guid>? RecruitingEvidence { get; set; }
 
-    private Guid? renderedPartyId;
+    private AiAgentDirectoryItemModel? renderedItem;
     private IReadOnlyList<string> visibleTags = [];
 
     [Parameter]
@@ -232,6 +240,8 @@
 
     [Parameter]
     public bool IsLoading { get; set; }
+    [Parameter] public bool IsOutdated { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
 
     [Parameter]
     public AiAgentDirectoryItemModel? Item { get; set; }
@@ -260,12 +270,11 @@
 
     protected override void OnParametersSet()
     {
-        if (Item?.PartyId == renderedPartyId)
-        {
+        if (ReferenceEquals(Item, renderedItem)) {
             return;
         }
 
-        renderedPartyId = Item?.PartyId;
+        renderedItem = Item;
         visibleTags = Item?.Agent.Tags
             .Where(tag => !AgentSpecialTags.IsFavorite(tag))
             .Distinct(StringComparer.OrdinalIgnoreCase)

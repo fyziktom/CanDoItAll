@@ -55,8 +55,12 @@ internal static class AgentDefinitionFactory
         configurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(configurationJson);
         configurationJson = AgentDecisionDataPolicyMetadata.Preserve(existingAgent?.ConfigurationJson, configurationJson);
 
+        var selectedCapabilityIds = model.SelectedCapabilityIds.ToHashSet();
+        if (selectedCapabilityIds.Except(catalog.Capabilities.Select(item => item.Id)).Any()) {
+            throw new InvalidOperationException("A selected capability is no longer available. Refresh and review the assignment before saving.");
+        }
         var capabilities = catalog.Capabilities
-            .Where(item => model.SelectedCapabilityIds.Contains(item.Id))
+            .Where(item => selectedCapabilityIds.Contains(item.Id))
             .Select(item =>
             {
                 var existingCapability = existingAgent?.Capabilities

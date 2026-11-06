@@ -4,6 +4,7 @@ namespace CanDoItAll.Modules.Memory.Services;
 
 public sealed class MemoryProviderProfileEditorModel
 {
+    public MemoryProviderProfileCondition? ExpectedProfile { get; init; }
     public string InstanceId { get; set; } = "provider.new-memory";
 
     public string DisplayName { get; set; } = "New memory provider";
@@ -118,6 +119,8 @@ public sealed class MemoryProviderProfileEditorModel
         return copy;
     }
 }
+
+public readonly record struct MemoryProviderProfileCondition(MemoryProviderInstanceId InstanceId, Guid Revision);
 
 public sealed class MemoryProviderHttpTransportEditorModel
 {

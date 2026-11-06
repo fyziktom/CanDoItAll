@@ -78,6 +78,7 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
 
     public string IntentLog { get; private set; } = "No intent yet.";
 
+    public Guid DatabaseProfileId => CrmHrWorkspaceSandboxIds.Id("recruitment-sandbox-database");
     public RecruitmentWorkspaceModel? CurrentWorkspace { get; private set; }
 
     public RecruitmentApplicationEditorModel ApplicationEditor { get; private set; } = new();
@@ -255,8 +256,8 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
         return Task.CompletedTask;
     }
 
-    public Task DeleteInterviewAsync(Guid interviewId)
-    {
+    public Task DeleteInterviewAsync(RecruitmentInterviewItemModel row) {
+        var interviewId = row.Id;
         selected?.Interviews.RemoveAll(item => item.Id == interviewId);
         RefreshWorkspace();
         Log($"Delete interview: {interviewId:D}");
@@ -289,8 +290,8 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
         return Task.CompletedTask;
     }
 
-    public Task DeleteTaskAsync(Guid taskId)
-    {
+    public Task DeleteTaskAsync(LifecycleTaskItemModel row) {
+        var taskId = row.Id;
         selected?.LifecycleTasks.RemoveAll(item => item.Id == taskId);
         RefreshWorkspace();
         Log($"Delete task: {taskId:D}");

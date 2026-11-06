@@ -1,11 +1,15 @@
 @page "/crm-hr"
 @implements IDisposable
+@using CanDoItAll.Editing
 @inject ICrmHrHomeQueryService HomeQueryService
+@inject IEditingUiAccess EditingAccess
+@inject CrmHrChanges Changes
 @inject NavigationManager Navigation
 @inject ILogger<CrmHrHomePage> Logger
 
 <PageTitle>CRM / HR</PageTitle>
 
+<CrmHrLiveCatalog Owner="EditingOwner.CrmHrParty">
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface" />
 
 <CrmHrHomeSurface Presentation="@session.Presentation" Intent="HandleIntentAsync" IsInteractive="@isInteractive">
@@ -13,6 +17,7 @@
         <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Home" />
     </SecondaryNavigation>
 </CrmHrHomeSurface>
+</CrmHrLiveCatalog>
 
 @code {
     // Host of the Home overview: it owns the read session, navigation through the route catalogue, the document
@@ -32,7 +37,7 @@
 
     protected override void OnInitialized()
     {
-        session = new CrmHrHomeReadSession(HomeQueryService, Logger)
+        session = new CrmHrHomeReadSession(ReadOverviewAsync, Logger)
         {
             Changed = RenderAsync
         };
@@ -40,6 +45,15 @@
 
     protected override Task OnInitializedAsync()
         => session.LoadAsync();
+
+    private async Task<CrmHrHomeSnapshotModel> ReadOverviewAsync(CancellationToken cancellationToken) {
+        using var grant = await EditingAccess.OpenAsync(new(Changes.Scope, EditingOwner.CrmHrParty), cancellationToken);
+        using var reading = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, grant.Lifetime);
+        await EditingAccess.ValidateAsync(grant, write: false, reading.Token);
+        var snapshot = await HomeQueryService.GetAsync(reading.Token);
+        await EditingAccess.ValidateAsync(grant, write: false, reading.Token);
+        return snapshot;
+    }
 
     // Prerendered and statically rendered markup has no event handlers. OnAfterRender runs only for an interactive
     // render, so the surface's actions become usable exactly when a browser click can reach this host.
@@ -66,6 +80,8 @@
                 return Task.CompletedTask;
             case CrmHrHomeIntent.Retry retry:
                 return session.RetryAsync(retry.Generation);
+            case CrmHrHomeIntent.Refresh refresh:
+                return session.RefreshAsync(refresh.Generation);
             default:
                 throw new NotSupportedException($"The Home host does not own the {intent.GetType().Name} intent.");
         }

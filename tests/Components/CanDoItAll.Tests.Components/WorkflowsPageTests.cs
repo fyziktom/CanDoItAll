@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
+using CanDoItAll.Editing;
 using Bunit;
 using AngleSharp.Dom;
 using System.Globalization;
@@ -37,6 +38,140 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 [Trait("Category", "HostPlatform")]
 public sealed class WorkflowsPageTests
 {
+    [Fact]
+    public async Task Prerender_has_a_navigation_identity_without_reading_the_workflow_catalog() {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-prerender");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment, services => {
+            services.AddSingleton<WorkflowCatalogReadCounter>();
+            services.AddScoped<IWorkflowCatalogSearchService>(provider => new CountingWorkflowCatalogSearch(
+                provider.GetRequiredService<PersistentWorkflowCatalogService>(), provider.GetRequiredService<WorkflowCatalogReadCounter>()));
+        });
+        harness.Context.SetRendererInfo(new RendererInfo("Static", isInteractive: false));
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents/workflows?tab=editor");
+        var cut = harness.Context.Render<WorkflowsPage>();
+        Assert.NotNull(cut.FindComponent<WorkflowAgentChatContextProvider>());
+        Assert.Equal(AgentChatContextAccessState.Loading, ReadAgentChatAccessState(cut.Instance));
+        Assert.Equal(0, harness.Context.Services.GetRequiredService<WorkflowCatalogReadCounter>().Calls);
+        Assert.NotNull(cut.Find("[data-testid='workflows-loading']"));
+    }
+
+    [Fact]
+    public async Task Denied_workflow_access_reads_no_catalog_and_renders_no_selected_definition() {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-initial-access");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment, services => {
+            services.AddSingleton<IEditingUiAccess>(new EditingUiTestAccess { Allowed = false });
+            services.AddSingleton<WorkflowCatalogReadCounter>();
+            services.AddScoped<IWorkflowCatalogSearchService>(provider => new CountingWorkflowCatalogSearch(
+                provider.GetRequiredService<PersistentWorkflowCatalogService>(), provider.GetRequiredService<WorkflowCatalogReadCounter>()));
+        });
+        var original = await CreateCanvasLoadDefinitionAsync(harness.Context.Services.GetRequiredService<IWorkflowCatalogService>());
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/agents/workflows?tab=editor&workflowId={original.Id.Value:D}");
+        var cut = harness.Context.Render<WorkflowsPage>();
+        cut.WaitForElement("[data-testid='workflows-error']");
+        Assert.Equal(0, harness.Context.Services.GetRequiredService<WorkflowCatalogReadCounter>().Calls);
+        Assert.Empty(cut.FindComponents<WorkflowCanvasEditor>());
+        Assert.DoesNotContain(original.Name, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Component_library_rechecks_access_before_accepting_a_late_read_result() {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-library-access");
+        var access = new EditingUiTestAccess();
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment, services => {
+            RegisterCountingWorkflowComponentLibrary(services);
+            services.AddSingleton<IEditingUiAccess>(access);
+        });
+        var library = harness.Context.Services.GetRequiredService<IWorkflowComponentLibraryService>();
+        var component = CreateWorkflowComponent("Restricted component result");
+        await library.SaveComponentAsync(new(component.Id, component.Name, component.ProviderProfileId,
+            component.Model, component.Modality, component.ModelSettings, component.Instructions, component.InputShape,
+            component.ResultShape, component.Permissions));
+        var counter = harness.Context.Services.GetRequiredService<WorkflowComponentLibraryCallCounter>();
+        counter.AfterList = () => access.Allowed = false;
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents/workflows?tab=editor");
+
+        var cut = harness.Context.Render<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-error']", TimeSpan.FromSeconds(10));
+        Assert.Equal(1, counter.ListComponentsCount);
+        Assert.Equal(0, counter.ListProviderOptionsCount);
+        Assert.DoesNotContain(component.Name, cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindComponent<WorkflowCanvasEditor>().Instance.Components);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Quiet_workflow_catalog_refresh_keeps_the_selected_draft_original_and_filter(bool filteredOut) {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-catalog-live");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment, services => {
+            services.AddSingleton<IEditingUiAccess, EditingUiTestAccess>();
+            services.AddSingleton<WorkflowCatalogReadCounter>();
+            services.AddScoped<IWorkflowCatalogSearchService>(provider => new CountingWorkflowCatalogSearch(
+                provider.GetRequiredService<PersistentWorkflowCatalogService>(), provider.GetRequiredService<WorkflowCatalogReadCounter>()));
+        });
+        var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var original = await CreateCanvasLoadDefinitionAsync(catalog);
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/agents/workflows?tab=editor&workflowId={original.Id.Value:D}");
+        var cut = harness.Context.Render<WorkflowsPage>();
+        cut.WaitForElement("[data-testid='workflow-canvas-name']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-name']").Change("My retained draft"));
+        if (filteredOut) {
+            await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-catalog-search']").Change("No matching workflow"));
+            cut.WaitForAssertion(() => Assert.Contains("0 workflows", cut.Find("[data-testid='workflows-catalog-page']").TextContent));
+        }
+        var counter = harness.Context.Services.GetRequiredService<WorkflowCatalogReadCounter>();
+        var priorReads = counter.Calls;
+        var peer = await catalog.SaveDefinitionAsync(new(original.Id, original.VersionId, "Peer catalog name",
+            original.Description, original.Status, original.Graph, original.RuntimePolicy) { InputParameters = original.InputParameters });
+        cut.WaitForAssertion(() => {
+            Assert.True(counter.Calls > priorReads);
+            Assert.Equal("My retained draft", cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
+            if (filteredOut) {
+                Assert.Equal("No matching workflow", cut.Find("[data-testid='workflows-catalog-search']").GetAttribute("value"));
+                Assert.Contains("0 workflows", cut.Find("[data-testid='workflows-catalog-page']").TextContent);
+            } else {
+                Assert.Contains("Peer catalog name", cut.Find("[data-testid='workflows-catalog-item']").TextContent);
+            }
+        });
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-refresh']").ClickAsync());
+        Assert.Equal("My retained draft", cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
+        if (filteredOut) {
+            Assert.Equal("No matching workflow", cut.Find("[data-testid='workflows-catalog-search']").GetAttribute("value"));
+        }
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-save']").Click());
+        cut.WaitForAssertion(() => Assert.Contains("Your draft is retained", cut.Find("[data-testid='workflow-canvas-operation-error']").TextContent));
+        Assert.Equal(peer.VersionId, (await catalog.GetDefinitionAsync(original.Id))!.Definition.VersionId);
+    }
+
+    [Fact]
+    public async Task Native_workflow_review_adopts_a_peer_base_without_saving_and_preserves_the_local_name() {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-native-pull");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var original = await CreateCanvasLoadDefinitionAsync(catalog);
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/agents/workflows?tab=editor&workflowId={original.Id.Value:D}");
+        var cut = harness.Context.Render<WorkflowsPage>();
+        cut.WaitForElement("[data-testid='workflow-canvas-name']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-name']").Change("Local reviewed name"));
+        var peer = await catalog.SaveDefinitionAsync(new(original.Id, original.VersionId, original.Name,
+            "Peer current description", original.Status, original.Graph, original.RuntimePolicy));
+        cut.WaitForElement("[data-testid='workflow-canvas-updates']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-check-current']").ClickAsync());
+        cut.WaitForElement("[data-testid='workflow-definition-review-dialog']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-definition-review-apply']").ClickAsync());
+        Assert.Equal("Local reviewed name", cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
+        Assert.Equal("Peer current description", cut.Find("[data-testid='workflow-canvas-description']").GetAttribute("value"));
+        Assert.Equal(peer.VersionId, (await catalog.GetDefinitionAsync(original.Id))!.Definition.VersionId);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-save']").ClickAsync());
+        var accepted = (await catalog.GetDefinitionAsync(original.Id))!.Definition;
+        Assert.NotEqual(peer.VersionId, accepted.VersionId);
+        Assert.Equal("Local reviewed name", accepted.Name);
+        Assert.Equal("Peer current description", accepted.Description);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -45,7 +180,7 @@ public sealed class WorkflowsPageTests
         const string poison = "CANVAS_PRIVATE_SENTINEL api_key=test-only-private-canvas /srv/private/canvas at Internal.Preview()";
         var runner = new CapturingWorkflowTestRunner { Failure = lane == 1 ? new InvalidOperationException(poison) : null,
             PublicFailure = lane == 2 ? poison : null };
-        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(services => {
             services.AddSingleton<IWorkflowTestRunner>(runner);
             services.AddSingleton<IProjectStructureRuntimeGateway>(new PreviewProjectGateway(Guid.NewGuid()) {
                 Failure = lane == 0 ? new InvalidOperationException(poison) : null
@@ -53,6 +188,7 @@ public sealed class WorkflowsPageTests
         });
         var definition = lane == 0 ? CreateProjectStructurePreviewDefinition() : CreatePreviewProgressDefinition();
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -84,6 +220,9 @@ public sealed class WorkflowsPageTests
             services.AddScoped<BlockingInitialWorkflowCatalogService>();
             services.AddScoped<IWorkflowCatalogService>(serviceProvider =>
                 serviceProvider.GetRequiredService<BlockingInitialWorkflowCatalogService>());
+            services.RemoveAll<IWorkflowCatalogSearchService>();
+            services.AddScoped<IWorkflowCatalogSearchService>(serviceProvider =>
+                serviceProvider.GetRequiredService<BlockingInitialWorkflowCatalogService>());
             services.RemoveAll<IAgentChatLauncher>();
             services.AddSingleton<IAgentChatLauncher>(launcher);
         });
@@ -93,7 +232,7 @@ public sealed class WorkflowsPageTests
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.Render<WorkflowsPage>();
-        await catalog.WaitForInitialListRequestAsync();
+        await catalog.WaitForInitialSearchRequestAsync();
 
         var openButton = cut.Find("[data-testid='workflows-curator-open']");
         Assert.True(openButton.HasAttribute("disabled"));
@@ -108,7 +247,7 @@ public sealed class WorkflowsPageTests
         openButton.Click();
         Assert.Empty(launcher.StartedAgentIds);
 
-        catalog.CompleteInitialListRequest();
+        catalog.CompleteInitialSearchRequest();
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
@@ -189,7 +328,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_creates_starter_workflow_and_runs_preview()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
@@ -248,7 +387,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_publishes_a_valid_draft_and_refreshes_its_status()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
@@ -284,7 +423,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task A_tab_opened_while_a_created_workflow_is_loading_gets_that_workflow_ready()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterRacingWorkflowCatalog);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterRacingWorkflowCatalog);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var racingCatalog = harness.Context.Services.GetRequiredService<RacingWorkflowCatalogService>();
 
@@ -311,10 +450,46 @@ public sealed class WorkflowsPageTests
             cut.Find("[data-testid='workflows-tab-workflows']").TextContent,
             StringComparison.Ordinal));
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Explicit_library_refresh_adopts_peer_components_without_replacing_the_open_workflow_draft(bool globalRefresh) {
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterCountingWorkflowComponentLibrary);
+        var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var library = harness.Context.Services.GetRequiredService<IWorkflowComponentLibraryService>();
+        var original = await CreateCanvasLoadDefinitionAsync(catalog);
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/agents/workflows?tab=editor&workflowId={original.Id.Value:D}");
+        var cut = harness.Context.Render<WorkflowsPage>();
+        cut.WaitForElement("[data-testid='workflow-canvas-name']");
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponent<WorkflowCanvasEditor>().Instance.ProviderOptions));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-name']").Change("Keep my workflow draft"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-toggle-components']").ClickAsync());
+        var counter = harness.Context.Services.GetRequiredService<WorkflowComponentLibraryCallCounter>();
+        var reads = counter.ListComponentsCount;
+        var component = CreateWorkflowComponent("Peer library component");
+        var accepted = await library.SaveComponentAsync(new(component.Id, component.Name, component.ProviderProfileId,
+            component.Model, component.Modality, component.ModelSettings, component.Instructions, component.InputShape,
+            component.ResultShape, component.Permissions));
+
+        cut.WaitForElement("[data-testid='workflow-canvas-component-updates']", TimeSpan.FromSeconds(10));
+        Assert.Equal(reads, counter.ListComponentsCount);
+        await cut.InvokeAsync(() => cut.Find(globalRefresh
+            ? "[data-testid='workflows-refresh']" : "[data-testid='workflow-canvas-refresh-components']").ClickAsync());
+
+        cut.WaitForAssertion(() => {
+            Assert.True(counter.ListComponentsCount > reads);
+            Assert.Contains(cut.FindComponent<WorkflowCanvasEditor>().Instance.Components, item => item.Id == accepted.Id);
+            Assert.Equal("Keep my workflow draft", cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
+            Assert.Equal(original.VersionId, cut.FindComponent<WorkflowCanvasEditor>().Instance.Definition!.VersionId);
+            Assert.Empty(cut.FindAll("[data-testid='workflow-canvas-component-updates']"));
+        });
+        Assert.Equal(original.VersionId, (await catalog.GetDefinitionAsync(original.Id))!.Definition.VersionId);
+    }
+
     [Fact]
     public async Task Workflows_page_defers_component_library_until_component_sections_need_it()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterCountingWorkflowComponentLibrary);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterCountingWorkflowComponentLibrary);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var counter = harness.Context.Services.GetRequiredService<WorkflowComponentLibraryCallCounter>();
 
@@ -360,7 +535,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_loads_full_selected_definition_before_rendering_editor_canvas()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var definition = await CreateCanvasLoadDefinitionAsync(catalogService);
@@ -404,7 +579,7 @@ public sealed class WorkflowsPageTests
     [InlineData(true)]
     public async Task Workflows_page_ignores_late_definition_result_after_newer_selection(bool staleRequestFails)
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterRacingWorkflowCatalog);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterRacingWorkflowCatalog);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var racingCatalog = harness.Context.Services.GetRequiredService<RacingWorkflowCatalogService>();
@@ -457,7 +632,7 @@ public sealed class WorkflowsPageTests
     {
         var runStore = new CountingWorkflowRunStore(new WorkflowRunStoreCallCounter());
         var runtimeManager = new RacingWorkflowRuntimeManager();
-        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(services =>
         {
             services.RemoveAll<IWorkflowRunStore>();
             services.RemoveAll<IWorkflowArtifactStore>();
@@ -535,7 +710,7 @@ public sealed class WorkflowsPageTests
     public async Task Workflows_page_resolves_exact_non_first_project_workflow_and_run_route()
     {
         var projectGateway = new WorkflowRouteProjectGateway();
-        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(services =>
         {
             services.RemoveAll<IProjectStructureRuntimeGateway>();
             services.AddSingleton<IProjectStructureRuntimeGateway>(projectGateway);
@@ -579,7 +754,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_fails_closed_when_requested_workflow_is_missing()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var availableDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
@@ -604,7 +779,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_fails_closed_when_requested_run_belongs_to_another_workflow()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
@@ -630,7 +805,7 @@ public sealed class WorkflowsPageTests
     public async Task Workflows_page_fails_closed_when_workflow_is_not_attached_to_requested_project()
     {
         var projectGateway = new WorkflowRouteProjectGateway();
-        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(services =>
         {
             services.RemoveAll<IProjectStructureRuntimeGateway>();
             services.AddSingleton<IProjectStructureRuntimeGateway>(projectGateway);
@@ -657,7 +832,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_ignores_late_route_result_after_newer_route_identity()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterRacingWorkflowCatalog);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterRacingWorkflowCatalog);
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var racingCatalog = harness.Context.Services.GetRequiredService<RacingWorkflowCatalogService>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
@@ -689,7 +864,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Persistent_workflow_catalog_uses_same_latest_version_for_summary_and_detail()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var workflowId = WorkflowId.New();
@@ -734,7 +909,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_defers_runtime_history_until_history_needs_it()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterCountingWorkflowRunStore);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterCountingWorkflowRunStore);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
@@ -845,7 +1020,7 @@ public sealed class WorkflowsPageTests
         var invalidPackRoot = Path.Combine(Path.GetTempPath(), $"invalid-workflow-template-pack-{Guid.NewGuid():N}");
         Directory.CreateDirectory(invalidPackRoot);
         File.WriteAllText(Path.Combine(invalidPackRoot, "manifest.yaml"), "packKey: [");
-        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(services =>
         {
             services.RemoveAll<WorkflowTemplatePackLoader>();
             services.AddScoped(_ => new WorkflowTemplatePackLoader(invalidPackRoot));
@@ -1009,11 +1184,12 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_hides_executor_instructions_and_preserves_other_node_instructions()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var component = CreateWorkflowComponent("Instruction visibility call");
         var definition = CreateInstructionVisibilityDefinition(component.Id);
 
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(editor => editor.Definition, definition)
             .Add(editor => editor.Components, [component])
             .Add(editor => editor.ProviderOptions, []));
@@ -1056,7 +1232,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_places_llm_component_validates_runs_and_saves_definition()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
@@ -1192,14 +1368,15 @@ public sealed class WorkflowsPageTests
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.Render<WorkflowsPage>();
 
-        cut.WaitForElement("[data-testid='workflows-tab-workflows']").Click();
+        cut.WaitForElement("[data-testid='workflows-tab-workflows']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").ClickAsync());
         cut.WaitForAssertion(() => Assert.Contains(
             cut.FindAll("[data-testid='workflows-catalog-item']"),
             item => item.TextContent.Contains(workflowName, StringComparison.Ordinal)));
-        cut.FindAll("[data-testid='workflows-catalog-item']")
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='workflows-catalog-item']")
             .Single(item => item.TextContent.Contains(workflowName, StringComparison.Ordinal))
-            .Click();
-        cut.Find("[data-testid='workflows-tab-editor']").Click();
+            .ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").ClickAsync());
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
         cut.WaitForAssertion(() =>
         {
@@ -1207,24 +1384,24 @@ public sealed class WorkflowsPageTests
                 cut.FindAll("[data-testid='workflow-canvas-select-node']"),
                 item => item.TextContent.Contains("LlmCall", StringComparison.Ordinal));
         });
-        cut.FindAll("[data-testid='workflow-canvas-select-node']")
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='workflow-canvas-select-node']")
             .Single(item => item.TextContent.Contains("LlmCall", StringComparison.Ordinal))
-            .Click();
-        cut.WaitForElement("[data-testid='workflow-canvas-open-selected-node-details']").Click();
+            .ClickAsync());
+        cut.WaitForElement("[data-testid='workflow-canvas-open-selected-node-details']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-open-selected-node-details']").ClickAsync());
 
-        var nodeDetails = cut.WaitForElement("[data-testid='workflow-canvas-node-details-modal']");
-        var openGallery = nodeDetails.QuerySelector("[data-testid='prompt-gallery-picker-button']");
-        Assert.NotNull(openGallery);
-        openGallery.Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-node-details-modal']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-node-details-modal'] [data-testid='prompt-gallery-picker-button']").ClickAsync());
 
         dialogHost.WaitForElement("[data-testid='prompt-gallery-picker-dialog']");
-        dialogHost.Find("[data-testid='prompt-gallery-search']").Input(promptTitle);
+        await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='prompt-gallery-search']")
+            .InputAsync(new ChangeEventArgs { Value = promptTitle }));
         dialogHost.WaitForAssertion(() =>
         {
             Assert.Contains(promptTitle, dialogHost.Markup, StringComparison.Ordinal);
             Assert.Single(dialogHost.FindAll("[data-testid='prompt-gallery-edit']"));
         });
-        dialogHost.Find("[data-testid='prompt-gallery-edit']").Click();
+        var openedDetails = dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='prompt-gallery-edit']").ClickAsync());
 
         dialogHost.WaitForAssertion(() =>
         {
@@ -1235,19 +1412,17 @@ public sealed class WorkflowsPageTests
             Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-details-modal']"));
         });
 
-        var promptEditor = dialogHost.Find("[data-testid='prompt-gallery-item-editor']");
-        var saveDraft = promptEditor.QuerySelector("button[type='submit']");
-        Assert.NotNull(saveDraft);
-        saveDraft.Click();
+        await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='prompt-gallery-item-editor'] button[type='submit']").ClickAsync());
         dialogHost.WaitForAssertion(() =>
         {
             Assert.Contains(notifications.Messages, message => message.Summary == "Prompt draft saved");
         });
 
-        var cancel = dialogHost.Find("[data-testid='prompt-gallery-item-editor']")
+        await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='prompt-gallery-item-editor']")
             .QuerySelectorAll("button")
-            .Single(button => button.TextContent.Contains("Cancel", StringComparison.Ordinal));
-        cancel.Click();
+            .Single(button => button.TextContent.Contains("Cancel", StringComparison.Ordinal))
+            .ClickAsync());
+        await openedDetails;
 
         dialogHost.WaitForAssertion(() =>
         {
@@ -1266,7 +1441,7 @@ public sealed class WorkflowsPageTests
     {
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var runner = new CapturingWorkflowTestRunner();
-        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(services =>
         {
             services.RemoveAll<IWorkflowTestRunner>();
             services.AddSingleton<IWorkflowTestRunner>(runner);
@@ -1276,6 +1451,7 @@ public sealed class WorkflowsPageTests
         var definition = CreateProjectStructurePreviewDefinition();
 
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1321,7 +1497,7 @@ public sealed class WorkflowsPageTests
     public async Task Workflow_canvas_previews_a_published_workflow_as_an_unsaved_draft()
     {
         var runner = new CapturingWorkflowTestRunner();
-        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(services =>
         {
             services.RemoveAll<IWorkflowTestRunner>();
             services.AddSingleton<IWorkflowTestRunner>(runner);
@@ -1329,6 +1505,7 @@ public sealed class WorkflowsPageTests
         var published = CreatePreviewProgressDefinition() with { Status = WorkflowLifecycleStatus.Active };
 
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(component => component.Definition, published)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1348,10 +1525,11 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_marks_planned_runtime_backends_unavailable()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var definition = CreatePreviewProgressDefinition();
 
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1369,10 +1547,11 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_floating_windows_stay_below_the_canvas_toolbar()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var definition = CreatePreviewProgressDefinition();
 
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1390,11 +1569,12 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_reports_immutable_current_definition_node_selection()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var definition = CreatePreviewProgressDefinition();
         WorkflowAgentChatNodeSelection? selected = null;
 
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, [])
@@ -1427,11 +1607,12 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_stats_count_workflow_node_usages_not_available_inventory()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var usedComponent = CreateWorkflowComponent("Used summary call");
         var definition = CreateWorkflowUsageStatsDefinition(usedComponent.Id);
 
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(component => component.Definition, definition)
             .Add(component => component.Components,
             [
@@ -1461,7 +1642,7 @@ public sealed class WorkflowsPageTests
     public async Task Workflow_canvas_preview_selects_running_node_from_progress()
     {
         var runner = new NodeProgressWorkflowTestRunner(new WorkflowNodeId("work"));
-        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(services =>
         {
             services.RemoveAll<IWorkflowTestRunner>();
             services.AddSingleton<IWorkflowTestRunner>(runner);
@@ -1469,6 +1650,7 @@ public sealed class WorkflowsPageTests
         var definition = CreatePreviewProgressDefinition();
 
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1488,7 +1670,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_reconnects_linear_route_after_delete_and_accepts_canvas_connections()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         const string promptTitle = "Linear route prompt";
@@ -1582,7 +1764,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_authors_typed_predicate_route_metadata()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         const string promptTitle = "Predicate route prompt";
@@ -1633,7 +1815,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_decision_context_action_adds_and_edits_routes_in_node_dialog()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
@@ -1855,7 +2037,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_history_paginates_runs_and_events_and_moves_full_payload_to_detail_dialog()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
@@ -1941,7 +2123,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_history_displays_typed_failure_diagnostic_without_raw_message()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
@@ -2013,7 +2195,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_preserves_maximized_state_when_selection_changes()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
@@ -2043,7 +2225,7 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Agents_shell_exposes_workflows_page_navigation()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await CreateAuthorizedWorkflowHarnessAsync();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents");
@@ -2065,6 +2247,19 @@ public sealed class WorkflowsPageTests
     {
         services.RemoveAll<IWorkflowLlmComponentInvoker>();
         services.AddScoped<IWorkflowLlmComponentInvoker, DeterministicWorkflowLlmComponentInvoker>();
+    }
+
+    private sealed class WorkflowCatalogReadCounter {
+        private int calls;
+        public int Calls => Volatile.Read(ref calls);
+        public void Count() => Interlocked.Increment(ref calls);
+    }
+
+    private sealed class CountingWorkflowCatalogSearch(IWorkflowCatalogSearchService inner, WorkflowCatalogReadCounter counter) : IWorkflowCatalogSearchService {
+        public Task<WorkflowCatalogSearchPage> SearchDefinitionsAsync(WorkflowCatalogSearchQuery query, CancellationToken cancellationToken = default) {
+            counter.Count();
+            return inner.SearchDefinitionsAsync(query, cancellationToken);
+        }
     }
 
     private static void RegisterCountingWorkflowComponentLibrary(IServiceCollection services)
@@ -2098,12 +2293,22 @@ public sealed class WorkflowsPageTests
         services.AddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<CountingWorkflowRunStore>());
     }
 
+    private static Task<ComponentTestHarness> CreateAuthorizedWorkflowHarnessAsync(
+        Action<IServiceCollection>? configureServices = null,
+        TestHarnessOptions? options = null) {
+        return ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IPromptGalleryUiAccess, PromptGalleryUiTestAccess>();
+            services.AddSingleton<IEditingUiAccess, EditingUiTestAccess>();
+            configureServices?.Invoke(services);
+        }, options);
+    }
+
     internal static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(
         CanDoItAllTestEnvironment environment,
         Action<IServiceCollection>? configureServices = null)
     {
         var profile = environment.CreateInMemoryProfile("primary", databaseName: Guid.NewGuid().ToString("N"));
-        return ComponentTestHarness.CreateAsync(configureServices, new TestHarnessOptions
+        return CreateAuthorizedWorkflowHarnessAsync(configureServices, new TestHarnessOptions
         {
             TestEnvironment = environment,
             ActiveProfile = profile,
@@ -2150,7 +2355,8 @@ public sealed class WorkflowsPageTests
         await workflow.InvokeAsync(() => workflow.Find(
             "[data-testid='workflow-canvas-components-window'] [data-testid='prompt-gallery-picker-button']").ClickAsync());
         dialogHost.WaitForElement("[data-testid='prompt-gallery-picker-dialog']");
-        dialogHost.Find("[data-testid='prompt-gallery-search']").Input(promptTitle);
+        await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='prompt-gallery-search']")
+            .InputAsync(new ChangeEventArgs { Value = promptTitle }));
         dialogHost.WaitForAssertion(() =>
         {
             Assert.Contains(promptTitle, dialogHost.Markup, StringComparison.Ordinal);
@@ -2883,11 +3089,96 @@ public sealed class WorkflowsPageTests
             ]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Template_unknown_acknowledgement_retains_ids_and_blocks_replay_after_reopening(bool committed) {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-template-unknown");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment, RegisterRacingWorkflowCatalog);
+        var catalog = harness.Context.Services.GetRequiredService<RacingWorkflowCatalogService>();
+        var library = harness.Context.Services.GetRequiredService<IWorkflowComponentLibraryService>();
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents/workflows");
+        var cut = harness.Context.Render<WorkflowsPage>();
+        const string templateName = "Local Folder Summary Markdown Report";
+        OpenTemplatePreview(cut, templateName);
+        cut.WaitForElement("[data-testid='workflows-template-add-draft']:not([disabled])");
+        var originalComponents = (await library.ListComponentsAsync()).Select(item => item.Id).ToHashSet();
+        var originalDefinitions = (await catalog.ListDefinitionsAsync()).Count;
+        var saves = catalog.SaveCalls;
+        catalog.LoseSaveAcknowledgement = true;
+        catalog.CommitBeforeFailure = committed;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-template-add-draft']").ClickAsync());
+        cut.WaitForAssertion(() => {
+            Assert.True(cut.Find("[data-testid='workflows-template-add-draft']").HasAttribute("disabled"));
+            Assert.Contains("Draft creation could not be confirmed", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains(catalog.LastSubmittedId!.Value.Value.ToString("D"), cut.Markup, StringComparison.Ordinal);
+        });
+        var retained = Assert.Single((await library.ListComponentsAsync()).Where(item => !originalComponents.Contains(item.Id)));
+        Assert.Contains(retained.Id.Value.ToString("D"), cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(originalDefinitions + (committed ? 1 : 0), (await catalog.ListDefinitionsAsync()).Count);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-template-preview-close']").ClickAsync());
+        var item = cut.FindAll("[data-testid='workflows-template-catalogue-item']").First(row => row.TextContent.Contains(templateName, StringComparison.Ordinal));
+        await cut.InvokeAsync(() => item.QuerySelector("[data-testid='workflows-template-preview']")!.ClickAsync());
+        cut.WaitForAssertion(() => Assert.True(cut.Find("[data-testid='workflows-template-add-draft']").HasAttribute("disabled")));
+        Assert.Equal(saves + 1, catalog.SaveCalls);
+        Assert.Single((await library.ListComponentsAsync()).Where(component => !originalComponents.Contains(component.Id)));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-template-preview-close']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-template-catalogue-close']").ClickAsync());
+        Assert.True(cut.Find("[data-testid='workflows-create-starter']").HasAttribute("disabled"));
+        Assert.True(cut.Find("[data-testid='workflows-open-inspected-draft']").HasAttribute("disabled"));
+        var unconfirmedId = catalog.LastSubmittedId!.Value;
+        if (committed) {
+            var name = (await catalog.GetDefinitionAsync(unconfirmedId))!.Definition.Name;
+            await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").ClickAsync());
+            cut.WaitForElement("[data-testid='workflows-tree-status-Draft']", TimeSpan.FromSeconds(10));
+            await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tree-status-Draft']").ClickAsync());
+            cut.WaitForAssertion(() => Assert.Contains(cut.FindAll("[data-testid='workflows-catalog-item']"),
+                row => row.TextContent.Contains(name, StringComparison.Ordinal)));
+            await cut.InvokeAsync(() => cut.FindAll("[data-testid='workflows-catalog-item']")
+                .First(row => row.TextContent.Contains(name, StringComparison.Ordinal)).ClickAsync());
+            cut.WaitForAssertion(() => Assert.Equal(unconfirmedId, ReadSelectedDefinition(cut.Instance)!.Id));
+        }
+        if (!committed) {
+            catalog.Delay(unconfirmedId);
+            catalog.Fail(unconfirmedId);
+            await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-inspect-unconfirmed-draft']").ClickAsync());
+            Assert.Contains("remains unconfirmed", cut.Find("[data-testid='workflows-draft-inspection-error']").TextContent);
+            Assert.True(cut.Find("[data-testid='workflows-open-inspected-draft']").HasAttribute("disabled"));
+            catalog.ClearDelay(unconfirmedId);
+        }
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-inspect-unconfirmed-draft']").ClickAsync());
+        var recovery = cut.Find("[data-testid='workflows-draft-recovery']").TextContent;
+        Assert.Contains(retained.Name, recovery, StringComparison.Ordinal);
+        Assert.Contains("does not confirm the earlier creation", recovery, StringComparison.Ordinal);
+        Assert.True(cut.Find("[data-testid='workflows-create-starter']").HasAttribute("disabled"));
+        Assert.Equal(!committed, cut.Find("[data-testid='workflows-open-inspected-draft']").HasAttribute("disabled"));
+        Assert.Equal(saves + 1, catalog.SaveCalls);
+        if (committed) {
+            var native = harness.Context.Services.GetRequiredService<PersistentWorkflowCatalogService>();
+            var observed = (await native.GetDefinitionAsync(unconfirmedId))!.Definition;
+            var peer = await native.SaveDefinitionAsync(new(observed.Id, observed.VersionId, "Peer revised recovered workflow",
+                observed.Description, observed.Status, observed.Graph, observed.RuntimePolicy) { InputParameters = observed.InputParameters });
+            await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-dashboard']").ClickAsync());
+            await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-open-inspected-draft']").ClickAsync());
+            cut.WaitForAssertion(() => {
+                Assert.Empty(cut.FindAll("[data-testid='workflows-draft-recovery']"));
+                Assert.Equal(peer.VersionId, ReadSelectedDefinition(cut.Instance)!.VersionId);
+            });
+            Assert.Equal(saves + 1, catalog.SaveCalls);
+        } else {
+            Assert.Contains("Not found", recovery, StringComparison.Ordinal);
+        }
+    }
+
     private sealed class RacingWorkflowCatalogService(
         PersistentWorkflowCatalogService inner) : IWorkflowCatalogService
     {
         private readonly Dictionary<WorkflowId, PendingDefinitionRequest> pendingRequests = [];
         private PendingDefinitionRequest? pendingList;
+        public bool LoseSaveAcknowledgement { get; set; }
+        public bool CommitBeforeFailure { get; set; }
+        public int SaveCalls { get; private set; }
+        public WorkflowId? LastSubmittedId { get; private set; }
 
         public void Delay(params WorkflowId[] definitionIds)
         {
@@ -2906,6 +3197,8 @@ public sealed class WorkflowsPageTests
         public void Fail(WorkflowId definitionId)
             => GetPendingRequest(definitionId).Completion.TrySetResult(
                 new InvalidOperationException($"Delayed workflow '{definitionId}' failed."));
+
+        public void ClearDelay(WorkflowId definitionId) => pendingRequests.Remove(definitionId);
 
         // Holds the next catalog list until Complete is called; later lists pass through.
         public void DelayNextList()
@@ -2952,10 +3245,20 @@ public sealed class WorkflowsPageTests
             CancellationToken cancellationToken = default)
             => inner.GetLatestDefinitionByStatusAsync(workflowId, status, cancellationToken);
 
-        public Task<WorkflowDefinition> SaveDefinitionAsync(
+        public async Task<WorkflowDefinition> SaveDefinitionAsync(
             WorkflowDefinitionSaveRequest request,
-            CancellationToken cancellationToken = default)
-            => inner.SaveDefinitionAsync(request, cancellationToken);
+            CancellationToken cancellationToken = default) {
+            SaveCalls++;
+            LastSubmittedId = request.Id;
+            if (LoseSaveAcknowledgement && !CommitBeforeFailure) {
+                throw new IOException("Injected response failure before definition commit");
+            }
+            var result = await inner.SaveDefinitionAsync(request, cancellationToken);
+            if (LoseSaveAcknowledgement) {
+                throw new IOException("Injected response failure after definition commit");
+            }
+            return result;
+        }
 
         public Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
             WorkflowDefinitionStatusChangeRequest request,
@@ -2974,9 +3277,9 @@ public sealed class WorkflowsPageTests
             => inner.ImportDefinitionAsync(request, cancellationToken);
 
         public Task DeleteDefinitionAsync(
-            WorkflowId workflowId,
+            WorkflowDefinitionDeleteRequest request,
             CancellationToken cancellationToken = default)
-            => inner.DeleteDefinitionAsync(workflowId, cancellationToken);
+            => inner.DeleteDefinitionAsync(request, cancellationToken);
 
         public Task<WorkflowValidationResult> ValidateDefinitionAsync(
             WorkflowDefinition definition,
@@ -2997,23 +3300,25 @@ public sealed class WorkflowsPageTests
     }
 
     private sealed class BlockingInitialWorkflowCatalogService(
-        PersistentWorkflowCatalogService inner) : IWorkflowCatalogService
+        PersistentWorkflowCatalogService inner) : IWorkflowCatalogService, IWorkflowCatalogSearchService
     {
-        private readonly TaskCompletionSource initialListStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource initialListCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource initialSearchStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource initialSearchCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Task WaitForInitialListRequestAsync()
-            => initialListStarted.Task;
+        public Task WaitForInitialSearchRequestAsync()
+            => initialSearchStarted.Task;
 
-        public void CompleteInitialListRequest()
-            => initialListCompletion.TrySetResult();
+        public void CompleteInitialSearchRequest()
+            => initialSearchCompletion.TrySetResult();
 
-        public async Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+        public Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
             CancellationToken cancellationToken = default)
-        {
-            initialListStarted.TrySetResult();
-            await initialListCompletion.Task.WaitAsync(cancellationToken);
-            return await inner.ListDefinitionsAsync(cancellationToken);
+            => inner.ListDefinitionsAsync(cancellationToken);
+
+        public async Task<WorkflowCatalogSearchPage> SearchDefinitionsAsync(WorkflowCatalogSearchQuery query, CancellationToken cancellationToken = default) {
+            initialSearchStarted.TrySetResult();
+            await initialSearchCompletion.Task.WaitAsync(cancellationToken);
+            return await inner.SearchDefinitionsAsync(query, cancellationToken);
         }
 
         public Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
@@ -3050,9 +3355,9 @@ public sealed class WorkflowsPageTests
             => inner.ImportDefinitionAsync(request, cancellationToken);
 
         public Task DeleteDefinitionAsync(
-            WorkflowId workflowId,
+            WorkflowDefinitionDeleteRequest request,
             CancellationToken cancellationToken = default)
-            => inner.DeleteDefinitionAsync(workflowId, cancellationToken);
+            => inner.DeleteDefinitionAsync(request, cancellationToken);
 
         public Task<WorkflowValidationResult> ValidateDefinitionAsync(
             WorkflowDefinition definition,
@@ -3246,6 +3551,7 @@ public sealed class WorkflowsPageTests
 
     private sealed class WorkflowComponentLibraryCallCounter
     {
+        public Action? AfterList { get; set; }
         private int listComponentsCount;
         private int listProviderOptionsCount;
 
@@ -3277,7 +3583,9 @@ public sealed class WorkflowsPageTests
         public async Task<IReadOnlyList<LlmCallComponent>> ListComponentsAsync(CancellationToken cancellationToken = default)
         {
             counter.IncrementListComponents();
-            return await inner.ListComponentsAsync(cancellationToken);
+            var result = await inner.ListComponentsAsync(cancellationToken);
+            counter.AfterList?.Invoke();
+            return result;
         }
 
         public Task<LlmCallComponent?> GetComponentAsync(
@@ -3291,9 +3599,9 @@ public sealed class WorkflowsPageTests
             => inner.SaveComponentAsync(request, cancellationToken);
 
         public Task DeleteComponentAsync(
-            WorkflowComponentId componentId,
+            WorkflowComponentDeleteRequest request,
             CancellationToken cancellationToken = default)
-            => inner.DeleteComponentAsync(componentId, cancellationToken);
+            => inner.DeleteComponentAsync(request, cancellationToken);
     }
 
     private sealed class WorkflowRunStoreCallCounter

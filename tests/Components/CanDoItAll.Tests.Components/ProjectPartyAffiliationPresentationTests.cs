@@ -144,7 +144,8 @@ public sealed class ProjectPartyAffiliationPresentationTests
                 IReadOnlyCollection<PartyOrganizationAffiliationEditorModel>
                     replacement,
                 string actor,
-                CancellationToken cancellationToken = default)
+                CancellationToken cancellationToken = default,
+                Action<IReadOnlyList<PartyOrganizationAffiliationListItemModel>>? onCommitted = null)
         {
             throw new NotSupportedException();
         }
@@ -154,7 +155,8 @@ public sealed class ProjectPartyAffiliationPresentationTests
                 PartyOrganizationAffiliationEditorModel affiliation,
                 string actor,
                 DateTimeOffset? expectedUpdatedAtUtc = null,
-                CancellationToken cancellationToken = default)
+                CancellationToken cancellationToken = default,
+                Action<PartyOrganizationAffiliationListItemModel>? onCommitted = null)
         {
             throw new NotSupportedException();
         }

@@ -39,6 +39,10 @@ public sealed class PromptsSandboxTests : IDisposable
     [InlineData("editor-missing", "prompt-gallery-editor-retry")]
     [InlineData("editor-rejected", "prompt-gallery-editor-warning")]
     [InlineData("editor-unknown-result", "prompt-gallery-editor-warning")]
+    [InlineData("editor-review", "prompt-merge-review")]
+    [InlineData("editor-review-conflict", "prompt-merge-review")]
+    [InlineData("editor-review-raw", "prompt-merge-review")]
+    [InlineData("editor-review-preferred", "prompt-merge-review")]
     [InlineData("picker", "prompt-gallery-actual-model-filter")]
     [InlineData("compatibility", "prompt-compatibility-insert-suppress")]
     [InlineData("compatibility-blocked", "prompt-compatibility-cancel")]
@@ -109,6 +113,19 @@ public sealed class PromptsSandboxTests : IDisposable
         Assert.Contains(references, reference => reference.StartsWith("CanDoItAll.Prompts.UI", StringComparison.Ordinal));
         Assert.All(references, reference =>
             Assert.DoesNotContain(ForbiddenReferenceFragments, fragment => reference.Contains(fragment, StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void Review_specimen_applies_to_the_same_parent_form_without_a_save_intent() {
+        var cut = Render("editor-review");
+        var editor = cut.FindComponent<CanDoItAll.Prompts.UI.Editor.PromptGalleryItemEditorSurface>().Instance;
+        var form = editor.CurrentForm;
+        cut.WaitForElement("[data-testid='prompt-merge-apply']").Click();
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-merge-dialog']")));
+        Assert.Same(form, editor.CurrentForm);
+        Assert.Equal("Current saved name", form!.Title);
+        Assert.Equal("My local summary", form.Summary);
+        Assert.Contains("Applied to local draft only", cut.Find("[data-testid='prompts-sandbox-intent']").TextContent, StringComparison.Ordinal);
     }
 
     public void Dispose() => context.Dispose();

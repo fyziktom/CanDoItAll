@@ -151,7 +151,17 @@ public sealed class CatalogDraft {
         EditContext.NotifyValidationStateChanged();
         return EditContext.GetValidationMessages().Any() ? null : new(value with { DisplayOrder = order, Port = port }, [.. revisions], revision);
     }
-    public void AcceptIdentity(Guid id) => value = value with { Id = id };
+    public void AcceptIdentity(Guid id, DateTimeOffset? updatedAtUtc) => value = value with { Id = id, ExpectedUpdatedAtUtc = updatedAtUtc ?? value.ExpectedUpdatedAtUtc };
+    public void ObserveRoutingWhenUntouched(Guid expectedRevision) {
+        if (revisions[(int)CatalogField.DefaultPurposes] == 0) {
+            value = value with { ExpectedRoutingRevision = expectedRevision };
+        }
+    }
+    public void AcceptRouting(Guid? expectedRevision, CatalogSubmission submitted) {
+        if (expectedRevision is { } revision) {
+            value = value with { ExpectedRoutingRevision = revision, OriginalDefaultPurposes = submitted.Value.DefaultPurposes };
+        }
+    }
     public void AcceptHealth(CatalogHealthFact health, CatalogSubmission submitted) {
         if (revision == submitted.Revision) {
             value = value with { Health = health };

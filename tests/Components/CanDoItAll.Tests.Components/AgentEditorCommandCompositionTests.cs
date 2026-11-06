@@ -122,7 +122,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this, completed.Add))
             .Add(component => component.TargetChanged, EventCallback.Factory.Create<AgentEditorTarget>(this, targets.Add)));
         cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Reconciliation test");
-        probe.Save = request => probe.Target.SaveAgentAsync(request);
+        probe.Save = request => probe.Target.SaveAgentDefinitionAsync(request);
         probe.Failure = AgentEditorProbeFailure.RefreshAfterSave;
         await cut.Find("form").SubmitAsync();
         var id = cut.Instance.CurrentTarget.AgentId;
@@ -158,7 +158,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this,
                 _ => Task.FromException(new InvalidOperationException("Caller refresh failed.")))));
         cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Callback test");
-        probe.Save = request => probe.Target.SaveAgentAsync(request);
+        probe.Save = request => probe.Target.SaveAgentDefinitionAsync(request);
         await cut.Find("form").SubmitAsync();
         var draft = (AgentEditorModel)cut.FindComponent<EditForm>().Instance.EditContext!.Model;
         Assert.NotNull(draft.Id);
@@ -178,7 +178,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
         cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Recoverable draft");
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
-        probe.Save = _ => Task.FromException<Guid>(new IOException("Acknowledgement unavailable."));
+        probe.Save = _ => Task.FromException<AgentDefinition>(new IOException("Acknowledgement unavailable."));
         await cut.Find("form").SubmitAsync();
         Assert.NotNull(cut.Find("[data-testid='agents-editor-write-unconfirmed']"));
         Assert.Same(context, cut.FindComponent<EditForm>().Instance.EditContext);

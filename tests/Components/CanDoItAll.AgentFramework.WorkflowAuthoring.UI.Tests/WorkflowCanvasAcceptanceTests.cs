@@ -9,6 +9,52 @@ namespace CanDoItAll.Tests.Components.WorkflowAuthoring;
 
 public sealed class WorkflowCanvasAcceptanceTests {
     [Fact]
+    public async Task Editing_a_scalar_does_not_enumerate_unrelated_hidden_input_parameters() {
+        await using var context = CreateContext();
+        var inputs = new ObservedInputs([
+            new("message", "Message", WorkflowInputParameterKind.Text, false, "Hidden original input", "$.message",
+                "Retained input", WorkflowInputParameterOptionSource.None, null, null, "Message")
+        ]);
+        var cut = Render(context, Definition() with { InputParameters = inputs },
+            new((_, _) => throw new InvalidOperationException(), Valid));
+        var before = inputs.Enumerations;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-name']").Change("Scalar edit"));
+        Assert.Equal("Scalar edit", cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
+        Assert.Equal(before, inputs.Enumerations);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Held_save_adopts_untouched_accepted_fields_and_preserves_the_later_field(bool laterName) {
+        await using var context = CreateContext();
+        var original = Definition();
+        var held = new TaskCompletionSource<WorkflowDefinitionSaveOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var requests = new List<WorkflowDefinitionSaveRequest>();
+        var cut = Render(context, original, new(async (request, _) => {
+            requests.Add(request);
+            return requests.Count == 1 ? await held.Task : new WorkflowDefinitionSaveOutcome.Accepted(Accept(original, request));
+        }, Valid));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-name']").Change(" Submitted name "));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-description']").Change(" Submitted description "));
+        var save = cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-save']").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Single(requests));
+        await cut.InvokeAsync(() => cut.Find(laterName ? "[data-testid='workflow-canvas-name']" : "[data-testid='workflow-canvas-description']")
+            .Change(laterName ? "Later name" : "Later description"));
+        var accepted = Accept(original, requests[0]) with {
+            Name = requests[0].Name.Trim(), Description = requests[0].Description.Trim()
+        };
+        held.SetResult(new WorkflowDefinitionSaveOutcome.Accepted(accepted));
+        await save;
+        Assert.Equal(laterName ? "Later name" : accepted.Name, cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-save']").ClickAsync());
+        Assert.Equal(2, requests.Count);
+        Assert.Equal(accepted.VersionId, requests[1].ExpectedVersionId);
+        Assert.Equal(laterName ? "Later name" : accepted.Name, requests[1].Name);
+        Assert.Equal(laterName ? accepted.Description : "Later description", requests[1].Description);
+    }
+
+    [Fact]
     public async Task Failed_validation_is_reported_without_certifying_or_discarding_the_draft() {
         await using var context = CreateContext();
         var cut = Render(context, Definition(), new((_, _) => throw new InvalidOperationException(),
@@ -277,7 +323,7 @@ public sealed class WorkflowCanvasAcceptanceTests {
         Assert.Equal("Replacement", cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
     }
 
-    private static BunitContext CreateContext() {
+    internal static BunitContext CreateContext() {
         var context = new BunitContext();
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
@@ -285,7 +331,20 @@ public sealed class WorkflowCanvasAcceptanceTests {
         return context;
     }
 
-    private static IRenderedComponent<WorkflowCanvasSurface> Render(BunitContext context, WorkflowDefinition? definition,
+    private sealed class ObservedInputs(IReadOnlyList<WorkflowInputParameterDescriptor> values) : IReadOnlyList<WorkflowInputParameterDescriptor> {
+        public int Enumerations { get; private set; }
+        public int Count => values.Count;
+        public WorkflowInputParameterDescriptor this[int index] => values[index];
+
+        public IEnumerator<WorkflowInputParameterDescriptor> GetEnumerator() {
+            Enumerations++;
+            return values.GetEnumerator();
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    internal static IRenderedComponent<WorkflowCanvasSurface> Render(BunitContext context, WorkflowDefinition? definition,
         WorkflowDocumentOperations operations, Action? accepted = null, WorkflowPreviewOperations? preview = null)
         => context.Render<WorkflowCanvasSurface>(p => p.Add(x => x.Definition, definition)
             .Add(x => x.DocumentOperations, operations)
@@ -295,13 +354,13 @@ public sealed class WorkflowCanvasAcceptanceTests {
                 (_, _, _) => Task.FromResult<WorkflowPreviewOutcome>(new WorkflowPreviewOutcome.Rejected("Not used"))))
             .Add(x => x.DefinitionSaved, _ => accepted?.Invoke()));
 
-    private static Task<WorkflowValidationResult> Valid(WorkflowDefinition _, CancellationToken token)
+    internal static Task<WorkflowValidationResult> Valid(WorkflowDefinition _, CancellationToken token)
         => Task.FromResult(WorkflowValidationResult.Success);
 
-    private static WorkflowDefinition Definition()
+    internal static WorkflowDefinition Definition()
         => WorkflowCanvasDefinitionMapper.ToDefinition(WorkflowCanvasDefinitionMapper.CreateDraft([]));
 
-    private static WorkflowDefinition Accept(WorkflowDefinition original, WorkflowDefinitionSaveRequest request)
+    internal static WorkflowDefinition Accept(WorkflowDefinition original, WorkflowDefinitionSaveRequest request)
         => original with { VersionId = WorkflowVersionId.New(), Name = request.Name, Description = request.Description,
             Graph = request.Graph, RuntimePolicy = request.RuntimePolicy, UpdatedAtUtc = DateTimeOffset.UtcNow };
 }

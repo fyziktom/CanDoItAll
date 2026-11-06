@@ -1064,7 +1064,7 @@ public sealed partial class MafWorkflowHumanInLoopTests
             => throw new NotSupportedException();
 
         public Task DeleteDefinitionAsync(
-            WorkflowId workflowId,
+            WorkflowDefinitionDeleteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
@@ -1092,7 +1092,7 @@ public sealed partial class MafWorkflowHumanInLoopTests
             => throw new NotSupportedException();
 
         public Task DeleteComponentAsync(
-            WorkflowComponentId componentId,
+            WorkflowComponentDeleteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }

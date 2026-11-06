@@ -122,7 +122,7 @@ public class AgentEditorWorkspaceProbe : DispatchProxy {
     public IAgentFrameworkWorkspaceService Target { get; set; } = default!;
     public AgentEditorProbeFailure Failure { get; set; }
     public int AcceptedSaves { get; private set; }
-    public Func<AgentEditorModel, Task<Guid>>? Save { get; set; }
+    public Func<AgentEditorModel, Task<AgentDefinition>>? Save { get; set; }
     public CancellationToken SaveToken { get; private set; }
 
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
@@ -138,16 +138,16 @@ public class AgentEditorWorkspaceProbe : DispatchProxy {
             return Task.FromException<IReadOnlyList<CapabilityCatalogItem>>(new InvalidOperationException("Capability catalog probe failure."));
         }
 
-        if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) && Save is not null) {
+        if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentDefinitionAsync) && Save is not null) {
             SaveToken = (CancellationToken)args![1]!;
             AcceptedSaves++;
             return Save((AgentEditorModel)args![0]!);
         }
 
-        if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) &&
+        if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentDefinitionAsync) &&
             Failure == AgentEditorProbeFailure.RefreshAfterSave) {
             AcceptedSaves++;
-            return Task.FromResult(Guid.NewGuid());
+            return Target.SaveAgentDefinitionAsync((AgentEditorModel)args![0]!, (CancellationToken)args[1]!);
         }
 
         try {

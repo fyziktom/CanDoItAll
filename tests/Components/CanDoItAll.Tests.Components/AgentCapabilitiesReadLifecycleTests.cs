@@ -7,10 +7,53 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.Extensions.DependencyInjection;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentCapabilitiesReadLifecycleTests {
+    [Fact]
+    public async Task Retired_access_publishes_unavailable_context_without_revealing_the_previous_catalog() {
+        using var fixture = new AgentCapabilitiesHostFixture();
+        var states = new List<AgentChatContextAccessState>();
+        fixture.Context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
+        var cut = fixture.Context.Render<AgentCapabilitiesPanel>(parameters => parameters
+            .Add(component => component.PreferredAgentId, fixture.Alpha.Id)
+            .Add(component => component.ContextAccessStateChanged, state => states.Add(state)));
+        var services = fixture.Context.Services;
+        Assert.IsType<EditingUiTestAccess>(services.GetRequiredService<IEditingUiAccess>()).Allowed = false;
+        services.GetRequiredService<EditingChangeFeed>().Publish(new(services.GetRequiredService<AgentConfigurationChanges>().Scope,
+            EditingOwner.AgentCapability, fixture.Capability.Id), EditingChangeKind.AccessChanged);
+        cut.WaitForElement("[data-testid='capabilities-access-unavailable']");
+        Assert.DoesNotContain(fixture.Alpha.Name, cut.Markup);
+        Assert.Equal(AgentChatContextAccessState.Failed, states.Last());
+    }
+
+    [Fact]
+    public async Task Selecting_an_agent_keeps_unread_catalog_hints_until_explicit_refresh() {
+        using var fixture = new AgentCapabilitiesHostFixture();
+        var cut = fixture.Render(fixture.Alpha.Id);
+        cut.WaitForElement("[data-testid='agents-capability-search']").Input("Fixture");
+        var reads = fixture.Workspace.CatalogReads;
+        fixture.Workspace.Capabilities = [fixture.Capability with { Name = "Fixture peer capability" }];
+        var services = fixture.Context.Services;
+        services.GetRequiredService<EditingChangeFeed>().Publish(new(services.GetRequiredService<AgentConfigurationChanges>().Scope,
+            EditingOwner.AgentCapability, fixture.Capability.Id), EditingChangeKind.EditableContentChanged);
+        cut.WaitForElement("[data-testid='capabilities-catalog-changed']");
+        Assert.Equal(reads, fixture.Workspace.CatalogReads);
+        await cut.InvokeAsync(() => cut.FindComponent<AgentCapabilitiesSurface>().Instance.Intent.InvokeAsync(new AgentCapabilitiesIntent.SelectAgent(fixture.Beta.Id)));
+        Assert.Single(cut.FindAll("[data-testid='capabilities-catalog-changed']"));
+        Assert.Equal(reads, fixture.Workspace.CatalogReads);
+        await cut.Find("[data-testid='capabilities-catalog-refresh']").ClickAsync();
+        Assert.Empty(cut.FindAll("[data-testid='capabilities-catalog-changed']"));
+        Assert.Equal(reads + 1, fixture.Workspace.CatalogReads);
+        Assert.Equal(fixture.Beta.Id, cut.FindComponent<AgentCapabilitiesSurface>().Instance.Selection.AgentId);
+        Assert.Equal("Fixture", cut.Find("[data-testid='agents-capability-search']").GetAttribute("value"));
+        Assert.Contains("Fixture peer capability", cut.Markup);
+    }
+
     [Fact]
     public async Task Pending_target_read_does_not_render_the_previous_editor() {
         using var fixture = new AgentCapabilitiesHostFixture();
@@ -92,7 +135,7 @@ internal sealed class AgentCapabilitiesHostFixture : IDisposable {
         Context.Services.AddCanDoItAllBaseLib();
         Context.Services.AddSingleton<CanDoItAll.Infrastructure.Persistence.IDatabaseSwitchNotificationService,
             CanDoItAll.Infrastructure.Persistence.DatabaseSwitchNotificationService>();
-        Context.Services.AddAgentFrameworkUi();
+        Context.Services.AddAgentConfigurationFixture();
         var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, CapabilitiesWorkspaceProxy>();
         Workspace = (CapabilitiesWorkspaceProxy)(object)service;
         Workspace.Agents = [Alpha, Beta];
@@ -102,8 +145,10 @@ internal sealed class AgentCapabilitiesHostFixture : IDisposable {
         Context.Services.AddSingleton(DispatchProxy.Create<IAgentChatLauncher, CapabilitiesUnexpectedProxy>());
     }
 
-    public IRenderedComponent<AgentCapabilitiesPanel> Render(Guid? agentId) => Context.Render<AgentCapabilitiesPanel>(parameters => parameters
-        .Add(component => component.PreferredAgentId, agentId));
+    public IRenderedComponent<AgentCapabilitiesPanel> Render(Guid? agentId) {
+        Context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
+        return Context.Render<AgentCapabilitiesPanel>(parameters => parameters.Add(component => component.PreferredAgentId, agentId));
+    }
 
     public void Dispose() => Context.Dispose();
 
@@ -124,11 +169,12 @@ public class CapabilitiesWorkspaceProxy : DispatchProxy {
     public bool CatalogReadFails { get; set; }
     public int SaveCalls { get; private set; }
     public int VerifyCalls { get; private set; }
+    public int CatalogReads { get; private set; }
     public CancellationToken LastReadToken { get; private set; }
 
     protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch {
         nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) => CatalogReadFails ? Task.FromException<IReadOnlyList<AgentDefinition>>(new IOException("Catalog unavailable")) : Task.FromResult(Agents),
-        nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) => Task.FromResult(Capabilities),
+        nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) => ReadCapabilities(),
         nameof(IAgentFrameworkWorkspaceService.GetAgentEditorAsync) => Read(Assert.IsType<Guid>(args![0]), Assert.IsType<CancellationToken>(args[1])),
         nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) => SaveDraft(Assert.IsType<AgentEditorModel>(args![0])),
         nameof(IAgentFrameworkWorkspaceService.VerifyCapabilityAsync) => Verify((Guid)args![0]!, (Guid)args[1]!, (CancellationToken)args[2]!),
@@ -136,6 +182,11 @@ public class CapabilitiesWorkspaceProxy : DispatchProxy {
             ?? Task.FromResult(CapabilityEditorModel.FromDefinition(Capabilities.Single(item => item.Id == (Guid)args![0]!))),
         _ => throw new InvalidOperationException($"Unexpected workspace call: {method?.Name}")
     };
+
+    private Task<IReadOnlyList<CapabilityCatalogItem>> ReadCapabilities() {
+        CatalogReads++;
+        return Task.FromResult(Capabilities);
+    }
 
     private Task<AgentEditorModel> Read(Guid id, CancellationToken token) {
         LastReadToken = token;

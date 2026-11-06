@@ -11,6 +11,7 @@ using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -717,7 +718,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var saveActivity = new RecordingActivityStream();
         var saveObserver = new RecordingProviderProfileCommitObserver();
         var providerAdministration = fixture.CreateProviderAdministrationService(saveActivity, saveObserver);
-        var saved = await providerAdministration.SaveProviderAsync(CreateEditor(fixture));
+        var saved = await providerAdministration.SaveProviderAsync(await CreateEditorAsync(fixture, providerAdministration));
         Assert.True(saved.IsSuccess);
         Assert.Equal(fixture.Profile.Id, saved.Value);
 
@@ -751,14 +752,17 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 requiredSecretExists: true).IsEligible);
         }
 
+        await using var originalRead = await fixture.DbContextFactory.ProvidersFactory.CreateDbContextAsync();
+        var originalToken = await originalRead.Set<PersistedProviderProfile>().Where(profile => profile.Id == fixture.Profile.Id)
+            .Select(profile => profile.ConcurrencyToken).SingleAsync();
         var published = await service.ChangeAsync(new SharedProviderPublicationChangeRequest(
             fixture.Profile.Id,
             SharedProviderPublicationAction.Publish,
-            fixture.Publication.ConcurrencyToken));
+            fixture.Publication.ConcurrencyToken) { ExpectedProviderConcurrencyToken = originalToken });
         var unpublished = await service.ChangeAsync(new SharedProviderPublicationChangeRequest(
             fixture.Profile.Id,
             SharedProviderPublicationAction.Unpublish,
-            published.ConcurrencyToken));
+            published.ConcurrencyToken) { ExpectedProviderConcurrencyToken = originalToken });
 
         Assert.True(published.IsPublished);
         Assert.False(unpublished.IsPublished);
@@ -824,6 +828,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var raceProviderAdministration = referencedFixture.CreateProviderAdministrationService(
             raceActivity,
             raceObserver);
+        var raceEditor = await CreateEditorAsync(referencedFixture, raceProviderAdministration, replacementSecretRecordId);
         var gatedDeletionPolicy = new GatedSecretDeletionReferencePolicy(
             new ProviderSecretDeletionReferencePolicy(referencedFixture.DbContextFactory.ProviderOptions, referencedFixture.DbContextFactory.Transactions));
         var raceSecretService = new SecretService(
@@ -838,7 +843,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             referencedFixture.SecretRecordId));
         await gatedDeletionPolicy.Entered.WaitAsync(TimeSpan.FromSeconds(5));
         var raceSave = raceProviderAdministration.SaveProviderAsync(
-            CreateEditor(referencedFixture, replacementSecretRecordId));
+            raceEditor);
         try
         {
             await Task.Yield();
@@ -885,7 +890,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             ineligibleService.ChangeAsync(new SharedProviderPublicationChangeRequest(
                 ineligibleFixture.Profile.Id,
                 SharedProviderPublicationAction.Publish,
-                ineligibleFixture.Publication.ConcurrencyToken)));
+                ineligibleFixture.Publication.ConcurrencyToken) { ExpectedProviderConcurrencyToken = ineligibleFixture.Profile.ConcurrencyToken }));
 
         var fixture = await CreatePersistenceFixtureAsync(isPublished: false);
         var activity = new RecordingActivityStream();
@@ -893,16 +898,15 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var service = fixture.CreatePublicationService(activity, observer);
         var missingSecretActivity = new RecordingActivityStream();
         var missingSecretObserver = new RecordingProviderProfileCommitObserver();
-        var missingSecretSave = await fixture.CreateProviderAdministrationService(
-                missingSecretActivity,
-                missingSecretObserver)
-            .SaveProviderAsync(CreateEditor(fixture, Guid.NewGuid()));
+        var missingSecretAdministration = fixture.CreateProviderAdministrationService(missingSecretActivity, missingSecretObserver);
+        var missingSecretSave = await missingSecretAdministration.SaveProviderAsync(
+            await CreateEditorAsync(fixture, missingSecretAdministration, Guid.NewGuid()));
 
         await Assert.ThrowsAsync<SharedProviderConcurrencyException>(() => service.ChangeAsync(
             new SharedProviderPublicationChangeRequest(
                 fixture.Profile.Id,
                 SharedProviderPublicationAction.Publish,
-                Guid.NewGuid())));
+                Guid.NewGuid()) { ExpectedProviderConcurrencyToken = fixture.Profile.ConcurrencyToken }));
 
         await using var verification = await fixture.DbContextFactory.CreateDbContextAsync();
         var persisted = await verification.Set<ProviderSharePublication>()
@@ -1152,29 +1156,14 @@ public sealed class SharedProviderPublicationAndCatalogTests
             new ConnectorAgentExposure("test", true, false, "Test connector."),
             null);
 
-    private static ProviderAdministrationEditorModel CreateEditor(
+    private static async Task<ProviderAdministrationEditorModel> CreateEditorAsync(
         PersistenceFixture fixture,
-        Guid? secretRecordId = null)
-        => new()
-        {
-            Id = fixture.Profile.Id,
-            Name = fixture.Profile.Name,
-            ConnectorPluginKey = fixture.Profile.ConnectorPluginKey,
-            ConfigSchemaVersion = fixture.Profile.ConfigSchemaVersion,
-            ApiKeySecretId = secretRecordId ?? fixture.SecretRecordId,
-            IsEnabled = true,
-            SupportsStreaming = true,
-            SupportsToolCalling = true,
-            SupportsStructuredOutput = true,
-            SupportsVision = fixture.Profile.SupportsVision,
-            Configuration = new ConnectorConfigState(
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    [ProviderConnectorFieldKeys.BaseUrl] = fixture.Profile.BaseUrl,
-                    [ProviderConnectorFieldKeys.DefaultModel] = fixture.Profile.DefaultModel,
-                    [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
-                })
-        };
+        IProviderAdministrationService administration,
+        Guid? secretRecordId = null) {
+        var editor = await administration.GetProviderAsync(fixture.Profile.Id);
+        editor.ApiKeySecretId = secretRecordId ?? fixture.SecretRecordId;
+        return editor;
+    }
 
     private static async Task<PersistenceFixture> CreatePersistenceFixtureAsync(bool isPublished)
     {
@@ -1235,7 +1224,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 EligibilityPolicy,
                 activityStream,
                 Clock,
-                [observer]);
+                [observer], new ProviderEditingWrites(), DbContextFactory.Database);
 
         public SharedProviderCatalogQueryService CreateCatalogService(
             SharedProviderCatalogCache cache)
@@ -1269,7 +1258,10 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 providerHealthCheckService: null!,
                 activityStream,
                 [],
-                [observer]);
+                [observer],
+                new(new EphemeralDataProtectionProvider(), DbContextFactory.Database),
+                new(),
+                DbContextFactory.Database);
         }
     }
 
@@ -1374,9 +1366,11 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 .UseInMemoryDatabase(databaseName, databaseRoot).Options;
             ProvidersFactory = new OwnedDbContextFactory<ProvidersDbContext>(() => new(ProviderOptions));
             SecurityFactory = new OwnedDbContextFactory<SecurityDbContext>(() => new(securityOptions));
-            Transactions = CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+            var profile = new ResolvedDatabaseProfile(
                 new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.InMemory, SourceKind = DatabaseProfileSourceKind.InMemory },
-                DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+                DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+            Transactions = CoordinatedDatabaseTransaction.ForProfile(profile);
+            Database = new TestCanonicalDatabase(profile);
             SecretReferences = new(SecurityFactory, securityOptions, Transactions);
         }
 
@@ -1385,6 +1379,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         public IDbContextFactory<SecurityDbContext> SecurityFactory { get; }
         public CoordinatedDatabaseTransaction Transactions { get; }
         public SecretReferenceQuery SecretReferences { get; }
+        public ICanonicalRuntimeDatabase Database { get; }
 
         public AppDbContext CreateDbContext() => new(options);
 
@@ -1392,6 +1387,11 @@ public sealed class SharedProviderPublicationAndCatalogTests
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());
         }
+    }
+
+    private sealed class TestCanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = profile;
+        public long Generation => 0;
     }
 
     private sealed class OwnedDbContextFactory<TContext>(Func<TContext> create) : IDbContextFactory<TContext>

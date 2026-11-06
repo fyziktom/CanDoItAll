@@ -8,6 +8,9 @@ components; there is no second renderer.
 
 The library references `CanDoItAll.Modules.Prompts.Contracts` (public gallery value
 contracts and ports), `CanDoItAll.Components.BaseLib` and `Microsoft.AspNetCore.Components.Web`.
+The typed review adapter also uses the dependency-free `CanDoItAll.Editing` algorithms
+and lightweight `CanDoItAll.Editing.UI` comparison controls. Capture and patch preserve
+the form and EditContext, including invalid raw numeric and unfinished collection input.
 It has no dependency on the Prompts module implementation, Infrastructure, Entity
 Framework, Web, AgentFramework runtime or application registration. No component injects
 a service; every surface receives explicit presentation data and emits intents.

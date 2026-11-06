@@ -73,6 +73,7 @@ public sealed class PartyAddress
 public sealed class PartyRelationship
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public uint Version { get; set; }
     public Guid SourcePartyId { get; set; }
     public Guid TargetPartyId { get; set; }
     public PartyRelationshipKind RelationshipKind { get; set; }
@@ -149,6 +150,7 @@ internal sealed class PartyConfiguration : IEntityTypeConfiguration<Party>
             .HasComputedColumnSql("lower(trim(\"ExternalCode\"))", stored: true);
         builder.Property(party => party.ExtendedDataJson).HasColumnType("TEXT");
         builder.Property(party => party.LastChangedBy).HasMaxLength(160);
+        builder.Property(party => party.UpdatedAtUtc).IsConcurrencyToken();
         builder.HasIndex(party => new { party.DisplayName, party.Id });
         builder.HasIndex(party => new { party.PartyType, party.LifecycleStatus });
         builder.HasIndex(party => party.ExternalCode);
@@ -213,6 +215,7 @@ internal sealed class PartyRelationshipConfiguration : IEntityTypeConfiguration<
     {
         builder.ToTable("CrmHr_PartyRelationships");
         builder.HasKey(relationship => relationship.Id);
+        builder.Property(relationship => relationship.Version).IsRowVersion();
         builder.Property(relationship => relationship.RelationshipKind).HasConversion<string>().HasMaxLength(64);
         builder.Property(relationship => relationship.Notes).HasColumnType("TEXT");
         builder.HasIndex(relationship => new { relationship.SourcePartyId, relationship.TargetPartyId, relationship.RelationshipKind });

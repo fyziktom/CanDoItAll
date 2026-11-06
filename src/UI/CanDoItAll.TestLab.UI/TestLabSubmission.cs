@@ -31,6 +31,8 @@ public sealed class TestLabSubmission {
             return;
         }
         draft.Model.Id = id;
+        draft.Model.ExpectedPlan = Model.ExpectedPlan;
+        draft.Model.OriginalRuns = Model.OriginalRuns;
         foreach (var row in cases.Where(row => row.IsPresent(draft.Model.Cases))) {
             row.Origin.Id = row.Submitted.Id;
         }
@@ -40,6 +42,7 @@ public sealed class TestLabSubmission {
         foreach (var row in runs.Where(row => row.IsPresent(draft.Model.Runs))) {
             row.Origin.Id = row.Submitted.Id;
         }
+        draft.AcceptBaseline(Model);
     }
 
     public void Reconcile(TestLabDraft draft, TestPlanEditorModel accepted) {
@@ -116,6 +119,11 @@ public sealed class TestLabSubmission {
                 row.Origin.Summary = saved.Summary;
             }
         }
+        var submittedRuns = Model.Runs.Select(row => row.Id).ToHashSet();
+        live.Runs.AddRange(accepted.Runs.Where(row => !submittedRuns.Contains(row.Id) && live.Runs.All(existing => existing.Id != row.Id))
+            .Select(row => new TestRunEditorModel { Id = row.Id, ExecutedAtUtc = row.ExecutedAtUtc, Runner = row.Runner, Result = row.Result, Summary = row.Summary }));
+        live.OriginalRuns = accepted.OriginalRuns;
+        draft.AcceptBaseline(accepted);
     }
 
     private sealed record Row<T>(T Origin, T Baseline, T Submitted) where T : class, ITestPlanChildEditor {
@@ -125,6 +133,8 @@ public sealed class TestLabSubmission {
 
     public static TestPlanEditorModel Clone(TestPlanEditorModel source) => new() {
         Id = source.Id,
+        ExpectedPlan = source.ExpectedPlan,
+        OriginalRuns = source.OriginalRuns,
         ProjectId = source.ProjectId,
         ExpectedProjectAdmission = source.ExpectedProjectAdmission,
         ResponsiblePartyId = source.ResponsiblePartyId,

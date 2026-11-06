@@ -1,10 +1,12 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using CanDoItAll.Infrastructure.ControlPlane
+@using CanDoItAll.Infrastructure.Editing
 @using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Editing
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Workbench.Insights.UI
 @using Microsoft.Extensions.Logging
-@implements IDisposable
+@implements IAsyncDisposable
 @inject ProjectManagerSummaryScopeResolver ScopeResolver
 @inject ProjectManagerSummaryQueryService SummaryQueryService
 @inject ProjectManagerSummaryStateStore StateStore
@@ -12,8 +14,14 @@
 @inject IDatabaseProfileRuntimeAccessor Runtime
 @inject IDatabaseSwitchNotificationService DatabaseChanges
 @inject ILogger<ProjectManagerSummarySource> Logger
+@inject EditingChangeFeed Changes
+@inject IEditingUiAccess UiAccess
+@inject ProjectChanges ProjectChanges
+@inject ILogger<EditingObservation> ObservationLogger
 
-@if (session is not null) {
+@if (unavailable is not null) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="manager-summary-unavailable">@unavailable</Alert>
+} else if (session is not null) {
     <CanDoItAll.Workbench.Insights.UI.ProjectManagerSummaryPanel @key="session" Session="session" />
 }
 
@@ -22,6 +30,10 @@
     [Parameter] public ProjectWriteAdmission? ExpectedProjectAdmission { get; set; }
     [CascadingParameter] public Task<AuthenticationState>? AuthenticationState { get; set; }
     private ManagerSummarySession? session;
+    private EditingObservation? access;
+    private ProjectManagerSummaryViewState? openingState;
+    private readonly List<EditingObservation> retiredAccess = [];
+    private string? unavailable;
     private (Guid Project, Guid Profile, ProjectWriteAdmission? Admission, string Actor)? applied;
     private Task<AuthenticationState>? appliedAuthentication;
     private Guid origin;
@@ -38,6 +50,7 @@
         if (applied?.Project != projectId || applied?.Admission != admission || !ReferenceEquals(appliedAuthentication, authentication)) {
             Retire();
         }
+        await DisposeRetiredAccessAsync();
         var actor = authentication is null ? null : (await authentication).User;
         if (disposed || request != parameterGeneration) {
             return;
@@ -45,22 +58,71 @@
         var stamp = ProjectManagerSummarySource.ActorStamp(actor);
         var retained = StateStore.GetOrCreate(projectId);
         var context = (projectId, retained.ProfileId, admission, stamp);
-        if (context == applied && session is not null) {
+        if (context == applied && (session is not null || unavailable is not null)) {
             return;
         }
         Retire();
+        await DisposeRetiredAccessAsync();
+        if (disposed || request != parameterGeneration) {
+            return;
+        }
         var captured = origin;
         applied = context;
         appliedAuthentication = authentication;
-        var source = new ProjectManagerSummarySource(projectId, admission, stamp, retained,
-            ScopeResolver, SummaryQueryService, Admissions, Runtime, () => !disposed && origin == captured, Logger);
-        session = new(source, retained.Options, source.Restore());
+        openingState = retained;
+        unavailable = null;
+        var originalAccess = new EditingObservation(Changes, UiAccess,
+            new(ProjectChanges.Scope, EditingOwner.ProjectStructure), ObservationLogger);
+        access = originalAccess;
+        try {
+            await originalAccess.StartAsync(_ => Task.CompletedTask, () => InvokeAsync(() => LoseAccess(captured)));
+            var source = new ProjectManagerSummarySource(projectId, admission, stamp, retained,
+                ScopeResolver, SummaryQueryService, Admissions, Runtime, () => !disposed && origin == captured,
+                originalAccess, () => LoseAccess(captured), Logger);
+            var restored = await source.RestoreAsync(originalAccess.Lifetime);
+            if (!disposed && origin == captured) {
+                session = new(source, retained.Options, restored);
+            }
+        } catch (Exception failure) {
+            if (!disposed && origin == captured) {
+                Logger.LogWarning("Original Manager Summary opening failed for project {ProjectId}, profile {ProfileId}; failure {FailureType}.",
+                    projectId, retained.ProfileId, failure.GetType().Name);
+                LoseAccess(captured);
+            }
+        }
     }
 
     private void Retire() {
         origin = Guid.NewGuid();
+        if (access is { } previous) {
+            access = null;
+            previous.Stop();
+            retiredAccess.Add(previous);
+        }
         session?.Dispose();
         session = null;
+        openingState = null;
+    }
+
+    private void LoseAccess(Guid expected) {
+        if (disposed || origin != expected) {
+            return;
+        }
+        if (openingState is { } retained) {
+            retained.Snapshot = null;
+            retained.ScopeAdmissions = [];
+        }
+        Retire();
+        unavailable = "The original reporting access ended. Reopen Manager Summary with current access.";
+        StateHasChanged();
+    }
+
+    private async Task DisposeRetiredAccessAsync() {
+        var previous = retiredAccess.ToArray();
+        retiredAccess.Clear();
+        foreach (var observation in previous) {
+            await observation.DisposeAsync();
+        }
     }
 
     private void OnDatabaseChanged(object? sender, DatabaseProfileChangedNotification notification) {
@@ -75,10 +137,11 @@
         }
     }
 
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
         disposed = true;
         parameterGeneration++;
         DatabaseChanges.Changed -= OnDatabaseChanged;
         Retire();
+        await DisposeRetiredAccessAsync();
     }
 }

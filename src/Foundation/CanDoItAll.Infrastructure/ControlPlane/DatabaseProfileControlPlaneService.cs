@@ -198,10 +198,14 @@ public sealed class DatabaseProfileControlPlaneService(
             {
                 return Task.FromResult(Result<Guid>.Failure(Error.Failure("Runtime override profiles cannot be persisted.")));
             }
+            if (existing?.Audit.ConfigurationRevision != model.ExpectedConfigurationRevision) {
+                return Task.FromResult(Result<Guid>.Failure(ProfileConfigurationChanged()));
+            }
 
             var profile = BuildPersistedProfile(model, existing);
             UpsertProfile(document, profile);
             WriteCatalogLocked(document);
+            model.ExpectedConfigurationRevision = profile.Audit.ConfigurationRevision;
 
             try {
                 var activeState = ReadActiveProfileStateLocked();
@@ -219,14 +223,14 @@ public sealed class DatabaseProfileControlPlaneService(
     }
 
     public Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-        => DeleteCoreAsync(id, null, cancellationToken);
+        => DeleteCoreAsync(id, null, null, cancellationToken);
 
-    public Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) {
+    public Task<Result> DeleteEditorAsync(Guid id, Guid? expectedConfigurationRevision, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(runtimeProfile);
-        return DeleteCoreAsync(id, runtimeProfile, cancellationToken);
+        return DeleteCoreAsync(id, expectedConfigurationRevision, runtimeProfile, cancellationToken);
     }
 
-    private Task<Result> DeleteCoreAsync(Guid id, ResolvedDatabaseProfile? editorRuntime, CancellationToken cancellationToken) {
+    private Task<Result> DeleteCoreAsync(Guid id, Guid? expectedConfigurationRevision, ResolvedDatabaseProfile? editorRuntime, CancellationToken cancellationToken) {
         lock (_sync)
         {
             using IDisposable coordination = AcquireCoordination(cancellationToken);
@@ -242,6 +246,9 @@ public sealed class DatabaseProfileControlPlaneService(
                 TryResolveExplicitOverrideLocked() is not null || editorRuntime.Profile.Id == id || activeState.ActiveProfileId == id)) {
                 return Task.FromResult(Result.Failure(Error.Validation("Current, pending or startup-controlled profiles cannot be deleted.")));
             }
+            if (editorRuntime is not null && profile.Audit.ConfigurationRevision != expectedConfigurationRevision) {
+                return Task.FromResult(Result.Failure(ProfileConfigurationChanged()));
+            }
 
             document.Profiles.Remove(profile);
             WriteCatalogLocked(document);
@@ -256,6 +263,9 @@ public sealed class DatabaseProfileControlPlaneService(
             return Task.FromResult(Result.Success());
         }
     }
+
+    private static Error ProfileConfigurationChanged() => Error.Failure(
+        "The database profile changed after it was opened. Review its saved configuration.", "database-profile.configuration-changed");
 
     public Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -685,6 +695,7 @@ public sealed class DatabaseProfileControlPlaneService(
             Audit = new DatabaseProfileAuditMetadata
             {
                 CreatedUtc = existing?.Audit.CreatedUtc ?? now,
+                ConfigurationRevision = Guid.NewGuid(),
                 LastUsedUtc = existing?.Audit.LastUsedUtc,
                 LastSuccessfulOpenUtc = existing?.Audit.LastSuccessfulOpenUtc
             },
@@ -780,6 +791,7 @@ public sealed class DatabaseProfileControlPlaneService(
         return new DatabaseProfileEditorModel
         {
             Id = profile.Id,
+            ExpectedConfigurationRevision = profile.Audit.ConfigurationRevision,
             DisplayName = profile.DisplayName,
             ProviderKind = profile.ProviderKind,
             SourceKind = profile.SourceKind,

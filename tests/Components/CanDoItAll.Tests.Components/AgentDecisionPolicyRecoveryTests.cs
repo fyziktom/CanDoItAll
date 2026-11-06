@@ -5,6 +5,8 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.UI.Catalog;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Editing;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,11 +15,23 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentDecisionPolicyRecoveryTests {
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task Policy_surface_does_not_read_or_render_protected_values_without_interactive_admission(bool interactive, bool allowed) {
+        await using var context = Context(out var owner, out _);
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", interactive));
+        Assert.IsType<EditingUiTestAccess>(context.Services.GetRequiredService<IEditingUiAccess>()).Allowed = allowed;
+        var cut = context.RenderPolicyRecovery();
+        Assert.Equal(0, owner.ContextReads);
+        Assert.Empty(cut.FindAll("[data-testid^='agent-policy-recovery-'] button"));
+    }
+
     [Fact]
     public async Task Failed_list_read_renders_the_actual_recovery_error() {
         await using var context = Context(out _, out var pending);
         pending.AfterList = () => throw new IOException("Injected unavailable storage.");
-        var list = context.Render<AgentDecisionPolicyRecoveryDialog>();
+        var list = context.RenderPolicyRecovery();
         var error = list.WaitForElement("[data-testid='agent-policy-recovery-error']");
         Assert.Contains("Retained saves could not be read", error.TextContent, StringComparison.Ordinal);
         Assert.DoesNotContain("session.Error", list.Markup, StringComparison.Ordinal);
@@ -29,7 +43,7 @@ public sealed class AgentDecisionPolicyRecoveryTests {
         var command = pending.Record!.Command;
         owner.Lookup = new AgentDecisionDataPolicyLookup.Accepted(new(command, DateTimeOffset.UtcNow));
         AgentDecisionPolicyRecoverySelection? selected = null;
-        var list = context.Render<AgentDecisionPolicyRecoveryDialog>(p => p.Add(x => x.Selected, value => selected = value));
+        var list = context.RenderPolicyRecovery(p => p.Add(x => x.Selected, value => selected = value));
         var row = list.WaitForElement($"button[data-testid='agent-policy-recovery-{command.Expectation.AgentId:N}']");
         await list.InvokeAsync(() => row.ClickAsync(new MouseEventArgs()));
         Assert.NotNull(selected);
@@ -38,7 +52,7 @@ public sealed class AgentDecisionPolicyRecoveryTests {
         Assert.Null(state.Original);
         Assert.False(state.CanSave);
         await context.DisposeRenderedComponentsAsync();
-        var editor = context.Render<AgentDecisionPolicyDialog>(p => p.Add(x => x.State, state));
+        var editor = context.RenderPolicy(p => p.Add(x => x.State, state));
         Assert.Empty(editor.FindAll("form"));
         await editor.InvokeAsync(() => editor.Find("[data-testid='agent-policy-recover']").ClickAsync(new MouseEventArgs()));
         editor.WaitForElement("[data-testid='agent-policy-historical']");
@@ -139,19 +153,22 @@ public sealed class AgentDecisionPolicyRecoveryTests {
     }
 
     private static AgentDecisionPolicyRecoverySession Session(BunitContext context, PendingStore pending)
-        => new(context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>(), pending, NullLogger<AgentDecisionPolicyRecoverySession>.Instance);
+        => new(context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>(), pending, NullLogger<AgentDecisionPolicyRecoverySession>.Instance, context.Services.GetRequiredService<CanDoItAll.Modules.AgentFramework.AgentConfigurationOpening>());
 
     private static BunitContext Context(out PolicyOwner owner, out PendingStore pending) {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.AddPolicyOpeningFixture();
         var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, PolicyOwner>();
         owner = (PolicyOwner)(object)workspace;
         pending = new() { Record = new(new(Guid.NewGuid(), new(owner.Identity, Guid.NewGuid(), new(4)),
             new(ReadBasisMode.RunSnapshot, MaximumWorkDuration: TimeSpan.FromMinutes(3))), AgentDecisionPolicyPendingStage.Dispatching) };
         context.Services.AddSingleton(workspace);
         context.Services.AddSingleton<IAgentDecisionPolicyPendingStore>(pending);
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
+        context.OpenPolicyScope();
         return context;
     }
 
@@ -161,8 +178,10 @@ public sealed class AgentDecisionPolicyRecoveryTests {
         public AgentDecisionDataPolicyLookup Lookup { get; set; } = new AgentDecisionDataPolicyLookup.NotObserved();
         public ReplaceAgentDecisionDataPolicyCommand? LookedUp { get; private set; }
         public int CurrentReads { get; private set; }
+        public int ContextReads { get; private set; }
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
             if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.ReadAgentDecisionDataPolicyContextAsync)) {
+                ContextReads++;
                 return Task.FromResult(Identity);
             }
             if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.LookupAgentDecisionDataPolicyAsync)) {

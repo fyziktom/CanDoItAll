@@ -1,5 +1,15 @@
 @using static CanDoItAll.CrmHr.UI.Assignments.CrmHrAssignmentsWorkspacePresentation
 @using CanDoItAll.SharedKernel
+@using CanDoItAll.Editing
+@using CanDoItAll.Infrastructure.Editing
+@using CanDoItAll.CrmHr.UI.Assignments
+@inject ProjectAssignmentChanges AssignmentChanges
+@inject CrmHrChanges Changes
+@inject IStaffingRequestEditing StaffingOwner
+@inject EditingChangeFeed EditingFeed
+@inject IEditingUiAccess EditingAccess
+@inject ILogger<EditingObservation> ObservationLogger
+@inject ILogger<AssignmentWorkspaceSession> EditingLogger
 @inject ProjectWriteAdmissionService ProjectWriteAdmissions
 @page "/crm-hr/assignments"
 @implements IAsyncDisposable
@@ -17,6 +27,25 @@
 @inject Microsoft.Extensions.Logging.ILogger<CrmHrAssignmentsPage> Logger
 
 <PageTitle>CRM / HR Assignments</PageTitle>
+<CrmHrEditorLeaveGuard @ref="navigationLeave" TestIdPrefix="crmhr-assignments" HasLocalChanges="@(() => editing.Drafts.IsDirty)"
+    IsSameEditorRoute="IsSameEditorRoute" InputRevision="inputRevision" Opening="selectionLifetime" HasInput="editing.Drafts.IsDirty"
+    IsBusy="@(() => editing.IsBusy)" Unknown="editing.IsUnknown" />
+<CrmHrEditorLeaveGuard @ref="relationshipLeave" TestIdPrefix="crmhr-assignment" ObserveNavigation="false"
+    HasLocalChanges="@(() => editing.Drafts.Relationship.IsDirty)" IsSameEditorRoute="@(_ => true)"
+    InputRevision="editing.Drafts.Relationship.InputRevision" Opening="editing.Drafts.Relationship.Opening"
+    HasInput="editing.Drafts.Relationship.IsDirty" IsBusy="@(() => editing.Drafts.Relationship.IsSaving)" Unknown="editing.Drafts.Relationship.IsUnknown" />
+<CrmHrEditorLeaveGuard @ref="allocationLeave" TestIdPrefix="crmhr-allocation" ObserveNavigation="false"
+    HasLocalChanges="@(() => editing.Drafts.Allocation.IsDirty)" IsSameEditorRoute="@(_ => true)"
+    InputRevision="editing.Drafts.Allocation.InputRevision" Opening="editing.Drafts.Allocation.Opening"
+    HasInput="editing.Drafts.Allocation.IsDirty" IsBusy="@(() => editing.Drafts.Allocation.IsSaving)" Unknown="editing.Drafts.Allocation.IsUnknown" />
+<CrmHrEditorLeaveGuard @ref="staffingLeave" TestIdPrefix="crmhr-staffing" ObserveNavigation="false"
+    HasLocalChanges="@(() => editing.Drafts.Staffing.IsDirty)" IsSameEditorRoute="@(_ => true)"
+    InputRevision="editing.Drafts.Staffing.InputRevision" Opening="editing.Drafts.Staffing.Opening"
+    HasInput="editing.Drafts.Staffing.IsDirty" IsBusy="@(() => editing.Drafts.Staffing.IsSaving)" Unknown="editing.Drafts.Staffing.IsUnknown" />
+
+<CrmHrEditorLeaveGuard @ref="unknownLeave" TestIdPrefix="crmhr-assignments-unknown" ObserveNavigation="false"
+    HasLocalChanges="@(() => true)" IsSameEditorRoute="@(_ => true)" InputRevision="inputRevision" Opening="selectionLifetime"
+    HasInput="true" IsBusy="@(() => editing.IsBusy)" />
 
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
@@ -90,12 +119,11 @@
     private CancellationTokenSource? selectionLifetimeCancellation;
     private long selectionLifetime;
     private readonly CrmHrMutationGate mutationGate = new();
-    // The create editors of this host record what they dispatched, so a draft the operator started while the write
-    // was in flight is never cleared by that write's own completion.
-    private readonly CrmHrDraftReconciler drafts = new();
-    private const string AssignmentDraft = "assignment";
-    private const string AllocationDraft = "allocation";
-    private const string StaffingRequestDraft = "staffing-request";
+    private AssignmentWorkspaceSession editing = default!;
+    private CrmHrEditorLeaveGuard? navigationLeave, relationshipLeave, allocationLeave, staffingLeave, unknownLeave;
+    private long inputRevision;
+    private AssignmentSelectionData renderedSelectionData;
+    private bool recordsChanged;
     private CancellationTokenSource? staffingRequestSearchCancellation;
     private CancellationTokenSource? relationshipAssignmentSearchCancellation;
     private CancellationTokenSource? allocationAssignmentSearchCancellation;
@@ -109,9 +137,9 @@
     private StaffingRequestStatus? staffingRequestStatusFilter;
     private ProjectPartyAssignmentRole? relationshipAssignmentRoleFilter;
     private ProjectPartyAssignmentRole? allocationAssignmentRoleFilter;
-    private ProjectPartyAssignmentUpsertRequest draftAssignment = CreateProjectAssignmentDraft();
-    private ProjectPartyAssignmentUpsertRequest allocationDraft = CreateAllocationDraft();
-    private StaffingRequestEditorModel staffingRequestDraft = CreateStaffingRequestDraft();
+    private ProjectPartyAssignmentUpsertRequest draftAssignment => editing.Drafts.Relationship.Draft;
+    private ProjectPartyAssignmentUpsertRequest allocationDraft => editing.Drafts.Allocation.Draft;
+    private StaffingRequestEditorModel staffingRequestDraft => editing.Drafts.Staffing.Draft;
 
     private AgentChatContextSurface AgentChatSurface
     {
@@ -140,12 +168,7 @@
             url,
             new KeyValuePair<string, string?>(AssignmentsUrlCodec.ProjectKey, selectedProjectId?.ToString("D")));
 
-    private WorkspaceTabsIdentity WorkspaceTabsKey => new(
-        selectedProjectId,
-        assignmentCounts.TotalCount,
-        assignmentCounts.AllocationCount,
-        staffingRequestTotalCount,
-        loadedSelectionData.HasFlag(AssignmentSelectionData.StaffingRequests));
+    private WorkspaceTabsIdentity WorkspaceTabsKey => new(selectedProjectId, selectedProjectAdmission?.LifetimeId);
 
     private int? StaffingRequestCount => loadedSelectionData.HasFlag(AssignmentSelectionData.StaffingRequests)
         ? staffingRequestTotalCount
@@ -157,8 +180,14 @@
         ? selectedProject
         : null;
 
-    protected override void OnInitialized()
-        => url = new UrlStateBinding<AssignmentsUrlState>(Navigation, AssignmentsUrlCodec.Instance, History, typeof(CrmHrAssignmentsPage));
+    protected override void OnInitialized() {
+        url = new UrlStateBinding<AssignmentsUrlState>(Navigation, AssignmentsUrlCodec.Instance, History, typeof(CrmHrAssignmentsPage));
+        editing = new(ProjectPartyIntegrationService, StaffingOwner, AssignmentChanges, Changes, EditingFeed, EditingAccess,
+            ObservationLogger, EditingLogger) {
+            Dispatch = work => InvokeAsync(work), Changed = () => _ = InvokeAsync(StateHasChanged),
+            RecordsChanged = HandleRecordsChangedAsync, SaveAssignment = SaveAssignmentOwnerAsync
+        };
+    }
 
     // Every location reaches the same instance: a pasted link, Back, Forward and this page's own intents arriving.
     // Another project loads the route; another tab or filter of the same project loads only that tab's list.
@@ -167,6 +196,11 @@
         var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
         if (!change.IsChanged)
         {
+            return;
+        }
+
+        if (!change.IsInitial && change.Current.ProjectId == selectedProjectId && selectedProjectAdmission is not null) {
+            await ApplyRouteViewAsync(change.Current);
             return;
         }
 
@@ -230,7 +264,10 @@
                 ?? requestedProjectId;
             SetSelectedProject(targetProjectId);
             selectedProject = projectCatalog.SelectedProject;
-            BindSelectedProjectAdmission();
+            await BindSelectedProjectAdmissionAsync();
+            if (!IsCurrentRouteSelectionLoad(generation, requestedProjectId, targetProjectId)) {
+                return;
+            }
             if (requestedProjectId.HasValue &&
                 projectCatalog.SelectedProject is null)
             {
@@ -242,7 +279,7 @@
             var missingData = requestedData & ~loadedSelectionData;
             if (missingData is not AssignmentSelectionData.None)
             {
-                var snapshot = await LoadSelectionSnapshotAsync(
+                var snapshot = await ReadSelectionSnapshotAsync(
                     new AssignmentSelectionLoadRequest(
                         targetProjectId,
                         missingData,
@@ -310,13 +347,18 @@
     }
 
     // An explicit project choice is a new history entry; another project starts without the filters of the one left.
-    private Task HandleProjectChanged(Guid? projectId)
-    {
+    private async Task HandleProjectChanged(Guid? projectId) {
+        if (projectId == selectedProjectId) {
+            return;
+        }
+        if (projectId != selectedProjectId && (navigationLeave is null || !await navigationLeave.RequestLeaveAsync())) {
+            return;
+        }
         var route = projectId == selectedProjectId
             ? RouteFor(selectedWorkspaceTab)
             : AssignmentsUrlCodec.Default with { Tab = selectedWorkspaceTab };
         url.Navigate(route with { ProjectId = projectId }, UrlHistoryMode.Push);
-        return LoadSelectionAsync(projectId);
+        await LoadSelectionAsync(projectId);
     }
 
     // The location of a tab with the filters its list holds now.
@@ -412,9 +454,12 @@
             }
 
             selectedProject = resolvedProject;
-            BindSelectedProjectAdmission();
+            await BindSelectedProjectAdmissionAsync();
+            if (!IsCurrentSelectionLoad(generation, projectId)) {
+                return;
+            }
             var requestedData = AssignmentSelectionData.AssignmentCounts | GetRequiredData(selectedWorkspaceTab);
-            var snapshot = await LoadSelectionSnapshotAsync(
+            var snapshot = await ReadSelectionSnapshotAsync(
                 new AssignmentSelectionLoadRequest(
                     projectId,
                     requestedData,
@@ -514,7 +559,7 @@
         await InvokeAsync(StateHasChanged);
         try
         {
-            var snapshot = await LoadSelectionSnapshotAsync(
+            var snapshot = await ReadSelectionSnapshotAsync(
                 new AssignmentSelectionLoadRequest(
                     expectedProjectId,
                     dataToLoad,
@@ -573,6 +618,10 @@
             CompleteLoad(cancellation);
         }
     }
+
+    private Task<AssignmentSelectionSnapshot> ReadSelectionSnapshotAsync(AssignmentSelectionLoadRequest request, CancellationToken token) =>
+        request.ProjectId is null ? Task.FromResult(AssignmentSelectionSnapshot.Empty)
+            : editing.ReadAsync(() => LoadSelectionSnapshotAsync(request, token), token);
 
     protected virtual async Task<AssignmentSelectionSnapshot> LoadSelectionSnapshotAsync(
         AssignmentSelectionLoadRequest request,
@@ -704,8 +753,8 @@
     // The owner write of a participation or allocation; a seam for deterministic interleaving tests of the host.
     protected virtual Task<Result<Guid>> SaveAssignmentOwnerAsync(
         ProjectPartyAssignmentUpsertRequest submission,
-        CancellationToken cancellationToken)
-        => ProjectPartyIntegrationService.SaveAssignmentAsync(submission, cancellationToken);
+        CancellationToken cancellationToken, Action<ProjectAssignmentSaveReceipt> onCommitted)
+        => ProjectPartyIntegrationService.SaveAssignmentAsync(submission, cancellationToken, onCommitted);
 
     protected virtual Task<StaffingDashboardModel> GetStaffingDashboardAsync(
         CancellationToken cancellationToken)
@@ -855,6 +904,7 @@
         }
 
         loadedSelectionData |= snapshot.LoadedData;
+        renderedSelectionData |= snapshot.LoadedData;
     }
 
     private void SetSelectedProject(Guid? projectId)
@@ -874,6 +924,7 @@
         CancelAssignmentSearches();
 
         selectedProjectId = projectId;
+        editing.Retire();
         selectedProject = null;
         selectedProjectAdmission = null;
         scheduleAssignments = [];
@@ -894,6 +945,7 @@
         staffingCandidatePageIndex = 0;
         staffingCandidateTotalCount = 0;
         loadedSelectionData = AssignmentSelectionData.None;
+        renderedSelectionData = AssignmentSelectionData.None;
         loadingSelectionData = AssignmentSelectionData.None;
         isSelectionDataLoading = false;
         candidateSearchText = string.Empty;
@@ -905,14 +957,23 @@
         allocationAssignmentSearchText = string.Empty;
         relationshipAssignmentRoleFilter = null;
         allocationAssignmentRoleFilter = null;
-        draftAssignment = CreateProjectAssignmentDraft(projectId);
-        allocationDraft = CreateAllocationDraft(projectId);
-        staffingRequestDraft = CreateStaffingRequestDraft(projectId);
+        editing.Drafts.Relationship.Open(CreateProjectAssignmentDraft(projectId));
+        editing.Drafts.Allocation.Open(CreateAllocationDraft(projectId));
+        editing.Drafts.Staffing.Open(CreateStaffingRequestDraft(projectId));
     }
 
     private async Task<bool> PrepareRelationshipCreateAsync()
     {
+        if (!editing.HasAccess || editing.IsUnknown || editing.IsBusy) {
+            return false;
+        }
+        if (editing.Drafts.Relationship.IsDirty && !await RequestDiscardAsync(AssignmentEditorKind.Relationship)) {
+            return false;
+        }
         ResetDraft();
+        if (draftAssignment.IsPrimary && !await editing.ReviewPrimaryAsync(draftAssignment, selectionLifetimeCancellation?.Token ?? default)) {
+            return false;
+        }
         await InvokeAsync(StateHasChanged);
         return true;
     }
@@ -925,6 +986,12 @@
             return false;
         }
 
+        if (!editing.HasAccess || editing.IsUnknown || editing.IsBusy) {
+            return false;
+        }
+        if (editing.Drafts.Staffing.IsDirty && !await RequestDiscardAsync(AssignmentEditorKind.Staffing)) {
+            return false;
+        }
         ResetStaffingRequestDraft();
         await InvokeAsync(StateHasChanged);
         return true;
@@ -939,170 +1006,149 @@
             return false;
         }
 
+        if (!editing.HasAccess || editing.IsUnknown || editing.IsBusy) {
+            return false;
+        }
+        if (editing.Drafts.Allocation.IsDirty && !await RequestDiscardAsync(AssignmentEditorKind.Allocation)) {
+            return false;
+        }
         ResetAllocationDraft();
+        if (allocationDraft.IsPrimary && !await editing.ReviewPrimaryAsync(allocationDraft, selectionLifetimeCancellation?.Token ?? default)) {
+            return false;
+        }
         await InvokeAsync(StateHasChanged);
         return true;
     }
 
-    private async Task<bool> SaveDraftAsync()
-    {
-        if (selectedProjectId is not { } projectId)
-        {
-            NotificationService.Warning("Assignment not saved", "Choose a project before saving an assignment.");
-            return false;
-        }
-
-        if (draftAssignment.ProjectId != projectId || draftAssignment.ExpectedProjectAdmission is null) {
-            NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
-            return false;
-        }
-        // One admitted write per project selection; the submission carries the captured project admission and is
-        // independent of later edits of the draft.
-        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
-        if (admission is null)
-        {
-            return false;
-        }
-
-        var submittedDraft = draftAssignment;
-        var submission = drafts.Submit(AssignmentDraft, submittedDraft, static draft => draft.Snapshot());
-        var result = await SaveForCapturedProjectAsync(() => SaveAssignmentOwnerAsync(
-            submission,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None));
-        if (!result.IsSuccess)
-        {
-            NotificationService.Error("Assignment save failed", result.Errors.FirstOrDefault()?.Message ?? "Unable to save the assignment.");
-            return false;
-        }
-
-        NotificationService.Success("Assignment saved", "Project assignment saved.");
-        // A completion of a retired selection never resets the draft of the project selected since, and neither does
-        // one whose editor the operator already typed the next assignment into.
-        if (ReferenceEquals(draftAssignment, submittedDraft) &&
-            !drafts.ChangedAfterSubmission(AssignmentDraft, draftAssignment))
-        {
-            ResetDraft();
-        }
-
-        drafts.Retire(AssignmentDraft);
-
-        if (selectedProjectId == projectId)
-        {
-            InvalidateAssignmentViews();
-            await EnsureSelectionDataLoadedAsync(
-                AssignmentSelectionData.AssignmentCounts |
-                AssignmentSelectionData.RelationshipAssignments,
-                force: true);
-            await RefreshStaffingDashboardAsync();
-            await InvokeAsync(StateHasChanged);
-        }
-
-        return true;
+    private bool IsSameEditorRoute(string target) {
+        var absolute = Navigation.ToAbsoluteUri(target);
+        var current = Navigation.ToAbsoluteUri(Navigation.Uri);
+        return absolute.AbsolutePath == current.AbsolutePath &&
+            Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(absolute.Query).GetValueOrDefault(AssignmentsUrlCodec.ProjectKey).ToString() ==
+            Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(current.Query).GetValueOrDefault(AssignmentsUrlCodec.ProjectKey).ToString();
     }
 
-    private async Task<bool> SaveAllocationAsync()
-    {
-        if (selectedProjectId is not { } projectId)
-        {
-            NotificationService.Warning("Allocation not saved", "Choose a project before saving an allocation.");
-            return false;
-        }
+    private Task<bool> RequestDiscardAsync(AssignmentEditorKind kind) => kind switch {
+        AssignmentEditorKind.Relationship => relationshipLeave?.RequestLeaveAsync() ?? Task.FromResult(false),
+        AssignmentEditorKind.Allocation => allocationLeave?.RequestLeaveAsync() ?? Task.FromResult(false),
+        AssignmentEditorKind.Staffing => staffingLeave?.RequestLeaveAsync() ?? Task.FromResult(false),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
 
-        if (allocationDraft.ProjectId != projectId || allocationDraft.ExpectedProjectAdmission is null) {
-            NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
-            return false;
+    private async Task DiscardReviewedUnknownAsync() {
+        if (!editing.CanDiscardReviewedUnknown || unknownLeave is null || !await unknownLeave.RequestLeaveAsync() || !editing.CanDiscardReviewedUnknown) {
+            return;
         }
-        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
-        if (admission is null)
-        {
-            return false;
-        }
-
-        allocationDraft.Source = "crm-hr-ui";
-        var submittedDraft = allocationDraft;
-        var submission = drafts.Submit(AllocationDraft, submittedDraft, static draft => draft.Snapshot());
-        var result = await SaveForCapturedProjectAsync(() => SaveAssignmentOwnerAsync(
-            submission,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None));
-        if (!result.IsSuccess)
-        {
-            NotificationService.Error("Allocation save failed", result.Errors.FirstOrDefault()?.Message ?? "Unable to save the allocation.");
-            return false;
-        }
-
-        NotificationService.Success("Allocation saved", "Project allocation saved.");
-        if (ReferenceEquals(allocationDraft, submittedDraft) &&
-            !drafts.ChangedAfterSubmission(AllocationDraft, allocationDraft))
-        {
-            ResetAllocationDraft();
-        }
-
-        drafts.Retire(AllocationDraft);
-
-        if (selectedProjectId == projectId)
-        {
-            InvalidateAssignmentViews();
-            loadedSelectionData &= ~AssignmentSelectionData.StaffingCandidates;
-            await EnsureSelectionDataLoadedAsync(
-                AssignmentSelectionData.AssignmentCounts |
-                AssignmentSelectionData.AllocationAssignments,
-                force: true);
-            await RefreshStaffingDashboardAsync();
-            await InvokeAsync(StateHasChanged);
-        }
-
-        return true;
+        editing.DiscardReviewedUnknown(() => {
+            if (editing.Drafts.Relationship.IsUnknown) {
+                ResetDraft();
+            }
+            if (editing.Drafts.Allocation.IsUnknown) {
+                ResetAllocationDraft();
+            }
+            if (editing.Drafts.Staffing.IsUnknown) {
+                ResetStaffingRequestDraft();
+            }
+        });
     }
 
-    private async Task<bool> SaveStaffingRequestAsync()
-    {
-        if (selectedProjectId is not { } projectId)
-        {
-            NotificationService.Warning("Staffing request not saved", "Choose a project before saving a staffing request.");
-            return false;
-        }
+    private Task<bool> SaveDraftAsync() => SaveEditorAsync(AssignmentEditorKind.Relationship);
+    private Task<bool> SaveAllocationAsync() => SaveEditorAsync(AssignmentEditorKind.Allocation);
+    private Task<bool> SaveStaffingRequestAsync() => SaveEditorAsync(AssignmentEditorKind.Staffing);
 
-        if (staffingRequestDraft.ProjectId != projectId || staffingRequestDraft.ExpectedProjectAdmission is null) {
+    private async Task<bool> SaveEditorAsync(AssignmentEditorKind kind) {
+        var expected = selectedProjectAdmission;
+        var submittedProject = kind == AssignmentEditorKind.Staffing ? staffingRequestDraft.ExpectedProjectAdmission
+            : kind == AssignmentEditorKind.Allocation ? allocationDraft.ExpectedProjectAdmission : draftAssignment.ExpectedProjectAdmission;
+        if (expected is null || submittedProject != expected) {
             NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
             return false;
         }
         using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
-        if (admission is null)
-        {
+        if (admission is null) {
             return false;
         }
-
-        var submittedDraft = staffingRequestDraft;
-        var submission = drafts.Submit(StaffingRequestDraft, submittedDraft, static draft => draft.Snapshot());
-        var result = await SaveForCapturedProjectAsync(() => HrService.SaveStaffingRequestAsync(
-            submission,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None));
-        if (result.IsFailure)
-        {
-            NotificationService.Error("Staffing request save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
-            return false;
+        var token = selectionLifetimeCancellation?.Token ?? CancellationToken.None;
+        var accepted = kind switch {
+            AssignmentEditorKind.Relationship => await editing.SaveRelationshipAsync(token),
+            AssignmentEditorKind.Allocation => await editing.SaveAllocationAsync(token),
+            AssignmentEditorKind.Staffing => await editing.SaveStaffingAsync(token),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        };
+        if (selectedProjectAdmission == expected) {
+            if (accepted) {
+                NotificationService.Success("Saved", editing.Message ?? "The change was saved.");
+                await RefreshRecordsAsync();
+            } else if (editing.Message is { } message) {
+                NotificationService.Warning("Change retained", message);
+            }
         }
+        return accepted;
+    }
 
-        NotificationService.Success("Staffing request saved", "Staffing request saved.");
-        if (ReferenceEquals(staffingRequestDraft, submittedDraft) &&
-            !drafts.ChangedAfterSubmission(StaffingRequestDraft, staffingRequestDraft))
-        {
-            ResetStaffingRequestDraft();
+    private async Task ReviewUnknownRecordsAsync() {
+        var before = recordsReadRevision;
+        var expected = selectedProjectAdmission;
+        editing.InvalidateUnknownReview();
+        await RefreshRecordsAsync();
+        if (!recordsChanged && selectedProjectAdmission == expected && recordsReadRevision > before) {
+            editing.MarkUnknownRecordsReviewed();
         }
+    }
 
-        drafts.Retire(StaffingRequestDraft);
-
-        if (selectedProjectId == projectId)
-        {
-            staffingRequestPageIndex = 0;
-            PublishListFilters(AssignmentWorkspaceTab.StaffingRequests, UrlHistoryMode.Replace);
-            loadedSelectionData &= ~AssignmentSelectionData.StaffingRequests;
-            await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.StaffingRequests, force: true);
-            await RefreshStaffingDashboardAsync();
-            await InvokeAsync(StateHasChanged);
+    private Task HandleRecordsChangedAsync(AssignmentWriteArea area) {
+        recordsChanged = true;
+        if (selectedWorkspaceTab == AssignmentWorkspaceTab.ResourceSchedule) {
+            return InvokeAsync(StateHasChanged);
         }
+        return RefreshRecordsAsync();
+    }
 
-        return true;
+    private Task? recordsRefresh;
+    private long recordsReadRevision;
+    private ProjectWriteAdmission? recordsRefreshProject;
+    private bool refreshAgain;
+    private async Task RefreshRecordsAsync() {
+        var expected = selectedProjectAdmission;
+        if (recordsRefresh is { } active && recordsRefreshProject == expected) {
+            refreshAgain = true;
+            await active;
+            return;
+        }
+        if (expected is null || !editing.HasAccess) {
+            return;
+        }
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        recordsRefresh = completion.Task;
+        recordsRefreshProject = expected;
+        try {
+            do {
+                refreshAgain = false;
+                InvalidateAssignmentViews();
+                loadedSelectionData &= ~(AssignmentSelectionData.StaffingRequests | AssignmentSelectionData.StaffingCandidates);
+                if (await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.AssignmentCounts | GetRequiredData(selectedWorkspaceTab)) &&
+                    selectedProjectAdmission == expected) {
+                    recordsReadRevision++;
+                    recordsChanged = false;
+                    await RefreshStaffingDashboardAsync();
+                }
+            } while (refreshAgain && selectedProjectAdmission == expected && !isDisposed);
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Saved assignment records could not refresh for project {ProjectId}.", expected.ProjectId);
+            if (selectedProjectAdmission == expected) {
+                recordsChanged = true;
+                editing.ReportReadFailure();
+            }
+        } finally {
+            if (ReferenceEquals(recordsRefresh, completion.Task)) {
+                recordsRefresh = null;
+                recordsRefreshProject = null;
+            }
+            completion.SetResult();
+            if (!isDisposed) {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
     }
 
     private Task SearchCandidatesAsync()
@@ -1347,20 +1393,26 @@
         await ReloadCandidatesAsync();
     }
 
-    private async Task ResetDraftAsync()
-    {
+    private async Task ResetDraftAsync() {
+        if (editing.IsUnknown || editing.IsBusy || !await RequestDiscardAsync(AssignmentEditorKind.Relationship)) {
+            return;
+        }
         ResetDraft();
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ResetAllocationAsync()
-    {
+    private async Task ResetAllocationAsync() {
+        if (editing.IsUnknown || editing.IsBusy || !await RequestDiscardAsync(AssignmentEditorKind.Allocation)) {
+            return;
+        }
         ResetAllocationDraft();
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ResetStaffingRequestAsync()
-    {
+    private async Task ResetStaffingRequestAsync() {
+        if (editing.IsUnknown || editing.IsBusy || !await RequestDiscardAsync(AssignmentEditorKind.Staffing)) {
+            return;
+        }
         ResetStaffingRequestDraft();
         await InvokeAsync(StateHasChanged);
     }
@@ -1377,86 +1429,32 @@
     private Task<bool> ReloadCandidatesAsync()
         => EnsureSelectionDataLoadedAsync(AssignmentSelectionData.StaffingCandidates, force: true);
 
-    private async Task DeleteAssignmentAsync(Guid assignmentId)
-    {
-        var expectedReference = RequireDisplayedAssignmentReference(assignmentId);
-        var projectId = selectedProjectId;
+    private Task DeleteAssignmentAsync(ProjectPartyAssignmentDetail row) => DeleteDisplayedAsync(row, null);
+    private Task DeleteAllocationAsync(ProjectPartyAssignmentDetail row) => DeleteDisplayedAsync(row, null);
+    private Task DeleteStaffingRequestAsync(StaffingRequestItemModel row) => DeleteDisplayedAsync(null, row);
+
+    private async Task DeleteDisplayedAsync(ProjectPartyAssignmentDetail? assignment, StaffingRequestItemModel? request) {
+        var expected = selectedProjectAdmission;
         using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
-        if (admission is null)
-        {
+        if (admission is null) {
             return;
         }
-
-        await ProjectPartyIntegrationService.DeleteAssignmentAsync(
-            assignmentId,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None, expectedReference);
-        NotificationService.Warning("Assignment deleted", "Project assignment deleted.");
-        if (selectedProjectId == projectId)
-        {
-            InvalidateAssignmentViews();
-            await EnsureSelectionDataLoadedAsync(
-                AssignmentSelectionData.AssignmentCounts |
-                AssignmentSelectionData.RelationshipAssignments,
-                force: true);
-            await RefreshStaffingDashboardAsync();
-        }
-    }
-
-    private async Task DeleteAllocationAsync(Guid assignmentId)
-    {
-        var expectedReference = RequireDisplayedAssignmentReference(assignmentId);
-        var projectId = selectedProjectId;
-        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
-        if (admission is null)
-        {
+        var token = selectionLifetimeCancellation?.Token ?? CancellationToken.None;
+        var accepted = assignment is not null ? await editing.DeleteAssignmentAsync(assignment, token)
+            : await editing.DeleteStaffingAsync(request!, token);
+        if (selectedProjectAdmission != expected) {
             return;
         }
-
-        await ProjectPartyIntegrationService.DeleteAssignmentAsync(
-            assignmentId,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None, expectedReference);
-        NotificationService.Warning("Allocation deleted", "Project allocation deleted.");
-        if (selectedProjectId == projectId)
-        {
-            InvalidateAssignmentViews();
-            loadedSelectionData &= ~AssignmentSelectionData.StaffingCandidates;
-            await EnsureSelectionDataLoadedAsync(
-                AssignmentSelectionData.AssignmentCounts |
-                AssignmentSelectionData.AllocationAssignments,
-                force: true);
-            await RefreshStaffingDashboardAsync();
-        }
-    }
-
-    private async Task DeleteStaffingRequestAsync(Guid staffingRequestId)
-    {
-        var projectId = selectedProjectId;
-        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
-        if (admission is null)
-        {
-            return;
-        }
-
-        await HrService.DeleteStaffingRequestAsync(
-            staffingRequestId,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None);
-        NotificationService.Warning("Staffing request deleted", "Staffing request deleted.");
-        if (selectedProjectId == projectId)
-        {
-            if (staffingRequests.Count == 1 && staffingRequestPageIndex > 0)
-            {
-                staffingRequestPageIndex--;
-                PublishListFilters(AssignmentWorkspaceTab.StaffingRequests, UrlHistoryMode.Replace);
-            }
-
-            loadedSelectionData &= ~AssignmentSelectionData.StaffingRequests;
-            await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.StaffingRequests, force: true);
-            await RefreshStaffingDashboardAsync();
+        if (accepted) {
+            NotificationService.Warning("Deleted", "The displayed row was deleted.");
+            await RefreshRecordsAsync();
+        } else if (editing.Message is { } message) {
+            NotificationService.Warning("Deletion not confirmed", message);
         }
     }
 
     private bool IsLoading(AssignmentSelectionData data)
-        => isSelectionDataLoading && loadingSelectionData.HasFlag(data);
+        => isSelectionDataLoading && loadingSelectionData.HasFlag(data) && !renderedSelectionData.HasFlag(data);
 
     private static int CalculateTotalPages(int totalCount)
         => totalCount == 0
@@ -1521,8 +1519,12 @@
         var cancellationToken = selectionLifetimeCancellation?.Token ?? CancellationToken.None;
         try
         {
-            staffingDashboard = await GetStaffingDashboardAsync(cancellationToken);
-            hasStaffingDashboardLoaded = true;
+            var expected = selectedProjectAdmission;
+            var current = await editing.ReadAsync(() => GetStaffingDashboardAsync(cancellationToken), cancellationToken);
+            if (selectedProjectAdmission == expected) {
+                staffingDashboard = current;
+                hasStaffingDashboardLoaded = true;
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -1566,46 +1568,38 @@
             ? OpenGantt(projectId)
             : Task.CompletedTask;
 
-    private void BindSelectedProjectAdmission() {
+    private async Task BindSelectedProjectAdmissionAsync() {
         selectedProjectAdmission = selectedProject?.LifetimeId is { } lifetimeId
             ? new ProjectWriteAdmission(ProjectWriteAdmissions.DatabaseProfileId, selectedProject.Id, lifetimeId)
             : null;
         ResetDraft();
         ResetAllocationDraft();
         ResetStaffingRequestDraft();
-    }
-
-    private static async Task<Result<Guid>> SaveForCapturedProjectAsync(Func<Task<Result<Guid>>> save) {
-        try {
-            return await save();
-        } catch (ProjectWriteAdmissionRejectedException) {
-            return Result<Guid>.Failure(Error.Validation("The selected project lifetime changed. Reload the project and reopen this editor before saving.",
-                ProjectAssignmentAdmission.RefreshRequiredErrorCode));
-        }
-    }
-
-    private ProjectAssignmentReference RequireDisplayedAssignmentReference(Guid assignmentId) {
-        var assignment = relationshipAssignments.Concat(allocationAssignments).Where(item => item.Id == assignmentId).DistinctBy(item => (item.Id, item.ProjectLifetimeId)).SingleOrDefault()
-            ?? throw new InvalidOperationException("Reload the assignment list before deleting this row.");
-        return new(ProjectWriteAdmissions.DatabaseProfileId, assignment.ProjectId, assignment.ProjectLifetimeId);
+        await editing.OpenAsync(selectedProjectAdmission);
     }
 
     private void ResetDraft()
     {
-        draftAssignment = CreateProjectAssignmentDraft(selectedProjectId);
-        draftAssignment.ExpectedProjectAdmission = selectedProjectAdmission;
+        var model = CreateProjectAssignmentDraft(selectedProjectId);
+        model.ExpectedProjectAdmission = selectedProjectAdmission;
+        editing.Drafts.Relationship.Open(model);
+        editing.EditorOpened(AssignmentEditorKind.Relationship);
     }
 
     private void ResetAllocationDraft()
     {
-        allocationDraft = CreateAllocationDraft(selectedProjectId);
-        allocationDraft.ExpectedProjectAdmission = selectedProjectAdmission;
+        var model = CreateAllocationDraft(selectedProjectId);
+        model.ExpectedProjectAdmission = selectedProjectAdmission;
+        editing.Drafts.Allocation.Open(model);
+        editing.EditorOpened(AssignmentEditorKind.Allocation);
     }
 
     private void ResetStaffingRequestDraft()
     {
-        staffingRequestDraft = CreateStaffingRequestDraft(selectedProjectId);
-        staffingRequestDraft.ExpectedProjectAdmission = selectedProjectAdmission;
+        var model = CreateStaffingRequestDraft(selectedProjectId);
+        model.ExpectedProjectAdmission = selectedProjectAdmission;
+        editing.Drafts.Staffing.Open(model);
+        editing.EditorOpened(AssignmentEditorKind.Staffing);
     }
 
     private void InvalidateAssignmentViews()
@@ -1668,8 +1662,7 @@
         cancellation?.Dispose();
     }
 
-    public ValueTask DisposeAsync()
-    {
+    public async ValueTask DisposeAsync() {
         isDisposed = true;
         Interlocked.Increment(ref loadGeneration);
         var cancellation = Interlocked.Exchange(ref loadCancellation, null);
@@ -1680,7 +1673,7 @@
         selectionCancellation?.Dispose();
         CancelStaffingRequestSearch();
         CancelAssignmentSearches();
-        return ValueTask.CompletedTask;
+        await editing.DisposeAsync();
     }
 
     protected sealed record AssignmentProjectCatalog(

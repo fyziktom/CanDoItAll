@@ -1,35 +1,36 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-public sealed class ProviderProfileSecretMutationScope : IAsyncDisposable
-{
+public sealed class ProviderProfileSecretMutationScope : IAsyncDisposable {
     private readonly SerializableMutationScope? mutationScope;
+    private readonly IDbContextTransaction? ownedTransaction;
 
     private ProviderProfileSecretMutationScope(
         ProviderProfile? profile,
-        SerializableMutationScope? mutationScope)
-    {
+        SerializableMutationScope? mutationScope,
+        IDbContextTransaction? ownedTransaction = null) {
         Profile = profile;
         this.mutationScope = mutationScope;
+        this.ownedTransaction = ownedTransaction;
     }
 
     public ProviderProfile? Profile { get; }
 
-    internal bool HasMutationScope => mutationScope is not null;
+    internal bool HasMutationScope => mutationScope is not null || ownedTransaction is not null;
 
     public static async Task<ProviderProfileSecretMutationScope> BeginAsync(
         ProvidersDbContext dbContext,
         Guid? providerProfileId,
         Guid? targetSecretRecordId,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken,
+        bool requireTransaction = false) {
         ArgumentNullException.ThrowIfNull(dbContext);
 
-        while (true)
-        {
+        while (true) {
             var observedSecretRecordId = providerProfileId.HasValue
                 ? await dbContext.Set<ProviderProfile>()
                     .AsNoTracking()
@@ -40,15 +41,23 @@ public sealed class ProviderProfileSecretMutationScope : IAsyncDisposable
             var scopeKeys = SecretMutationScopeKeys.ForSecretRecords(
                 observedSecretRecordId,
                 targetSecretRecordId);
-            if (scopeKeys.Count == 0)
-            {
-                var unlockedProfile = providerProfileId.HasValue
-                    ? await dbContext.Set<ProviderProfile>()
-                        .SingleOrDefaultAsync(
-                            profile => profile.Id == providerProfileId.Value,
-                            cancellationToken)
-                    : null;
-                return new(unlockedProfile, mutationScope: null);
+            if (scopeKeys.Count == 0) {
+                var transaction = requireTransaction && dbContext.Database.IsRelational()
+                    ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+                try {
+                    var unlockedProfile = providerProfileId.HasValue
+                        ? await dbContext.Set<ProviderProfile>()
+                            .SingleOrDefaultAsync(
+                                profile => profile.Id == providerProfileId.Value,
+                                cancellationToken)
+                        : null;
+                    return new(unlockedProfile, mutationScope: null, transaction);
+                } catch {
+                    if (transaction is not null) {
+                        await transaction.DisposeAsync();
+                    }
+                    throw;
+                }
             }
 
             var candidateScope = await SerializableMutationScope.BeginAsync(
@@ -61,13 +70,11 @@ public sealed class ProviderProfileSecretMutationScope : IAsyncDisposable
                         profile => profile.Id == providerProfileId.Value,
                         cancellationToken)
                 : null;
-            if (lockedProfile?.ApiKeySecretId == observedSecretRecordId)
-            {
+            if (lockedProfile?.ApiKeySecretId == observedSecretRecordId) {
                 return new(lockedProfile, candidateScope);
             }
 
-            if (lockedProfile is not null)
-            {
+            if (lockedProfile is not null) {
                 dbContext.Entry(lockedProfile).State = EntityState.Detached;
             }
 
@@ -76,8 +83,8 @@ public sealed class ProviderProfileSecretMutationScope : IAsyncDisposable
     }
 
     public Task CommitAsync(CancellationToken cancellationToken)
-        => mutationScope?.CommitAsync(cancellationToken) ?? Task.CompletedTask;
+        => mutationScope?.CommitAsync(cancellationToken) ?? ownedTransaction?.CommitAsync(cancellationToken) ?? Task.CompletedTask;
 
     public ValueTask DisposeAsync()
-        => mutationScope?.DisposeAsync() ?? ValueTask.CompletedTask;
+        => mutationScope?.DisposeAsync() ?? ownedTransaction?.DisposeAsync() ?? ValueTask.CompletedTask;
 }

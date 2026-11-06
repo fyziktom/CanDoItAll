@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Workbench.Insights.UI;
 using Microsoft.Extensions.Logging;
@@ -14,7 +15,7 @@ internal sealed class ProjectManagerSummarySource(
     ProjectManagerSummaryViewState retained, ProjectManagerSummaryScopeResolver scopes,
     ProjectManagerSummaryQueryService reports, ProjectWriteAdmissionService admissions,
     IDatabaseProfileRuntimeAccessor runtime, Func<bool> isCurrent,
-    ILogger<ProjectManagerSummarySource> logger) : IManagerSummarySource {
+    EditingObservation access, Action accessEnded, ILogger<ProjectManagerSummarySource> logger) : IManagerSummarySource {
     private ProjectWriteAdmission? admission = expectedAdmission;
     private (ManagerScopeId Id, ProjectManagerSummaryOptions Options, ProjectManagerSummaryScopeResolution Scope, IReadOnlyList<ProjectWriteAdmission> Admissions)? candidate;
     private (ManagerReportId Id, ProjectManagerSummarySnapshot Snapshot, IReadOnlyList<ProjectWriteAdmission> Admissions)? accepted;
@@ -27,14 +28,16 @@ internal sealed class ProjectManagerSummarySource(
                 .ThenBy(claim => claim.Value, StringComparer.Ordinal).Select(claim => new { claim.Type, claim.Value })
         }))));
 
-    public ManagerReportPresentation? Restore() {
-        RequireOrigin();
+    public async Task<ManagerReportPresentation?> RestoreAsync(CancellationToken cancellationToken) {
+        await RequireReadAsync(cancellationToken);
         if (retained.Snapshot is not { } snapshot || admission is null ||
             retained.LifetimeId != admission.LifetimeId || retained.ActorStamp != actorStamp) {
             return null;
         }
+        var scopeAdmissions = retained.ScopeAdmissions.ToArray();
+        await RequireScopeAsync(scopeAdmissions, cancellationToken);
         var id = new ManagerReportId(Guid.NewGuid());
-        accepted = (id, snapshot, retained.ScopeAdmissions);
+        accepted = (id, snapshot, scopeAdmissions);
         return Present(id, snapshot);
     }
 
@@ -57,7 +60,11 @@ internal sealed class ProjectManagerSummarySource(
         var submitted = candidate is { } value && value.Id == scopeId && value.Options == options
             ? value : throw new InvalidOperationException("The report scope confirmation has expired.");
         await RequireScopeAsync(submitted.Admissions, cancellationToken);
-        var snapshot = await reports.LoadAsync(submitted.Scope, options, progress, cancellationToken);
+        var snapshot = await reports.LoadAsync(submitted.Scope, options, async next => {
+            await RequireReadAsync(cancellationToken);
+            await progress(next);
+            await RequireReadAsync(cancellationToken);
+        }, cancellationToken);
         await RequireScopeAsync(submitted.Admissions, cancellationToken);
         var id = new ManagerReportId(Guid.NewGuid());
         prepared = (id, snapshot, submitted.Admissions);
@@ -93,33 +100,51 @@ internal sealed class ProjectManagerSummarySource(
 
     public string DescribeFailure(Exception exception) {
         logger.LogError(exception, "Manager summary read failed for original project {ProjectId} and runtime profile {ProfileId}.", projectId, retained.ProfileId);
+        if (exception is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException or ProjectStructureAgentException { StatusCode: 404 }) {
+            accessEnded();
+            return "The original reporting access ended. Reopen Manager Summary with current access.";
+        }
         return exception is ProjectStructureAgentException { StatusCode: 413,
             ErrorCode: ProjectPlanAnalyticsErrorCodes.ScopeLimitExceeded or ProjectPlanAnalyticsErrorCodes.PayloadLimitExceeded }
             ? exception.Message : "Manager Summary could not be loaded. The previous successful snapshot, if any, is still shown.";
     }
 
     private void RequireOrigin() {
-        if (!isCurrent() || runtime.ResolveCurrentProfile().Profile.Id != retained.ProfileId ||
+        if (!isCurrent() || access.Lifetime.IsCancellationRequested || runtime.ResolveCurrentProfile().Profile.Id != retained.ProfileId ||
             admission is { } captured && (captured.ProjectId != projectId || captured.DatabaseProfileId != retained.ProfileId)) {
-            throw new InvalidOperationException("The original reporting context is no longer current.");
+            throw new UnauthorizedAccessException("The original reporting context is no longer current.");
+        }
+    }
+
+    private async Task RequireReadAsync(CancellationToken cancellationToken) {
+        try {
+            cancellationToken.ThrowIfCancellationRequested();
+            RequireOrigin();
+            await access.AuthorizeAsync(write: false, cancellationToken);
+            RequireOrigin();
+        } catch (UnauthorizedAccessException) {
+            accessEnded();
+            throw;
         }
     }
 
     private async Task RequireCurrentAsync(CancellationToken cancellationToken) {
-        cancellationToken.ThrowIfCancellationRequested();
-        RequireOrigin();
+        await RequireReadAsync(cancellationToken);
         admission ??= await admissions.CaptureAsync(projectId, cancellationToken)
-            ?? throw new InvalidOperationException("The original project is unavailable.");
+            ?? throw new UnauthorizedAccessException("The original project is unavailable.");
         await admissions.RequireCurrentAsync(admission, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        RequireOrigin();
+        await RequireReadAsync(cancellationToken);
     }
 
     private async Task RequireScopeAsync(IReadOnlyList<ProjectWriteAdmission> expected, CancellationToken cancellationToken) {
-        await RequireCurrentAsync(cancellationToken);
-        await admissions.RequireManyCurrentAsync(expected, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        RequireOrigin();
+        try {
+            await RequireCurrentAsync(cancellationToken);
+            await admissions.RequireManyCurrentAsync(expected, cancellationToken);
+            await RequireReadAsync(cancellationToken);
+        } catch (Exception failure) when (failure is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException) {
+            accessEnded();
+            throw;
+        }
     }
 
     private static ManagerReportPresentation Present(ManagerReportId id, ProjectManagerSummarySnapshot report) => new(id,

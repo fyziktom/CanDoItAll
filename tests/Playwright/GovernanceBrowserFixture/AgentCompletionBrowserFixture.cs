@@ -209,6 +209,7 @@ internal sealed class FloatingCoordinatorBrowserFixture(IFloatingAgentChatCoordi
     public Task<ActiveAgentChat> OpenChatAsync(Guid agentId, Guid chatSessionId, CancellationToken cancellationToken = default) => throw new NotSupportedException("The settings fixture cannot open agent execution.");
     public ActiveAgentChat ShowChat(AgentChatHandleId handleId) => inner.ShowChat(handleId);
     public ActiveAgentChat KeepActive(AgentChatHandleId handleId) => inner.KeepActive(handleId);
+    public void SetDraftPending(AgentChatHandleId handleId, bool pending) => inner.SetDraftPending(handleId, pending);
     public void Stop(AgentChatHandleId handleId) => inner.Stop(handleId);
     public ActiveAgentChat SetRunState(AgentChatHandleId handleId, ActiveAgentChatRunState runState) => inner.SetRunState(handleId, runState);
     public bool TryBeginOperation(AgentChatHandleId handleId) => inner.TryBeginOperation(handleId);

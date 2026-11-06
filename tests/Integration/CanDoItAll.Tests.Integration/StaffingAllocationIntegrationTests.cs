@@ -171,6 +171,8 @@ public sealed class StaffingAllocationIntegrationTests
         Assert.Equal(CrmHrHomeQueryLimits.DirectoryPreviewSize, homeSnapshot.DirectoryPreview.Count);
         Assert.Equal(CrmHrHomeQueryLimits.SensitivePreviewSize, homeSnapshot.SensitivePreview.Count);
         Assert.Equal(CrmHrHomeQueryLimits.OpenPipelinePreviewSize, homeSnapshot.OpenPipelinePreview.Count);
+        Assert.All(homeSnapshot.DirectoryPreview.Where(item => item.IsSensitive), item => Assert.Empty(item.Summary));
+        Assert.All(homeSnapshot.SensitivePreview, item => Assert.Empty(item.Summary));
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             hrService.SearchStaffingCandidatesAsync(
@@ -277,6 +279,8 @@ public sealed class StaffingAllocationIntegrationTests
             AllocationPercent = 60m,
             StartsOn = DateOnly.FromDateTime(DateTime.UtcNow),
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.TeamMember, string.Empty),
             Source = "integration-tests"
         })).IsSuccess);
 

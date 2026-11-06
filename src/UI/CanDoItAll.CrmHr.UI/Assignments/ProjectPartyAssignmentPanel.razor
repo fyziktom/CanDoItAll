@@ -76,7 +76,7 @@
                                    PageChanged="PageChanged"
                                    TestIdPrefix="crmhr-assignment-list">
                         <ItemTemplate Context="assignment">
-                            <ProjectAssignmentRecordCard Assignment="assignment"
+                            <ProjectAssignmentRecordCard WritesDisabled="WritesDisabled" Assignment="assignment"
                                                          ProjectName="@ProjectName"
                                                          TestIdPrefix="crmhr-assignment"
                                                          ShowDetails="ShowDetailsAsync"
@@ -91,18 +91,26 @@
 
 <Dialog IsOpen="@isCreateDialogOpen"
         Eyebrow="Project relationship"
-        Title="Create assignment"
+        Title="@(Draft.AssignmentId.HasValue ? "Edit saved assignment" : "Create assignment")"
         Subtitle="@ProjectName"
         Size="ModalSize.Wide"
         DenseChrome="true"
         TestId="crmhr-assignment-create-dialog"
         OnClose="CloseCreateDialogAsync">
     <ChildContent>
+            <EditForm @key="Draft" EditContext="context" OnValidSubmit="HandleSaveAsync">
+            <ValidationSummary />
+            @if (StatusMessage is not null) {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="crmhr-editor-status">@StatusMessage</Alert>
+            }
+            @Recovery
+
+
         <Stack GapScale="LayoutGap.Large">
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="2">
                 <FormField Text="Assignment role">
-                    <InputSelect @bind-Value="Draft.Role"
+                    <InputSelect @bind-Value="Draft.Role" @bind-Value:after="@(() => ScopeChangedAsync(AssignmentField.Role))"
                                  class="cda-input"
                                  data-testid="crmhr-assignment-role">
                         @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>()) {
@@ -111,7 +119,7 @@
                     </InputSelect>
                 </FormField>
                 <FormField Text="Node key">
-                    <InputText @bind-Value="Draft.NodeKey"
+                    <NativeValueInput TValue="string" @bind-Value="Draft.NodeKey" PendingChanged="@(_ => TextAsync(AssignmentField.Node))"
                                class="cda-input"
                                data-testid="crmhr-assignment-node-key" />
                 </FormField>
@@ -120,7 +128,7 @@
             <PartyPicker Label="Party"
                          TestIdPrefix="crmhr-assignment-party"
                          SelectedPartyId="Draft.PartyId"
-                         SelectedPartyIdChanged="HandlePartyChanged" />
+                         SelectedPartyIdChanged="HandlePartyChanged" PendingChanged="@(value => ReportAsync(AssignmentField.Party, value))" />
 
             <PartyAffiliationPicker PartyId="Draft.PartyId"
                                     SelectedAffiliationId="Draft.PartyAffiliationId"
@@ -130,17 +138,17 @@
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="3">
                 <FormField Text="Allocation %">
-                    <InputNumber @bind-Value="Draft.AllocationPercent"
+                    <NativeValueInput DisplayName="allocation percentage" TValue="decimal?" @bind-Value="Draft.AllocationPercent" PendingChanged="@(value => ReportAsync(AssignmentField.Allocation, value))"
                                  class="cda-input"
                                  data-testid="crmhr-assignment-allocation" />
                 </FormField>
                 <FormField Text="Starts on">
-                    <InputDate @bind-Value="Draft.StartsOn"
+                    <NativeValueInput DisplayName="start date" TValue="DateOnly?" @bind-Value="Draft.StartsOn" PendingChanged="@(value => ReportAsync(AssignmentField.Start, value))"
                                class="cda-input"
                                data-testid="crmhr-assignment-starts-on" />
                 </FormField>
                 <FormField Text="Ends on">
-                    <InputDate @bind-Value="Draft.EndsOn"
+                    <NativeValueInput DisplayName="end date" TValue="DateOnly?" @bind-Value="Draft.EndsOn" PendingChanged="@(value => ReportAsync(AssignmentField.End, value))"
                                class="cda-input"
                                data-testid="crmhr-assignment-ends-on" />
                 </FormField>
@@ -149,18 +157,25 @@
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="2">
                 <FormField Text="Notes">
-                    <InputTextArea @bind-Value="Draft.Notes"
+                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(AssignmentField.Notes))"
                                    class="cda-input cda-input--textarea min-h-24"
                                    data-testid="crmhr-assignment-notes" />
                 </FormField>
                 <label class="inline-flex items-center gap-2 self-start text-sm text-slate-700">
-                    <InputCheckbox @bind-Value="Draft.IsPrimary"
+                    <InputCheckbox @bind-Value="Draft.IsPrimary" @bind-Value:after="PrimaryChangedAsync"
                                    data-testid="crmhr-assignment-primary" />
                     <span>Mark as primary</span>
                 </label>
             </Grid>
         </Stack>
-    </ChildContent>
+    @if (Draft.IsPrimary) {
+                <Stack GapScale="LayoutGap.Small">
+                    <SmallText Text="@(Draft.PrimaryOriginal is { } basis ? $"Reviewed primary scope: {basis.PrimaryIds.Length} current primary assignment(s)." : "Review the current primary for this role and node before saving.")" />
+                    <Button Text="Review current primary" ButtonStyle="ButtonStyle.Light" Disabled="@(isSaving || WritesDisabled)" Click="@(async () => { await ReviewPrimary(); })" />
+                </Stack>
+            }
+            </EditForm>
+        </ChildContent>
     <Footer>
         <Split Breakpoint="LayoutBreakpoint.None"
                Gap="LayoutGap.Small"
@@ -169,16 +184,16 @@
                Wrap="FlexWrap.Wrap">
             <Button ButtonStyle="ButtonStyle.Light"
                     Text="Reset"
-                    Disabled="@isSaving"
+                    Disabled="@(isSaving || WritesDisabled)"
                     data-testid="crmhr-assignment-reset-button"
-                    Click="ResetDraft" />
+                    Click="ResetEditorAsync" />
             <Cluster Gap="LayoutGap.Small">
                 <Button ButtonStyle="ButtonStyle.Light"
                         Text="Cancel"
-                        Disabled="@isSaving"
+                        Disabled="@(isSaving || WritesDisabled)"
                         Click="CloseCreateDialogAsync" />
-                <Button Text="Save assignment"
-                        Disabled="@isSaving"
+                <Button Text="@(Draft.AssignmentId.HasValue ? "Save changes" : "Save assignment")"
+                        Disabled="@(isSaving || SaveDisabled || pending.Count > 0)"
                         IsBusy="@isSaving"
                         data-testid="crmhr-assignment-save-button"
                         Click="HandleSaveAsync" />
@@ -196,6 +211,55 @@
                                 OpenGantt="OpenGantt" />
 
 @code {
+    protected override void OnParametersSet() {
+        if (context is null || !ReferenceEquals(context.Model, Draft)) {
+            context = new(Draft);
+            pending.Clear();
+        }
+    }
+
+    private EditContext context = default!;
+    private readonly HashSet<AssignmentField> pending = [];
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public bool WritesDisabled { get; set; }
+    [Parameter] public string? StatusMessage { get; set; }
+    [Parameter] public RenderFragment? Recovery { get; set; }
+    [Parameter, EditorRequired] public Func<bool> HasChanges { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<Task<bool>> RequestDiscard { get; set; } = default!;
+    [Parameter] public EventCallback<CanDoItAll.Editing.RecordInput<AssignmentField>> InputChanged { get; set; }
+    private Task TextAsync(AssignmentField field) {
+
+        if (field == AssignmentField.Node) {
+            Draft.PrimaryOriginal = null;
+        }
+        return ReportAsync(field);
+    }
+    private Task ReportAsync(AssignmentField field, bool incomplete = false) {
+        if (incomplete) {
+            pending.Add(field);
+        } else {
+            pending.Remove(field);
+        }
+        return InputChanged.InvokeAsync(new(field, incomplete));
+    }
+    private async Task ResetEditorAsync() {
+        if (!WritesDisabled && !isSaving && (!HasChanges() || await RequestDiscard())) {
+            await ResetDraft.InvokeAsync();
+        }
+    }
+
+    [Parameter, EditorRequired] public Func<Task<bool>> ReviewPrimary { get; set; } = default!;
+    private async Task ScopeChangedAsync(AssignmentField field) {
+        Draft.PrimaryOriginal = null;
+        await ReportAsync(field);
+    }
+    private async Task PrimaryChangedAsync() {
+        await ReportAsync(AssignmentField.Primary);
+        if (Draft.IsPrimary) {
+            await ReviewPrimary();
+        }
+    }
+
     private bool isCreateDialogOpen;
     private bool isPreparingCreate;
     private bool isSaving;
@@ -253,7 +317,7 @@
     public EventCallback ResetDraft { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> DeleteAssignment { get; set; }
+    public EventCallback<ProjectPartyAssignmentDetail> DeleteAssignment { get; set; }
 
     [Parameter]
     public EventCallback OpenStructure { get; set; }
@@ -274,22 +338,27 @@
         }
     }
 
-    private Task CloseCreateDialogAsync() {
-        if (!isSaving) {
-            isCreateDialogOpen = false;
+    private async Task CloseCreateDialogAsync() {
+        if (isSaving) {
+            return;
         }
-
-        return Task.CompletedTask;
+        if (HasChanges()) {
+            if (!await RequestDiscard()) {
+                return;
+            }
+            await ResetDraft.InvokeAsync();
+        }
+        isCreateDialogOpen = false;
     }
 
     private async Task HandleSaveAsync() {
-        if (isSaving) {
+        if (isSaving || SaveDisabled || pending.Count > 0 || !context.Validate()) {
             return;
         }
 
         isSaving = true;
         try {
-            if (await SaveDraft()) {
+            if (await SaveDraft() && !HasChanges() && pending.Count == 0) {
                 isCreateDialogOpen = false;
             }
         } finally {
@@ -328,15 +397,18 @@
         return Task.CompletedTask;
     }
 
-    private Task HandlePartyChanged(Guid? partyId) {
+    private async Task HandlePartyChanged(Guid? partyId) {
         Draft.PartyId = partyId ?? Guid.Empty;
         Draft.PartyAffiliationId = null;
-        return Task.CompletedTask;
+        context.NotifyFieldChanged(new(Draft, nameof(Draft.PartyId)));
+        await ReportAsync(AssignmentField.Affiliation);
+        await ReportAsync(AssignmentField.Party, pending.Contains(AssignmentField.Party));
     }
 
-    private Task HandleAffiliationChanged(Guid? affiliationId) {
+    private async Task HandleAffiliationChanged(Guid? affiliationId) {
         Draft.PartyAffiliationId = affiliationId;
-        return Task.CompletedTask;
+        context.NotifyFieldChanged(new(Draft, nameof(Draft.PartyAffiliationId)));
+        await ReportAsync(AssignmentField.Affiliation, pending.Contains(AssignmentField.Affiliation));
     }
 
     private Task HandleSearchInputAsync(ChangeEventArgs args) {

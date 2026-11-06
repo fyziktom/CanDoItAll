@@ -305,13 +305,14 @@ public sealed class ProjectStructurePartyQuickCreateTests(ITestOutputHelper outp
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource ReleaseBefore { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public async Task<Result<ProjectPartyQuickCreateResult>> CreateAsync(ProjectPartyQuickCreateRequest request, CancellationToken cancellationToken) {
+        public async Task<Result<ProjectPartyQuickCreateResult>> CreateAsync(ProjectPartyQuickCreateRequest request, CancellationToken cancellationToken,
+            Func<CancellationToken, ValueTask>? authorizeCommit, Func<CancellationToken, ValueTask>? authorizeRead) {
             var call = ++CreateCalls;
             Started.TrySetResult();
             if (HoldBeforeCreate) {
                 await ReleaseBefore.Task;
             }
-            var result = await Inner!.CreatePartyAsync(request, cancellationToken);
+            var result = await Inner!.CreatePartyAsync(request, cancellationToken, authorizeCommit, authorizeRead);
             AcceptedPartyId = result.Value?.PartyId;
             (call == 1 ? Created : SecondCreated).TrySetResult();
             if (HoldCreate) {
@@ -346,7 +347,8 @@ public sealed class ProjectStructurePartyQuickCreateTests(ITestOutputHelper outp
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) {
             ArgumentNullException.ThrowIfNull(method);
             if (method.Name == nameof(IProjectPartyIntegrationBridge.CreatePartyAsync)) {
-                return Gate.CreateAsync((ProjectPartyQuickCreateRequest)arguments![0]!, (CancellationToken)arguments[1]!);
+                return Gate.CreateAsync((ProjectPartyQuickCreateRequest)arguments![0]!, (CancellationToken)arguments[1]!,
+                    (Func<CancellationToken, ValueTask>?)arguments[2], (Func<CancellationToken, ValueTask>?)arguments[3]);
             }
             if (method.Name == nameof(IProjectPartyIntegrationBridge.ListPartyOptionsAsync) && Gate.AcceptedPartyId.HasValue && Gate.FailOptionsAfterCreate) {
                 return Task.FromException<IReadOnlyList<ProjectPartyOption>>(new IOException("Owned option read failure after directory commit."));

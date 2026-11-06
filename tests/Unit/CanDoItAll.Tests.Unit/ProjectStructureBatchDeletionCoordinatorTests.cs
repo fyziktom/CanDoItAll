@@ -562,7 +562,8 @@ public sealed class ProjectStructureBatchDeletionCoordinatorTests
             Guid receivedProjectId,
             string rootNodeId,
             ProjectStructureManagedStorageDisposition managedStorageDisposition,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            Func<CancellationToken, ValueTask>? authorizeCommit)
         {
             Assert.Equal(projectId, receivedProjectId);
             Assert.False(cancellationToken.IsCancellationRequested);

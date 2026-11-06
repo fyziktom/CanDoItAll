@@ -12,6 +12,34 @@ namespace CanDoItAll.Tests.Integration.TestLab;
 
 public sealed class TestLabOwnerPersistenceTests {
     [Fact]
+    public async Task A_stale_plan_cannot_replace_new_children_and_a_plan_save_preserves_unobserved_runs() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<TestLabService>();
+        var created = await service.SaveAsync(new() { Title = "Original plan" });
+        Assert.True(created.IsSuccess);
+        var first = await service.GetAsync(created.Value);
+        var second = await service.GetAsync(created.Value);
+        var execution = new TestRunRecord { TestPlanId = created.Value, ExecutedAtUtc = DateTimeOffset.UtcNow, Runner = "Independent recorder", Result = TestCaseStatus.Passed };
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<TestLabDbContext>>();
+        await using (var recorder = await factory.CreateDbContextAsync()) {
+            recorder.Add(execution);
+            await recorder.SaveChangesAsync();
+        }
+
+        first.Cases.Add(new() { Name = "New case" });
+        Assert.True((await service.SaveAsync(first)).IsSuccess);
+        second.Title = "Stale title";
+        await Assert.ThrowsAsync<TestPlanContentConflictException>(() => service.SaveAsync(second));
+
+        var stored = await service.GetAsync(created.Value);
+        Assert.Equal("Original plan", stored.Title);
+        Assert.Equal("New case", Assert.Single(stored.Cases).Name);
+        Assert.Equal(execution.Id, Assert.Single(stored.Runs).Id);
+        Assert.Equal(TestCaseStatus.Passed, Assert.Single(await service.ListAsync()).LatestResult);
+    }
+
+    [Fact]
     public async Task Runtime_model_contains_only_owned_records_with_complete_schema_parity() {
         await using var application = await TestApplication.CreateAsync();
         var ownerFactory = application.Services.GetRequiredService<IDbContextFactory<TestLabDbContext>>();

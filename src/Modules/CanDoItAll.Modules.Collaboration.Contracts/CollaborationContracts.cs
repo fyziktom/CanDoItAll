@@ -41,7 +41,9 @@ public sealed record CollaborationThreadCreateRequest(
     CollaborationParticipantKind ParticipantKind,
     string MessageBody,
     CollaborationMessageKind MessageKind,
-    bool MarkAsUnread = true);
+    bool MarkAsUnread = true) {
+    public Guid? SubmissionId { get; init; }
+}
 
 public sealed record CollaborationMessageWriteRequest(
     Guid ThreadId,
@@ -50,7 +52,18 @@ public sealed record CollaborationMessageWriteRequest(
     CollaborationMessageAuthorKind AuthorKind,
     string MessageBody,
     CollaborationMessageKind MessageKind,
-    bool MarkAsUnread = true);
+    bool MarkAsUnread = true) {
+    public Guid? SubmissionId { get; init; }
+    public CollaborationReadObservation? ReadObservation { get; init; }
+}
+
+public readonly record struct CollaborationReadObservation(Guid ThreadId, int MessageCount) {
+    public static CollaborationReadObservation From(CollaborationThreadDetailModel thread) => new(thread.ThreadId, thread.Messages.Count);
+}
+
+public static class CollaborationWriteConflict {
+    public const string ReadObservationChanged = "collaboration.read-observation-changed";
+}
 
 public sealed record CollaborationAutomationSignalRequest(
     string SourceKey,
@@ -122,9 +135,27 @@ public sealed record CollaborationShellState(
     int UnreadCount,
     int EscalationCount);
 
+public enum CollaborationSection { Inbox, Threads, Escalations }
+
+public readonly record struct CollaborationListWindow(CollaborationSection Section, bool UnreadOnly, int Offset) {
+    public const int Size = 50;
+    public int OffsetFor(CollaborationSection section) => Section == section ? Offset : 0;
+}
+
+public sealed record CollaborationListTotals(int Inbox, int Threads, int Escalations, int UnreadInbox, int UnreadEscalations) {
+    public int Visible(CollaborationSection section, bool unreadOnly) => section switch {
+        CollaborationSection.Threads => Threads,
+        CollaborationSection.Escalations => unreadOnly ? UnreadEscalations : Escalations,
+        _ => unreadOnly ? UnreadInbox : Inbox
+    };
+}
+
 public sealed record CollaborationWorkspaceModel(
     IReadOnlyList<CollaborationInboxItemSummary> InboxItems,
     IReadOnlyList<CollaborationThreadSummary> Threads,
     IReadOnlyList<CollaborationInboxItemSummary> Escalations,
     CollaborationThreadDetailModel? SelectedThread,
-    CollaborationShellState ShellState);
+    CollaborationShellState ShellState) {
+    public CollaborationListTotals Totals { get; init; } = new(InboxItems.Count, Threads.Count, Escalations.Count,
+        InboxItems.Count(item => item.IsUnread), Escalations.Count(item => item.IsUnread));
+}

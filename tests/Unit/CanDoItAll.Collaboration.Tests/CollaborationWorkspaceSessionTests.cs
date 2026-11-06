@@ -9,6 +9,22 @@ using Microsoft.AspNetCore.Components.Forms;
 namespace CanDoItAll.Tests.Unit.Collaboration;
 
 public sealed class CollaborationWorkspaceSessionTests {
+    [Fact]
+    public async Task Leaving_a_thread_keeps_its_reply_in_the_workspace_exit_state_until_explicit_discard() {
+        using var session = Session(new Owner());
+        await session.ApplyRouteAsync(Deep(A));
+        var original = session.Reply;
+        original.Model.MessageBody = "Unsent response";
+        await session.SelectAsync(B);
+        Assert.Equal(CollaborationDraftStatus.Unsaved, session.DraftStatus);
+        Assert.Equal(string.Empty, session.Reply.Model.MessageBody);
+        await session.SelectAsync(A);
+        Assert.Same(original, session.Reply);
+        Assert.Equal("Unsent response", session.Reply.Model.MessageBody);
+        session.ClearReply(session.Target!, original);
+        Assert.Equal(CollaborationDraftStatus.Clean, session.DraftStatus);
+    }
+
     private static readonly Guid A = new(1, 0, 0, new byte[8]);
     private static readonly Guid B = new(2, 0, 0, new byte[8]);
 
@@ -273,11 +289,9 @@ public sealed class CollaborationWorkspaceSessionTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Retired_reply_callbacks_and_completion_cannot_change_successor_draft_or_busy_gate(bool oldFailure) {
+    public async Task Pending_reply_keeps_its_draft_and_admission_after_leaving_and_returning(bool oldFailure) {
         var first = Completion<Result>();
-        var second = Completion<Result>();
-        var writes = new Queue<Task<Result>>([first.Task, second.Task]);
-        var owner = new Owner { Append = _ => writes.Dequeue() };
+        var owner = new Owner { Append = _ => first.Task };
         using var session = Session(owner);
         await session.ApplyRouteAsync(Deep(A));
         var oldTarget = session.Target!;
@@ -287,22 +301,26 @@ public sealed class CollaborationWorkspaceSessionTests {
         await session.SelectAsync(B);
         await session.SelectAsync(A);
         Assert.NotSame(oldTarget, session.Target);
+        Assert.Same(oldDraft, session.Reply);
+        Assert.True(oldDraft.IsSaving);
         await session.ReplyAsync(oldTarget, oldDraft);
+        await session.ReplyAsync(session.Target!, oldDraft);
         Assert.Single(owner.Replies);
-        var current = session.Reply;
-        current.Model.MessageBody = "New A";
-        var currentSave = session.ReplyAsync(session.Target!, current);
         if (oldFailure) {
             first.SetException(new InvalidOperationException("Retired command failure"));
         } else {
             first.SetResult(Result.Success());
         }
         await oldSave;
-        Assert.Same(current, session.Reply);
-        Assert.True(current.IsSaving);
-        Assert.Equal("New A", current.Model.MessageBody);
-        second.SetResult(Result.Success());
-        await currentSave;
+        if (oldFailure) {
+            Assert.Same(oldDraft, session.Reply);
+            Assert.True(oldDraft.OutcomeUnknown);
+            Assert.Equal("Old A", oldDraft.Model.MessageBody);
+        } else {
+            Assert.NotSame(oldDraft, session.Reply);
+            Assert.Equal(string.Empty, session.Reply.Model.MessageBody);
+        }
+        Assert.False(session.Reply.IsSaving);
     }
 
     [Fact]
@@ -573,7 +591,8 @@ public sealed class CollaborationWorkspaceSessionTests {
         public Func<CollaborationMessageWriteRequest, Task<Result>> Append { get; set; } = _ => Task.FromResult(Result.Success());
         public Func<Guid, Task<Result>> Mark { get; set; } = _ => Task.FromResult(Result.Success());
 
-        public Task<CollaborationWorkspaceModel> GetWorkspaceAsync(Guid? selectedThreadId = null, CancellationToken cancellationToken = default) {
+        public Task<CollaborationWorkspaceModel> GetWorkspaceAsync(Guid? selectedThreadId = null, CancellationToken cancellationToken = default,
+            CollaborationListWindow window = default) {
             Reads++;
             return Read(selectedThreadId, cancellationToken);
         }
@@ -588,9 +607,9 @@ public sealed class CollaborationWorkspaceSessionTests {
             return Append(request);
         }
 
-        public Task<Result> MarkThreadAsReadAsync(Guid threadId, CancellationToken cancellationToken = default) {
-            Marked.Add(threadId);
-            return Mark(threadId);
+        public Task<Result> MarkThreadAsReadAsync(CollaborationReadObservation expected, CancellationToken cancellationToken = default) {
+            Marked.Add(expected.ThreadId);
+            return Mark(expected.ThreadId);
         }
     }
 }

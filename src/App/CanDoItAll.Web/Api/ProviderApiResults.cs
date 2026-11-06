@@ -1,8 +1,15 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using System.Text.Json.Serialization;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 namespace CanDoItAll.Web.Api;
+
+public sealed record ProviderModelMaintenancePersistenceApiResponse(string Code, Guid ProviderId,
+    bool RemoteOperationCompleted,
+    [property: JsonConverter(typeof(JsonStringEnumConverter<ProviderModelMaintenancePersistenceState>))]
+    ProviderModelMaintenancePersistenceState ConfigurationState,
+    ProviderModelMaintenanceEditorResult Result, bool AutomaticReplaySafe, ProviderMutationAttempt? Attempt, string Message);
 
 /// <summary>
 /// HTTP 202 answer of a provider operation whose provider-profile change was stored but whose follow-up
@@ -87,12 +94,23 @@ internal static class ProviderApiResults {
     internal const string NotFoundCode = "agents.provider-not-found";
     internal const string UnavailableCode = "agents.provider-unavailable";
     internal const string DiagnosticUnavailableCode = "agents.provider-diagnostic-unavailable";
+    internal const string ModelMaintenanceReviewCode = "agents.provider-model-configuration-review-required";
+    internal const string ModelMaintenanceReviewOutcome = "model-completed-configuration-review-required";
 
     public static async Task<IResult> ExecuteAsync(
         HttpContext context, Func<Task<IResult>> operation,
         Func<ProviderMutationCommit, IResult>? committedResponse = null) {
         try {
             return await operation();
+        } catch (ProviderModelMaintenancePersistenceException exception) {
+            context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers[OutcomeHeader] = ModelMaintenanceReviewOutcome;
+            var attempt = (exception.InnerException as ProviderMutationUnconfirmedException)?.Attempt;
+            var body = new ProviderModelMaintenancePersistenceApiResponse(ModelMaintenanceReviewCode, exception.ProviderId,
+                true, exception.State, exception.Result, false, attempt,
+                "Remote model maintenance completed. Review or reconcile provider configuration; do not repeat the remote operation.");
+            return Results.Json(body, statusCode: exception.State == ProviderModelMaintenancePersistenceState.CommittedWithWarning
+                ? StatusCodes.Status202Accepted : StatusCodes.Status409Conflict);
         } catch (ProviderMutationCommittedException exception) {
             context.Response.Headers[OutcomeHeader] = ReconciliationPending;
             return committedResponse?.Invoke(exception.Commit) ?? Results.Accepted(value: new ProviderCommittedApiResponse(exception.ProviderId, true, true,

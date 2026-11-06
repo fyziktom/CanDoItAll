@@ -22,14 +22,15 @@ public sealed class ProjectWorkbenchRelationService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => LinkObjectsCoreAsync(
             projectId,
             sourceNodeKey,
             targetNodeKey,
             linkKind,
             allowCanonicalTaskResourceLink: false,
-            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, authorizeCommit: authorizeCommit);
 
     internal Task LinkCanonicalTaskResourceAsync(
         Guid projectId,
@@ -39,19 +40,21 @@ public sealed class ProjectWorkbenchRelationService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => LinkObjectsCoreAsync(
             projectId,
             sourceNodeKey,
             targetNodeKey,
             linkKind,
             allowCanonicalTaskResourceLink: true,
-            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, authorizeCommit: authorizeCommit);
 
     public Task<ProjectStructureLink> LinkObjectsDetailedAsync(ProjectWriteAdmission admission, string sourceNodeKey, string targetNodeKey,
-        ProjectObjectLinkKind linkKind, IReadOnlyCollection<ProjectStructureNode> expectedNodes, CancellationToken cancellationToken = default)
+        ProjectObjectLinkKind linkKind, IReadOnlyCollection<ProjectStructureNode> expectedNodes, CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => LinkObjectsCoreAsync(admission.ProjectId, sourceNodeKey, targetNodeKey, linkKind, false, cancellationToken,
-            admission, expectedNodes: expectedNodes);
+            admission, expectedNodes: expectedNodes, authorizeCommit: authorizeCommit);
 
     private async Task<ProjectStructureLink> LinkObjectsCoreAsync(
         Guid projectId,
@@ -63,7 +66,8 @@ public sealed class ProjectWorkbenchRelationService(
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
         ProjectAgentMutationAdmission? agentMutationAdmission = null,
-        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
@@ -74,7 +78,7 @@ public sealed class ProjectWorkbenchRelationService(
             cancellationToken, expectedProjectAdmission is null ? null : [expectedProjectAdmission], processMutationAdmission, agentMutationAdmission);
         var link = await StageUserLinkAsync(dbContext, projectId, sourceNodeKey, targetNodeKey, linkKind, allowCanonicalTaskResourceLink, cancellationToken, mutationScope, expectedNodes);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         return new(link.SourceNodeKey, link.TargetNodeKey, link.LinkKind, true, link.Id);
     }
 
@@ -171,8 +175,8 @@ public sealed class ProjectWorkbenchRelationService(
         ProjectObjectLinkKind linkKind,
         CancellationToken cancellationToken = default,
         ProjectStructureAgentContext? mutationOwner = null,
-        ProjectStructureLink? expectedLink = null)
-    {
+        ProjectStructureLink? expectedLink = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         if (expectedLink?.RecordId is null || expectedLink.SourceId != sourceNodeKey || expectedLink.TargetId != targetNodeKey || expectedLink.Kind != linkKind) {
             throw new ProjectStructureEditConflictException();
         }
@@ -182,16 +186,20 @@ public sealed class ProjectWorkbenchRelationService(
             targetNodeKey,
             linkKind,
             reconcileDetachedTaskResource: true,
-            cancellationToken, mutationOwner, expectedLink);
+            cancellationToken, mutationOwner, expectedLink, authorizeCommit);
     }
 
     internal async Task<bool> DetachProjectedNodeAsync(
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ProjectObjectLinkRecord? removableLink;
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken))
         {
             await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
@@ -223,7 +231,7 @@ public sealed class ProjectWorkbenchRelationService(
                    removableLink.SourceNodeKey,
                    removableLink.TargetNodeKey,
                    removableLink.LinkKind,
-                   cancellationToken, mutationOwner, new(removableLink.SourceNodeKey, removableLink.TargetNodeKey, removableLink.LinkKind, true, removableLink.Id));
+                   cancellationToken, mutationOwner, new(removableLink.SourceNodeKey, removableLink.TargetNodeKey, removableLink.LinkKind, true, removableLink.Id), authorizeCommit);
     }
 
     internal Task<bool> UnlinkCanonicalTaskResourceAsync(
@@ -249,8 +257,8 @@ public sealed class ProjectWorkbenchRelationService(
         bool reconcileDetachedTaskResource,
         CancellationToken cancellationToken,
         ProjectStructureAgentContext? mutationOwner,
-        ProjectStructureLink? expectedLink = null)
-    {
+        ProjectStructureLink? expectedLink = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -305,7 +313,7 @@ public sealed class ProjectWorkbenchRelationService(
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         return true;
     }
 
@@ -451,8 +459,8 @@ public sealed class ProjectWorkbenchRelationService(
         string? parentNodeKey,
         CancellationToken cancellationToken = default,
         ProjectStructureAgentContext? mutationOwner = null,
-        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
-    {
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, projectId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
@@ -513,7 +521,7 @@ public sealed class ProjectWorkbenchRelationService(
                 clock.GetUtcNow(),
                 cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
 
@@ -523,8 +531,8 @@ public sealed class ProjectWorkbenchRelationService(
         string targetParentNodeKey,
         CancellationToken cancellationToken = default,
         ProjectStructureAgentContext? mutationOwner = null,
-        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
-    {
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetParentNodeKey);
 
         mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, projectId);
@@ -627,7 +635,7 @@ public sealed class ProjectWorkbenchRelationService(
                 clock.GetUtcNow(),
                 cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
 
         return forest.RootNodeKeys
             .Select(rootNodeKey => ProjectWorkbenchNodeMapper.MapStructureNode(forest.NodesByKey[rootNodeKey]))
@@ -719,7 +727,8 @@ public sealed class ProjectWorkbenchRelationService(
         ProjectProcessMutationAdmission? processMutationAdmission = null,
         ProjectAgentMutationAdmission? agentMutationAdmission = null,
         IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null,
-        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(positions);
         if (positions.Count == 0)
@@ -761,7 +770,7 @@ public sealed class ProjectWorkbenchRelationService(
             throw new ProjectStructureEditConflictException();
         }
         var result = await projectStructureAssemblyService.UpdatePositionsAsync(dbContext, projectId, requestedPositions, cancellationToken, projected);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         return result;
     }
 
@@ -770,8 +779,8 @@ public sealed class ProjectWorkbenchRelationService(
         string rootNodeKey,
         CancellationToken cancellationToken = default,
         ProjectStructureAgentContext? mutationOwner = null,
-        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
-    {
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         if (string.IsNullOrWhiteSpace(rootNodeKey))
         {
             return null;
@@ -805,7 +814,7 @@ public sealed class ProjectWorkbenchRelationService(
             projectId,
             plan.Positions.Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y)).ToList(),
             cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         return new ProjectStructureSubtreeRecompositionResult(rootNodeKey, plan.DescendantCount, repositionedNodeIds.Count);
     }
 

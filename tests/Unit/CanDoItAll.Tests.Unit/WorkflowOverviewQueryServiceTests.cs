@@ -268,7 +268,7 @@ public sealed class WorkflowOverviewQueryServiceTests
             => throw new NotSupportedException();
 
         public Task DeleteDefinitionAsync(
-            WorkflowId workflowId,
+            WorkflowDefinitionDeleteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 

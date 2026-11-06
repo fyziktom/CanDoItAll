@@ -3,7 +3,7 @@ using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public enum SharedProviderTargetMutationKind { Publish, Unpublish, ImportedSettings, Retirement }
-public enum SharedProviderTargetVerificationDisposition { Satisfied, NotApplied, StillUnconfirmed }
+public enum SharedProviderTargetVerificationDisposition { CurrentMatchesIntent, CurrentMatchesBefore, DifferentCurrent }
 
 public abstract record SharedProviderTargetPostcondition {
     public sealed record Publication(bool IsPublished) : SharedProviderTargetPostcondition;
@@ -15,8 +15,7 @@ public sealed record SharedProviderTargetAttempt(
     Guid AttemptId, Guid ProviderId, SharedProviderTargetMutationKind Kind,
     SharedProviderProfileSharingSnapshot Before, SharedProviderTargetPostcondition Intended);
 
-public sealed record SharedProviderTargetVerificationResult(
-    SharedProviderTargetVerificationDisposition Disposition, SharedProviderChange? Change = null);
+public sealed record SharedProviderTargetVerificationResult(SharedProviderTargetVerificationDisposition Disposition);
 
 public static class SharedProviderTargetVerification {
     public static SharedProviderTargetPostcondition Capture(SharedProviderTargetMutationKind kind,
@@ -37,21 +36,20 @@ public static class SharedProviderTargetVerification {
         var before = attempt.Before;
         if (attempt.ProviderId != before.ProviderProfileId || attempt.ProviderId != current.ProviderProfileId ||
             current.Ownership != before.Ownership) {
-            return new(SharedProviderTargetVerificationDisposition.StillUnconfirmed);
+            return new(SharedProviderTargetVerificationDisposition.DifferentCurrent);
         }
         if (attempt.Intended is SharedProviderTargetPostcondition.Publication publication) {
             if (current.Ownership != SharedProviderProfileOwnership.Local ||
                 current.Publication is { ConcurrencyToken: var currentToken } && currentToken == Guid.Empty ||
                 before.Publication is { } prior && (prior.ConcurrencyToken == Guid.Empty ||
                     current.Publication?.Id != prior.Id || current.Publication.PublicId != prior.PublicId)) {
-                return new(SharedProviderTargetVerificationDisposition.StillUnconfirmed);
+                return new(SharedProviderTargetVerificationDisposition.DifferentCurrent);
             }
             var unchanged = before.Publication is null ? current.Publication is null
                 : current.Publication!.ConcurrencyToken == before.Publication.ConcurrencyToken &&
                     current.Publication.IsPublished == before.Publication.IsPublished;
             var satisfied = current.Publication?.IsPublished == publication.IsPublished;
-            return Classify(satisfied, unchanged,
-                new(SharedProviderChangeKind.Publication, [attempt.ProviderId]));
+            return Classify(satisfied, unchanged);
         }
         if (before.Import is not { } oldImport || current.Import is not { } importState ||
             current.Ownership != SharedProviderProfileOwnership.Imported ||
@@ -60,7 +58,7 @@ public static class SharedProviderTargetVerification {
             importState.RemotePublicationId != oldImport.RemotePublicationId ||
             oldImport.ImportConcurrencyToken == Guid.Empty || oldImport.ProviderConcurrencyToken == Guid.Empty ||
             importState.ImportConcurrencyToken == Guid.Empty || importState.ProviderConcurrencyToken == Guid.Empty) {
-            return new(SharedProviderTargetVerificationDisposition.StillUnconfirmed);
+            return new(SharedProviderTargetVerificationDisposition.DifferentCurrent);
         }
         var sameBefore = importState.ImportConcurrencyToken == oldImport.ImportConcurrencyToken &&
             importState.ProviderConcurrencyToken == oldImport.ProviderConcurrencyToken &&
@@ -76,12 +74,10 @@ public static class SharedProviderTargetVerification {
                 importState.SelectionState == SharedProviderSelectionState.Retired,
             _ => false
         };
-        var retired = attempt.Intended is SharedProviderTargetPostcondition.Retirement;
-        return Classify(desired, sameBefore, new(retired ? SharedProviderChangeKind.ImportRetirement : SharedProviderChangeKind.ImportedSettings,
-            [attempt.ProviderId], retired ? [attempt.ProviderId] : [], catalogMembershipMayHaveChanged: retired));
+        return Classify(desired, sameBefore);
     }
 
-    private static SharedProviderTargetVerificationResult Classify(bool satisfied, bool unchanged, SharedProviderChange change) =>
-        satisfied ? new(SharedProviderTargetVerificationDisposition.Satisfied, unchanged ? null : change)
-        : new(unchanged ? SharedProviderTargetVerificationDisposition.NotApplied : SharedProviderTargetVerificationDisposition.StillUnconfirmed);
+    private static SharedProviderTargetVerificationResult Classify(bool satisfied, bool unchanged) =>
+        new(satisfied ? SharedProviderTargetVerificationDisposition.CurrentMatchesIntent
+            : unchanged ? SharedProviderTargetVerificationDisposition.CurrentMatchesBefore : SharedProviderTargetVerificationDisposition.DifferentCurrent);
 }

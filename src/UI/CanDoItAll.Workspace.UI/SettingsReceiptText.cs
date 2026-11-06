@@ -8,6 +8,7 @@ public static class SettingsReceiptText {
         SettingsDiagnostic.Validation => "Check the submitted values.",
         SettingsDiagnostic.Missing => "The selected record is missing.",
         SettingsDiagnostic.ReferenceBlocked => "Existing references prevent deletion.",
+        SettingsDiagnostic.Conflict => "This secret changed after it was opened. Select it again to review its current metadata.",
         SettingsDiagnostic.CleanupPending => "Saved; payload cleanup needs attention.",
         SettingsDiagnostic.ActivityPending => "Saved; activity recording needs attention.",
         SettingsDiagnostic.LoggingPending => "Saved; diagnostic logging needs attention.",

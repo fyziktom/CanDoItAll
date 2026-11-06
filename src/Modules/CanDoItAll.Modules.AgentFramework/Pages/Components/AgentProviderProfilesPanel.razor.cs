@@ -3,6 +3,9 @@ using CanDoItAll.AgentFramework.Providers.UI;
 using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
+using CanDoItAll.Editing;
+using ProviderEditingChanges = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderEditingChanges;
+using ProviderEditingOpening = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderEditingOpening;
 using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -10,11 +13,12 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 // The provider and editor section a route-controlled panel shows, for its page to write into the URL.
 public readonly record struct ProviderRouteSelection(Guid ProviderId, ProviderEditorSection Section);
 
-public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDisposable {
+public partial class AgentProviderProfilesPanel : IProviderProfilesView, IAsyncDisposable {
     [Inject] public IProviderEditorCommands Commands { get; set; } = default!;
     [Inject] public ProviderEditorRecovery Recovery { get; set; } = default!;
     [Inject] public IProviderProfilesReads Reads { get; set; } = default!;
     [Inject] public NotificationService NotificationService { get; set; } = default!;
+    [Inject] public ProviderEditingChanges EditingChanges { get; set; } = default!;
     [Parameter] public Guid? ProviderId { get; set; }
     [Parameter] public ProviderEditorSection Section { get; set; } = ProviderEditorSection.Connection;
     [Parameter] public bool ConnectionsOpen { get; set; }
@@ -32,37 +36,94 @@ public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDispos
     private bool routeApplied;
     private Guid? appliedProviderId;
     private ProviderEditorSection? appliedSection;
+    private ProviderEditingOpening? opening;
+    private bool admitted;
+    private bool admissionAttempted;
+    private string? accessError;
+    private long changeSequence;
+    private long refreshedSequence;
 
     private bool IsRouteControlled => ProviderRequested.HasDelegate;
 
     public ProviderProfilesState State => session.State;
     public ProviderEditorDraft Editor => session.Editor;
     public long Activation => session.SelectionVersion;
-    public IReadOnlyList<ProviderProfile> Providers => session.Catalog.Providers;
-    public IReadOnlyList<ProviderSecretChoice> Secrets => session.Catalog.Secrets.Items
+    public IReadOnlyList<ProviderProfile> Providers => admitted ? session.Catalog.Providers : [];
+    public IReadOnlyList<ProviderSecretChoice> Secrets => !admitted ? [] : session.Catalog.Secrets.Items
         .Select(secret => new ProviderSecretChoice(ProviderMetadata.CreateSecretReference(secret.Id), secret.Name)).ToArray();
-    public ProviderProfile? SelectedProvider => session.SelectedProvider;
+    public ProviderProfile? SelectedProvider => admitted ? session.SelectedProvider : null;
     public ProviderProfilesLoadState CatalogLoadState => session.CatalogLoadState;
-    public bool CanEdit => session.CanEdit;
+    public bool CanEdit => admitted && session.CanEdit;
     public bool SourceManaged => session.IsSourceManaged;
     public bool IsBusy => operations.IsBusy;
     public bool WritesBlocked => operations.WritesBlocked;
     public bool HasPendingReconciliation => operations.HasPendingReconciliation;
     public bool IsWriteUnconfirmed => operations.IsWriteUnconfirmed;
+    public bool CanAcknowledgeDiagnostic => operations.CanAcknowledgeDiagnostic;
+    public bool CanReviewCurrent => operations.CanReviewCurrent;
+    public ProviderRecoveryReview? RecoveryReview => session.RecoveryReview;
     public bool HasVerifiedRetry => operations.HasVerifiedRetry;
-    public string? Error => session.Error;
+    public bool NeedsComparison => session.NeedsComparison;
+    public ProviderEditorComparison? Comparison => session.Comparison;
+    public string? Error => accessError ?? session.Error;
+    public bool CatalogChanged => changeSequence > refreshedSequence;
     public string? MetadataWarning => session.MetadataWarning;
     public string? SecretMetadataError => session.Catalog.Secrets.Error;
 
-    protected override async Task OnInitializedAsync() {
-        session = new(Reads, Recovery);
+    protected override void OnInitialized() {
+        session = new(new AuthorizedReads(Reads, () => opening ?? throw new UnauthorizedAccessException("Open provider access before reading.")), Recovery);
         operations = new(session, Commands);
-        if (!IsRouteControlled) {
-            await session.RefreshAsync();
+    }
+
+    protected override async Task OnParametersSetAsync() {
+        if (!RendererInfo.IsInteractive || disposed) {
+            return;
+        }
+        if (!admissionAttempted) {
+            admissionAttempted = true;
+            opening = EditingChanges.Open(Guid.NewGuid(), () => !disposed && accessError is null);
+            try {
+                await opening.StartAsync(batch => InvokeAsync(() => ReceiveChanges(batch)), () => InvokeAsync(RetireAccess));
+                Recovery.Bind(new(opening.Scope, opening.PrincipalStamp));
+                admitted = true;
+                if (!IsRouteControlled) {
+                    await session.RefreshAsync();
+                }
+            } catch (Exception) {
+                RetireAccess();
+            }
+        }
+        if (admitted && IsRouteControlled) {
+            await ApplyRouteAsync();
         }
     }
 
-    protected override Task OnParametersSetAsync() => IsRouteControlled ? ApplyRouteAsync() : Task.CompletedTask;
+    private void ReceiveChanges(EditingChangeBatch batch) {
+        if (!admitted || disposed) {
+            return;
+        }
+        var peers = batch.Changes.Where(change => change.OriginEditorId != opening!.EditorId).ToArray();
+        if (!batch.RequiresResync && peers.Length == 0) {
+            return;
+        }
+        changeSequence++;
+        if (State.ProviderId.HasValue && !session.IsSourceManaged &&
+            (batch.RequiresResync || peers.Any(change => change.Resource.ResourceId == State.ProviderId &&
+                change.Kind is not (EditingChangeKind.MetadataChanged or EditingChangeKind.LifecycleChanged)))) {
+            session.RequireComparison();
+        }
+        StateHasChanged();
+    }
+
+    private void RetireAccess() {
+        if (disposed) {
+            return;
+        }
+        admitted = false;
+        accessError = "Provider workspace access changed. Reopen it with current access; the local draft is retained.";
+        session.MarkTargetUnavailable(accessError);
+        StateHasChanged();
+    }
 
     // A location applies its section when the section changes or the location names another provider, never on a mere
     // render: a new draft has no provider in its URL and so no section there either, and keeps the one it is on.
@@ -108,7 +169,11 @@ public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDispos
     }
 
     public async Task RefreshAsync() {
+        var sequence = changeSequence;
         await session.RefreshAsync();
+        if (session.CatalogLoadState == ProviderProfilesLoadState.Ready && session.MetadataWarning is null) {
+            refreshedSequence = sequence;
+        }
         await RenderCurrentAsync();
     }
 
@@ -135,19 +200,52 @@ public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDispos
     }
 
     public async Task ExecuteAsync(ProviderEditorIntent intent) {
-        if (!IsCurrent(intent.Target) || intent.Target.ProviderId != State.ProviderId) {
+        if (!admitted || opening is null || !IsCurrent(intent.Target) || intent.Target.ProviderId != State.ProviderId) {
             return;
         }
-        var feedback = await (intent.Action switch {
-            ProviderEditorAction.Save => operations.SaveAsync(),
-            ProviderEditorAction.Delete => operations.DeleteAsync(),
-            ProviderEditorAction.Health => operations.CheckHealthAsync(),
-            ProviderEditorAction.DiscoverModels => operations.DiscoverModelsAsync(),
-            ProviderEditorAction.Reconcile => operations.RetryReconciliationAsync(),
-            ProviderEditorAction.Verify => operations.VerifyUnconfirmedAsync(),
-            ProviderEditorAction.RetryVerified => operations.RetryVerifiedAsync(),
-            _ => throw new ArgumentOutOfRangeException(nameof(intent))
-        });
+        if (intent.Action is ProviderEditorAction.Compare or ProviderEditorAction.ApplyComparison or ProviderEditorAction.CancelComparison or ProviderEditorAction.ReviewCurrent or ProviderEditorAction.ApplyCurrentReview) {
+            try {
+                if (intent.Action == ProviderEditorAction.Compare && !operations.IsBusy && !operations.IsWriteUnconfirmed) {
+                    await session.CompareAsync(session.TargetCancellationToken);
+                } else if (intent.Action == ProviderEditorAction.ApplyComparison) {
+                    await opening.ReadAsync(_ => Task.FromResult(true), session.TargetCancellationToken);
+                    session.ApplyComparison();
+                } else if (intent.Action == ProviderEditorAction.CancelComparison) {
+                    session.CancelComparison();
+                } else if (intent.Action == ProviderEditorAction.ReviewCurrent) {
+                    await operations.ReviewCurrentAsync();
+                } else if (intent.Action == ProviderEditorAction.ApplyCurrentReview) {
+                    await opening.ReadAsync(_ => Task.FromResult(true), session.TargetCancellationToken);
+                    if (operations.ApplyCurrentReview() is { } recovered) {
+                        NotificationService.Warning(recovered.Title, recovered.Message);
+                    }
+                }
+            } catch (OperationCanceledException) when (session.TargetCancellationToken.IsCancellationRequested) {
+            } catch (Exception) {
+                if (IsCurrent(intent.Target)) {
+                    NotificationService.Warning("Provider comparison unavailable", "The current provider could not be read. Your draft is retained.");
+                }
+            }
+            await RenderCurrentAsync();
+            return;
+        }
+        ProviderEditorFeedback? feedback;
+        try {
+            feedback = await opening.WriteAsync(() => intent.Action switch {
+                ProviderEditorAction.Save => operations.SaveAsync(),
+                ProviderEditorAction.Delete => operations.DeleteAsync(),
+                ProviderEditorAction.Health => operations.CheckHealthAsync(),
+                ProviderEditorAction.DiscoverModels => operations.DiscoverModelsAsync(),
+                ProviderEditorAction.Reconcile => operations.RetryReconciliationAsync(),
+                ProviderEditorAction.Verify => operations.VerifyUnconfirmedAsync(),
+                ProviderEditorAction.RetryVerified => operations.RetryVerifiedAsync(),
+                ProviderEditorAction.AcknowledgeDiagnostic => operations.AcknowledgeDiagnosticAsync(),
+                _ => throw new ArgumentOutOfRangeException(nameof(intent))
+            }, () => IsCurrent(intent.Target) && intent.Target.ProviderId == State.ProviderId, session.TargetCancellationToken);
+        } catch (UnauthorizedAccessException) {
+            RetireAccess();
+            return;
+        }
         if (!IsCurrent(intent.Target)) {
             return;
         }
@@ -207,8 +305,18 @@ public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDispos
     private bool IsCurrent(ProviderEditorTarget target) => session.IsCurrentSelection(target.Activation) &&
         ReferenceEquals(target.Context, session.EditContext);
     private Task RenderCurrentAsync() => disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
         disposed = true;
         session?.Dispose();
+        if (opening is not null) {
+            await opening.DisposeAsync();
+        }
+    }
+
+    private sealed class AuthorizedReads(IProviderProfilesReads reads, Func<ProviderEditingOpening> original) : IProviderProfilesReads {
+        public Task<ProviderProfilesCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default)
+            => original().ReadAsync(reads.LoadCatalogAsync, cancellationToken);
+        public Task<CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel> LoadEditorAsync(Guid id, CancellationToken cancellationToken = default)
+            => original().ReadAsync(token => reads.LoadEditorAsync(id, token), cancellationToken);
     }
 }

@@ -7,7 +7,7 @@ namespace CanDoItAll.AgentFramework.Providers.UI;
 public sealed record ProviderSecretChoice(string Reference, string Name);
 public sealed record ProviderEditorTarget(Guid? ProviderId, long Activation, EditContext Context);
 public sealed record ProviderHostSlotContext(ProviderEditorTarget Target, ProviderEditorSection Section, bool SourceManaged);
-public enum ProviderEditorAction { Save, Delete, Health, DiscoverModels, Reconcile, Verify, RetryVerified }
+public enum ProviderEditorAction { Save, Delete, Health, DiscoverModels, Reconcile, Verify, RetryVerified, Compare, ApplyComparison, CancelComparison, AcknowledgeDiagnostic, ReviewCurrent, ApplyCurrentReview }
 public sealed record ProviderEditorIntent(ProviderEditorTarget Target, ProviderEditorAction Action);
 
 public interface IProviderProfilesView {
@@ -25,6 +25,12 @@ public interface IProviderProfilesView {
     bool HasPendingReconciliation { get; }
     bool IsWriteUnconfirmed { get; }
     bool HasVerifiedRetry { get; }
+    bool CanAcknowledgeDiagnostic => false;
+    bool CanReviewCurrent => false;
+    ProviderRecoveryReview? RecoveryReview => null;
+    bool NeedsComparison => false;
+    bool CatalogChanged => false;
+    ProviderEditorComparison? Comparison => null;
     string? Error { get; }
     string? MetadataWarning { get; }
     string? SecretMetadataError { get; }

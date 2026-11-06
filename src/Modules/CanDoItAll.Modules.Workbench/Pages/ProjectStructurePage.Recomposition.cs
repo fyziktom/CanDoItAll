@@ -29,23 +29,26 @@ public partial class ProjectStructurePage {
             ProjectStructureAuthoringOperation.RecomposeNodes, ProjectStructureAuthoringResultKind.Rejected, "The selected branch could not be recomposed.") {
             SourceNodeId = opening.Node.Id
         };
+        await using var access = ObserveActionAccess();
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             var result = await ProjectWorkbenchService.RecomposeSubtreeAsync(context.Surface.ProjectId, opening.Node.Id,
                 mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission, ExpectedGraph = ProjectStructureGraphStateGuard.Capture(context.Surface) },
-                expectedNodes: [opening.Node]);
+                expectedNodes: [opening.Node], authorizeCommit: token => AuthorizeActionAsync(context, access, write: true, token));
             if (result is not null) {
                 outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Recomposition = result,
                     Message = result.RepositionedNodeCount == 0 ? $"{opening.Node.Title} already fits the layout." :
                         $"Recomposed {result.RepositionedNodeCount} nodes under {opening.Node.Title}." };
             }
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
             if (result is not null && IsCurrentAuthoring(opening, recompositionOpening) && selectionRevision == insightsSelectionRevision) {
                 await RefreshAuthoringSurfaceAsync(opening, outcome, opening.Node.Id,
                     () => ReferenceEquals(recompositionOpening, opening) && selectionRevision == insightsSelectionRevision);
             }
         } catch (Exception failure) {
             opening.RequiresObservation = !IsKnownGraphRejection(failure);
-            RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+            RecordCurrentAuthoringOutcome(opening, outcome with { Failure = failure,
                 Kind = opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
                 Message = opening.RequiresObservation ? "Recomposition is unconfirmed. Observe the original project before repeating it." : failure.Message });
         } finally {

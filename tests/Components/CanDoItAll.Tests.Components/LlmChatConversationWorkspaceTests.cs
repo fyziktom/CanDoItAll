@@ -3,17 +3,22 @@ using System.Reflection;
 using System.Threading.Channels;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Conversations.Shell;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Prompts.Components;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,6 +26,106 @@ namespace CanDoItAll.Tests.Components.LlmChats;
 
 public sealed class LlmChatConversationWorkspaceTests
 {
+    [Fact]
+    public void Prerender_cannot_accept_input_or_open_authorized_conversation_reads_before_interactivity() {
+        var original = CreateConversation();
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([original], null));
+        conversations.TranscriptPages.Enqueue(CreateView(original, []));
+        using var context = CreateContext(conversations, new StubOperationGateway());
+        context.SetRendererInfo(new RendererInfo("Static", false));
+
+        var cut = context.Render<LlmChatConversationWorkspace>();
+
+        Assert.Empty(cut.FindAll("[data-testid='llm-chat-prompt']"));
+        Assert.Empty(conversations.ListQueries);
+        Assert.Empty(conversations.TranscriptQueries);
+        Assert.Empty(((StubConversationEditorAccess)context.Services.GetRequiredService<ILlmChatConversationEditorAccess>()).Openings);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Metadata_dialog_keeps_its_original_revision_when_transcript_refreshes(bool archive) {
+        var original = CreateConversation();
+        var peer = original with { Title = "Peer title", ConcurrencyToken = 12, TranscriptRevision = 16 };
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([original], null));
+        conversations.TranscriptPages.Enqueue(CreateView(original, []));
+        conversations.TranscriptPages.Enqueue(CreateView(peer, []));
+        conversations.RenamedView = CreateView(original with { Title = "Local title" }, []);
+        conversations.ArchivedView = CreateView(original with { Status = LlmChatConversationStatus.Archived }, []);
+        using var context = CreateContext(conversations, new StubOperationGateway());
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
+        var cut = context.Render<LlmChatConversationWorkspace>();
+        await cut.WaitForElement($"[data-testid='llm-chat-{(archive ? "archive" : "rename")}-{ConversationId:D}']").ClickAsync();
+        var surface = cut.FindComponent<LlmChatConversationSurface>();
+        await cut.InvokeAsync(() => surface.Instance.Intent.InvokeAsync(new(surface.Instance.Presentation.Generation,
+            ConversationWorkspaceAction.ReloadSelected)));
+        cut.WaitForAssertion(() => Assert.Equal("Peer title", cut.Find("[data-testid='llm-chat-selected-title']").TextContent));
+
+        var dialog = cut.FindComponent<LlmChatConversationDialogSurface>();
+        var origin = dialog.Instance.Presentation.Origin;
+        if (!archive) {
+            await cut.InvokeAsync(() => dialog.Instance.Intent.InvokeAsync(new(origin, ConversationDialogAction.TitleChanged, "Local title")));
+        }
+        await cut.InvokeAsync(() => dialog.Instance.Intent.InvokeAsync(new(origin, ConversationDialogAction.Confirm)));
+
+        Assert.Equal(original.ConcurrencyToken, archive ? conversations.ArchiveExpectedConcurrencyToken : conversations.RenameExpectedConcurrencyToken);
+        if (!archive) {
+            Assert.Equal(original.TranscriptRevision, conversations.RenameExpectedTranscriptRevision);
+        }
+    }
+
+    [Fact]
+    public async Task Message_admission_keeps_text_entered_while_the_submitted_message_is_pending() {
+        var conversation = CreateConversation();
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([conversation], null));
+        conversations.TranscriptPages.Enqueue(CreateView(conversation, []));
+        var reply = new TaskCompletionSource<LlmChatUiResult<LlmChatOperationView>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var operations = new StubOperationGateway { Send = (_, _) => reply.Task };
+        using var context = CreateContext(conversations, operations);
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
+        var cut = context.Render<LlmChatConversationWorkspace>();
+        await cut.WaitForElement("[data-testid='llm-chat-prompt']").InputAsync("Submitted message");
+        var sending = cut.Find("[data-testid='llm-chat-send']").ClickAsync();
+        cut.WaitForAssertion(() => Assert.Single(operations.Sends));
+        var surface = cut.FindComponent<LlmChatConversationSurface>();
+        await cut.InvokeAsync(() => surface.Instance.Intent.InvokeAsync(new(surface.Instance.Presentation.Generation,
+            ConversationWorkspaceAction.DraftChanged, Text: "Next unsent message")));
+        reply.SetResult(LlmChatUiResult<LlmChatOperationView>.Success(CreateOperationView() with { OperationId = operations.Sends[0].OperationId }));
+        await sending;
+
+        Assert.Equal("Next unsent message", cut.Find("[data-testid='llm-chat-prompt']").GetAttribute("value"));
+        Assert.Equal("Submitted message", Assert.Single(operations.Sends).Message);
+    }
+
+    [Fact]
+    public async Task Pending_metadata_write_refuses_a_queued_dialog_close() {
+        var original = CreateConversation();
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([original], null));
+        conversations.TranscriptPages.Enqueue(CreateView(original, []));
+        var reply = new TaskCompletionSource<LlmChatUiResult<LlmChatConversationView>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        conversations.Rename = _ => reply.Task;
+        using var context = CreateContext(conversations, new StubOperationGateway());
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
+        var cut = context.Render<LlmChatConversationWorkspace>();
+        await cut.WaitForElement($"[data-testid='llm-chat-rename-{ConversationId:D}']").ClickAsync();
+        var dialog = cut.FindComponent<LlmChatConversationDialogSurface>();
+        var origin = dialog.Instance.Presentation.Origin;
+        var saving = cut.InvokeAsync(() => dialog.Instance.Intent.InvokeAsync(new(origin, ConversationDialogAction.Confirm)));
+        cut.WaitForAssertion(() => Assert.NotNull(conversations.RenamedTitle));
+        await cut.InvokeAsync(() => dialog.Instance.Intent.InvokeAsync(new(origin, ConversationDialogAction.Close)));
+        var retainedWhilePending = cut.FindAll("[data-testid='llm-chat-rename-title']").Count;
+        reply.SetResult(LlmChatUiResult<LlmChatConversationView>.Success(CreateView(original with { Title = "Accepted" }, [])));
+        await saving;
+
+        Assert.Equal(1, retainedWhilePending);
+        Assert.Empty(cut.FindAll("[data-testid='llm-chat-rename-title']"));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -30,6 +135,7 @@ public sealed class LlmChatConversationWorkspaceTests
         conversations.ListPages.Enqueue(new([conversation], null));
         conversations.TranscriptPages.Enqueue(CreateView(conversation, []));
         using var context = CreateContext(conversations, new StubOperationGateway());
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
         var open = rename ? $"llm-chat-rename-{ConversationId:D}" : "llm-chat-new";
         var title = rename ? "llm-chat-rename-title" : "llm-chat-start-title";
@@ -38,7 +144,7 @@ public sealed class LlmChatConversationWorkspaceTests
             component.Find("input").GetAttribute("data-testid") == title).Instance.ValueChanged;
         await cut.InvokeAsync(() => cut.FindComponent<Dialog>().Instance.OnClose.InvokeAsync());
         await cut.Find($"[data-testid='{open}']").ClickAsync();
-        cut.Find($"[data-testid='{title}']").Change("Current opening title");
+        cut.Find($"[data-testid='{title}']").Input("Current opening title");
 
         await cut.InvokeAsync(() => queued.InvokeAsync("Retired opening title"));
 
@@ -59,6 +165,7 @@ public sealed class LlmChatConversationWorkspaceTests
             conversations.ListPages.Enqueue(new([conversation], null));
             conversations.TranscriptPages.Enqueue(CreateView(conversation, [CreateMessage(LlmMessageRole.User, "Retained product message")]));
             using var context = CreateContext(conversations, new StubOperationGateway());
+            context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
             var cut = context.Render<LlmChatConversationWorkspace>(parameters => parameters
                 .Add(component => component.InitialConversationId, conversation.ConversationId)
                 .Add(component => component.Focused, focused));
@@ -90,6 +197,7 @@ public sealed class LlmChatConversationWorkspaceTests
         conversations.TranscriptPages.Enqueue(CreateView(conversation, []));
         using var context = CreateContext(conversations, new StubOperationGateway());
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatFloatingConversationContent>(parameters => parameters
             .Add(component => component.ConversationId, ConversationId));
 
@@ -155,6 +263,7 @@ public sealed class LlmChatConversationWorkspaceTests
             DispatchProxy.Create<IPromptGalleryService, UnexpectedPromptGalleryServiceProxy>());
         context.Services.AddSingleton<ILlmChatComposerActionContributor, PromptGalleryLlmChatComposerActionContributor>();
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatFloatingConversationContent>(parameters => parameters
             .Add(component => component.ConversationId, ConversationId));
 
@@ -181,15 +290,22 @@ public sealed class LlmChatConversationWorkspaceTests
         var operations = new StubOperationGateway();
         using var context = CreateContext(conversations, operations);
         context.Services.AddSingleton<IPromptGalleryService>(new SelectionPromptGalleryService());
+        context.Services.AddSingleton<IPromptGalleryUiAccess, PromptGalleryUiTestAccess>();
+        var changes = new EditingChangeFeed();
+        context.Services.AddSingleton(new PromptGalleryChanges(changes, changes, new(EditingScopeKind.Dataset, Guid.NewGuid()), new()));
         context.Services.AddSingleton<ILlmChatComposerActionContributor, PromptGalleryLlmChatComposerActionContributor>();
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var dialogHost = context.Render<DialogHost>();
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatFloatingConversationContent>(parameters => parameters
             .Add(component => component.ConversationId, ConversationId));
-        cut.WaitForElement("[data-testid='prompt-gallery-picker-button']").Click();
+        cut.WaitForElement("[data-testid='prompt-gallery-picker-button']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='prompt-gallery-picker-button']").ClickAsync());
 
         dialogHost.WaitForElement("[data-testid='prompt-gallery-picker-dialog']");
-        dialogHost.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        dialogHost.WaitForElement("[data-testid='prompt-gallery-select']");
+        await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='prompt-gallery-select']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal(
             "Floating gallery prompt",
@@ -209,13 +325,14 @@ public sealed class LlmChatConversationWorkspaceTests
             []);
         using var context = CreateContext(conversations, new StubOperationGateway());
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
         cut.WaitForElement("[data-testid='llm-chat-new']").Click();
 
         cut.WaitForElement($"[data-testid='llm-chat-start-definition-{ActiveDefinitionId:D}']");
         Assert.Empty(cut.FindAll($"[data-testid='llm-chat-start-definition-{DraftDefinitionId:D}']"));
         cut.Find($"[data-testid='llm-chat-start-definition-{ActiveDefinitionId:D}']").Click();
-        cut.Find("[data-testid='llm-chat-start-title']").Change("Pinned chat");
+        cut.Find("[data-testid='llm-chat-start-title']").Input("Pinned chat");
         cut.Find("[data-testid='llm-chat-start-confirm']").Click();
 
         cut.WaitForAssertion(() => Assert.Equal(ActiveDefinitionId, conversations.CreatedDefinitionId));
@@ -246,6 +363,7 @@ public sealed class LlmChatConversationWorkspaceTests
             null));
         using var context = CreateContext(conversations, new StubOperationGateway());
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
 
         cut.WaitForAssertion(() => Assert.Contains("first visible turn", cut.Markup, StringComparison.Ordinal));
@@ -273,9 +391,10 @@ public sealed class LlmChatConversationWorkspaceTests
             []);
         using var context = CreateContext(conversations, new StubOperationGateway());
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
         cut.WaitForElement($"[data-testid='llm-chat-rename-{ConversationId:D}']").Click();
-        cut.Find("[data-testid='llm-chat-rename-title']").Change("Renamed chat");
+        cut.Find("[data-testid='llm-chat-rename-title']").Input("Renamed chat");
         cut.Find("[data-testid='llm-chat-rename-confirm']").Click();
 
         cut.WaitForAssertion(() => Assert.Equal("Renamed chat", conversations.RenamedTitle));
@@ -303,6 +422,7 @@ public sealed class LlmChatConversationWorkspaceTests
         using var context = CreateContext(conversations, operations);
         context.Services.AddSingleton<ILlmChatComposerActionContributor>(composerActionContributor);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
         cut.WaitForElement("[data-testid='llm-chat-prompt']").Input("Existing draft   ");
         cut.WaitForAssertion(() => Assert.NotNull(composerActionContributor.Context));
@@ -332,8 +452,9 @@ public sealed class LlmChatConversationWorkspaceTests
         operations.SendResults.Enqueue(LlmChatUiResult<LlmChatOperationView>.Success(CreateOperationView()));
         using var context = CreateContext(conversations, operations);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
-        cut.WaitForElement("[data-testid='llm-chat-prompt']").Change("Explain the result");
+        cut.WaitForElement("[data-testid='llm-chat-prompt']").Input("Explain the result");
         cut.Find("[data-testid='llm-chat-send']").Click();
         cut.WaitForAssertion(() => Assert.Single(operations.Sends));
         cut.Find("[data-testid='llm-chat-send']").Click();
@@ -370,6 +491,7 @@ public sealed class LlmChatConversationWorkspaceTests
             new(220)));
         using var context = CreateContext(conversations, new StubOperationGateway());
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
 
         cut.WaitForAssertion(() => Assert.Equal(96, cut.FindAll("[data-testid='agent-thread-card']").Count));
@@ -396,8 +518,9 @@ public sealed class LlmChatConversationWorkspaceTests
         var eventSessions = new ControlledEventSessionGateway();
         using var context = CreateContext(conversations, operations, eventSessions);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
-        cut.WaitForElement("[data-testid='llm-chat-prompt']").Change("Explain the result");
+        cut.WaitForElement("[data-testid='llm-chat-prompt']").Input("Explain the result");
         cut.Find("[data-testid='llm-chat-send']").Click();
         cut.WaitForAssertion(() => Assert.Single(operations.Sends));
         var operationId = new LlmChatOperationId(operations.Sends[0].OperationId);
@@ -485,10 +608,12 @@ public sealed class LlmChatConversationWorkspaceTests
         var eventSessions = new ControlledEventSessionGateway();
         using var context = CreateContext(conversations, operations, eventSessions);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var first = context.Render<LlmChatConversationWorkspace>();
         first.WaitForAssertion(() => Assert.Single(eventSessions.OpenedOperationIds));
         await first.Instance.DisposeAsync();
         first.Dispose();
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var second = context.Render<LlmChatConversationWorkspace>();
 
         second.WaitForAssertion(() => Assert.Equal(2, eventSessions.OpenedOperationIds.Count));
@@ -515,6 +640,7 @@ public sealed class LlmChatConversationWorkspaceTests
         var eventSessions = new ControlledEventSessionGateway();
         using var context = CreateContext(conversations, operations, eventSessions);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
         cut.WaitForAssertion(() => Assert.Single(eventSessions.OpenedOperationIds));
         var typedOperationId = new LlmChatOperationId(operationId);
@@ -574,6 +700,7 @@ public sealed class LlmChatConversationWorkspaceTests
         var eventSessions = new ControlledEventSessionGateway();
         using var context = CreateContext(conversations, operations, eventSessions);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
         cut.WaitForElement("[data-testid='llm-chat-operation-cancel']").Click();
         cut.WaitForAssertion(() => Assert.Equal(1, operations.CancelCalls));
@@ -609,6 +736,7 @@ public sealed class LlmChatConversationWorkspaceTests
         };
         using var context = CreateContext(conversations, operations);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
         cut.WaitForElement("[data-testid='llm-chat-operation-reconcile']");
         Assert.Empty(cut.FindAll("[data-testid='llm-chat-operation-abandon']"));
@@ -639,6 +767,7 @@ public sealed class LlmChatConversationWorkspaceTests
         var eventSessions = new ControlledEventSessionGateway();
         using var context = CreateContext(conversations, operations, eventSessions);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
         cut.WaitForAssertion(() => Assert.Single(eventSessions.OpenedOperationIds));
         var typedOperationId = new LlmChatOperationId(operationId);
@@ -717,6 +846,7 @@ public sealed class LlmChatConversationWorkspaceTests
             1));
         using var context = CreateContext(conversations, operations, eventSessions);
 
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<LlmChatConversationWorkspace>();
 
         cut.WaitForAssertion(() => Assert.Contains("Already completed answer", cut.Markup, StringComparison.Ordinal));
@@ -732,6 +862,7 @@ public sealed class LlmChatConversationWorkspaceTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddConversationShell();
         context.Services.AddLogging();
         context.Services.AddSingleton<ILlmChatDefinitionUiGateway>(new StubDefinitionGateway());
         context.Services.AddSingleton(conversations);
@@ -739,7 +870,36 @@ public sealed class LlmChatConversationWorkspaceTests
         context.Services.AddSingleton(eventSessions ?? new ControlledEventSessionGateway());
         context.Services.AddSingleton<ILlmChatOperationProjectionReducer, LlmChatOperationProjectionReducer>();
         context.Services.AddSingleton<ILlmChatUiAuthorizationFacade>(new StubAuthorization());
+        context.Services.AddSingleton<ILlmChatConversationEditorAccess>(new StubConversationEditorAccess());
         return context;
+    }
+
+    internal sealed class StubConversationEditorAccess : ILlmChatConversationEditorAccess {
+        public List<(Guid? Target, Func<Task> Changed, Func<Task> Retired)> Openings { get; } = [];
+        public long Epoch { get; set; }
+        public int Validations { get; private set; }
+        public Func<ValueTask>? NextValidation { get; set; }
+        public bool CanExecute { get; set; } = true;
+        public bool CanManage { get; set; } = true;
+        public Task<LlmChatEditorOpening> OpenAsync(Guid? conversationId, LlmChatConversationAccessKind kind, Guid editorId,
+            Func<Task> changed, Func<Task> retired, CancellationToken cancellationToken) {
+            var epoch = Epoch;
+            Openings.Add((conversationId, changed, retired));
+            return Task.FromResult(new LlmChatEditorOpening(conversationId, editorId, async (write, _) => {
+                Validations++;
+                if (NextValidation is { } next) {
+                    NextValidation = null;
+                    await next();
+                }
+                if (epoch != Epoch || write && (kind == LlmChatConversationAccessKind.Read ||
+                    kind == LlmChatConversationAccessKind.Execute && !CanExecute ||
+                    kind is LlmChatConversationAccessKind.Metadata or LlmChatConversationAccessKind.Recovery && !CanManage)) {
+                    throw new UnauthorizedAccessException("Original test conversation access changed.");
+                }
+            }, CancellationToken.None, () => { }, () => ValueTask.CompletedTask,
+                kind is LlmChatConversationAccessKind.Execute or LlmChatConversationAccessKind.Recovery
+                    ? LlmChatWriteResource.ConversationOperation : LlmChatWriteResource.ConversationMetadata));
+        }
     }
 
     internal static LlmChatConversationListItem CreateConversation(
@@ -1025,11 +1185,14 @@ public sealed class LlmChatConversationWorkspaceTests
         public Func<LlmChatConversationQuery, CancellationToken, Task<LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>>>? List { get; set; }
 
         public LlmChatConversationView? CreatedView { get; set; }
+        public Func<CancellationToken, Task<LlmChatUiResult<LlmChatConversationView>>>? Create { get; set; }
 
         public LlmChatConversationView? RenamedView { get; set; }
         public Func<CancellationToken, Task<LlmChatUiResult<LlmChatConversationView>>>? Rename { get; set; }
 
         public LlmChatConversationView? ArchivedView { get; set; }
+        public Func<CancellationToken, Task<LlmChatUiResult<LlmChatConversationView>>>? Archive { get; set; }
+        public int ArchiveCalls { get; private set; }
 
         public Guid? CreatedDefinitionId { get; private set; }
 
@@ -1040,6 +1203,7 @@ public sealed class LlmChatConversationWorkspaceTests
         public CancellationToken CreateToken { get; private set; }
 
         public string? RenamedTitle { get; private set; }
+        public int RenameCalls { get; private set; }
 
         public long? RenameExpectedConcurrencyToken { get; private set; }
 
@@ -1081,6 +1245,9 @@ public sealed class LlmChatConversationWorkspaceTests
             CreateToken = cancellationToken;
             CreatedDefinitionId = definitionId;
             CreatedTitle = title;
+            if (Create is not null) {
+                return Create(cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(CreatedView!));
         }
 
@@ -1092,6 +1259,7 @@ public sealed class LlmChatConversationWorkspaceTests
             CancellationToken cancellationToken = default)
         {
             RenamedTitle = title;
+            RenameCalls++;
             RenameExpectedConcurrencyToken = expectedConcurrencyToken;
             RenameExpectedTranscriptRevision = expectedTranscriptRevision;
             return Rename?.Invoke(cancellationToken) ?? Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(RenamedView!));
@@ -1103,12 +1271,14 @@ public sealed class LlmChatConversationWorkspaceTests
             CancellationToken cancellationToken = default)
         {
             ArchiveExpectedConcurrencyToken = expectedConcurrencyToken;
-            return Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(ArchivedView!));
+            ArchiveCalls++;
+            return Archive?.Invoke(cancellationToken) ?? Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(ArchivedView!));
         }
     }
 
     internal sealed class StubOperationGateway : ILlmChatOperationUiGateway
     {
+        public Func<SendRequest, CancellationToken, Task<LlmChatUiResult<LlmChatOperationView>>>? Send { get; set; }
         public Queue<LlmChatUiResult<LlmChatOperationView>> SendResults { get; } = [];
 
         public List<SendRequest> Sends { get; } = [];
@@ -1122,6 +1292,7 @@ public sealed class LlmChatConversationWorkspaceTests
         public LlmChatUiResult<LlmChatOperationView>? AbandonResult { get; set; }
 
         public int CancelCalls { get; private set; }
+        public List<Guid> CancelledIds { get; } = [];
 
         public int ReconcileCalls { get; private set; }
 
@@ -1135,6 +1306,9 @@ public sealed class LlmChatConversationWorkspaceTests
             CancellationToken cancellationToken = default)
         {
             Sends.Add(new(operationId, conversationId, expectedTranscriptRevision, message));
+            if (Send is not null) {
+                return Send(Sends[^1], cancellationToken);
+            }
             var result = SendResults.Dequeue();
             return Task.FromResult(result.IsSuccess
                 ? LlmChatUiResult<LlmChatOperationView>.Success(result.Value! with { OperationId = operationId })
@@ -1152,6 +1326,7 @@ public sealed class LlmChatConversationWorkspaceTests
             CancellationToken cancellationToken = default)
         {
             CancelCalls++;
+            CancelledIds.Add(operationId);
             Current = Current with
             {
                 OperationId = operationId,

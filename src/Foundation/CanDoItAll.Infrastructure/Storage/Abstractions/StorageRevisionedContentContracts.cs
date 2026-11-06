@@ -1,7 +1,10 @@
+using System.Security.Cryptography;
+
 namespace CanDoItAll.Infrastructure.Storage;
 
 public readonly record struct StorageContentRevision
 {
+    private const string ContentHashPrefix = "sha256:";
     public StorageContentRevision(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
@@ -9,6 +12,13 @@ public readonly record struct StorageContentRevision
     }
 
     public string Value { get; }
+
+    public bool IsContentHash => Value?.StartsWith(ContentHashPrefix, StringComparison.Ordinal) == true;
+
+    public static StorageContentRevision ForContent(ReadOnlySpan<byte> content) => FromDigest(SHA256.HashData(content));
+
+    internal static StorageContentRevision FromDigest(ReadOnlySpan<byte> digest)
+        => new(ContentHashPrefix + Convert.ToHexStringLower(digest));
 
     public override string ToString() => Value ?? string.Empty;
 }
@@ -19,12 +29,13 @@ public sealed record StorageRevisionedWriteRequest
         StorageObjectReference reference,
         byte[] content,
         StorageContentRevision? expectedRevision,
-        bool allowOverwrite)
-    {
+        bool allowOverwrite,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         Reference = reference ?? throw new ArgumentNullException(nameof(reference));
         Content = content ?? throw new ArgumentNullException(nameof(content));
         ExpectedRevision = expectedRevision;
         AllowOverwrite = allowOverwrite;
+        AuthorizeCommit = authorizeCommit;
     }
 
     public StorageObjectReference Reference { get; }
@@ -34,6 +45,9 @@ public sealed record StorageRevisionedWriteRequest
     public StorageContentRevision? ExpectedRevision { get; }
 
     public bool AllowOverwrite { get; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Func<CancellationToken, ValueTask>? AuthorizeCommit { get; }
 }
 
 public sealed record StorageRevisionedWriteResult(

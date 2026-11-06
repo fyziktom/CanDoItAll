@@ -61,6 +61,7 @@ public sealed class TestRunEditorModel : ITestPlanChildEditor {
 
 public sealed class TestPlanEditorModel {
     public Guid? Id { get; set; }
+    public TestPlanCondition? ExpectedPlan { get; set; }
 
     public Guid? ProjectId { get; set; }
 
@@ -81,6 +82,15 @@ public sealed class TestPlanEditorModel {
     public List<TestEvidenceEditorModel> Evidence { get; set; } = [];
 
     public List<TestRunEditorModel> Runs { get; set; } = [];
+    public IReadOnlyList<TestRunObservation> OriginalRuns { get; set; } = [];
+}
+
+public readonly record struct TestPlanCondition(Guid DatabaseProfileId, Guid PlanId, Guid DefinitionRevision);
+
+public sealed record TestRunObservation(Guid Id, DateTimeOffset ExecutedAtUtc, string Runner, TestCaseStatus Result, string Summary);
+
+public sealed record TestLabPlanPage(IReadOnlyList<TestPlanSummary> Plans, bool HasNext) {
+    public const int Size = 100;
 }
 
 public interface ITestPlanChildEditor {

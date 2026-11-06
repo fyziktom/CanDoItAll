@@ -77,7 +77,9 @@ public sealed record PluginGrantUpdateRequest(
     PluginGrantScopeKind ScopeKind = PluginGrantScopeKind.Plugin,
     string ScopeKey = "",
     PluginGrantRiskKind RiskKind = PluginGrantRiskKind.Medium,
-    string Reason = "");
+    string Reason = "") {
+    public Guid? ExpectedConcurrencyToken { get; init; }
+}
 
 /// <summary>
 /// A saved connection of a plugin: which connection kind it uses and its settings. OAuth tokens are not part of it.
@@ -139,7 +141,14 @@ public sealed record PluginConnectionSaveRequest(
     PluginConnectionKey ConnectionKey,
     string DisplayName,
     string SettingsJson,
-    bool IsEnabled = true);
+    bool IsEnabled = true) {
+    public Guid? ExpectedConcurrencyToken { get; init; }
+}
+
+public static class PluginWriteConflict {
+    public const string ConnectionChanged = "plugins.connection-changed";
+    public const string GrantChanged = "plugins.grant-changed";
+}
 
 /// <summary>
 /// Settings view of one plugin, returned by <c>GET /api/plugins/{pluginId}/settings</c>.

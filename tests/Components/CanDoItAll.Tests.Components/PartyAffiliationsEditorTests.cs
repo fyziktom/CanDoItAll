@@ -2,12 +2,41 @@ using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Components;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class PartyAffiliationsEditorTests
 {
+    [Fact]
+    public async Task Raw_text_notifies_the_existing_form_and_is_published_before_blur() {
+        var row = new PartyOrganizationAffiliationEditorModel {
+            Id = Guid.NewGuid(), PersonPartyId = Guid.NewGuid(), OrganizationPartyId = Guid.NewGuid(), JobTitle = "Original title"
+        };
+        var form = new EditContext(row);
+        FieldIdentifier? changed = null;
+        form.OnFieldChanged += (_, args) => changed = args.FieldIdentifier;
+        IReadOnlyList<PartyOrganizationAffiliationEditorModel> published = [];
+        using var context = CreateContext(new StubPartyRecordQueryService([]));
+        var cut = context.Render<CascadingValue<EditContext>>(parameters => parameters
+            .Add(component => component.Value, form)
+            .AddChildContent<PartyAffiliationsEditor>(child => child
+                .Add(component => component.CurrentPersonPartyId, row.PersonPartyId)
+                .Add(component => component.Affiliations, [row])
+                .Add(component => component.AffiliationsChanged, value => published = value)));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-affiliation-title-0']").InputAsync(new ChangeEventArgs { Value = "  Raw title  " }));
+
+        Assert.NotNull(changed);
+        Assert.Equal(nameof(PartyOrganizationAffiliationEditorModel.JobTitle), changed.Value.FieldName);
+        Assert.True(form.IsModified(changed.Value));
+        Assert.Contains("modified", cut.Find("[data-testid='crmhr-affiliation-title-0']").ClassList);
+        Assert.Equal("  Raw title  ", Assert.Single(published).JobTitle);
+        Assert.Equal("Original title", row.JobTitle);
+    }
+
     [Fact]
     public void Selecting_a_primary_clears_the_previous_primary_and_failed_parent_save_keeps_edits()
     {
@@ -116,6 +145,9 @@ public sealed class PartyAffiliationsEditorTests
         cut.Find("[data-testid='crmhr-affiliation-add']").Click();
 
         var draft = Assert.Single(published);
+        Assert.NotNull(draft.Id);
+        Assert.NotEqual(Guid.Empty, draft.Id);
+        Assert.True(draft.IsNew);
         Assert.Equal(personPartyId, draft.PersonPartyId);
         Assert.Equal(PartyOrganizationAffiliationKind.ExternalContact, draft.AffiliationKind);
         Assert.True(draft.IsPrimary);
@@ -128,6 +160,8 @@ public sealed class PartyAffiliationsEditorTests
         cut.Find("[data-testid='crmhr-affiliation-picker-confirm']").Click();
 
         var selected = Assert.Single(published);
+        Assert.Equal(draft.Id, selected.Id);
+        Assert.True(selected.IsNew);
         Assert.Equal(organizationId, selected.OrganizationPartyId);
         Assert.Contains("Fabrikam Services", cut.Markup, StringComparison.Ordinal);
         Assert.Empty(cut.FindAll("[data-testid='crmhr-affiliation-picker']"));
@@ -159,6 +193,7 @@ public sealed class PartyAffiliationsEditorTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<TooltipService>();
         context.Services.AddSingleton(queryService);
         return context;

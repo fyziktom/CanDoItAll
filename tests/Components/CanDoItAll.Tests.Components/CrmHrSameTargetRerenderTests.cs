@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using Microsoft.AspNetCore.Components;
@@ -44,17 +45,19 @@ public sealed class CrmHrSameTargetRerenderTests
         Assert.Equal("Typed and not saved", view.ProfileEditor.JobTitle);
         Assert.NotNull(cut.Find("[data-testid='crmhr-workforce-record-dialog']"));
 
-        // Its own commit takes the owner's accepted values into a new draft.
+        // Its own commit rebases the accepted values in the existing form lifetime.
         await cut.InvokeAsync(view.SaveWorkforceProfileAsync);
 
         var afterProfile = await hr.GetWorkforceProfileWorkspaceAsync(firstId);
         Assert.Equal("Typed and not saved", afterProfile!.Profile.JobTitle);
-        Assert.NotSame(profileDraft, view.ProfileEditor);
+        Assert.Same(profileDraft, view.ProfileEditor);
         Assert.Equal("Typed and not saved", view.ProfileEditor.JobTitle);
 
         // A different person is a different target: an unsaved draft never follows the operator there.
         view.ProfileEditor.JobTitle = "Typed for the first person only";
-        navigation.NavigateTo($"/crm-hr/workforce?partyId={secondId:D}");
+        var switching = cut.InvokeAsync(() => view.SelectPartyAsync(secondId));
+        cut.WaitForElement("[data-testid='crmhr-workforce-dirty-discard']").Click();
+        await switching;
 
         cut.WaitForAssertion(() => Assert.Equal("Second title", view.ProfileEditor.JobTitle));
         var firstPersisted = await hr.GetWorkforceProfileWorkspaceAsync(firstId);
@@ -81,7 +84,11 @@ public sealed class CrmHrSameTargetRerenderTests
         navigation.NavigateTo($"/crm-hr/recruiting?applicationId={application.Value:D}");
         var cut = harness.Context.Render<CrmHrRecruitingPage>();
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
-        cut.WaitForAssertion(() => Assert.Equal("Saved role", view.ApplicationEditor.DesiredRole));
+        cut.WaitForAssertion(() => {
+            Assert.Equal("Saved role", view.ApplicationEditor.DesiredRole);
+            Assert.True(view.IsRecruitmentDialogOpen);
+            Assert.False(cut.FindComponent<CanDoItAll.CrmHr.UI.Recruiting.CrmHrRecruitingWorkspaceSurface>().Instance.InterviewSaveDisabled);
+        });
         var applicationDraft = view.ApplicationEditor;
         applicationDraft.DesiredRole = "Typed and not saved";
         view.InterviewEditor.ScheduledAtLocal = new DateTime(2031, 1, 15, 10, 0, 0, DateTimeKind.Unspecified);
@@ -98,7 +105,9 @@ public sealed class CrmHrSameTargetRerenderTests
         Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-record-dialog']"));
 
         // Closing the record is the operator's own discard: the record leaves the location and its drafts go with it.
-        await cut.InvokeAsync(view.CloseRecruitmentDialogAsync);
+        var closing = cut.InvokeAsync(view.CloseRecruitmentDialogAsync);
+        cut.WaitForElement("[data-testid='crmhr-recruiting-dirty-discard']").Click();
+        await closing;
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']")));
         Assert.EndsWith("/crm-hr/recruiting", navigation.Uri, StringComparison.Ordinal);
@@ -148,19 +157,20 @@ public sealed class CrmHrSameTargetRerenderTests
         // A sub-selection in the route reloads the same account.
         await cut.InvokeAsync(() => view.SelectOpportunityAsync(opportunity.Value));
 
-        cut.WaitForAssertion(() => Assert.Equal(opportunity.Value, view.SelectedOpportunityId));
+        cut.WaitForAssertion(() => Assert.True(view.SelectedOpportunityId == opportunity.Value,
+            $"Location: {navigation.Uri}; {string.Join("; ", harness.Context.Services.GetRequiredService<NotificationService>().Messages.Select(message => message.Detail))}"));
         Assert.Same(profileDraft, view.ProfileEditor);
         Assert.Equal("Typed and not saved", view.ProfileEditor.CommercialNotes);
         Assert.Same(interactionDraft, view.InteractionEditor);
         Assert.Equal("Typed subject", view.InteractionEditor.Subject);
-        // The related opportunity was not chosen by the operator, so it follows the selection.
-        Assert.Equal(opportunity.Value, view.InteractionEditor.RelatedOpportunityId);
+        Assert.Null(view.InteractionEditor.RelatedOpportunityId);
 
         // Meanwhile the owner moved the account forward; another editor's commit reloads the same account.
         var ownerChange = await crm.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             Id = profileDraft.Id,
             AccountPartyId = accountId,
+            Original = (await crm.GetAccountWorkspaceAsync(accountId))!.Profile.Original,
             RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer,
             CommercialNotes = "First commercial note",
             LastChangedBy = "component-tests"
@@ -170,21 +180,28 @@ public sealed class CrmHrSameTargetRerenderTests
 
         Assert.Same(profileDraft, view.ProfileEditor);
         Assert.Equal("Typed and not saved", view.ProfileEditor.CommercialNotes);
-        Assert.Equal(CrmAccountRelationshipStage.ActiveCustomer, view.ProfileEditor.RelationshipStage);
+        Assert.Equal(CrmAccountRelationshipStage.Prospect, view.ProfileEditor.RelationshipStage);
         var beforeProfileSave = await crm.GetAccountWorkspaceAsync(accountId);
         Assert.Equal("First commercial note", beforeProfileSave!.Profile.CommercialNotes);
 
-        // Saving the kept draft writes the typed note and does not revert the stage the owner accepted meanwhile.
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-account-review-open']").ClickAsync(new()));
+        cut.WaitForElement("[data-testid='crmhr-account-review-dialog']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-account-review-apply']").ClickAsync(new()));
+        Assert.Equal(CrmAccountRelationshipStage.ActiveCustomer, view.ProfileEditor.RelationshipStage);
+        Assert.Equal("First commercial note", (await crm.GetAccountWorkspaceAsync(accountId))!.Profile.CommercialNotes);
         await cut.InvokeAsync(view.SaveAccountProfileAsync);
 
         var afterProfileSave = await crm.GetAccountWorkspaceAsync(accountId);
         Assert.Equal("Typed and not saved", afterProfileSave!.Profile.CommercialNotes);
         Assert.Equal(CrmAccountRelationshipStage.ActiveCustomer, afterProfileSave.Profile.RelationshipStage);
-        Assert.NotSame(profileDraft, view.ProfileEditor);
+        Assert.Same(profileDraft, view.ProfileEditor);
 
         // A different account is a different target: no draft follows the operator there.
         view.ProfileEditor.CommercialNotes = "Typed for the first account only";
-        navigation.NavigateTo($"/crm-hr/crm?accountId={otherAccountId:D}");
+        var selecting = cut.InvokeAsync(() => view.SelectAccountAsync(otherAccountId));
+        cut.WaitForElement("[data-testid='crmhr-account-dirty-close']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-account-dirty-discard']").ClickAsync(new()));
+        await selecting;
 
         cut.WaitForAssertion(() => Assert.Equal("Second commercial note", view.ProfileEditor.CommercialNotes));
         Assert.NotSame(interactionDraft, view.InteractionEditor);
@@ -215,6 +232,7 @@ public sealed class CrmHrSameTargetRerenderTests
         var profile = await crm.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crm.GetAccountWorkspaceAsync(accountId))!.Profile.Original,
             RelationshipStage = CrmAccountRelationshipStage.Prospect,
             CommercialNotes = commercialNotes,
             LastChangedBy = "component-tests"

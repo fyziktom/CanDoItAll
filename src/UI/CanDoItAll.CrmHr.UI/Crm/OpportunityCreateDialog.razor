@@ -30,15 +30,11 @@
                     </PanelCard>
                 }
 
-                <EditForm id="crmhr-opportunity-create-form"
-                          Model="draft"
-                          OnValidSubmit="HandleCreateAsync">
-                    <OpportunityEditor Model="draft"
-                                       Section="@ResolveEditorSection(step)"
-                                       AccountDisplayName="@AccountDisplayName"
-                                       RelationshipStageLabel="@RelationshipStageLabel"
-                                       LoadFailed="LoadFailed" />
-                </EditForm>
+                @Editing
+                <OpportunityEditorForm @ref="form" @key="Opening" Model="InitialModel" FormId="crmhr-opportunity-create-form"
+                    Section="@ResolveEditorSection(step)" AccountDisplayName="@AccountDisplayName" RelationshipStageLabel="@RelationshipStageLabel"
+                    Save="HandleCreateAsync" InvalidSection="ShowInvalidSection" InputChanged="InputChanged" PickerChanged="PickerChanged"
+                    ProjectSelected="ProjectSelected" LoadFailed="LoadFailed" />
             </Stack>
         </ChildContent>
         <Footer>
@@ -63,7 +59,7 @@
                         <Button Text="Create opportunity"
                                 Type="submit"
                                 form="crmhr-opportunity-create-form"
-                                Disabled="IsBusy"
+                                Disabled="@(IsBusy || SaveDisabled)"
                                 IsBusy="IsBusy"
                                 data-testid="crmhr-opportunity-save-button" />
                     }
@@ -81,7 +77,14 @@
 }
 
 @code {
-    private CrmOpportunityEditorModel draft = new();
+    private OpportunityEditorForm? form;
+    private CrmOpportunityEditorModel draft => InitialModel;
+    [Parameter] public long Opening { get; set; }
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public RenderFragment? Editing { get; set; }
+    [Parameter] public EventCallback<OpportunityInput> InputChanged { get; set; }
+    [Parameter] public EventCallback<bool> PickerChanged { get; set; }
+    [Parameter] public EventCallback<Guid> ProjectSelected { get; set; }
     private CreateOpportunityStep step;
     private string? validationMessage;
     private bool wasOpen;
@@ -125,8 +128,10 @@
         wasOpen = IsOpen;
     }
 
-    private void MoveNext()
-    {
+    private async Task MoveNext() {
+        if (form is not null && !await form.ValidateAsync()) {
+            return;
+        }
         validationMessage = ValidateStep(step);
         if (validationMessage is not null)
         {
@@ -152,7 +157,7 @@
         };
     }
 
-    private Task HandleCreateAsync()
+    private Task HandleCreateAsync(CrmOpportunityEditorModel submitted)
     {
         validationMessage = ValidateStep(CreateOpportunityStep.Commercial);
         return validationMessage is null
@@ -162,16 +167,21 @@
 
     private async Task HandleCloseAsync()
     {
-        ResetDraft();
         wasOpen = false;
         await Close.InvokeAsync();
     }
 
     private void ResetDraft()
     {
-        draft = OpportunityEditorDrafts.Clone(InitialModel);
         step = CreateOpportunityStep.Basics;
         validationMessage = null;
+    }
+
+    private void ShowInvalidSection(int? index) {
+        if (index is >= 0 and <= 2) {
+            step = (CreateOpportunityStep)index.Value;
+        }
+        validationMessage = "Finish the invalid input before continuing.";
     }
 
     private string? ValidateStep(CreateOpportunityStep wizardStep)

@@ -425,6 +425,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
         var profileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crmService.GetAccountWorkspaceAsync(accountId))!.Profile.Original,
             RelationshipStage = CrmAccountRelationshipStage.Prospect,
             CommercialNotes = $"{displayName} commercial notes",
             LastChangedBy = "component-tests"

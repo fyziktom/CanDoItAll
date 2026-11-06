@@ -65,17 +65,26 @@ public sealed class ProviderSharedReconciliationTests {
         Assert.Equal(!affected, ReferenceEquals(context, session.EditContext));
     }
 
-    [Fact]
-    public async Task Retired_target_is_failed_without_selecting_another_provider() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Retired_target_keeps_its_metadata_when_available_and_never_selects_another_provider(bool missing) {
         var reads = new Reads { Imported = true };
         using var session = new ProviderProfilesSession(reads);
         await session.RefreshAsync();
         var count = reads.EditorReads;
+        reads.Retire();
+        reads.Missing = missing;
         await session.ReconcileSharedAsync(new(SharedProviderChangeKind.ImportRetirement, [reads.Id], [reads.Id]));
         Assert.Equal(reads.Id, session.State.ProviderId);
-        Assert.Equal(ProviderProfilesLoadState.Failed, session.EditorLoadState);
-        Assert.False(session.CanEdit);
-        Assert.Equal(count, reads.EditorReads);
+        Assert.Equal(missing ? ProviderProfilesLoadState.Failed : ProviderProfilesLoadState.Ready, session.EditorLoadState);
+        Assert.Equal(!missing, session.CanEdit);
+        Assert.Equal(count + (missing ? 0 : 1), reads.EditorReads);
+        if (!missing) {
+            Assert.True(session.IsSourceManaged);
+            Assert.False(session.Draft.IsEnabled);
+            Assert.Contains("retired", session.MetadataWarning, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -119,14 +128,19 @@ public sealed class ProviderSharedReconciliationTests {
 
     private sealed class Reads : IProviderProfilesReads {
         public Guid Id { get; } = Guid.NewGuid();
-        public Guid Revision { get; } = Guid.NewGuid();
+        public Guid Revision { get; private set; } = Guid.NewGuid();
+        private bool retired;
+        public void Retire() {
+            retired = true;
+            Revision = Guid.NewGuid();
+        }
         public bool Imported { get; init; }
         public bool Missing { get; set; }
         public bool Malformed { get; set; }
         public int EditorReads { get; private set; }
         public Task<ProviderProfilesCatalog> LoadCatalogAsync(CancellationToken token = default) {
             var profile = new Profile(Id, "Saved provider", Kind.OpenAi, "", "", "model", ProviderTransportKind.Responses,
-                true, true, true, false, true, "{}", "", "", null, ["model"]) {
+                !retired, true, true, false, true, "{}", "", "", null, ["model"]) {
                 ConnectorPluginKey = Imported ? ProviderConnectorKeys.SharedImport : ProviderConnectorKeys.OpenAi
             };
             return Task.FromResult(new ProviderProfilesCatalog(Missing ? [] : [profile], new([])) {
@@ -136,7 +150,7 @@ public sealed class ProviderSharedReconciliationTests {
         public Task<Editor> LoadEditorAsync(Guid id, CancellationToken token = default) {
             EditorReads++;
             return Malformed ? Task.FromException<Editor>(new InvalidOperationException("Malformed projection"))
-                : Task.FromResult(new Editor { Id = id, Name = "Saved provider", DefaultModel = "model", ExpectedConcurrencyToken = Revision });
+                : Task.FromResult(new Editor { Id = id, Name = "Saved provider", DefaultModel = "model", ExpectedConcurrencyToken = Revision, IsEnabled = !retired });
         }
     }
 }

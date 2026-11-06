@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -9,17 +10,25 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admission, ProjectStructureNode original, bool isEdit,
     IWorkspaceSecretsOwner secrets, ProjectWorkbenchService workbench, Func<bool> current, Func<bool> originalAuthority,
-    Func<SecretListItem, SecretReferenceInput, Action<ProjectStructureNode>, Task<ProjectStructureNode>> write,
-    Func<ProjectStructureNode, Task> observe, Action<SecretReferenceReceipt> record, ILogger logger) {
+    EditingObservation access, Func<bool, CancellationToken, ValueTask> authorize,
+    Func<SecretListItem, SecretReferenceInput, Action<ProjectStructureNode>, Func<CancellationToken, ValueTask>, Task<ProjectStructureNode>> write,
+    Func<ProjectStructureNode, Func<CancellationToken, ValueTask>, Task> observe, Action<SecretReferenceReceipt> record, ILogger logger) : IAsyncDisposable {
     public SecretReferenceState State { get; } = new(isEdit);
     public bool IsCurrent => current() && originalAuthority() && secrets.IsCurrent && !State.IsRetired;
     private long readGeneration;
     private SecretReferenceInput? submitted;
     private ProjectStructureNode? committed;
+    private bool accessStarted;
 
     public void Retire() {
         State.Retire();
         readGeneration++;
+        access.Stop();
+    }
+
+    public ValueTask DisposeAsync() {
+        Retire();
+        return access.DisposeAsync();
     }
 
     public async Task LoadAsync() {
@@ -29,7 +38,20 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         var generation = ++readGeneration;
         State.IsLoading = true;
         try {
+            if (!accessStarted) {
+                await access.StartAsync(_ => Task.CompletedTask, () => {
+                    if (IsCurrent) {
+                        State.Items = [];
+                        State.IsUnavailable = true;
+                        State.Message = "The original Structure access retired. Reopen the reference with current access.";
+                    }
+                    return Task.CompletedTask;
+                });
+                accessStarted = true;
+            }
+            await RequireAccessAsync(write: false);
             var items = await secrets.ListAsync(CancellationToken.None);
+            await RequireAccessAsync(write: false);
             if (IsCurrent && generation == readGeneration) {
                 State.Items = items;
                 State.IsUnavailable = false;
@@ -38,6 +60,7 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         } catch (Exception failure) {
             if (IsCurrent && generation == readGeneration) {
                 State.IsUnavailable = true;
+                State.Items = [];
                 State.Message = "Secret metadata could not be loaded. Retry the read before submitting a reference.";
             }
             Log(failure);
@@ -56,6 +79,7 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         try {
             await RequireOriginalAsync();
             var item = (await secrets.ListAsync(CancellationToken.None)).FirstOrDefault(item => item.Id == input.SecretId);
+            await RequireAccessAsync(write: false);
             if (item is null) {
                 Refuse("The selected secret is unavailable. No project reference was submitted.");
                 return;
@@ -163,6 +187,7 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
     }
 
     private async Task RequireOriginalAsync() {
+        await RequireAccessAsync(write: true);
         if (!originalAuthority() || !secrets.IsCurrent) {
             throw new ProjectWriteAdmissionRejectedException(admission);
         }
@@ -180,6 +205,17 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         if (!originalAuthority() || !secrets.IsCurrent) {
             throw new ProjectWriteAdmissionRejectedException(admission);
         }
+        await RequireAccessAsync(write: true);
+    }
+
+    private async ValueTask RequireAccessAsync(bool write, CancellationToken cancellationToken = default) {
+        if (!IsCurrent) {
+            throw new UnauthorizedAccessException("The original secret reference opening has retired.");
+        }
+        await authorize(write, cancellationToken);
+        if (!IsCurrent) {
+            throw new UnauthorizedAccessException("The original secret reference opening changed during authorization.");
+        }
     }
 
     private bool IsOriginalProjectRoot(ProjectStructureNode node) => node.IsSystemManaged &&
@@ -187,11 +223,13 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         node.ArtifactId == admission.ProjectId && node.Id == ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(admission.ProjectId);
 
     private async Task<SecretListItem> ReadAcceptedSecretAsync() {
+        await RequireAccessAsync(write: false);
         if (!originalAuthority() || !secrets.IsCurrent) {
             throw new ProjectWriteAdmissionRejectedException(admission);
         }
         var id = State.Receipt?.SecretId ?? throw new InvalidOperationException("No accepted secret identity exists.");
         var items = await secrets.ListAsync(CancellationToken.None);
+        await RequireAccessAsync(write: false);
         var item = items.FirstOrDefault(item => item.Id == id)
             ?? throw new InvalidOperationException("The accepted secret metadata is unavailable.");
         if (IsCurrent) {
@@ -211,7 +249,7 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
                 committed = node;
                 Receipt(new(SecretReferencePhase.ReferenceCommitted, item.Id, node.Id,
                     "Project reference committed. Surface observation is pending."));
-            });
+            }, token => RequireAccessAsync(write: true, token));
         } catch (Exception failure) when (committed is null && !KnownRejection(failure)) {
             Receipt(new(SecretReferencePhase.Unknown, item.Id, null, "The project reference write is unconfirmed. The secret identity is retained; do not repeat the write."));
             throw;
@@ -225,7 +263,9 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         if (committed is not { } accepted) {
             return;
         }
+        await RequireAccessAsync(write: false);
         var surface = await workbench.GetStructureAsync(admission.ProjectId);
+        await RequireAccessAsync(write: false);
         var found = surface.Nodes.FirstOrDefault(node => node.Id == accepted.Id && node.RecordId == accepted.RecordId);
         if (surface.ExpectedProjectAdmission != admission || found is null ||
             ProjectObjectMetadataSerializer.Parse(found.MetadataJson).SecretReference?.SecretId != State.Receipt?.SecretId) {
@@ -234,7 +274,8 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         if (!IsCurrent) {
             return;
         }
-        await observe(found);
+        await observe(found, token => RequireAccessAsync(write: false, token));
+        await RequireAccessAsync(write: false);
         State.RequiresObservation = false;
         State.Message = "The original reference was saved and observed.";
         Receipt(State.Receipt! with { Phase = SecretReferencePhase.Observed, Message = State.Message });
@@ -271,5 +312,5 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
     private void Log(Exception failure) => logger.LogWarning("Secret reference opening {OpeningId}, project {ProjectId}, lifetime {LifetimeId} ended with {FailureType}; secret {SecretId}, reference {NodeId}, phase {Phase}.",
         State.OpeningId, admission.ProjectId, admission.LifetimeId, failure.GetType().Name, State.Receipt?.SecretId, State.Receipt?.NodeId, State.Receipt?.Phase);
 
-    private static bool KnownRejection(Exception failure) => failure is ProjectWriteAdmissionRejectedException or ProjectStructureEditConflictException or ArgumentException or InvalidDataException;
+    private static bool KnownRejection(Exception failure) => failure is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException or ProjectStructureEditConflictException or ArgumentException or InvalidDataException;
 }

@@ -165,7 +165,8 @@ public sealed class ProjectStructureLocalFileActionCoordinatorTests
             FileToolsSemanticScope scope,
             FileToolsKnownFileOccurrence occurrence,
             FileToolsLocalFileAction action,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             CallCount++;
             LastAction = action;
@@ -185,7 +186,8 @@ public sealed class ProjectStructureLocalFileActionCoordinatorTests
 
         public Task<ProjectStructureLocalFileOpenResult> OpenAsync(
             ProjectStructureNode node,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             CallCount++;
             return Task.FromResult(new ProjectStructureLocalFileOpenResult(true, "Opened."));
@@ -193,7 +195,8 @@ public sealed class ProjectStructureLocalFileActionCoordinatorTests
 
         public Task<ProjectStructureLocalFileOpenResult> OpenInPreferredApplicationAsync(
             ProjectStructureNode node,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             CallCount++;
             return Task.FromResult(new ProjectStructureLocalFileOpenResult(true, "Opened."));

@@ -10,6 +10,28 @@ internal static class ProjectStructureCanvasTaskCommitPolicy
         ProjectStructureNode taskNode)
         => ProjectStructureTaskEditStatePolicy.Read(taskNode);
 
+    public static ProjectStructureNode ExpectedAfterAssignment(ProjectStructureNode original, ProjectStructureNode committed) {
+        var state = Read(original);
+        var committedRevision = Read(committed).DirectAssignmentRevision;
+        if (committedRevision == state.DirectAssignmentRevision) {
+            return original;
+        }
+        if (committedRevision != checked(state.DirectAssignmentRevision + 1)) {
+            throw new ProjectStructureEditConflictException("The Task assignment revision did not advance exactly once.");
+        }
+        var metadata = ProjectObjectMetadataSerializer.Parse(original.MetadataJson);
+        var assignment = ProjectObjectMetadataSerializer.Parse(committed.MetadataJson).WorkItem
+            ?? throw new ProjectStructureEditConflictException("The committed Task assignment metadata is missing.");
+        metadata.WorkItem ??= new() { WorkItemKind = ProjectWorkItemKind.Task };
+        metadata.WorkItem.DirectAssignmentRevision = committedRevision;
+        metadata.WorkItem.AssigneePartyDisplayName = assignment.AssigneePartyDisplayName;
+        metadata.WorkItem.ExpectedCostAmount = assignment.ExpectedCostAmount;
+        metadata.WorkItem.ExpectedCostCurrencyCode = assignment.ExpectedCostCurrencyCode;
+        metadata.WorkItem.ExpectedCostBasis = assignment.ExpectedCostBasis;
+        return original with { MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(original.ObjectType, original.ObjectSubtype,
+            ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(original.MetadataJson, metadata), original.MetadataJson, original.Notes, media: null) };
+    }
+
     public static void ValidateCurrentMetadata(
         ProjectObjectMetadataEnvelope currentMetadata,
         ProjectStructureTaskEditState expectedSnapshot)
@@ -92,7 +114,7 @@ internal static class ProjectStructureCanvasTaskCommitPolicy
             metadata);
         return request with
         {
-            MetadataJson = ProjectObjectMetadataSerializer.Serialize(metadata)
+            MetadataJson = ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(request.MetadataJson, metadata)
         };
     }
 

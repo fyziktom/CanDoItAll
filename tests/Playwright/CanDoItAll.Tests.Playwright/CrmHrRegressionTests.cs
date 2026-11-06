@@ -246,6 +246,7 @@ public sealed class CrmHrRegressionTests
         var accountProfileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crmService.GetAccountProfileAsync(accountId))!.Original,
             RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer,
             CommercialNotes = "B13 regression account proof.",
             ConstraintNotes = "No blockers.",

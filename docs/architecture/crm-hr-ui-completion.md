@@ -421,3 +421,9 @@ discovery counts and results on an isolated bundle-free copy, is in
   exactly the owner read each host issues after its commit, and the draft a save leaves behind is
   proven by `CrmHrPostDispatchEditTests`; see
   [reconciliation after a commit](ui-component-seams.md#reconciliation-after-a-commit).
+
+## Concurrent editing assignment checkpoint
+
+The current CR11 scope, native owners, typed reconciliation, shared inspection, browser evidence and 5032 verification are recorded in [Concurrent editing execution](concurrent-editing-prompt-pilot.md#cr11-assignments-and-staffing-scoped-checkpoint).
+
+The CRM boundary allowlist includes the light Editing contracts/renderers and named live-catalog/leave-guard adapters. Renderers retain the ban on EF, module implementation services and direct JavaScript runtime use; browser validity belongs to shared NativeFormInspector. The current frozen CRM lane passes374 cases. CR01, CR12 and later rollout waves remain open.

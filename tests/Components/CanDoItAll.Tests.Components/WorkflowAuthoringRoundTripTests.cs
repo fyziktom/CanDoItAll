@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using System.Text.Json;
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
@@ -20,7 +21,7 @@ public sealed class WorkflowAuthoringRoundTripTests {
         var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var original = await SaveAndReadAsync(catalog, CreateRequest());
         WorkflowDefinition? accepted = null;
-        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Definition, original)
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Authorize, (_, _) => ValueTask.CompletedTask).Add(x => x.Definition, original)
             .Add(x => x.DefinitionSaved, value => accepted = value));
         cut.WaitForElement("[data-testid='workflow-canvas-save']", TimeSpan.FromSeconds(10));
         if (editNode) {
@@ -47,11 +48,11 @@ public sealed class WorkflowAuthoringRoundTripTests {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var original = await SaveAndReadAsync(catalog, CreateRequest());
-        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Definition, original));
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Authorize, (_, _) => ValueTask.CompletedTask).Add(x => x.Definition, original));
         cut.WaitForElement("[data-testid='workflow-canvas-save']", TimeSpan.FromSeconds(10));
         await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-name']").Change("Losing local draft"));
         var document = WorkflowCanvasDefinitionMapper.ToDefinition(WorkflowCanvasDefinitionMapper.FromDefinition(original, []));
-        var competing = new WorkflowDocumentOwner(catalog, NullLogger.Instance);
+        var competing = new WorkflowDocumentOwner(catalog, NullLogger.Instance, harness.Context.Services.GetRequiredService<WorkflowChanges>(), (_, _) => ValueTask.CompletedTask);
         var receipt = Assert.IsType<WorkflowDefinitionSaveOutcome.Accepted>(await competing.Operations.Save(
             new(original.Id, original.VersionId, "Winner", original.Description, original.Status, document.Graph, document.RuntimePolicy) {
                 InputParameters = original.InputParameters, ExternalNamespace = original.ExternalNamespace, ExternalKey = original.ExternalKey
@@ -69,7 +70,7 @@ public sealed class WorkflowAuthoringRoundTripTests {
         var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var original = await SaveAndReadAsync(catalog, CreateRequest());
         var callbacks = 0;
-        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Definition, original)
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Authorize, (_, _) => ValueTask.CompletedTask).Add(x => x.Definition, original)
             .Add(x => x.DefinitionSaved, _ => {
                 callbacks++;
                 throw new InvalidOperationException("private post-commit failure");
@@ -127,7 +128,7 @@ public sealed class WorkflowAuthoringRoundTripTests {
 
     private static async Task<WorkflowDefinition> EditTitleAsync(ComponentTestHarness harness, WorkflowDefinition original) {
         WorkflowDefinition? accepted = null;
-        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Definition, original)
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Authorize, (_, _) => ValueTask.CompletedTask).Add(x => x.Definition, original)
             .Add(x => x.DefinitionSaved, value => accepted = value));
         cut.WaitForAssertion(() => Assert.Equal(original.Name,
             cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value")), TimeSpan.FromSeconds(10));

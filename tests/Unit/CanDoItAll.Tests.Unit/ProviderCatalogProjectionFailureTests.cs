@@ -7,6 +7,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
@@ -101,7 +102,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                         Microsoft.Extensions.Options.Options.Create(new ProviderInitializationOptions())),
                     [],
                     [observer],
-                    logger);
+                    logger, dbContextFactory.Witness);
             var model = new AgentFrameworkProviderProfileEditorModel
             {
                 Id = providerId,
@@ -637,7 +638,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                 [],
                 [new RecordingCommitObserver()],
                 new RecordingLogger<
-                    DatabaseProviderProfileRegistry>());
+                    DatabaseProviderProfileRegistry>(), dbContextFactory.Witness);
         var providerId = Guid.NewGuid();
         var model = new AgentFrameworkProviderProfileEditorModel
         {
@@ -740,7 +741,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             [],
             [new RecordingCommitObserver()],
             new RecordingLogger<
-                DatabaseProviderProfileRegistry>());
+                DatabaseProviderProfileRegistry>(), dbContextFactory.Witness);
         return new RegistryFixture(registry, dbContextFactory);
     }
 
@@ -785,9 +786,11 @@ public sealed class ProviderCatalogProjectionFailureTests
                 .UseInMemoryDatabase(databaseName, databaseRoot).Options;
             ProvidersFactory = new OwnedDbContextFactory<ProvidersDbContext>(() => new(ProviderOptions));
             SecurityFactory = new OwnedDbContextFactory<SecurityDbContext>(() => new(securityOptions));
-            Transactions = CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+            var profile = new ResolvedDatabaseProfile(
                 new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.InMemory, SourceKind = DatabaseProfileSourceKind.InMemory },
-                DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+                DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+            Transactions = CoordinatedDatabaseTransaction.ForProfile(profile);
+            Witness = new(new EphemeralDataProtectionProvider(), new TestCanonicalDatabase(profile));
             SecretReferences = new(SecurityFactory, securityOptions, Transactions);
         }
 
@@ -796,6 +799,7 @@ public sealed class ProviderCatalogProjectionFailureTests
         public IDbContextFactory<SecurityDbContext> SecurityFactory { get; }
         public CoordinatedDatabaseTransaction Transactions { get; }
         public SecretReferenceQuery SecretReferences { get; }
+        public ProviderMutationWitness Witness { get; }
 
         public AppDbContext CreateDbContext() => new(options);
 
@@ -803,6 +807,11 @@ public sealed class ProviderCatalogProjectionFailureTests
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());
         }
+    }
+
+    private sealed class TestCanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = profile;
+        public long Generation => 0;
     }
 
     private sealed class OwnedDbContextFactory<TContext>(Func<TContext> create) : IDbContextFactory<TContext>

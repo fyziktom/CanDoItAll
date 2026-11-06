@@ -1407,6 +1407,8 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
 
         public int SaveCapabilityCallCount { get; private set; }
         public CuratorOwnerAcknowledgementFault? AcknowledgementFault { get; set; }
+        public bool FailCatalogAfterPrimary { get; set; }
+        public bool FailDirectoryAfterPrimary { get; set; }
         public bool WriteCompleted { get; private set; }
         public void ResetAcknowledgementState() => WriteCompleted = false;
 
@@ -1489,6 +1491,11 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
                 .Append(saved)
                 .ToArray();
             WriteCompleted = true;
+            if (FailCatalogAfterPrimary) {
+                var accepted = CapabilityEditorModel.FromDefinition(saved);
+                accepted.ExpectedFingerprint = CapabilityEditorConcurrency.ComputeFingerprint(accepted);
+                throw new AgentCatalogCommittedException<CapabilityEditorModel>(accepted, new IOException("Private observer failure."));
+            }
             if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeReceipt) {
                 throw new IOException("The owner acknowledgement was lost.");
             }
@@ -1531,6 +1538,12 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
             };
             Agents = Agents.Select(agent => agent.Id == updated.Id ? updated : agent).ToArray();
             WriteCompleted = true;
+            if (FailDirectoryAfterPrimary) {
+                throw new AgentDirectoryProjectionSynchronizationException(updated.Id, new IOException("Private directory failure."), acceptedDefinition: updated);
+            }
+            if (FailCatalogAfterPrimary) {
+                throw new AgentCatalogCommittedException<AgentDefinition>(updated, new IOException("Private observer failure."));
+            }
             if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeReceipt) {
                 throw new IOException("The owner acknowledgement was lost.");
             }

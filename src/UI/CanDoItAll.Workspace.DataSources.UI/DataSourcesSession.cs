@@ -194,6 +194,7 @@ public sealed class DataSourcesSession : IDisposable {
         if (revision == editorRevision && ReferenceEquals(draft, Draft)) {
             if (result.Outcome is DataSourceOutcome.Confirmed or DataSourceOutcome.Partial && result.ProfileId != Guid.Empty) {
                 Draft.Id = result.ProfileId;
+                Draft.ExpectedConfigurationRevision = result.AcceptedConfigurationRevision;
                 ChangeSelection(result.ProfileId, DataSourceSelectionCause.Owner);
             }
             Message = result.Message;
@@ -210,7 +211,8 @@ public sealed class DataSourcesSession : IDisposable {
             return;
         }
         var revision = editorRevision;
-        var result = await Operations.RunAsync(context, action, id, null, () => owner.ExecuteAsync(new(context, id, action)));
+        var command = new DataSourceCommand(context, id, action) { ExpectedConfigurationRevision = Draft.ExpectedConfigurationRevision };
+        var result = await Operations.RunAsync(context, action, id, null, () => owner.ExecuteAsync(command));
         if (result is null || disposed) {
             return;
         }

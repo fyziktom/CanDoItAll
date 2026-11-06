@@ -5,7 +5,7 @@ namespace CanDoItAll.TestLab.UI;
 
 public enum TestLabSection { Overview, Cases, Evidence, Runs }
 public enum TestLabReadState { NotLoaded, Loading, Ready, Empty, Missing, Unavailable, Stale }
-public enum TestLabSaveState { Ready, Pending, Refused, Saved, SavedWithWarning, Unknown }
+public enum TestLabSaveState { Ready, Pending, Refused, Saved, SavedWithWarning, Unknown, Conflict }
 
 public sealed record TestLabProjectOption(Guid Id, string Name, ProjectWriteAdmission Admission);
 public sealed record TestLabPartyOption(Guid PartyId, string DisplayName);
@@ -20,11 +20,14 @@ public interface ITestLabWorkspaceView {
     TestLabWorkspaceState State { get; }
     Task NewAsync();
     Task SelectAsync(Guid id);
+    Task MovePlanPageAsync(bool next);
     void SelectSection(TestLabSection section) => State.Section = section;
     void ApplyFilter(TestLabPlanFilter filter) => State.Filter = filter;
     Task ChangeProjectAsync(TestLabDraft origin, Guid? projectId, long? targetVersion = null);
     Task ChangePartyAsync(TestLabDraft origin, Guid? partyId, long? targetVersion = null);
     Task SaveAsync(TestLabDraft origin, long? targetVersion = null);
+    Task CompareChangesAsync(TestLabDraft origin);
+    Task ApplyComparisonAsync(TestLabDraft origin, TestLabPlanComparison comparison);
     Task RetryAsync();
 }
 
@@ -32,6 +35,8 @@ public sealed class TestLabWorkspaceState {
     public TestLabDraft? Draft { get; set; }
     public TestLabSection Section { get; set; }
     public IReadOnlyList<TestPlanSummary> Plans { get; set; } = [];
+    public int PlanOffset { get; set; }
+    public bool HasMorePlans { get; set; }
     public IReadOnlyList<TestLabProjectOption> Projects { get; set; } = [];
     public IReadOnlyList<TestLabPartyOption> Parties { get; set; } = [];
     public TestLabReadState PlansRead { get; set; }

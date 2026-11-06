@@ -103,7 +103,7 @@ public sealed class WorkflowScenario : IDisposable {
     public async Task<WorkflowPromptBindingOutcome> BindAsync(WorkflowPromptBindingRequest request, CancellationToken owner) {
         BindingCount++;
         await HoldAsync();
-        return Mode == WorkflowScenarioMode.Unknown ? new WorkflowPromptBindingOutcome.Unknown()
+        return Mode == WorkflowScenarioMode.Unknown ? new WorkflowPromptBindingOutcome.Unknown(WorkflowComponentId.New())
             : new WorkflowPromptBindingOutcome.Accepted(Component with { Id = WorkflowComponentId.New(),
                 Name = request.Selection.Title, PromptArtifactId = request.Selection.ArtifactId, PromptVersionId = request.Selection.VersionId,
                 ProviderProfileId = request.Provider.ProviderProfileId, Model = request.Model });

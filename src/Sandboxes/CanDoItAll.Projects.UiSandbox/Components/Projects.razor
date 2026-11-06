@@ -61,7 +61,7 @@
                   PreviousStep="() => step = Math.Max(0, step - 1)" NextStep="() => step = Math.Min(4, step + 1)"
                   Save="submitted => SaveAsync(submitted, false)" SaveAndOpenStructure="submitted => SaveAsync(submitted, true)" Delete="Delete"
                   ReadCurrentDefinition="ReadCurrentDefinitionAsync" DiscardAndReloadDefinition="target => RecoverDefinition(target, false)"
-                  BeginDefinitionReconciliation="target => RecoverDefinition(target, true)"
+                  BeginDefinitionReconciliation="BeginComparisonAsync" ApplyDefinitionReconciliation="ApplyComparisonAsync"
                   OpenProjectDashboard='() => Handoff(draft.Model.Id, "Dashboard")'
                   OpenProcesses='() => Handoff(draft.Model.Id, "Processes")'
                   OpenStructure='id => Handoff(id, "Structure")' OpenCalendar='id => Handoff(id, "Calendar")' />
@@ -295,21 +295,34 @@
 
     private async Task ReadCurrentDefinitionAsync(ProjectEditorDraft target) {
         if (!open || !ReferenceEquals(target, draft) || target.Model.Id is not { } id ||
-            target.Conflict is null or { ReadState: ProjectEditorConflictReadState.Loading }) {
+            !target.CanCompare || target.Definition.Reading) {
             return;
         }
         long current = ++acquisition;
         var owner = store;
-        target.BeginConflictRead();
+        target.Definition.Reading = true;
+        if (target.Conflict is not null) {
+            target.BeginConflictRead();
+        }
         try {
             var saved = await owner.ReadDefinitionAsync(id);
             if (current == acquisition && open && ReferenceEquals(target, draft) && ReferenceEquals(owner, store)) {
-                target.CompleteConflictRead(saved);
+                if (target.Conflict is not null) {
+                    target.CompleteConflictRead(saved);
+                } else {
+                    target.InspectCurrent(saved);
+                }
             }
         } catch (InvalidOperationException exception) {
             if (current == acquisition && open && ReferenceEquals(target, draft)) {
-                target.FailConflictRead(exception.Message);
+                if (target.Conflict is not null) {
+                    target.FailConflictRead(exception.Message);
+                }
+                target.Message = exception.Message;
+                target.IsError = true;
             }
+        } finally {
+            target.Definition.Reading = false;
         }
     }
 
@@ -321,6 +334,39 @@
         draft = target.StartFromCurrent(preservePrevious);
         step = 0;
         editing = true;
+    }
+
+    private async Task BeginComparisonAsync(ProjectEditorDraft target) {
+        if (!open || !ReferenceEquals(target, draft) || !target.CanCompare) {
+            return;
+        }
+        if (!target.HasCurrentDefinition || target.Definition.CurrentIsStale || target.Definition.Review is not null) {
+            await ReadCurrentDefinitionAsync(target);
+        }
+        if (open && ReferenceEquals(target, draft) && target.HasCurrentDefinition && !target.Definition.CurrentIsStale) {
+            target.BeginMerge();
+            target.Message = null;
+            target.IsError = false;
+        }
+    }
+
+    private async Task ApplyComparisonAsync(ProjectEditorDraft target) {
+        if (!open || !ReferenceEquals(target, draft) || !target.CanApplyMerge || target.Model.Id is not { } id) {
+            return;
+        }
+        var review = target.Definition.Review!;
+        var hint = target.Definition.HintRevision;
+        var current = await store.ReadDefinitionAsync(id);
+        if (!open || !ReferenceEquals(target, draft) || !ReferenceEquals(review, target.Definition.Review)) {
+            return;
+        }
+        if (current.Expectation != review.Current.Expectation) {
+            target.InspectCurrent(current, hint);
+            target.BeginMerge();
+            target.Message = "The synthetic definition changed again. Review the new comparison; the editable draft is retained.";
+            return;
+        }
+        target.ApplyMerge();
     }
 
     private void RetryCleanup(ProjectCleanupTarget target) {

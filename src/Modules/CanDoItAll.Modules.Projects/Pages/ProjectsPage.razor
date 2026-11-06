@@ -13,13 +13,19 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.Infrastructure.ControlPlane
+@using CanDoItAll.Editing
+@using CanDoItAll.Infrastructure.Editing
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
 @inject IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject ILogger<ProjectsPage> Logger
-@implements IDisposable
+@implements IAsyncDisposable
+@inject ProjectChanges ProjectChanges
+@inject EditingChangeFeed EditingFeed
+@inject IEditingUiAccess EditingAccess
+@inject ILogger<EditingObservation> ObservationLogger
 @using Microsoft.Extensions.Logging
 @inject IProjectPackageService ProjectPackageService
 @inject IDatabaseProfileService DatabaseProfileService
@@ -28,6 +34,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
 <PageTitle>Projects</PageTitle>
 
+@if (catalogReady) {
 <PageScaffold MaxWidthClass="max-w-full" data-testid="projects-workspace" data-interactive="@interactive.ToString().ToLowerInvariant()">
     <Header>
         <div class="pr-20 sm:pr-24">
@@ -116,7 +123,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                                   ContextAccessState="@AgentChatAccessState"
                                   RefreshRequested="HandleAgentChatRefreshRequestedAsync" />
 
-<ProjectModalHost @key="draft" IsOpen="showProjectModal"
+<ProjectModalHost @key="draft" @ref="projectModal" IsOpen="showProjectModal"
+                  ObserveNavigation="catalogReady" IsSameEditorRoute="IsSameProjectEditorRoute"
                   IsEditorMode="@(modalMode == ProjectsModalMode.Editor)"
                   Draft="draft"
                   StarterObjectKinds="starterObjectKinds"
@@ -143,6 +151,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                   ReadCurrentDefinition="ReadCurrentDefinitionAsync"
                   DiscardAndReloadDefinition="DiscardAndReloadDefinition"
                   BeginDefinitionReconciliation="BeginDefinitionReconciliation"
+                  ApplyDefinitionReconciliation="ApplyDefinitionReconciliationAsync"
+                  ReadingCurrent="@(ReferenceEquals(comparisons?.Reading, draft))"
                   PendingRecovery="PendingEditorView"
                   PendingAction="HandlePendingActionAsync"
                   Delete="DeleteAsync"
@@ -168,6 +178,11 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                                 CurrentScope="@(pendingReady && pendingContext is not null ? ProjectNativeDefinitionOperations.Scope(pendingContext) : null)"
                                 Selected="selectedReference" Select="SelectReference" Discard="DiscardReferenceAsync"
                                 CancelSelection="() => selectedReference = null" Refresh="RefreshReferencesAsync" Next="NextReferencesAsync" Close="CloseReferences" />
+} else if (catalog?.IsRetired == true) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="projects-access-unavailable">
+        <TextBlock Value="Current Project access is required. Reopen this workspace with current access." />
+    </Alert>
+}
 
 @code {
     private static readonly string[] wizardSteps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
@@ -258,6 +273,12 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private long editorIntent;
     private bool disposed;
     private bool interactive;
+    private ProjectCatalogObservation? catalog;
+    private bool catalogReady;
+    private ProjectDefinitionComparisonCoordinator comparisons = default!;
+    private readonly Queue<EditingChange> recentProjectChanges = [];
+    private ProjectModalHost? projectModal;
+    private bool recentProjectGap;
     private Guid? failedEditorId;
     private string? portfolioError;
     private string? editorError;
@@ -374,10 +395,49 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             ? "Save the first project to populate the workspace."
             : projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().Name;
 
-    protected override void OnInitialized()
-        => url = new(Navigation, ProjectsUrlCodec.Instance, History, typeof(ProjectsPage));
+    protected override async Task OnInitializedAsync() {
+        url = new(Navigation, ProjectsUrlCodec.Instance, History, typeof(ProjectsPage));
+        catalog = new(EditingFeed, EditingAccess, ProjectChanges.Scope, ObservationLogger);
+        await catalog.StartAsync(RefreshPortfolioCoreAsync, RetireProjectAccess, work => InvokeAsync(work), ObserveProjectChanges);
+        catalogReady = !disposed && !catalog.IsRetired;
+        if (catalogReady) {
+            comparisons = new(NativeDefinitions, catalog.AuthorizeReadAsync, target => !disposed && showProjectModal && ReferenceEquals(draft, target), Logger);
+        }
+    }
+
+    private void ObserveProjectChanges(EditingChangeBatch batch) {
+        if (editorOperations.Values.Any(session => session.Submitted.Model.Id is null && !session.Pending.IsReconciled && !session.IsEvidenceDiscarded)) {
+            recentProjectGap |= batch.RequiresResync;
+            foreach (var change in batch.Changes) {
+                if (recentProjectChanges.Count == EditingChangeFeed.SubscriptionCapacity) {
+                    recentProjectChanges.Dequeue();
+                    recentProjectGap = true;
+                }
+                recentProjectChanges.Enqueue(change);
+            }
+        }
+        if (showProjectModal) {
+            var revision = draft.Definition.HintRevision;
+            draft.Definition.Observe(batch);
+            if (revision != draft.Definition.HintRevision) {
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void RetireProjectAccess() {
+        catalogReady = false;
+        portfolioAccessState = AgentChatContextAccessState.Failed;
+        readLifetime.Cancel();
+        if (!disposed) {
+            StateHasChanged();
+        }
+    }
 
     protected override Task OnParametersSetAsync() {
+        if (!catalogReady) {
+            return Task.CompletedTask;
+        }
         var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
         if (!change.IsChanged) {
             return Task.CompletedTask;
@@ -449,19 +509,25 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private Task RetryReadsAsync() => Task.WhenAll(RefreshPortfolioAsync(), RefreshPackageTargetsAsync(),
         failedEditorId is { } id ? AcquireEditorAsync(id, RouteProjectId == id) : Task.CompletedTask);
 
-    private async Task RefreshPortfolioAsync() {
+    private Task RefreshPortfolioAsync() => catalog?.RefreshAsync() ?? Task.CompletedTask;
+
+    private async Task RefreshPortfolioCoreAsync() {
         var stamp = portfolioLoads.Begin(new(ProjectsPageLoadKind.CompletionRefresh, null));
         portfolioAccessState = AgentChatContextAccessState.Loading;
         try {
             var state = await LoadPortfolioStateAsync();
-            if (!disposed) {
+            await catalog!.AuthorizeReadAsync(readLifetime.Token);
+            if (!disposed && catalogReady) {
                 portfolioLoads.TryCommit(stamp, RouteProjectId, () => {
                     ApplyPortfolioState(state);
                     portfolioError = null;
                     portfolioAccessState = AgentChatContextAccessState.Ready;
                 });
+                StateHasChanged();
             }
         } catch (OperationCanceledException) when (readLifetime.IsCancellationRequested) {
+        } catch (UnauthorizedAccessException) {
+            throw;
         } catch (Exception exception) {
             Logger.LogError(exception, "Projects portfolio read failed; acquired drafts and acknowledged mutations are retained.");
             if (!disposed) {
@@ -469,6 +535,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                     portfolioError = "Unable to refresh the portfolio. Acquired edits and completed operations are retained.";
                     portfolioAccessState = AgentChatContextAccessState.Failed;
                 });
+                StateHasChanged();
             }
         }
     }
@@ -595,6 +662,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private async Task<ProjectsPortfolioState> LoadPortfolioStateAsync()
     {
+        await catalog!.AuthorizeReadAsync(readLifetime.Token);
         var projectSummariesTask = ProjectsService.ListAsync(readLifetime.Token);
         var hierarchyLinksTask = ProjectsService.ListHierarchyLinksAsync(readLifetime.Token);
         var deletionCleanupsTask = ProjectsService.ListPendingDeletionCleanupsAsync(readLifetime.Token);
@@ -625,7 +693,9 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private async Task<IReadOnlyList<ProjectPackageTargetOption>>
         LoadProjectPackageTargetProfilesAsync()
     {
+        await catalog!.AuthorizeReadAsync(readLifetime.Token);
         var profiles = await DatabaseProfileService.ListAsync(readLifetime.Token);
+        await catalog.AuthorizeReadAsync(readLifetime.Token);
         return profiles
             .Where(profile =>
                 !profile.IsActive &&
@@ -662,6 +732,9 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     // A new project is a draft and stays out of the URL until its first save.
     private async Task OpenNewProjectAsync() {
+        if (!await MayReplaceEditorAsync()) {
+            return;
+        }
         if (url.State.HasOverlay) {
             var previous = url.State;
             url.Navigate(previous.WithoutOverlay(), UrlHistoryMode.Replace);
@@ -670,16 +743,45 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         await AcquireEditorAsync(null, fromRoute: false);
     }
 
-    private Task OpenProjectPreviewAsync(Guid id) {
+    private async Task OpenProjectPreviewAsync(Guid id) {
+        if (showProjectModal && editor.Id != id && !await MayReplaceEditorAsync()) {
+            return;
+        }
         var previous = url.State;
         NavigateOverlay(previous.WithoutOverlay() with { ProjectId = id });
-        return ApplyOverlaysAsync(previous, url.State, initial: false);
+        await ApplyOverlaysAsync(previous, url.State, initial: false);
+    }
+
+    private async Task<bool> MayReplaceEditorAsync() {
+        if (!showProjectModal) {
+            return true;
+        }
+        var original = draft;
+        return projectModal is not null && await projectModal.RequestLeaveAsync() &&
+            ReferenceEquals(original, draft) && showProjectModal;
+    }
+
+    private bool IsSameProjectEditorRoute(string location) {
+        if (!showProjectModal) {
+            return true;
+        }
+        var absolute = Navigation.ToAbsoluteUri(location);
+        if (!new Uri(Navigation.BaseUri).IsBaseOf(absolute)) {
+            return false;
+        }
+        var path = Navigation.ToBaseRelativePath(absolute.AbsoluteUri).Split('?', '#')[0].TrimEnd('/');
+        if (!string.Equals(path, ProjectsUrlCodec.Path.TrimStart('/'), StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+        var next = ProjectsUrlCodec.Instance.Read(absolute.AbsoluteUri);
+        return next.ProjectId == editor.Id && next.HierarchyId is null && next.FilesId is null;
     }
 
     private async Task AcquireEditorAsync(Guid? id, bool fromRoute) {
         if (id.HasValue && showProjectModal && editor.Id == id && failedEditorId is null) {
             return;
         }
+        comparisons?.Retire();
         RetireLifecycleEditor(draft);
         if (editorOperations.TryGetValue(draft, out var previousOperation)) {
             previousOperation.Dispose();
@@ -692,7 +794,9 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         showProjectModal = false;
         editorError = null;
         try {
+            await catalog!.AuthorizeReadAsync(read.Token);
             var acquired = await NativeDefinitions.AcquireEditorAsync(id, read.Token);
+            await catalog.AuthorizeReadAsync(read.Token);
             var loaded = acquired.Model;
             if (id.HasValue && loaded.Id != id) {
                 throw new InvalidOperationException($"Project '{id:D}' is unavailable.");
@@ -701,7 +805,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                 return;
             }
             TryCompleteProjectLoad(stamp, () => {
-                draft = new(loaded, acquired.Scope);
+                draft = new(loaded, acquired.Scope, acquired.Original);
                 wizardStep = 0;
                 modalMode = id.HasValue ? ProjectsModalMode.Overview : ProjectsModalMode.Editor;
                 if (fromRoute) {
@@ -786,7 +890,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             var result = await ProjectPackageService.ExportAllAsync(new ProjectPackageExportRequest
             {
                 PackagePath = string.IsNullOrWhiteSpace(submittedPath) ? null : submittedPath
-            });
+            }, requireCurrentAccess: catalog!.AuthorizeReadAsync);
 
             if (result.IsFailure)
             {
@@ -832,7 +936,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         projectPackageMessage = null;
         projectPackageMessageIsError = false;
         try {
-            var result = await ProjectPackageService.ImportAllAsync(request);
+            var result = await ProjectPackageService.ImportAllAsync(request, requireCurrentAccess: catalog!.AuthorizeWriteAsync);
             projectPackageMessage = result.IsFailure
                 ? string.Join(" ", result.Errors.Select(error => error.Message))
                 : $"Imported {result.Value!.RecordsImported} project record(s) from {result.Value.Manifest.PackageId:N} into {request.TargetProfileId:D}.";
@@ -1016,43 +1120,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private bool IsActiveEditor(ProjectEditorDraft target, long intent)
         => !disposed && showProjectModal && ReferenceEquals(draft, target) && editorIntent == intent;
 
-    private async Task ReadCurrentDefinitionAsync(ProjectEditorDraft target) {
-        if (!showProjectModal || !ReferenceEquals(draft, target) || target.Model.Id is not { } projectId ||
-            target.Conflict is null or { ReadState: ProjectEditorConflictReadState.Loading }) {
-            return;
-        }
-        long intent = ++editorIntent;
-        editorRead?.Cancel();
-        using var read = CancellationTokenSource.CreateLinkedTokenSource(readLifetime.Token);
-        editorRead = read;
-        target.BeginConflictRead();
-        try {
-            var result = await NativeDefinitions.ReadCurrentAsync(projectId,
-                target.Scope ?? throw new InvalidOperationException("The editor has no original dataset binding."), read.Token);
-            if (!IsActiveEditor(target, intent) || read.IsCancellationRequested) {
-                return;
-            }
-            if (result.IsFailure) {
-                target.FailConflictRead(string.Join(" ", result.Errors.Select(error => error.Message)));
-                return;
-            }
-            target.CompleteConflictRead(result.Value!);
-        } catch (OperationCanceledException) when (read.IsCancellationRequested) {
-        } catch (Exception exception) {
-            Logger.LogError(exception, "Current project definition comparison failed for {ProjectId}.", projectId);
-            if (IsActiveEditor(target, intent)) {
-                target.FailConflictRead("Unable to read the current definition. Your draft is preserved; retry the comparison read.");
-            }
-        } finally {
-            if (ReferenceEquals(editorRead, read)) {
-                editorRead = null;
-            }
-        }
-    }
+    private Task ReadCurrentDefinitionAsync(ProjectEditorDraft target) => comparisons.ReadAsync(target, readLifetime.Token);
 
     private void DiscardAndReloadDefinition(ProjectEditorDraft target) => StartCurrentDefinitionDraft(target, preservePrevious: false);
 
-    private void BeginDefinitionReconciliation(ProjectEditorDraft target) => StartCurrentDefinitionDraft(target, preservePrevious: true);
+    private Task BeginDefinitionReconciliation(ProjectEditorDraft target) => comparisons.BeginAsync(target, readLifetime.Token);
+
+    private Task ApplyDefinitionReconciliationAsync(ProjectEditorDraft target) => comparisons.ApplyAsync(target, readLifetime.Token);
 
     private void StartCurrentDefinitionDraft(ProjectEditorDraft target, bool preservePrevious) {
         if (!showProjectModal || !ReferenceEquals(draft, target) ||
@@ -1114,6 +1188,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     }
 
     private async Task RetryProjectDeletionCleanupAsync(ProjectCleanupTarget target) {
+        try {
+            await catalog!.AuthorizeWriteAsync(readLifetime.Token);
+        } catch (UnauthorizedAccessException) {
+            projectDeletionNotice = "Current Project write access is required before requesting cleanup. No cleanup retry was started.";
+            projectDeletionNoticeIsError = true;
+            return;
+        }
         if (!deletionCleanups.CanRetry(target) || !busyCleanupTargets.Add(target)) {
             return;
         }
@@ -1166,11 +1247,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private string ResolveProjectName(Guid projectId)
         => projectSummaries.FirstOrDefault(project => project.Id == projectId)?.Name ?? "Selected project";
 
-    private Task OpenProjectFiles(Guid projectId)
-    {
+    private async Task OpenProjectFiles(Guid projectId) {
+        if (!await MayReplaceEditorAsync()) {
+            return;
+        }
         var previous = url.State;
         NavigateOverlay(previous.WithoutOverlay() with { FilesId = projectId });
-        return ApplyOverlaysAsync(previous, url.State, initial: false);
+        await ApplyOverlaysAsync(previous, url.State, initial: false);
     }
 
     private async Task LoadProjectFilesAsync(Guid projectId)
@@ -1181,8 +1264,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         projectFilesDialogProject = null;
         try
         {
+            await catalog!.AuthorizeReadAsync(readLifetime.Token);
             var project = projectSummaries.FirstOrDefault(item => item.Id == projectId)
                 ?? await ProjectsService.GetSummaryAsync(projectId, readLifetime.Token);
+            await catalog.AuthorizeReadAsync(readLifetime.Token);
 
             if (project is null)
             {
@@ -1212,11 +1297,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         }
     }
 
-    private Task OpenHierarchyModalAsync(Guid projectId)
-    {
+    private async Task OpenHierarchyModalAsync(Guid projectId) {
+        if (!await MayReplaceEditorAsync()) {
+            return;
+        }
         var previous = url.State;
         NavigateOverlay(previous.WithoutOverlay() with { HierarchyId = projectId });
-        return ApplyOverlaysAsync(previous, url.State, initial: false);
+        await ApplyOverlaysAsync(previous, url.State, initial: false);
     }
 
     private async Task LoadHierarchyAsync(Guid projectId)
@@ -1226,6 +1313,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             projectId));
         try
         {
+            await catalog!.AuthorizeReadAsync(readLifetime.Token);
             var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
             var summaryTask = project is null ? ProjectsService.GetSummaryAsync(projectId, readLifetime.Token) : null;
             var hierarchyTask = ProjectsService.GetHierarchyAsync(projectId, readLifetime.Token);
@@ -1245,6 +1333,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             }
 
             var hierarchy = await hierarchyTask;
+            await catalog.AuthorizeReadAsync(readLifetime.Token);
             var selectedProject = project;
             hierarchyLoads.TryCommit(loadStamp, RouteProjectId, () =>
             {
@@ -1316,7 +1405,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     };
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if (firstRender) {
+        if (catalogReady && !interactive) {
             interactive = true;
             await RefreshPendingSavesAsync();
             await RefreshLifecycleAsync();
@@ -1327,7 +1416,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         }
     }
 
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
+            return;
+        }
         disposed = true;
         lifecycleSelection++;
         foreach (var operation in lifecycleOperations.Values) {
@@ -1345,6 +1437,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         hierarchyLoads.Invalidate();
         editorRead?.Cancel();
         readLifetime.Cancel();
+        comparisons?.Dispose();
+        if (catalog is not null) {
+            await catalog.DisposeAsync();
+        }
     }
 
     private sealed record ProjectsPortfolioState(

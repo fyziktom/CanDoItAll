@@ -18,11 +18,12 @@ public sealed class ProjectStructureTaskCreationService(
     private const int MaximumTaskTitleLength = 200;
     private const string TaskSubtype = "task";
 
-    public Task<ProjectStructureTaskCreateResult> CreateAsync(
+    public async Task<ProjectStructureTaskCreateResult> CreateAsync(
         Guid projectId,
         ProjectStructureTaskCreateRequest request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(agent);
@@ -31,12 +32,15 @@ public sealed class ProjectStructureTaskCreationService(
             throw new InvalidOperationException("Task creation requires the captured native mutation context.");
         }
         var normalizedRequest = ValidateAndNormalize(projectId, request);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
 
-        return rowOrderService.RunProjectMutationAsync(
+        return await rowOrderService.RunProjectMutationAsync(
             projectId,
             agent,
             "create-gantt-task",
-            innerCancellationToken => CreateCoreAsync(projectId, normalizedRequest, agent, innerCancellationToken),
+            innerCancellationToken => CreateCoreAsync(projectId, normalizedRequest, agent, innerCancellationToken, authorizeCommit),
             cancellationToken);
     }
 
@@ -44,7 +48,8 @@ public sealed class ProjectStructureTaskCreationService(
         Guid projectId,
         ProjectStructureTaskCreateRequest request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit)
     {
         var pricing = await estimateRefreshService.RefreshAsync(
             projectId,
@@ -53,7 +58,10 @@ public sealed class ProjectStructureTaskCreationService(
             request.Estimate ?? ProjectTaskEstimate.Empty(),
             ProjectStructureTaskMissingResourcePricingPolicy.PreserveManualEstimate,
             cancellationToken);
-        var backlog = await EnsureMainBacklogAsync(projectId, agent, cancellationToken);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
+        var backlog = await EnsureMainBacklogAsync(projectId, agent, cancellationToken, authorizeCommit);
         var metadata = new ProjectObjectMetadataEnvelope
         {
             WorkItem = new ProjectWorkItemMetadata
@@ -84,7 +92,7 @@ public sealed class ProjectStructureTaskCreationService(
                     1,
                     checked((int)Math.Round(request.Duration.TotalSeconds, MidpointRounding.AwayFromZero)))),
             agent,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
 
         ProjectStructureTaskResourceAttachment? attachment = null;
         if (request.Resource is not null)
@@ -95,8 +103,9 @@ public sealed class ProjectStructureTaskCreationService(
                     projectId,
                     task.Id,
                     request.Resource,
+                    workflowInputSettings: null,
                     agent,
-                    cancellationToken);
+                    cancellationToken, authorizeCommit);
             }
             catch (OperationCanceledException failure) when (cancellationToken.IsCancellationRequested)
             {
@@ -123,7 +132,7 @@ public sealed class ProjectStructureTaskCreationService(
                 projectId,
                 task.Id,
                 request.AfterTaskNodeId,
-                cancellationToken, agent);
+                cancellationToken, agent, authorizeCommit);
         }
         catch (OperationCanceledException failure) when (cancellationToken.IsCancellationRequested)
         {
@@ -152,7 +161,8 @@ public sealed class ProjectStructureTaskCreationService(
     private async Task<ProjectStructureNodeSummary> EnsureMainBacklogAsync(
         Guid projectId,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit)
     {
         var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
         var rootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);
@@ -181,7 +191,7 @@ public sealed class ProjectStructureTaskCreationService(
                     ProjectBlock = new ProjectBlockMetadata()
                 })),
             agent,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     private async Task<ProjectStructureTaskCreationException> CompensateAsync(

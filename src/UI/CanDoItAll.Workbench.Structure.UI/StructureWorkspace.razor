@@ -18,9 +18,9 @@
         <CanvasWorkbenchStage Eyebrow="" Title="" Description=""><Canvas><SkeletonStateOverlay Snapshot="@shell.Loading" /></Canvas></CanvasWorkbenchStage>
     } else {
         <Stack Gap="1.5rem" Class="project-structure-page__stack">
-            <Tabs SelectedIndex="SelectedView" SelectedIndexChanged="@(value => Dispatch.InvokeAsync(new StructureViewIntent(shell.ContextId, value)))"
+            <Tabs @key="shell.ContextId" SelectedIndex="SelectedView" SelectedIndexChanged="@(value => Dispatch.InvokeAsync(new StructureViewIntent(shell.ContextId, value)))"
                   FillHeight="@(SelectedView == 1)" PanelOverflowMode="@(SelectedView == 1 ? TabsPanelOverflowMode.Hidden : TabsPanelOverflowMode.Visible)"
-                  AriaLabel="Project structure views" Variant="TabsVariant.WorkspaceSecondary" RenderMode="TabRenderMode.Server">
+                  AriaLabel="Project structure views" Variant="TabsVariant.WorkspaceSecondary" RenderMode="TabRenderMode.Client">
                 <TabsItem Text="Canvas" Icon="account_tree">
         @{
             var view = Presentation;
@@ -38,6 +38,8 @@
                                  CreateActionInvoked="@(value => Dispatch.InvokeAsync(new StructureCreateIntent(view.ContextId, value)))"
                                  ComposerOpened="@(value => Dispatch.InvokeAsync(new StructureComposerOpenedIntent(view.ContextId, value)))"
                                  ComposerClosed="@(value => Dispatch.InvokeAsync(new StructureComposerClosedIntent(view.ContextId, value)))"
+                                 ComposerComparisonRequested="@(value => Dispatch.InvokeAsync(new StructureComposerComparisonIntent(view.ContextId, value)))"
+                                 ConfirmComposerClose="ConfirmComposerClose"
                                  NodeEdited="@(value => Dispatch.InvokeAsync(new StructureNoteEditIntent(view.ContextId, value)))"
                                  NodeOpened="@(value => Dispatch.InvokeAsync(new StructureOpenIntent(view.ContextId, value)))"
                                  StateChanged="@(value => Dispatch.InvokeAsync(new StructureStateIntent(view.ContextId, value)))"
@@ -75,6 +77,15 @@
                         @ToolbarSupplement
                     </ToolbarLeftContent>
                     <OverlayContent>
+                        @if (!string.IsNullOrWhiteSpace(EditorMessage)) {
+                            <PanelCard Class="project-structure-node-editor-status" role="status" aria-live="polite"
+                                       data-testid="structure-node-compare-status">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock Value="@EditorMessage" TextStyle="TextStyle.Caption" />
+                                    @EditorActions
+                                </Stack>
+                            </PanelCard>
+                        }
                         @if (view.ShowFeedback &&
                             !string.IsNullOrWhiteSpace(view.Feedback))
                         {
@@ -123,8 +134,8 @@
             </Canvas>
         </CanvasWorkbenchStage>
                 </TabsItem>
-                <TabsItem Text="Gantt" Icon="view_timeline">@Planning</TabsItem>
-                <TabsItem Text="Manager Summary" Icon="monitoring">@Insights</TabsItem>
+                <TabsItem Text="Gantt" Icon="view_timeline">@if (planningVisited) { @Planning }</TabsItem>
+                <TabsItem Text="Manager Summary" Icon="monitoring">@if (insightsVisited) { @Insights }</TabsItem>
             </Tabs>
         </Stack>
     }
@@ -138,11 +149,27 @@
     [Parameter] public RenderFragment? Insights { get; set; }
     [Parameter] public RenderFragment? SupportWindows { get; set; }
     [Parameter] public RenderFragment? ToolbarSupplement { get; set; }
+    [Parameter] public string? EditorMessage { get; set; }
+    [Parameter] public RenderFragment? EditorActions { get; set; }
     [Parameter] public StructureDialogsPresentation Dialogs { get; set; } = new();
     [Parameter] public EventCallback<StructureDialogIntent> DialogIntent { get; set; }
     [Parameter] public RenderFragment? DeferredDialogs { get; set; }
+    [Parameter] public Func<CanvasWorkbenchComposerCloseRequest, Task<bool>>? ConfirmComposerClose { get; set; }
 
     private CanvasWorkbench? canvas;
+    private Guid? mountedContext;
+    private bool planningVisited;
+    private bool insightsVisited;
+
+    protected override void OnParametersSet() {
+        if (mountedContext != Presentation.ContextId) {
+            mountedContext = Presentation.ContextId;
+            planningVisited = false;
+            insightsVisited = false;
+        }
+        planningVisited |= SelectedView == 1;
+        insightsVisited |= SelectedView == 2;
+    }
 
     public Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
         => (canvas ?? throw new InvalidOperationException("The Structure canvas is not mounted.")).OpenCreateDialogAsync(action, request);
@@ -153,6 +180,18 @@
 
     public Task SelectNodesAsync(IReadOnlyList<string> nodeIds, string? primaryNodeId = null)
         => canvas?.SelectNodesAsync(nodeIds, primaryNodeId) ?? Task.CompletedTask;
+
+    public Task<CanvasWorkbenchComposerDraft?> ReadComposerDraftAsync(Guid contextId)
+        => Presentation.ContextId == contextId && canvas is not null
+            ? canvas.ReadComposerDraftAsync() : Task.FromResult<CanvasWorkbenchComposerDraft?>(null);
+
+    public Task<CanvasWorkbenchComposerCloseRequest?> ReadComposerCloseRequestAsync(Guid contextId)
+        => Presentation.ContextId == contextId && canvas is not null
+            ? canvas.ReadComposerCloseRequestAsync() : Task.FromResult<CanvasWorkbenchComposerCloseRequest?>(null);
+
+    public Task<CanvasWorkbenchComposerApplyResult> ApplyComposerDraftAsync(Guid contextId, CanvasWorkbenchComposerApplyRequest request)
+        => Presentation.ContextId == contextId && canvas is not null
+            ? canvas.ApplyComposerDraftAsync(request) : Task.FromResult(new CanvasWorkbenchComposerApplyResult(CanvasWorkbenchComposerApplyStatus.Retired, 0));
 
     public Task<IReadOnlyList<string>> GetSelectedNodeIdsAsync()
         => canvas?.GetSelectedNodeIdsAsync() ?? Task.FromResult<IReadOnlyList<string>>([]);

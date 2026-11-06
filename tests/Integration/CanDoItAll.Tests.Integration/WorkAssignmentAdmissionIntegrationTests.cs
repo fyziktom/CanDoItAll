@@ -40,8 +40,10 @@ public sealed class WorkAssignmentAdmissionIntegrationTests {
         await using (var complete = await CanonicalAsync(restarted)) {
             Assert.True(await ExistsAsync(complete, currentAssignmentId, role));
         }
+        var shown = (await commands.ListAssignmentsDetailedAsync(current.ProjectId, [role]))
+            .Where(row => row.NodeKey == current.NodeKey).Select(ProjectPartyAssignmentConcurrencySnapshot.From).ToArray();
         Assert.True((await commands.ReplaceNodeAssignmentsAsync(current.ProjectId, new(current.NodeKey), [], [role],
-            expectedProjectAdmission: current.Admission)).IsSuccess);
+            expectedProjectAdmission: current.Admission, expectedAssignments: shown)).IsSuccess);
         await using var verified = await CanonicalAsync(restarted);
         Assert.False(await ExistsAsync(verified, currentAssignmentId, role));
     }
@@ -176,6 +178,7 @@ public sealed class WorkAssignmentAdmissionIntegrationTests {
         var commands = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
         var request = Request(seed, ProjectPartyAssignmentRole.WorkItemAssignee);
         request.AssignmentId = initial.Id;
+        request.Original = Assert.Single(await commands.ListAssignmentsDetailedAsync(seed.ProjectId)).Original;
         Assert.True((await commands.SaveAssignmentAsync(request)).IsSuccess);
         await using (var complete = await CanonicalAsync(app)) {
             var work = await complete.Set<ProjectWorkAssignmentRecord>().SingleAsync(item => item.Id == initial.Id);
@@ -187,7 +190,9 @@ public sealed class WorkAssignmentAdmissionIntegrationTests {
             Assert.Equal(request.Notes, work.Notes);
             Assert.False(await complete.Set<ProjectPartyAssignment>().AnyAsync(item => item.Id == initial.Id));
         }
+        request.Original = (await scope.ServiceProvider.GetRequiredService<IProjectWorkAssignmentQueries>().GetAsync(initial.Id))!.Original;
         request.Role = ProjectPartyAssignmentRole.Manager;
+        request.PrimaryOriginal = await commands.ReadPrimaryObservationAsync(seed.Admission, request.Role, seed.NodeKey);
         Assert.True((await commands.SaveAssignmentAsync(request)).IsSuccess);
         await using var verified = await CanonicalAsync(app);
         var restored = await verified.Set<ProjectPartyAssignment>().SingleAsync(item => item.Id == initial.Id);
@@ -216,10 +221,13 @@ public sealed class WorkAssignmentAdmissionIntegrationTests {
             Assert.Null((await complete.Set<StaffingRequest>().SingleAsync(item => item.ProjectId == null)).ProjectLifetimeId);
             Assert.Equal(current.Admission.LifetimeId, (await complete.Set<StaffingRequest>().SingleAsync(item => item.ProjectId == current.ProjectId)).ProjectLifetimeId);
         }
-        delayed.Id = saved.Value;
+        delayed = (await scope.ServiceProvider.GetRequiredService<IStaffingRequestEditing>().ReadAsync(saved.Value))!;
+        delayed.ExpectedSourceProjectReference = null;
         delayed.ProjectId = null;
         delayed.ExpectedProjectAdmission = null;
-        await Assert.ThrowsAsync<InvalidOperationException>(() => hr.SaveStaffingRequestAsync(delayed));
+        var missingSource = await hr.SaveStaffingRequestAsync(delayed);
+        Assert.True(missingSource.IsFailure);
+        Assert.Contains(missingSource.Errors, error => error.Code == StaffingRequestEditingErrors.ProjectReferenceInvalid);
         delayed.ExpectedSourceProjectReference = ProjectAssignmentReference.From(current.Admission);
         Assert.True((await hr.SaveStaffingRequestAsync(delayed)).IsSuccess);
         await using var unassigned = await CanonicalAsync(app);
@@ -329,7 +337,8 @@ public sealed class WorkAssignmentAdmissionIntegrationTests {
 
     private static ProjectPartyAssignmentUpsertRequest Request(Seed seed, ProjectPartyAssignmentRole role) => new() {
         ProjectId = seed.ProjectId, ExpectedProjectAdmission = seed.Admission, PartyId = seed.PartyId,
-        NodeKey = seed.NodeKey, Role = role, IsPrimary = true, AllocationPercent = 31.25m,
+        NodeKey = seed.NodeKey, Role = role, IsPrimary = true,
+        PrimaryOriginal = new(seed.ProjectId, seed.Admission.LifetimeId, role, seed.NodeKey, System.Collections.Immutable.ImmutableArray<Guid>.Empty), AllocationPercent = 31.25m,
         StartsOn = new(2026, 9, 10), EndsOn = new(2026, 9, 12), Source = "captured editor", Notes = "Preserved notes"
     };
 

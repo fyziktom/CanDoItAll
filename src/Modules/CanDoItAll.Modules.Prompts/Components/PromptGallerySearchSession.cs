@@ -71,11 +71,30 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
     private Guid? favoriteBusyItemId;
     private bool isLoading = true;
     private bool disposed;
+    private bool accessRetired;
+    private bool isQuietRefresh;
+    private readonly SemaphoreSlim readGate = new(1, 1);
+    private readonly PromptGalleryQuietRefresh quiet;
+    public Func<bool, CancellationToken, ValueTask>? Authorize { get; set; }
+    public Task InvalidateAsync() => quiet.InvalidateAsync();
+    public Task RetireAccessAsync() {
+        accessRetired = true;
+        operation?.Cancel();
+        page = new([], 0, context.PageSize, 0);
+        availableTags = [];
+        loadError = "Gallery access changed. Reopen this view with current access.";
+        return PublishAsync();
+    }
 
     public PromptGallerySearchSession(IPromptGalleryService gallery, Func<CancellationToken, Task>? debounce = null)
     {
         this.gallery = gallery ?? throw new ArgumentNullException(nameof(gallery));
         this.debounce = debounce ?? (token => Task.Delay(DebounceMilliseconds, token));
+        quiet = new(async () => {
+            await readGate.WaitAsync(lifetime.Token);
+            readGate.Release();
+            await RefreshAsync(quiet: true);
+        });
         Presentation = BuildPresentation();
     }
 
@@ -135,25 +154,26 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
         };
     }
 
-    public async Task RefreshAsync()
+    public async Task RefreshAsync(bool quiet = false)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
-        var generation = await LoadAsync(requestedPageIndex);
+        var generation = await LoadAsync(requestedPageIndex, quiet: quiet);
         await CorrectPageAsync(generation);
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (disposed)
         {
-            return ValueTask.CompletedTask;
+            return;
         }
 
         disposed = true;
         operation?.Cancel();
         lifetime.Cancel();
+        await quiet.DisposeAsync();
+        operation?.Dispose();
         lifetime.Dispose();
-        return ValueTask.CompletedTask;
     }
 
     private async Task ChangeFiltersAsync(PromptGalleryFilterValues next, bool debounce)
@@ -189,9 +209,10 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
         int pageIndex,
         bool debounce = false,
         string failureSummary = SearchFailureSummary,
-        PromptGallerySearchCommitKind? commit = null)
+        PromptGallerySearchCommitKind? commit = null,
+        bool quiet = false)
     {
-        if (disposed)
+        if (disposed || accessRetired)
         {
             return -1;
         }
@@ -227,10 +248,17 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
         }
 
         isLoading = true;
+        isQuietRefresh = quiet && page.Items.Count > 0;
         loadError = null;
         await PublishAsync();
+        var acquired = false;
         try
         {
+            await readGate.WaitAsync(current.Token);
+            acquired = true;
+            if (Authorize is not null) {
+                await Authorize(false, current.Token);
+            }
             var result = await gallery.SearchAsync(BuildQuery(pageIndex), current.Token);
             if (!IsCurrent(generation))
             {
@@ -260,6 +288,9 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
         }
         finally
         {
+            if (acquired) {
+                readGate.Release();
+            }
             // A superseded or disposed request must not clear the busy indicator of the current one.
             if (IsCurrent(generation))
             {
@@ -283,6 +314,9 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
         var lifetimeToken = lifetime.Token;
         try
         {
+            if (Authorize is not null) {
+                await Authorize(true, lifetimeToken);
+            }
             var result = await gallery.SetFavoriteAsync(item.Id, !item.IsFavorite, lifetimeToken);
             if (disposed)
             {
@@ -364,7 +398,7 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
             context.Provider,
             context.Model,
             context.ShowActualChatModelFilter,
-            favoriteBusyItemId);
+            favoriteBusyItemId, isQuietRefresh);
 
     // A filter the list does not offer is reported at its default, so it never reaches the owner's location.
     private Task CommitAsync(PromptGallerySearchCommitKind kind)

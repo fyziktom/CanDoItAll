@@ -1,0 +1,61 @@
+@using CanDoItAll.Editing.UI
+
+@if (State.SkillOutdated || State.SkillMissing) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-workforce-skill-outcome">
+        <TextBlock Value="@(State.SkillMissing ? "The selected skill row was removed or replaced. Your draft is retained; select a current skill before saving." : "This skill changed. Review its current saved values before replacing it.")" />
+        <Button Text="Review skill changes" ButtonStyle="ButtonStyle.Light" Click="ReviewRequested" Disabled="Reading" data-testid="crmhr-workforce-skill-review-open" />
+    </Alert>
+}
+@if (State.CanUndoSkill) {
+    <Button Text="Undo skill merge" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" data-testid="crmhr-workforce-skill-undo" />
+}
+<Dialog IsOpen="@(State.SkillReview is not null)" Title="Review workforce skill" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-workforce-skill-review-dialog">
+    <ChildContent>
+        @if (State.SkillReview is { } review) {
+            <Stack GapScale="LayoutGap.Medium" Stretch="true">
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Compare this skill's original values, your draft and the saved row. Apply changes only your draft; Save remains separate." /></Alert>
+                <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+                @if (State.SkillReviewStale) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-workforce-skill-review-stale"><TextBlock Value="The skill changed again. Refresh this comparison before applying. Explicit choices are retained." /></Alert>
+                }
+                @if (State.Skill.IsUnknown || State.Skill.HasPendingInput) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="An unknown save outcome or incomplete date or number input blocks applying. Submitted values and raw input are retained." /></Alert>
+                }
+                <MergeFieldView TValue="SkillProficiencyLevel" Label="Proficiency" Field="review.Proficiency" Format="@(value => value.ToString())" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="int" Label="Years of experience" Field="review.Years" Format="@(value => value.ToString())" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Certification" Field="review.Certification" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="DateOnly?" Label="Last validated" Field="review.Validated" Format="@(value => value?.ToString("d") ?? "None")" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Notes" Field="review.Notes" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed">
+                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="5" ValueChanged="@(text => SetNotesAsync(review, text))" aria-label="Merged skill notes" /></ResultEditor>
+                </MergeFieldView>
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="Reading" Click="ReviewRequested" data-testid="crmhr-workforce-skill-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(Reading || !State.CanApplySkill)" Click="ApplyRequested" data-testid="crmhr-workforce-skill-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private bool showUnchanged;
+    [Parameter, EditorRequired] public WorkforceRecordDrafts State { get; set; } = default!;
+    [Parameter] public bool Reading { get; set; }
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+    [Parameter] public EventCallback UndoRequested { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private Task SetNotesAsync(WorkforceSkillReview review, string? text) {
+        if (!ReferenceEquals(State.SkillReview, review)) {
+            return Task.CompletedTask;
+        }
+        review.Notes.SetResult(text ?? string.Empty);
+        return Changed.InvokeAsync();
+    }
+}

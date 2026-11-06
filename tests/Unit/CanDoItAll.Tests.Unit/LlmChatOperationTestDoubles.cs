@@ -717,7 +717,8 @@ internal sealed class LlmChatOperationHarness
         bool executorAvailable = true,
         bool failAfterPartial = false,
         Exception? heartbeatFailure = null,
-        bool profileChangeAfterDispatch = false)
+        bool profileChangeAfterDispatch = false,
+        ILlmChatUnitOfWork? suppliedUnitOfWork = null)
     {
         var now = new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
         var timeProvider = new FixedTimeProvider(now);
@@ -744,7 +745,7 @@ internal sealed class LlmChatOperationHarness
             0));
         var operations = new InMemoryLlmChatOperationRepository();
         var invocations = new InMemoryLlmChatInvocationRecordRepository();
-        var unitOfWork = new InlineLlmChatUnitOfWork();
+        var unitOfWork = suppliedUnitOfWork ?? new InlineLlmChatUnitOfWork();
         var operationScope = new LlmChatOperationScopeAccessor();
         var streamingOptions = new LlmChatStreamingOptions();
         var eventJournal = new LlmChatOperationEventJournal(

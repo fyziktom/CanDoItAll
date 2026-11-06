@@ -29,7 +29,7 @@ public sealed class ProviderEditorSubmission {
         var result = Capture(draft, editor);
         var request = Copy(result.original);
         var candidate = request.Id ?? Guid.NewGuid();
-        var kind = request.Id.HasValue ? ProviderMutationKind.Update : ProviderMutationKind.Create;
+        var kind = request.Id.HasValue && request.ExpectedConcurrencyToken != Guid.Empty ? ProviderMutationKind.Update : ProviderMutationKind.Create;
         request.Id = candidate;
         if (kind == ProviderMutationKind.Create) {
             request.ExpectedConcurrencyToken = Guid.Empty;
@@ -58,6 +58,12 @@ public sealed class ProviderEditorSubmission {
     }
 
     public void Reconcile(ProviderProfileEditorModel draft, ProviderProfileEditorModel authoritative) {
+        var unchangedPrices = Unchanged(draft, nameof(draft.ModelPrices)) &&
+            draft.ModelPrices.SequenceEqual(priceRows, ReferenceEqualityComparer.Instance) &&
+            JsonSerializer.Serialize(draft.ModelPrices) == JsonSerializer.Serialize(original.ModelPrices) &&
+            (editor is null || !editor.Context.GetValidationMessages().Any() && editor.CaptureRevisions()
+                .Where(pair => priceRows.Any(row => ReferenceEquals(row, pair.Key.Model)))
+                .All(pair => pair.Value == revisions.GetValueOrDefault(pair.Key)));
         ReconcileFields(draft, original, authoritative);
         for (var index = 0; index < priceRows.Count; index++) {
             var live = priceRows[index];
@@ -69,6 +75,13 @@ public sealed class ProviderEditorSubmission {
             if (accepted.Length == 1) {
                 ReconcilePrice(live, submitted, accepted[0]);
             }
+        }
+        if (unchangedPrices) {
+            draft.ModelPrices = authoritative.ModelPrices.Select(accepted => {
+                var matching = priceRows.Where(row => string.Equals(row.Model.Trim(), accepted.Model.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
+                return matching.Length == 1 ? matching[0] : ProviderPricingDefaults.ToEditorModels(
+                    ProviderPricingDefaults.FromEditorModels([accepted])).Single();
+            }).ToList();
         }
         draft.Id = authoritative.Id;
         draft.ExpectedConcurrencyToken = authoritative.ExpectedConcurrencyToken;

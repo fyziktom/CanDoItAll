@@ -91,8 +91,8 @@ public sealed class ProviderProfilesImportedRefreshTests {
         Assert.Equal([Reads.ModelB, Reads.ModelC], cut.Instance.Editor.Model.SuggestedModels);
         Assert.False(cut.Instance.Editor.Model.SupportsTools);
         await Tab(cut, ProviderEditorSection.Runtime);
-        Assert.Equal("Beta\nGamma", ((IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
-        Assert.Equal("{\"revision\":1}", ((IHtmlTextAreaElement)cut.Find("[data-testid='providers-config-json']")).Value);
+        Assert.Equal("Beta\nGamma", cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
+        Assert.Equal("{\"revision\":1}", cut.Find("[data-testid='providers-config-json']").GetAttribute("value"));
         await Tab(cut, ProviderEditorSection.Prices);
         Assert.Equal(9m, cut.Instance.Editor.Model.ModelPrices[0].InputPerMillionTokensUsd);
         Assert.Equal("Gamma", ((IHtmlInputElement)cut.Find("[data-testid='provider-pricing-model-0']")).Value);
@@ -128,7 +128,7 @@ public sealed class ProviderProfilesImportedRefreshTests {
         Assert.Same(context, cut.Instance.Editor.Context);
         Assert.Same(row, cut.Instance.Editor.Model.ModelPrices[0]);
         Assert.Equal("Unsaved local name", cut.Instance.Editor.Model.Name);
-        Assert.Equal("{unfinished", ((IHtmlTextAreaElement)cut.Find("[data-testid='providers-config-json']")).Value);
+        Assert.Equal("{unfinished", cut.Find("[data-testid='providers-config-json']").GetAttribute("value"));
         await Tab(cut, ProviderEditorSection.Prices);
         Assert.Equal("1e-", ((IHtmlInputElement)cut.Find("[data-testid='provider-pricing-input-0']")).Value);
         Assert.Equal(1, reads.EditorReads);

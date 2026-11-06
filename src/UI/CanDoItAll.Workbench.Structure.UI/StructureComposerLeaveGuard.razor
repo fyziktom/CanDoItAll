@@ -1,0 +1,82 @@
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+
+@if (IsOpen) {
+    <NavigationLock OnBeforeInternalNavigation="BeforeNavigationAsync" ConfirmExternalNavigation="true" />
+}
+<Dialog IsOpen="@(decision is not null)" Title="Leave this node editor?" Size="ModalSize.Compact" CloseOnBackdrop="false"
+        OnClose="@(() => Complete(false))" TestId="structure-composer-dirty-close">
+    <ChildContent>
+        <TextBlock Value="Continue editing or discard this local draft. Unsaved input and comparison choices will be lost." />
+        @if (hasSubmittedOperation) {
+            <TextBlock Value="Leaving does not retry or resolve the submitted operation. Check its original result before creating a replacement." />
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster>
+            <Button Text="Continue editing" Click="@(() => Complete(false))" data-testid="structure-composer-dirty-continue" />
+            <Button Text="Discard local draft and leave" ButtonStyle="ButtonStyle.Danger" Click="@(() => Complete(true))" data-testid="structure-composer-dirty-discard" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public Guid OpeningId { get; set; }
+    [Parameter] public StructureNodeFormReview? Review { get; set; }
+    [Parameter, EditorRequired] public Func<Task<CanvasWorkbenchComposerCloseRequest?>> ReadCurrent { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<string, bool> IsSameRoute { get; set; } = default!;
+    private TaskCompletionSource<bool>? decision;
+    private Guid observedOpening;
+    private bool disposed;
+    private bool hasSubmittedOperation;
+
+    protected override void OnParametersSet() {
+        if (!IsOpen || OpeningId != observedOpening) {
+            observedOpening = OpeningId;
+            Complete(false);
+        }
+    }
+
+    public async Task<bool> RequestLeaveAsync(CanvasWorkbenchComposerCloseRequest request) {
+        if (disposed || !IsOpen || request.OpeningId != OpeningId || decision is not null) {
+            return false;
+        }
+        if (request.Revision == 0 && !request.HasPendingSubmission && !request.HasUnconfirmedOutcome && Review is null) {
+            return true;
+        }
+        hasSubmittedOperation = request.HasPendingSubmission || request.HasUnconfirmedOutcome;
+        var review = Review;
+        var reviewRevision = review?.InputRevision;
+        var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        decision = pending;
+        StateHasChanged();
+        if (!await pending.Task || disposed || !IsOpen || OpeningId != request.OpeningId ||
+            !ReferenceEquals(review, Review) || reviewRevision != Review?.InputRevision) {
+            return false;
+        }
+        var current = await ReadCurrent();
+        return !disposed && IsOpen && current == request && ReferenceEquals(review, Review) && reviewRevision == Review?.InputRevision;
+    }
+
+    private void Complete(bool leave) {
+        var pending = decision;
+        decision = null;
+        pending?.TrySetResult(leave);
+    }
+
+    private async Task BeforeNavigationAsync(LocationChangingContext context) {
+        if (IsSameRoute(context.TargetLocation)) {
+            return;
+        }
+        var request = await ReadCurrent();
+        if (request is null || !await RequestLeaveAsync(request) || context.CancellationToken.IsCancellationRequested) {
+            context.PreventNavigation();
+        }
+    }
+
+    public void Dispose() {
+        disposed = true;
+        Complete(false);
+    }
+}

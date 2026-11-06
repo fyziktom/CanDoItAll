@@ -7,9 +7,20 @@ namespace CanDoItAll.Modules.Workbench.Pages;
 
 internal sealed class ProjectTaskDialogSession(Func<bool> isCurrent, Func<Task> readProject, ILogger logger,
     IReadOnlyList<string>? originalTaskIds = null) {
-    private readonly Guid operationId = Guid.NewGuid();
+    private Guid operationId = Guid.NewGuid();
     private bool busy;
     public PlanningTaskSaveResult? Result { get; private set; }
+    public bool CanAcceptComparison => !busy && isCurrent() && (Result is null || Result is { Status: PlanningTaskSaveStatus.Rejected, Phases.Count: 0 });
+
+    public void AcceptComparison() {
+        if (!CanAcceptComparison) {
+            throw new InvalidOperationException("An unconfirmed or committed Task operation cannot be rearmed by a comparison.");
+        }
+        if (Result is not null) {
+            operationId = Guid.NewGuid();
+        }
+        Result = null;
+    }
 
     public async Task<PlanningTaskSaveResult> SubmitAsync(Func<Task> save) {
         if (busy || Result is { CanRetry: false }) {
@@ -146,11 +157,14 @@ internal sealed class ProjectTaskDialogSession(Func<bool> isCurrent, Func<Task> 
                 Status = known.Phases.Any(phase => phase.Phase == PlanningTaskPhase.Attachment) ? known.Status : PlanningTaskSaveStatus.Partial,
                 Message = $"{known.Message} Follow-up work did not complete. Known committed identities are retained; read the project before another write." };
         }
-        if (failure is ProjectWriteAdmissionRejectedException or ProjectStructureGanttMutationException or
+        if (failure is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException or ProjectStructureEditConflictException or ProjectStructureGanttMutationException or
             ProjectStructureTaskDetailsException { Code: ProjectStructureTaskDetailsErrorCode.InvalidRequest or ProjectStructureTaskDetailsErrorCode.ConcurrencyConflict } or
-            ProjectStructureTaskApplicationException { Code: ProjectStructureTaskApplicationErrorCode.InvalidRequest or ProjectStructureTaskApplicationErrorCode.ConcurrencyConflict } ||
+            ProjectStructureTaskApplicationException { Code: ProjectStructureTaskApplicationErrorCode.InvalidRequest or
+                ProjectStructureTaskApplicationErrorCode.ConcurrencyConflict or ProjectStructureTaskApplicationErrorCode.AssignmentConflict } ||
             failure is ProjectStructureAgentException { EffectState: AgentToolEffectState.None or AgentToolEffectState.NotCommitted }) {
-            return Rejected("The native owner rejected this change. The draft is retained. Read the project and reopen the editor to use its current authority.", true);
+            return Rejected(originalTaskIds is { Count: > 0 }
+                ? "The Task could not be saved because its state or access changed. Your draft is retained. Compare changes to review current values, or reopen the Task."
+                : "The native owner rejected this change. The draft is retained. Read the project and reopen the editor to use its current authority.", true);
         }
         return new(PlanningTaskSaveStatus.Unknown,
             "The save could not be confirmed. The draft is retained. Read the original project before another write; do not repeat creation.",

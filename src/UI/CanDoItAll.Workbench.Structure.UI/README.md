@@ -17,6 +17,20 @@ notifications capture the native target before editing. Cancel retires that open
 submission retains its original outcome independently of the next editor. Native
 task, secret, text/media and other specialized editors retain their own owners.
 
+Existing node comparison uses typed text, number, date and keyed choice values.
+`StructureNodeComparisonDialog` renders original/local/current and a local result;
+it owns no reads or writes. Unfinished result input blocks Apply and Refresh and
+stays mounted when unchanged fields are hidden. A refreshed comparison carries
+choices only for an unchanged triple and retains the previous result for copying.
+Apply and Undo edit the existing composer; the native Save remains separate.
+
+The host supplies the native close decision and current raw composer snapshot to
+`StructureComposerLeaveGuard`. Continue retains the same controls; discard must
+still match the opening, input revision, comparison and submitted outcome. Canvas
+remains mounted across view switches. Planning and Insights mount on first visit
+and remain until the context changes. `EditorMessage` and `EditorActions` render bounded status text and native Undo
+above the keyboard hint, outside the toolbar so neither can shrink its controls.
+
 Planning, Insights, support windows and deferred dialogs have explicit composition
 slots. The canvas itself is not a host fragment. Compatibility type forwards retain
 the existing toolbar, toolbox, overlay and catalog presentation names.

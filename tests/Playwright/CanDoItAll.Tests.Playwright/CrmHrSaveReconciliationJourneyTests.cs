@@ -113,6 +113,7 @@ public sealed class CrmHrSaveReconciliationJourneyTests
         var profile = await crm.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crm.GetAccountProfileAsync(accountId))!.Original,
             RelationshipStage = CrmAccountRelationshipStage.Prospect,
             CommercialNotes = seededNotes,
             LastChangedBy = "playwright-tests"

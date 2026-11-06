@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "scope": "Static briefing-package validation and reference scalar truth-table checks only",
+  "checked_at_utc": "2026-10-30T22:46:56.072530+00:00",
+  "application_builds_run": false,
+  "application_tests_run": false,
+  "application_runtime_verified": false,
+  "production_merge_implementation_tested": false,
+  "checks": {
+    "json_files_parsed": 6,
+    "required_files": 25,
+    "repository_sources": 45,
+    "external_references": 4,
+    "surface_entries": 65,
+    "surface_evidence_states": {
+      "DIRECT": 12,
+      "DIRECT/DOC_CURRENT": 3,
+      "DIRECT/PERIMETER_OPEN": 4,
+      "DIRECT_ADAPTER/DOC_OWNER": 1,
+      "DIRECT_FACADE/OWNER_OPEN": 1,
+      "DIRECT_GRANT/OTHER_OPEN": 1,
+      "DOC_CURRENT": 9,
+      "DOC_CURRENT/PERIMETER_OPEN": 8,
+      "HISTORICAL_CHECK_REQUIRED": 22,
+      "TREE_DISCOVERY": 4
+    },
+    "requirements_mapped": 22,
+    "internal_markdown_links": 82,
+    "scalar_reference_vectors_executed": 16,
+    "scenario_descriptions_structure_checked_only": 9,
+    "scalar_reference_property_combinations": 216,
+    "stop_gate_documents_checked": 3,
+    "checksum_entries_verified": 0,
+    "manifest_present": false
+  },
+  "errors": []
+}

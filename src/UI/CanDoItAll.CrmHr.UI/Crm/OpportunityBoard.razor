@@ -58,7 +58,7 @@
                     <Button Text="@($"Advance to {ResolveNextStage(opportunity.Stage)}")"
                             ButtonStyle="ButtonStyle.Light"
                             Size="ButtonSize.Small"
-                            Click="@(() => AdvanceOpportunityStage.InvokeAsync(opportunity.Id))"
+                            Click="@(() => AdvanceOpportunityStage.InvokeAsync(new(opportunity.Id, opportunity.AccountPartyId, opportunity.Stage, opportunity.UpdatedAtUtc)))"
                             data-testid="@($"crmhr-opportunity-advance-{opportunity.Id:N}")" />
                 }
             </Stack>
@@ -77,7 +77,7 @@
     public EventCallback<Guid> SelectOpportunity { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> AdvanceOpportunityStage { get; set; }
+    public EventCallback<CrmOpportunityStageAdvance> AdvanceOpportunityStage { get; set; }
 
     private static bool CanAdvance(OpportunityStage stage)
     {

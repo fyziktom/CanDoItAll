@@ -12,7 +12,7 @@ public sealed record AgentConversationContextIntent(AgentConversationContextOrig
 
 public enum AgentFloatingCloseChoice { Cancel, KeepActive, Stop }
 
-public sealed record AgentFloatingCloseState(Guid Origin, AgentChatHandleId HandleId, string AgentName, bool CanStop, bool AwaitingApproval);
+public sealed record AgentFloatingCloseState(Guid Origin, AgentChatHandleId HandleId, string AgentName, bool CanStop, bool AwaitingApproval, bool HasUnsentDraft = false);
 
 public sealed record AgentFloatingCloseIntent(Guid Origin, AgentChatHandleId HandleId, AgentFloatingCloseChoice Choice);
 

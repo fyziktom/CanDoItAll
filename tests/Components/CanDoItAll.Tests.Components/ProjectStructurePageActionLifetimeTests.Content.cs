@@ -1,17 +1,21 @@
 using System.Data.Common;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Content.UI.Analysis;
 using CanDoItAll.Workbench.Insights.UI;
+using CanDoItAll.Editing;
+using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -22,6 +26,409 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed partial class ProjectStructurePageActionLifetimeTests {
+    public enum ContentCommand { SummaryStatus, Workbook, Gantt, CanvasImage, TranscriptScaffold, TranscriptAnalysis }
+    public enum ContentBoundary { Allowed, DeniedBefore, AfterNativeSql, AfterNativeCommit }
+    public enum ContentStatusCommand { Metadata, Media, MetadataOnly }
+
+    [Theory]
+    [InlineData(ContentStatusCommand.Metadata)]
+    [InlineData(ContentStatusCommand.Media)]
+    [InlineData(ContentStatusCommand.MetadataOnly)]
+    public async Task Native_content_checks_original_status_when_it_writes_status_and_preserves_independent_status_otherwise(ContentStatusCommand command) {
+        await using var harness = await CreateHarnessAsync();
+        var target = await CreateTargetAsync(harness, "Original content status", ProjectObjectType.Transcript);
+        var workbench = Workbench(harness);
+        var original = command == ContentStatusCommand.Media
+            ? await workbench.CreateObjectAsync(target.ProjectId, new(ProjectObjectType.File, "Original status file", "", "Original file notes",
+                target.Node.Id, ObjectSubtype: "text", Media: new("original-status.txt", "text/plain", Convert.ToBase64String(Encoding.UTF8.GetBytes("Original file bytes")))) {
+                    ExpectedProjectAdmission = target.Admission
+                })
+            : target.Node;
+        Assert.Equal(1, await workbench.UpdateObjectStatusesAsync(target.ProjectId, [original.Id], "Done",
+            expectedProjectAdmission: target.Admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany([original], target.Admission)));
+        var peer = Assert.Single((await workbench.GetStructureAsync(target.ProjectId)).Nodes, node => node.Id == original.Id);
+        var before = await CaptureContentRowsAsync(harness, target.ProjectId);
+        var metadata = ProjectObjectMetadataSerializer.Parse(original.MetadataJson);
+        if (metadata.Transcript is { } transcript) {
+            transcript.SummaryText = "Owned metadata result";
+        }
+        var replacement = ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(original.MetadataJson, metadata);
+        if (command == ContentStatusCommand.MetadataOnly) {
+            var accepted = await workbench.UpdateContentMetadataAsync(target.Admission, original, replacement);
+            Assert.NotNull(accepted);
+            Assert.Equal((peer.Status, peer.ProgressMode, peer.ProgressPercent), (accepted.Status, accepted.ProgressMode, accepted.ProgressPercent));
+            Assert.Equal("Owned metadata result", ProjectObjectMetadataSerializer.Parse(accepted.MetadataJson).Transcript?.SummaryText);
+        } else {
+            Func<Task> submit = command == ContentStatusCommand.Metadata
+                ? () => workbench.UpdateContentMetadataAsync(target.Admission, original, replacement, "Review")
+                : () => workbench.ReplaceContentMediaAsync(target.Admission, original,
+                    new("replacement-status.txt", "text/plain", Convert.ToBase64String(Encoding.UTF8.GetBytes("Replacement file bytes"))), replacement, "Review");
+            await Assert.ThrowsAsync<ProjectStructureEditConflictException>(submit);
+            Assert.Equal(before, await CaptureContentRowsAsync(harness, target.ProjectId));
+        }
+    }
+
+    [Fact]
+    public async Task Immediate_native_create_retains_its_known_node_when_postcommit_read_access_is_lost() {
+        var access = new EditingUiTestAccess();
+        var probe = new ContentAuthorityProbe(access) { Boundary = ContentBoundary.AfterNativeCommit, Type = ProjectObjectType.Note };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IEditingUiAccess>(access);
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(probe), ServiceLifetime.Singleton);
+        });
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        var target = await CreateTargetAsync(harness, "Immediate create authority");
+        var page = Render(harness, target.ProjectId);
+        var shown = JsonSerializer.Serialize(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes);
+        var request = new CanvasWorkbenchCreateActionRequest("add-note", target.Node.Id, 0, 0, target.Node.Id,
+            "Known immediate creation", "Original instant create context", "Original instant create notes", "child", "dialog", "", null);
+        probe.Project = target.ProjectId;
+        probe.Armed = true;
+        await page.InvokeAsync(() => page.FindComponent<CanvasWorkbench>().Instance.OnCreateAction(JsonSerializer.Serialize(request)));
+        Assert.True(probe.Reached);
+        var created = Assert.Single((await Workbench(harness).GetStructureAsync(target.ProjectId)).Nodes, node => node.Title == request.Title);
+        Assert.Equal(target.Node.Id, created.ParentId);
+        Assert.Equal(shown, JsonSerializer.Serialize(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes));
+        var outcome = page.Instance.AuthoringOutcomes.Last();
+        Assert.Equal(target.Admission, outcome.Project);
+        Assert.Equal(created.RecordId, outcome.Node?.RecordId);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
+        Assert.NotNull(outcome.Failure);
+        Assert.Contains(harness.Context.Services.GetRequiredService<CanDoItAll.Components.BaseLib.NotificationService>().Messages,
+            message => message.Summary == "Structure changes saved; refresh required");
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<CanDoItAll.Components.BaseLib.NotificationService>().Messages,
+            message => message.Summary == "Node could not be created");
+    }
+
+    [Theory]
+    [InlineData(ContentBoundary.Allowed)]
+    [InlineData(ContentBoundary.DeniedBefore)]
+    [InlineData(ContentBoundary.AfterNativeSql)]
+    [InlineData(ContentBoundary.AfterNativeCommit)]
+    public async Task Shared_native_create_keeps_original_access_at_commit_and_publication(ContentBoundary boundary) {
+        var access = new EditingUiTestAccess();
+        var probe = new ContentAuthorityProbe(access) { Boundary = boundary, Type = ProjectObjectType.Note };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IEditingUiAccess>(access);
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(probe), ServiceLifetime.Singleton);
+        });
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update", _ => true).SetResult(true);
+        var target = await CreateTargetAsync(harness, "Generic create authority");
+        probe.Project = target.ProjectId;
+        var page = Render(harness, target.ProjectId);
+        var canvas = page.FindComponent<CanvasWorkbench>().Instance;
+        var request = new CanvasWorkbenchCreateActionRequest("add-note", target.Node.Id, 0, 0, target.Node.Id,
+            "Guarded generic creation", "Original create context", "Original generic create notes", "child", "dialog", "", null) {
+                ComposerOpeningId = Guid.NewGuid(), ComposerSubmissionId = Guid.NewGuid()
+            };
+        await page.InvokeAsync(() => canvas.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(request.ComposerOpeningId.Value, request, null))));
+        var before = await CaptureContentRowsAsync(harness, target.ProjectId);
+        var shown = JsonSerializer.Serialize(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes);
+        access.Allowed = boundary != ContentBoundary.DeniedBefore;
+        probe.Armed = true;
+        await page.InvokeAsync(() => canvas.OnCreateAction(JsonSerializer.Serialize(request)));
+        if (boundary is ContentBoundary.AfterNativeSql or ContentBoundary.AfterNativeCommit) {
+            Assert.True(probe.Reached);
+        }
+        var after = await CaptureContentRowsAsync(harness, target.ProjectId);
+        var outcome = page.Instance.AuthoringOutcomes.Last();
+        Assert.Equal(target.Admission, outcome.Project);
+        if (boundary is ContentBoundary.DeniedBefore or ContentBoundary.AfterNativeSql) {
+            Assert.Equal(before, after);
+            Assert.Equal(ProjectStructureAuthoringResultKind.Rejected, outcome.Kind);
+            Assert.Null(outcome.Node);
+        } else {
+            var accepted = Assert.Single((await Workbench(harness).GetStructureAsync(target.ProjectId)).Nodes, node => node.Title == request.Title);
+            Assert.Equal(target.Node.Id, accepted.ParentId);
+            Assert.Equal(request.Notes, accepted.Notes);
+            Assert.Equal(accepted.RecordId, outcome.Node?.RecordId);
+            if (boundary == ContentBoundary.AfterNativeCommit) {
+                Assert.Equal(shown, JsonSerializer.Serialize(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes));
+                Assert.NotNull(outcome.Failure);
+                access.Allowed = true;
+                await page.InvokeAsync(() => canvas.OnCreateAction(JsonSerializer.Serialize(request with { ComposerSubmissionId = Guid.NewGuid() })));
+                Assert.Equal(after, await CaptureContentRowsAsync(harness, target.ProjectId));
+            }
+        }
+    }
+
+    public static IEnumerable<object[]> ContentAuthorityCases()
+        => from command in Enum.GetValues<ContentCommand>()
+           from boundary in Enum.GetValues<ContentBoundary>()
+           select new object[] { command, boundary };
+
+    [Theory]
+    [MemberData(nameof(ContentAuthorityCases))]
+    public async Task Content_authoring_enforces_current_access_at_native_boundaries(ContentCommand command, ContentBoundary boundary) {
+        var access = new EditingUiTestAccess();
+        var probe = new ContentAuthorityProbe(access) { Boundary = boundary };
+        var provider = new ProviderGate();
+        provider.Release.SetResult();
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IEditingUiAccess>(access);
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(probe), ServiceLifetime.Singleton);
+            services.Replace(ServiceDescriptor.Singleton<IProviderRuntimeProfileSource>(provider));
+            services.Replace(ServiceDescriptor.Singleton<IProviderRuntimeProfileSnapshotSource>(provider));
+            services.Replace(ServiceDescriptor.Singleton<IProviderPromptExecutionService>(provider));
+        });
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update", _ => true).SetResult(true);
+        harness.Context.JSInterop.Setup<string?>("CanDoItAll.canvasWorkbench.exportImageData", _ => true)
+            .SetResult("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5+Rf0AAAAASUVORK5CYII=");
+        var type = command switch {
+            ContentCommand.TranscriptScaffold => ProjectObjectType.Recording,
+            ContentCommand.TranscriptAnalysis => ProjectObjectType.Transcript,
+            _ => ProjectObjectType.Note
+        };
+        var target = await CreateTargetAsync(harness, "Native content authority", type);
+        var cut = Render(harness, target.ProjectId);
+        if (command is ContentCommand.SummaryStatus or ContentCommand.Workbook or ContentCommand.Gantt) {
+            await ContextActionAsync(cut, target.Node.Id, "summary");
+        } else if (command == ContentCommand.TranscriptAnalysis) {
+            await ContextActionAsync(cut, target.Node.Id, "transcript:summarize");
+            cut.WaitForAssertion(() => Assert.Equal(ContentConfirmationPhase.Ready, cut.FindComponent<ContentTranscriptDialog>().Instance.State.Phase));
+        } else {
+            await SelectAsync(cut, target.Node.Id);
+        }
+        probe.Project = target.ProjectId;
+        probe.Type = command switch {
+            ContentCommand.Workbook or ContentCommand.Gantt => ProjectObjectType.File,
+            ContentCommand.CanvasImage => ProjectObjectType.ImageAsset,
+            ContentCommand.TranscriptScaffold or ContentCommand.TranscriptAnalysis => ProjectObjectType.Transcript,
+            _ => ProjectObjectType.Note
+        };
+        var before = await CaptureContentRowsAsync(harness, target.ProjectId);
+        var shown = JsonSerializer.Serialize(cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes);
+        probe.Armed = true;
+        access.Allowed = boundary != ContentBoundary.DeniedBefore;
+        switch (command) {
+            case ContentCommand.SummaryStatus:
+                await cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSupportDialogs>().Instance.ChangeSummaryStatus.InvokeAsync((target.Node.Id, "Done")));
+                break;
+            case ContentCommand.Workbook:
+                await cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSupportDialogs>().Instance.ExportSummaryWorkbook.InvokeAsync());
+                break;
+            case ContentCommand.Gantt:
+                await cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSupportDialogs>().Instance.ExportSummaryGantt.InvokeAsync());
+                break;
+            case ContentCommand.CanvasImage:
+                await InvokeSelectionAsync(cut, new InsightsSelectionCommand.Inspector("export-image"));
+                break;
+            case ContentCommand.TranscriptScaffold:
+                await ContextActionAsync(cut, target.Node.Id, "transcript:create");
+                break;
+            case ContentCommand.TranscriptAnalysis:
+                await cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSupportDialogs>().Instance.ExecuteTranscriptAction.InvokeAsync());
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(command));
+        }
+        if (boundary is ContentBoundary.AfterNativeSql or ContentBoundary.AfterNativeCommit) {
+            Assert.True(probe.Reached);
+        }
+        var after = await CaptureContentRowsAsync(harness, target.ProjectId);
+        var outcome = cut.Instance.AuthoringOutcomes.Last();
+        Assert.Equal(target.Admission, outcome.Project);
+        if (boundary is ContentBoundary.DeniedBefore or ContentBoundary.AfterNativeSql) {
+            Assert.Equal(before, after);
+            Assert.Equal(command == ContentCommand.TranscriptAnalysis && boundary == ContentBoundary.AfterNativeSql
+                ? ProjectStructureAuthoringResultKind.PartialCommit : ProjectStructureAuthoringResultKind.Rejected, outcome.Kind);
+        } else {
+            Assert.NotEqual(before, after);
+            Assert.Equal(command == ContentCommand.TranscriptScaffold && boundary == ContentBoundary.AfterNativeCommit
+                ? ProjectStructureAuthoringResultKind.PartialCommit : ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
+            if (boundary == ContentBoundary.AfterNativeCommit) {
+                Assert.Equal(shown, JsonSerializer.Serialize(cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes));
+                Assert.NotNull(outcome.Failure);
+            }
+        }
+        Assert.Equal(command == ContentCommand.TranscriptAnalysis && boundary != ContentBoundary.DeniedBefore ? 1 : 0, provider.Calls);
+        if (command == ContentCommand.TranscriptScaffold && boundary == ContentBoundary.AfterNativeCommit) {
+            Assert.NotNull(outcome.Node);
+            Assert.Null(outcome.Link);
+            Assert.Equal(ProjectObjectType.Transcript, Assert.Single((await Workbench(harness).GetStructureAsync(target.ProjectId)).Nodes, node => node.Id == outcome.Node.Id).ObjectType);
+        }
+        if (command == ContentCommand.TranscriptAnalysis && boundary != ContentBoundary.DeniedBefore) {
+            Assert.Equal(ProjectStructureExternalEffectState.Completed, outcome.ExternalEffect);
+            Assert.Equal("Original provider answer", outcome.TranscriptResponse?.OutputText);
+            await cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSupportDialogs>().Instance.ExecuteTranscriptAction.InvokeAsync());
+            Assert.Equal(1, provider.Calls);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Summary_export_retired_after_actual_SQL_rolls_back_and_keeps_the_successor_dialog(bool gantt) {
+        var gate = new ContentWriteHold(afterCommit: false);
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(gate), ServiceLifetime.Singleton));
+        var original = await CreateTargetAsync(harness, "Uncommitted summary export");
+        var next = await CreateTargetAsync(harness, "Successor summary export");
+        var before = await CaptureContentRowsAsync(harness, original.ProjectId);
+        var nextBefore = await CaptureContentRowsAsync(harness, next.ProjectId);
+        var cut = Render(harness, original.ProjectId);
+        await ContextActionAsync(cut, original.Node.Id, "summary");
+        gate.Project = original.ProjectId;
+        gate.Armed = true;
+        var pending = cut.InvokeAsync(() => Button(cut, gantt ? "Export Gantt" : "Export XLSX").ClickAsync(new MouseEventArgs()));
+        Guid successorOpening;
+        try {
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            Navigate(harness, cut, next.ProjectId);
+            await ContextActionAsync(cut, next.Node.Id, "summary");
+            successorOpening = cut.FindComponent<ContentProgressSummaryDialog>().Instance.State.OpeningId;
+        } finally {
+            gate.Release.TrySetResult();
+        }
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.Equal(before, await CaptureContentRowsAsync(harness, original.ProjectId));
+        Assert.Equal(nextBefore, await CaptureContentRowsAsync(harness, next.ProjectId));
+        Assert.Equal(successorOpening, cut.FindComponent<ContentProgressSummaryDialog>().Instance.State.OpeningId);
+        Assert.Empty(cut.FindComponent<ContentProgressSummaryDialog>().Instance.State.Message);
+        var outcome = Assert.Single(cut.Instance.AuthoringOutcomes);
+        Assert.Equal(original.Admission, outcome.Project);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Rejected, outcome.Kind);
+        Assert.Null(outcome.Node);
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<CanDoItAll.Components.BaseLib.NotificationService>().Messages,
+            message => message.Summary.StartsWith("Structure", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Canvas_capture_keeps_its_original_parent_after_selection_changes_within_the_same_project() {
+        await using var harness = await CreateHarnessAsync();
+        var original = await CreateTargetAsync(harness, "Same Project capture");
+        var neighbor = await Workbench(harness).CreateObjectAsync(original.ProjectId,
+            new(ProjectObjectType.Note, "Unrelated selected neighbor", "", "Original neighbor notes", $"project:{original.ProjectId:D}"));
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update", _ => true).SetResult(true);
+        var cut = Render(harness, original.ProjectId);
+        await SelectAsync(cut, original.Node.Id);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var capture = harness.Context.JSInterop.Setup<string?>("CanDoItAll.canvasWorkbench.exportImageData", _ => {
+            entered.TrySetResult();
+            return true;
+        });
+        var pending = InvokeSelectionAsync(cut, new InsightsSelectionCommand.Inspector("export-image"));
+        try {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await SelectAsync(cut, neighbor.Id);
+        } finally {
+            capture.SetResult("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5+Rf0AAAAASUVORK5CYII=");
+        }
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        var stored = await Workbench(harness).GetStructureAsync(original.ProjectId);
+        var exported = Assert.Single(stored.Nodes, node => node.ObjectType == ProjectObjectType.ImageAsset);
+        Assert.Equal(original.Node.Id, exported.ParentId);
+        Assert.Equal(JsonSerializer.Serialize(neighbor), JsonSerializer.Serialize(stored.Nodes.Single(node => node.Id == neighbor.Id)));
+        Assert.Equal(ProjectStructureAuthoringResultKind.Committed, Assert.Single(cut.Instance.AuthoringOutcomes).Kind);
+    }
+
+    [Fact]
+    public async Task Gantt_export_retired_during_local_generation_does_not_create_a_file_or_change_the_successor() {
+        var generator = new TextGeneratorGate();
+        await using var harness = await CreateHarnessAsync(generator: generator);
+        var original = await CreateTargetAsync(harness, "Original generated summary");
+        var next = await CreateTargetAsync(harness, "New generated summary");
+        var before = await CaptureContentRowsAsync(harness, original.ProjectId);
+        var nextBefore = await CaptureContentRowsAsync(harness, next.ProjectId);
+        var cut = Render(harness, original.ProjectId);
+        await ContextActionAsync(cut, original.Node.Id, "summary");
+        generator.Armed = true;
+        var pending = cut.InvokeAsync(() => Button(cut, "Export Gantt").ClickAsync(new MouseEventArgs()));
+        Guid successorOpening;
+        try {
+            await generator.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            Navigate(harness, cut, next.ProjectId);
+            await ContextActionAsync(cut, next.Node.Id, "summary");
+            successorOpening = cut.FindComponent<ContentProgressSummaryDialog>().Instance.State.OpeningId;
+        } finally {
+            generator.Release.TrySetResult();
+        }
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.Equal(before, await CaptureContentRowsAsync(harness, original.ProjectId));
+        Assert.Equal(nextBefore, await CaptureContentRowsAsync(harness, next.ProjectId));
+        Assert.Equal(successorOpening, cut.FindComponent<ContentProgressSummaryDialog>().Instance.State.OpeningId);
+        Assert.Empty(cut.FindComponent<ContentProgressSummaryDialog>().Instance.State.Message);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Rejected, Assert.Single(cut.Instance.AuthoringOutcomes).Kind);
+    }
+
+    private sealed class ContentWriteHold(bool afterCommit) : SaveChangesInterceptor, IDbTransactionInterceptor {
+        public Guid Project { get; set; }
+        public bool Armed { get; set; }
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private DbContext? matchedContext;
+
+        public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default) {
+            if (Armed && result > 0 && eventData.Context is WorkbenchDbContext context && context.ChangeTracker.Entries<ProjectObjectRecord>()
+                    .Any(entry => entry.Entity.ProjectId == Project && entry.Entity.ObjectType == ProjectObjectType.File)) {
+                Assert.NotNull(context.Database.CurrentTransaction);
+                matchedContext = context;
+                if (!afterCommit) {
+                    await HoldAsync(cancellationToken);
+                }
+            }
+            return result;
+        }
+
+        public async Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) {
+            if (Armed && afterCommit && ReferenceEquals(eventData.Context, matchedContext)) {
+                await HoldAsync(CancellationToken.None);
+            }
+        }
+
+        private async Task HoldAsync(CancellationToken cancellationToken) {
+            Armed = false;
+            Entered.TrySetResult();
+            await Release.Task.WaitAsync(cancellationToken);
+        }
+    }
+
+    private static async Task<string> CaptureContentRowsAsync(ComponentTestHarness harness, Guid project) {
+        await using var context = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
+        var nodes = await context.Set<ProjectObjectRecord>().AsNoTracking().Where(node => node.ProjectId == project && !node.IsSystemManaged)
+            .OrderBy(node => node.NodeKey).ToListAsync();
+        var links = await context.Set<ProjectObjectLinkRecord>().AsNoTracking().Where(link => link.ProjectId == project).OrderBy(link => link.Id).ToListAsync();
+        return JsonSerializer.Serialize(new { Nodes = nodes, Links = links });
+    }
+
+    private sealed class ContentAuthorityProbe(EditingUiTestAccess access) : SaveChangesInterceptor, IDbTransactionInterceptor {
+        public ContentBoundary Boundary { get; init; }
+        public Guid Project { get; set; }
+        public ProjectObjectType Type { get; set; }
+        public bool Armed { get; set; }
+        public bool Reached { get; private set; }
+        private DbContext? pendingCommit;
+
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default) {
+            if (Armed && result > 0 && eventData.Context is WorkbenchDbContext context && context.ChangeTracker.Entries<ProjectObjectRecord>()
+                    .Any(entry => entry.Entity.ProjectId == Project && entry.Entity.ObjectType == Type)) {
+                if (Boundary == ContentBoundary.AfterNativeSql) {
+                    Assert.NotNull(context.Database.CurrentTransaction);
+                    Revoke();
+                } else if (Boundary == ContentBoundary.AfterNativeCommit) {
+                    pendingCommit = context;
+                }
+            }
+            return ValueTask.FromResult(result);
+        }
+
+        public Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) {
+            if (Armed && ReferenceEquals(eventData.Context, pendingCommit)) {
+                Revoke();
+            }
+            return Task.CompletedTask;
+        }
+
+        private void Revoke() {
+            Armed = false;
+            Reached = true;
+            access.Allowed = false;
+        }
+    }
+
     [Theory]
     [InlineData("transcript:summarize", ProjectLlmActionKind.Summarize)]
     [InlineData("transcript:find-my-tasks", ProjectLlmActionKind.FindMyTasks)]

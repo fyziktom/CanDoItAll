@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
@@ -57,7 +59,8 @@ public interface ILlmChatOperationUiGateway
 public sealed class LlmChatOperationUiGateway(
     ILlmChatOperationApplicationService operations,
     ILlmChatUiAuthorizationFacade authorization,
-    IAgentWorkspaceScopeAccessor workspaceScopeAccessor) : ILlmChatOperationUiGateway
+    IAgentWorkspaceScopeAccessor workspaceScopeAccessor,
+    ILogger<LlmChatOperationUiGateway> logger) : ILlmChatOperationUiGateway
 {
     public async Task<LlmChatUiResult<LlmChatOperationView>> SendAsync(
         Guid operationId,
@@ -87,15 +90,21 @@ public sealed class LlmChatOperationUiGateway(
             return LlmChatUiResultMapper.Invalid<LlmChatOperationView>("Workspace context is unavailable. Wait for the current page context to finish updating and retry.");
         }
 
-        var result = await operations.SendAsync(
-            new(
-                typedOperationId,
-                typedConversationId,
-                expectedTranscriptRevision,
-                message,
-                attributionScope),
-            cancellationToken).ConfigureAwait(false);
-        return LlmChatUiResultMapper.Map(result, ToView);
+        try {
+            var result = await operations.SendAsync(
+                new(
+                    typedOperationId,
+                    typedConversationId,
+                    expectedTranscriptRevision,
+                    message,
+                    attributionScope),
+                cancellationToken).ConfigureAwait(false);
+            return LlmChatUiResultMapper.Map(result, ToView);
+        } catch (LlmChatCommittedException<Result<LlmChatOperationDetails>> exception) when (exception.Accepted.IsSuccess) {
+            logger.LogWarning("Operation {OperationId} is admitted; follow-up processing needs reconciliation.", operationId);
+            return LlmChatUiResult<LlmChatOperationView>.Success(ToView(exception.Accepted.Value!),
+                "The message is admitted. Follow its existing operation; do not send it again to reconcile.");
+        }
     }
 
     public async Task<LlmChatUiResult<LlmChatOperationView>> GetAsync(

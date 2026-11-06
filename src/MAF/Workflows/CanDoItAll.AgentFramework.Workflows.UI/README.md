@@ -3,6 +3,9 @@
 This .NET 10 Razor class library contains controlled, service-free rendering for
 the Agent Workflows shell, catalog, history, templates, overview and analytics.
 Its inputs are immutable presentation records; user actions emit typed intents.
+The catalog's search text, page information and read warning are values supplied by its
+native host. Search and previous/next actions emit typed intents; they do not load or
+replace a selected workflow document inside this rendering library.
 
 Dependencies are ASP.NET Components.Web, CanDoItAll.Components.BaseLib and
 CanDoItAll.Components.Charts. Repository builds resolve the Components packages

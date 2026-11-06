@@ -25,6 +25,32 @@ namespace CanDoItAll.Tests.Unit.Projects;
 public sealed class ProjectPackageHardeningTests
 {
     [Fact]
+    public async Task Archive_access_revocation_after_staging_prevents_publication_and_removes_the_staged_archive() {
+        var root = CreateTemporaryDirectory();
+        try {
+            var source = Path.Combine(root, "source");
+            Directory.CreateDirectory(source);
+            await File.WriteAllTextAsync(Path.Combine(source, "payload.json"), "{\"proof\":\"bounded archive\"}");
+            var destination = Path.Combine(root, "refused.zip");
+            bool staged = false;
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => ProjectPackageArchive.CreatePackageArchiveAsync(
+                source, destination, DateTimeOffset.UtcNow, TestWorkspaceServices.PhysicalPathPolicyFactory, CancellationToken.None,
+                _ => {
+                    var stagingPath = Assert.Single(Directory.GetFiles(root, "*.tmp"));
+                    Assert.True(new FileInfo(stagingPath).Length > 0);
+                    Assert.False(File.Exists(destination));
+                    staged = true;
+                    throw new UnauthorizedAccessException("Current Project read access was revoked before publication.");
+                }));
+            Assert.True(staged);
+            Assert.False(File.Exists(destination));
+            Assert.Empty(Directory.GetFiles(root, "*.tmp"));
+        } finally {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ValidateForImport_accepts_canonical_virtual_project_root_parent()
     {
         var projectId = Guid.NewGuid();

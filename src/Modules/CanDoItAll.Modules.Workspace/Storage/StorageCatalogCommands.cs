@@ -34,7 +34,7 @@ public sealed class StorageCatalogCommands(StorageCatalogService catalog, IStora
         var draft = command.Draft;
         if (command.Effect == CatalogEffect.Delete) {
             try {
-                await catalog.DeleteEditorAsync(draft.Id!.Value, cancellationToken);
+                await catalog.DeleteEditorAsync(draft.Id!.Value, draft.ExpectedUpdatedAtUtc, cancellationToken);
                 outcome = outcome with { CatalogId = draft.Id, Write = CatalogWrite.Committed };
             } catch (StorageCatalogEditorRefusedException refused) {
                 return Refused(refused);
@@ -88,32 +88,33 @@ public sealed class StorageCatalogCommands(StorageCatalogService catalog, IStora
             }
             var health = StorageCatalogProjection.Health(tested.HealthStatus, tested.CapabilityMask, tested.TestedAtUtc);
             outcome = outcome with { Driver = CatalogDriver.Completed, Health = health };
-            request = request with {
-                HealthStatus = tested.HealthStatus, CapabilityMask = tested.CapabilityMask,
-                LastTestedAtUtc = tested.TestedAtUtc, LastHealthMessage = health.Message
-            };
-        }
-
-        if (command.Effect == CatalogEffect.Save || draft.Id.HasValue) {
             try {
-                var saved = await catalog.SaveEditorAsync(request, !draft.Id.HasValue, cancellationToken);
-                outcome = outcome with { CatalogId = saved.Id, Write = CatalogWrite.Committed };
-            } catch (StorageCatalogEditorRefusedException refused) {
-                return outcome with { Diagnostic = Refused(refused).Diagnostic };
+                if (draft.Id.HasValue && await catalog.SaveConnectionResultAsync(input, tested with { Message = health.Message },
+                        updateCapabilities: true, cancellationToken)) {
+                    outcome = outcome with { CatalogId = draft.Id, Write = CatalogWrite.Committed };
+                }
             } catch (Exception exception) {
                 return Failed(command, outcome with { Write = CatalogWrite.Unknown }, CatalogDiagnostic.PersistenceFailed, exception);
             }
         }
 
         if (command.Effect == CatalogEffect.Save) {
+            var routing = draft.DefaultPurposes.ToHashSet().SetEquals(draft.OriginalDefaultPurposes) ? null :
+                new StorageDefaultRoutingWrite(draft.ExpectedRoutingRevision, draft.DefaultPurposes.Select(purpose => (StorageUsagePurpose)purpose).ToArray());
             try {
-                await catalog.ApplyDefaultPurposesAsync(outcome.CatalogId!.Value,
-                    draft.DefaultPurposes.Select(purpose => (StorageUsagePurpose)purpose).ToArray(), cancellationToken);
-                outcome = outcome with { Routing = CatalogRouting.Complete };
+                var saved = await catalog.SaveEditorAsync(request, !draft.Id.HasValue, routing, cancellationToken);
+                outcome = outcome with {
+                    CatalogId = saved.Catalog.Id, Write = CatalogWrite.Committed, AcceptedUpdatedAtUtc = saved.Catalog.UpdatedAtUtc,
+                    Routing = routing is null ? CatalogRouting.NotAttempted : CatalogRouting.Complete, AcceptedRoutingRevision = saved.RoutingRevision
+                };
+            } catch (StorageCatalogEditorRefusedException refused) {
+                return outcome with { Diagnostic = Refused(refused).Diagnostic };
             } catch (Exception exception) {
-                return Failed(command, outcome with { Routing = CatalogRouting.PossiblyPartial }, CatalogDiagnostic.RoutingFailed, exception);
+                return Failed(command, outcome with { Write = CatalogWrite.Unknown,
+                    Routing = routing is null ? CatalogRouting.NotAttempted : CatalogRouting.Unknown }, CatalogDiagnostic.PersistenceFailed, exception);
             }
         }
+
         return await RecordActivityAsync(command, outcome, cancellationToken);
     }
 
@@ -144,6 +145,11 @@ public sealed class StorageCatalogCommands(StorageCatalogService catalog, IStora
     }
 
     private static CatalogOutcome Refused(StorageCatalogEditorRefusedException exception) => new() {
-        Diagnostic = exception.Reason == StorageCatalogEditorRefusal.Missing ? CatalogDiagnostic.Missing : CatalogDiagnostic.Protected
+        Diagnostic = exception.Reason switch {
+            StorageCatalogEditorRefusal.Missing => CatalogDiagnostic.Missing,
+            StorageCatalogEditorRefusal.Changed => CatalogDiagnostic.Changed,
+            StorageCatalogEditorRefusal.RoutingChanged => CatalogDiagnostic.RoutingChanged,
+            _ => CatalogDiagnostic.Protected
+        }
     };
 }

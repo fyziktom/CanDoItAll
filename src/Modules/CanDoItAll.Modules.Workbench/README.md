@@ -366,3 +366,141 @@ Complete canonical migrations remain the only schema authority. Downgrade must r
 retained preparations/receipts when removing their table, and imported evidence when
 removing its provenance marker. Operator recovery remains separately authorized; this
 transfer path cannot resume or reconcile copied source effects.
+
+Native Project definition and hierarchy commits contribute Project root metadata to the
+existing bounded Structure SSE/poll feed. Explicit refresh retains open local editors,
+maps related Project identities to their actual child/parent projection keys, selects
+surviving nodes and removes only acknowledged update rows. The graph is not replaced by
+incoming hints, and no polling bridge or additional query per hint is introduced.
+
+The Structure Project modal creates a new root; existing Project nodes route to the native
+Projects editor. Its per-opening `ProjectRootCreationAccess` retains current Project UI
+authority across private reads and command dispatch, including the actual definition and
+starter commit boundaries. Closing or replacing the opening retires that grant. Later
+acceptance remains attached to the original retained operation. Explicit leave decisions
+cover the recovery action and navigation while preserving raw local input on Continue.
+
+Existing Structure node composers capture their actual native original and hold a
+per-opening Structure grant. Comparison reads one node and its bindings in a coherent
+snapshot, checks the original Project lifetime and node occurrence, then checks the
+grant again before disclosure. The existing observation lifetime retires displayed
+current content on access changes without creating another feed subscription.
+
+Typed comparison and raw result state live in Structure.UI. Apply verifies the current
+editable-content witness and updates the same local controls; Undo restores the prior
+local values while keeping the accepted current baseline. A separate native Save
+checks the original witness and held access after SQL before commit. Unknown metadata
+and unchanged date precision stay with the native owner. Layout and live progress do
+not invalidate an ordinary content form. Deleted nodes are refused rather than upserted.
+Peer hints never read or replace the graph; the explicit refresh keeps the editor and
+removes only acknowledged update rows. Pending or unconfirmed submissions cannot be
+rearmed by comparison, a hint, or a later current read.
+
+Canvas and Gantt Task edits retain their existing specialized controls. Their native
+opening reads one coherent Task/assignment snapshot under RepeatableRead with enlisted
+Project lifetime and batched Party facts. Gantt additionally reads its current canonical
+dependency context; an ordinary refresh of the same Project admission keeps the Task
+opening alive. The original native Task occurrence never transfers to a replacement.
+
+Planning.UI owns typed field/group comparison and raw result state. The native session
+verifies current again before local Apply, advances its native expectation only with the
+exact form patch, and retains that expectation through Undo. Separate Save still checks
+native content, assignment revision and current Structure access. The callback reaches
+the actual Task, assignment, workflow attachment, process-link and pricing commit paths.
+Existing compensation and phased receipts remain authoritative; uncertain or partially
+committed operations cannot be replayed through comparison.
+
+Task writes and pricing recovery use the existing lossless metadata serializer. An own
+assignment phase carries only its exact revision, display-name and pricing changes into
+the subsequent Task expectation; it cannot adopt an intervening peer due date or other
+configuration. Complete multi-assignee sets remain protected, and workflow/process
+attachments remain explicit local intent. Existing inbox metadata marks a comparison
+stale without another feed subscription or a detail read for every hint.
+
+Canvas and Gantt Task creation share the native per-opening access owner with Task
+editing. It checks the original Project admission and current Structure access around
+private resource, quote and Project reads, and at each native content commit. Creation
+keeps its existing phased receipts and compensation; it does not fabricate an original
+Task snapshot. A denied readback retains the known committed result and local draft
+without publishing the fresh body or replaying creation. An accepted Gantt readback
+renders the parent surface so the saved Task appears without a full-page reload.
+
+Narrow Gantt title, schedule, dependency, insertion and adjacent row-order commands
+hold the original view and Project admission through native authorization and physical
+commit. Definite access denial is rejected and requires a refresh before further edits;
+it is not an uncertain save. A physically committed command whose reply outlives its
+view retains the original target and cannot publish into a successor view. Successful
+commands use the guarded native Project reader for accepted readback. Existing title,
+complete schedule, dependency and adjacency witnesses remain authoritative.
+
+Initial and explicit Structure reads validate current UI access before acquisition and
+again before publishing the project body. A refused same-actor, same-database refresh
+keeps the displayed surface and mounted local draft, with explicit feedback. Initial
+denial displays an unavailable state. Private Gantt assignment and row-order reads use
+the original Project admission and current access on both sides of acquisition. General
+Gantt reload uses the guarded native Project reader; it has no unguarded callback.
+
+Mutable Insights status, progress, priority and marker batches retain their displayed
+node witnesses and original selection/actor/Project context. Current Structure access
+is checked before native work and at the existing physical transaction commit. A
+denied or conflicting batch saves no selected nodes. Confirmed commits keep their
+receipt when a later read or view fails. Current refusals, uncertain outcomes and saved
+changes requiring refresh use the existing global notification, so an internally
+scrolled selection panel cannot hide the outcome. Retired views do not notify a successor.
+
+Calendar events remain read-only with explicit refresh. Private reads verify current
+access and the original actor/runtime/profile before publishing. Preference saves keep
+their existing issue order and original Project admission, with current access checked
+at physical commit. A changed actor retires old callbacks. Refresh of the same accepted
+owner retains the local view, date, timezone and selection while acquiring new events;
+it does not save or replay preferences changed by another Calendar session. Initial or
+replacement owners resolve their persisted preferences and addressed location normally.
+
+Alternate Canvas progress, priority and marker actions use their original node witnesses
+and current Structure access at physical commit. Current refusals are visibly not saved;
+uncertain replies remain unconfirmed. A confirmed command whose access or view retires
+keeps its original saved outcome and withholds fresh data from the retired view.
+Captured Structure preferences retain their original Project and issue order, with the
+same current-access check at commit. Pure refresh retains local zoom, selection and a
+mounted floating inspector draft without replaying another session's stored preferences.
+Task editing keeps its native modal and explicit dirty-close decision.
+
+Native graph move, dependency add/remove, reconnect, copy/cut paste, conversion and
+subtree recomposition preserve their original native witnesses and original view/actor/
+Project through current-access checks at physical commit. Confirmed late outcomes keep
+their receipt; current refusals are visible and unconfirmed replies cannot be replayed.
+Accepted conversion data is withheld when read access retires. Explicit refresh retains
+local context and acknowledges incorporated peer rows. Deletion/managed-file recovery,
+transfer and content/file asset protocols have separate owners and receipts.
+
+Branch deletion validates current UI access and the original Project/graph at physical
+commit. Exact durable cleanup retries preserve their original context and pending ids;
+late results cannot alter a successor view. A confirmed deletion or completed replay
+keeps its receipt if later access/readback fails. Current UI checks precede new cleanup
+effects; already-admitted native owner steps and background recovery keep their committed
+authority. No automatic repeat or inverse deletion is introduced.
+
+
+The native subproject transfer command now combines current Structure and Project-create
+access with original context at physical Project creation, physical node movement and
+UI-initiated assignment reconciliation. Existing reservation, graph/lifetime witnesses,
+creation receipt, durable partial recovery and native conditional compensation remain.
+Only native proof that creation never attempted physical commit produces a known access
+refusal; lost replies retain uncertainty. Retired routes retain original completion evidence
+without changing or notifying a successor. Scoped38 native tests and4 real two-browser
+checks pass; the original4 node rows/2 canonical Projects/Calendar/links/prior12 source
+receipts and all5 prior fixture Projects survive native temporary-resource cleanup. See
+.artifacts/concurrent-editing/proof/r2-workbench/transfer-manifest.md. Content/file/assets,
+exact whole-WB closure and final R2 Release5032/Stable remain required.
+
+Summary/content exports, transcript scaffolding and analysis check current Structure access
+at native effects and result publication. Shared creation requires its original context and
+keeps exact known committed nodes when readback fails. Queued image generation retains its
+original in-process authority through provider work and native media commit. Metadata/media
+commands replacing status compare the original status/progress group; independent metadata
+updates preserve peer status. Native provider/media receipts remain separate and cannot be
+blindly replayed. Scoped121 Debug cases and seven real two-engine checks pass, including
+stale summary refusal, stored exports, native file revision conflict and transcript scaffold.
+Owned nodes/files are removed while existing fixture data and audit receipts remain. See
+.artifacts/concurrent-editing/proof/r2-workbench/content-manifest.md. Remaining native file,
+Secret/Party/runtime/command writers and final whole-R2 Release5032/Stable stay open.

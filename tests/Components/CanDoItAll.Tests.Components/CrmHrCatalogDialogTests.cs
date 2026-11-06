@@ -110,6 +110,7 @@ public sealed class CrmHrCatalogDialogTests
         var profileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crmService.GetAccountWorkspaceAsync(accountId))!.Profile.Original,
             RelationshipStage = CrmAccountRelationshipStage.Prospect,
             CommercialNotes = "Controlled dialog proof",
             LastChangedBy = "component-tests"
@@ -185,32 +186,44 @@ public sealed class CrmHrCatalogDialogTests
         var expectedRoute = $"/crm-hr/recruiting?applicationId={applicationResult.Value:D}";
         var applicationCardTestId = $"crmhr-recruiting-application-{applicationResult.Value:N}";
 
-        cut.Find("[data-testid='crmhr-recruiting-role']").Change("Unsaved role change");
+        var applicationContext = cut.FindComponents<Microsoft.AspNetCore.Components.Forms.EditForm>()
+            .Single(form => form.Instance.EditContext?.Model is RecruitmentApplicationEditorModel).Instance.EditContext;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-recruiting-role']").InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "Unsaved role change" }));
 
-        cut.Find("[data-testid='crmhr-recruiting-tab-interviews']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-recruiting-tab-interviews']").ClickAsync(new()));
         cut.WaitForElement("[data-testid='crmhr-recruiting-interview-type']");
-        Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-role']"));
+        var interviewContext = cut.FindComponents<Microsoft.AspNetCore.Components.Forms.EditForm>()
+            .Single(form => form.Instance.EditContext?.Model is RecruitmentInterviewEditorModel).Instance.EditContext;
+        Assert.Same(applicationContext, cut.FindComponents<Microsoft.AspNetCore.Components.Forms.EditForm>()
+            .Single(form => form.Instance.EditContext?.Model is RecruitmentApplicationEditorModel).Instance.EditContext);
+        Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-role']").Closest("[role='tabpanel'][hidden]"));
         Assert.EndsWith(expectedRoute + "&section=interviews", navigation.Uri, StringComparison.Ordinal);
 
-        cut.Find("[data-testid='crmhr-recruiting-tab-assessments']").Click();
-        cut.WaitForAssertion(() =>
-        {
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-recruiting-tab-assessments']").ClickAsync(new()));
+        cut.WaitForAssertion(() => {
             Assert.Contains("No bound AgentFramework candidate", cut.Markup);
-            Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-interview-type']"));
+            Assert.Same(interviewContext, cut.FindComponents<Microsoft.AspNetCore.Components.Forms.EditForm>()
+                .Single(form => form.Instance.EditContext?.Model is RecruitmentInterviewEditorModel).Instance.EditContext);
+            Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-interview-type']").Closest("[role='tabpanel'][hidden]"));
         });
 
-        cut.Find("[data-testid='crmhr-recruiting-tab-development']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-recruiting-tab-development']").ClickAsync(new()));
         cut.WaitForElement("[data-testid='crmhr-recruiting-support-save-button']");
-        Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-interview-type']"));
+        Assert.Same(interviewContext, cut.FindComponents<Microsoft.AspNetCore.Components.Forms.EditForm>()
+            .Single(form => form.Instance.EditContext?.Model is RecruitmentInterviewEditorModel).Instance.EditContext);
+        Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-interview-type']").Closest("[role='tabpanel'][hidden]"));
 
-        cut.Find("[data-testid='crmhr-recruiting-tab-conversion']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-recruiting-tab-conversion']").ClickAsync(new()));
         cut.WaitForElement("[data-testid='crmhr-recruiting-convert-kind']");
-        Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-support-save-button']"));
+        Assert.True(cut.Find("[data-testid='crmhr-recruiting-support-save-button']").Closest("[role='tabpanel']")!.HasAttribute("hidden"));
         Assert.EndsWith(expectedRoute + "&section=conversion", navigation.Uri, StringComparison.Ordinal);
         // The sections refined the deep link's own entry.
         Assert.Single(history.Locations);
 
-        cut.Find("[data-testid='crmhr-recruiting-record-close']").Click();
+        var close = cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-recruiting-record-close']").ClickAsync(new()));
+        cut.WaitForElement("[data-testid='crmhr-recruiting-dirty-discard']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-recruiting-dirty-discard']").ClickAsync(new()));
+        await close;
 
         // The deep link had no catalog entry behind it: closing replaces it with the catalog location.
         cut.WaitForAssertion(() =>
@@ -237,7 +250,7 @@ public sealed class CrmHrCatalogDialogTests
         Assert.Equal(0, history.BackCount);
         Assert.Single(history.Locations);
 
-        cut.Find($"[data-testid='{applicationCardTestId}']").Click();
+        await cut.InvokeAsync(() => cut.Find($"[data-testid='{applicationCardTestId}']").ClickAsync(new()));
         cut.WaitForAssertion(() =>
         {
             Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-record-dialog']"));
@@ -278,7 +291,7 @@ public sealed class CrmHrCatalogDialogTests
         Assert.EndsWith("/crm-hr/recruiting", history.Locations[0], StringComparison.Ordinal);
 
         // Closing the record it opened goes back to that catalog entry.
-        cut.Find("[data-testid='crmhr-recruiting-record-close']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-recruiting-record-close']").ClickAsync(new()));
         cut.WaitForAssertion(() =>
         {
             Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']"));

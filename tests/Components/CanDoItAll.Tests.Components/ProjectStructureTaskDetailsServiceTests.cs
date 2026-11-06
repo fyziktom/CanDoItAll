@@ -56,6 +56,9 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             "task-details-tests", mutationOwner: MutationOwner(admission));
         var assignmentStartsOn = new DateOnly(2026, 7, 14);
         var assignmentEndsOn = new DateOnly(2026, 7, 25);
+        var shownAssignments = (await bridge.ListAssignmentsDetailedAsync(projectId))
+            .Where(assignment => assignment.NodeKey == task.Id && assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee)
+            .Select(ProjectPartyAssignmentConcurrencySnapshot.From).ToArray();
         var exactAssignmentResult = await bridge.ReplaceNodeAssignmentsAsync(
             projectId,
             new ProjectNodeReference(task.Id),
@@ -75,7 +78,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                     Notes = "Joe is reserved at a negotiated allocation."
                 }
             ],
-            [ProjectPartyAssignmentRole.WorkItemAssignee], expectedProjectAdmission: admission);
+            [ProjectPartyAssignmentRole.WorkItemAssignee], expectedProjectAdmission: admission, expectedAssignments: shownAssignments);
         Assert.True(exactAssignmentResult.IsSuccess);
         var currentTask = (await workbenchService.GetStructureAsync(
                 projectId))
@@ -996,8 +999,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
 
         public Task<Result<Guid>> SaveAssignmentAsync(
             ProjectPartyAssignmentUpsertRequest request,
-            CancellationToken cancellationToken = default)
-            => Inner.SaveAssignmentAsync(request, cancellationToken);
+            CancellationToken cancellationToken = default, Action<ProjectAssignmentSaveReceipt>? onCommitted = null)
+            => Inner.SaveAssignmentAsync(request, cancellationToken, onCommitted);
 
         public virtual Task<Result> ReplaceNodeAssignmentsAsync(
             Guid projectId,
@@ -1005,13 +1008,14 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
             CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
             => Inner.ReplaceNodeAssignmentsAsync(
                 projectId,
                 nodeReference,
                 desiredAssignments,
                 targetRoles,
-                cancellationToken, expectedProjectAdmission);
+                cancellationToken, expectedProjectAdmission, expectedAssignments);
 
         public virtual Task<Result> ReplaceNodeAssignmentsIfCurrentAsync(
             Guid projectId,
@@ -1034,8 +1038,9 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         public Task DeleteAssignmentAsync(
             Guid assignmentId,
             CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null)
-            => Inner.DeleteAssignmentAsync(assignmentId, cancellationToken, expectedReference);
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+            Action<ProjectAssignmentDeleteReceipt>? onCommitted = null)
+            => Inner.DeleteAssignmentAsync(assignmentId, cancellationToken, expectedReference, original, onCommitted);
 
         public Task DeleteAssignmentsForNodesAsync(
             Guid projectId,
@@ -1067,7 +1072,9 @@ public sealed class ProjectStructureTaskDetailsServiceTests
 
         public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
             ProjectPartyQuickCreateRequest request,
-            CancellationToken cancellationToken = default)
-            => Inner.CreatePartyAsync(request, cancellationToken);
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
+            => Inner.CreatePartyAsync(request, cancellationToken, authorizeCommit, authorizeRead);
     }
 }

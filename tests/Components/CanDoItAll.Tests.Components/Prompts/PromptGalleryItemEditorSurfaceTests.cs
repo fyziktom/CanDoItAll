@@ -10,6 +10,27 @@ namespace CanDoItAll.Tests.Components.Prompts;
 public sealed class PromptGalleryItemEditorSurfaceTests
 {
     [Fact]
+    public async Task Tag_entry_stays_local_until_an_explicit_save_after_the_input_loses_focus() {
+        await using var context = CreateContext();
+        var intents = new List<PromptGalleryEditorIntent>();
+        var cut = context.Render<PromptGalleryItemEditorSurface>(parameters => parameters
+            .Add(component => component.Presentation, PromptGalleryEditorPresentation.CreateNew(1))
+            .Add(component => component.Intent, EventCallback.Factory.Create<PromptGalleryEditorIntent>(this, intents.Add)));
+        cut.Find("[data-testid='prompt-gallery-editor-title']").Input("Tag entry");
+        cut.Find("[data-testid='prompt-gallery-editor-content']").Input("Content");
+        var tag = cut.Find("[data-testid='prompt-gallery-editor-tag-input']");
+        tag.Focus();
+        tag.Input("local-tag");
+        tag.KeyDown("Enter");
+        await cut.Find("form").SubmitAsync();
+        Assert.Empty(intents);
+        Assert.Equal(["local-tag"], cut.Instance.CurrentForm!.Tags);
+        var blur = tag.BlurAsync(new());
+        await cut.Find("form").SubmitAsync();
+        Assert.IsType<PromptGalleryEditorIntent.SaveDraft>(Assert.Single(intents));
+        await blur;
+    }
+    [Fact]
     public void Existing_item_renders_supported_model_and_version_metadata()
     {
         var itemId = Guid.NewGuid();
@@ -204,9 +225,10 @@ public sealed class PromptGalleryItemEditorSurfaceTests
     }
 
     [Fact]
-    public void External_change_shows_the_conflict_alert_and_reload_emits_retry_for_the_current_generation()
+    public void External_change_shows_the_conflict_alert_and_review_requests_comparison_without_replacing_the_draft()
     {
         var itemId = Guid.NewGuid();
+        var reviews = 0;
         var intents = new List<PromptGalleryEditorIntent>();
         using var context = CreateContext();
         var presentation = Ready(itemId, ScriptedPromptGalleryService.Details(itemId)) with
@@ -216,15 +238,17 @@ public sealed class PromptGalleryItemEditorSurfaceTests
         };
         var cut = context.Render<PromptGalleryItemEditorSurface>(parameters => parameters
             .Add(component => component.Presentation, presentation)
+            .Add(component => component.ReviewRequested, EventCallback.Factory.Create(this, () => reviews++))
             .Add(component => component.Intent, EventCallback.Factory.Create<PromptGalleryEditorIntent>(this, intents.Add)));
 
         cut.Find("[data-testid='prompt-gallery-editor-title']").Change("Local edit kept until reload");
         var conflict = cut.Find("[data-testid='prompt-gallery-editor-conflict']");
         Assert.Contains("changed elsewhere", conflict.TextContent, StringComparison.Ordinal);
 
-        cut.Find("[data-testid='prompt-gallery-editor-reload']").Click();
+        cut.Find("[data-testid='prompt-gallery-editor-review']").Click();
 
-        Assert.Equal(4, Assert.IsType<PromptGalleryEditorIntent.Retry>(Assert.Single(intents)).Generation);
+        Assert.Equal(1, reviews);
+        Assert.Empty(intents);
         // The surface only asks; the draft stays until the owner replaces the source.
         Assert.Equal("Local edit kept until reload", cut.Find("[data-testid='prompt-gallery-editor-title']").GetAttribute("value"));
     }

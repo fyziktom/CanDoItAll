@@ -16,6 +16,21 @@ namespace CanDoItAll.Tests.Integration.ProjectStructure;
 public sealed class ProjectStructureFileInteractionIntegrationTests
 {
     [Fact]
+    public async Task Same_size_replacement_with_preserved_timestamp_rejects_a_stale_file_editor() {
+        await using var fixture = await InteractionFixture.CreateAsync();
+        await using var editor = await fixture.Coordinator.OpenAsync(fixture.ProjectId, fixture.NodeKey);
+        var timestamp = File.GetLastWriteTimeUtc(fixture.FullPath);
+        var original = await File.ReadAllTextAsync(fixture.FullPath);
+        var replaced = "!" + original[1..];
+        await File.WriteAllTextAsync(fixture.FullPath, replaced);
+        File.SetLastWriteTimeUtc(fixture.FullPath, timestamp);
+
+        await Assert.ThrowsAsync<FileSaveConflictException>(() => editor.SaveAsync(
+            CreateSaveArgs(editor, "# Stale replacement", editor.Request.ContentRevision)));
+        Assert.Equal(replaced, await File.ReadAllTextAsync(fixture.FullPath));
+    }
+
+    [Fact]
     public async Task Two_native_sessions_conflict_and_mode_changes_keep_the_accepted_revision() {
         await using var fixture = await InteractionFixture.CreateAsync();
         await using var first = await fixture.Coordinator.OpenAsync(fixture.ProjectId, fixture.NodeKey);
@@ -252,6 +267,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             Directory.CreateDirectory(fixtureRoot);
             StorageCatalogSnapshot storage = await storageCatalog.SaveAsync(StorageCatalogSaveRequest.FromSnapshot(bootstrap) with {
                 Id = Guid.NewGuid(),
+                ExpectedUpdatedAtUtc = null,
                 Name = "Isolated interaction source",
                 IsSystemDefault = false,
                 EndpointOrRoot = fixtureRoot

@@ -12,7 +12,8 @@ public sealed class ProjectStructureTaskPricingPersistenceService(
     internal async Task<ProjectStructureNode?> CommitAsync(
         ProjectStructureTaskPricingCommitPlan plan,
         Action<ProjectObjectMetadataEnvelope> metadataMutation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(metadataMutation);
@@ -72,7 +73,7 @@ public sealed class ProjectStructureTaskPricingPersistenceService(
             task.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
                 task.ObjectType,
                 task.ObjectSubtype,
-                ProjectObjectMetadataSerializer.Serialize(metadata),
+                ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(task.MetadataJson, metadata),
                 task.MetadataJson,
                 task.Notes,
                 media: null);
@@ -82,6 +83,9 @@ public sealed class ProjectStructureTaskPricingPersistenceService(
                 task,
                 cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
+            if (authorizeCommit is not null) {
+                await authorizeCommit(cancellationToken);
+            }
             commitAttempted = true;
             await mutationScope.CommitAsync(cancellationToken);
 

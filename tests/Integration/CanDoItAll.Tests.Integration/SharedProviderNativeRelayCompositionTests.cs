@@ -42,7 +42,8 @@ public sealed class SharedProviderNativeRelayCompositionTests {
         var saved = await administration.SaveProviderAsync(editor);
         Assert.True(saved.IsSuccess);
         var sharing = services.GetRequiredService<ISharedProviderManagementService>();
-        var published = await sharing.SetPublicationAsync(providerId, SharedProviderPublicationAction.Publish, null);
+        var original = await sharing.GetProfileSharingAsync(providerId);
+        var published = await sharing.SetPublicationAsync(providerId, SharedProviderPublicationAction.Publish, null, original.ProviderConcurrencyToken!.Value);
         var publication = Assert.IsType<SharedProviderPublicationWriteResult>(published.Publication);
         var route = SharedProviderRoutingModelIdCodec.Create(publication.PublicId, model);
         var payload = Encoding.UTF8.GetBytes($$"""{"model":"{{route.Value}}","messages":[{"role":"user","content":"hello"}]}""");

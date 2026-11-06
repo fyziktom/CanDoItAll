@@ -15,6 +15,9 @@ namespace CanDoItAll.Web.Api;
 
 internal static class AgentsApi
 {
+    private const string AgentConfigurationConflictCode = "agents.configuration-conflict";
+    private const string TeamConfigurationConflictCode = "agents.team-configuration-conflict";
+    private const string CapabilityConfigurationConflictCode = "agents.capability-configuration-conflict";
     public static RouteGroupBuilder MapAgentsApi(this RouteGroupBuilder group)
     {
         var agents = group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
@@ -41,12 +44,14 @@ internal static class AgentsApi
 
         agents.MapPost("/", SaveAgentAsync)
             .WithName("SaveAgent")
+            .WithDescription("Creates a new agent or conditionally replaces its complete configuration. Existing agents require the original expectedUpdatedAtUtc from GET; missing, changed or deleted originals return 409 without saving.")
             .Accepts<AgentEditorModel>("application/json")
             .Produces<Guid>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status401Unauthorized,
-                StatusCodes.Status403Forbidden);
+                StatusCodes.Status403Forbidden,
+                StatusCodes.Status409Conflict);
 
         agents.MapDelete("/{agentId:guid}", DeleteAgentAsync)
             .WithName("DeleteAgent")
@@ -106,23 +111,28 @@ internal static class AgentsApi
 
         agents.MapPost("/teams", SaveAgentTeamAsync)
             .WithName("SaveAgentTeam")
-            .Produces<Guid>(StatusCodes.Status200OK);
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         agents.MapPut("/teams/{teamId:guid}", UpdateAgentTeamAsync)
             .WithName("UpdateAgentTeam")
-            .Produces<Guid>(StatusCodes.Status200OK);
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         agents.MapPost("/teams/{teamId:guid}/members", UpdateAgentTeamMembersAsync)
             .WithName("UpdateAgentTeamMembers")
-            .Produces<AgentTeamDefinition>(StatusCodes.Status200OK);
+            .Produces<AgentTeamDefinition>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         agents.MapPut("/teams/{teamId:guid}/members", ReplaceAgentTeamMembersAsync)
             .WithName("ReplaceAgentTeamMembers")
-            .Produces<AgentTeamDefinition>(StatusCodes.Status200OK);
+            .Produces<AgentTeamDefinition>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         agents.MapDelete("/teams/{teamId:guid}", DeleteAgentTeamAsync)
             .WithName("DeleteAgentTeam")
-            .Produces<ApiAck>(StatusCodes.Status200OK);
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status409Conflict);
     }
 
     private static void MapProviderEndpoints(RouteGroupBuilder agents)
@@ -174,7 +184,7 @@ internal static class AgentsApi
         agents.MapPost("/providers/{providerId:guid}/ollama-modelfile", CreateAgentProviderModelMaintenanceAsync)
             .WithName("CreateAgentProviderModelMaintenance").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<ProviderModelMaintenanceEditorResult>(StatusCodes.Status200OK)
-            .Produces<ProviderCommittedApiResponse>(StatusCodes.Status202Accepted)
+            .Produces<ProviderModelMaintenancePersistenceApiResponse>(StatusCodes.Status202Accepted)
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound,
                 StatusCodes.Status409Conflict, StatusCodes.Status503ServiceUnavailable);
     }
@@ -191,11 +201,13 @@ internal static class AgentsApi
 
         agents.MapPost("/capabilities", SaveAgentCapabilityAsync)
             .WithName("SaveAgentCapability")
-            .Produces<Guid>(StatusCodes.Status200OK);
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
 
         agents.MapDelete("/capabilities/{capabilityId:guid}", DeleteAgentCapabilityAsync)
             .WithName("DeleteAgentCapability")
-            .Produces<ApiAck>(StatusCodes.Status200OK);
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
 
         agents.MapPost("/{agentId:guid}/capabilities/{capabilityId:guid}/verify", VerifyAgentCapabilityAsync)
             .WithName("VerifyAgentCapability").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
@@ -530,15 +542,12 @@ internal static class AgentsApi
     /// concurrency check. An <c>id</c> that does not exist yet creates the agent with that identifier.
     ///
     /// The server trims text, derives the template key from <c>templateKey</c> or, when blank, from <c>name</c>, drops
-    /// unknown capability identifiers and duplicate tags, replaces <c>permissions.allowedSecrets</c> with
+    /// duplicate tags, replaces <c>permissions.allowedSecrets</c> with
     /// <c>allowedSecretReferences</c>, and writes each typed access setting over its key in <c>configurationJson</c>
     /// (a value that is not a JSON object is replaced by an empty object). Saved configuration never attaches runtime
     /// tools by itself: each run still applies the agent's permissions, capabilities, access settings and invocation
     /// policy.
     ///
-    /// The agent is committed before the CRM/HR directory projection is refreshed. If that refresh fails, the request
-    /// fails with a generic HTTP 500 although the agent is saved; list the agents before retrying, because a repeated
-    /// create is then rejected for its already used template key.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
@@ -605,12 +614,17 @@ internal static class AgentsApi
     /// </response>
     internal static async Task<IResult> DeleteAgentAsync(
         Guid agentId,
+        [Description("Original agent updatedAtUtc from the reviewed agent read. Required for deletion of an existing agent.")] DateTimeOffset? expectedUpdatedAtUtc,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {
         try
         {
-            await workspaceService.DeleteAgentAsync(agentId, cancellationToken);
+            if (expectedUpdatedAtUtc is { } expected) {
+                await workspaceService.DeleteAgentAsync(agentId, expected, cancellationToken);
+            } else {
+                await workspaceService.DeleteAgentAsync(agentId, cancellationToken);
+            }
             return Results.Ok(new ApiAck(true));
         }
         catch (AgentDeletionConflictException exception)
@@ -620,6 +634,9 @@ internal static class AgentsApi
                 exception.Kind == AgentDeletionConflictKind.ManagedSeedAgent
                     ? "agents.delete-managed-seed"
                     : "agents.delete-active-execution");
+        }
+        catch (AgentCatalogConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, AgentConfigurationConflictCode);
         }
     }
 
@@ -636,7 +653,7 @@ internal static class AgentsApi
     ///
     /// An unknown source, a name without any letter or digit, or a name whose derived template key already belongs to
     /// another agent is not translated into the error envelope: the request fails with a generic HTTP 500 and nothing
-    /// is created. The clone is committed before the CRM/HR directory projection is refreshed; if that refresh fails,
+    /// is created. The clone is committed before the CRM/HR directory projection is refreshed;
     /// HTTP 500 is returned although the clone exists, so list the agents before retrying.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
@@ -652,7 +669,7 @@ internal static class AgentsApi
         AgentCloneApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.CloneAgentAsync(agentId, request.CloneName, cancellationToken));
+        await AgentCatalogApiResults.CopyAsync(() => workspaceService.CloneAgentAsync(agentId, request.CloneName, cancellationToken));
 
     /// <summary>
     /// Create a template agent from an existing agent, leaving the source agent unchanged.
@@ -667,8 +684,6 @@ internal static class AgentsApi
     /// belong to another agent or template. A blank key falls back to the source name, which normally collides with
     /// the source agent's own key, so send an explicit key. An unknown agent or an unusable or duplicate key is not
     /// translated into the error envelope: the request fails with a generic HTTP 500 and nothing is created. The
-    /// template is committed before the CRM/HR directory projection is refreshed; if that refresh fails, HTTP 500 is
-    /// returned although the template exists, so list the agents with <c>includeTemplates=true</c> before retrying.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
@@ -683,7 +698,7 @@ internal static class AgentsApi
         AgentTemplateConversionApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.ConvertToTemplateAsync(agentId, request.TemplateKey, cancellationToken));
+        await AgentCatalogApiResults.CopyAsync(() => workspaceService.ConvertToTemplateAsync(agentId, request.TemplateKey, cancellationToken));
 
     /// <summary>
     /// Write an export package of an agent on the server and return the package's server path.
@@ -884,7 +899,8 @@ internal static class AgentsApi
         AgentTeamEditorModel request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken));
+        await TeamWriteAsync(async () => Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)),
+            accepted => Results.Ok(accepted.Id));
 
     /// <summary>
     /// Replace an agent team's name, description, icon and members.
@@ -917,7 +933,8 @@ internal static class AgentsApi
         CancellationToken cancellationToken)
     {
         request.Id = teamId;
-        return Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken));
+        return await TeamWriteAsync(async () => Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)),
+            accepted => Results.Ok(accepted.Id));
     }
 
     /// <summary>
@@ -950,7 +967,7 @@ internal static class AgentsApi
         AgentTeamMembersApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken));
+        await ReplaceTeamMembersAsync(teamId, request, workspaceService, cancellationToken);
 
     /// <summary>
     /// Replace the member list of an agent team.
@@ -982,7 +999,7 @@ internal static class AgentsApi
         AgentTeamMembersApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken));
+        await ReplaceTeamMembersAsync(teamId, request, workspaceService, cancellationToken);
 
     /// <summary>
     /// Delete an agent team without affecting its member agents.
@@ -1003,11 +1020,18 @@ internal static class AgentsApi
     /// </response>
     internal static async Task<IResult> DeleteAgentTeamAsync(
         Guid teamId,
+        [Description("Original team updatedAtUtc from the reviewed team read. Required for deletion of an existing team.")] DateTimeOffset? expectedUpdatedAtUtc,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {
-        await workspaceService.DeleteAgentTeamAsync(teamId, cancellationToken);
-        return Results.Ok(new ApiAck(true));
+        return await TeamWriteAsync(async () => {
+            if (expectedUpdatedAtUtc is { } expected) {
+                await workspaceService.DeleteAgentTeamAsync(teamId, expected, cancellationToken);
+            } else {
+                await workspaceService.DeleteAgentTeamAsync(teamId, cancellationToken);
+            }
+            return Results.Ok(new ApiAck(true));
+        });
     }
 
     /// <summary>
@@ -1208,6 +1232,7 @@ internal static class AgentsApi
     /// </response>
     internal static async Task<IResult> DeleteAgentProviderAsync(
         Guid providerId,
+        Guid? expectedConcurrencyToken,
         HttpContext context,
         IProviderRuntimeAdministrationService providerAdministration,
         CancellationToken cancellationToken) =>
@@ -1215,7 +1240,11 @@ internal static class AgentsApi
             context,
             async () =>
             {
-                await providerAdministration.DeleteProviderAsync(providerId, cancellationToken);
+                if (expectedConcurrencyToken is { } expected) {
+                    await providerAdministration.DeleteProviderAsync(providerId, expected, cancellationToken);
+                } else {
+                    await providerAdministration.DeleteProviderAsync(providerId, cancellationToken);
+                }
                 return Results.Ok(new ApiAck(true));
             },
             _ => Results.Ok(new ApiAck(true)));
@@ -1363,12 +1392,13 @@ internal static class AgentsApi
         ProviderModelMaintenanceEditorRequest request,
         HttpContext context,
         IProviderRuntimeAdministrationService providerAdministration,
+        ProviderModelMaintenanceHttpAccess access,
         CancellationToken cancellationToken) =>
-        await ProviderApiResults.ExecuteAsync(context, async () =>
+        await ProviderApiResults.ExecuteAsync(context, () => access.ExecuteAsync(providerId, context, async () =>
             Results.Ok(await providerAdministration.CreateOrUpdateProviderModelAsync(
                 providerId,
                 request,
-                cancellationToken)));
+                cancellationToken)), cancellationToken));
 
     /// <summary>
     /// List the capability catalog of the current workspace.
@@ -1421,8 +1451,7 @@ internal static class AgentsApi
     /// <remarks>
     /// Create: send <c>id</c> and <c>expectedFingerprint</c> as null; the server assigns the identifier. Update: read
     /// <c>GET /api/agents/capabilities/{capabilityId}/editor</c>, change the members you intend to change, and send
-    /// the whole form with its <c>id</c> and <c>expectedFingerprint</c>. With a fingerprint the save is rejected when
-    /// the stored capability changed since the read; without one the update overwrites without a check. The proof
+    /// the whole form with its <c>id</c> and <c>expectedFingerprint</c>. The proof
     /// fields are kept. Changing the kind or key also updates every agent's assignment of the capability and advances
     /// those agents' revisions.
     ///
@@ -1431,9 +1460,7 @@ internal static class AgentsApi
     /// kind Memory is retired and rejected. Skill configuration must be a JSON object; the configuration of other
     /// kinds is stored as sent and is not validated.
     ///
-    /// Every rejection, including a fingerprint mismatch, an unknown <c>id</c>, a fingerprint sent on create, a
-    /// duplicate key or a null text member, is not translated into the error envelope: the request fails with a generic
-    /// HTTP 500 and nothing is saved. Capabilities shipped with the product are restored to their shipped definition
+    /// Capabilities shipped with the product are restored to their shipped definition
     /// when the catalog is written, so edits to them can report success without being kept. Read the editor form
     /// again after every save.
     ///
@@ -1445,11 +1472,12 @@ internal static class AgentsApi
     /// The save completed. The body is the capability identifier as a JSON string (a GUID); read the editor form for
     /// the stored values and the new fingerprint.
     /// </response>
+    [Description("Creates a capability or conditionally replaces its configuration. Existing capabilities require their original expectedFingerprint; missing or stale originals return HTTP409 with agents.capability-configuration-conflict. Proof metadata is preserved.")]
     internal static async Task<IResult> SaveAgentCapabilityAsync(
         CapabilityEditorModel request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.SaveCapabilityAsync(request, cancellationToken));
+        await CapabilityWriteAsync(async () => Results.Ok(await workspaceService.SaveCapabilityAsync(request, cancellationToken)));
 
     /// <summary>
     /// Delete a catalog capability and remove it from every agent that has it assigned.
@@ -1457,24 +1485,31 @@ internal static class AgentsApi
     /// <remarks>
     /// Removes the capability from the catalog and its assignment from every agent, advancing those agents' revisions;
     /// assignments do not block the delete. Deleting an identifier that does not exist succeeds, so a repeated delete
-    /// is harmless. Capabilities shipped with the product are restored by the same catalog write, so deleting one
-    /// reports success but it remains.
+    /// is harmless.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="capabilityId">Identifier of the capability to delete.</param>
     /// <response code="200">
-    /// The delete completed: the capability is gone, or it never existed, unless it is shipped with the product. The
+    /// The delete completed: the capability is gone, or it never existed. The
     /// body is <c>{ "ok": true }</c>.
     /// </response>
+    [Description("Deletes a capability and its assignments only when expectedFingerprint matches the reviewed configuration. Missing or stale originals return HTTP409; built-in capabilities are refused.")]
     internal static async Task<IResult> DeleteAgentCapabilityAsync(
         Guid capabilityId,
+        string? expectedFingerprint,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {
-        await workspaceService.DeleteCapabilityAsync(capabilityId, cancellationToken);
-        return Results.Ok(new ApiAck(true));
+        return await CapabilityWriteAsync(async () => {
+            if (expectedFingerprint is null) {
+                await workspaceService.DeleteCapabilityAsync(capabilityId, cancellationToken);
+            } else {
+                await workspaceService.DeleteCapabilityAsync(capabilityId, expectedFingerprint, cancellationToken);
+            }
+            return Results.Ok(new ApiAck(true));
+        });
     }
 
     /// <summary>
@@ -2967,18 +3002,60 @@ internal static class AgentsApi
         try
         {
             return Results.Ok(await workspaceService.SaveAgentAsync(request, cancellationToken));
-        }
-        catch (ArgumentException exception)
-        {
+        } catch (AgentDirectoryProjectionSynchronizationException exception) {
+            return AgentCatalogApiResults.Committed(Results.Ok(exception.AgentId));
+        } catch (AgentCatalogCommittedException<AgentDefinition> exception) {
+            return AgentCatalogApiResults.Committed(Results.Ok(exception.Accepted.Id));
+        } catch (ArgumentException exception) {
+            return ApiEndpointResults.BadRequest(
+                exception.Message,
+                AgentApiRequestValidation.InvalidRequestCode);
+        } catch (AgentCatalogConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, AgentConfigurationConflictCode);
+        } catch (InvalidOperationException exception) {
             return ApiEndpointResults.BadRequest(
                 exception.Message,
                 AgentApiRequestValidation.InvalidRequestCode);
         }
-        catch (InvalidOperationException exception)
-        {
-            return ApiEndpointResults.BadRequest(
-                exception.Message,
-                AgentApiRequestValidation.InvalidRequestCode);
+    }
+
+    private static Task<IResult> ReplaceTeamMembersAsync(Guid teamId, AgentTeamMembersApiRequest request,
+        IAgentFrameworkWorkspaceService workspace, CancellationToken cancellationToken)
+        => TeamWriteAsync(async () => Results.Ok(request.ExpectedUpdatedAtUtc is { } expected
+            ? await workspace.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, expected, cancellationToken)
+            : await workspace.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken)),
+            accepted => Results.Ok(accepted));
+
+    private static async Task<IResult> TeamWriteAsync(Func<Task<IResult>> write,
+        Func<AgentTeamDefinition, IResult>? committedResponse = null) {
+        try {
+            return await write();
+        } catch (AgentCatalogCommittedException<AgentTeamDefinition> exception) when (committedResponse is not null) {
+            return AgentCatalogApiResults.Committed(committedResponse(exception.Accepted));
+        } catch (AgentCatalogCommittedException<Guid>) {
+            return AgentCatalogApiResults.Committed(Results.Ok(new ApiAck(true)));
+        } catch (AgentTeamConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, TeamConfigurationConflictCode);
+        } catch (AgentTeamMetadataRejectedException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, AgentApiRequestValidation.InvalidRequestCode);
+        } catch (ArgumentException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, AgentApiRequestValidation.InvalidRequestCode);
+        }
+    }
+
+    private static async Task<IResult> CapabilityWriteAsync(Func<Task<IResult>> write) {
+        try {
+            return await write();
+        } catch (AgentCatalogCommittedException<CapabilityEditorModel> exception) {
+            return AgentCatalogApiResults.Committed(Results.Ok(exception.Accepted.Id));
+        } catch (AgentCatalogCommittedException<Guid>) {
+            return AgentCatalogApiResults.Committed(Results.Ok(new ApiAck(true)));
+        } catch (CapabilityCatalogRejectedException exception) when (exception.IsConcurrencyConflict) {
+            return ApiEndpointResults.Conflict(exception.Message, CapabilityConfigurationConflictCode);
+        } catch (CapabilityCatalogRejectedException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, AgentApiRequestValidation.InvalidRequestCode);
+        } catch (ArgumentException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, AgentApiRequestValidation.InvalidRequestCode);
         }
     }
 
@@ -3061,7 +3138,8 @@ internal sealed record AgentImportApiRequest(string PackagePath);
 /// existing agent; empty identifiers and duplicates are dropped. Always send this member: an empty array, and also an
 /// omitted or null list, removes all members.
 /// </param>
-internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds);
+internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds,
+    [property: Description("Original team updatedAtUtc. Required for replacing the saved membership set; omission never bypasses concurrency checks.")] DateTimeOffset? ExpectedUpdatedAtUtc = null);
 
 /// <summary>
 /// New title of an agent chat session, sent to <c>POST /api/agents/{agentId}/chat-sessions/{chatSessionId}/rename</c>.

@@ -8,6 +8,23 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentEditorCommandsTests {
     [Fact]
+    public async Task A_known_catalog_commit_keeps_its_accepted_definition_and_sanitized_warning() {
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, WorkspaceProbe>();
+        var probe = (WorkspaceProbe)(object)workspace;
+        var accepted = new AgentDefinition(Guid.NewGuid(), "Accepted fixture", "Role", "Summary", "Retained instruction",
+            AgentLifecycleStatus.Active, null, "model", AgentWorkloadKind.General, AgentChatHistoryMode.FrameworkManaged,
+            0.2, true, false, "{}", false, "", AgentPermissionsPolicy.Default, [], [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+        probe.Failure = new AgentCatalogCommittedException<AgentDefinition>(accepted, new IOException("PRIVATE_COMMIT_SENTINEL"));
+        var commands = new AgentEditorCommands(workspace, new ExternalTargetPathRegistryFactory());
+        var result = Assert.IsType<AgentEditorSaveOutcome.Committed>(await commands.SaveAsync(new()));
+        Assert.Same(accepted, result.Accepted);
+        Assert.Equal(accepted.Id, result.AgentId);
+        Assert.NotNull(result.Warning);
+        Assert.DoesNotContain("PRIVATE_COMMIT_SENTINEL", result.Warning, StringComparison.Ordinal);
+        Assert.Equal(1, probe.Calls);
+    }
+
+    [Fact]
     public async Task Reference_read_adapter_replaces_private_errors_before_returning_its_presentation_result() {
         var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, ReferenceProbe>();
         var providers = DispatchProxy.Create<CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService, ReferenceProbe>();
@@ -61,6 +78,7 @@ public sealed class AgentEditorCommandsTests {
     [Theory]
     [InlineData(WriteFailure.Validation)]
     [InlineData(WriteFailure.Conflict)]
+    [InlineData(WriteFailure.AccessDenied)]
     [InlineData(WriteFailure.UnknownIo)]
     [InlineData(WriteFailure.UnknownInvalidOperation)]
     [InlineData(WriteFailure.UnownedCancellation)]
@@ -70,6 +88,7 @@ public sealed class AgentEditorCommandsTests {
         probe.Failure = failure switch {
             WriteFailure.Validation => new AgentEditorValidationException("Known pre-write rejection."),
             WriteFailure.Conflict => new AgentCatalogConcurrencyException(Guid.NewGuid(), DateTimeOffset.UnixEpoch, null),
+            WriteFailure.AccessDenied => new UnauthorizedAccessException("PRIVATE_NATIVE_ACCESS_DETAIL"),
             WriteFailure.UnknownIo => new IOException("Unknown write outcome."),
             WriteFailure.UnknownInvalidOperation => new InvalidOperationException("Unknown persistence operation."),
             WriteFailure.UnownedCancellation => new OperationCanceledException("Not cancelled by the editor."),
@@ -77,8 +96,10 @@ public sealed class AgentEditorCommandsTests {
         };
         var commands = new AgentEditorCommands(workspace, new ExternalTargetPathRegistryFactory());
         var outcome = await commands.SaveAsync(new());
-        if (failure is WriteFailure.Validation or WriteFailure.Conflict) {
-            Assert.Equal(failure == WriteFailure.Conflict, Assert.IsType<AgentEditorSaveOutcome.Rejected>(outcome).IsConflict);
+        if (failure is WriteFailure.Validation or WriteFailure.Conflict or WriteFailure.AccessDenied) {
+            var rejected = Assert.IsType<AgentEditorSaveOutcome.Rejected>(outcome);
+            Assert.Equal(failure == WriteFailure.Conflict, rejected.IsConflict);
+            Assert.DoesNotContain("PRIVATE_NATIVE_ACCESS_DETAIL", rejected.Message);
         } else {
             Assert.IsType<AgentEditorSaveOutcome.Unconfirmed>(outcome);
         }
@@ -97,17 +118,17 @@ public sealed class AgentEditorCommandsTests {
         Assert.Equal(1, probe.Calls);
     }
 
-    public enum WriteFailure { Validation, Conflict, UnknownIo, UnknownInvalidOperation, UnownedCancellation }
+    public enum WriteFailure { Validation, Conflict, AccessDenied, UnknownIo, UnknownInvalidOperation, UnownedCancellation }
 
     public class WorkspaceProbe : DispatchProxy {
         public int Calls { get; private set; }
         public Exception Failure { get; set; } = new InvalidOperationException("Unexpected write.");
         public Action? Cancel { get; set; }
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
-            Assert.Equal(nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync), targetMethod?.Name);
+            Assert.Equal(nameof(IAgentFrameworkWorkspaceService.SaveAgentDefinitionAsync), targetMethod?.Name);
             Calls++;
             Cancel?.Invoke();
-            return Task.FromException<Guid>(Failure);
+            return Task.FromException<AgentDefinition>(Failure);
         }
     }
 

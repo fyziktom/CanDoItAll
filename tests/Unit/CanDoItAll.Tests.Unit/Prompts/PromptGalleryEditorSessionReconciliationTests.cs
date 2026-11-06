@@ -86,7 +86,8 @@ public sealed class PromptGalleryEditorSessionReconciliationTests
         gallery.SaveDraft = draft => Task.FromResult(persisted.TrySave(draft, ArchivedToken.AddMinutes(1)));
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, SecondRevision));
 
-        Assert.Equal(ReceiptToken, gallery.SavedDrafts[^1].ExpectedUpdatedAtUtc);
+        Assert.Single(gallery.SavedDrafts);
+        Assert.Equal(ReceiptToken, session.AcceptedToken);
         Assert.Single(notices, notice => notice.Summary == "Prompt draft saved");
         Assert.Single(notices, notice => notice.Summary == "Prompt draft was not saved");
         Assert.Equal(ArchivedToken, persisted.Token);
@@ -115,6 +116,7 @@ public sealed class PromptGalleryEditorSessionReconciliationTests
         await session.SetTargetAsync(itemId);
 
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, SecondRevision));
+        await session.ApplyAsync(new PromptGalleryEditorIntent.ToggleArchive(session.Presentation.Generation));
         await session.ApplyAsync(new PromptGalleryEditorIntent.ToggleArchive(session.Presentation.Generation));
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, SecondRevision with { Content = "Third revision" }));
 
@@ -155,7 +157,8 @@ public sealed class PromptGalleryEditorSessionReconciliationTests
         gallery.SaveDraft = draft => Task.FromResult(persisted.TrySave(draft, ArchivedToken.AddMinutes(1)));
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, loaded));
 
-        Assert.Equal(SeededToken, gallery.SavedDrafts[^1].ExpectedUpdatedAtUtc);
+        Assert.Empty(gallery.SavedDrafts);
+        Assert.Equal(SeededToken, session.AcceptedToken);
         Assert.Contains(notices, notice => notice.Summary == "Prompt draft was not saved");
         Assert.Equal(foreign.SupportedModels, persisted.Content.SupportedModels);
         Assert.Equal(ArchivedToken, persisted.Token);

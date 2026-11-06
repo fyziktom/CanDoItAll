@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -120,8 +121,10 @@ public sealed record RecruitmentApplicationSummary(
 /// The recruitment application as returned in the recruitment workspace, in the shape of the application save
 /// request: change it and send it back with <c>POST /api/crm-hr/recruiting/applications</c>.
 /// </summary>
-public sealed class RecruitmentApplicationEditorModel
-{
+public sealed class RecruitmentApplicationEditorModel {
+    [Description("Exact owner-read original for this row; retain it unchanged for conditional replacement. Null is permitted only for create-only intent and never authorizes overwriting an existing row.")]
+    public RecruitmentApplicationObservation? Original { get; set; }
+
     /// <summary>
     /// Identifier of the recruitment application.
     /// </summary>
@@ -238,8 +241,9 @@ public sealed record RecruitmentStageHistoryItemModel(
     DateTimeOffset ChangedAtUtc,
     string ChangedBy);
 
-public sealed class RecruitmentInterviewEditorModel
-{
+public sealed class RecruitmentInterviewEditorModel {
+    public RecruitmentInterviewObservation? Original { get; set; }
+
     public Guid? Id { get; set; }
     public Guid ApplicationId { get; set; }
     public DateTime? ScheduledAtLocal { get; set; }
@@ -278,10 +282,15 @@ public sealed record RecruitmentInterviewItemModel(
     string InterviewerName,
     RecruitmentInterviewOutcome Outcome,
     string Recommendation,
-    string Feedback);
+    string Feedback) {
+    [Description("Exact owner-read original for this row; retain it unchanged for conditional replacement. Null is permitted only for create-only intent and never authorizes overwriting an existing row.")]
+    public RecruitmentInterviewObservation? Original { get; init; }
+}
 
-public sealed class LifecycleTaskEditorModel
-{
+public sealed class LifecycleTaskEditorModel {
+    public LifecycleTaskObservation? Original { get; set; }
+    public ProjectWriteAdmission? RelatedProjectAdmission { get; set; }
+
     public Guid? Id { get; set; }
     public Guid PartyId { get; set; }
     public LifecycleTaskKind TaskKind { get; set; } = LifecycleTaskKind.Onboarding;
@@ -330,7 +339,10 @@ public sealed record LifecycleTaskItemModel(
     Guid? RelatedProjectId,
     string RelatedProjectName,
     string Notes,
-    bool IsOverdue);
+    bool IsOverdue) {
+    [Description("Exact owner-read original for this row; retain it unchanged for conditional replacement. Null is permitted only for create-only intent and never authorizes overwriting an existing row.")]
+    public LifecycleTaskObservation? Original { get; init; }
+}
 
 public sealed class RecruitmentSupportAssignmentsEditorModel
 {
@@ -339,9 +351,15 @@ public sealed class RecruitmentSupportAssignmentsEditorModel
     public Guid? BuddyPartyId { get; set; }
     public Guid? MentorPartyId { get; set; }
     public string LastChangedBy { get; set; } = "crm-hr-ui";
+    public PartyRelationshipObservation? Original { get; private set; }
 
-    // An independent submission; the model holds no mutable descendants.
-    public RecruitmentSupportAssignmentsEditorModel Snapshot() => (RecruitmentSupportAssignmentsEditorModel)MemberwiseClone();
+    public void SetOriginal(PartyRelationshipObservation original) => Original = original.Snapshot();
+
+    public RecruitmentSupportAssignmentsEditorModel Snapshot() {
+        var copy = (RecruitmentSupportAssignmentsEditorModel)MemberwiseClone();
+        copy.Original = Original?.Snapshot();
+        return copy;
+    }
 }
 
 /// <summary>
@@ -365,14 +383,19 @@ public sealed record RecruitmentSupportAssignmentsModel(
     Guid? BuddyPartyId,
     string BuddyName,
     Guid? MentorPartyId,
-    string MentorName);
+    string MentorName) {
+    [Description("Complete original relationship-set observation read with these support assignments. Send unchanged to reject peer changes while preserving unrelated relationships.")]
+    public PartyRelationshipObservation Original { get; init; } = new([]);
+}
 
 /// <summary>
 /// A conversion request prepared from the application and from the candidate's existing workforce profile, returned in
 /// the recruitment workspace. Review it and send it to <c>POST /api/crm-hr/recruiting/conversions</c>.
 /// </summary>
-public sealed class RecruitmentConversionEditorModel
-{
+public sealed class RecruitmentConversionEditorModel {
+    [Description("Required unchanged composite original read with the conversion editor, including application, workforce and party lifecycle. Conversion never obtains a replacement original on behalf of the caller.")]
+    public RecruitmentConversionObservation? Original { get; set; }
+
     /// <summary>
     /// Identifier of the application to convert.
     /// </summary>

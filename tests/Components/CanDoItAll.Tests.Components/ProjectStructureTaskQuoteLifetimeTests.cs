@@ -3,6 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -79,7 +80,8 @@ public sealed class ProjectStructureTaskQuoteLifetimeTests {
             new Dictionary<string, object?> {
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = ProjectId,
                 [nameof(ProjectStructureGanttTaskDialog.EditModel)] = edit,
-                [nameof(ProjectStructureGanttTaskDialog.QuoteResolver)] = resolve
+                [nameof(ProjectStructureGanttTaskDialog.QuoteResolver)] = resolve,
+                [nameof(ProjectStructureGanttTaskDialog.EditSubmitted)] = new Func<ProjectStructureTaskEditDialogResult, Task<PlanningTaskSaveResult>>(_ => Task.FromResult(PlanningTaskSaveResult.Accepted))
             });
         var pending = host.WaitForElement("[data-testid='project-structure-gantt-task-resource-cost-refresh']").ClickAsync();
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));

@@ -19,7 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructurePartySaveTests {
+public sealed partial class ProjectStructurePartySaveTests {
     [Theory]
     [InlineData(ProjectObjectType.Participant)]
     [InlineData(ProjectObjectType.Meeting)]
@@ -37,12 +37,16 @@ public sealed class ProjectStructurePartySaveTests {
             ValidFrom = new DateOnly(2025, 1, 1) }, "owned-wb5-test");
         Assert.True(affiliation.IsSuccess);
         var projectDefault = await owner.SaveAssignmentAsync(new() { ProjectId = target.ProjectId, ExpectedProjectAdmission = target.Admission,
-            PartyId = target.SecondParty, Role = ProjectPartyAssignmentRole.Manager, IsPrimary = true, Source = "Original project default" });
+            PartyId = target.SecondParty, Role = ProjectPartyAssignmentRole.Manager, IsPrimary = true, Source = "Original project default",
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(target.Admission, ProjectPartyAssignmentRole.Manager, string.Empty) });
         Assert.True(projectDefault.IsSuccess);
         var defaultBefore = await ReadAssignmentAsync(harness, projectDefault.Value);
         var id = (await owner.SaveAssignmentAsync(new() { ProjectId = target.ProjectId, ExpectedProjectAdmission = target.Admission,
             PartyId = target.FirstParty, PartyAffiliationId = affiliation.Value!.Id, NodeKey = target.Node.Id, Role = role, IsPrimary = true, AllocationPercent = 37.125m,
-            Source = "owned-source", Notes = "Preserve assignment note" })).Value;
+            Source = "owned-source", Notes = "Preserve assignment note",
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(target.Admission, role, target.Node.Id) })).Value;
         await using (var context = await harness.Context.Services.GetRequiredService<IDbContextFactory<CrmHrDbContext>>().CreateDbContextAsync()) {
             var row = await context.Set<ProjectPartyAssignment>().SingleAsync(item => item.Id == id);
             row.StartsAtUtc = new DateTimeOffset(2026, 9, 1, 10, 11, 12, TimeSpan.Zero).AddTicks(1234560);
@@ -225,7 +229,9 @@ public sealed class ProjectStructurePartySaveTests {
         var target = await SeedAsync(harness, kind);
         var role = harness.Context.Services.GetRequiredService<IProjectNodeAssignmentPolicyBridge>().Resolve(kind, target.Node.ObjectSubtype).PreferredRole!.Value;
         var saved = await gate.Inner!.SaveAssignmentAsync(new() { ProjectId = target.ProjectId, ExpectedProjectAdmission = target.Admission,
-            PartyId = target.FirstParty, NodeKey = target.Node.Id, Role = role, IsPrimary = true });
+            PartyId = target.FirstParty, NodeKey = target.Node.Id, Role = role, IsPrimary = true,
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(target.Admission, role, target.Node.Id) });
         Assert.True(saved.IsSuccess);
         gate.HiddenParty = target.FirstParty;
         var cut = Render(harness, target.ProjectId);

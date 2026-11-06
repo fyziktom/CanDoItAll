@@ -6,8 +6,11 @@ namespace CanDoItAll.Modules.CrmHr;
 
 public sealed class PartyOrganizationAffiliationService(
     IDbContextFactory<CrmHrDbContext> dbContextFactory,
-    IClock clock) : IPartyOrganizationAffiliationService
+    IClock clock,
+    CrmHrChanges changes) : IPartyOrganizationAffiliationService
 {
+    internal static string MutationScopeKey(Guid personPartyId) => $"crmhr:affiliations:{personPartyId:D}";
+
     public async Task<IReadOnlyList<PartyOrganizationAffiliationListItemModel>> ListAsync(
         Guid personPartyId,
         CancellationToken cancellationToken = default)
@@ -20,6 +23,11 @@ public sealed class PartyOrganizationAffiliationService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await ReadListAsync(dbContext, personPartyId, DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime), cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<PartyOrganizationAffiliationListItemModel>> ReadListAsync(
+        CrmHrDbContext dbContext, Guid personPartyId, DateOnly today, CancellationToken cancellationToken) {
         var rows = await QueryListRows(dbContext, personPartyId)
             .Take(PartyOrganizationAffiliationLimits.MaximumAffiliationsPerPerson + 1)
             .ToListAsync(cancellationToken);
@@ -30,7 +38,6 @@ public sealed class PartyOrganizationAffiliationService(
                 $"{PartyOrganizationAffiliationLimits.MaximumAffiliationsPerPerson}.");
         }
 
-        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
         return rows
             .Select(row => MapListItem(row, today))
             .ToList();
@@ -40,10 +47,12 @@ public sealed class PartyOrganizationAffiliationService(
         Guid personPartyId,
         IReadOnlyCollection<PartyOrganizationAffiliationEditorModel> affiliations,
         string actor,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<IReadOnlyList<PartyOrganizationAffiliationListItemModel>>? onCommitted = null)
     {
         ArgumentNullException.ThrowIfNull(affiliations);
-        var now = clock.GetUtcNow();
+        affiliations = affiliations.Select(item => item.Snapshot()).ToArray();
+        var now = CrmHrEditVersions.Normalize(clock.GetUtcNow());
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         var errors = PartyOrganizationAffiliationPolicy.ValidateReplacement(
             personPartyId,
@@ -56,6 +65,9 @@ public sealed class PartyOrganizationAffiliationService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await SerializableMutationScope.BeginAsync(dbContext,
+            PartyAffiliationEndpoints.PartyIds(personPartyId, affiliations).Select(PartyAffiliationEndpoints.ScopeKey)
+                .Append(MutationScopeKey(personPartyId)).ToArray(), cancellationToken);
         var endpointValidation = await ValidateEndpointsAsync(
             dbContext,
             personPartyId,
@@ -73,7 +85,7 @@ public sealed class PartyOrganizationAffiliationService(
             .ToListAsync(cancellationToken);
         var existingById = existing.ToDictionary(item => item.Id);
         var submittedIds = affiliations
-            .Where(item => item.Id.HasValue)
+            .Where(item => item.Id.HasValue && !item.IsNew)
             .Select(item => item.Id!.Value)
             .ToHashSet();
         var missingSubmittedIds = submittedIds
@@ -87,8 +99,13 @@ public sealed class PartyOrganizationAffiliationService(
                     "crmhr.affiliation.replacement-id-invalid"));
         }
 
+        if (affiliations.Any(item => item.IsNew && item.Id.HasValue && existingById.ContainsKey(item.Id.Value))) {
+            return Result<IReadOnlyList<PartyOrganizationAffiliationListItemModel>>.Failure(Error.Failure(
+                "A new affiliation identifier already exists. Review the current affiliations.", "crmhr.affiliation.concurrency-conflict"));
+        }
+
         var missingVersions = affiliations
-            .Where(item => item.Id.HasValue && !item.ExpectedUpdatedAtUtc.HasValue)
+            .Where(item => item.Id.HasValue && !item.IsNew && !item.ExpectedUpdatedAtUtc.HasValue)
             .Select(item => item.Id!.Value)
             .ToList();
         if (missingVersions.Count > 0)
@@ -103,6 +120,7 @@ public sealed class PartyOrganizationAffiliationService(
         var staleVersions = affiliations
             .Where(item =>
                 item.Id is Guid id &&
+                !item.IsNew &&
                 item.ExpectedUpdatedAtUtc.HasValue &&
                 existingById[id].UpdatedAtUtc != item.ExpectedUpdatedAtUtc.Value)
             .Select(item => item.Id!.Value)
@@ -128,7 +146,7 @@ public sealed class PartyOrganizationAffiliationService(
                     "crmhr.affiliation.historical-removal-not-allowed"));
         }
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        IReadOnlyList<PartyOrganizationAffiliationListItemModel> saved;
         try
         {
             var requestedPrimaryId = affiliations
@@ -143,9 +161,10 @@ public sealed class PartyOrganizationAffiliationService(
                 {
                     primary.IsPrimary = false;
                     primary.LastChangedBy = endpointValidation.Actor;
-                    primary.UpdatedAtUtc = now;
+                    primary.UpdatedAtUtc = CrmHrEditVersions.Next(primary.UpdatedAtUtc, now);
                 }
 
+                await changes.DemandCommitAsync(cancellationToken);
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
 
@@ -153,14 +172,15 @@ public sealed class PartyOrganizationAffiliationService(
                 affiliations.Count);
             foreach (var editor in affiliations)
             {
-                var entity = editor.Id is Guid id
+                var entity = editor.Id is Guid id && !editor.IsNew
                     ? existingById[id]
                     : new PartyOrganizationAffiliation
                     {
+                        Id = editor.Id ?? Guid.NewGuid(),
                         PersonPartyId = personPartyId,
                         CreatedAtUtc = now
                     };
-                if (!editor.Id.HasValue)
+                if (!editor.Id.HasValue || editor.IsNew)
                 {
                     dbContext.Set<PartyOrganizationAffiliation>().Add(entity);
                 }
@@ -189,19 +209,22 @@ public sealed class PartyOrganizationAffiliationService(
                 endpointValidation.Actor,
                 endpointValidation.PersonIsSensitive,
                 now);
+            await changes.DemandCommitAsync(cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
+            saved = await ReadListAsync(dbContext, personPartyId, today, cancellationToken);
+            await changes.DemandCommitAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (Exception exception) when (exception is DbUpdateException || SerializableMutationScope.IsConflict(exception))
         {
-            await transaction.RollbackAsync(cancellationToken);
             return Result<IReadOnlyList<PartyOrganizationAffiliationListItemModel>>.Failure(
                 Error.Failure(
                     "The affiliation set changed concurrently or conflicts with a database constraint.",
                     "crmhr.affiliation.persistence-conflict"));
         }
 
-        var saved = await ListAsync(personPartyId, cancellationToken);
+        onCommitted?.Invoke(saved);
+        changes.PublishAffiliations(personPartyId);
         return Result<IReadOnlyList<PartyOrganizationAffiliationListItemModel>>.Success(saved);
     }
 
@@ -209,10 +232,12 @@ public sealed class PartyOrganizationAffiliationService(
         PartyOrganizationAffiliationEditorModel affiliation,
         string actor,
         DateTimeOffset? expectedUpdatedAtUtc = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<PartyOrganizationAffiliationListItemModel>? onCommitted = null)
     {
         ArgumentNullException.ThrowIfNull(affiliation);
-        var now = clock.GetUtcNow();
+        affiliation = affiliation.Snapshot();
+        var now = CrmHrEditVersions.Normalize(clock.GetUtcNow());
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         var errors = PartyOrganizationAffiliationPolicy.ValidateSingle(
             affiliation,
@@ -224,6 +249,9 @@ public sealed class PartyOrganizationAffiliationService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await SerializableMutationScope.BeginAsync(dbContext,
+            PartyAffiliationEndpoints.PartyIds(affiliation.PersonPartyId, [affiliation]).Select(PartyAffiliationEndpoints.ScopeKey)
+                .Append(MutationScopeKey(affiliation.PersonPartyId)).ToArray(), cancellationToken);
         var endpointValidation = await ValidateEndpointsAsync(
             dbContext,
             affiliation.PersonPartyId,
@@ -241,7 +269,7 @@ public sealed class PartyOrganizationAffiliationService(
         {
             entity = await dbContext.Set<PartyOrganizationAffiliation>()
                 .SingleOrDefaultAsync(item => item.Id == affiliationId, cancellationToken);
-            if (entity is null)
+            if (entity is null && !affiliation.IsNew)
             {
                 return Result<PartyOrganizationAffiliationListItemModel>.Failure(
                     Error.Failure(
@@ -249,7 +277,11 @@ public sealed class PartyOrganizationAffiliationService(
                         "crmhr.affiliation.not-found"));
             }
 
-            if (entity.PersonPartyId != affiliation.PersonPartyId)
+            if (entity is not null && affiliation.IsNew) {
+                return Result<PartyOrganizationAffiliationListItemModel>.Failure(Error.Failure(
+                    "This new affiliation identifier already exists. Review it before saving.", "crmhr.affiliation.concurrency-conflict"));
+            }
+            if (entity is not null && entity.PersonPartyId != affiliation.PersonPartyId)
             {
                 return Result<PartyOrganizationAffiliationListItemModel>.Failure(
                     Error.Validation(
@@ -259,8 +291,12 @@ public sealed class PartyOrganizationAffiliationService(
 
             var expectedVersion = expectedUpdatedAtUtc ??
                                   affiliation.ExpectedUpdatedAtUtc;
-            if (expectedVersion.HasValue &&
-                entity.UpdatedAtUtc != expectedVersion.Value)
+            if (entity is not null && (!expectedVersion.HasValue || expectedVersion.Value == default)) {
+                return Result<PartyOrganizationAffiliationListItemModel>.Failure(Error.Validation(
+                    "Reload this affiliation before saving; its original version is required.",
+                    "crmhr.affiliation.concurrency-version-required"));
+            }
+            if (entity is not null && entity.UpdatedAtUtc != expectedVersion!.Value)
             {
                 return Result<PartyOrganizationAffiliationListItemModel>.Failure(
                     Error.Failure(
@@ -268,7 +304,7 @@ public sealed class PartyOrganizationAffiliationService(
                         "crmhr.affiliation.concurrency-conflict"));
             }
         }
-        else
+        if (entity is null)
         {
             var existingCount = await dbContext
                 .Set<PartyOrganizationAffiliation>()
@@ -310,11 +346,12 @@ public sealed class PartyOrganizationAffiliationService(
         var isNew = entity is null;
         entity ??= new PartyOrganizationAffiliation
         {
+            Id = affiliation.Id ?? Guid.NewGuid(),
             PersonPartyId = affiliation.PersonPartyId,
             CreatedAtUtc = now
         };
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        PartyOrganizationAffiliationListItemModel saved;
         try
         {
             if (affiliation.IsPrimary)
@@ -331,9 +368,10 @@ public sealed class PartyOrganizationAffiliationService(
                     {
                         currentPrimary.IsPrimary = false;
                         currentPrimary.LastChangedBy = endpointValidation.Actor;
-                        currentPrimary.UpdatedAtUtc = now;
+                        currentPrimary.UpdatedAtUtc = CrmHrEditVersions.Next(currentPrimary.UpdatedAtUtc, now);
                     }
 
+                    await changes.DemandCommitAsync(cancellationToken);
                     await dbContext.SaveChangesAsync(cancellationToken);
                 }
             }
@@ -367,20 +405,22 @@ public sealed class PartyOrganizationAffiliationService(
                 endpointValidation.Actor,
                 endpointValidation.PersonIsSensitive,
                 now);
+            await changes.DemandCommitAsync(cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
+            saved = (await ReadListAsync(dbContext, affiliation.PersonPartyId, today, cancellationToken)).Single(item => item.Id == entity.Id);
+            await changes.DemandCommitAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (Exception exception) when (exception is DbUpdateException || SerializableMutationScope.IsConflict(exception))
         {
-            await transaction.RollbackAsync(cancellationToken);
             return Result<PartyOrganizationAffiliationListItemModel>.Failure(
                 Error.Failure(
                     "The affiliation changed concurrently or conflicts with a database constraint.",
                     "crmhr.affiliation.persistence-conflict"));
         }
 
-        var saved = (await ListAsync(affiliation.PersonPartyId, cancellationToken))
-            .Single(item => item.Id == entity.Id);
+        onCommitted?.Invoke(saved);
+        changes.PublishAffiliations(affiliation.PersonPartyId);
         return Result<PartyOrganizationAffiliationListItemModel>.Success(saved);
     }
 
@@ -464,19 +504,7 @@ public sealed class PartyOrganizationAffiliationService(
         string actor,
         CancellationToken cancellationToken)
     {
-        var partyIds = affiliations
-            .SelectMany(item => new Guid?[]
-            {
-                item.PersonPartyId,
-                item.OrganizationPartyId,
-                item.OrganizationUnitPartyId,
-                item.ManagerPartyId
-            })
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value)
-            .Append(personPartyId)
-            .Distinct()
-            .ToArray();
+        var partyIds = PartyAffiliationEndpoints.PartyIds(personPartyId, affiliations);
         var parties = await dbContext.Set<Party>()
             .AsNoTracking()
             .Where(party => partyIds.Contains(party.Id))
@@ -582,7 +610,7 @@ public sealed class PartyOrganizationAffiliationService(
         entity.ValidToUtc = ToUtcDate(editor.ValidTo);
         entity.Notes = (editor.Notes ?? string.Empty).Trim();
         entity.LastChangedBy = actor;
-        entity.UpdatedAtUtc = now;
+        entity.UpdatedAtUtc = CrmHrEditVersions.Next(entity.UpdatedAtUtc, now);
     }
 
     private static DateTimeOffset? ToUtcDate(DateOnly? value)
@@ -726,6 +754,12 @@ internal static class PartyOrganizationAffiliationPolicy
         DateOnly today,
         ICollection<Error> errors)
     {
+        if (item.Id == Guid.Empty || item.IsNew && !item.Id.HasValue) {
+            errors.Add(Error.Validation("A newly identified affiliation needs a nonempty identifier.", "crmhr.affiliation.id-invalid"));
+        }
+        if ((item.IsNew || !item.Id.HasValue) && item.ExpectedUpdatedAtUtc.HasValue) {
+            errors.Add(Error.Validation("A new affiliation must observe absence, not an existing row version.", "crmhr.affiliation.create-version-invalid"));
+        }
         if (item.PersonPartyId == Guid.Empty)
         {
             errors.Add(Error.Validation(

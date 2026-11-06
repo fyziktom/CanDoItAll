@@ -1,4 +1,6 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Insights.UI;
@@ -16,6 +18,8 @@ public partial class ProjectStructurePage {
     private InsightsMenu? insightsMenu;
     private readonly Queue<InsightsEffect> insightsEffects = new();
     private readonly Queue<(ProjectWriteAdmission Admission, string NodeId, ProjectStructureCommandKind Command, ArtifactReference? Artifact)> committedInsightCommands = new();
+    internal IReadOnlyList<(ProjectWriteAdmission Admission, string NodeId, ProjectStructureCommandKind Command, ArtifactReference? Artifact)> CommittedInsightCommands
+        => committedInsightCommands.ToArray();
 
     private sealed record InsightsContext(InsightsOrigin Origin, ProjectStructureActionContext Native,
         Task<AuthenticationState>? Actor, ProjectStructureSelectionPanelState Selection,
@@ -50,7 +54,7 @@ public partial class ProjectStructurePage {
             await InsightsAdmissions.RequireCurrentAsync(context.Native.Admission, deferredCompletionCts.Token);
             return IsCurrentInsights(context) && CurrentInsights.Origin == origin ? context : null;
         } catch (Exception exception) {
-            RecordInsightsEffect(context, "Admission", [], null, exception.Message, exception);
+            RecordInsightsEffect(context, "Admission", [], [], exception.Message, exception);
             return null;
         }
     }
@@ -62,13 +66,22 @@ public partial class ProjectStructurePage {
             insightsEffects.Dequeue();
         }
         if (exception is not null) {
-            Logger.LogWarning(exception, "Insights {Operation} for original project {ProjectId}, lifetime {LifetimeId}, targets {NodeIds}: {Outcome}.",
-                operation, context.Origin.ProjectId, context.Origin.LifetimeId, targets, message);
+            Logger.LogWarning("Insights {Operation} for original project {ProjectId}, lifetime {LifetimeId}, target count {TargetCount}; failure type {FailureType}.",
+                operation, context.Origin.ProjectId.ToString("N")[..8], context.Origin.LifetimeId.ToString("N")[..8], targets.Count,
+                exception.GetType().Name);
         }
         if (IsCurrentInsights(context)) {
             var current = CurrentInsights;
             workflowFeedback = message;
             workflowFeedbackTone = exception is null ? "mint" : "warn";
+            if (exception is not null) {
+                var summary = confirmed?.Count switch {
+                    > 0 => "Structure changes saved; refresh required",
+                    0 => "Structure changes not saved",
+                    _ => "Structure outcome unconfirmed"
+                };
+                NotificationService.Warning(summary, message);
+            }
             if (current.Origin == context.Origin) {
                 insightsContext = current with { Selection = BuildSelectionPanelState() };
             }
@@ -76,10 +89,17 @@ public partial class ProjectStructurePage {
     }
 
     private async Task ApplyInsightsNodesAsync(InsightsContext context, string operation, IReadOnlyList<string> targets,
-        Func<Task<IReadOnlyList<ProjectStructureNode>>> write) {
+        Func<Func<CancellationToken, ValueTask>, Task<IReadOnlyList<ProjectStructureNode>>> write) {
+        await using var access = ObserveActionAccess();
         IReadOnlyList<ProjectStructureNode> changed;
         try {
-            changed = await write();
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeInsightsAsync(context, access, write: true, deferredCompletionCts.Token);
+            changed = await write(token => AuthorizeInsightsAsync(context, access, write: true, token));
+        } catch (Exception exception) when (exception is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException or ProjectStructureEditConflictException) {
+            RecordInsightsEffect(context, operation, targets, [],
+                "The selected changes were not saved because access or the displayed nodes changed. Refresh the original project before trying again.", exception);
+            return;
         } catch (Exception exception) {
             RecordInsightsEffect(context, operation, targets, null,
                 "No write result was confirmed. Inspect the original project's state before repeating the action.", exception);
@@ -87,14 +107,25 @@ public partial class ProjectStructurePage {
         }
         var confirmed = changed.Select(node => node.Id).ToArray();
         RecordInsightsEffect(context, operation, targets, confirmed, $"Updated {confirmed.Length} original node(s).");
-        if (!IsCurrentAction(context.Native) || !ReferenceEquals(context.Actor, InsightsAuthentication)) {
+        if (!IsCurrentInsights(context)) {
             return;
         }
         try {
+            await AuthorizeInsightsAsync(context, access, write: false, deferredCompletionCts.Token);
             await ApplySurfaceNodeUpdatesAsync(changed);
         } catch (Exception exception) {
             RecordInsightsEffect(context, operation, targets, confirmed,
                 $"Updated {confirmed.Length} original node(s), but the view could not refresh. Reload the view; do not repeat the write.", exception);
+        }
+    }
+
+    private async ValueTask AuthorizeInsightsAsync(InsightsContext context, EditingObservation access, bool write, CancellationToken cancellationToken) {
+        if (!IsCurrentInsights(context)) {
+            throw new UnauthorizedAccessException("The original Structure selection is no longer current.");
+        }
+        await AuthorizeActionAsync(context.Native, access, write, cancellationToken);
+        if (!IsCurrentInsights(context)) {
+            throw new UnauthorizedAccessException("The original Structure selection changed while access was checked.");
         }
     }
 
@@ -119,16 +150,16 @@ public partial class ProjectStructurePage {
                     InsightsStatus.NotApplicable => "N/A",
                     _ => throw new ArgumentOutOfRangeException(nameof(intent))
                 };
-                await ApplyInsightsNodesAsync(context, "Status", ids, () => ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(
-                    admission.ProjectId, ids, value, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
+                await ApplyInsightsNodesAsync(context, "Status", ids, authorize => ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(
+                    admission.ProjectId, ids, value, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize));
                 break;
             case InsightsSelectionCommand.Progress progress:
-                await ApplyInsightsNodesAsync(context, "Progress", ids, () => ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(
-                    admission.ProjectId, ids, "progress", progress.Percent, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
+                await ApplyInsightsNodesAsync(context, "Progress", ids, authorize => ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(
+                    admission.ProjectId, ids, "progress", progress.Percent, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize));
                 break;
             case InsightsSelectionCommand.Priority priority:
-                await ApplyInsightsNodesAsync(context, "Priority", ids, () => ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(
-                    admission.ProjectId, ids, priority.Value, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
+                await ApplyInsightsNodesAsync(context, "Priority", ids, authorize => ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(
+                    admission.ProjectId, ids, priority.Value, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize));
                 break;
             case InsightsSelectionCommand.Marker marker:
                 await ApplyInsightsMarkerAsync(context, ids, marker.Value, toggle: false);
@@ -190,21 +221,21 @@ public partial class ProjectStructurePage {
         if (actionCatalog.TryResolveMarkerAction(intent.ActionId, out var icon, out var tone, out var label)) {
             await ApplyInsightsMarkerAsync(context, ids, new(icon, tone, label), toggle: true);
         } else if (actionCatalog.TryResolveProgressAction(intent.ActionId, out var mode, out var percent)) {
-            await ApplyInsightsNodesAsync(context, "Progress", ids, () => ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(
-                admission.ProjectId, ids, mode, percent, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
+            await ApplyInsightsNodesAsync(context, "Progress", ids, authorize => ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(
+                admission.ProjectId, ids, mode, percent, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize));
         } else if (actionCatalog.TryResolvePriorityAction(intent.ActionId, out var priority)) {
-            await ApplyInsightsNodesAsync(context, "Priority", ids, () => ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(
-                admission.ProjectId, ids, priority, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
+            await ApplyInsightsNodesAsync(context, "Priority", ids, authorize => ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(
+                admission.ProjectId, ids, priority, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize));
         }
     }
 
     private Task ApplyInsightsMarkerAsync(InsightsContext context, string[] ids, ProjectStructureSelectionMarkerRequest marker, bool toggle) {
         var admission = context.Native.Admission;
         var remove = toggle && context.Nodes.All(node => node.Markers.Any(value => value.Icon.Equals(marker.Badge, StringComparison.OrdinalIgnoreCase)));
-        return ApplyInsightsNodesAsync(context, "Marker", ids, () => string.IsNullOrWhiteSpace(marker.Badge)
-            ? ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(admission.ProjectId, ids, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission))
-            : remove ? ProjectWorkbenchService.RemoveObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission))
-            : ProjectWorkbenchService.AddObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
+        return ApplyInsightsNodesAsync(context, "Marker", ids, authorize => string.IsNullOrWhiteSpace(marker.Badge)
+            ? ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(admission.ProjectId, ids, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize)
+            : remove ? ProjectWorkbenchService.RemoveObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize)
+            : ProjectWorkbenchService.AddObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize));
     }
 
     private async Task<bool> PersistInsightsStateAsync(InsightsContext context, CanvasWorkbenchUiState state, string operation) {
@@ -217,6 +248,9 @@ public partial class ProjectStructurePage {
             if (!await PersistCapturedViewStateAsync(context.Native, json, deferredCompletionCts.Token)) {
                 return false;
             }
+        } catch (Exception exception) when (exception is UnauthorizedAccessException or ProjectWriteAdmissionRejectedException) {
+            RecordInsightsEffect(context, operation, [], [], "The view preferences were not saved because access changed. Refresh the original project before trying again.", exception);
+            return false;
         } catch (Exception exception) {
             RecordInsightsEffect(context, operation, [], null, "The view-state result was not confirmed. Reload before repeating it.", exception);
             return false;

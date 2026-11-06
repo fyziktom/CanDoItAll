@@ -21,6 +21,10 @@ public interface ICrmHrAgentsWorkspaceView : ICrmHrWorkspaceView
     AiAgentWorkspaceModel? SelectedWorkspace { get; }
     bool IsWorkspaceLoading { get; }
     bool IsRecordDialogOpen { get; }
+    bool IsRecordOutdated { get; }
+    long CatalogRefreshVersion { get; }
+    void RefreshCatalog();
+    Task RefreshRecordAsync();
     // The section of the open agent record.
     CrmHrAgentRecordSection RecordSection { get; }
     PagedRecordSelection<Guid>? AgentSelection { get; }

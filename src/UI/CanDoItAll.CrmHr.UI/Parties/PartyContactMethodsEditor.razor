@@ -35,13 +35,13 @@
                     </div>
                     <div>
                         <label class="cda-field-label">Label</label>
-                        <InputText @bind-Value="item.Label"
+                        <NativeValueInput TValue="string" @bind-Value="item.Label"
                                    class="cda-input"
                                    data-testid="@($"crmhr-contact-label-{rowIndex}")" />
                     </div>
                     <div class="lg:col-span-2">
                         <label class="cda-field-label">Value</label>
-                        <InputText @bind-Value="item.Value"
+                        <NativeValueInput TValue="string" @bind-Value="item.Value"
                                    class="cda-input"
                                    data-testid="@($"crmhr-contact-value-{rowIndex}")" />
                     </div>
@@ -62,7 +62,7 @@
                     </label>
                     <div>
                         <label class="cda-field-label">Notes</label>
-                        <InputText @bind-Value="item.Notes"
+                        <NativeValueInput TValue="string" @bind-Value="item.Notes"
                                    class="cda-input"
                                    data-testid="@($"crmhr-contact-notes-{rowIndex}")" />
                     </div>
@@ -115,7 +115,7 @@
                     <Stack GapScale="LayoutGap.Medium">
                         <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                             <FormField Text="Value">
-                                <InputText @bind-Value="contactDraft.Value"
+                                <NativeValueInput TValue="string" @bind-Value="contactDraft.Value"
                                            class="cda-input"
                                            aria-invalid="@(!string.IsNullOrEmpty(contactValidationError) ? "true" : "false")"
                                            data-testid="crmhr-contact-wizard-value" />
@@ -129,7 +129,7 @@
                             </FormField>
 
                             <FormField Text="Label">
-                                <InputText @bind-Value="contactDraft.Label"
+                                <NativeValueInput TValue="string" @bind-Value="contactDraft.Label"
                                            class="cda-input"
                                            data-testid="crmhr-contact-wizard-label" />
                             </FormField>
@@ -200,17 +200,20 @@
 }
 
 @code {
+    [CascadingParameter] public Microsoft.AspNetCore.Components.Forms.EditContext? Context { get; set; }
     private ContactMethodDraft? contactDraft;
     private ContactWizardStep contactWizardStep;
     private string contactValidationError = string.Empty;
 
     [Parameter, EditorRequired]
     public IList<PartyContactPointEditorModel> ContactPoints { get; set; } = default!;
+    [Parameter] public EventCallback<bool> PendingChanged { get; set; }
 
     private void OpenContactWizard() {
         contactDraft = new ContactMethodDraft();
         contactWizardStep = ContactWizardStep.Type;
         contactValidationError = string.Empty;
+        _ = PendingChanged.InvokeAsync(true);
     }
 
     private void SelectContactType(PartyContactType contactType) {
@@ -277,6 +280,7 @@
         contactDraft = null;
         contactWizardStep = ContactWizardStep.Type;
         contactValidationError = string.Empty;
+        _ = PendingChanged.InvokeAsync(false);
     }
 
     private void RemoveContactPoint(PartyContactPointEditorModel contactPoint) {

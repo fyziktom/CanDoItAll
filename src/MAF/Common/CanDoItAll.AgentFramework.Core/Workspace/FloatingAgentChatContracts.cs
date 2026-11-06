@@ -41,6 +41,8 @@ public interface IFloatingAgentChatCoordinator : IAgentChatLauncher
 
     ActiveAgentChat KeepActive(AgentChatHandleId handleId);
 
+    void SetDraftPending(AgentChatHandleId handleId, bool pending);
+
     void Stop(AgentChatHandleId handleId);
 
     ActiveAgentChat SetRunState(

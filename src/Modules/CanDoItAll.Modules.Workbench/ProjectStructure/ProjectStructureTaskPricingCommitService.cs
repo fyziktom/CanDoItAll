@@ -108,7 +108,8 @@ public sealed class ProjectStructureTaskPricingCommitService(
 
     internal async Task<ProjectStructureTaskEstimateRefreshResult> CommitAsync(
         ProjectStructureTaskPricingCommitPlan plan,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         var updated = await pricingPersistenceService.CommitAsync(
@@ -135,7 +136,7 @@ public sealed class ProjectStructureTaskPricingCommitService(
                 WriteEstimate(currentMetadata.WorkItem, plan.Pricing.Estimate);
                 currentMetadata.WorkItem.ExpectedCostBasis = plan.Pricing.CalculatedCostBasis;
             },
-            cancellationToken);
+            cancellationToken, authorizeCommit);
         if (updated is null)
         {
             throw new InvalidOperationException(

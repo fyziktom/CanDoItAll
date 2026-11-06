@@ -11,8 +11,8 @@ internal sealed class SchedulerMutations(ISchedulerWorkspaceOwner owner, Func<Ta
     public IReadOnlyDictionary<Guid, SchedulerMutationReceipt> Receipts => planReceipts;
     public bool IsPlanLocked(Guid id) => planReceipts.GetValueOrDefault(id)?.Status is SchedulerMutationStatus.Pending or SchedulerMutationStatus.Unknown;
     public Task ToggleAsync(SchedulerPlanSummary plan) => MutatePlanAsync(plan.Id,
-        plan.IsEnabled ? SchedulerMutationKind.Disable : SchedulerMutationKind.Enable, () => owner.ToggleAsync(plan.Id, !plan.IsEnabled));
-    public Task DeleteAsync(Guid id) => MutatePlanAsync(id, SchedulerMutationKind.Delete, () => owner.DeleteAsync(id));
+        plan.IsEnabled ? SchedulerMutationKind.Disable : SchedulerMutationKind.Enable, () => owner.ToggleAsync(plan.Condition, !plan.IsEnabled));
+    public Task DeleteAsync(SchedulerPlanSummary plan) => MutatePlanAsync(plan.Id, SchedulerMutationKind.Delete, () => owner.DeleteAsync(plan.Condition));
     private void Notify() => notify();
     private Task RefreshAsync() => refresh();
     public bool IsPlanReviewing(Guid id) => planReviews.ContainsKey(id);
@@ -210,8 +210,71 @@ internal sealed class SchedulerMutations(ISchedulerWorkspaceOwner owner, Func<Ta
         Notify();
     }
 
+    public async Task CompareChangesAsync(SchedulerDraft draft, Func<bool> isActive) {
+        if (disposed || !isActive() || draft.IsReviewing || draft.Receipt?.Status != SchedulerMutationStatus.Conflict || draft.Values.Id is not { } id) {
+            return;
+        }
+        var receipt = draft.Receipt;
+        var revision = draft.Revision;
+        using var lane = new SchedulerReadLane();
+        draftReviews[draft.Origin] = lane;
+        using var request = lane.Begin();
+        bool Current() => !disposed && isActive() && request.IsCurrent && ReferenceEquals(draft.Receipt, receipt);
+        draft.IsReviewing = true;
+        draft.ConflictReview = null;
+        draft.Error = string.Empty;
+        Notify();
+        try {
+            var saved = await owner.EditorAsync(id, request.Token);
+            if (!Current()) {
+                return;
+            }
+            if (saved.Id != id || !saved.ExpectedDefinitionRevision.HasValue) {
+                draft.Error = "The current schedule could not be identified. Your draft is retained.";
+            } else if (draft.Revision != revision) {
+                draft.Error = "The draft changed while the schedule was loading. Compare changes again.";
+            } else {
+                draft.ConflictReview = new(draft, saved);
+            }
+        } catch (KeyNotFoundException) when (Current()) {
+            draft.Error = "The schedule was removed. Your draft is still open.";
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+        } catch (Exception) {
+            if (Current()) {
+                draft.Error = "The saved schedule could not be loaded. Compare changes again.";
+            }
+        } finally {
+            draftReviews.Remove(draft.Origin);
+            draft.IsReviewing = false;
+            Notify();
+        }
+    }
+
+    public bool ApplyComparison(SchedulerDraft draft, SchedulerConflictReview review) {
+        if (disposed || !ReferenceEquals(draft.ConflictReview, review) || !review.IsResolved || draft.Receipt?.Status != SchedulerMutationStatus.Conflict) {
+            return false;
+        }
+        if (draft.Revision != review.Revision) {
+            draft.Error = "The draft changed after comparison. Read the saved schedule again.";
+            Notify();
+            return false;
+        }
+        if (draft.Values.Id is { } id && ReferenceEquals(planReceipts.GetValueOrDefault(id), draft.Receipt)) {
+            planReceipts.Remove(id);
+        }
+        draft.Values = review.Apply();
+        draft.Baseline = review.Current;
+        draft.ConflictReview = null;
+        draft.Receipt = null;
+        draft.Error = string.Empty;
+        submissions.Remove(draft.Origin);
+        Notify();
+        return true;
+    }
+
     private static SchedulerDraftValues Merge(SchedulerDraft draft, long submittedRevision, SchedulerDraftValues saved) => draft.Values with {
         Id = saved.Id,
+        ExpectedDefinitionRevision = saved.ExpectedDefinitionRevision,
         Name = draft.LastChanged(SchedulerDraftField.Name) <= submittedRevision ? saved.Name : draft.Values.Name,
         Description = draft.LastChanged(SchedulerDraftField.Description) <= submittedRevision ? saved.Description : draft.Values.Description,
         TargetKind = draft.LastChanged(SchedulerDraftField.TargetKind) <= submittedRevision ? saved.TargetKind : draft.Values.TargetKind,

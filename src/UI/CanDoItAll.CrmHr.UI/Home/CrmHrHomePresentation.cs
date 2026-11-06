@@ -126,6 +126,7 @@ public abstract record CrmHrHomeIntent
     public sealed record OpenOpportunity(Guid AccountPartyId, Guid OpportunityId) : CrmHrHomeIntent;
 
     public sealed record Retry(long Generation) : CrmHrHomeIntent;
+    public sealed record Refresh(long Generation) : CrmHrHomeIntent;
 }
 
 public static class CrmHrHomeText

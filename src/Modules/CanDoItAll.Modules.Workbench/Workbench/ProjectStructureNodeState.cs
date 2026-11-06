@@ -101,6 +101,14 @@ internal static class ProjectStructureNodeStateGuard {
         }
     }
 
+    internal static bool HasSameEditableContent(ProjectStructureNode expected, ProjectStructureNode current) =>
+        expected.RecordId == current.RecordId && expected.Id == current.Id && expected.ProjectId == current.ProjectId &&
+        expected.ObjectType == current.ObjectType && expected.ObjectSubtype == current.ObjectSubtype && expected.ParentId == current.ParentId &&
+        expected.MetadataJson == current.MetadataJson && expected.Title == current.Title && expected.Subtitle == current.Subtitle &&
+        expected.Notes == current.Notes && expected.StartUtc == current.StartUtc && expected.EndUtc == current.EndUtc &&
+        expected.DurationSeconds == current.DurationSeconds &&
+        JsonSerializer.Serialize(expected.NodeReferences) == JsonSerializer.Serialize(current.NodeReferences);
+
     internal static ProjectStructureContentFingerprint Fingerprint(ProjectStructureNode node) {
         var markers = node.Markers.Count > 0 ? node.Markers : ProjectNodeLegacyMetadata.ReadLegacyMarkers(node.MetadataJson);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(new {

@@ -9,6 +9,24 @@ namespace CanDoItAll.Tests.WorkbenchPlanning;
 
 public sealed class GanttSurfaceTests {
     [Fact]
+    public void Refresh_selection_highlights_only_the_tasks_named_by_the_host() {
+        using var context = CreateContext();
+        var initial = Presentation();
+        var first = initial.Tasks[0];
+        var second = new GanttTask(new("second"), "Second", first.Start, first.End);
+        var accepted = initial with {
+            Tasks = [first, second],
+            SelectedTaskIds = new HashSet<GanttTaskId> { first.Id }
+        };
+        var cut = context.Render<PlanningGanttSurface>(parameters => parameters.Add(component => component.Presentation, accepted));
+
+        var accent = cut.FindComponent<GanttChart>().Instance.TaskAccentColorSelector!;
+        Assert.NotNull(accent(first));
+        Assert.Null(accent(second));
+        Assert.Equal("1 changed task selected", cut.Find("[data-testid='project-structure-gantt-change-selection']").TextContent.Trim());
+    }
+
+    [Fact]
     public async Task Queued_title_intent_keeps_original_origin_and_receiver() {
         using var context = CreateContext();
         var original = Presentation();

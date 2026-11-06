@@ -11,19 +11,30 @@
     Func<bool> isCurrent = () => !disposed && openingKey == (ProjectId, QuoteContext, CreateRequest.SourceNodeId, IsEditMode) && ReferenceEquals(reference, DialogReference);
     var submit = Submitted;
 }
-<PlanningStructureTaskEditor @key="openingKey" ProjectId="ProjectId" QuoteContext="QuoteContext" CreateRequest="CreateRequest"
+<PlanningStructureTaskEditor @key="openingKey" @ref="editor" ProjectId="ProjectId" QuoteContext="QuoteContext" CreateRequest="CreateRequest"
                             IsEditMode="IsEditMode" InitialAssignee="InitialAssignee" InitialExecution="InitialExecution"
                             CanChangeDirectAssignee="CanChangeDirectAssignee" RepositoryOptions="RepositoryOptions"
                             ResourceOptions="ResourceOptions" ResourceWarnings="ResourceWarnings" QuoteResolver="QuoteResolver"
                             DefaultCurrencyCode="@CurrencyFormatter.CurrencyCode" Readback="Readback"
+                            ComparisonOwner="ComparisonOwner"
                             Submitted="@(draft => SubmitAsync(draft, submit, reference, isCurrent))"
                             Cancelled="@(() => isCurrent() ? CloseAsync(reference) : Task.CompletedTask)" />
 
 @code {
     private bool disposed;
-    public void Dispose() => disposed = true;
+    private readonly ProjectTaskDialogCloseOwner closeOwner = new();
+    private PlanningStructureTaskEditor? editor;
+
+    protected override void OnAfterRender(bool firstRender) => closeOwner.Attach(DialogReference,
+        () => editor?.ReadCloseRequest(), () => editor?.ConfirmLeaveAsync() ?? Task.FromResult(false));
+
+    public void Dispose() {
+        disposed = true;
+        closeOwner.Dispose();
+    }
     [CascadingParameter] public DialogReference? DialogReference { get; set; }
     [Parameter] public Func<Task<PlanningTaskSaveResult>>? Readback { get; set; }
+    [Parameter] public IPlanningTaskComparisonOwner? ComparisonOwner { get; set; }
     [Parameter, EditorRequired]
     public CanvasWorkbenchCreateActionRequest CreateRequest { get; set; } = default!;
 
@@ -68,9 +79,14 @@
         if (reference is null) {
             return new(PlanningTaskSaveStatus.Rejected, "This task editor requires its original dialog reference.", [], [], []);
         }
-        var result = submit is null ? PlanningTaskSaveResult.Accepted : await submit(draft);
+        var submitted = editor?.ReadCloseRequest();
+        var result = submit is null ? new PlanningTaskSaveResult(PlanningTaskSaveStatus.Rejected,
+            "This task editor is not connected to a save owner.", [], [], []) : await submit(draft);
         if (result.ShouldClose) {
-            await reference.CloseAsync(draft);
+            if (!isCurrent() || !await closeOwner.CloseAcceptedAsync(reference, submitted, draft!)) {
+                return result with { RequiresReadback = true,
+                    Message = $"{result.Message} The current draft is retained. Review the original save outcome before another write." };
+            }
         }
         return result;
     }

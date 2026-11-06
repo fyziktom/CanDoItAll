@@ -1,6 +1,8 @@
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Projects.Pages.Components;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -10,6 +12,11 @@ public partial class ProjectStructurePage {
     [Inject] private ProjectNativeDefinitionOperations ProjectCreateDefinitions { get; set; } = default!;
     [Inject] private IProjectPendingSubmissionStore ProjectCreatePendingStore { get; set; } = default!;
     [Inject] private ProjectPendingStoreLimits ProjectCreatePendingLimits { get; set; } = default!;
+    [Inject] private EditingChangeFeed ProjectCreateChanges { get; set; } = default!;
+    [Inject] private IEditingUiAccess ProjectCreateUiAccess { get; set; } = default!;
+    [Inject] private ProjectChanges ProjectCreateProjectChanges { get; set; } = default!;
+    [Inject] private ILogger<EditingObservation> ProjectCreateObservationLogger { get; set; } = default!;
+    private ProjectRootCreationAccess? projectCreateAccess;
     private readonly Dictionary<ProjectEditorDraft, ProjectEditorOperationSession> projectCreateSessions = [];
     private ProjectDefinitionWriteContext? projectCreateContext;
     private IReadOnlyList<ProjectPendingSubmissionMetadata> projectCreatePending = [];
@@ -27,17 +34,18 @@ public partial class ProjectStructurePage {
         => !session.IsRetired && showProjectCreateModal && ReferenceEquals(session.Draft, projectCreateDraft) &&
            IsCurrentAuthoring(opening, projectCreateOpening);
 
-    private async Task<(ProjectDefinitionWriteContext Context, IReadOnlyList<ProjectPendingSubmissionMetadata> Pending)> ReadProjectCreatePendingAsync(ProjectPendingScope scope) {
-        var before = await ProjectCreateDefinitions.GetContextAsync(deferredCompletionCts.Token);
+    private Task<(ProjectDefinitionWriteContext Context, IReadOnlyList<ProjectPendingSubmissionMetadata> Pending)> ReadProjectCreatePendingAsync(
+        ProjectPendingScope scope, ProjectRootCreationAccess access) => access.ReadAsync(async token => {
+        var before = await ProjectCreateDefinitions.GetContextAsync(token);
         if (ProjectNativeDefinitionOperations.Scope(before) != scope) {
             throw new InvalidOperationException("The dataset or caller changed after the editor opened.");
         }
-        await ProjectCreatePendingStore.InitializeAsync(deferredCompletionCts.Token);
+        await ProjectCreatePendingStore.InitializeAsync(token);
         var rows = new List<ProjectPendingSubmissionMetadata>();
         var seen = new HashSet<ProjectDefinitionOperation>();
         ProjectDefinitionOperation? after = null;
         do {
-            var page = await ProjectCreatePendingStore.ListAsync(scope, ProjectCreatePendingLimits.MaximumPageSize, after, deferredCompletionCts.Token);
+            var page = await ProjectCreatePendingStore.ListAsync(scope, ProjectCreatePendingLimits.MaximumPageSize, after, token);
             foreach (var row in page.Items) {
                 if (!scope.Contains(row.Operation) || !seen.Add(row.Operation) || rows.Count >= ProjectCreatePendingLimits.MaximumRecordCount) {
                     throw new InvalidOperationException("The retained-save inventory is invalid or exceeds its bounded scope.");
@@ -49,12 +57,12 @@ public partial class ProjectStructurePage {
                 throw new InvalidOperationException("The retained-save continuation does not follow its page.");
             }
         } while (after is not null);
-        var context = await ProjectCreateDefinitions.GetContextAsync(deferredCompletionCts.Token);
+        var context = await ProjectCreateDefinitions.GetContextAsync(token);
         if (ProjectNativeDefinitionOperations.Scope(context) != scope) {
             throw new InvalidOperationException("The dataset or caller changed while retained saves were read.");
         }
-        return (context, rows);
-    }
+        return (context, (IReadOnlyList<ProjectPendingSubmissionMetadata>)rows);
+    }, deferredCompletionCts.Token);
 
     private bool ValidateProjectCreateCapture(ProjectEditorDraft target) {
         if (!ReferenceEquals(target, projectCreateDraft) || !ProjectCreateSubmissionReady) {
@@ -113,11 +121,12 @@ public partial class ProjectStructurePage {
         }
         var parent = projectCreateParentOpening;
         var dialog = projectHierarchyDialogBeforeCreate;
+        var access = projectCreateAccess ?? throw new UnauthorizedAccessException("The original Workbench creation access is unavailable.");
         ProjectEditorOperationSession? session = null;
         Exception? failure = null;
         target.Mutation = ProjectEditorMutationState.Saving;
         try {
-            var (context, pending) = await ReadProjectCreatePendingAsync(target.Scope!);
+            var (context, pending) = await ReadProjectCreatePendingAsync(target.Scope!, access);
             if (!IsCurrentAuthoring(opening, projectCreateOpening) || !ReferenceEquals(target, projectCreateDraft)) {
                 return;
             }
@@ -130,7 +139,8 @@ public partial class ProjectStructurePage {
             session = new(target, submitted, new(ProjectCreatePendingStore, frozen, submitted.Seeds.Count > 0));
             projectCreateSessions.Add(target, session);
             await session.PrepareAsync(deferredCompletionCts.Token);
-            await session.Pending.DispatchAsync(context, DateTimeOffset.UtcNow, false, ProjectCreateDefinitions.DispatchAsync);
+            await session.Pending.DispatchAsync(context, DateTimeOffset.UtcNow, false,
+                (command, token) => access.DispatchAsync(ProjectCreateDefinitions, target.Definition.OpeningId, command, token));
             session.RememberAcceptance();
             if (!IsLiveProjectCreate(opening, session)) {
                 target.Mutation = ProjectEditorMutationState.PendingRecovery;
@@ -144,6 +154,7 @@ public partial class ProjectStructurePage {
                     : "Creation is not confirmed. Check its original save reference before continuing.";
                 return;
             }
+            await access.AuthorizeReadAsync(deferredCompletionCts.Token);
             session.Reconcile();
             if (session.CanSeed) {
                 if (ProjectWorkbenchSeedService is not IAdmittedProjectWorkbenchSeedService seeds) {
@@ -151,9 +162,10 @@ public partial class ProjectStructurePage {
                 }
                 session.BeginSeedAttempt();
                 try {
-                    await seeds.SeedProjectObjectsAsync(accepted.Result.Acknowledgement.Project, submitted.Seeds.Select(seed => seed.Value).ToArray());
+                    await seeds.SeedProjectObjectsAsync(accepted.Result.Acknowledgement.Project,
+                        submitted.Seeds.Select(seed => seed.Value).ToArray(), requireCurrentWrite: access.AuthorizeWriteAsync);
                     session.CompleteSeedAttempt();
-                } catch (ProjectWriteAdmissionRejectedException) {
+                } catch (Exception exception) when (exception is ProjectWriteAdmissionRejectedException or UnauthorizedAccessException) {
                     session.RefuseSeedAttempt();
                     target.Mutation = ProjectEditorMutationState.AdmissionRefused;
                     target.Message = "Project saved. Starter objects were refused before writes; inspect the current project explicitly.";
@@ -231,15 +243,17 @@ public partial class ProjectStructurePage {
             !IsLiveProjectCreate(opening, session) || session.Pending.IsBusy || !projectCreateRecoveryActions.Add(session)) {
             return;
         }
+        var access = projectCreateAccess ?? throw new UnauthorizedAccessException("The original Workbench creation access is unavailable.");
         try {
             switch (action.Action) {
                 case ProjectPendingEditorAction.Check:
-                    await session.Pending.ObserveLookupAsync(await ProjectCreateDefinitions.LookupAsync(session.Operation, deferredCompletionCts.Token));
+                    await session.Pending.ObserveLookupAsync(await access.ReadAsync(
+                        token => ProjectCreateDefinitions.LookupAsync(session.Operation, token), deferredCompletionCts.Token));
                     session.RememberAcceptance();
                     break;
                 case ProjectPendingEditorAction.Retry:
-                    var context = await ProjectCreateDefinitions.GetContextAsync(deferredCompletionCts.Token);
-                    var lookup = await ProjectCreateDefinitions.LookupAsync(session.Operation, deferredCompletionCts.Token);
+                    var context = await access.ReadAsync(ProjectCreateDefinitions.GetContextAsync, deferredCompletionCts.Token);
+                    var lookup = await access.ReadAsync(token => ProjectCreateDefinitions.LookupAsync(session.Operation, token), deferredCompletionCts.Token);
                     if (!IsLiveProjectCreate(opening, session)) {
                         break;
                     }
@@ -252,16 +266,19 @@ public partial class ProjectStructurePage {
                         await session.PrepareAsync(deferredCompletionCts.Token);
                     }
                     await session.Pending.DispatchAsync(context, DateTimeOffset.UtcNow,
-                        session.Pending.Record?.Stage != ProjectPendingStage.Prepared, ProjectCreateDefinitions.DispatchAsync);
+                        session.Pending.Record?.Stage != ProjectPendingStage.Prepared,
+                        (command, token) => access.DispatchAsync(ProjectCreateDefinitions, session.Draft.Definition.OpeningId, command, token));
                     session.RememberAcceptance();
                     break;
                 case ProjectPendingEditorAction.ApplyAccepted:
+                    await access.AuthorizeReadAsync(deferredCompletionCts.Token);
                     session.Reconcile();
                     session.Draft.Message = "The exact accepted creation was applied. Newer input is preserved. Read the current definition separately; recovery does not create starter objects.";
                     break;
                 case ProjectPendingEditorAction.ReadCurrent:
                     if (session.Draft.AcceptedOutcome is { } accepted) {
-                        var current = await ProjectCreateDefinitions.ReadCurrentAsync(accepted.Accepted.Project.ProjectId, session.Draft.Scope!, deferredCompletionCts.Token);
+                        var current = await access.ReadAsync(token => ProjectCreateDefinitions.ReadCurrentAsync(
+                            accepted.Accepted.Project.ProjectId, session.Draft.Scope!, token), deferredCompletionCts.Token);
                         if (IsLiveProjectCreate(opening, session) && current.IsSuccess) {
                             session.Draft.InspectCurrent(current.Value!);
                         } else if (current.IsFailure) {
@@ -328,10 +345,14 @@ public partial class ProjectStructurePage {
 
     private void RetireProjectCreateSession() {
         ProjectCreateSession?.Dispose();
+        projectCreateAccess?.Stop();
         projectCreateContext = null;
     }
 
-    private void OpenProjectCreateRecovery() {
+    private async Task OpenProjectCreateRecovery() {
+        if (showProjectCreateModal && (projectCreateModal is null || !await projectCreateModal.RequestLeaveAsync())) {
+            return;
+        }
         RetireProjectCreateSession();
         projectCreateOpening = null;
         showProjectCreateModal = false;

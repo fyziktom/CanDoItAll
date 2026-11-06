@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 internal sealed class AgentDecisionPolicyRecoverySession(IAgentFrameworkWorkspaceService workspace,
-    IAgentDecisionPolicyPendingStore pending, ILogger<AgentDecisionPolicyRecoverySession> logger) {
+    IAgentDecisionPolicyPendingStore pending, ILogger<AgentDecisionPolicyRecoverySession> logger, AgentConfigurationOpening opening) {
     private AgentExecutionActivityWorkspaceIdentity? context;
     private bool retired;
     public IReadOnlyList<AgentDecisionPolicyPendingSummary> Rows { get; private set; } = [];
@@ -22,9 +22,9 @@ internal sealed class AgentDecisionPolicyRecoverySession(IAgentFrameworkWorkspac
         Rows = [];
         context = null;
         try {
-            var captured = await workspace.ReadAgentDecisionDataPolicyContextAsync(cancellationToken);
-            var rows = await pending.ListAsync(captured, cancellationToken);
-            if (captured != await workspace.ReadAgentDecisionDataPolicyContextAsync(cancellationToken) ||
+            var captured = await ReadContextAsync(cancellationToken);
+            var rows = await opening.ReadAsync(async token => await pending.ListAsync(captured, token), cancellationToken);
+            if (captured != await ReadContextAsync(cancellationToken) ||
                     rows.Count > IAgentDecisionPolicyPendingStore.MaximumRecords || rows.Any(row => row.AgentId == Guid.Empty ||
                         row.OperationId == Guid.Empty || !Enum.IsDefined(row.Stage)) || rows.Select(row => row.AgentId).Distinct().Count() != rows.Count) {
                 throw new InvalidOperationException("The recovery context or retained list changed.");
@@ -48,11 +48,11 @@ internal sealed class AgentDecisionPolicyRecoverySession(IAgentFrameworkWorkspac
         Busy = true;
         Error = null;
         try {
-            if (captured != await workspace.ReadAgentDecisionDataPolicyContextAsync(cancellationToken)) {
+            if (captured != await ReadContextAsync(cancellationToken)) {
                 throw new InvalidOperationException("The original recovery workspace changed.");
             }
-            var record = await pending.ReadAsync(new(captured, row.AgentId), cancellationToken);
-            if (captured != await workspace.ReadAgentDecisionDataPolicyContextAsync(cancellationToken) || record is null ||
+            var record = await opening.ReadAsync(async token => await pending.ReadAsync(new(captured, row.AgentId), token), cancellationToken);
+            if (captured != await ReadContextAsync(cancellationToken) || record is null ||
                     record.Command.Expectation.AgentId != row.AgentId || record.Command.OperationId != row.OperationId || record.Stage != row.Stage ||
                     record.Command.Expectation.Workspace.DatabaseProfileId != captured.DatabaseProfileId ||
                     record.Command.Expectation.Workspace.WorkspaceScope != captured.WorkspaceScope) {
@@ -73,6 +73,9 @@ internal sealed class AgentDecisionPolicyRecoverySession(IAgentFrameworkWorkspac
         Rows = [];
         context = null;
     }
+
+    private Task<AgentExecutionActivityWorkspaceIdentity> ReadContextAsync(CancellationToken cancellationToken)
+        => opening.ReadAsync(workspace.ReadAgentDecisionDataPolicyContextAsync, cancellationToken);
 
     private void Fail(Exception failure, string message, CancellationToken cancellationToken) {
         if (retired || cancellationToken.IsCancellationRequested) {

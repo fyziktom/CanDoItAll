@@ -2,67 +2,115 @@ using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.AgentFramework.Workflows.Definitions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 namespace CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 
 public sealed class WorkflowCanvasDocument
 {
+    internal WorkflowDraftChanges Changes { get; } = new();
+
+    public long EditRevision => Changes.Revision;
+
+    public WorkflowCanvasDocument() {
+        TrackCollection(Nodes, static node => node.Changes, WorkflowDraftField.Nodes);
+        TrackCollection(Edges, static edge => edge.Changes, WorkflowDraftField.Edges);
+    }
+
     public WorkflowDefinition? Baseline { get; set; }
 
     public WorkflowId? DefinitionId { get; set; }
 
     public WorkflowVersionId? VersionId { get; set; }
 
-    public string Name { get; set; } = "Canvas workflow";
+    public string Name { get; set => Changes.Set(WorkflowDraftField.Name, ref field, value); } = "Canvas workflow";
 
-    public string Description { get; set; } = "Workflow authored from the canvas editor.";
+    public string Description { get; set => Changes.Set(WorkflowDraftField.Description, ref field, value); } = "Workflow authored from the canvas editor.";
 
-    public WorkflowLifecycleStatus Status { get; set; } = WorkflowLifecycleStatus.Draft;
+    public WorkflowLifecycleStatus Status { get; set => Changes.Set(WorkflowDraftField.Status, ref field, value); } = WorkflowLifecycleStatus.Draft;
 
-    public WorkflowRuntimePolicy RuntimePolicy { get; set; } = WorkflowSettings.Default.DefaultRuntimePolicy;
+    public WorkflowRuntimePolicy RuntimePolicy { get; set => Changes.Set(WorkflowDraftField.RuntimePolicy, ref field, value); } = WorkflowSettings.Default.DefaultRuntimePolicy;
 
-    public WorkflowNodeId StartNodeId { get; set; } = new("start");
+    public WorkflowNodeId StartNodeId { get; set => Changes.Set(WorkflowDraftField.StartNodeId, ref field, value); } = new("start");
 
     public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
-    public List<WorkflowCanvasNodeDraft> Nodes { get; } = [];
+    public ObservableCollection<WorkflowCanvasNodeDraft> Nodes { get; } = [];
 
-    public List<WorkflowCanvasEdgeDraft> Edges { get; } = [];
+    public ObservableCollection<WorkflowCanvasEdgeDraft> Edges { get; } = [];
+
+    private void TrackCollection<T>(ObservableCollection<T> collection, Func<T, WorkflowDraftChanges> changes,
+        WorkflowDraftField property) where T : class {
+        HashSet<T> tracked = [];
+        Action changed = () => Changes.Touch(property);
+        collection.CollectionChanged += (_, args) => {
+            if (args.Action == NotifyCollectionChangedAction.Reset) {
+                foreach (var item in tracked) {
+                    changes(item).Changed -= changed;
+                }
+                tracked.Clear();
+                foreach (var item in collection) {
+                    if (tracked.Add(item)) {
+                        changes(item).Changed += changed;
+                    }
+                }
+            } else {
+                if (args.OldItems is not null) {
+                    foreach (T item in args.OldItems) {
+                        if (!collection.Contains(item) && tracked.Remove(item)) {
+                            changes(item).Changed -= changed;
+                        }
+                    }
+                }
+                if (args.NewItems is not null) {
+                    foreach (T item in args.NewItems) {
+                        if (tracked.Add(item)) {
+                            changes(item).Changed += changed;
+                        }
+                    }
+                }
+            }
+            changed();
+        };
+    }
 }
 
 public enum WorkflowNodeInputField { AgentId, SubworkflowId, TimeoutSeconds, RetryAttempts, RetryDelay }
 
 public sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKind kind)
 {
+    internal WorkflowDraftChanges Changes { get; } = new();
+
     public WorkflowNode? Baseline { get; set; }
 
-    public WorkflowNodeId Id { get; set; } = id;
+    public WorkflowNodeId Id { get; set => Changes.Set(WorkflowDraftField.Id, ref field, value); } = id;
 
-    public WorkflowNodeKind Kind { get; set; } = kind;
+    public WorkflowNodeKind Kind { get; set => Changes.Set(WorkflowDraftField.Kind, ref field, value); } = kind;
 
-    public string Name { get; set; } = WorkflowCanvasDefinitionMapper.ResolveDefaultNodeName(kind);
+    public string Name { get; set => Changes.Set(WorkflowDraftField.Name, ref field, value); } = WorkflowCanvasDefinitionMapper.ResolveDefaultNodeName(kind);
 
-    public WorkflowComponentId? ComponentId { get; set; }
+    public WorkflowComponentId? ComponentId { get; set => Changes.Set(WorkflowDraftField.ComponentId, ref field, value); }
 
-    public Guid? ProviderProfileId { get; set; }
+    public Guid? ProviderProfileId { get; set => Changes.Set(WorkflowDraftField.ProviderProfileId, ref field, value); }
 
-    public string Model { get; set; } = string.Empty;
+    public string Model { get; set => Changes.Set(WorkflowDraftField.Model, ref field, value); } = string.Empty;
 
-    public Guid? AgentId { get; set; }
+    public Guid? AgentId { get; set => Changes.Set(WorkflowDraftField.AgentId, ref field, value); }
 
-    public WorkflowId? SubworkflowId { get; set; }
+    public WorkflowId? SubworkflowId { get; set => Changes.Set(WorkflowDraftField.SubworkflowId, ref field, value); }
 
-    public WorkflowExternalRequestKind? ExternalRequestKind { get; set; }
+    public WorkflowExternalRequestKind? ExternalRequestKind { get; set => Changes.Set(WorkflowDraftField.ExternalRequestKind, ref field, value); }
 
-    public WorkflowExecutorId? ExecutorId { get; set; }
+    public WorkflowExecutorId? ExecutorId { get; set => Changes.Set(WorkflowDraftField.ExecutorId, ref field, value); }
 
-    public string ExecutorSettingsJson { get; set; } = string.Empty;
+    public string ExecutorSettingsJson { get; set => Changes.Set(WorkflowDraftField.ExecutorSettings, ref field, value); } = string.Empty;
 
-    public ConfigurationState? PendingConfiguration { get; set; }
+    public ConfigurationState? PendingConfiguration { get; set => Changes.Set(WorkflowDraftField.ExecutorSettings, ref field, value); }
 
-    public string SettingsError { get; set; } = string.Empty;
+    public string SettingsError { get; set => Changes.Set(WorkflowDraftField.ExecutorSettings, ref field, value); } = string.Empty;
 
     public Dictionary<WorkflowNodeInputField, string> RawInputs { get; } = [];
 
@@ -70,13 +118,13 @@ public sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKind 
 
     public string ReadInput(WorkflowNodeInputField field, string value) => RawInputs.GetValueOrDefault(field, value);
 
-    public WorkflowExecutorExecutionPolicy? ExecutionPolicy { get; set; }
+    public WorkflowExecutorExecutionPolicy? ExecutionPolicy { get; set => Changes.Set(WorkflowDraftField.ExecutionPolicy, ref field, value); }
 
-    public string Instructions { get; set; } = WorkflowCanvasDefinitionMapper.ResolveDefaultInstructions(kind);
+    public string Instructions { get; set => Changes.Set(WorkflowDraftField.Instructions, ref field, value); } = WorkflowCanvasDefinitionMapper.ResolveDefaultInstructions(kind);
 
-    public WorkflowValueShape? InputShape { get; set; } = new(WorkflowValueShapeKind.Text, string.Empty, "Text");
+    public WorkflowValueShape? InputShape { get; set => Changes.Set(WorkflowDraftField.InputShape, ref field, value); } = new(WorkflowValueShapeKind.Text, string.Empty, "Text");
 
-    public WorkflowValueShape? ResultShape { get; set; } = new(WorkflowValueShapeKind.Text, string.Empty, "Text");
+    public WorkflowValueShape? ResultShape { get; set => Changes.Set(WorkflowDraftField.ResultShape, ref field, value); } = new(WorkflowValueShapeKind.Text, string.Empty, "Text");
 
     public WorkflowValueShapeKind InputShapeKind {
         get => InputShape?.Kind ?? WorkflowValueShapeKind.Text;
@@ -96,9 +144,9 @@ public sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKind 
         }
     }
 
-    public double CanvasX { get; set; }
+    public double CanvasX { get; set => Changes.Set(WorkflowDraftField.CanvasX, ref field, value); }
 
-    public double CanvasY { get; set; }
+    public double CanvasY { get; set => Changes.Set(WorkflowDraftField.CanvasY, ref field, value); }
 }
 
 public sealed class WorkflowCanvasEdgeDraft(
@@ -106,23 +154,25 @@ public sealed class WorkflowCanvasEdgeDraft(
     WorkflowNodeId sourceNodeId,
     WorkflowNodeId targetNodeId)
 {
+    internal WorkflowDraftChanges Changes { get; } = new();
+
     public WorkflowEdge? Baseline { get; set; }
 
-    public WorkflowEdgeId Id { get; set; } = id;
+    public WorkflowEdgeId Id { get; set => Changes.Set(WorkflowDraftField.Id, ref field, value); } = id;
 
-    public WorkflowNodeId SourceNodeId { get; set; } = sourceNodeId;
+    public WorkflowNodeId SourceNodeId { get; set => Changes.Set(WorkflowDraftField.SourceNodeId, ref field, value); } = sourceNodeId;
 
-    public WorkflowNodeId TargetNodeId { get; set; } = targetNodeId;
+    public WorkflowNodeId TargetNodeId { get; set => Changes.Set(WorkflowDraftField.TargetNodeId, ref field, value); } = targetNodeId;
 
-    public WorkflowPortId? SourcePortId { get; set; } = new(WorkflowCanvasDefinitionMapper.OutputPortId);
+    public WorkflowPortId? SourcePortId { get; set => Changes.Set(WorkflowDraftField.SourcePortId, ref field, value); } = new(WorkflowCanvasDefinitionMapper.OutputPortId);
 
-    public WorkflowPortId? TargetPortId { get; set; } = new(WorkflowCanvasDefinitionMapper.InputPortId);
+    public WorkflowPortId? TargetPortId { get; set => Changes.Set(WorkflowDraftField.TargetPortId, ref field, value); } = new(WorkflowCanvasDefinitionMapper.InputPortId);
 
-    public WorkflowEdgeKind Kind { get; set; } = WorkflowEdgeKind.Direct;
+    public WorkflowEdgeKind Kind { get; set => Changes.Set(WorkflowDraftField.Kind, ref field, value); } = WorkflowEdgeKind.Direct;
 
-    public string ConditionExpression { get; set; } = string.Empty;
+    public string ConditionExpression { get; set => Changes.Set(WorkflowDraftField.ConditionExpression, ref field, value); } = string.Empty;
 
-    public WorkflowEdgeRouting Routing { get; set; } = WorkflowEdgeRouting.Always;
+    public WorkflowEdgeRouting Routing { get; set => Changes.Set(WorkflowDraftField.Routing, ref field, value); } = WorkflowEdgeRouting.Always;
 }
 
 public static class WorkflowCanvasDefinitionMapper

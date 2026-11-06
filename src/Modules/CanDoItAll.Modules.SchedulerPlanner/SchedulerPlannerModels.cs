@@ -11,6 +11,8 @@ public sealed class SchedulerPlan
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    public Guid DefinitionRevision { get; set; }
+
     public string Name { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
@@ -62,6 +64,7 @@ internal sealed class SchedulerPlanConfiguration : IEntityTypeConfiguration<Sche
     {
         builder.ToTable("SchedulerPlanner_Plans");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.DefinitionRevision).IsConcurrencyToken();
         builder.Property(item => item.Name).HasMaxLength(180).IsRequired();
         builder.Property(item => item.Description).HasColumnType("TEXT");
         builder.Property(item => item.TargetNameSnapshot).HasMaxLength(240).IsRequired();
@@ -152,11 +155,15 @@ public sealed record SchedulerPlannerWorkspace(
     IReadOnlyList<SchedulerPlanSummary> Plans,
     IReadOnlyList<SchedulerPlanRunSummary> History,
     IReadOnlyList<SchedulerTargetOption> TargetOptions,
-    CanvasCalendarSurface CalendarSurface);
+    CanvasCalendarSurface CalendarSurface) {
+    public int? PlanCount { get; init; }
+}
 
 public sealed class SchedulerPlanEditorModel
 {
     public Guid? Id { get; set; }
+
+    public Guid? ExpectedDefinitionRevision { get; set; }
 
     public string Name { get; set; } = string.Empty;
 

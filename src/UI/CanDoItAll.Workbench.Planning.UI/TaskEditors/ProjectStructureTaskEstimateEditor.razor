@@ -15,7 +15,7 @@
                    value="@expectedEffortValueText"
                    aria-label="Expected pure task effort"
                    data-testid="@TestId("effort")"
-                   @onchange="HandleExpectedEffortChangedAsync" />
+                   @oninput="CaptureEffortInputAsync" @onchange="HandleExpectedEffortChangedAsync" />
         </FormField>
 
         <FormField Text="Effort unit">
@@ -57,7 +57,7 @@
                    disabled="@ExpectedCostReadOnly"
                    aria-label="Expected task cost"
                    data-testid="@TestId("cost")"
-                   @onchange="HandleExpectedCostChangedAsync" />
+                   @oninput="CaptureCostInputAsync" @onchange="HandleExpectedCostChangedAsync" />
         </FormField>
 
         <FormField Text="Currency">
@@ -181,6 +181,30 @@
         }
     }
 
+    public TaskEstimateInputText CaptureInput() => new(expectedEffortValueText,
+        expectedEffortUnit?.ToString() ?? invalidUnitText, expectedCostAmountText, expectedCostCurrencyCode);
+
+    public void ApplyInput(TaskEstimateInputText input) {
+        expectedEffortValueText = input.Effort;
+        expectedCostAmountText = input.Cost;
+        expectedCostCurrencyCode = input.Currency;
+        expectedEffortUnit = Enum.TryParse<ProjectWorkItemEffortUnit>(input.Unit, true, out var unit) && Enum.IsDefined(unit) ? unit : null;
+        invalidUnitText = input.Unit;
+        lastParameterValue = Value;
+        lastEmittedValue = TryGetValue(out var parsed, out _) ? parsed : null;
+        StateHasChanged();
+    }
+
+    private Task CaptureEffortInputAsync(ChangeEventArgs args) {
+        expectedEffortValueText = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+        return InputChanged.InvokeAsync(TryGetValue(out _, out _));
+    }
+
+    private Task CaptureCostInputAsync(ChangeEventArgs args) {
+        expectedCostAmountText = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+        return InputChanged.InvokeAsync(TryGetValue(out _, out _));
+    }
+
     private void SyncFromValue(ProjectTaskEstimate value)
     {
         try
@@ -263,8 +287,7 @@
 
     private ProjectTaskEstimate BuildEstimate()
     {
-        return new TaskEstimateInputText(expectedEffortValueText, expectedEffortUnit?.ToString() ?? invalidUnitText,
-            expectedCostAmountText, expectedCostCurrencyCode).Parse(HoursPerManDay);
+        return CaptureInput().Parse(HoursPerManDay);
     }
 
     private string NormalizeDefaultCurrencyCode()

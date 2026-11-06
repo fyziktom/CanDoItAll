@@ -20,6 +20,10 @@ public enum PromptGallerySandboxScenario
     EditorRejected,
     EditorBusy,
     EditorUnknownResult,
+    EditorReview,
+    EditorReviewConflict,
+    EditorReviewRaw,
+    EditorReviewPreferred,
     Picker,
     Compatibility,
     CompatibilityBlocked
@@ -86,6 +90,7 @@ public sealed class PromptGallerySandboxFixture
     public PromptGallerySearchPresentation PickerSearch => picker.Presentation;
 
     public PromptGalleryEditorPresentation? Editor { get; private set; }
+    public PromptMergeReview? Review { get; private set; }
 
     public bool PickerOpen { get; private set; }
 
@@ -102,6 +107,7 @@ public sealed class PromptGallerySandboxFixture
         Scenario = scenario;
         IntentLog = "No intent yet.";
         Editor = null;
+        Review = null;
         PickerOpen = false;
         CompatibilityOpen = false;
         Compatibility = null;
@@ -129,6 +135,16 @@ public sealed class PromptGallerySandboxFixture
                 break;
             case PromptGallerySandboxScenario.EditorEdit:
                 Editor = ReadyEditor(FirstItemId, versions: 2);
+                break;
+            case PromptGallerySandboxScenario.EditorReview:
+            case PromptGallerySandboxScenario.EditorReviewConflict:
+            case PromptGallerySandboxScenario.EditorReviewRaw:
+            case PromptGallerySandboxScenario.EditorReviewPreferred:
+                Editor = ReadyEditor(FirstItemId, versions: 1);
+                Review = PromptMergeSandbox.Create(scenario, Editor.Source!);
+                var local = Review.Local.Values;
+                Editor = Editor with { Source = new(local.Title, local.Summary, local.Kind, local.Phase, local.Content,
+                    local.Tags, local.SupportedModels, local.SupportedConsumers, local.Recommendations) };
                 break;
             case PromptGallerySandboxScenario.EditorLoading:
                 Editor = PromptGalleryEditorPresentation.CreateLoading(++editorGeneration, FirstItemId);
@@ -186,6 +202,11 @@ public sealed class PromptGallerySandboxFixture
     {
         Editor = null;
         IntentLog = "Editor: Closed";
+    }
+
+    public void CloseReview(bool applied) {
+        Review = null;
+        IntentLog = applied ? "Review: Applied to local draft only" : "Review: Cancelled; parent draft retained";
     }
 
     public void ClosePicker()

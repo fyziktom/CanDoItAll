@@ -17,6 +17,7 @@ public sealed record GanttPresentation(Guid Origin) {
     public bool CanMutate { get; init; }
     public string? LoadError { get; init; }
     public IReadOnlyList<GanttTask> Tasks { get; init; } = [];
+    public IReadOnlySet<GanttTaskId> SelectedTaskIds { get; init; } = new HashSet<GanttTaskId>();
     public IReadOnlyList<GanttDependency> Dependencies { get; init; } = [];
     public IReadOnlySet<GanttTaskId> ProjectionOnlyTaskIds { get; init; } = new HashSet<GanttTaskId>();
     public IReadOnlySet<GanttTaskId> IntervalSynthesizedTaskIds { get; init; } = new HashSet<GanttTaskId>();

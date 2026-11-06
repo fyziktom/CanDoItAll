@@ -1,9 +1,13 @@
 @using System.Collections.Immutable
 @using CanDoItAll.AgentFramework.Llm.SimpleChats.UI
+@using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations
 @using Microsoft.Extensions.Logging
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navigation
 @inject ILlmChatDefinitionUiGateway Definitions
 @inject ILlmChatConversationUiGateway Conversations
 @inject ILlmChatOperationUiGateway Operations
+@inject ILlmChatConversationEditorAccess EditorAccess
 @inject ILlmChatUiAuthorizationFacade Authorization
 @inject ILlmChatUiEventSessionGateway EventSessions
 @inject ILlmChatOperationProjectionReducer ProjectionReducer
@@ -12,7 +16,9 @@
 @inject ILogger<LlmChatOperationFollower> FollowerLogger
 @implements IAsyncDisposable
 
-<LlmChatConversationSurface Presentation="@LlmChatConversationPresentationMapper.ToWorkspace(controller, Focused, draftPrompt, composerKey)" Intent="HandleIntentAsync">
+<NavigationLock ConfirmExternalNavigation="@(HasUnfinishedDraft || controller?.IsMutating == true)" OnBeforeInternalNavigation="GuardNavigation" />
+
+<LlmChatConversationSurface Presentation="@WorkspacePresentation" Intent="HandleIntentAsync">
     <ComposerActions>
         @if (controller?.SelectedConversation is { } selected) {
             var generation = controller.SelectionGeneration;
@@ -32,6 +38,8 @@
     [Parameter] public Guid? InitialConversationId { get; set; }
     [Parameter] public EventCallback<Guid?> SelectedConversationIdChanged { get; set; }
     [Parameter] public bool Focused { get; set; }
+    [Parameter] public Func<string, Guid?, bool>? RetainsNavigation { get; set; }
+    [Parameter] public EventCallback NavigationBlocked { get; set; }
     private LlmChatConversationWorkspaceController? controller;
     private LlmChatOperationFollower? operationFollower;
     private CancellationTokenSource? followerLifetime;
@@ -44,34 +52,98 @@
     private bool disposed;
     private Guid? selectedStartDefinitionId;
     private string startTitle = "";
-    private string renameTitle = "";
     private string draftPrompt = "";
+    private long draftRevision;
+    private LlmChatConversationMetadataDraft? metadataDraft;
+    private LlmChatEditorOpening? dialogOpening;
+    private LlmChatConversationAccessSession accessSession = default!;
+    private long changeRevision;
+    private long refreshedRevision;
+    private bool dialogReadBusy;
+    private bool dialogCommandPending;
+    private bool dialogDiscard;
+    private bool unconfirmedCreate;
+    private string createNotice = "";
+    private ConversationWorkspaceIntent? pendingTransition;
+    private string? pendingNavigation;
     private int composerKey;
     private bool startDialogOpen;
     private bool renameDialogOpen;
     private bool archiveDialogOpen;
 
+    private ConversationWorkspacePresentation WorkspacePresentation
+        => LlmChatConversationPresentationMapper.ToWorkspace(controller, Focused, draftPrompt, composerKey)
+            with {
+                IsAuthorizing = !RendererInfo.IsInteractive || controller?.IsAuthorizing != false,
+                UpdatesAvailable = changeRevision != refreshedRevision,
+                RequiresDiscard = pendingTransition is not null || pendingNavigation is not null
+            };
+
+    private bool HasUnfinishedDraft => !string.IsNullOrEmpty(draftPrompt) || metadataDraft?.HasChanges == true ||
+        metadataDraft?.Unconfirmed == true || dialogCommandPending || startDialogOpen && !string.IsNullOrEmpty(startTitle) || unconfirmedCreate;
+
     private ConversationDialogOrigin DialogOrigin => new(dialogGeneration,
         startDialogOpen ? ConversationDialogKind.Start : renameDialogOpen ? ConversationDialogKind.Rename
             : archiveDialogOpen ? ConversationDialogKind.Archive : ConversationDialogKind.None,
-        renameDialogOpen || archiveDialogOpen ? controller?.SelectedConversation?.ConversationId : null);
+        renameDialogOpen || archiveDialogOpen ? metadataDraft?.Original.ConversationId : null);
 
     private ConversationDialogPresentation DialogPresentation => new(DialogOrigin,
-        startDialogOpen ? startTitle : renameDialogOpen ? renameTitle : controller?.SelectedConversation?.Title ?? "",
+        startDialogOpen ? startTitle : metadataDraft?.Title ?? "",
         selectedStartDefinitionId,
         startDialogOpen && controller is not null
             ? controller.ActiveDefinitions.Select(LlmChatDefinitionPresentationMapper.ToCatalogCard).ToImmutableArray() : [],
-        controller?.HasMoreDefinitions ?? false, controller?.IsLoading ?? false, controller?.IsMutating ?? false);
+        controller?.HasMoreDefinitions ?? false, dialogReadBusy || controller?.IsLoading == true, dialogCommandPending || controller?.IsMutating == true,
+        metadataDraft?.Comparison, metadataDraft?.NeedsReview == true || renameDialogOpen && metadataDraft?.Original.Status == LlmChatConversationStatus.Archived,
+        metadataDraft?.Notice ?? createNotice, metadataDraft?.Unconfirmed ?? false, dialogDiscard, metadataDraft?.CanUndo ?? false, unconfirmedCreate,
+        metadataDraft?.StateInformation ?? "");
 
     private async Task HandleDialogIntentAsync(ConversationDialogIntent intent) {
         if (disposed || controller is null || intent.Origin != DialogOrigin || intent.Origin.Kind == ConversationDialogKind.None) {
             return;
         }
-        if (intent.Action == ConversationDialogAction.Close) {
-            CloseOwnedDialog(intent.Origin.Generation);
+        var submittedTitle = startDialogOpen ? startTitle : metadataDraft?.Title ?? "";
+        var submittedRevision = metadataDraft?.Revision ?? 0;
+        if (intent.Action == ConversationDialogAction.TitleChanged) {
+            if (accessSession.IsCurrent && dialogOpening is { IsCurrent: true }) {
+                await HandleAuthorizedDialogIntentAsync(intent, submittedTitle, submittedRevision);
+            } else if (!disposed) {
+                await RetireAccessAsync();
+            }
             return;
         }
-        if (controller.IsMutating) {
+        var command = intent.Action == ConversationDialogAction.Confirm;
+        if (command && (dialogCommandPending || controller.IsMutating || dialogReadBusy)) {
+            return;
+        }
+        if (command) {
+            dialogCommandPending = true;
+        }
+        try {
+            await accessSession.AuthorizeReadAsync(CancellationToken.None);
+            await HandleAuthorizedDialogIntentAsync(intent, submittedTitle, submittedRevision, command);
+        } catch (Exception exception) {
+            await HandleAccessFailureAsync(exception);
+        } finally {
+            if (command && intent.Origin.Generation == dialogGeneration) {
+                dialogCommandPending = false;
+            }
+        }
+    }
+
+    private async Task HandleAuthorizedDialogIntentAsync(ConversationDialogIntent intent, string submittedTitle, long submittedRevision, bool ownsCommand = false) {
+        if (disposed || controller is null || intent.Origin != DialogOrigin || intent.Origin.Kind == ConversationDialogKind.None) {
+            return;
+        }
+        var localTitle = renameDialogOpen && intent.Action == ConversationDialogAction.TitleChanged;
+        if ((dialogReadBusy || controller.IsMutating || dialogCommandPending && !ownsCommand) && !localTitle) {
+            return;
+        }
+        if (intent.Action == ConversationDialogAction.Close) {
+            if (metadataDraft?.HasChanges == true || metadataDraft?.Unconfirmed == true || startDialogOpen && !string.IsNullOrEmpty(startTitle) || unconfirmedCreate) {
+                dialogDiscard = true;
+            } else {
+                CloseOwnedDialog(intent.Origin.Generation);
+            }
             return;
         }
         switch (intent.Action) {
@@ -79,7 +151,22 @@
                 startTitle = intent.Text ?? "";
                 break;
             case ConversationDialogAction.TitleChanged when renameDialogOpen:
-                renameTitle = intent.Text ?? "";
+                metadataDraft!.SetTitle(intent.Text ?? "");
+                break;
+            case ConversationDialogAction.Compare:
+                await CompareMetadataAsync(intent.Origin.Generation);
+                break;
+            case ConversationDialogAction.ApplyComparison:
+                metadataDraft?.Apply(intent.Acknowledged);
+                break;
+            case ConversationDialogAction.Undo:
+                metadataDraft?.Undo();
+                break;
+            case ConversationDialogAction.Discard when dialogDiscard:
+                CloseOwnedDialog(intent.Origin.Generation);
+                break;
+            case ConversationDialogAction.KeepEditing:
+                dialogDiscard = false;
                 break;
             case ConversationDialogAction.SelectDefinition when startDialogOpen && intent.DefinitionId is { } id:
                 SelectStartDefinition(id);
@@ -88,10 +175,10 @@
                 await controller.LoadMoreDefinitionsAsync(CancellationToken.None);
                 break;
             case ConversationDialogAction.Confirm when startDialogOpen:
-                await CreateConversationAsync(intent.Origin.Generation);
+                await CreateConversationAsync(intent.Origin.Generation, submittedTitle);
                 break;
             case ConversationDialogAction.Confirm when renameDialogOpen:
-                await RenameConversationAsync(intent.Origin.Generation);
+                await RenameConversationAsync(intent.Origin.Generation, submittedTitle, submittedRevision);
                 break;
             case ConversationDialogAction.Confirm when archiveDialogOpen:
                 await ArchiveConversationAsync(intent.Origin.Generation);
@@ -102,11 +189,17 @@
     protected override void OnInitialized() {
         controller = new(Definitions, Conversations, Operations, Authorization, Logger, TimeProvider.System);
         operationFollower = new(EventSessions, ProjectionReducer, FollowerLogger);
+        accessSession = new(EditorAccess, () => InvokeAsync(() => {
+            if (!disposed) {
+                changeRevision++;
+                StateHasChanged();
+            }
+        }), RetireAccessAsync);
     }
 
     protected override async Task OnParametersSetAsync() {
         var target = InitialConversationId;
-        if (disposed || routeObserved && observedRoute == target) {
+        if (disposed || !RendererInfo.IsInteractive || routeObserved && observedRoute == target) {
             return;
         }
         var first = !routeObserved;
@@ -121,6 +214,9 @@
         StopFollower();
         ClearComposer();
         if (first) {
+            if (!await OpenCatalogAsync()) {
+                return;
+            }
             initialization = controller!.InitializeAsync(CancellationToken.None, target);
             await initialization;
         } else {
@@ -135,7 +231,66 @@
     }
 
     private async Task HandleIntentAsync(ConversationWorkspaceIntent intent) {
+        if (intent.Action == ConversationWorkspaceAction.DraftChanged) {
+            if (accessSession.IsCurrent) {
+                await HandleAuthorizedIntentAsync(intent, draftPrompt, draftRevision);
+            } else if (!disposed) {
+                await RetireAccessAsync();
+            }
+            return;
+        }
+        var submittedMessage = draftPrompt;
+        var submittedRevision = draftRevision;
+        try {
+            await accessSession.AuthorizeReadAsync(CancellationToken.None);
+            await HandleAuthorizedIntentAsync(intent, submittedMessage, submittedRevision);
+            if (!disposed) {
+                await accessSession.AuthorizeReadAsync(CancellationToken.None);
+            }
+        } catch (Exception exception) {
+            await HandleAccessFailureAsync(exception);
+        }
+    }
+
+    private async Task HandleAuthorizedIntentAsync(ConversationWorkspaceIntent intent, string submittedMessage, long submittedRevision) {
         if (controller is null || !controller.IsCurrentSelection(intent.Generation)) {
+            return;
+        }
+        if (intent.Action == ConversationWorkspaceAction.KeepEditing) {
+            pendingTransition = null;
+            pendingNavigation = null;
+            return;
+        }
+        if (intent.Action == ConversationWorkspaceAction.DiscardDraft && !controller.IsMutating) {
+            var next = pendingTransition;
+            var location = pendingNavigation;
+            pendingTransition = null;
+            pendingNavigation = null;
+            ClearComposer();
+            CloseOwnedDialogs();
+            if (next is not null) {
+                await HandleAuthorizedIntentAsync(next, draftPrompt, draftRevision);
+            } else if (location is not null) {
+                Navigation.NavigateTo(location);
+            }
+            return;
+        }
+        if (intent.Action == ConversationWorkspaceAction.Select && intent.ConversationId == controller.SelectedConversation?.ConversationId) {
+            return;
+        }
+        var changesTarget = intent.Action == ConversationWorkspaceAction.NewConversation ||
+            intent.Action is ConversationWorkspaceAction.Select or ConversationWorkspaceAction.Rename or ConversationWorkspaceAction.Archive &&
+            intent.ConversationId != controller.SelectedConversation?.ConversationId;
+        var replacesDialog = intent.Action is ConversationWorkspaceAction.NewConversation or ConversationWorkspaceAction.Rename or ConversationWorkspaceAction.Archive &&
+            (metadataDraft?.HasChanges == true || metadataDraft?.Unconfirmed == true || startDialogOpen && !string.IsNullOrEmpty(startTitle) || unconfirmedCreate);
+        if (changesTarget && controller.IsMutating || dialogCommandPending && intent.Action is
+            (ConversationWorkspaceAction.Select or ConversationWorkspaceAction.NewConversation or ConversationWorkspaceAction.Rename or
+             ConversationWorkspaceAction.Archive or ConversationWorkspaceAction.Send or ConversationWorkspaceAction.CancelResponse or
+             ConversationWorkspaceAction.Reconcile or ConversationWorkspaceAction.Abandon or ConversationWorkspaceAction.DiscardDraft)) {
+            return;
+        }
+        if (changesTarget && HasUnfinishedDraft || replacesDialog) {
+            pendingTransition = intent;
             return;
         }
         switch (intent.Action) {
@@ -145,18 +300,30 @@
             case ConversationWorkspaceAction.LoadMoreConversations:
                 await controller.LoadMoreConversationsAsync(CancellationToken.None);
                 break;
+            case ConversationWorkspaceAction.RefreshConversations:
+                var coveringRevision = changeRevision;
+                if (await controller.RefreshConversationsAsync(CancellationToken.None)) {
+                    refreshedRevision = coveringRevision;
+                }
+                break;
             case ConversationWorkspaceAction.LoadMoreMessages:
                 await controller.LoadMoreMessagesAsync(CancellationToken.None);
                 break;
             case ConversationWorkspaceAction.ReloadSelected:
+                var coveringSelectionRevision = changeRevision;
                 StopFollower();
                 if (await controller.ReloadSelectedAsync(CancellationToken.None)) {
                     await AcceptSelectionAsync(intent.Generation);
+                    if (Focused) {
+                        refreshedRevision = coveringSelectionRevision;
+                    }
                 }
                 break;
             case ConversationWorkspaceAction.NewConversation:
                 CloseOwnedDialogs();
-                startDialogOpen = controller.Authorization.CanManage;
+                if (controller.Authorization.CanManage) {
+                    await OpenStartDialogAsync();
+                }
                 break;
             case ConversationWorkspaceAction.Rename when intent.ConversationId is { } renameId:
                 await OpenTargetDialogAsync(renameId, archive: false);
@@ -165,27 +332,35 @@
                 await OpenTargetDialogAsync(archiveId, archive: true);
                 break;
             case ConversationWorkspaceAction.DraftChanged:
-                draftPrompt = intent.Text ?? "";
+                if (draftPrompt != (intent.Text ?? "")) {
+                    draftPrompt = intent.Text ?? "";
+                    draftRevision++;
+                }
                 break;
             case ConversationWorkspaceAction.Send:
-                if (await controller.SendAsync(draftPrompt, CancellationToken.None) && controller.IsCurrentSelection(intent.Generation)) {
-                    ClearComposer();
+                if (await WithOperationAccessAsync(() => controller.SendAsync(submittedMessage, CancellationToken.None)) && controller.IsCurrentSelection(intent.Generation)) {
+                    if (submittedRevision == draftRevision) {
+                        ClearComposer();
+                    }
                     RestartFollower();
                 }
                 break;
-            case ConversationWorkspaceAction.CancelResponse:
-                await controller.CancelActiveOperationAsync(CancellationToken.None);
+            case ConversationWorkspaceAction.CancelResponse when intent.OperationId is { } cancelId:
+                await WithOperationAccessAsync(() => controller.CancelActiveOperationAsync(cancelId, CancellationToken.None));
                 break;
-            case ConversationWorkspaceAction.Reconcile:
-                await controller.ReconcileActiveOperationAsync(CancellationToken.None);
+            case ConversationWorkspaceAction.Reconcile when intent.OperationId is { } reconcileId:
+                await WithOperationAccessAsync(() => controller.ReconcileActiveOperationAsync(reconcileId, CancellationToken.None), manage: true);
                 break;
-            case ConversationWorkspaceAction.Abandon:
-                await controller.AbandonActiveOperationAsync(CancellationToken.None);
+            case ConversationWorkspaceAction.Abandon when intent.OperationId is { } abandonId:
+                await WithOperationAccessAsync(() => controller.AbandonActiveOperationAsync(abandonId, CancellationToken.None));
                 break;
         }
     }
 
     private async Task<bool> SelectConversationAsync(Guid id) {
+        if (controller!.IsMutating) {
+            return false;
+        }
         var owner = ++routeGeneration;
         CloseOwnedDialogs();
         StopFollower();
@@ -199,6 +374,9 @@
 
     private async Task<bool> AcceptSelectionAsync(long generation, bool notify = true) {
         if (!controller!.IsCurrentSelection(generation)) {
+            return false;
+        }
+        if (!await OpenSelectionAsync(generation)) {
             return false;
         }
         await controller.PrepareActiveOperationAsync(CancellationToken.None);
@@ -228,7 +406,26 @@
             return;
         }
         dialogGeneration++;
-        renameTitle = controller.SelectedConversation.Title;
+        metadataDraft = new(controller.SelectedConversation);
+        var ownerGeneration = dialogGeneration;
+        try {
+            dialogOpening = await accessSession.OpenAsync(id, LlmChatConversationAccessKind.Metadata,
+                () => InvokeAsync(() => {
+                    if (!disposed && ownerGeneration == dialogGeneration) {
+                        metadataDraft?.ObserveHint();
+                        StateHasChanged();
+                    }
+                }));
+            await dialogOpening.AuthorizeAsync(true, CancellationToken.None);
+            if (disposed || ownerGeneration != dialogGeneration) {
+                QueueDisposal(dialogOpening);
+                dialogOpening = null;
+                return;
+            }
+        } catch (Exception exception) {
+            await HandleAccessFailureAsync(exception);
+            return;
+        }
         archiveDialogOpen = archive;
         renameDialogOpen = !archive;
     }
@@ -240,7 +437,14 @@
         archiveDialogOpen = false;
         selectedStartDefinitionId = null;
         startTitle = "";
-        renameTitle = "";
+        metadataDraft = null;
+        dialogDiscard = false;
+        dialogReadBusy = false;
+        dialogCommandPending = false;
+        unconfirmedCreate = false;
+        createNotice = "";
+        QueueDisposal(dialogOpening);
+        dialogOpening = null;
     }
     private void CloseOwnedDialog(long owner) {
         if (owner == dialogGeneration) {
@@ -255,39 +459,70 @@
             }
         }
     }
-    private async Task CreateConversationAsync(long owner) {
-        if (owner != dialogGeneration || !startDialogOpen || selectedStartDefinitionId is not { } id) {
+    private async Task CreateConversationAsync(long owner, string submittedTitle) {
+        if (owner != dialogGeneration || !startDialogOpen || unconfirmedCreate || dialogOpening is null || selectedStartDefinitionId is not { } id) {
             return;
         }
-        if (await controller!.CreateAsync(id, startTitle, CancellationToken.None) && !disposed && owner == dialogGeneration) {
+        await dialogOpening.AuthorizeAsync(true, CancellationToken.None);
+        using var admission = dialogOpening.EnterWrite(accessSession.AuthorizeReadAsync);
+        if (await controller!.CreateAsync(id, submittedTitle, CancellationToken.None) && !disposed && owner == dialogGeneration) {
             routeGeneration++;
             CloseOwnedDialog(owner);
             ClearComposer();
             await AcceptSelectionAsync(controller.SelectionGeneration);
+        } else if (controller.LastMutationUnconfirmed && owner == dialogGeneration) {
+            unconfirmedCreate = true;
+            createNotice = "The creation outcome is unconfirmed. Inspect the conversation list before explicitly discarding this opening. Do not repeat Start chat.";
         }
     }
-    private async Task RenameConversationAsync(long owner) {
-        if (owner != dialogGeneration || !renameDialogOpen) {
+    private async Task RenameConversationAsync(long owner, string submittedTitle, long submittedRevision) {
+        if (owner != dialogGeneration || !renameDialogOpen || metadataDraft is not { NeedsReview: false, Original.Status: LlmChatConversationStatus.Active } draft || dialogOpening is null) {
             return;
         }
-        if (await controller!.RenameSelectedAsync(renameTitle, CancellationToken.None)) {
-            CloseOwnedDialog(owner);
+        await dialogOpening.AuthorizeAsync(true, CancellationToken.None);
+        using var admission = dialogOpening.EnterWrite(accessSession.AuthorizeReadAsync);
+        if (await controller!.RenameSelectedAsync(draft.Original, submittedTitle, CancellationToken.None)) {
+            if (!disposed && owner == dialogGeneration) {
+                if (draft.Revision == submittedRevision) {
+                    CloseOwnedDialog(owner);
+                } else {
+                    if (controller.HasNewerMetadataRead) {
+                        draft.ObserveHint();
+                    }
+                    draft.Acknowledge(controller.LastAcceptedMetadata!);
+                }
+            }
+        } else if (!disposed && owner == dialogGeneration) {
+            if (controller.LastMutationUnconfirmed) {
+                draft.MarkUnknown();
+            } else if (!string.IsNullOrWhiteSpace(controller.LastMutationFailure)) {
+                draft.Reject(controller.LastMutationFailure);
+            }
         }
     }
     private async Task ArchiveConversationAsync(long owner) {
-        if (owner != dialogGeneration || !archiveDialogOpen) {
+        if (owner != dialogGeneration || !archiveDialogOpen || metadataDraft is not { NeedsReview: false } draft || dialogOpening is null) {
             return;
         }
         var generation = controller!.SelectionGeneration;
-        if (await controller.ArchiveSelectedAsync(CancellationToken.None) && controller.IsCurrentSelection(generation) && owner == dialogGeneration) {
+        await dialogOpening.AuthorizeAsync(true, CancellationToken.None);
+        using var admission = dialogOpening.EnterWrite(accessSession.AuthorizeReadAsync);
+        if (await controller.ArchiveSelectedAsync(draft.Original, CancellationToken.None) && controller.IsCurrentSelection(generation) && owner == dialogGeneration) {
             CloseOwnedDialog(owner);
             await SelectedConversationIdChanged.InvokeAsync(controller.SelectedConversation?.ConversationId);
+        } else if (!disposed && owner == dialogGeneration) {
+            if (controller.LastMutationUnconfirmed) {
+                draft.MarkUnknown();
+            } else if (!string.IsNullOrWhiteSpace(controller.LastMutationFailure)) {
+                draft.Reject(controller.LastMutationFailure);
+            }
         }
     }
     private Task InsertPromptAsync(string content, long generation) {
         if (controller!.IsCurrentSelection(generation)) {
             ArgumentException.ThrowIfNullOrWhiteSpace(content);
             draftPrompt = string.IsNullOrWhiteSpace(draftPrompt) ? content.Trim() : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{content.Trim()}";
+            draftRevision++;
             composerKey++;
             StateHasChanged();
         }
@@ -295,8 +530,111 @@
     }
     private void ClearComposer() {
         draftPrompt = "";
+        draftRevision++;
         composerKey++;
     }
+
+    private async Task GuardNavigation(LocationChangingContext context) {
+        if (HasUnfinishedDraft || controller?.IsMutating == true) {
+            if (!dialogCommandPending && controller?.IsMutating != true && RetainsNavigation?.Invoke(context.TargetLocation, InitialConversationId) == true) {
+                return;
+            }
+            context.PreventNavigation();
+            pendingNavigation = context.TargetLocation;
+            await NavigationBlocked.InvokeAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<bool> OpenCatalogAsync() {
+        try {
+            await accessSession.OpenCatalogAsync();
+            return true;
+        } catch (Exception exception) {
+            await HandleAccessFailureAsync(exception);
+            return false;
+        }
+    }
+
+    private async Task<bool> OpenSelectionAsync(long generation) {
+        if (controller!.SelectedConversation is not { } selected) {
+            return false;
+        }
+        try {
+            await accessSession.OpenSelectionAsync(selected.ConversationId);
+            return controller.IsCurrentSelection(generation);
+        } catch (Exception exception) {
+            await HandleAccessFailureAsync(exception);
+            return false;
+        }
+    }
+
+    private async Task OpenStartDialogAsync() {
+        var owner = dialogGeneration;
+        var opening = await accessSession.OpenAsync(null, LlmChatConversationAccessKind.Metadata, () => Task.CompletedTask);
+        if (disposed || owner != dialogGeneration) {
+            QueueDisposal(opening);
+            return;
+        }
+        await opening.AuthorizeAsync(true, CancellationToken.None);
+        dialogOpening = opening;
+        startDialogOpen = true;
+    }
+
+    private async Task CompareMetadataAsync(long owner) {
+        if (metadataDraft is not { } draft || dialogOpening is null || controller!.IsMutating) {
+            return;
+        }
+        var revision = draft.Revision;
+        dialogReadBusy = true;
+        try {
+            await dialogOpening.AuthorizeAsync(false, CancellationToken.None);
+            var result = await Conversations.GetAsync(draft.Original.ConversationId, new(1), dialogOpening.Lifetime);
+            if (disposed || owner != dialogGeneration || !ReferenceEquals(metadataDraft, draft)) {
+                return;
+            }
+            await dialogOpening.AuthorizeAsync(false, CancellationToken.None);
+            if (result is { IsSuccess: true, Value: { } view } && view.Conversation.ConversationId == draft.Original.ConversationId) {
+                draft.Compare(view.Conversation, revision);
+            } else {
+                draft.Reject("Current conversation information could not be read. Your title draft is retained.");
+            }
+        } catch (Exception exception) when (exception is not UnauthorizedAccessException) {
+            if (!disposed && owner == dialogGeneration) {
+                await dialogOpening.AuthorizeAsync(false, CancellationToken.None);
+                Logger.LogWarning("Simple Chat metadata comparison failed with {FailureType}.", exception.GetType().Name);
+                draft.Reject("Current information could not be read. Your title draft is retained.");
+            }
+        } finally {
+            if (owner == dialogGeneration) {
+                dialogReadBusy = false;
+            }
+        }
+    }
+
+    private Task<bool> WithOperationAccessAsync(Func<Task<bool>> action, bool manage = false)
+        => accessSession.RunOperationAsync(action, manage);
+
+    private void QueueDisposal(LlmChatEditorOpening? opening) => accessSession.Retire(opening);
+
+    private async Task HandleAccessFailureAsync(Exception exception) {
+        Logger.LogWarning("Original Simple Chat conversation access failed with {FailureType}.", exception.GetType().Name);
+        await RetireAccessAsync();
+    }
+
+    private Task RetireAccessAsync() => InvokeAsync(() => {
+        if (!disposed) {
+            routeGeneration++;
+            CloseOwnedDialogs();
+            StopFollower();
+            ClearComposer();
+            pendingTransition = null;
+            pendingNavigation = null;
+            accessSession.Stop();
+            controller!.RetireAccess();
+            StateHasChanged();
+        }
+    });
 
     private void RestartFollower() {
         StopFollower();
@@ -387,5 +725,6 @@
         StopFollower();
         controller?.Dispose();
         await followerTask;
+        await accessSession.DisposeAsync();
     }
 }

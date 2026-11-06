@@ -19,6 +19,7 @@ public partial class CrmHrRecruitingPage : ICrmHrRecruitingWorkspaceView
 {
     void ICrmHrWorkspaceView.RequestRender() => _ = InvokeAsync(StateHasChanged);
 
+    Guid ICrmHrRecruitingWorkspaceView.DatabaseProfileId => Changes.Scope.Id;
     RecruitmentWorkspaceModel? ICrmHrRecruitingWorkspaceView.CurrentWorkspace => currentWorkspace;
     RecruitmentApplicationEditorModel ICrmHrRecruitingWorkspaceView.ApplicationEditor => applicationEditor;
     RecruitmentInterviewEditorModel ICrmHrRecruitingWorkspaceView.InterviewEditor => interviewEditor;
@@ -45,10 +46,10 @@ public partial class CrmHrRecruitingPage : ICrmHrRecruitingWorkspaceView
     Task ICrmHrRecruitingWorkspaceView.ResetApplicationAsync() => ResetApplicationAsync();
     Task ICrmHrRecruitingWorkspaceView.SaveInterviewAsync() => SaveInterviewAsync();
     Task ICrmHrRecruitingWorkspaceView.ResetInterviewAsync() => ResetInterviewAsync();
-    Task ICrmHrRecruitingWorkspaceView.DeleteInterviewAsync(Guid interviewId) => DeleteInterviewAsync(interviewId);
+    Task ICrmHrRecruitingWorkspaceView.DeleteInterviewAsync(RecruitmentInterviewItemModel row) => DeleteInterviewAsync(row);
     Task ICrmHrRecruitingWorkspaceView.SaveTaskAsync() => SaveTaskAsync();
     Task ICrmHrRecruitingWorkspaceView.ResetTaskAsync() => ResetTaskAsync();
-    Task ICrmHrRecruitingWorkspaceView.DeleteTaskAsync(Guid taskId) => DeleteTaskAsync(taskId);
+    Task ICrmHrRecruitingWorkspaceView.DeleteTaskAsync(LifecycleTaskItemModel row) => DeleteTaskAsync(row);
     Task ICrmHrRecruitingWorkspaceView.SaveSupportAssignmentsAsync() => SaveSupportAssignmentsAsync();
     Task ICrmHrRecruitingWorkspaceView.ConvertCandidateAsync() => ConvertCandidateAsync();
     Task ICrmHrRecruitingWorkspaceView.SetConversionHomeUnitAsync(Guid? partyId) => SetConversionHomeUnitAsync(partyId);

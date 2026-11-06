@@ -14,13 +14,16 @@ public sealed record ProviderWriteResult(
     Guid? ProviderId = null,
     string? Message = null,
     Guid? ConcurrencyToken = null,
-    ProviderMutationAttempt? Attempt = null);
+    ProviderMutationAttempt? Attempt = null,
+    EditorModel? Accepted = null);
 
 public sealed record ProviderHealthCheckOutcome(ProviderHealthResult? Health, ProviderWriteResult? Persistence);
 
 public interface IProviderEditorCommands {
     Task<ProviderWriteResult> SaveAsync(ProviderEditorSubmission submission, CancellationToken cancellationToken);
     Task<ProviderWriteResult> DeleteAsync(Guid providerId, CancellationToken cancellationToken);
+    Task<ProviderWriteResult> DeleteAsync(ProviderMutationAttempt attempt, CancellationToken cancellationToken)
+        => throw new NotSupportedException("This provider editor owner does not support original-bound deletion.");
     Task<ProviderHealthCheckOutcome> CheckHealthAsync(Guid providerId, bool sourceManaged, CancellationToken cancellationToken);
     Task<Result<ProviderModelPricingRefreshResult>> DiscoverModelsAsync(ProviderEditorSubmission submission, CancellationToken cancellationToken);
     Task ReconcileAsync(Guid providerId, CancellationToken cancellationToken);
@@ -32,14 +35,35 @@ public sealed class ProviderEditorCommands(
     IProviderAdministrationService administration,
     IProviderCatalogReconciliation reconciliation,
     IProviderMutationVerification verification) : IProviderEditorCommands {
-    public Task<ProviderWriteResult> SaveAsync(ProviderEditorSubmission submission, CancellationToken cancellationToken)
-        => ExecuteWriteAsync(() => runtime.SaveProviderAsync(submission.CreateRequest(), cancellationToken), cancellationToken, submission.Attempt);
+    public async Task<ProviderWriteResult> SaveAsync(ProviderEditorSubmission submission, CancellationToken cancellationToken) {
+        EditorModel? accepted = null;
+        var result = await ExecuteWriteAsync(async () => {
+            accepted = await runtime.SaveProviderEditorAsync(submission.CreateRequest(), cancellationToken);
+            return accepted.Id ?? throw new InvalidOperationException("The provider owner returned no committed identity.");
+        }, cancellationToken, submission.Attempt);
+        return result with {
+            Accepted = result.Accepted ?? accepted,
+            ConcurrencyToken = result.ConcurrencyToken ?? accepted?.ExpectedConcurrencyToken
+        };
+    }
 
     public Task<ProviderWriteResult> DeleteAsync(Guid providerId, CancellationToken cancellationToken)
         => ExecuteWriteAsync(async () => {
             await runtime.DeleteProviderAsync(providerId, cancellationToken);
             return providerId;
         }, cancellationToken);
+
+    public Task<ProviderWriteResult> DeleteAsync(ProviderMutationAttempt attempt, CancellationToken cancellationToken) {
+        if (attempt.Kind != ProviderMutationKind.Delete || attempt.ProviderId == Guid.Empty ||
+            attempt.ExpectedConcurrencyToken is not { } expected || expected == Guid.Empty) {
+            return Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Conflict,
+                Message: "The original provider version is unavailable. Read and review the provider before deleting it."));
+        }
+        return ExecuteWriteAsync(async () => {
+            await runtime.DeleteProviderAsync(attempt.ProviderId, expected, cancellationToken);
+            return attempt.ProviderId;
+        }, cancellationToken, attempt);
+    }
 
     public async Task<ProviderHealthCheckOutcome> CheckHealthAsync(
         Guid providerId, bool sourceManaged, CancellationToken cancellationToken) {
@@ -86,11 +110,14 @@ public sealed class ProviderEditorCommands(
         try {
             return new(ProviderWriteDisposition.Committed, await write());
         } catch (ProviderMutationCommittedException exception) {
-            return new(ProviderWriteDisposition.Committed, exception.ProviderId, exception.Message, exception.Commit.ConcurrencyToken);
+            return new(ProviderWriteDisposition.Committed, exception.ProviderId, exception.Message, exception.Commit.ConcurrencyToken,
+                Accepted: exception.Commit.Accepted);
         } catch (ProviderMutationUnconfirmedException exception) {
             return new(ProviderWriteDisposition.Unconfirmed, exception.Attempt.ProviderId, exception.Message, Attempt: exception.Attempt);
         } catch (ProviderProfileConcurrencyException) {
             return new(ProviderWriteDisposition.Conflict, Message: "The provider changed. Reload before saving again.");
+        } catch (UnauthorizedAccessException) {
+            return new(ProviderWriteDisposition.Rejected, Message: "The original provider editing access is no longer available. Your draft is retained.");
         } catch (ProviderProfileValidationException exception) {
             return new(ProviderWriteDisposition.Rejected, Message: exception.Message);
         } catch (SharedProviderProfileDeletionBlockedException exception) {

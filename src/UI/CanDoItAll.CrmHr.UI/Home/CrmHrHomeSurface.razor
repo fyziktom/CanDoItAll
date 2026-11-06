@@ -38,6 +38,12 @@
                 </span>
             </Stats>
             <Actions>
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh overview"
+                                        TooltipText="Read the current CRM and HR overview."
+                                        Disabled="@(ActionsDisabled || Presentation.Phase != CrmHrHomePhase.Ready)"
+                                        Click="RefreshAsync"
+                                        data-testid="crmhr-home-refresh" />
                 <PageHeaderActionButton Icon="asset"
                                         Label="Open directory"
                                         TooltipText="Open the CRM-HR party directory."
@@ -337,4 +343,5 @@
         => Presentation.IsRetrying
             ? Task.CompletedTask
             : Intent.InvokeAsync(new CrmHrHomeIntent.Retry(Presentation.Generation));
+    private Task RefreshAsync() => Intent.InvokeAsync(new CrmHrHomeIntent.Refresh(Presentation.Generation));
 }

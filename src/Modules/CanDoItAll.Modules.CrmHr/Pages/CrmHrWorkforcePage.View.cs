@@ -21,7 +21,7 @@ public partial class CrmHrWorkforcePage : ICrmHrWorkforceWorkspaceView
 
     CrmHrActivityPresentation ICrmHrWorkforceWorkspaceView.WorkforceHistoryPresentation => WorkforceHistoryPresentation;
     string? ICrmHrWorkforceWorkspaceView.WorkforceHistoryFailureMessage => WorkforceHistoryFailureMessage;
-    DeliveryUnitQuickCreateModel ICrmHrWorkforceWorkspaceView.DeliveryUnitEditor => deliveryUnitEditor;
+    CanDoItAll.CrmHr.UI.Parties.PartyEditorViewModel ICrmHrWorkforceWorkspaceView.DeliveryUnitEditor => deliveryUnitEditor;
     SkillDefinitionEditorModel ICrmHrWorkforceWorkspaceView.SkillDefinitionEditor => skillDefinitionEditor;
     WorkforceProfileWorkspaceModel? ICrmHrWorkforceWorkspaceView.SelectedWorkspace => selectedWorkspace;
     WorkforceCapacityWorkspaceModel? ICrmHrWorkforceWorkspaceView.CapacityWorkspace => capacityWorkspace;

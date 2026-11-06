@@ -4,6 +4,7 @@ using CanDoItAll.Modules.Security;
 using IProviderAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderAdministrationService;
 using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 using IProviderRuntimeProfileSnapshotLoader = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeProfileSnapshotLoader;
+using SharedProviderProfileOwnershipPolicy = CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderProfileOwnershipPolicy;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -33,8 +34,21 @@ public sealed class ProviderProfilesReads(
         };
     }
 
-    public Task<ProviderProfileEditorModel> LoadEditorAsync(Guid providerId, CancellationToken cancellationToken = default)
-        => runtime.GetProviderEditorAsync(providerId, cancellationToken);
+    public async Task<ProviderProfileEditorModel> LoadEditorAsync(Guid providerId, CancellationToken cancellationToken = default) {
+        try {
+            return await runtime.GetProviderEditorAsync(providerId, cancellationToken);
+        } catch (ProviderRuntimeProfileUnavailableException exception) when (exception.ProviderId == providerId) {
+            var imported = await snapshots.LoadAsync(providerId, cancellationToken);
+            if (imported is null || imported.Profile.Id != providerId ||
+                !SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(imported.Profile.ConnectorPluginKey)) {
+                throw;
+            }
+            var editor = ProviderProfileEditorModel.FromDefinition(imported.Profile);
+            editor.ExpectedConcurrencyToken = imported.ConfigurationRevision?.Value
+                ?? throw new InvalidOperationException("The imported metadata view requires its native revision.");
+            return editor;
+        }
+    }
 
     private async Task<ProviderSecretReferences> ReadSecretsAsync(CancellationToken cancellationToken) {
         try {

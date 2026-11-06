@@ -56,7 +56,7 @@ public sealed class DefinitionEditorProviderOrderingTests {
         cut.Render(p => p.Add(x => x.Presentation, session.Presentation with { ProvidersLoading = false }));
         AssertModels(cut, "ollama");
         await ClickAsync(cut, "llm-chat-definition-editor-save");
-        var values = Assert.Single(intents).Submission!;
+        var values = Assert.Single(intents.Where(intent => intent.Action == DefinitionEditorAction.Save)).Submission!;
         Assert.Equal("Unicode Žluťoučký", values.Name);
         Assert.Equal(SecondProvider, values.ProviderProfileId);
         Assert.Equal("ollama-secondary", values.Model);
@@ -80,7 +80,7 @@ public sealed class DefinitionEditorProviderOrderingTests {
         cut.Render(p => p.Add(x => x.Presentation, complete));
         AssertModels(cut, "ollama");
         await ClickAsync(cut, "llm-chat-definition-editor-save");
-        var values = Assert.Single(intents).Submission!;
+        var values = Assert.Single(intents.Where(intent => intent.Action == DefinitionEditorAction.Save)).Submission!;
         Assert.Equal("Local edit", values.Name);
         Assert.Equal(SecondProvider, values.ProviderProfileId);
         Assert.Equal("ollama-default", values.Model);
@@ -148,7 +148,8 @@ public sealed class DefinitionEditorProviderOrderingTests {
         => LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>.Success(Providers);
 
     private static LlmChatDefinitionEditorSession Session(ILlmChatProviderUiGateway providers)
-        => new(new StubDefinitionGateway(CreateEditor()), providers, new StubAuthorization(true, true), NullLogger<LlmChatDefinitionEditorSession>.Instance);
+        => new(new StubDefinitionGateway(CreateEditor()), providers, new StubAuthorization(true, true), NullLogger<LlmChatDefinitionEditorSession>.Instance,
+            new StubDefinitionEditorAccess(new StubAuthorization(true, true)), StubDefinitionEditorAccess.DispatchAsync);
 
     private sealed class ControlledProviders(Func<CancellationToken, Task<LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>>> read) : ILlmChatProviderUiGateway {
         public Task<LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>> ListAsync(CancellationToken cancellationToken = default) => read(cancellationToken);

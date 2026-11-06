@@ -246,7 +246,7 @@ internal static class LlmChatDefinitionEndpoints
             return LlmChatApiResults.InvalidRequest(mappingError);
         }
 
-        var result = await service.CreateAsync(command!, cancellationToken).ConfigureAwait(false);
+        var result = await LlmChatApiResults.WriteAsync(() => service.CreateAsync(command!, cancellationToken), response).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return LlmChatApiResults.FromFailure(result.Errors);
@@ -446,7 +446,7 @@ internal static class LlmChatDefinitionEndpoints
             return LlmChatApiResults.InvalidRequest(mappingError);
         }
 
-        var result = await service.UpdateAsync(command!, cancellationToken).ConfigureAwait(false);
+        var result = await LlmChatApiResults.WriteAsync(() => service.UpdateAsync(command!, cancellationToken), response).ConfigureAwait(false);
         return DefinitionMutationResult(result, response);
     }
 
@@ -674,9 +674,9 @@ internal static class LlmChatDefinitionEndpoints
             return tokenError!;
         }
 
-        var result = await service.ChangeStatusAsync(
+        var result = await LlmChatApiResults.WriteAsync(() => service.ChangeStatusAsync(
             new ChangeLlmChatDefinitionStatusCommand(id, status, expectedToken),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken), response).ConfigureAwait(false);
         return DefinitionMutationResult(result, response);
     }
 

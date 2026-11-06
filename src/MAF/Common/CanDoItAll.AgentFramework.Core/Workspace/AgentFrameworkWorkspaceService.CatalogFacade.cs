@@ -55,6 +55,9 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
         => catalogService.SaveAgentAsync(model, cancellationToken);
 
+    public Task<AgentDefinition> SaveAgentDefinitionAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
+        => catalogService.SaveAgentDefinitionAsync(model, cancellationToken);
+
     public Task GrantAgentProjectStructureAccessAsync(
         Guid agentId,
         Guid projectId,
@@ -89,6 +92,9 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
         => catalogService.DeleteAgentAsync(agentId, cancellationToken);
 
+    public Task DeleteAgentAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => catalogService.DeleteAgentAsync(agentId, expectedUpdatedAtUtc, cancellationToken);
+
     public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default)
         => catalogService.ListAgentTeamsAsync(cancellationToken);
 
@@ -113,6 +119,17 @@ public sealed partial class AgentFrameworkWorkspaceService
 
     public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
         => catalogService.DeleteAgentTeamAsync(teamId, cancellationToken);
+
+    public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => catalogService.UpdateAgentTeamMembersAsync(teamId, agentIds, expectedUpdatedAtUtc, cancellationToken);
+
+    public Task DeleteAgentTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => catalogService.DeleteAgentTeamAsync(teamId, expectedUpdatedAtUtc, cancellationToken);
+
+    public Task<AgentTeamDefinition> EnsureAgentTeamMemberAsync(Guid teamId, DateTimeOffset expectedCreatedAtUtc, Guid agentId,
+        CancellationToken cancellationToken = default)
+        => catalogService.EnsureAgentTeamMemberAsync(teamId, expectedCreatedAtUtc, agentId, cancellationToken);
 
     public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
         => catalogService.CloneAgentAsync(agentId, cloneName, cancellationToken);
@@ -164,6 +181,9 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
         => catalogService.DeleteProviderAsync(providerId, cancellationToken);
 
+    public Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => catalogService.DeleteProviderAsync(providerId, expectedConcurrencyToken, cancellationToken);
+
     public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
         => catalogService.TestProviderAsync(providerId, cancellationToken);
 
@@ -199,6 +219,9 @@ public sealed partial class AgentFrameworkWorkspaceService
 
     public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.DeleteCapabilityAsync(capabilityId, cancellationToken);
+
+    public Task DeleteCapabilityAsync(Guid capabilityId, string expectedFingerprint, CancellationToken cancellationToken = default)
+        => catalogService.DeleteCapabilityAsync(capabilityId, expectedFingerprint, cancellationToken);
 
     public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);

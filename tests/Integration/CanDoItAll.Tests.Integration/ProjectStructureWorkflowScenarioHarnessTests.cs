@@ -23,15 +23,12 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
     };
 
     [Fact]
-    public async Task WorkflowScenarioHarness_runs_twenty_one_project_structure_workflow_cases()
-    {
-        var proofRoot = Path.Combine(
-            IntegrationTestPaths.RepositoryRoot,
-            "artifacts",
-            "codex-bundles",
-            "project-structure-workflow-runs",
-            "proof",
-            "scenarios");
+    public async Task WorkflowScenarioHarness_runs_twenty_one_project_structure_workflow_cases() {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
+            "workflow-scenario-harness",
+            testEnvironment => testEnvironment.CreatePostgreSqlProfile("scenario-harness"),
+            ConfigureGroundedWorkflowServices);
+        var proofRoot = Path.Combine(host.ActiveProfile.WorkspaceRootPath, "scenarios");
         var syntheticRoot = Path.Combine(proofRoot, "synthetic-inputs");
 
         await PrepareSyntheticInputsAsync(syntheticRoot);
@@ -39,10 +36,6 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
         Assert.Equal(21, scenarios.Count);
         Assert.All(scenarios, ValidateScenarioSources);
 
-        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
-            "workflow-scenario-harness",
-            testEnvironment => testEnvironment.CreatePostgreSqlProfile("scenario-harness"),
-            ConfigureGroundedWorkflowServices);
         var execution = await RunHarnessAsync(
             host,
             proofRoot,
@@ -54,25 +47,10 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
     }
 
     [Fact]
-    public async Task WorkflowScenarioHarness_runs_twenty_one_project_structure_workflow_cases_on_postgresql()
-    {
+    public async Task WorkflowScenarioHarness_runs_twenty_one_project_structure_workflow_cases_on_postgresql() {
         var availability = await PostgresTestAvailability.EnsureAvailableAsync(IntegrationTestPaths.RepositoryRoot);
         Assert.True(availability.IsAvailable, availability.Message);
         Assert.False(string.IsNullOrWhiteSpace(availability.ConnectionString));
-
-        var proofRoot = Path.Combine(
-            IntegrationTestPaths.RepositoryRoot,
-            "artifacts",
-            "codex-bundles",
-            "project-structure-workflow-runs",
-            "proof",
-            "scenarios");
-        var syntheticRoot = Path.Combine(proofRoot, "synthetic-inputs");
-
-        await PrepareSyntheticInputsAsync(syntheticRoot);
-        var scenarios = BuildScenarios(syntheticRoot);
-        Assert.Equal(21, scenarios.Count);
-        Assert.All(scenarios, ValidateScenarioSources);
 
         var databaseName = $"cditall_wf_{Guid.NewGuid():N}"[..30];
         await CreateDatabaseAsync(availability.ConnectionString!, databaseName);
@@ -85,6 +63,13 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                     "scenario-harness-postgres",
                     BuildDatabaseConnectionString(availability.ConnectionString!, databaseName)),
                 ConfigureGroundedWorkflowServices);
+            var proofRoot = Path.Combine(host.ActiveProfile.WorkspaceRootPath, "scenarios");
+            var syntheticRoot = Path.Combine(proofRoot, "synthetic-inputs");
+
+            await PrepareSyntheticInputsAsync(syntheticRoot);
+            var scenarios = BuildScenarios(syntheticRoot);
+            Assert.Equal(21, scenarios.Count);
+            Assert.All(scenarios, ValidateScenarioSources);
             var execution = await RunHarnessAsync(
                 host,
                 proofRoot,
@@ -133,9 +118,11 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                     LastChangedBy = "workflow-summary-test"
                 });
                 Assert.True(party.IsSuccess);
+                var primary = await services.GetRequiredService<ProjectPartyIntegrationService>()
+                    .ReadPrimaryObservationAsync(admission, role, string.Empty);
                 var assignment = await services.GetRequiredService<IProjectPartyIntegrationBridge>().SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest {
                     ProjectId = project.Id, ExpectedProjectAdmission = admission, PartyId = party.Value,
-                    Role = role, IsPrimary = true, Source = "workflow-summary-test"
+                    Role = role, IsPrimary = true, PrimaryOriginal = primary, Source = "workflow-summary-test"
                 });
                 Assert.True(assignment.IsSuccess);
             }

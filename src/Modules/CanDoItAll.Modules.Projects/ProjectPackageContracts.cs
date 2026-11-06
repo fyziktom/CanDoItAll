@@ -128,11 +128,11 @@ public sealed record ProjectPackageImportResult(
 public interface IProjectPackageService {
     Task<Result<ProjectPackageExportResult>> ExportAllAsync(
         ProjectPackageExportRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentAccess = null);
 
     Task<Result<ProjectPackageImportResult>> ImportAllAsync(
         ProjectPackageImportRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentAccess = null);
 
     Task<Result<ProjectPackageManifest>> ReadManifestAsync(
         string packagePath,

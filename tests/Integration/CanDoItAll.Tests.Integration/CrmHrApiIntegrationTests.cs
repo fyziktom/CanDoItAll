@@ -11,6 +11,53 @@ public sealed class CrmHrApiIntegrationTests
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
+    public async Task Api_relationship_and_support_commands_require_their_originals_and_return_conflicts_without_a_retry() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var subject = await CreatePartyAsync(host.Client, "Relationship API subject", PartyType.Person, $"subject-{Guid.NewGuid():N}");
+        var peer = await CreatePartyAsync(host.Client, "Relationship API peer", PartyType.Person, $"peer-{Guid.NewGuid():N}");
+        var original = await GetAsync<IReadOnlyList<PartyRelationshipListItemModel>>(host.Client, $"/api/crm-hr/parties/{subject:D}/relationships");
+        var rowId = Guid.NewGuid();
+        var created = await host.Client.PutAsJsonAsync($"/api/crm-hr/parties/{subject:D}/relationships", new {
+            original = PartyRelationshipObservation.FromRows(original),
+            relationships = new[] { new { id = rowId, relatedPartyId = peer, notes = "First API relationship" } }
+        });
+        await AssertSuccessAsync(created);
+        var accepted = (await created.Content.ReadFromJsonAsync<PartyRelationshipSaveReceipt>(JsonOptions))!;
+        Assert.Equal(rowId, Assert.Single(accepted.Accepted).Id);
+        Assert.NotEqual(0u, accepted.Accepted[0].Version);
+        var opposite = await GetAsync<IReadOnlyList<PartyRelationshipListItemModel>>(host.Client, $"/api/crm-hr/parties/{peer:D}/relationships");
+        var changed = await host.Client.PutAsJsonAsync($"/api/crm-hr/parties/{peer:D}/relationships", new {
+            original = PartyRelationshipObservation.FromRows(opposite),
+            relationships = new[] { new { id = rowId, relatedPartyId = subject, isOutgoing = false, notes = "Peer API relationship" } }
+        });
+        await AssertSuccessAsync(changed);
+
+        var stale = await host.Client.PutAsJsonAsync($"/api/crm-hr/parties/{subject:D}/relationships", new {
+            original = PartyRelationshipObservation.FromRows(accepted.Accepted), relationships = Array.Empty<PartyRelationshipEditorModel>()
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        Assert.Equal(CrmHrEditingErrorCodes.RelationshipConflict, await ReadSingleErrorCodeAsync(stale));
+        var missing = await host.Client.PutAsJsonAsync($"/api/crm-hr/parties/{subject:D}/relationships", new { relationships = Array.Empty<PartyRelationshipEditorModel>() });
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+        Assert.Equal(CrmHrEditingErrorCodes.RelationshipOriginalRequired, await ReadSingleErrorCodeAsync(missing));
+        var retained = await GetAsync<IReadOnlyList<PartyRelationshipListItemModel>>(host.Client, $"/api/crm-hr/parties/{subject:D}/relationships");
+        Assert.Equal("Peer API relationship", Assert.Single(retained).Notes);
+        var support = await host.Client.PostAsJsonAsync("/api/crm-hr/recruiting/support-assignments", new {
+            partyId = subject, managerPartyId = peer, original = new PartyRelationshipObservation([])
+        });
+        await AssertSuccessAsync(support);
+        var supportAccepted = (await support.Content.ReadFromJsonAsync<PartyRelationshipSaveReceipt>(JsonOptions))!;
+        Assert.Equal(peer, Assert.Single(supportAccepted.Accepted).RelatedPartyId);
+        var staleSupport = await host.Client.PostAsJsonAsync("/api/crm-hr/recruiting/support-assignments", new {
+            partyId = subject, original = new PartyRelationshipObservation([])
+        });
+        Assert.Equal(HttpStatusCode.Conflict, staleSupport.StatusCode);
+        Assert.Equal(CrmHrEditingErrorCodes.RelationshipConflict, await ReadSingleErrorCodeAsync(staleSupport));
+        Assert.Equal(2, (await GetAsync<IReadOnlyList<PartyRelationshipListItemModel>>(host.Client, $"/api/crm-hr/parties/{subject:D}/relationships")).Count);
+    }
+
+    [Fact]
     public async Task Api_round_trips_linked_hiring_and_workforce_scenario_with_bounded_pages()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
@@ -78,6 +125,7 @@ public sealed class CrmHrApiIntegrationTests
             $"/api/crm-hr/parties/{candidateId:D}/relationships",
             new
             {
+                original = new PartyRelationshipObservation([]),
                 relationships = new[]
                 {
                     new
@@ -107,7 +155,8 @@ public sealed class CrmHrApiIntegrationTests
             $"/api/crm-hr/parties/{candidateId:D}/relationships",
             new
             {
-                relationships
+                relationships,
+                original = PartyRelationshipObservation.FromRows(relationships)
             });
         await AssertSuccessAsync(relationshipRoundTripResponse);
 
@@ -159,12 +208,16 @@ public sealed class CrmHrApiIntegrationTests
                 recommendation = "Proceed to offer."
             });
 
+        var observedApplication = await GetAsync<RecruitmentWorkspaceModel>(
+            host.Client,
+            $"/api/crm-hr/recruiting/applications/{applicationId:D}");
         var approvedApplicationId = await PostAsync<Guid>(
             host.Client,
             "/api/crm-hr/recruiting/applications",
             new
             {
                 id = applicationId,
+                original = observedApplication.Application.Original,
                 partyId = candidateId,
                 targetUnitPartyId = deliveryUnitId,
                 recruiterPartyId = managerId,
@@ -182,6 +235,7 @@ public sealed class CrmHrApiIntegrationTests
             "/api/crm-hr/recruiting/support-assignments",
             new
             {
+                original = PartyRelationshipObservation.FromRows(relationships),
                 partyId = candidateId,
                 managerPartyId = managerId,
                 buddyPartyId = buddyId,
@@ -220,6 +274,7 @@ public sealed class CrmHrApiIntegrationTests
             new
             {
                 applicationId,
+                original = recruitmentWorkspace.Conversion.Original,
                 workforceKind = WorkforceKind.Employee,
                 jobTitle = "Senior Platform Engineer",
                 discipline = "Platform Engineering",
@@ -312,6 +367,7 @@ public sealed class CrmHrApiIntegrationTests
             $"/api/crm-hr/parties/{partyId:D}/relationships",
             new
             {
+                original = new PartyRelationshipObservation([]),
                 relationships = new[]
                 {
                     new

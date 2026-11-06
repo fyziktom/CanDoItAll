@@ -150,7 +150,7 @@ public sealed class CapabilityCorrectnessIntegrationTests {
     public async Task Missing_snapshot_source_is_infrastructure_unavailable_before_diagnostic_dispatch() {
         using var fixture = await CapabilityFileFixture.CreateAsync();
         var profiles = new ProviderProfileService();
-        var registry = new WorkspaceBackedProviderProfileRegistry(fixture.Store, profiles);
+        var registry = new WorkspaceBackedProviderProfileRegistry(fixture.Store, profiles, fixture.Identity);
         var catalog = new AgentFrameworkWorkspaceCatalogService(fixture.Store,
             DispatchProxy.Create<IAgentPackageService, UnusedCapabilityDependency>(), fixture.Proof, profiles,
             DispatchProxy.Create<IProviderDiagnosticsService, UnusedCapabilityDependency>(), registry,

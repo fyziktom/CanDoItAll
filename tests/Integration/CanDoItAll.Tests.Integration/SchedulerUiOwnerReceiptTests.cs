@@ -18,6 +18,43 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class SchedulerUiOwnerReceiptTests {
     public enum Fault { Projection, Reload, Logging, LostCommitAcknowledgement }
 
+    [Fact]
+    public async Task Stale_definition_toggle_and_delete_do_not_change_the_schedule_or_project_a_trigger() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var target = await SeedWorkflowAsync(services);
+        var projection = new ProjectionProbe(services.GetRequiredService<ISchedulerPlannerTriggerScheduler>(), new());
+        var owner = ActivatorUtilities.CreateInstance<SchedulerPlannerService>(services, projection);
+        var saved = await owner.SavePlanAsync(new() {
+            Name = "Original schedule", TargetKind = SchedulerPlanTargetKind.Workflow,
+            TargetId = target.Id.Value, TargetVersionId = target.VersionId.Value
+        });
+        var first = await owner.GetPlanEditorAsync(saved.Id);
+        var second = await owner.GetPlanEditorAsync(saved.Id);
+        first.Name = "First editor";
+        var current = await owner.SavePlanAsync(first);
+        var projectionCalls = projection.Calls;
+
+        second.Description = "Second editor";
+        await Assert.ThrowsAsync<SchedulerPlanConflictException>(() => owner.SavePlanAsync(second));
+        await Assert.ThrowsAsync<SchedulerPlanConflictException>(() => owner.SetPlanEnabledAsync(saved.Condition, false));
+        await Assert.ThrowsAsync<SchedulerPlanConflictException>(() => owner.DeletePlanAsync(saved.Condition));
+        Assert.Equal(projectionCalls, projection.Calls);
+
+        var firedAt = DateTimeOffset.UtcNow;
+        await services.GetRequiredService<ISchedulerPlannerRunDispatcher>().DispatchAsync(new(saved.Id, Guid.NewGuid(), null, firedAt, null) {
+            ExpectedDefinitionRevision = saved.DefinitionRevision
+        });
+        await using var database = await services.GetRequiredService<IDbContextFactory<SchedulerPlannerDbContext>>().CreateDbContextAsync();
+        var stored = await database.Set<SchedulerPlan>().SingleAsync();
+        Assert.Equal(current.DefinitionRevision, stored.DefinitionRevision);
+        Assert.Equal("First editor", stored.Name);
+        Assert.Empty(stored.Description);
+        Assert.True(stored.IsEnabled);
+        Assert.Empty(await database.Set<SchedulerPlanRun>().ToListAsync());
+    }
+
     [Theory]
     [InlineData(Fault.Projection)]
     [InlineData(Fault.Reload)]
@@ -100,7 +137,7 @@ public sealed class SchedulerUiOwnerReceiptTests {
         var projection = new ProjectionProbe(services.GetRequiredService<ISchedulerPlannerTriggerScheduler>(), new()) { Mode = Fault.Projection };
         var owner = ActivatorUtilities.CreateInstance<SchedulerPlannerService>(services, projection);
         var session = ActivatorUtilities.CreateInstance<SchedulerWorkspaceSession>(services, owner);
-        var receipt = kind == SchedulerMutationKind.Delete ? await session.DeleteAsync(saved.Id) : await session.ToggleAsync(saved.Id, kind == SchedulerMutationKind.Enable);
+        var receipt = kind == SchedulerMutationKind.Delete ? await session.DeleteAsync(saved.Condition) : await session.ToggleAsync(saved.Condition, kind == SchedulerMutationKind.Enable);
         Assert.Equal(SchedulerMutationStatus.CommittedWithWarning, receipt.Status);
         Assert.Equal(kind, receipt.Kind);
         Assert.Equal(saved.Id, receipt.PlanId);
@@ -147,7 +184,7 @@ public sealed class SchedulerUiOwnerReceiptTests {
         public SchedulerPlannerDbContext CreateDbContext() => new(options);
     }
     private sealed class ProjectionProbe(ISchedulerPlannerTriggerScheduler actual, FaultInterceptor interceptor) : ISchedulerPlannerTriggerScheduler {
-        public Fault Mode { get; init; }
+        public Fault? Mode { get; init; }
         public int Calls { get; private set; }
         public Task SynchronizeAsync(CancellationToken token = default) => actual.SynchronizeAsync(token);
         public async Task SynchronizePlanAsync(Guid id, CancellationToken token = default) {

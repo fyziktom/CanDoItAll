@@ -1,10 +1,23 @@
 @using Microsoft.AspNetCore.Components
-@implements IDisposable
+@implements IAsyncDisposable
+@using CanDoItAll.Editing
 @using CanDoItAll.Infrastructure.Persistence
 @using Microsoft.Extensions.Logging
 @inject IDatabaseSwitchNotificationService ProfileChanges
 @inject ILogger<AgentCatalogHost> Logger
+@inject AgentConfigurationChanges ConfigurationChanges
 
+@if (!RendererInfo.IsInteractive || agentsOpening?.IsReady != true || teamsOpening?.IsReady != true) {
+    <SurfaceCard data-testid="agents-catalog-access">
+        <TextBlock Value="@(accessRetired ? "Agent catalog access changed or is unavailable. Reopen with current workspace access." : "Initializing agent catalog access.")" />
+    </SurfaceCard>
+} else {
+@if (catalogChangeSequence != acknowledgedCatalogChanges || catalogRefreshError is not null) {
+    <Alert AlertStyle="AlertStyle.Info" data-testid="agents-catalog-changed">
+        <TextBlock Value="@(catalogRefreshError ?? "Agent or Team configuration changed. Refresh this catalog; open drafts keep their originals.")" />
+        <Button Text="Refresh catalog" Click="RefreshCatalogAsync" IsBusy="isRefreshingCatalog" Disabled="isRefreshingCatalog" data-testid="agents-catalog-refresh" />
+    </Alert>
+}
 @if (teamRecovery is { } recovery) {
     <Alert AlertStyle="@(recovery.Confirmed ? AlertStyle.Warning : AlertStyle.Danger)" data-testid="agents-team-recovery">
         @(recovery.Confirmed ? "The team change was saved, but the catalog could not refresh." : "The team change could not be confirmed. Check the current catalog before editing again.")
@@ -18,14 +31,23 @@
                    OpeningManagedAgentChatId="@openingManagedAgentChatId"
                    Intent="HandleIntentAsync" />
 @if (activePolicy is { } policy) {
-    <AgentDecisionPolicyDialog @key="policy" State="policy" AgentName="@(agents.FirstOrDefault(agent => agent.Id == policy.AgentId)?.Name ?? $"Agent {policy.AgentId:D}")"
-                               OwnerLifetime="lifetimeToken" Closed="@(() => activePolicy = null)" Saved="PolicySavedAsync" />
+    <AgentDecisionPolicyDialog @key="policy" State="policy" Opening="@(agentsOpening!)" AgentName="@(agents.FirstOrDefault(agent => agent.Id == policy.AgentId)?.Name ?? $"Agent {policy.AgentId:D}")"
+                               OwnerLifetime="lifetimeToken" Closed="@(() => activePolicy = null)" Saved="PolicySavedAsync" AccessRetired="RetireCatalogAsync" />
 }
 @if (policyRecoveryOpen) {
-    <AgentDecisionPolicyRecoveryDialog OwnerLifetime="lifetimeToken" Closed="@(() => policyRecoveryOpen = false)" Selected="RestorePolicyAsync" />
+    <AgentDecisionPolicyRecoveryDialog Opening="@(agentsOpening!)" OwnerLifetime="lifetimeToken" Closed="@(() => policyRecoveryOpen = false)" Selected="RestorePolicyAsync" AccessRetired="RetireCatalogAsync" />
+}
 }
 
 @code {
+    private readonly Guid catalogEditorId = Guid.NewGuid();
+    private AgentConfigurationOpening? agentsOpening;
+    private AgentConfigurationOpening? teamsOpening;
+    private long catalogChangeSequence;
+    private long acknowledgedCatalogChanges;
+    private bool accessRetired;
+    private bool isRefreshingCatalog;
+    private string? catalogRefreshError;
     [Parameter]
     public Guid? RequestedAgentId { get; set; }
 
@@ -96,7 +118,7 @@
     private bool teamMutationBusy;
     private TeamRecovery? teamRecovery;
 
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
         if (isDisposed) {
             return;
         }
@@ -104,6 +126,14 @@
         RetirePolicyEditors();
         ProfileChanges.Changed -= OnProfileChanged;
         lifetime.Cancel();
+        agentsOpening?.Stop();
+        teamsOpening?.Stop();
+        if (agentsOpening is { } agentOwner) {
+            await agentOwner.DisposeAsync();
+        }
+        if (teamsOpening is { } teamOwner) {
+            await teamOwner.DisposeAsync();
+        }
         lifetime.Dispose();
         editorTargets.Clear();
     }
@@ -224,11 +254,18 @@
     protected override async Task OnInitializedAsync() {
         lifetimeToken = lifetime.Token;
         ProfileChanges.Changed += OnProfileChanged;
-        await EnsureLoadedAsync();
+        if (RendererInfo.IsInteractive) {
+            await OpenCatalogObservationsAsync();
+            await EnsureLoadedAsync();
+        }
     }
 
     protected override async Task OnParametersSetAsync() {
-        if (isDisposed) {
+        if (isDisposed || !RendererInfo.IsInteractive) {
+            return;
+        }
+        await OpenCatalogObservationsAsync();
+        if (agentsOpening?.IsReady != true || teamsOpening?.IsReady != true) {
             return;
         }
         var previousAgentId = contextRequestedAgentId;
@@ -295,7 +332,7 @@
     }
 
     private Task EnsureLoadedAsync() {
-        if (isDisposed || hasLoaded) {
+        if (isDisposed || !RendererInfo.IsInteractive || agentsOpening?.IsReady != true || teamsOpening?.IsReady != true || hasLoaded) {
             return Task.CompletedTask;
         }
 
@@ -324,7 +361,7 @@
             if (isDisposed) {
                 return;
             }
-            var loaded = await CatalogOperations.LoadAsync(new(!SkipCatalogRepair, InitialAgents, InitialProviders, InitialTeams), request.Token);
+            var loaded = await ReadCatalogAsync(new(Repair: !SkipCatalogRepair), request.Token);
             if (isDisposed || generation != catalogGeneration) {
                 return;
             }
@@ -644,9 +681,7 @@
             if (!IsCurrentTeamDialog(generation, request) || result is not AgentTeamMembersDialogResult members || members.TeamId != team.Id) {
                 return;
             }
-            var intendedIds = members.AgentIds.ToArray();
             teamMutationBusy = true;
-            await CatalogOperations.UpdateMembersAsync(team.Id, intendedIds, request.Token);
             if (IsCurrentTeamDialog(generation, request)) {
                 await ReconcileTeamAsync(new(team.Id, false, true, selection), generation);
             }
@@ -674,11 +709,18 @@
         var selection = teamSelectionRevision;
         teamMutationBusy = true;
         try {
-            await CatalogOperations.DeleteTeamAsync(team.Id, request.Token);
+            await teamsOpening!.WriteAsync(token => CatalogOperations.DeleteTeamAsync(team.Id, team.UpdatedAtUtc, token), request.Token);
             if (IsCurrentRequest(generation)) {
                 await ReconcileTeamAsync(new(team.Id, true, true, selection), generation);
             }
         } catch (Exception) when (!IsCurrentRequest(generation)) {
+        } catch (AgentTeamConcurrencyException) {
+            catalogRefreshError = "This Team changed elsewhere. Refresh the catalog and review its current membership before deleting.";
+        } catch (AgentCatalogCommittedException<Guid> exception) when (exception.Accepted == team.Id) {
+            NotificationService.Warning("Team deleted with warning", exception.Message);
+            if (IsCurrentRequest(generation)) {
+                await ReconcileTeamAsync(new(team.Id, true, true, selection), generation);
+            }
         } catch (Exception error) {
             Logger.LogWarning("Team deletion acknowledgement unavailable for {TeamId}: {FailureType}", team.Id, error.GetType().Name);
             teamRecovery = new(team.Id, true, false, selection);
@@ -725,6 +767,9 @@
         }
         requestGeneration++;
         catalogGeneration++;
+        agentsOpening?.Stop();
+        teamsOpening?.Stop();
+        accessRetired = true;
         lifetime.Cancel();
         _ = InvokeAsync(() => {
             if (!isDisposed) {
@@ -747,12 +792,15 @@
             return false;
         }
         var generation = ++catalogGeneration;
+        var coveredSequence = catalogChangeSequence;
         try {
-            var loaded = await CatalogOperations.LoadAsync(new(Repair: false), request.Token);
+            var loaded = await ReadCatalogAsync(new(Repair: false), request.Token);
             if (isDisposed || request.IsCancellationRequested || generation != catalogGeneration) {
                 return false;
             }
             snapshot = loaded;
+            acknowledgedCatalogChanges = Math.Max(acknowledgedCatalogChanges, coveredSequence);
+            catalogRefreshError = null;
             hasLoaded = true;
             isLoading = false;
             if (selectedTeamId.HasValue && teams.All(item => item.Id != selectedTeamId.Value)) {
@@ -767,6 +815,68 @@
             if (!isDisposed && generation == catalogGeneration) {
                 isLoading = false;
             }
+        }
+    }
+
+    private async Task OpenCatalogObservationsAsync() {
+        if (agentsOpening is not null || accessRetired || isDisposed) {
+            return;
+        }
+        agentsOpening = new(ConfigurationChanges, EditingOwner.AgentDefinition, null, catalogEditorId, () => !isDisposed && !lifetimeToken.IsCancellationRequested);
+        teamsOpening = new(ConfigurationChanges, EditingOwner.AgentTeam, null, catalogEditorId, () => !isDisposed && !lifetimeToken.IsCancellationRequested);
+        try {
+            await agentsOpening.StartAsync(CatalogChangedAsync, RetireCatalogAsync, catalog: true);
+            await teamsOpening.StartAsync(CatalogChangedAsync, RetireCatalogAsync, catalog: true);
+        } catch (Exception error) {
+            Logger.LogWarning("Agent catalog access could not be opened: {FailureType}", error.GetType().Name);
+            await RetireCatalogAsync();
+        }
+    }
+
+    private Task CatalogChangedAsync(EditingChangeBatch batch) => InvokeAsync(() => {
+        if (!isDisposed && (batch.RequiresResync || batch.Changes.Any(change => change.OriginEditorId != catalogEditorId))) {
+            catalogChangeSequence++;
+            foreach (var editor in policyEditors.Values) {
+                if (batch.RequiresResync || batch.Changes.Any(change => change.OriginEditorId != catalogEditorId &&
+                    change.Resource.Owner == EditingOwner.AgentDefinition && change.Resource.ResourceId == editor.AgentId)) {
+                    editor.ObserveExternalChange();
+                }
+            }
+            StateHasChanged();
+        }
+    });
+
+    private Task RetireCatalogAsync() => InvokeAsync(() => {
+        if (!isDisposed) {
+            accessRetired = true;
+            agentsOpening?.Stop();
+            teamsOpening?.Stop();
+            lifetime.Cancel();
+            RetirePolicyEditors();
+            snapshot = AgentCatalogSnapshot.Empty;
+            StateHasChanged();
+        }
+    });
+
+    private Task<AgentCatalogSnapshot> ReadCatalogAsync(AgentCatalogLoadRequest request, CancellationToken token)
+        => agentsOpening!.ReadAsync(agentToken => teamsOpening!.ReadAsync(teamToken => CatalogOperations.LoadAsync(request, teamToken), agentToken), token);
+
+    private async Task RefreshCatalogAsync() {
+        if (isRefreshingCatalog) {
+            return;
+        }
+        var sequence = catalogChangeSequence;
+        isRefreshingCatalog = true;
+        catalogRefreshError = null;
+        try {
+            if (await ReloadCatalogAsync()) {
+                acknowledgedCatalogChanges = Math.Max(acknowledgedCatalogChanges, sequence);
+            }
+        } catch (Exception error) {
+            Logger.LogWarning("Agent catalog refresh failed: {FailureType}", error.GetType().Name);
+            catalogRefreshError = "The catalog could not refresh. Retry this read; open drafts are retained.";
+        } finally {
+            isRefreshingCatalog = false;
         }
     }
 

@@ -12,6 +12,70 @@ namespace CanDoItAll.Tests.Components.ProviderProfilesUi;
 
 public sealed class ProviderRendererTests {
     [Fact]
+    public async Task Recovery_review_labels_its_current_basis_without_disclosing_private_settings_or_raw_secret_values() {
+        using var context = Context();
+        var current = new ProviderProfileEditorModel {
+            Id = Guid.NewGuid(), ExpectedConcurrencyToken = Guid.NewGuid(), Name = "Saved peer",
+            ApiKeyEnvironmentVariable = "private-secret-value", ConfigurationJson = "{\"ownedExtension\":\"private-saved-value\"}"
+        };
+        var local = ProviderEditorDraft.Copy(current);
+        local.Name = "Retained local";
+        local.ConfigurationJson = "{\"ownedExtension\":\"private-local-value\"}";
+        var review = new ProviderRecoveryReview(local, current);
+        var cut = context.Render<ProviderRecoveryReviewSurface>(parameters => parameters.Add(component => component.Review, review));
+        Assert.Contains("Saved peer", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Retained local", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-secret-value", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-saved-value", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-local-value", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Additional settings changed: ownedExtension", cut.Markup, StringComparison.Ordinal);
+        Assert.Single(cut.FindAll("label"), label => label.TextContent.Contains("Keep my complete draft against this reviewed version", StringComparison.Ordinal));
+        Assert.False(review.CanApply);
+        await cut.Find("input[type='checkbox']").ChangeAsync(new() { Value = true });
+        Assert.True(review.CanApply);
+        await context.DisposeRenderedComponentsAsync();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Settings_review_distinguishes_changed_private_configuration_without_projecting_its_values(bool incomplete) {
+        using var context = Context();
+        var original = new ProviderProfileEditorModel { Id = Guid.NewGuid(), ConfigurationJson = "{\"ownedExtension\":\"private-original\"}", ApiKeyEnvironmentVariable = "private-original-secret-value" };
+        var local = ProviderEditorDraft.Copy(original);
+        local.ConfigurationJson = incomplete ? "{unfinished" : original.ConfigurationJson;
+        var current = ProviderEditorDraft.Copy(original);
+        current.ExpectedConcurrencyToken = Guid.NewGuid();
+        current.ConfigurationJson = "{\"ownedExtension\":\"private-current\"}";
+        current.ApiKeyEnvironmentVariable = "private-current-secret-value";
+        var review = new ProviderEditorComparison(original, local, current, incomplete);
+        var cut = context.Render<ProviderComparisonSurface>(p => p.Add(c => c.Review, review));
+        Assert.Contains("Additional settings changed: ownedExtension", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-original", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-current", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("invalid reference retained privately", cut.Markup, StringComparison.Ordinal);
+        Assert.False(review.CanApply);
+        if (incomplete) {
+            Assert.Single(cut.FindAll("label"), label => label.TextContent.Contains("Keep my unfinished provider settings locally", StringComparison.Ordinal));
+        }
+        await context.DisposeRenderedComponentsAsync();
+    }
+
+    [Fact]
+    public async Task Pending_tag_survives_section_changes_without_becoming_a_saved_tag() {
+        using var context = Context();
+        var view = new ProviderScenarioSession();
+        var cut = context.Render<ProviderProfilesSurface>(p => p.Add(c => c.View, view));
+        cut.Find("[data-testid='providers-tags-input']").Input("unfinished 東京");
+        await Tab(cut, ProviderEditorSection.Runtime);
+        await Tab(cut, ProviderEditorSection.Connection);
+        Assert.Equal("unfinished 東京", cut.Find("[data-testid='providers-tags-input']").GetAttribute("value"));
+        Assert.Equal("unfinished 東京", view.Editor.PendingTag);
+        Assert.DoesNotContain("unfinished 東京", view.Editor.Model.Tags);
+        await context.DisposeRenderedComponentsAsync();
+    }
+
+    [Fact]
     public async Task Six_tabs_and_actual_children_share_one_context_and_immediate_draft() {
         using var context = Context();
         var view = new ProviderScenarioSession();

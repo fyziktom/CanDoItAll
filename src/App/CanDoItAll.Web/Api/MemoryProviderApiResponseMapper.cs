@@ -66,7 +66,7 @@ internal static class MemoryProviderApiResponseMapper
                     configuration.Mcp.AuthHeaderName,
                     configuration.Mcp.AuthHeaderEnvironmentVariable,
                     configuration.Mcp.ContextQueryTool,
-                    configuration.Mcp.OperationStatusTool));
+                    configuration.Mcp.OperationStatusTool)) { ConfigurationRevision = profile.ConfigurationRevision };
     }
 
     public static MemoryProviderSelectionApiResponse MapSelection(

@@ -135,8 +135,9 @@ public sealed class ProviderHistorySeamTests {
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         var cut = context.Render<ProviderHistoryContentDialog>(p => p.Add(x => x.Content, HistorySandboxFixture.Content));
         var areas = cut.FindAll("textarea");
-        Assert.Equal(HistorySandboxFixture.SyntheticInput, areas[0].TextContent);
-        Assert.Equal(HistorySandboxFixture.SyntheticResponse, areas[1].TextContent);
+        Assert.Equal(HistorySandboxFixture.SyntheticInput, areas[0].GetAttribute("value"));
+        Assert.Equal(HistorySandboxFixture.SyntheticResponse, areas[1].GetAttribute("value"));
+        Assert.All(areas, area => Assert.True(area.HasAttribute("readonly")));
         Assert.Contains("PriorContextNotCaptured", cut.Markup);
         Assert.Contains("bytes", cut.Markup);
         Assert.Contains("2026-09-15 12:00:00 UTC", cut.Markup);

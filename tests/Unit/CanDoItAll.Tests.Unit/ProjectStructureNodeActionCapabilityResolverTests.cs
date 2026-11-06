@@ -273,12 +273,14 @@ public sealed class ProjectStructureNodeActionCapabilityResolverTests
 
         public Task<ProjectStructureLocalFileOpenResult> OpenAsync(
             ProjectStructureNode node,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => Task.FromResult(new ProjectStructureLocalFileOpenResult(false, "Unavailable."));
 
         public Task<ProjectStructureLocalFileOpenResult> OpenInPreferredApplicationAsync(
             ProjectStructureNode node,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => Task.FromResult(new ProjectStructureLocalFileOpenResult(false, "Unavailable."));
     }
 }

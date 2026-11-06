@@ -183,8 +183,11 @@ Component tests that dispose rendered components while reusing a `BunitContext` 
 `DisposeRenderedComponentsAsync()` from `BunitContextLifecycleExtensions`. In bUnit 2.7.2,
 calling `DisposeComponentsAsync()` outside a busy renderer dispatcher can clear the root
 list before the queued disposal reads it, leaving old components and their scoped
-registrations alive. The helper dispatches the entire operation; its regression test
-holds the renderer busy to verify that disposal still releases the rendered components.
+registrations alive. Its asynchronous disposal callbacks also modify an unsynchronized
+list using the current task scheduler. The helper dispatches the entire operation and
+uses the renderer synchronization-context scheduler for those callbacks. Regression
+tests cover a busy dispatcher and simultaneous asynchronous disposal while keeping
+the context reusable.
 
 When a component can render in the background, find the DOM element and dispatch its
 event together inside `cut.InvokeAsync`. A render between `Find` and `Click` can replace

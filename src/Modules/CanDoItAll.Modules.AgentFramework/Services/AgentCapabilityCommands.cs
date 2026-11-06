@@ -51,6 +51,8 @@ public sealed class AgentCapabilityCommands(IAgentFrameworkWorkspaceService work
             return id == attempt.AgentId ? AgentCapabilityOperationStatus.Committed : AgentCapabilityOperationStatus.Unconfirmed;
         } catch (AgentDirectoryProjectionSynchronizationException exception) when (exception.AgentId == attempt.AgentId) {
             return AgentCapabilityOperationStatus.CommittedWithWarning;
+        } catch (AgentCatalogCommittedException<AgentDefinition> exception) when (exception.Accepted.Id == attempt.AgentId) {
+            return AgentCapabilityOperationStatus.CommittedWithWarning;
         } catch (AgentCatalogConcurrencyException) {
             return AgentCapabilityOperationStatus.Conflict;
         } catch (AgentEditorValidationException) {

@@ -1,0 +1,97 @@
+<Stack GapScale="LayoutGap.Large" data-testid="prompt-merge-review">
+    <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+        <TextBlock Value="Compare the original revision, your draft, and the current saved item. Apply updates your draft only. Save remains a separate action." />
+        <TextBlock Value="@($"Current status: {(Review.Current.IsArchived ? "Archived" : Review.Current.Status.ToString())}; immutable version {Review.Current.CurrentVersionNumber}. Versions and preferences are read-only here.")" />
+    </Alert>
+    <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" data-testid="prompt-merge-show-all" />
+    @if (!string.IsNullOrWhiteSpace(StaleMessage)) {
+        <Alert AlertStyle="AlertStyle.Warning" data-testid="prompt-merge-stale"><TextBlock Value="@StaleMessage" /></Alert>
+    }
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="string" Label="Name" Field="@Review.Title" Format="Identity" Changed="Changed" TestId="prompt-merge-title">
+        <ResultEditor Context="value"><input class="cda-input" value="@value" aria-label="Merged name" @oninput="@(e => SetText(Review.Title, e))" /></ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="string" Label="Summary" Field="@Review.Summary" Format="Identity" Changed="Changed" TestId="prompt-merge-summary">
+        <ResultEditor Context="value"><textarea class="cda-input cda-input--textarea" value="@value" aria-label="Merged summary" @oninput="@(e => SetText(Review.Summary, e))" /></ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="PromptGalleryItemKind" Label="Kind" Field="@Review.Kind" Format="@(value => PromptGalleryText.FormatKind(value))" Changed="Changed" />
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="string" Label="Phase or group" Field="@Review.Phase" Format="Identity" Changed="Changed">
+        <ResultEditor Context="value"><input class="cda-input" value="@value" aria-label="Merged phase" @oninput="@(e => SetText(Review.Phase, e))" /></ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="string" Label="Reusable content" Field="@Review.Text.Field" Format="Identity" Changed="Changed" TestId="prompt-merge-content">
+        <ResultEditor Context="value">
+            <TextBlock Value="@TextDescription" />
+            <textarea class="cda-input cda-input--textarea cda-input--mono min-h-80" value="@value" aria-label="Merged reusable content" @oninput="@(e => SetText(Review.Text.Field, e))" />
+        </ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="IReadOnlyList<string>" Label="Tags (membership combined)" Field="@Review.Tags" Format="@(values => string.Join(", ", values))" Changed="Changed">
+        <ResultEditor Context="values">
+            <Cluster Gap="LayoutGap.Small">
+                @foreach (var tag in values) {
+                    <StatusBadge Tone="neutral" Text="@tag" NoWrap="true" />
+                }
+            </Cluster>
+        </ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="IReadOnlyList<PromptGalleryConsumer>" Label="Supported consumers (membership combined)" Field="@Review.Consumers" Format="@(values => values.Count == 0 ? "All consumers" : string.Join(", ", values))" Changed="Changed" />
+    <FormSection Title="Supported provider models" Description="Rows are matched by provider and model. A missing row means removal. Review preferred choices together.">
+        @foreach (var row in Review.Models.Where(row => showUnchanged || row.Field.LocalChanged || row.Field.CurrentChanged).Take(visibleModels)) {
+            <MergeFieldView ShowUnchanged="@showUnchanged" TValue="MergeEntry<PromptProviderModel>" Label="@($"{row.Key.Provider} / {row.Key.Model}")" Field="@row.Field" Format="FormatModel" Changed="Changed">
+                <ResultEditor Context="entry">
+                    @if (entry.Exists) {
+                        <CheckBox TValue="bool" Value="@entry.Value!.IsPreferred" ValueChanged="@(value => SetPreferred(row.Field, entry.Value!, value))"
+                            aria-label="@($"Preferred result {row.Key.Provider} {row.Key.Model}")" />
+                        <TextBlock Value="@FormatModel(entry)" />
+                        <Button Text="Remove from result" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => RemoveModel(row.Field))" />
+                    } else {
+                        <TextBlock Value="Removed / absent" />
+                    }
+                </ResultEditor>
+            </MergeFieldView>
+        }
+        @if (Review.Models.Count > visibleModels) {
+            <Button Text="Show more model rows" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleModels += 50)" />
+        }
+        @if (Review.GroupError is { } groupError) {
+            <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@groupError" /></Alert>
+        }
+    </FormSection>
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="PromptNumericDraft<double>" Label="Temperature" Field="@Review.Temperature" Format="@(value => value.Raw)" Changed="Changed">
+        <ResultEditor Context="value"><input class="cda-input" value="@value.Raw" aria-label="Merged temperature" @oninput="@(e => SetNumber(Review.Temperature, e))" /></ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="PromptNumericDraft<double>" Label="Top-p" Field="@Review.TopP" Format="@(value => value.Raw)" Changed="Changed">
+        <ResultEditor Context="value"><input class="cda-input" value="@value.Raw" aria-label="Merged top-p" @oninput="@(e => SetNumber(Review.TopP, e))" /></ResultEditor>
+    </MergeFieldView>
+    <MergeFieldView ShowUnchanged="@showUnchanged" TValue="PromptNumericDraft<int>" Label="Maximum output tokens" Field="@Review.MaxOutputTokens" Format="@(value => value.Raw)" Changed="Changed">
+        <ResultEditor Context="value"><input class="cda-input" value="@value.Raw" aria-label="Merged maximum output tokens" @oninput="@(e => SetNumber(Review.MaxOutputTokens, e))" /></ResultEditor>
+    </MergeFieldView>
+</Stack>
+
+@code {
+    private bool showUnchanged;
+    private int visibleModels = 50;
+    [Parameter, EditorRequired] public PromptMergeReview Review { get; set; } = default!;
+    [Parameter] public string? StaleMessage { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private static string Identity(string value) => value;
+    private static string FormatModel(MergeEntry<PromptProviderModel> entry) => entry.Exists
+        ? $"{entry.Value!.Provider} / {entry.Value.Model}{(entry.Value.IsPreferred ? " (preferred)" : string.Empty)}" : "Removed / absent";
+    private string TextDescription => Review.Text.RequiresManualComparison ? "Large text: compare the full values and choose or edit the complete result. No content was truncated."
+        : $"Your change: {Describe(Review.Text.LocalChange)}. Current change: {Describe(Review.Text.CurrentChange)}. Only disjoint line ranges combine automatically.";
+    private static string Describe(TextChange? change) => change is null ? "unchanged" : $"line {change.StartLine + 1}, {change.RemovedLines} removed, {change.AddedLines.Count} added";
+    private async Task SetText(MergeField<string> field, ChangeEventArgs args) {
+        field.SetResult(args.Value?.ToString() ?? string.Empty);
+        await Changed.InvokeAsync();
+    }
+    private async Task RemoveModel(MergeField<MergeEntry<PromptProviderModel>> field) {
+        field.SetResult(MergeEntry<PromptProviderModel>.Missing);
+        await Changed.InvokeAsync();
+    }
+    private async Task SetPreferred(MergeField<MergeEntry<PromptProviderModel>> field, PromptProviderModel model, bool preferred) {
+        field.SetResult(MergeEntry<PromptProviderModel>.Present(model with { IsPreferred = preferred }));
+        await Changed.InvokeAsync();
+    }
+    private async Task SetNumber<T>(MergeField<PromptNumericDraft<T>> field, ChangeEventArgs args) where T : struct, IParsable<T>, IFormattable {
+        field.SetResult(PromptNumericDraft<T>.From(args.Value?.ToString() ?? string.Empty));
+        await Changed.InvokeAsync();
+    }
+}

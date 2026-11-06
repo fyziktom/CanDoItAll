@@ -8,7 +8,7 @@ public sealed class WorkspaceSecretsOwner(SecretService secrets, ICanonicalRunti
     private readonly long generation = canonical.Generation;
     public bool IsCurrent => canonical.Profile.Profile.Id == profile && canonical.Generation == generation;
     public Task<IReadOnlyList<SecretListItem>> ListAsync(CancellationToken cancellationToken) => secrets.ListForPickerAsync(cancellationToken);
-    public Task<SecretEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) => secrets.GetAsync(id, cancellationToken);
+    public Task<SecretEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) => secrets.GetEditorAsync(id, cancellationToken);
 
     public async Task<SettingsWriteResult<Guid>> SaveAsync(SecretEditorModel command, CancellationToken cancellationToken) {
         if (!IsCurrent) {
@@ -20,18 +20,23 @@ public sealed class WorkspaceSecretsOwner(SecretService secrets, ICanonicalRunti
                 : new(SettingsWriteState.Refused, command.Id ?? Guid.Empty, SettingsDiagnostic.Validation);
         } catch (SecretCommittedException committed) {
             return Known(committed);
+        } catch (SecretMetadataConflictException) {
+            return new(SettingsWriteState.Refused, command.Id ?? Guid.Empty, SettingsDiagnostic.Conflict);
         }
     }
 
-    public async Task<SettingsWriteResult<Guid>> DeleteAsync(Guid id, CancellationToken cancellationToken) {
+    public async Task<SettingsWriteResult<Guid>> DeleteAsync(SecretMetadataCondition expected, CancellationToken cancellationToken) {
+        var id = expected.SecretId;
         if (!IsCurrent) {
             return new(SettingsWriteState.Refused, id, SettingsDiagnostic.Retired);
         }
         try {
-            await secrets.DeleteAsync(id, cancellationToken);
+            await secrets.DeleteReviewedAsync(expected, cancellationToken);
             return new(SettingsWriteState.Committed, id);
         } catch (SecretDeletionBlockedException) {
             return new(SettingsWriteState.Refused, id, SettingsDiagnostic.ReferenceBlocked);
+        } catch (SecretMetadataConflictException) {
+            return new(SettingsWriteState.Refused, id, SettingsDiagnostic.Conflict);
         } catch (SecretCommittedException committed) {
             return Known(committed);
         }

@@ -174,7 +174,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
             return PendingRead?.Task ?? Task.FromResult(new HistoryPolicySnapshot(new(), 5));
         }
 
-        public Task<HistoryRetentionPreview> PreviewShorterRetentionAsync(HistoryPolicy policy, CancellationToken cancellationToken) {
+        public Task<HistoryRetentionPreview> PreviewShorterRetentionAsync(HistoryPolicyPreviewRequest request, CancellationToken cancellationToken) {
             Previews++;
             return Task.FromResult(new HistoryRetentionPreview(3, 2, 500, ExceedsLimit));
         }

@@ -41,6 +41,7 @@ public sealed record MemoryProviderManagementProfile(
     MemoryProviderLimits Limits)
 {
     public IReadOnlyList<string> LegacyRawCredentialKeys { get; init; } = [];
+    public Guid? ConfigurationRevision { get; init; }
 
     public bool CanRunProviderBackedActions =>
         IsEnabled &&
@@ -70,7 +71,8 @@ public sealed record MemoryProviderManagementProfile(
             profile.Manifest.UiSurfaces.ToArray(),
             MemoryProviderUiUrlPolicy.Sanitize(profile),
             profile.Manifest.Limits) {
-            LegacyRawCredentialKeys = new[] { MemoryEditorDefaults.LegacyHttpCredential, MemoryEditorDefaults.LegacyNativeCredential }.Where(profile.Manifest.Extensions.Values.ContainsKey).ToArray()
+            LegacyRawCredentialKeys = new[] { MemoryEditorDefaults.LegacyHttpCredential, MemoryEditorDefaults.LegacyNativeCredential }.Where(profile.Manifest.Extensions.Values.ContainsKey).ToArray(),
+            ConfigurationRevision = profile.ConfigurationRevision
         };
     }
 }

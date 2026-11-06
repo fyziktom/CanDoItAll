@@ -68,7 +68,7 @@ public sealed class OpportunityBoardTests
     }
 
     [Fact]
-    public async Task Create_dialog_cancel_keeps_the_caller_model_unchanged()
+    public async Task Create_dialog_uses_the_explicit_host_draft_and_cancel_requests_its_host()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var linkedProjectId = Guid.NewGuid();
@@ -80,10 +80,11 @@ public sealed class OpportunityBoardTests
             LinkedProjectId = linkedProjectId
         };
         var closeCount = 0;
+        var draft = initialModel.Snapshot();
 
         var cut = harness.Context.Render<OpportunityCreateDialog>(parameters => parameters
             .Add(component => component.IsOpen, true)
-            .Add(component => component.InitialModel, initialModel)
+            .Add(component => component.InitialModel, draft)
             .Add(component => component.Close, () => closeCount++));
 
         cut.Find("[data-testid='crmhr-opportunity-title']").Change("Unsaved change");
@@ -92,7 +93,21 @@ public sealed class OpportunityBoardTests
 
         Assert.Equal("Original pursuit", initialModel.Title);
         Assert.Equal(linkedProjectId, initialModel.LinkedProjectId);
+        Assert.Equal("Unsaved change", draft.Title);
+        Assert.Null(draft.LinkedProjectId);
         Assert.Equal(1, closeCount);
+    }
+
+    [Fact]
+    public async Task Board_advance_carries_the_displayed_stage_and_version_without_loading_a_new_token() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var item = CreatePipelineItem(Guid.NewGuid(), Guid.NewGuid(), "Observed board card", "USD", 125);
+        CrmOpportunityStageAdvance? intent = null;
+        var cut = harness.Context.Render<OpportunityBoard>(parameters => parameters
+            .Add(component => component.Opportunities, [item])
+            .Add(component => component.AdvanceOpportunityStage, value => intent = value));
+        cut.Find($"[data-testid='crmhr-opportunity-advance-{item.Id:N}']").Click();
+        Assert.Equal(new(item.Id, item.AccountPartyId, item.Stage, item.UpdatedAtUtc), intent);
     }
 
     [Fact]

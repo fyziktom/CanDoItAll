@@ -112,13 +112,12 @@ the prior hash. All earlier checkpoint manifests remain intact.
 the Storage owner fixture's required class-level HostPlatform category. Test bodies and
 production owners remain unchanged.
 
-## Current owner findings
+## Original boundary checkpoint
 
-The new exact-editor entry points guard actual persistence acquisition. Existing callers keep
-legacy upsert behavior. Save retains separately committed catalog, per-purpose routing and
-Activity stages. The existing runtime write fence admits one captured original profile through
-the whole operation; restart publication waits for that operation. Canonical factories remain
-bound to the original database. This is an existing process-local fence, not distributed locking.
+The original exact-editor entry points guarded persistence acquisition. Save reported the
+catalog write, per-purpose routing and Activity as separate stages. The runtime write fence
+admits one captured profile through the whole operation, and restart publication waits for
+that operation. Canonical factories remain bound to the original database.
 
 The original filesystem draft Test uses `StorageDriverInput.FromDraft`, without an active host
 binding. Its real driver reports Unavailable under the current host-binding policy. The new
@@ -134,6 +133,18 @@ failures; lost catalog acknowledgement remains Unknown even after observing the 
 Tests cover deletion between acquisition and flush, real secret runtime resolution, diagnostics
 failure, unsaved/existing Test, and a held two-profile operation. No schema migration is added.
 
+## Concurrent editing checkpoint
+
+The current editor submits its original configuration timestamp. A routing edit also submits
+the observed workspace routing revision, including disabled rules and membership. The owner
+checks both under its transaction and commits configuration and routing together. A Save that
+changes only configuration leaves routing alone. Activity remains a separate effect.
+
+Test checks the submitted connection. It updates the saved health only if the connection still
+matches and the result is newer. The health write leaves the configuration revision alone.
+An edit that changes connection settings clears the previous health. On a stale configuration or
+routing refusal, the form retains the draft and offers an explicit discard and reopen action.
+
 ## Final responsibilities and semantics
 
 | Owner | Responsibility |
@@ -142,7 +153,7 @@ failure, unsaved/existing Test, and a held two-profile operation. No schema migr
 | StorageCatalog.UI | Exact read lanes, stable draft/EditContext and per-field revisions, command admission and bounded receipt history, full three-step BaseLib renderer |
 | WorkspaceStorageCatalogOwner | Captured canonical profile/generation, independent real reads, canonical provider/routing projections |
 | StorageCatalogCommands | Existing runtime write fence, catalog/routing/driver/credential/Activity orchestration and safe diagnostics |
-| StorageCatalogService | Original bootstrap/serialization/routing behavior and strict editor-only existence/system checks at persistence acquisition |
+| StorageCatalogService | Bootstrap and configuration serialization, exact configuration and routing checks, atomic configuration and routing writes, conditional health updates |
 | StorageSettingsPanel | Active production slot, authentication/profile retirement and Recovery with the captured opening ID/null |
 | Independent sandbox | Same renderer and controllers with bounded, mutable original scenario stores; simulated health and deferred Recovery |
 

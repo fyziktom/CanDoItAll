@@ -5,6 +5,9 @@
 @using CanDoItAll.Modules.Prompts.Components
 
 <div class="workflow-canvas-editor-shell">
+    @if (HasCurrentHeadChange) {
+        <Alert AlertStyle="AlertStyle.Info" data-testid="workflow-canvas-updates">The current saved workflow changed. Review updates to bring them into your draft.</Alert>
+    }
     @if (!string.IsNullOrWhiteSpace(errorMessage)) {
         <Alert AlertStyle="AlertStyle.Warning" data-testid="workflow-canvas-operation-error">@errorMessage</Alert>
     }
@@ -24,17 +27,23 @@
                 <Button Text="Validate"
                         ButtonStyle="ButtonStyle.Light"
                         Click="ValidateAsync"
-                        Disabled="@isBusy"
+                        Disabled="@(isBusy || editingAccessRetired)"
                         data-testid="workflow-canvas-validate" />
                 <Button Text="Run preview"
                         Click="RunPreviewAsync"
-                        Disabled="@(isBusy || previewUnknown)"
+                        Disabled="@(isBusy || editingAccessRetired || previewUnknown)"
                         IsBusy="@isTesting"
                         data-testid="workflow-canvas-run-preview" />
                 <Button Text="Save"
                         Click="SaveAsync"
-                        Disabled="@(isBusy || saveUnknown)"
+                        Disabled="@(isBusy || editingAccessRetired || saveUnknown || currentReview.IsReading || currentReview.Review is not null || currentReview.IsDeleted)"
                         data-testid="workflow-canvas-save" />
+                @if (DocumentOperations.ReadCurrent is not null && document.DefinitionId.HasValue) {
+                    <Button Text="@(HasCurrentHeadChange ? "Review updates" : "Check for updates")"
+                            ButtonStyle="ButtonStyle.Light" Click="CheckCurrentAsync"
+                            Disabled="@(isBusy || editingAccessRetired || currentReview.IsReading)" IsBusy="currentReview.IsReading"
+                            data-testid="workflow-canvas-check-current" />
+                }
             </Cluster>
         </HeaderActions>
         <Canvas>
@@ -169,6 +178,14 @@
                                 </div>
                                 @PromptPicker?.Invoke(CreatePromptPickerContext("Browse gallery", null))
                             </Split>
+                            @if (LibraryRefreshRequired) {
+                                <Alert AlertStyle="AlertStyle.Info" data-testid="workflow-canvas-component-updates">
+                                    The component library changed. Refresh it to see current prepared calls; your workflow draft is retained.
+                                </Alert>
+                            }
+                            <Button Text="Refresh library" Icon="refresh" Size="ButtonSize.Small"
+                                    Disabled="@(isBusy || editingAccessRetired)" Click="LibraryRefreshRequested"
+                                    data-testid="workflow-canvas-refresh-components" />
                             <p class="workflows-muted mt-3"
                                data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
                             @{
@@ -221,6 +238,7 @@
                                                 <span>@ResolveComponentProviderLabel(component) · @component.Model · @component.Modality · @component.ResultShape.Kind</span>
                                             </div>
                                             <Button Text="Place"
+                                                    Class="shrink-0 whitespace-nowrap"
                                                     ButtonStyle="ButtonStyle.Light"
                                                     Size="ButtonSize.Small"
                                                     Click="@(() => OpenLlmComponentCreateAsync(component))"
@@ -684,6 +702,13 @@
     </CanvasWorkbenchStage>
     </SurfaceCard>
 </div>
+
+@if (currentReview.Review is { } review) {
+    <WorkflowDefinitionReviewDialog Review="review" Previous="currentReview.Previous"
+        CanApply="@(IsCurrent && !saveUnknown && ReviewStaleMessage.Length == 0 && currentReview.CanApply(document))"
+        Busy="currentReview.IsReading" StaleMessage="@ReviewStaleMessage" Changed="CurrentReviewChangedAsync"
+        Apply="ApplyCurrentReviewAsync" Cancel="CloseCurrentReviewAsync" Refresh="CheckCurrentAsync" />
+}
 
 @if (isPreviewInputDialogOpen) {
     <WorkflowPreviewInputDialog State="previewInputState" Projects="previewProjectOptions"

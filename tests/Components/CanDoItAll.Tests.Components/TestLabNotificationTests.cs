@@ -64,7 +64,7 @@ public sealed class TestLabNotificationTests : BunitContext {
         public Task<IReadOnlyList<TestLabProjectOption>> ProjectsAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TestLabProjectOption>>([Project]);
         public Task<IReadOnlyList<TestLabPartyOption>> PartiesAsync(Guid projectId, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TestLabPartyOption>>([]);
         public Task<TestLabPartyOption?> PartyAsync(Guid partyId, CancellationToken cancellationToken) => Task.FromResult<TestLabPartyOption?>(null);
-        public Task<IReadOnlyList<TestPlanSummary>> ListAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TestPlanSummary>>([]);
+        public Task<TestLabPlanPage> ListAsync(int offset, CancellationToken cancellationToken) => Task.FromResult(new TestLabPlanPage([], false));
         public Task<TestPlanEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) => Task.FromResult(stored is null ? null : TestLabSubmission.Clone(stored));
         public Task<TestLabWriteResult> SaveAsync(TestPlanEditorModel submission) {
             Writes++;

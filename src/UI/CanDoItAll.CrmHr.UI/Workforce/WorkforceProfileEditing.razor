@@ -1,0 +1,88 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+
+@if (State.HasPendingInput && !State.IsSaving) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-workforce-pending-input"><TextBlock Value="Complete the date, number or reference input before saving. Your raw input is retained." /></Alert>
+}
+@if (State.IsOutdated || State.IsUnknown || State.Missing || Message is not null) {
+    <Alert AlertStyle="@(Attention || State.IsOutdated || State.IsUnknown || State.Missing ? AlertStyle.Warning : AlertStyle.Info)" data-testid="crmhr-workforce-profile-outcome">
+        <TextBlock Value="@(State.IsUnknown ? "The workforce save outcome is unknown. Its submission and your draft are retained; resubmission is blocked." : State.Missing ? "The profile or its party type was replaced. Reopen the current record before editing it." : State.IsOutdated ? "The workforce profile changed. Review its current values before saving your draft." : Message)" />
+        @if (Attention && Message is not null && (State.IsOutdated || State.Missing)) {
+            <TextBlock Value="@Message" />
+        }
+        <Button Text="Review saved changes" ButtonStyle="ButtonStyle.Light" Disabled="@(Reading || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-workforce-review-open" />
+    </Alert>
+}
+@if (State.CanUndo) {
+    <Button Text="Undo merge edits" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" data-testid="crmhr-workforce-merge-undo" />
+}
+<Dialog IsOpen="@(State.Review is not null)" Title="Review workforce profile" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-workforce-review-dialog">
+    <ChildContent>
+        @if (State.Review is { } review) {
+            <Stack GapScale="LayoutGap.Medium" Stretch="true">
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Compare the original profile, your draft and the current saved profile. Apply updates only your draft. Save remains a separate action." /></Alert>
+                @if (State.IsUnknown) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="This comparison retains your draft and does not resolve the unknown save outcome. The previous command cannot be replayed." /></Alert>
+                }
+                @if (State.ReviewIsStale) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-workforce-review-stale"><TextBlock Value="The profile changed again. Refresh this comparison before applying. Explicit choices are retained." /></Alert>
+                }
+                @if (State.Missing) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="This profile or its party type was replaced. Reopen the current record before editing it." /></Alert>
+                }
+                @if (State.HasPendingInput) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="Complete the date, number or reference input before applying this comparison. Your raw input is retained in the form." /></Alert>
+                }
+                <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+                <MergeFieldView TValue="WorkforceKind" Label="Workforce kind" Field="review.Kind" Format="@(value => value.ToString())" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Employee code" Field="review.EmployeeCode" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Job title" Field="review.JobTitle" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Discipline" Field="review.Discipline" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Seniority" Field="review.Seniority" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="Guid?" Label="Home unit" Field="review.HomeUnit" Format="PartyName" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="Guid?" Label="Manager" Field="review.Manager" Format="PartyName" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="WorkforceDateRange" Label="Employment dates" Field="review.Dates" Format="FormatDates" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Location" Field="review.Location" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Time zone" Field="review.TimeZone" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="WorkforceRates" Label="Rates, currency and unit" Field="review.Rates" Format="FormatRates" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="decimal" Label="Capacity hours per week" Field="review.Capacity" Format="@(value => value.ToString("0.##"))" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Status" Field="review.Status" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Notes" Field="review.Notes" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed">
+                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="5" ValueChanged="@(text => SetNotesAsync(review, text))" aria-label="Merged workforce notes" /></ResultEditor>
+                </MergeFieldView>
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="Reading" Click="ReviewRequested" data-testid="crmhr-workforce-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(Reading || !State.CanApply)" Click="ApplyRequested" data-testid="crmhr-workforce-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private bool showUnchanged;
+    [Parameter, EditorRequired] public WorkforceProfileReconciliation State { get; set; } = default!;
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool Attention { get; set; }
+    [Parameter] public bool Reading { get; set; }
+    [Parameter] public Func<Guid?, string> PartyName { get; set; } = _ => "Referenced record";
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+    [Parameter] public EventCallback UndoRequested { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    private static string FormatDates(WorkforceDateRange value) => $"{value.Start?.ToString("d") ?? "Open"} → {value.End?.ToString("d") ?? "Open"}";
+    private static string FormatRates(WorkforceRates value) => $"Internal {value.Internal?.ToString("0.##") ?? "None"}; external {value.External?.ToString("0.##") ?? "None"} {value.Currency} / {value.Unit}";
+    private Task SetNotesAsync(WorkforceProfileReview review, string? value) {
+        if (!ReferenceEquals(State.Review, review)) {
+            return Task.CompletedTask;
+        }
+        review.Notes.SetResult(value ?? string.Empty);
+        return Changed.InvokeAsync();
+    }
+}

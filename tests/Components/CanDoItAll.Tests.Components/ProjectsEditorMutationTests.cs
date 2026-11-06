@@ -16,6 +16,118 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectsEditorMutationTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Starter_seeding_rechecks_current_write_access_after_the_definition_was_accepted(bool afterSql) {
+        var controls = new Controls { HoldSeed = true, RevokeSeedAfterSql = afterSql };
+        await using var harness = await Harness(controls);
+        var cut = RenderProjectsPage(harness);
+        await NewAsync(cut, "Accepted definition before revoked seeding", controls);
+        var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        draft.StarterObjects.Add(new() { Title = "Refused starter object" });
+        var save = cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.Save.InvokeAsync(draft.Capture()));
+        await using var operation = new PendingOperation(save, controls);
+        await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        var access = (CanDoItAll.Tests.Support.EditingUiTestAccess)harness.Context.Services.GetRequiredService<CanDoItAll.Editing.IEditingUiAccess>();
+        controls.RevokeWriteAccess = () => access.Allowed = false;
+        if (!afterSql) {
+            access.Allowed = false;
+        }
+        controls.Release.TrySetResult();
+        await save;
+
+        Assert.NotNull(draft.AcceptedOutcome);
+        Assert.Equal("Accepted definition before revoked seeding", (await harness.Context.Services.GetRequiredService<ProjectsService>().GetAsync(draft.Model.Id!.Value)).Name);
+        Assert.Empty(await ObjectsAsync(harness, draft.Model.Id.Value));
+        Assert.True(controls.SeedFailure is UnauthorizedAccessException, controls.SeedFailure?.ToString());
+        Assert.Equal(ProjectEditorMutationState.AdmissionRefused, draft.Mutation);
+        Assert.Contains("write access", draft.Message);
+        Assert.Equal(1, controls.SeedCalls);
+        Assert.Equal(afterSql, controls.SeedSqlObserved);
+        Assert.Empty(((ProjectPendingSubmissionTestStore)harness.Context.Services.GetRequiredService<IProjectPendingSubmissionStore>()).Records);
+    }
+
+    [Fact]
+    public async Task Explicit_definition_comparison_keeps_the_native_model_and_EditContext_until_apply() {
+        var controls = new Controls();
+        await using var harness = await Harness(controls);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var id = (await projects.SaveAsync(new() { Name = "Original merge project", Description = "Original description" })).Value;
+        var cut = RenderProjectsPage(harness);
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(id));
+        var modal = cut.FindComponent<ProjectModalHost>().Instance;
+        var draft = modal.Draft;
+        var model = draft.Model;
+        var context = draft.EditContext;
+        await cut.InvokeAsync(() => modal.SwitchToEditor.InvokeAsync());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "My retained name" }));
+        var peer = await projects.GetAsync(id);
+        peer.Description = "Peer accepted description";
+        Assert.True((await projects.SaveAsync(peer)).IsSuccess);
+        cut.WaitForAssertion(() => Assert.True(draft.Definition.IsOutdated));
+        await cut.InvokeAsync(() => modal.ReadCurrentDefinition.InvokeAsync(draft));
+
+        await cut.InvokeAsync(() => modal.BeginDefinitionReconciliation.InvokeAsync(draft));
+
+        Assert.Same(draft, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+        Assert.Same(model, draft.Model);
+        Assert.Same(context, draft.EditContext);
+        Assert.Equal("My retained name", draft.Model.Name);
+        Assert.Equal("Original description", draft.Model.Description);
+        Assert.NotNull(cut.Find("[data-testid='project-merge-review']"));
+        Assert.Equal("Original merge project", (await projects.GetAsync(id)).Name);
+        Assert.Equal("Peer accepted description", (await projects.GetAsync(id)).Description);
+        await cut.InvokeAsync(() => modal.ApplyDefinitionReconciliation.InvokeAsync(draft));
+        Assert.Same(context, draft.EditContext);
+        Assert.Equal("My retained name", draft.Model.Name);
+        Assert.Equal("Peer accepted description", draft.Model.Description);
+        Assert.Equal("Original merge project", (await projects.GetAsync(id)).Name);
+        await cut.InvokeAsync(() => modal.Save.InvokeAsync(draft.Capture()));
+        Assert.Equal("My retained name", (await projects.GetAsync(id)).Name);
+        Assert.Equal("Peer accepted description", (await projects.GetAsync(id)).Description);
+    }
+
+    [Fact]
+    public async Task An_unannounced_current_change_before_apply_rebuilds_the_comparison_without_writing_the_local_draft() {
+        var controls = new Controls();
+        await using var harness = await Harness(controls);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var id = (await projects.SaveAsync(new() { Name = "Original current check", Description = "Original description" })).Value;
+        var cut = RenderProjectsPage(harness);
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(id));
+        var modal = cut.FindComponent<ProjectModalHost>().Instance;
+        var draft = modal.Draft;
+        var original = draft.Original;
+        await cut.InvokeAsync(() => modal.SwitchToEditor.InvokeAsync());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "My local current check" }));
+        var peer = await projects.GetAsync(id);
+        peer.Name = "Peer current check";
+        Assert.True((await projects.SaveAsync(peer)).IsSuccess);
+        cut.WaitForAssertion(() => Assert.True(draft.Definition.IsOutdated));
+        await cut.InvokeAsync(() => modal.BeginDefinitionReconciliation.InvokeAsync(draft));
+        var review = draft.Definition.Review!;
+        review.Name.SetResult("Chosen current check");
+        await using (var external = await harness.Context.Services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync()) {
+            var row = await external.Set<Project>().SingleAsync(row => row.Id == id);
+            row.Description = "Controlled external update without a delivered hint";
+            row.ConcurrencyToken = Guid.NewGuid();
+            await external.SaveChangesAsync();
+        }
+        Assert.True(draft.CanApplyMerge);
+
+        await cut.InvokeAsync(() => modal.ApplyDefinitionReconciliation.InvokeAsync(draft));
+
+        Assert.Same(draft, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+        Assert.Same(original, draft.Original);
+        Assert.NotSame(review, draft.Definition.Review);
+        Assert.Equal("Chosen current check", draft.Definition.Review!.Name.Result);
+        Assert.Equal("Controlled external update without a delivered hint", draft.Definition.Review.Description.Current);
+        Assert.Equal("My local current check", draft.Model.Name);
+        Assert.Equal("Original description", draft.Model.Description);
+        Assert.Equal("Peer current check", (await projects.GetAsync(id)).Name);
+    }
+
     [Fact]
     public async Task Portfolio_context_is_ready_but_cannot_certify_a_pending_or_failed_exact_editor() {
         var controls = new Controls();
@@ -95,7 +207,7 @@ public sealed class ProjectsEditorMutationTests {
         Assert.Same(acquired, cut.FindComponent<ProjectModalHost>().Instance.Draft);
         Assert.Equal("Unsubmitted A", acquired.Model.Name);
         Assert.Equal("Acquisition A", (await projects.GetAsync(first)).Name);
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        await ProjectsPageTestActions.CloseEditorAsync(cut);
         await cut.InvokeAsync(() => provider.Instance.RefreshRequested.InvokeAsync());
         Assert.Empty(cut.FindAll("[data-testid='projects-editor-modal'], [data-testid='projects-detail-modal']"));
     }
@@ -301,13 +413,15 @@ public sealed class ProjectsEditorMutationTests {
         var oldEditor = cut.FindComponent<ProjectModalHost>();
         var oldDraft = oldEditor.Instance.Draft;
         var original = oldDraft.Model.ExpectedProjectAdmission;
-        await ProjectLifecycleFixture.DeleteSeededProjectAsync(harness.Context.Services, id);
-        Assert.True((await projects.CreateAsync(id, new() { Name = "Replacement retained" })).IsSuccess);
-        int preparations = participant.Preparations;
         controls.HoldNextRead = 1;
         Task pending = cut.InvokeAsync(() => oldEditor.Instance.Delete.InvokeAsync());
         await using var operation = new PendingOperation(pending, controls);
         await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        await ProjectLifecycleFixture.DeleteSeededProjectAsync(harness.Context.Services, id);
+        Assert.True((await projects.CreateAsync(id, new() { Name = "Replacement retained" })).IsSuccess);
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsAgentChatContextProvider>().Instance.RefreshRequested.InvokeAsync());
+        Assert.Empty(cut.FindComponent<ProjectDeletionStatusSurface>().Instance.Pending);
+        int preparations = participant.Preparations;
         await cut.InvokeAsync(() => oldEditor.Instance.Delete.InvokeAsync());
         ProjectEditorDraft? current = null;
         if (reacquireWhilePending) {
@@ -398,7 +512,7 @@ public sealed class ProjectsEditorMutationTests {
         Task pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-save-open-button']").ClickAsync(new()));
         await using var operation = new PendingOperation(pending, controls);
         await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        await ProjectsPageTestActions.CloseEditorAsync(cut);
         await NewAsync(cut, "Successor unsaved draft", controls);
         var successor = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         var newPlan = new StarterObjectDraft { Title = "Successor plan" };
@@ -428,7 +542,7 @@ public sealed class ProjectsEditorMutationTests {
         await using var operation = new PendingOperation(pending, controls);
         await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
         Guid id = draft.Model.Id!.Value;
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        await ProjectsPageTestActions.CloseEditorAsync(cut);
         await cut.InvokeAsync(() => harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/projects?projectId={id:D}"));
         cut.WaitForElement("[data-testid='projects-detail-modal']");
         var reopened = cut.FindComponent<ProjectModalHost>();
@@ -464,12 +578,12 @@ public sealed class ProjectsEditorMutationTests {
         competitor.Name = "Saved by competitor";
         competitor.Phases = [new() { Name = "Competitor phase", Goal = "Competitor goal" }];
         competitor.Options = [new() { Category = ProjectOptionCategory.Language, OptionName = "Competitor language", Notes = "Competitor notes" }];
-        Assert.True((await projects.SaveAsync(competitor)).IsSuccess);
 
         controls.HoldNextRead = 1;
         Task pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
         await using var operation = new PendingOperation(pending, controls);
         await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.True((await projects.SaveAsync(competitor)).IsSuccess);
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "My later name" }));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = "not-a-date" }));
         controls.Release.TrySetResult();
@@ -505,15 +619,25 @@ public sealed class ProjectsEditorMutationTests {
             await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = string.Empty }));
             await cut.InvokeAsync(() => cut.Find($"[data-testid='{recovery}']").ClickAsync(new()));
         }
-        var replacement = cut.FindComponent<ProjectModalHost>().Instance.Draft;
-        Assert.NotSame(originalContext, replacement.EditContext);
-        Assert.Equal(original.Conflict.Current!.Expectation, replacement.Model.ExpectedDefinition);
-        Assert.Equal("Saved by competitor", replacement.Model.Name);
-        Assert.Equal("Competitor phase", Assert.Single(replacement.Model.Phases).Name);
-        Assert.Equal(reconcile ? original : null, replacement.PreviousDraft);
+        var comparedCurrent = original.Conflict!.Current!;
         if (reconcile) {
-            Assert.Contains("My later name", cut.Find("[data-testid='project-definition-comparison']").TextContent);
+            Assert.Same(originalContext, cut.FindComponent<ProjectModalHost>().Instance.Draft.EditContext);
+            Assert.NotNull(original.Definition.Review);
+            original.Definition.Review!.Name.UseLocal();
+            await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.ApplyDefinitionReconciliation.InvokeAsync(original));
         }
+        var replacement = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        if (reconcile) {
+            Assert.Same(original, replacement);
+            Assert.Same(originalContext, replacement.EditContext);
+            Assert.Equal("My later name", replacement.Model.Name);
+            Assert.True(replacement.CanUndoMerge);
+        } else {
+            Assert.NotSame(originalContext, replacement.EditContext);
+            Assert.Equal("Saved by competitor", replacement.Model.Name);
+        }
+        Assert.Equal(comparedCurrent.Expectation, replacement.Model.ExpectedDefinition);
+        Assert.Equal("Competitor phase", Assert.Single(replacement.Model.Phases).Name);
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "Explicitly reconciled name" }));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
         Assert.Equal(ProjectEditorMutationState.Ready, replacement.Mutation);
@@ -538,14 +662,13 @@ public sealed class ProjectsEditorMutationTests {
         var competitor = await projects.GetAsync(id);
         competitor.Name = "Changed definition";
         Assert.True((await projects.SaveAsync(competitor)).IsSuccess);
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
-        Assert.Equal(ProjectEditorMutationState.Conflict, original.Mutation);
+        cut.WaitForAssertion(() => Assert.True(original.Definition.IsOutdated));
 
         controls.HoldNextRead = 1;
-        Task pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
+        Task pending = cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.ReadCurrentDefinition.InvokeAsync(original));
         await using var operation = new PendingOperation(pending, controls);
         await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        await ProjectsPageTestActions.CloseEditorAsync(cut);
         await NewAsync(cut, "Successor draft", controls);
         var successor = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         controls.Release.TrySetResult();
@@ -555,7 +678,7 @@ public sealed class ProjectsEditorMutationTests {
         Assert.Null(successor.Conflict);
         Assert.Null(successor.Model.ExpectedDefinition);
         Assert.Empty(cut.FindAll("[data-testid='project-definition-comparison']"));
-        Assert.Null(original.Conflict!.Current);
+        Assert.Null(original.InspectedDefinition);
     }
 
     private static Task<ComponentTestHarness> Harness(Controls controls, IProjectDeletionParticipant? participant = null) => ComponentTestHarness.CreateAsync(services => {
@@ -566,6 +689,9 @@ public sealed class ProjectsEditorMutationTests {
         Decorate<IActivityStream>(services, inner => new HeldActivity(inner, controls));
         Decorate<IDbContextFactory<ProjectsDbContext>>(services, inner => new ControlledFactory(inner, controls));
         Decorate<IProjectPartyIntegrationBridge>(services, inner => new HeldPortfolioContext(inner, controls));
+        if (controls.RevokeSeedAfterSql) {
+            Decorate<IDbContextFactory<WorkbenchDbContext>>(services, inner => new ObservedSeedFactory(inner, controls));
+        }
         services.RemoveAll<IAdmittedProjectWorkbenchSeedService>();
         services.AddScoped<IAdmittedProjectWorkbenchSeedService>(provider => new ControlledSeed(provider.GetRequiredService<ProjectWorkbenchService>(), controls));
     });
@@ -623,6 +749,11 @@ public sealed class ProjectsEditorMutationTests {
         public bool HoldSeed { get; init; }
         public bool FailReadAfterSeed { get; init; }
         public bool LoseSeedAcknowledgement { get; init; }
+        public bool RevokeSeedAfterSql { get; init; }
+        public bool RecordingSeed { get; set; }
+        public bool SeedSqlObserved { get; set; }
+        public WorkbenchDbContext? SeedContext { get; set; }
+        public Action? RevokeWriteAccess { get; set; }
         public int FailNextRead;
         public int HoldNextRead;
         public int HeldPortfolioReads;
@@ -662,17 +793,34 @@ public sealed class ProjectsEditorMutationTests {
     }
 
     private sealed class ControlledSeed(ProjectWorkbenchService inner, Controls controls) : IAdmittedProjectWorkbenchSeedService {
-        public async Task SeedProjectObjectsAsync(ProjectWriteAdmission project, IReadOnlyCollection<ProjectObjectSeedDraft> seeds, CancellationToken cancellationToken = default) {
+        public async Task SeedProjectObjectsAsync(ProjectWriteAdmission project, IReadOnlyCollection<ProjectObjectSeedDraft> seeds,
+            CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentWrite = null) {
             controls.SeedCalls++;
             if (controls.HoldSeed) {
                 controls.Started.TrySetResult();
                 await controls.Release.Task;
             }
             try {
-                await inner.SeedProjectObjectsAsync(project, seeds, cancellationToken);
+                if (controls.RevokeSeedAfterSql) {
+                    var currentAccess = requireCurrentWrite ?? throw new InvalidOperationException("The native Project host must supply current seed write admission.");
+                    controls.SeedContext = null;
+                    controls.RecordingSeed = true;
+                    requireCurrentWrite = async token => {
+                        if (controls.SeedContext is { } context && await context.Set<ProjectObjectRecord>().AsNoTracking()
+                            .AnyAsync(row => row.ProjectId == project.ProjectId && row.Title == "Refused starter object", token)) {
+                            Assert.NotNull(context.Database.CurrentTransaction);
+                            controls.SeedSqlObserved = true;
+                            controls.RevokeWriteAccess!();
+                        }
+                        await currentAccess(token);
+                    };
+                }
+                await inner.SeedProjectObjectsAsync(project, seeds, cancellationToken, requireCurrentWrite);
             } catch (Exception exception) {
                 controls.SeedFailure = exception;
                 throw;
+            } finally {
+                controls.RecordingSeed = false;
             }
             if (controls.LoseSeedAcknowledgement) {
                 throw new IOException("Injected lost seed acknowledgement after the native transaction committed.");
@@ -680,6 +828,25 @@ public sealed class ProjectsEditorMutationTests {
             if (controls.FailReadAfterSeed) {
                 Interlocked.Exchange(ref controls.FailNextRead, 1);
             }
+        }
+    }
+
+    private sealed class ObservedSeedFactory(IDbContextFactory<WorkbenchDbContext> inner, Controls controls) : IDbContextFactory<WorkbenchDbContext> {
+        public WorkbenchDbContext CreateDbContext() => Observe(inner.CreateDbContext());
+
+        public async Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Observe(await inner.CreateDbContextAsync(cancellationToken));
+
+        private WorkbenchDbContext Observe(WorkbenchDbContext context) {
+            if (controls.RecordingSeed) {
+                context.SavedChanges += (_, saved) => {
+                    if (controls.RecordingSeed && saved.EntitiesSavedCount > 0 && context.ChangeTracker.Entries<ProjectObjectRecord>()
+                        .Any(entry => entry.Entity.Title == "Refused starter object" && entry.State == EntityState.Unchanged)) {
+                        controls.SeedContext = context;
+                    }
+                };
+            }
+            return context;
         }
     }
 
@@ -719,20 +886,24 @@ public sealed class ProjectsEditorMutationTests {
             => inner.ListAssignmentsDetailedAsync(id, roles, cancellationToken);
         public Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(Guid id, CancellationToken cancellationToken = default)
             => inner.ListWorkItemAssigneeBindingsAsync(id, cancellationToken);
-        public Task<Result<Guid>> SaveAssignmentAsync(ProjectPartyAssignmentUpsertRequest request, CancellationToken cancellationToken = default)
-            => inner.SaveAssignmentAsync(request, cancellationToken);
-        public Task<Result> ReplaceNodeAssignmentsAsync(Guid id, ProjectNodeReference node, IReadOnlyList<ProjectPartyAssignmentUpsertRequest> assignments, IReadOnlyList<ProjectPartyAssignmentRole> roles, CancellationToken cancellationToken = default, ProjectWriteAdmission? expectedProjectAdmission = null)
-            => inner.ReplaceNodeAssignmentsAsync(id, node, assignments, roles, cancellationToken, expectedProjectAdmission);
-        public Task DeleteAssignmentAsync(Guid id, CancellationToken cancellationToken = default, ProjectAssignmentReference? expectedReference = null)
-            => inner.DeleteAssignmentAsync(id, cancellationToken, expectedReference);
+        public Task<Result<Guid>> SaveAssignmentAsync(ProjectPartyAssignmentUpsertRequest request, CancellationToken cancellationToken = default, Action<ProjectAssignmentSaveReceipt>? onCommitted = null)
+            => inner.SaveAssignmentAsync(request, cancellationToken, onCommitted);
+        public Task<Result> ReplaceNodeAssignmentsAsync(Guid id, ProjectNodeReference node, IReadOnlyList<ProjectPartyAssignmentUpsertRequest> assignments, IReadOnlyList<ProjectPartyAssignmentRole> roles, CancellationToken cancellationToken = default, ProjectWriteAdmission? expectedProjectAdmission = null,
+            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
+            => inner.ReplaceNodeAssignmentsAsync(id, node, assignments, roles, cancellationToken, expectedProjectAdmission, expectedAssignments);
+        public Task DeleteAssignmentAsync(Guid id, CancellationToken cancellationToken = default, ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+            Action<ProjectAssignmentDeleteReceipt>? onCommitted = null)
+            => inner.DeleteAssignmentAsync(id, cancellationToken, expectedReference, original, onCommitted);
         public Task DeleteAssignmentsForNodesAsync(Guid id, IReadOnlyCollection<ProjectNodeReference> nodes, CancellationToken cancellationToken = default, ProjectAssignmentReference? expectedReference = null)
             => inner.DeleteAssignmentsForNodesAsync(id, nodes, cancellationToken, expectedReference);
         public Task DeleteAssignmentsForProjectAsync(Guid id, CancellationToken cancellationToken = default, ProjectAssignmentReference? expectedReference = null)
             => inner.DeleteAssignmentsForProjectAsync(id, cancellationToken, expectedReference);
         public Task MoveAssignmentsToProjectAsync(ProjectPartyAssignmentMoveOperationId operation, Guid source, IReadOnlyCollection<ProjectNodeReference> nodes, Guid target, CancellationToken cancellationToken = default, ProjectAssignmentReference? sourceReference = null, ProjectWriteAdmission? expectedTargetAdmission = null)
             => inner.MoveAssignmentsToProjectAsync(operation, source, nodes, target, cancellationToken, sourceReference, expectedTargetAdmission);
-        public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(ProjectPartyQuickCreateRequest request, CancellationToken cancellationToken = default)
-            => inner.CreatePartyAsync(request, cancellationToken);
+        public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(ProjectPartyQuickCreateRequest request, CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
+            => inner.CreatePartyAsync(request, cancellationToken, authorizeCommit, authorizeRead);
     }
 
     private sealed class HeldDeletion(Controls controls) : IProjectDeletionParticipant {

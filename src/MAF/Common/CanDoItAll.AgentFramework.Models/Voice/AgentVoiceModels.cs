@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 /// <summary>
@@ -114,6 +116,9 @@ public sealed class AgentTextToSpeechSettings
 /// </summary>
 public sealed class AgentVoiceSettings
 {
+    [Description("Original shared workflow settings revision returned by the read. Required when replacing existing voice settings; null is create-only.")]
+    public DateTimeOffset? UpdatedAtUtc { get; set; }
+
     /// <summary>
     /// Speech-to-text settings. Transcription is disabled by default.
     /// </summary>
@@ -217,6 +222,7 @@ public static class AgentVoiceSettingsNormalizer
 
         return new AgentVoiceSettings
         {
+            UpdatedAtUtc = settings.UpdatedAtUtc,
             SpeechToText = NormalizeSpeechToText(settings.SpeechToText),
             TextToSpeech = NormalizeTextToSpeech(settings.TextToSpeech),
             SampleText = NormalizeText(settings.SampleText, AgentVoiceDefaults.SampleText),

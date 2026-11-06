@@ -9,4 +9,8 @@
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Foundation/CanDoItAll.Editing/CanDoItAll.Editing.csproj" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
+  </ItemGroup>
 </Project>

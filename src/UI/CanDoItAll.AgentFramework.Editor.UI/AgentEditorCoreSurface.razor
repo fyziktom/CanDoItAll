@@ -20,9 +20,17 @@ else if (state.LoadState == AgentEditorLoadState.Failed) {
     </Alert>
 }
 else {
-    <EditForm @key="state.Origin" EditContext="@state.Context" OnValidSubmit="state.Save">
+    <EditForm @key="state.Origin" EditContext="@state.Context" OnValidSubmit="state.Save"
+              @oninput="state.InputObserved" @onchange="state.InputObserved">
         <ConversationDefinitionEditorShell Class="agent-details-dialog min-h-0">
             <Header>
+                @if (state.HasExternalChanges || state.ComparisonMessage is not null) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-changed-elsewhere">
+                        <TextBlock Value="@(state.ComparisonMessage ?? "This agent changed elsewhere. Your draft is retained. Compare the current saved configuration before saving.")" />
+                        <Button Text="Compare changes" ButtonStyle="ButtonStyle.Light" Disabled="@(state.IsBusy || state.HasUnconfirmedWrite || state.PendingRefreshMessage is not null)"
+                                Click="state.Compare" data-testid="agents-editor-compare" />
+                    </Alert>
+                }
                 @if (state.VerificationMessage is { } verificationMessage) {
                     <Alert AlertStyle="AlertStyle.Info" data-testid="agents-editor-verification-result">
                         <p>@verificationMessage</p>
@@ -104,6 +112,8 @@ else {
                                                 <FormField Text="Tags"
                                                            data-testid="agents-catalog-tags-section">
                                                     <TagEditor Value="@sectionState.Tags"
+                                                               PendingInput="@sectionState.PendingTagInput"
+                                                               PendingInputChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.PendingTags(value))"
                                                                ValueChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.Tags(value))"
                                                                Suggestions="@sectionState.TagSuggestions"
                                                                Placeholder="Add agent tag"

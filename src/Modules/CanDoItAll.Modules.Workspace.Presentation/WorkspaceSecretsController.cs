@@ -14,6 +14,7 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
     private bool acquired = true;
     private bool disposed;
     private Task? refresh;
+    private WorkspaceSecretDraft? readingComparison;
     private string? referenceError;
     private string? editorError;
     private Guid? publishedSelection;
@@ -27,7 +28,11 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
     public string? Error { get => editorError ?? referenceError; private set => editorError = value; }
     public bool IsLoading { get; private set; }
     public bool CanEdit => !disposed && owner.IsCurrent && acquired;
-    public bool CanMutate => !disposed && owner.IsCurrent && acquired && !ledger.Blocks(Draft.Origin, Draft.Model.Id);
+    public bool CanMutate => CanEdit && !RequiresComparison && !ledger.Blocks(Draft.Origin, Draft.Model.Id);
+    public bool CanCompare => CanEdit && RequiresComparison && Draft.Baseline is not null && Draft.Model.Id.HasValue &&
+        !ReferenceEquals(readingComparison, Draft) && !ledger.Blocks(Draft.Origin, Draft.Model.Id);
+    public bool RequiresComparison { get; private set; }
+    public WorkspaceSecretReview? Comparison { get; private set; }
 
     public Task RefreshAsync() {
         if (disposed || !owner.IsCurrent) {
@@ -63,7 +68,7 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
             return;
         }
         var version = ++selection;
-        ClearSensitive(Draft.Model);
+        RetireDraft();
         Draft = new(new() { Id = id });
         var draft = Draft;
         acquired = false;
@@ -95,12 +100,55 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
 
     public void New() => Reset(WorkspaceSelectionCause.Operator);
 
+    public async Task CompareAsync() {
+        if (!CanCompare || Draft.Model.Id is not { } id) {
+            return;
+        }
+        var draft = Draft;
+        readingComparison = draft;
+        Notify();
+        try {
+            var current = await owner.GetAsync(id, lifetime.Token);
+            if (Current(draft)) {
+                if (current?.Id == id && current.ExpectedUpdatedAtUtc.HasValue) {
+                    Comparison = new(draft, current);
+                    Error = null;
+                } else {
+                    Error = "The original secret is unavailable. Your draft remains open.";
+                }
+            }
+        } catch (Exception) {
+            if (Current(draft)) {
+                Error = "Saved secret metadata could not be read. Your draft remains open.";
+            }
+        } finally {
+            if (ReferenceEquals(readingComparison, draft)) {
+                readingComparison = null;
+            }
+            Notify();
+        }
+    }
+
+    public void ApplyComparison() {
+        if (!CanCompare || Comparison is not { } review || !review.CanApply(Draft)) {
+            return;
+        }
+        Draft.Apply(review);
+        RequiresComparison = false;
+        CloseComparison();
+    }
+
+    public void CloseComparison() {
+        Comparison = null;
+        Notify();
+    }
+
     private void Reset(WorkspaceSelectionCause cause) {
         if (disposed || !owner.IsCurrent) {
             return;
         }
         selection++;
-        ClearSensitive(Draft.Model);
+        RetireDraft();
         Draft = CreateDraft();
         acquired = true;
         Error = null;
@@ -117,6 +165,7 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
         }
         var draft = Draft;
         var revision = draft.Revision;
+        var replacementRevision = draft.ReplacementRevision;
         var command = draft.Model.Copy();
         var action = delete ? SettingsAction.DeleteSecret : SettingsAction.SaveSecret;
         if (ledger.Admit(draft.Origin, action, command.Id) is not { } receipt) {
@@ -126,18 +175,23 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
         Notify();
         try {
             var result = delete
-                ? await owner.DeleteAsync(command.Id!.Value, lifetime.Token)
+                ? await owner.DeleteAsync(new(command.Id!.Value, command.ExpectedUpdatedAtUtc), lifetime.Token)
                 : await owner.SaveAsync(command, lifetime.Token);
             SettingsOperationLedger.Complete(receipt, result);
             if (result.State == SettingsWriteState.Refused) {
+                if (Current(draft) && result.Diagnostic == SettingsDiagnostic.Conflict) {
+                    RequiresComparison = true;
+                    Error = "The secret changed after you opened it. Compare the saved metadata before retrying.";
+                }
                 return;
             }
             receipt.RecordId = result.Value;
             if (Current(draft)) {
+                var hasLaterInput = draft.Revision != revision;
                 if (!delete) {
-                    draft.Model.Id = result.Value;
+                    draft.Accept(result.Value, command, replacementRevision);
                 }
-                if (draft.Revision == revision) {
+                if (!hasLaterInput) {
                     Reset(WorkspaceSelectionCause.Owner);
                 } else {
                     if (delete) {
@@ -194,6 +248,12 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
 
     private bool Current(WorkspaceSecretDraft draft) => !disposed && owner.IsCurrent && ReferenceEquals(Draft, draft);
     private static WorkspaceSecretDraft CreateDraft() => new(new() { Kind = SecretKind.ApiKey, Scope = "workspace" });
+    private void RetireDraft() {
+        Draft.Retire();
+        Comparison = null;
+        RequiresComparison = false;
+    }
+
     private static void ClearSensitive(SecretEditorModel model) {
         model.SecretValue = string.Empty;
         model.MetadataJson = string.Empty;
@@ -220,7 +280,7 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
         }
         disposed = true;
         selection++;
-        ClearSensitive(Draft.Model);
+        RetireDraft();
         Draft = CreateDraft();
         Secrets = [];
         lifetime.Cancel();

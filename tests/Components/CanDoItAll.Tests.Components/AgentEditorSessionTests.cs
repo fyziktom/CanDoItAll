@@ -128,8 +128,8 @@ public sealed class AgentEditorSessionTests {
         await using var harness = await CreateHarnessAsync(reads);
         var cut = harness.Context.Render<AgentDetailsDialog>();
         var renders = cut.RenderCount;
-        await cut.InvokeAsync(() => {
-            cut.Instance.Dispose();
+        await cut.InvokeAsync(async () => {
+            await cut.Instance.DisposeAsync();
             pending.SetResult(reads.Result(new() { Id = Guid.NewGuid(), Name = "Disposed result" }));
         });
         cut.WaitForState(() => cut.RenderCount > renders);
@@ -205,7 +205,7 @@ public sealed class AgentEditorSessionTests {
 
     internal sealed class EmptyMemoryProfiles : IMemoryProviderProfileStore {
         public int Reads { get; private set; }
-        public Task UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
+        public Task<MemoryProviderProfile> UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Editor rendering must not write a memory profile.");
         public Task<MemoryProviderProfile?> GetAsync(MemoryProviderInstanceId providerId, CancellationToken cancellationToken = default)
             => Task.FromResult<MemoryProviderProfile?>(null);

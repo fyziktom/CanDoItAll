@@ -32,6 +32,7 @@
     <Project Path="src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
   </Folder>
   <Folder Name="/src/Foundation/">
+    <Project Path="src/Foundation/CanDoItAll.Editing/CanDoItAll.Editing.csproj" />
     <Project Path="src/Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Infrastructure.Abstractions/CanDoItAll.Infrastructure.Abstractions.csproj" />
@@ -95,6 +96,7 @@
     <Project Path="src/UI/CanDoItAll.TestLab.UI/CanDoItAll.TestLab.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Plugins.UI/CanDoItAll.Plugins.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.SchedulerPlanner.UI/CanDoItAll.SchedulerPlanner.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Memory.UI/CanDoItAll.Memory.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Configuration.UI/CanDoItAll.Configuration.UI.csproj" />

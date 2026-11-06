@@ -38,7 +38,8 @@ public sealed record ProjectPartyAssignmentConcurrencySnapshot(
     Guid PartyId,
     ProjectPartyType PartyType,
     bool IsPrimary,
-    Guid? PartyAffiliationId = null)
+    Guid? PartyAffiliationId = null,
+    ProjectAssignmentObservation? Original = null)
 {
     public static ProjectPartyAssignmentConcurrencySnapshot From(
         ProjectPartyAssignmentDetail assignment)
@@ -50,7 +51,8 @@ public sealed record ProjectPartyAssignmentConcurrencySnapshot(
             assignment.PartyType,
             assignment.IsPrimary,
             assignment.PartyAffiliationId ??
-            assignment.Affiliation?.AffiliationId);
+            assignment.Affiliation?.AffiliationId,
+            assignment.Original);
     }
 }
 
@@ -249,14 +251,16 @@ public interface IProjectPartyIntegrationBridge
 
     Task<Result<Guid>> SaveAssignmentAsync(
         ProjectPartyAssignmentUpsertRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Action<ProjectAssignmentSaveReceipt>? onCommitted = null);
 
     Task<Result> ReplaceProjectAssignmentsAsync(
         Guid projectId,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
         => Task.FromResult(Result.Failure(Error.Failure(
             "Project-level assignment replacement is not available.",
             "projects.party-assignment.project-replacement-unavailable")));
@@ -267,7 +271,8 @@ public interface IProjectPartyIntegrationBridge
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null);
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null);
 
     Task<Result> ReplaceNodeAssignmentsIfCurrentAsync(
         Guid projectId,
@@ -292,7 +297,8 @@ public interface IProjectPartyIntegrationBridge
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot> expectedAssignments,
         ProjectPartyNodeOccurrence expectedNode,
         CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => Task.FromResult(Result<ProjectNodeAssignmentCommit>.Failure(Error.Failure(
             "Conditional participant/meeting assignment receipts are not available.",
             ProjectPartyIntegrationErrorCodes.ConditionalReplacementUnavailable)));
@@ -300,7 +306,9 @@ public interface IProjectPartyIntegrationBridge
     Task DeleteAssignmentAsync(
         Guid assignmentId,
         CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null);
+        ProjectAssignmentReference? expectedReference = null,
+        ProjectAssignmentObservation? original = null,
+        Action<ProjectAssignmentDeleteReceipt>? onCommitted = null);
 
     Task DeleteAssignmentsForNodesAsync(
         Guid projectId,
@@ -324,7 +332,9 @@ public interface IProjectPartyIntegrationBridge
 
     Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
         ProjectPartyQuickCreateRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        Func<CancellationToken, ValueTask>? authorizeRead = null);
 }
 
 public interface IProjectNodeDetailsBridge
@@ -418,7 +428,8 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
 
     public Task<Result<Guid>> SaveAssignmentAsync(
         ProjectPartyAssignmentUpsertRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<ProjectAssignmentSaveReceipt>? onCommitted = null)
     {
         return Task.FromResult(Result<Guid>.Failure(Error.Failure(
             "Project-party integration is not available.",
@@ -430,7 +441,8 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
     {
         return Task.FromResult(Result.Failure(Error.Failure(
             "Project-party integration is not available.",
@@ -443,7 +455,8 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
     {
         return Task.FromResult(Result.Failure(Error.Failure(
             "Project-party integration is not available.",
@@ -453,7 +466,9 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
     public Task DeleteAssignmentAsync(
         Guid assignmentId,
         CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null)
+        ProjectAssignmentReference? expectedReference = null,
+        ProjectAssignmentObservation? original = null,
+        Action<ProjectAssignmentDeleteReceipt>? onCommitted = null)
     {
         return Task.CompletedTask;
     }
@@ -489,7 +504,9 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
 
     public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
         ProjectPartyQuickCreateRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         return Task.FromResult(Result<ProjectPartyQuickCreateResult>.Failure(Error.Failure(
             "Project-party integration is not available.",

@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.CrmHr;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -10,6 +11,39 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectStructureChangesHttpTests {
+    [Fact]
+    public async Task Native_project_definition_commit_reaches_the_same_structure_SSE_and_poll_cursor() {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var projectId = await CreateProjectAsync(services);
+        var unrelatedId = await CreateProjectAsync(services);
+        var path = $"/api/project-structure/projects/{projectId:D}/changes";
+        var unrelatedPath = $"/api/project-structure/projects/{unrelatedId:D}/changes";
+        var unrelatedBaseline = await host.Client.GetFromJsonAsync<ProjectStructureChanges>(unrelatedPath);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var response = await host.Client.GetAsync(path + "/stream", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+        response.EnsureSuccessStatusCode();
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(timeout.Token));
+        var ready = await ReadEventAsync(reader, timeout.Token);
+        await using var peer = host.App.Services.CreateAsyncScope();
+        var projects = peer.ServiceProvider.GetRequiredService<ProjectsService>();
+        var draft = await projects.GetAsync(projectId);
+        draft.Name = "Peer renamed native Project";
+        Assert.True((await projects.SaveAsync(draft)).IsSuccess);
+
+        var polled = await host.Client.GetFromJsonAsync<ProjectStructureChanges>($"{path}?after={Cursor(ready.Batch.Cursor)}");
+        var contribution = Assert.Single(Assert.Single(polled!.Changes).Nodes);
+        Assert.Equal($"project:{projectId:D}", contribution.NodeId);
+        Assert.Equal(ProjectStructureChangeKind.Updated, contribution.Kind);
+        var streamed = await ReadEventAsync(reader, timeout.Token);
+        Assert.Equal("project.structure.changed", streamed.Name);
+        Assert.Equal(polled.Cursor, streamed.Batch.Cursor);
+        Assert.Equal(contribution, Assert.Single(Assert.Single(streamed.Batch.Changes).Nodes));
+        var unrelated = await host.Client.GetFromJsonAsync<ProjectStructureChanges>($"{unrelatedPath}?after={Cursor(unrelatedBaseline!.Cursor)}");
+        Assert.Empty(unrelated!.Changes);
+    }
+
     [Fact]
     public async Task Rolled_back_node_write_has_no_notification_or_persisted_node() {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
@@ -109,6 +143,53 @@ public sealed class ProjectStructureChangesHttpTests {
         Assert.Equal(HttpStatusCode.BadRequest, conflicting.StatusCode);
         using var missing = await host.Client.GetAsync($"/api/project-structure/projects/{Guid.NewGuid():D}/changes");
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+    }
+
+    [Fact]
+    public async Task Sse_and_polling_observe_the_same_native_work_assignment_commit() {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        await using var seedScope = host.App.Services.CreateAsyncScope();
+        var services = seedScope.ServiceProvider;
+        var projectId = await CreateProjectAsync(services);
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var original = await workbench.GetStructureAsync(projectId);
+        var node = await workbench.CreateObjectAsync(projectId,
+            new(ProjectObjectType.WorkItem, "Native Work stream task", "", "", $"project:{projectId:D}", ObjectSubtype: "task") {
+                ExpectedProjectAdmission = original.ExpectedProjectAdmission
+            });
+        var party = await services.GetRequiredService<PartyDirectoryService>().SavePartyAsync(new PartyEditorModel {
+            DisplayName = "Native Work stream person", PartyType = PartyType.Person, LifecycleStatus = PartyLifecycleStatus.Active
+        });
+        Assert.True(party.IsSuccess);
+        var path = $"/api/project-structure/projects/{projectId:D}/changes";
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using var response = await host.Client.GetAsync(path + "/stream", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+        response.EnsureSuccessStatusCode();
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(timeout.Token));
+        var ready = await ReadEventAsync(reader, timeout.Token);
+        Assert.Equal("project.structure.ready", ready.Name);
+        await using var writer = host.App.Services.CreateAsyncScope();
+        var commands = writer.ServiceProvider.GetRequiredService<IProjectWorkAssignmentCommands>();
+        var admission = original.ExpectedProjectAdmission!;
+        var saved = await commands.SaveAsync(new ProjectPartyAssignmentUpsertRequest {
+            ProjectId = projectId, ExpectedProjectAdmission = admission, NodeKey = node.Id, PartyId = party.Value,
+            Role = ProjectPartyAssignmentRole.WorkItemAssignee, IsPrimary = true,
+            PrimaryOriginal = await commands.ReadPrimaryObservationAsync(admission, node.Id)
+        });
+        Assert.True(saved.IsSuccess);
+
+        var changed = await ReadEventAsync(reader, timeout.Token);
+        Assert.Equal("project.structure.changed", changed.Name);
+        var streamed = Assert.Single(changed.Batch.Changes);
+        var changedNode = Assert.Single(streamed.Nodes);
+        Assert.Equal(node.Id, changedNode.NodeId);
+        Assert.Equal(node.Title, changedNode.Title);
+        Assert.Equal(ProjectStructureChangeKind.Updated, changedNode.Kind);
+        var polled = await host.Client.GetFromJsonAsync<ProjectStructureChanges>($"{path}?after={Cursor(ready.Batch.Cursor)}", timeout.Token);
+        Assert.NotNull(polled);
+        Assert.Equal(changed.Batch.Cursor, polled.Cursor);
+        Assert.Equal(streamed.Sequence, Assert.Single(polled.Changes).Sequence);
+        Assert.Equal(streamed.Nodes.ToArray(), polled.Changes[0].Nodes.ToArray());
     }
 
     private static async Task<Guid> CreateProjectAsync(IServiceProvider services) {

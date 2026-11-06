@@ -10,6 +10,7 @@ using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Structure.UI;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +43,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
     }
 
     [Fact]
-    public async Task Manager_summary_snapshot_survives_server_rendered_tab_disposal()
+    public async Task Manager_summary_snapshot_survives_native_host_disposal_and_reopening()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -60,17 +61,15 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             .Add(page => page.ProjectId, projectId));
 
         cut.WaitForElement("[data-testid='manager-summary-metrics']");
-        await cut.InvokeAsync(() => cut.FindAll(".cad-tabs__tab")
-            .Single(tab => tab.TextContent.Contains("Canvas", StringComparison.Ordinal))
-            .Click());
-        cut.WaitForAssertion(() =>
-            Assert.Empty(cut.FindAll("[data-testid='project-manager-summary']")));
-
-        await cut.InvokeAsync(() => cut.FindAll(".cad-tabs__tab")
-            .Single(tab => tab.TextContent.Contains("Manager Summary", StringComparison.Ordinal))
-            .Click());
+        var previousHost = cut.FindComponent<ProjectManagerSummaryPanel>().Instance;
+        var retainedSnapshot = stateStore.GetOrCreate(projectId).Snapshot;
+        await harness.Context.DisposeRenderedComponentsAsync();
+        cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters
+            .Add(page => page.ProjectId, projectId));
 
         cut.WaitForElement("[data-testid='manager-summary-metrics']");
+        Assert.NotSame(previousHost, cut.FindComponent<ProjectManagerSummaryPanel>().Instance);
+        Assert.Same(retainedSnapshot, stateStore.GetOrCreate(projectId).Snapshot);
         Assert.Contains("Loaded", cut.Markup, StringComparison.Ordinal);
         Assert.Empty(cut.FindAll("[data-testid='manager-summary-open-warnings']"));
         Assert.Equal(
@@ -274,14 +273,16 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             .Add(page => page.ProjectId, projectId));
 
         cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
+        var gantt = cut.FindComponent<PlanningGanttSurface>().Instance;
         await cut.InvokeAsync(() => cut.FindAll(".cad-tabs__tab")
             .Single(tab => tab.TextContent.Contains("Canvas", StringComparison.Ordinal))
-            .Click());
+            .ClickAsync());
 
         cut.Render(parameters => parameters.Add(page => page.ProjectId, projectId));
 
         AssertSelectedStructureTab(cut, "Canvas");
-        Assert.Empty(cut.FindAll("[data-testid='project-structure-gantt-panel']"));
+        Assert.Same(gantt, cut.FindComponent<PlanningGanttSurface>().Instance);
+        Assert.NotNull(cut.Find("[data-testid='project-structure-gantt-panel']").Closest("[role='tabpanel'][hidden]"));
     }
 
     [Fact]

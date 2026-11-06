@@ -1,0 +1,227 @@
+@namespace CanDoItAll.Workbench.Planning.UI
+@implements IDisposable
+@using Microsoft.Extensions.Logging
+@inject ILogger<PlanningTaskComparison> Logger
+
+@if (Owner is not null) {
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <Button Text="Compare changes" Icon="compare_arrows" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || !Owner.IsActive || IsSaving)"
+                Click="CompareAsync" data-testid="planning-task-compare" />
+        @if (undo is not null) {
+            <Button Text="Undo local apply" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || !Owner.IsActive || !CanAccept)"
+                    Click="UndoAsync" data-testid="planning-task-compare-undo" />
+        }
+    </Cluster>
+    @if (message is not null) {
+        <Alert AlertStyle="AlertStyle.Info" data-testid="planning-task-compare-status"><TextBlock Value="@message" /></Alert>
+    }
+    <Dialog IsOpen="isOpen" Title="Compare Task changes" Subtitle="Review original, local and current saved values. Apply changes only this draft."
+            Size="ModalSize.Wide" OnClose="Cancel" TestId="planning-task-comparison-dialog">
+        <ChildContent>
+            @if (review is not null) {
+                @if (Owner.ChangeRevision != comparedRevision) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="Another update arrived. Refresh the comparison before applying. Your result entries are retained." /></Alert>
+                }
+                <PlanningTaskComparisonFields Review="review" ResourceOptions="ResourceOptions" Changed="RecordInput" />
+            }
+            @if (previous is not null) {
+                <details><summary>Previous comparison retained for copying</summary><TextArea Value="@previous.CopyResults()" Rows="10" ReadOnly="true" data-testid="planning-task-previous-result" /></details>
+            }
+        </ChildContent>
+        <Footer>
+            <Cluster Wrap="FlexWrap.Wrap">
+                <Button Text="Return to editor" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="planning-task-compare-cancel" />
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || !Owner.IsActive || IsSaving)" Click="CompareAsync" data-testid="planning-task-compare-refresh" />
+                <Button Text="Apply to draft" Disabled="@(busy || review?.CanApply != true || !Owner.IsActive || !CanAccept)" Click="ApplyAsync" data-testid="planning-task-compare-apply" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter] public IPlanningTaskComparisonOwner? Owner { get; set; }
+    [Parameter, EditorRequired] public Func<PlanningTaskEditorInput> ReadInput { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<PlanningTaskLocalPatch, Func<bool>, bool> ApplyLocal { get; set; } = default!;
+    [Parameter] public PlanningTaskEditorInput? OriginalInput { get; set; }
+    [Parameter] public IReadOnlyList<ProjectStructureTaskResourceOption> ResourceOptions { get; set; } = [];
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public bool CanAccept { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private readonly CancellationTokenSource lifetime = new();
+    private IPlanningTaskComparisonOwner? subscribed;
+    private PlanningTaskEditorInput? baseline;
+    private PlanningTaskEditorInput? reviewedInput;
+    private PlanningTaskFormReview? review;
+    private PlanningTaskFormReview? previous;
+    private PlanningTaskEditorInput? undo;
+    private PlanningTaskEditorInput? undoExpected;
+    private PlanningTaskComparisonCurrent? accepted;
+    private string? message;
+    private long comparedRevision;
+    private long stateRevision;
+    private bool isOpen;
+    private bool busy;
+    private bool disposed;
+    public bool BlocksInput => busy || isOpen;
+    public PlanningTaskComparisonState CaptureState() => new(review?.Current.Witness, stateRevision, isOpen);
+
+    protected override void OnParametersSet() {
+        baseline ??= OriginalInput;
+        if (!ReferenceEquals(subscribed, Owner)) {
+            if (subscribed is not null) {
+                subscribed.Changed -= OwnerChanged;
+            }
+            subscribed = Owner;
+            if (subscribed is not null) {
+                subscribed.Changed += OwnerChanged;
+            }
+        }
+    }
+
+    private void OwnerChanged() => _ = InvokeAsync(async () => {
+        if (disposed) {
+            return;
+        }
+        if (Owner?.IsActive != true) {
+            review = null;
+            previous = null;
+            accepted = null;
+            isOpen = false;
+            message = UnavailableMessage();
+            stateRevision++;
+        }
+        await Changed.InvokeAsync();
+        StateHasChanged();
+    });
+
+    private async Task CompareAsync() {
+        if (busy || IsSaving || Owner?.IsActive != true || baseline is null) {
+            return;
+        }
+        busy = true;
+        isOpen = true;
+        stateRevision++;
+        await Changed.InvokeAsync();
+        var input = ReadInput();
+        var prior = review;
+        var priorRevision = prior?.Revision;
+        var hint = Owner.ChangeRevision;
+        try {
+            var current = await Owner.ReadCurrentAsync(lifetime.Token);
+            if (disposed || !Owner.IsActive || input != ReadInput() || prior?.Revision != priorRevision) {
+                message = "The input changed during verification. It is retained; compare the current draft again.";
+                return;
+            }
+            var next = new PlanningTaskFormReview(baseline, input, current);
+            if (prior is not null) {
+                next.PreserveChoices(prior);
+            }
+            previous = prior;
+            review = next;
+            reviewedInput = input;
+            comparedRevision = hint;
+            message = "Review the proposed result. Apply changes only the draft; Save remains separate.";
+        } catch (Exception failure) when (failure is not OperationCanceledException || !disposed) {
+            ReportFailure(failure);
+        } finally {
+            busy = false;
+            await Changed.InvokeAsync();
+        }
+    }
+
+    private async Task ApplyAsync() {
+        if (busy || !CanAccept || Owner?.IsActive != true || review is not { CanApply: true } current || reviewedInput is null) {
+            return;
+        }
+        busy = true;
+        var revision = current.Revision;
+        var result = current.Candidate();
+        try {
+            if (!await Owner.VerifyCurrentAsync(current.Current.Witness, lifetime.Token) || current.Revision != revision) {
+                message = "The saved Task changed again. Refresh this comparison; your draft and result entries are retained.";
+                return;
+            }
+            if (!CanAccept || !ApplyLocal(new(reviewedInput, result, current.Current), () => Owner.AcceptCurrent(current.Current.Witness))) {
+                message = "The input or operation changed during verification. Nothing was applied; compare again.";
+                return;
+            }
+            undo = reviewedInput;
+            undoExpected = ReadInput();
+            accepted = current.Current;
+            baseline = current.Current.Input;
+            isOpen = false;
+            stateRevision++;
+            message = "Comparison applied to the draft. Save is a separate action.";
+        } catch (Exception failure) when (failure is not OperationCanceledException || !disposed) {
+            ReportFailure(failure);
+        } finally {
+            busy = false;
+            await Changed.InvokeAsync();
+        }
+    }
+
+    private async Task UndoAsync() {
+        if (busy || !CanAccept || Owner?.IsActive != true || undo is null || undoExpected is null || accepted is null) {
+            return;
+        }
+        busy = true;
+        try {
+            if (!await Owner.VerifyCurrentAsync(accepted.Witness, lifetime.Token) ||
+                !ApplyLocal(new(undoExpected, undo, accepted), static () => true)) {
+                message = "The Task or your newer input changed. Nothing was restored; compare again.";
+                return;
+            }
+            undo = null;
+            review = null;
+            reviewedInput = null;
+            stateRevision++;
+            message = "The previous local draft was restored. Current saved values and access remain the baseline for a separate Save.";
+        } catch (Exception failure) when (failure is not OperationCanceledException || !disposed) {
+            ReportFailure(failure);
+        } finally {
+            busy = false;
+            await Changed.InvokeAsync();
+        }
+    }
+
+    private Task Cancel() {
+        isOpen = false;
+        stateRevision++;
+        return Changed.InvokeAsync();
+    }
+
+    private Task RecordInput() {
+        review?.RecordInput();
+        stateRevision++;
+        return Changed.InvokeAsync();
+    }
+
+    private void ReportFailure(Exception failure) {
+        Logger.LogWarning("Task comparison could not complete; failure type {FailureType}.", failure.GetType().Name);
+        message = failure is UnauthorizedAccessException ? "Structure editing access changed. Your draft is retained; reopen with current access." :
+            "The current Task could not be verified. Your draft and result entries are retained. No write was attempted.";
+        if (Owner?.IsActive != true) {
+            review = null;
+            previous = null;
+            accepted = null;
+            isOpen = false;
+            message = UnavailableMessage();
+        }
+    }
+
+    private string UnavailableMessage() => Owner?.UnavailableReason switch {
+        PlanningTaskUnavailableReason.OriginalDeletedOrReplaced => "The original Task was deleted or replaced. Your local draft is retained; copy it before leaving this editor.",
+        PlanningTaskUnavailableReason.ProjectLifetimeChanged => "The original Project lifetime is no longer available. Your local draft is retained; it cannot be saved into a replacement Project.",
+        PlanningTaskUnavailableReason.OpeningRetired => "The original Task editor is no longer current. Your local draft is retained; reopen it from its original Project.",
+        _ => "Structure editing access changed. Your local draft is retained; reopen with current access."
+    };
+
+    public void Dispose() {
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
+        if (subscribed is not null) {
+            subscribed.Changed -= OwnerChanged;
+        }
+    }
+}

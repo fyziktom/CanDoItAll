@@ -1,9 +1,13 @@
 using Bunit;
+using CanDoItAll.CrmHr.UI.Crm;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using CanDoItAll.Modules.Projects;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.Components.Forms;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
 
@@ -12,6 +16,105 @@ namespace CanDoItAll.Tests.Components.CrmHr;
 // visible rejection that writes nothing and keeps the dialog open, never an unhandled circuit failure.
 public sealed class CrmHrOpportunityConversionHostTests
 {
+    [Fact]
+    public async Task A_native_conversion_keeps_unblurred_later_input_and_its_form_until_explicit_discard() {
+        var gate = new ConversionResponseGate();
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.RemoveAll<ICrmOpportunityConversionService>();
+            services.AddScoped<ICrmOpportunityConversionService>(provider => new HeldConversionOwner(provider.GetRequiredService<CrmService>(), gate));
+        });
+        var seed = await SeedConvertedOpportunityAsync(harness, "Later raw input");
+        var cut = RenderOpportunity(harness, seed);
+        var view = (ICrmHrCrmWorkspaceView)cut.Instance;
+        await cut.InvokeAsync(view.OpenConversionDialogAsync);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-link-existing']").ChangeAsync(new ChangeEventArgs { Value = false }));
+        var name = seed.ProjectName + " retained later draft";
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-name']").InputAsync(new ChangeEventArgs { Value = name }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-description']").InputAsync(new ChangeEventArgs { Value = "Submitted project description" }));
+        var model = view.OpportunityConversionEditor;
+        var context = cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext;
+        var saving = cut.InvokeAsync(() => view.SaveOpportunityConversionAsync(model));
+        try {
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-description']").InputAsync(new ChangeEventArgs { Value = "  Later unblurred target description  " }));
+        } finally {
+            gate.Release.TrySetResult();
+        }
+        await saving;
+
+        Assert.True(view.IsOpportunityConversionDialogOpen);
+        Assert.Same(model, view.OpportunityConversionEditor);
+        Assert.Same(context, cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext);
+        Assert.Equal("  Later unblurred target description  ", model.ProjectDescription);
+        Assert.True(cut.Find("[data-testid='crmhr-opportunity-conversion-save']").HasAttribute("disabled"));
+        var accepted = Assert.IsType<CrmOpportunityConversionResult>(gate.Accepted);
+        var project = await harness.Context.Services.GetRequiredService<ProjectsService>().GetAsync(accepted.ProjectId);
+        Assert.Equal("Submitted project description", project.Description);
+        await cut.InvokeAsync(() => view.SaveOpportunityConversionAsync(model));
+        Assert.Equal(1, gate.Writes);
+        var closing = cut.InvokeAsync(view.CloseOpportunityConversionDialogAsync);
+        cut.WaitForElement("[data-testid='crmhr-conversion-dirty-close']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-conversion-dirty-discard']").ClickAsync(new()));
+        await closing;
+        Assert.Equal(accepted.ProjectId, view.SelectedOpportunity!.LinkedProjectId);
+        Assert.False(view.IsOpportunityConversionDialogOpen);
+        Assert.Equal(1, await CountProjectsAsync(harness, name));
+    }
+
+    [Fact]
+    public async Task A_peer_source_edit_requires_local_review_without_replacing_the_conversion_draft() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var seed = await SeedConvertedOpportunityAsync(harness, "Source review");
+        var cut = RenderOpportunity(harness, seed);
+        var view = (ICrmHrCrmWorkspaceView)cut.Instance;
+        await cut.InvokeAsync(view.OpenConversionDialogAsync);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-link-existing']").ChangeAsync(new ChangeEventArgs { Value = false }));
+        var model = view.OpportunityConversionEditor;
+        model.ProjectName = seed.ProjectName + " explicit new target";
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-description']").InputAsync(new ChangeEventArgs { Value = "  Retained raw request  " }));
+        var context = cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext;
+        var crm = harness.Context.Services.GetRequiredService<CrmService>();
+        var peer = OpportunityEditorDrafts.FromDetail((await crm.GetOpportunityAsync(seed.OpportunityId))!);
+        peer.Summary = "Current peer conversion source";
+        Assert.True((await crm.SaveOpportunityAsync(peer)).IsSuccess);
+        cut.WaitForElement("[data-testid='crmhr-conversion-freshness']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-conversion-review-open']").ClickAsync(new()));
+        cut.WaitForElement("[data-testid='crmhr-conversion-review-dialog']");
+        Assert.Contains("Current peer conversion source", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("conversionEditing.Message", cut.Markup, StringComparison.Ordinal);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-conversion-review-apply']").ClickAsync(new()));
+
+        Assert.Same(model, view.OpportunityConversionEditor);
+        Assert.Same(context, cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext);
+        Assert.Equal("  Retained raw request  ", model.ProjectDescription);
+        Assert.Equal((await crm.GetOpportunityAsync(seed.OpportunityId))!.UpdatedAtUtc, model.ExpectedUpdatedAtUtc);
+        Assert.Equal(0, await CountProjectsAsync(harness, model.ProjectName));
+    }
+
+    [Fact]
+    public async Task A_known_conversion_with_failed_read_back_retires_the_submit_action_and_does_not_create_twice() {
+        CrmHrOwnerReadBackControl control = null!;
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => control = CrmHrOwnerReadBackControl.Install(services));
+        var seed = await SeedConvertedOpportunityAsync(harness, "Known conversion read-back");
+        var cut = RenderOpportunity(harness, seed);
+        var view = (ICrmHrCrmWorkspaceView)cut.Instance;
+        await cut.InvokeAsync(view.OpenConversionDialogAsync);
+        var submitted = view.OpportunityConversionEditor;
+        submitted.LinkExistingProject = false;
+        submitted.ProjectName = seed.ProjectName + " second target";
+        control.FailReadIn(nameof(CrmService.GetAccountWorkspaceAsync), "SaveOpportunityConversionAsync");
+
+        await cut.InvokeAsync(() => view.SaveOpportunityConversionAsync(submitted));
+
+        Assert.Equal(1, control.Interceptions);
+        Assert.Equal(1, await CountProjectsAsync(harness, submitted.ProjectName));
+        Assert.False(view.IsOpportunityConversionDialogOpen);
+        Assert.True(view.IsOpportunityDetailDialogOpen);
+        await cut.InvokeAsync(() => view.SaveOpportunityConversionAsync(submitted));
+        Assert.Equal(1, await CountProjectsAsync(harness, submitted.ProjectName));
+    }
+
     [Fact]
     public async Task A_linked_project_is_preselected_with_the_admission_its_load_captured_and_relinking_creates_no_project()
     {
@@ -158,4 +261,30 @@ public sealed class CrmHrOpportunityConversionHostTests
     }
 
     private sealed record ConvertedOpportunity(Guid AccountId, Guid OpportunityId, Guid ProjectId, string ProjectName);
+
+    private sealed class ConversionResponseGate {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public CrmOpportunityConversionResult? Accepted { get; set; }
+        public int Writes { get; set; }
+    }
+
+    private sealed class HeldConversionOwner(CrmService owner, ConversionResponseGate gate) : ICrmOpportunityConversionService {
+        public Task<CrmOpportunityDetailModel?> GetOpportunityForEditingAsync(Guid opportunityId, CancellationToken cancellationToken = default, int? maximumPartyLinks = null) =>
+            owner.GetOpportunityForEditingAsync(opportunityId, cancellationToken, maximumPartyLinks);
+        public Task<Result<CrmOpportunityConversionProjectBasis>> ObserveOpportunityProjectBasisAsync(Guid opportunityId,
+            DateTimeOffset expectedOpportunityUpdatedAtUtc, ProjectWriteAdmission project, CancellationToken cancellationToken = default) =>
+            owner.ObserveOpportunityProjectBasisAsync(opportunityId, expectedOpportunityUpdatedAtUtc, project, cancellationToken);
+        public async Task<Result<CrmOpportunityConversionResult>> ConvertOpportunityToProjectAsync(CrmOpportunityConversionEditorModel model,
+            CancellationToken cancellationToken = default, Action<CrmOpportunityConversionResult>? onCommitted = null) {
+            gate.Writes++;
+            var result = await owner.ConvertOpportunityToProjectAsync(model, cancellationToken, receipt => {
+                gate.Accepted = receipt;
+                onCommitted?.Invoke(receipt);
+            });
+            gate.Entered.TrySetResult();
+            await gate.Release.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+            return result;
+        }
+    }
 }

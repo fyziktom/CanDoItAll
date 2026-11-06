@@ -22,10 +22,7 @@ public static class CrmHrAssignmentsWorkspacePresentation
 
 public readonly record struct WorkspaceTabsIdentity(
     Guid? ProjectId,
-    int AssignmentCount,
-    int AllocationCount,
-    int StaffingRequestCount,
-    bool StaffingRequestsLoaded);
+    Guid? ProjectLifetimeId = null);
 
 public enum AssignmentWorkspaceTab
 {

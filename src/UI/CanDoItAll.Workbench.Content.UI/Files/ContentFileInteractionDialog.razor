@@ -46,6 +46,7 @@
                         <FileInteraction @key="view.Opening.Id" Request="view.Request" ContentSource="view.Opening.ContentSource"
                                          Composition="view.Opening.Composition" SaveRequested="view.SaveCallback"
                                          ModeChanged="view.ModeChanged" StateChanged="view.StateChanged"
+                                         RequireConflictReview="true"
                                          AllowModeSwitch="@(view.Opening.Save is not null)" FillAvailableHeight="true"
                                          MaximumContentBytes="view.Opening.MaximumContentBytes" AriaLabel="@($"Governed project structure file {view.Request.FileName}")" />
                     </SurfaceCard>

@@ -20,8 +20,15 @@ public sealed class MemoryProviderProfileUiService(
         } catch (Exception exception) when (exception is ArgumentException or InvalidOperationException) {
             throw new MemoryActionRefusedException(exception.Message);
         }
-        await providerProfileStore.UpsertAsync(profile, timeProvider.GetUtcNow(), cancellationToken);
-        return profile;
+        if (editor.ExpectedProfile is { } original && original.InstanceId != profile.InstanceId) {
+            throw new MemoryActionRefusedException("The provider ID belongs to the opened profile. Create a new draft to use a different ID.");
+        }
+        try {
+            return await providerProfileStore.UpsertAsync(profile with { ConfigurationRevision = editor.ExpectedProfile?.Revision },
+                timeProvider.GetUtcNow(), cancellationToken);
+        } catch (MemoryProviderProfileConflictException exception) {
+            throw new MemoryActionRefusedException(exception.Message);
+        }
     }
 
     public async Task<IReadOnlyList<MemoryProviderProfile>> CreateDemoProvidersAsync(
@@ -51,8 +58,7 @@ public sealed class MemoryProviderProfileUiService(
         {
             try {
                 origin.RequireCurrent();
-                await providerProfileStore.UpsertAsync(profile, timeProvider.GetUtcNow(), cancellationToken);
-                savedProfiles.Add(profile);
+                savedProfiles.Add(await providerProfileStore.UpsertAsync(profile, timeProvider.GetUtcNow(), cancellationToken));
             } catch (Exception exception) {
                 throw new MemoryDemoInterruptedException(savedProfiles, exception);
             }

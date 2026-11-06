@@ -6,6 +6,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
     <ProjectReference Include="../../Modules/CanDoItAll.Modules.Workspace.Contracts/CanDoItAll.Modules.Workspace.Contracts.csproj" />
     <ProjectReference Include="../../MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
   </ItemGroup>

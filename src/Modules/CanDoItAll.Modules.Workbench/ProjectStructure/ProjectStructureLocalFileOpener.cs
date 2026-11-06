@@ -16,11 +16,13 @@ public interface IProjectStructureLocalFileOpener
 
     bool CanOpenInPreferredApplication(ProjectStructureNode? node);
 
-    Task<ProjectStructureLocalFileOpenResult> OpenAsync(ProjectStructureNode node, CancellationToken cancellationToken = default);
+    Task<ProjectStructureLocalFileOpenResult> OpenAsync(ProjectStructureNode node, CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null);
 
     Task<ProjectStructureLocalFileOpenResult> OpenInPreferredApplicationAsync(
         ProjectStructureNode node,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null);
 }
 
 public sealed record ProjectStructureLocalFileOpenResult(bool IsSuccess, string Message);
@@ -50,28 +52,34 @@ public sealed class ProjectStructureLocalFileOpener(
 
     public Task<ProjectStructureLocalFileOpenResult> OpenAsync(
         ProjectStructureNode node,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
         => LaunchAsync(
             node,
             DesktopFileLaunchOperation.OpenContainingFolder,
             usePreferredApplication: false,
-            cancellationToken);
+            cancellationToken, authorizeRead);
 
     public Task<ProjectStructureLocalFileOpenResult> OpenInPreferredApplicationAsync(
         ProjectStructureNode node,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
         => LaunchAsync(
             node,
             DesktopFileLaunchOperation.Open,
             usePreferredApplication: true,
-            cancellationToken);
+            cancellationToken, authorizeRead);
 
     private async Task<ProjectStructureLocalFileOpenResult> LaunchAsync(
         ProjectStructureNode node,
         DesktopFileLaunchOperation operation,
         bool usePreferredApplication,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeRead)
     {
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         string fullPath;
         if (IsProcessOutput(node)) {
             if (!IsAvailable || !ProjectStructureProcessRunOutputFolderPolicy.TryResolve(node, out var root)) {
@@ -132,6 +140,9 @@ public sealed class ProjectStructureLocalFileOpener(
         }
 
         var request = new DesktopFileLaunchRequest(fullPath, operation, preference?.ExecutablePath);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         DesktopFileLaunchResult result = await desktopFileLauncher.LaunchAsync(request, cancellationToken);
         logger.Log(
             result.Succeeded ? LogLevel.Information : LogLevel.Warning,

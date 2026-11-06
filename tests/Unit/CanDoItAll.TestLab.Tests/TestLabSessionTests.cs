@@ -10,6 +10,37 @@ namespace CanDoItAll.Tests.Unit.TestLab;
 
 public sealed class TestLabSessionTests {
     [Fact]
+    public void Comparison_preserves_unfinished_timestamp_and_accepts_disjoint_current_rows() {
+        var planId = Guid.NewGuid();
+        var profileId = Guid.NewGuid();
+        var draft = new TestLabDraft(new() {
+            Id = planId, ExpectedPlan = new(profileId, planId, Guid.NewGuid()), Title = "Original title",
+            Runs = [new() { Id = Guid.NewGuid(), Runner = "Fixture runner" }]
+        });
+        var run = Assert.Single(draft.Model.Runs);
+        draft.InputTimestamp(run, "2026-11-");
+        draft.Model.Title = "My title";
+        draft.Edited();
+        var current = TestLabSubmission.Clone(draft.Baseline);
+        current.ExpectedPlan = new(profileId, planId, Guid.NewGuid());
+        current.Title = "Current title";
+        current.Cases.Add(new() { Id = Guid.NewGuid(), Name = "Case added by another editor" });
+        var comparison = new TestLabPlanComparison(draft, current);
+        draft.Comparison = comparison;
+
+        Assert.False(comparison.IsResolved);
+        Assert.False(draft.ApplyComparison(comparison));
+        comparison.Title.UseLocal();
+        Assert.True(draft.ApplyComparison(comparison));
+        Assert.Equal(current.ExpectedPlan, draft.Model.ExpectedPlan);
+        Assert.Equal("My title", draft.Model.Title);
+        Assert.Equal("Case added by another editor", Assert.Single(draft.Model.Cases).Name);
+        Assert.Same(run, Assert.Single(draft.Model.Runs));
+        Assert.Equal("2026-11-", draft.Timestamp(run));
+        Assert.Null(draft.BeginSave());
+    }
+
+    [Fact]
     public void Extracted_contracts_preserve_defaults_identity_and_json_shape() {
         Assert.Equal("CanDoItAll.Modules.TestLab.Contracts", typeof(TestPlanEditorModel).Assembly.GetName().Name);
         Assert.Equal([0, 1, 2, 3, 4], Enum.GetValues<TestCaseStatus>().Select(value => (int)value));
@@ -560,13 +591,13 @@ public sealed class TestLabSessionTests {
         public Func<Task>? BeforeWrite { get; set; }
         public TaskCompletionSource FallbackEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Task<IReadOnlyList<TestPlanSummary>> ListAsync(CancellationToken cancellationToken) {
+        public Task<TestLabPlanPage> ListAsync(int offset, CancellationToken cancellationToken) {
             Reads++;
-            return FailList ? Task.FromException<IReadOnlyList<TestPlanSummary>>(new InvalidOperationException("Controlled read failure")) :
-                Task.FromResult<IReadOnlyList<TestPlanSummary>>(Store.Values.Select(item => new TestPlanSummary(item.Id!.Value, item.ProjectId,
+            return FailList ? Task.FromException<TestLabPlanPage>(new InvalidOperationException("Controlled read failure")) :
+                Task.FromResult(new TestLabPlanPage(Store.Values.Select(item => new TestPlanSummary(item.Id!.Value, item.ProjectId,
                     item.Title, item.Phase, item.Cases.Count, item.Evidence.Count, item.Runs.LastOrDefault()?.Result, DateTimeOffset.UtcNow) {
                     ProjectLifetimeId = item.ExpectedProjectAdmission?.LifetimeId
-                }).ToArray());
+                }).ToArray(), false));
         }
         public Task<TestPlanEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) {
             Reads++;

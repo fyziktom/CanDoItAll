@@ -11,6 +11,9 @@
                 data-testid="@($"{DataTestId}-state")"
                 value="@state"
                 @onchange="HandleStateChanged">
+            @if (!ProjectTaskExecutionStatePolicy.CanTransition(initialState, state)) {
+                <option value="@state">@ResolveStateLabel(state) (retained draft; choose a valid transition)</option>
+            }
             @foreach (var option in Enum.GetValues<ProjectTaskExecutionState>())
             {
                 if (ProjectTaskExecutionStatePolicy.CanTransition(initialState, option))
@@ -33,7 +36,7 @@
                        value="@actualStartText"
                        aria-label="Task actual start in UTC"
                        data-testid="@($"{DataTestId}-started")"
-                       @onchange="HandleStartedAtChanged" />
+                       @oninput="HandleStartedAtChanged" @onchange="HandleStartedAtChanged" />
             </FormField>
 
             @if (state is ProjectTaskExecutionState.Completed or ProjectTaskExecutionState.Cancelled)
@@ -44,7 +47,7 @@
                            value="@actualEndText"
                            aria-label="Task actual end in UTC"
                            data-testid="@($"{DataTestId}-ended")"
-                           @onchange="HandleEndedAtChanged" />
+                           @oninput="HandleEndedAtChanged" @onchange="HandleEndedAtChanged" />
                 </FormField>
             }
         </Grid>
@@ -77,6 +80,19 @@
 
     [Parameter]
     public string DataTestId { get; set; } = "project-structure-task-execution";
+
+    public TaskExecutionInputText CaptureInput() => new(state, actualStartText, actualEndText);
+
+    public ProjectTaskExecutionSnapshot ApplyInput(TaskExecutionInputText input, TaskExecutionInputText baseline) {
+        initialState = baseline.State;
+        state = input.State;
+        actualStartText = input.Started;
+        actualEndText = input.Ended;
+        actualStartedAtUtc = ParseUtc(input.Started);
+        actualEndedAtUtc = ParseUtc(input.Ended);
+        StateHasChanged();
+        return new(state, actualStartedAtUtc, actualEndedAtUtc);
+    }
 
     protected override void OnParametersSet()
     {

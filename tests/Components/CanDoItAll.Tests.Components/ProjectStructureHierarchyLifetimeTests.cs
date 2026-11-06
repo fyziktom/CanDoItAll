@@ -622,6 +622,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         private string? node;
         private DbContext? committedContext;
         public bool LoseCommitReply { get; init; }
+        public bool HoldAfterCommit { get; init; }
         public Exception LostReply { get; } = new InvalidOperationException("Synthetic lost native hierarchy acknowledgement.");
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -645,7 +646,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
                         entry.State == EntityState.Modified && entry.Entity.NodeKey == node)) is true);
             if (matches) {
                 project = null;
-                if (LoseCommitReply) {
+                if (LoseCommitReply || HoldAfterCommit) {
                     committedContext = eventData.Context;
                 } else {
                     Entered.TrySetResult();
@@ -661,7 +662,9 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
                 committedContext = null;
                 Entered.TrySetResult();
                 await Release.Task.WaitAsync(cancellationToken);
-                throw LostReply;
+                if (LoseCommitReply) {
+                    throw LostReply;
+                }
             }
         }
     }

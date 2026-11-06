@@ -22,7 +22,11 @@ public sealed record DatabaseTransferItemPreview(
     string Summary,
     string? Warning,
     int SourceRecordCount,
-    int TargetRecordCount);
+    int TargetRecordCount) {
+    public DatabaseTransferObservation? Observation { get; init; }
+}
+
+public readonly record struct DatabaseTransferObservation(long SourceRevision, long TargetRevision);
 
 public sealed class DatabaseTransferRequest {
     public Guid SourceProfileId { get; set; }
@@ -32,6 +36,7 @@ public sealed class DatabaseTransferRequest {
     public List<string> ItemKeys { get; set; } = [];
 
     public bool ReplaceExisting { get; set; } = true;
+    public IReadOnlyDictionary<string, DatabaseTransferObservation> Observations { get; init; } = new Dictionary<string, DatabaseTransferObservation>();
 }
 
 public enum DatabaseTransferWarning { PostCommitCleanupIncomplete }
@@ -43,6 +48,7 @@ public sealed record DatabaseTransferItemResult(
     string Message,
     int RecordsCopied) {
     public DatabaseTransferWarning? Warning { get; init; }
+    public bool ReviewOutdated { get; init; }
 }
 
 public sealed record DatabaseTransferResult(
@@ -59,7 +65,9 @@ public sealed record DatabaseTransferResult(
 public sealed record DatabaseTransferOperation(
     ResolvedDatabaseProfile SourceProfile,
     ResolvedDatabaseProfile TargetProfile,
-    bool ReplaceExisting);
+    bool ReplaceExisting) {
+    public IReadOnlyDictionary<string, DatabaseTransferObservation> Observations { get; init; } = new Dictionary<string, DatabaseTransferObservation>();
+}
 
 public interface IDatabaseTransferHandler {
     DatabaseTransferItemDescriptor Descriptor { get; }

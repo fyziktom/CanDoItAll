@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
@@ -63,7 +65,8 @@ public interface ILlmChatConversationUiGateway
 
 public sealed class LlmChatConversationUiGateway(
     ILlmChatConversationApplicationService conversations,
-    ILlmChatUiAuthorizationFacade authorization) : ILlmChatConversationUiGateway
+    ILlmChatUiAuthorizationFacade authorization,
+    ILogger<LlmChatConversationUiGateway> logger) : ILlmChatConversationUiGateway
 {
     public async Task<LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>> ListPageAsync(
         LlmChatConversationQuery query,
@@ -119,10 +122,9 @@ public sealed class LlmChatConversationUiGateway(
             return LlmChatUiResultMapper.Invalid<LlmChatConversationView>("Select a valid Simple Chat definition.");
         }
 
-        var result = await conversations.CreateAsync(
+        return await WriteAsync(() => conversations.CreateAsync(
             new(new(definitionId), title, LlmChatConversationOrigin.Application),
-            cancellationToken).ConfigureAwait(false);
-        return LlmChatUiResultMapper.Map(result, ToView);
+            cancellationToken));
     }
 
     public async Task<LlmChatUiResult<LlmChatConversationView>> RenameAsync(
@@ -142,10 +144,9 @@ public sealed class LlmChatConversationUiGateway(
             return LlmChatUiResultMapper.Invalid<LlmChatConversationView>("Select a valid Simple Chat conversation.");
         }
 
-        var result = await conversations.RenameAsync(
+        return await WriteAsync(() => conversations.RenameAsync(
             new(id, title, expectedConcurrencyToken, expectedTranscriptRevision),
-            cancellationToken).ConfigureAwait(false);
-        return LlmChatUiResultMapper.Map(result, ToView);
+            cancellationToken));
     }
 
     public async Task<LlmChatUiResult<LlmChatConversationView>> ArchiveAsync(
@@ -163,10 +164,21 @@ public sealed class LlmChatConversationUiGateway(
             return LlmChatUiResultMapper.Invalid<LlmChatConversationView>("Select a valid Simple Chat conversation.");
         }
 
-        var result = await conversations.ArchiveAsync(
+        return await WriteAsync(() => conversations.ArchiveAsync(
             new(id, expectedConcurrencyToken),
-            cancellationToken).ConfigureAwait(false);
-        return LlmChatUiResultMapper.Map(result, ToView);
+            cancellationToken));
+    }
+
+    private async Task<LlmChatUiResult<LlmChatConversationView>> WriteAsync(Func<Task<Result<LlmChatConversationDetails>>> write) {
+        try {
+            return LlmChatUiResultMapper.Map(await write().ConfigureAwait(false), ToView);
+        } catch (LlmChatCommittedException<Result<LlmChatConversationDetails>> exception) when (exception.Accepted.IsSuccess) {
+            var accepted = exception.Accepted.Value!;
+            logger.LogWarning("Conversation {ConversationId} committed; secondary processing failed with {FailureType}.",
+                accepted.Conversation.Id.Value, exception.InnerException?.GetType().Name);
+            return LlmChatUiResult<LlmChatConversationView>.Success(ToView(accepted),
+                "The conversation change is saved, but updates require a refresh. Do not repeat the command to reconcile.");
+        }
     }
 
     private static bool TryCreateId(Guid value, out LlmChatConversationId id)

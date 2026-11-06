@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -30,6 +31,7 @@ internal sealed record ProjectStructureAuthoringOutcome(
     public Exception? Failure { get; init; }
     public ProjectStructureExternalEffectState ExternalEffect { get; init; }
     public Guid? ProviderId { get; init; }
+    public ProviderPromptExecutionResponse? TranscriptResponse { get; init; }
     public ProjectStructureContentMediaReceipt? StoredMedia { get; init; }
     public WorkflowId? WorkflowId { get; init; }
     public WorkflowVersionId? WorkflowVersionId { get; init; }

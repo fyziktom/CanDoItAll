@@ -30,6 +30,21 @@ public sealed class ProcessDefinitionDraft {
     public bool HasConflict { get; private set; }
     public bool IsDirty => baseline is not null && Capture() != baseline;
 
+    public ProcessDefinitionComparison Compare(ProcessDefinitionEditorProjection current)
+        => new(baseline ?? throw new InvalidOperationException("Open a definition before comparing."), Capture(), current);
+
+    public void Apply(ProcessDefinitionComparison comparison, ProcessDefinitionEditorProjection current) {
+        if (Capture() != comparison.Local || current.DefinitionKey != DefinitionKey ||
+            current.VersionToken != comparison.Current.VersionToken || current.Observation != comparison.Current.Observation) {
+            throw new InvalidOperationException("The draft or saved definition changed during comparison. Compare again.");
+        }
+        if (!comparison.IsResolved) {
+            throw new InvalidOperationException("Resolve the definition comparison before applying it.");
+        }
+        Discard(current);
+        comparison.ApplyTo(this);
+    }
+
     public void Observe(ProcessDefinitionEditorProjection? editor) {
         if (editor is null) {
             return;

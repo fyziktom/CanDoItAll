@@ -18,16 +18,18 @@ public sealed class WorkspaceDefaultsController(IWorkspaceDefaultsOwner owner) :
     public WorkspaceDefaultsDraft Draft { get; private set; } = new();
     public WorkspaceDefaultsDraft? PreviousDraft { get; private set; }
     public WorkspaceSettingsSnapshotV2? CurrentSnapshot { get; private set; }
+    public WorkspaceDefaultsReview? Comparison { get; private set; }
     public WorkspaceSettingsSnapshot? LastAccepted { get; private set; }
     public WorkspaceSettingsSnapshotV2? LastAcceptedV2 { get; private set; }
     public WorkspaceSettingsRejectionReason? Rejection { get; private set; }
     public IReadOnlyList<WorkspaceProviderOption> Providers { get; private set; } = [];
     public IReadOnlyList<SettingsReceipt> Receipts => ledger.Entries;
-    public bool CanSave => !disposed && owner.IsCurrent && acquired && !requiresReconciliation &&
+    public bool CanSave => !disposed && owner.IsCurrent && acquired && !requiresReconciliation && Comparison is null &&
         Rejection is not (WorkspaceSettingsRejectionReason.HeadChanged or WorkspaceSettingsRejectionReason.DatasetChanged or WorkspaceSettingsRejectionReason.OwnerRetired) &&
         !ledger.Blocks(Draft.Origin);
     public bool CanRecover => !disposed && owner.IsCurrent && acquired && CurrentSnapshot is not null &&
         !readingCurrent && !ledger.Blocks(Draft.Origin);
+    public bool CanCompare => CanRecover && Draft.CanCompare(CurrentSnapshot!);
     public bool IsLoading { get; private set; }
     public string? Error => defaultsError ?? providerError;
 
@@ -229,7 +231,7 @@ public sealed class WorkspaceDefaultsController(IWorkspaceDefaultsOwner owner) :
     }
 
     public Task ReadCurrentAsync() {
-        if (disposed || !owner.IsCurrent) {
+        if (disposed || !owner.IsCurrent || Comparison is not null) {
             return Task.CompletedTask;
         }
         return currentRead is { IsCompleted: false } pending ? pending : currentRead = ReadCurrentCoreAsync();
@@ -259,8 +261,31 @@ public sealed class WorkspaceDefaultsController(IWorkspaceDefaultsOwner owner) :
     public void ReloadCurrent() => StartCurrentDraft(preservePrevious: false);
     public void BeginReconciliation() => StartCurrentDraft(preservePrevious: true);
 
+    public void OpenComparison() {
+        if (CanCompare && Comparison is null) {
+            Comparison = new(Draft, CurrentSnapshot!);
+            Notify();
+        }
+    }
+
+    public void CloseComparison() {
+        Comparison = null;
+        Notify();
+    }
+
+    public void ApplyComparison() {
+        if (!CanCompare || Comparison is not { } review || !ReferenceEquals(review.Current, CurrentSnapshot) || !Draft.Apply(review)) {
+            return;
+        }
+        Rejection = null;
+        requiresReconciliation = false;
+        defaultsError = null;
+        CurrentSnapshot = null;
+        CloseComparison();
+    }
+
     private void StartCurrentDraft(bool preservePrevious) {
-        if (!CanRecover || preservePrevious && PreviousDraft is not null) {
+        if (!CanRecover || Comparison is not null || preservePrevious && PreviousDraft is not null) {
             return;
         }
         var next = new WorkspaceDefaultsDraft();
@@ -291,7 +316,7 @@ public sealed class WorkspaceDefaultsController(IWorkspaceDefaultsOwner owner) :
     };
 
     private static string RejectionMessage(WorkspaceSettingsRejectionReason reason) => reason switch {
-        WorkspaceSettingsRejectionReason.HeadChanged => "Workspace defaults changed. Your draft is retained; read current values to compare and explicitly reload or reconcile.",
+        WorkspaceSettingsRejectionReason.HeadChanged => "Workspace defaults changed. Read current values to compare them with your draft.",
         WorkspaceSettingsRejectionReason.DatasetChanged => "The dataset changed. Your original draft cannot be saved in the new dataset; read current values before explicitly reloading or reconciling.",
         WorkspaceSettingsRejectionReason.OwnerRetired => "This settings owner has retired. Reopen settings before making another change.",
         WorkspaceSettingsRejectionReason.TransactionConflict => "This attempt did not commit because another transaction prevented it. Your original draft is retained.",

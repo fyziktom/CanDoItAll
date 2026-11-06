@@ -1,0 +1,182 @@
+[
+  {
+    "id": "REQ-01",
+    "requirement": "Hlavní Blazor UI a engine, nikoli jiné UI či nový workflow bundle",
+    "documents": [
+      "00_START_HERE.md",
+      "operations/02_ROLLOUT.md"
+    ]
+  },
+  {
+    "id": "REQ-02",
+    "requirement": "Prověřit architekturu před plošnou implementací a odůvodnit malé prerequisite refaktory",
+    "documents": [
+      "01_AUDIT_FINDINGS.md",
+      "architecture/01_BOUNDARIES.md"
+    ]
+  },
+  {
+    "id": "REQ-03",
+    "requirement": "Skutečná ochrana stale Save na serveru včetně alternate writerů",
+    "documents": [
+      "inventory/02_WRITE_PERIMETER.md",
+      "tests/01_TEST_STRATEGY.md"
+    ]
+  },
+  {
+    "id": "REQ-04",
+    "requirement": "CRM příklad vysvětlit konkrétním současným kódem",
+    "documents": [
+      "01_AUDIT_FINDINGS.md",
+      "inventory/01_SURFACES.md",
+      "evidence/sources.json"
+    ]
+  },
+  {
+    "id": "REQ-05",
+    "requirement": "Proaktivní upozornění kdo/co změnil bez automatického přepsání formuláře",
+    "documents": [
+      "architecture/03_CHANGE_OBSERVATION.md",
+      "pilot/01_IMPLEMENTATION.md"
+    ]
+  },
+  {
+    "id": "REQ-06",
+    "requirement": "Sdílený typed human-friendly B/L/R merge pod úrovní modulů",
+    "documents": [
+      "architecture/01_BOUNDARIES.md",
+      "architecture/02_MERGE_PROTOCOL.md"
+    ]
+  },
+  {
+    "id": "REQ-07",
+    "requirement": "Floating window, ruční rozhodnutí konfliktů, ne raw JSON dump",
+    "documents": [
+      "architecture/02_MERGE_PROTOCOL.md",
+      "architecture/04_OVERLAYS.md"
+    ]
+  },
+  {
+    "id": "REQ-08",
+    "requirement": "Neztratit dirty/raw inputs, EditContext, modal/route draft",
+    "documents": [
+      "architecture/02_MERGE_PROTOCOL.md",
+      "architecture/04_OVERLAYS.md",
+      "pilot/02_MANUAL_ACCEPTANCE.md"
+    ]
+  },
+  {
+    "id": "REQ-09",
+    "requirement": "Notifications nad modalem skutečně viditelné i interaktivní",
+    "documents": [
+      "architecture/04_OVERLAYS.md",
+      "tests/01_TEST_STRATEGY.md"
+    ]
+  },
+  {
+    "id": "REQ-10",
+    "requirement": "Tiché seznamy včetně create/delete a zachování filtrů/selection",
+    "documents": [
+      "architecture/03_CHANGE_OBSERVATION.md",
+      "inventory/01_SURFACES.md"
+    ]
+  },
+  {
+    "id": "REQ-11",
+    "requirement": "Workflow/Process canvas explicitní pull jako ProjectStructure",
+    "documents": [
+      "architecture/03_CHANGE_OBSERVATION.md",
+      "inventory/01_SURFACES.md"
+    ]
+  },
+  {
+    "id": "REQ-12",
+    "requirement": "Nejdříve Prompt Gallery list+modal pilot a nested reálné integrace",
+    "documents": [
+      "pilot/01_IMPLEMENTATION.md",
+      "pilot/02_MANUAL_ACCEPTANCE.md"
+    ]
+  },
+  {
+    "id": "REQ-13",
+    "requirement": "Rebuild 5032 a povinné zastavení do explicitního souhlasu",
+    "documents": [
+      "operations/01_EXECUTION_AND_5032.md",
+      "CODEX_PROMPT.md",
+      "operations/02_ROLLOUT.md"
+    ]
+  },
+  {
+    "id": "REQ-14",
+    "requirement": "Výkon, bounded events/diffs, bez polling/wakeup storm",
+    "documents": [
+      "architecture/06_PERFORMANCE.md",
+      "architecture/03_CHANGE_OBSERVATION.md"
+    ]
+  },
+  {
+    "id": "REQ-15",
+    "requirement": "Ownership rozhodnutí nyní versus později, bezpečný actor/scope/auth",
+    "documents": [
+      "architecture/05_AUTHORITY_AND_HISTORY.md",
+      "review/03_RISKS_AND_OPEN_ITEMS.md"
+    ]
+  },
+  {
+    "id": "REQ-16",
+    "requirement": "Undo/Redo připravit bez vynucení event sourcing; odlišit local/persisted",
+    "documents": [
+      "architecture/05_AUTHORITY_AND_HISTORY.md"
+    ]
+  },
+  {
+    "id": "REQ-17",
+    "requirement": "Konkrétní modulové plochy, owners, policy a vlny rollout",
+    "documents": [
+      "inventory/surfaces.json",
+      "inventory/01_SURFACES.md",
+      "operations/02_ROLLOUT.md"
+    ]
+  },
+  {
+    "id": "REQ-18",
+    "requirement": "Dopad na testy, nové cases a CodeAnalytics focused selection",
+    "documents": [
+      "tests/01_TEST_STRATEGY.md",
+      "operations/01_EXECUTION_AND_5032.md"
+    ]
+  },
+  {
+    "id": "REQ-19",
+    "requirement": "Úklid zastaralých testů pouze s doložením; nevymýšlet deletions",
+    "documents": [
+      "tests/02_TEST_CLEANUP.md"
+    ]
+  },
+  {
+    "id": "REQ-20",
+    "requirement": "Před finálním ZIP review, korekce, recheck a integrita",
+    "documents": [
+      "review/02_FINAL_REVIEW.md",
+      "scripts/validate_package.py"
+    ]
+  },
+  {
+    "id": "REQ-21",
+    "requirement": "Evidence aktuální SHA; nezaměnit historické reporty za provedené testy",
+    "documents": [
+      "evidence/README.md",
+      "evidence/sources.json",
+      "review/03_RISKS_AND_OPEN_ITEMS.md"
+    ]
+  },
+  {
+    "id": "REQ-22",
+    "requirement": "Outcome safety: committed warning/unknown/third writer/delete/access loss",
+    "documents": [
+      "architecture/02_MERGE_PROTOCOL.md",
+      "inventory/02_WRITE_PERIMETER.md",
+      "tests/01_TEST_STRATEGY.md"
+    ]
+  }
+]

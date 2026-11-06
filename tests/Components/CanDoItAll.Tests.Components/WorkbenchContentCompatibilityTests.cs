@@ -20,9 +20,11 @@ public sealed class WorkbenchContentCompatibilityTests {
         Assert.NotNull(owner.GetMethod(nameof(ProjectWorkbenchService.ReplaceObjectMediaAsync),
             [typeof(Guid), typeof(string), typeof(ProjectObjectMediaPayload), typeof(string), typeof(string), typeof(string), typeof(CancellationToken),
                 typeof(CanDoItAll.Modules.Projects.ProjectWriteAdmission), typeof(ProjectStructureNode)]));
-        Assert.NotNull(owner.GetMethod(nameof(ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync),
+        var status = owner.GetMethod(nameof(ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync),
             [typeof(Guid), typeof(IReadOnlyCollection<string>), typeof(string), typeof(CancellationToken),
                 typeof(CanDoItAll.Modules.Projects.ProjectWriteAdmission), typeof(ProjectProcessMutationAdmission), typeof(ProjectAgentMutationAdmission),
-                typeof(IReadOnlyCollection<ProjectStructureNodeState>)]));
+                typeof(IReadOnlyCollection<ProjectStructureNodeState>), typeof(Func<CancellationToken, ValueTask>)]);
+        Assert.NotNull(status);
+        Assert.True(status.GetParameters()[^1].IsOptional);
     }
 }

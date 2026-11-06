@@ -27,6 +27,7 @@
 }
 
 <section class="project-structure-gantt-panel"
+         data-cda-overlay-container
          data-testid="project-structure-gantt-panel">
     @if (accepted.Receipt is { } receipt && receipt.Origin == accepted.Origin) {
         <Alert AlertStyle="@(receipt.State == PlanningCommitState.Committed ? AlertStyle.Info : AlertStyle.Warning)"
@@ -57,6 +58,7 @@
                Class="project-structure-gantt-panel__content w-full min-w-0"
                AlignItems="AlignItems.Stretch">
             <SurfaceCard Soft="true"
+                         data-cda-overlay-safe-top
                          Class="project-structure-gantt-panel__utility-bar">
                 <Cluster Gap="LayoutGap.XSmall"
                          Wrap="FlexWrap.Wrap"
@@ -66,6 +68,10 @@
                                Class="project-structure-gantt-panel__title" />
                     <Pill Tone="PillTone.Info" Text="@($"{projection.Tasks.Count} tasks")" />
                     <Pill Tone="PillTone.Neutral" Text="@($"{projection.Dependencies.Count} dependencies")" />
+                    @if (projection.SelectedTaskIds.Count > 0) {
+                        <Pill Tone="PillTone.Info" Text="@($"{projection.SelectedTaskIds.Count} changed {(projection.SelectedTaskIds.Count == 1 ? "task" : "tasks")} selected")"
+                              role="status" data-testid="project-structure-gantt-change-selection" />
+                    }
                     @if (projection.TotalExpectedEffortHours is { } expectedEffortHours)
                     {
                         <Pill Tone="PillTone.Neutral"
@@ -106,6 +112,7 @@
                             Click="@(() => agentsCallback.InvokeAsync(new(accepted.Origin)))" />
                     <Button Text="Dependencies" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
                             Disabled="@(!projection.IsValid || projection.Dependencies.Count == 0)" Click="@(() => showDependencies = !showDependencies)" />
+                    @ToolbarSupplement
                     <ErrorBoundary @ref="dragSourceErrorBoundary">
                         <ChildContent>
                             <GanttTaskDragSource Task="@accepted.InsertionCandidate"
@@ -193,6 +200,7 @@
                                 TaskOrderChangeRequested="@(args => orderCallback.InvokeAsync(new(accepted.Origin, args)))"
                                 DependencyIdFactory="@DependencyIdFactory"
                                 ProjectionOnlySelector="@(task => accepted.ProjectionOnlyTaskIds.Contains(task.Id))"
+                                TaskAccentColorSelector="@(task => accepted.SelectedTaskIds.Contains(task.Id) ? SelectedTaskAccent : null)"
                                 AllowTaskEditing="@CanMutate"
                                 AllowTimelineTaskCreation="@CanMutate"
                                 AllowDependencyEditing="@CanMutate"
@@ -218,6 +226,7 @@
             }
         </Stack>
     }
+    @OverlayContent
 </section>
 
 @if (accepted.Preview is { } previewProjection)
@@ -285,7 +294,11 @@
 }
 
 @code {
+    private const string SelectedTaskAccent = "#7c3aed";
+
     [Parameter, EditorRequired] public GanttPresentation Presentation { get; set; } = new(Guid.Empty);
+    [Parameter] public RenderFragment? ToolbarSupplement { get; set; }
+    [Parameter] public RenderFragment? OverlayContent { get; set; }
     [Parameter] public EventCallback<GanttIntent<GanttTaskTitleChangeRequest>> TitleChanged { get; set; }
     [Parameter] public EventCallback<GanttIntent<GanttTaskScheduleChangeRequest>> ScheduleChanged { get; set; }
     [Parameter] public EventCallback<GanttIntent<GanttDependencyMutationRequest>> DependencyChanged { get; set; }

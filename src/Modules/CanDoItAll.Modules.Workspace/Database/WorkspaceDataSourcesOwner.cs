@@ -31,7 +31,7 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
             }
             return new ProfileEditor(new(model.Id, model.DisplayName, model.WorkspaceRoot, model.PostgresHost,
                 model.PostgresPort, model.PostgresDatabaseName, model.PostgresUsername, model.PostgresAdminDatabaseName,
-                model.PostgresTrustServerCertificate), Provider(model.ProviderKind), model.IsRuntimeLocked,
+                model.PostgresTrustServerCertificate) { ExpectedConfigurationRevision = model.ExpectedConfigurationRevision }, Provider(model.ProviderKind), model.IsRuntimeLocked,
                 !string.IsNullOrEmpty(model.PostgresPassword));
         } finally {
             model.PostgresPassword = string.Empty;
@@ -64,11 +64,13 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
                     value.Descriptor.IsSensitive), value.IsAvailable,
                 value.IsAvailable ? value.Summary : "This group is empty, unavailable or refused by its owner.",
                 value.Warning is null ? null : "The owner reported a transfer constraint. Inspect this group's prerequisites before transferring.",
-                value.SourceRecordCount, value.TargetRecordCount)).ToArray());
+                value.SourceRecordCount, value.TargetRecordCount) {
+                Observation = value.Observation is { } observation ? new(observation.SourceRevision, observation.TargetRevision) : null
+            }).ToArray());
 
     public async Task<DataSourceResult> SaveAsync(DataSourcesContext context, ProfileValues values, ProfilePasswordIntent password) {
         var model = new DatabaseProfileEditorModel {
-            Id = values.Id, DisplayName = values.DisplayName, WorkspaceRoot = values.WorkspaceRoot,
+            Id = values.Id, ExpectedConfigurationRevision = values.ExpectedConfigurationRevision, DisplayName = values.DisplayName, WorkspaceRoot = values.WorkspaceRoot,
             ProviderKind = DatabaseProviderKind.PostgreSql, SourceKind = DatabaseProfileSourceKind.PostgresConnection,
             PostgresHost = values.PostgresHost, PostgresPort = values.PostgresPort,
             PostgresDatabaseName = values.PostgresDatabaseName, PostgresUsername = values.PostgresUsername,
@@ -80,11 +82,13 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
             if (workspace.Validate(model).IsFailure) {
                 throw new DataSourcesException(DataSourceFailure.InvalidRequest);
             }
-            return await WriteAsync(values.Id ?? Guid.Empty, DataSourceAction.Save, async () => {
+            var saved = await WriteAsync(values.Id ?? Guid.Empty, DataSourceAction.Save, async () => {
                 var result = await workspace.SaveEditorAsync(model);
                 return result.IsSuccess ? new(result.Value, DataSourceOutcome.Confirmed, "Data source saved. The database has not been created or activated by Save.")
-                    : new(values.Id ?? Guid.Empty, DataSourceOutcome.Refused, "The profile owner refused the save. Review the required fields and current profile.");
+                    : new(values.Id ?? Guid.Empty, DataSourceOutcome.Refused, "The profile owner refused the save. Reopen the saved profile before trying again.");
             });
+            return saved.Outcome is DataSourceOutcome.Confirmed or DataSourceOutcome.Partial
+                ? saved with { AcceptedConfigurationRevision = model.ExpectedConfigurationRevision } : saved;
         } finally {
             model.PostgresPassword = string.Empty;
         }
@@ -109,7 +113,7 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
                     : Unknown(command.ProfileId, "Activation did not finish. Bootstrap or saved selection may have progressed; inspect the original target before restarting.");
             }
             var result = command.Action switch {
-                DataSourceAction.Delete => await workspace.DeleteEditorAsync(command.ProfileId),
+                DataSourceAction.Delete => await workspace.DeleteEditorAsync(command.ProfileId, command.ExpectedConfigurationRevision),
                 DataSourceAction.TestConnection => await workspace.TestConnectionAsync(command.ProfileId),
                 DataSourceAction.CreateEmpty => await workspace.CreateEmptyAsync(command.ProfileId),
                 DataSourceAction.ApplySchema => await workspace.ApplySchemaAsync(command.ProfileId),
@@ -146,11 +150,14 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
         return await WriteAsync(request.TargetProfileId, DataSourceAction.Transfer, async () => {
             var result = await workspace.TransferSettingsAsync(new() {
                 SourceProfileId = request.SourceProfileId, TargetProfileId = request.TargetProfileId,
-                ItemKeys = groups.Select(key => key.Value).ToList(), ReplaceExisting = request.ReplaceExisting
+                ItemKeys = groups.Select(key => key.Value).ToList(), ReplaceExisting = request.ReplaceExisting,
+                Observations = request.Observations.ToDictionary(item => item.Key.Value,
+                    item => new DatabaseTransferObservation(item.Value.SourceRevision, item.Value.TargetRevision), StringComparer.Ordinal)
             });
             var items = result.Items.Select(item => new TransferGroupResult(new(item.Key), item.Label, item.Success,
                 item.Warning == DatabaseTransferWarning.PostCommitCleanupIncomplete
                     ? $"Committed {item.RecordsCopied} record(s), but connection or transaction cleanup needs operator review. Do not repeat this transfer."
+                    : item.ReviewOutdated ? "This group requires a fresh preview and explicit approval before replacement."
                     : item.Success ? $"Copied {item.RecordsCopied} record(s)." : "This group did not report success. It may be refused or have incomplete progress; no rollback is assumed.",
                 item.RecordsCopied)).ToArray();
             return new(request.TargetProfileId, result.IsSuccess && !result.HasWarnings ? DataSourceOutcome.Confirmed : DataSourceOutcome.Partial,

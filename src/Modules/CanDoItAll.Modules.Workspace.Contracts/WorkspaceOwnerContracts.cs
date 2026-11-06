@@ -4,7 +4,7 @@ namespace CanDoItAll.Modules.Workspace;
 
 public enum WorkspaceSection { Workspace, DataSources, Storage, Files, ProviderHistory, Secrets, Providers, ApiAccess }
 public enum SettingsWriteState { Refused, Committed, CommittedWarning }
-public enum SettingsDiagnostic { None, Validation, Missing, ReferenceBlocked, CleanupPending, ActivityPending, LoggingPending, Retired, ReadBackPending, Unknown }
+public enum SettingsDiagnostic { None, Validation, Missing, ReferenceBlocked, CleanupPending, ActivityPending, LoggingPending, Retired, ReadBackPending, Unknown, Conflict }
 
 public sealed record SettingsWriteResult<T>(SettingsWriteState State, T Value, SettingsDiagnostic Diagnostic = SettingsDiagnostic.None);
 
@@ -22,7 +22,7 @@ public interface IWorkspaceSecretsOwner {
     Task<IReadOnlyList<SecretListItem>> ListAsync(CancellationToken cancellationToken);
     Task<SecretEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken);
     Task<SettingsWriteResult<Guid>> SaveAsync(SecretEditorModel command, CancellationToken cancellationToken);
-    Task<SettingsWriteResult<Guid>> DeleteAsync(Guid id, CancellationToken cancellationToken);
+    Task<SettingsWriteResult<Guid>> DeleteAsync(SecretMetadataCondition expected, CancellationToken cancellationToken);
 }
 
 public readonly record struct WorkspaceFileExtension(string Value);

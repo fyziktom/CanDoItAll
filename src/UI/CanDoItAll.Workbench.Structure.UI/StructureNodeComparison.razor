@@ -1,0 +1,86 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+
+<Stack GapScale="LayoutGap.Large" data-testid="structure-node-comparison">
+    <TextBlock Value="Compare your original values, your draft and the current saved node. Apply updates this draft; Save is a separate action." />
+    <Button Text="@(showAll ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+            Click="@(() => showAll = !showAll)" />
+    @if (Review.Schema.ShowDefaultFields) {
+        <MergeFieldView TValue="string" Label="Title" Field="Review.Title" Format="@(value => value)" ShowUnchanged="@(showAll || Review.Title.Choice == MergeChoice.Custom)"
+                        Changed="NotifyChanged" TestId="structure-node-title">
+            <ResultEditor Context="value"><TextBox Value="@value" Immediate="true" ValueChanged="@(text => SetText(Review.Title, text))" data-testid="structure-node-title-result" /></ResultEditor>
+        </MergeFieldView>
+        @if (!Review.Schema.InlineNote) {
+            <MergeFieldView TValue="string" Label="Subtitle" Field="Review.Subtitle" Format="@(value => value)" ShowUnchanged="@(showAll || Review.Subtitle.Choice == MergeChoice.Custom)"
+                            Changed="NotifyChanged" TestId="structure-node-subtitle">
+                <ResultEditor Context="value"><TextBox Value="@value" Immediate="true" ValueChanged="@(text => SetText(Review.Subtitle, text))" /></ResultEditor>
+            </MergeFieldView>
+        }
+        <MergeFieldView TValue="string" Label="Notes" Field="Review.Notes" Format="@(value => value)" ShowUnchanged="@(showAll || Review.Notes.Choice == MergeChoice.Custom)"
+                        Changed="NotifyChanged" TestId="structure-node-notes">
+            <ResultEditor Context="value"><TextArea Value="@value" Rows="5" Immediate="true" ValueChanged="@(text => SetText(Review.Notes, text))" data-testid="structure-node-notes-result" /></ResultEditor>
+        </MergeFieldView>
+    }
+    @foreach (var row in Review.Fields) {
+        @if (row.Text is { } text) {
+            <MergeFieldView @key="row.Definition.Key" TValue="string" Label="@row.Definition.Label" Field="text" Format="@(value => value)"
+                            ShowUnchanged="@(showAll || row.HasPendingInput || text.Choice == MergeChoice.Custom)" Changed="@(() => ChoiceChanged(row))" TestId="@($"structure-node-field-{row.Definition.Key.Value}")">
+                <ResultEditor Context="value">
+                    @if (row.Definition.Kind == StructureNodeFieldKind.MultilineText) {
+                        <TextArea Value="@row.ResultInput" Rows="5" Immediate="true" ValueChanged="@(value => SetResult(row, value))" />
+                    } else {
+                        <TextBox Value="@row.ResultInput" Immediate="true" ValueChanged="@(value => SetResult(row, value))" />
+                    }
+                </ResultEditor>
+            </MergeFieldView>
+        } else {
+            <MergeFieldView @key="row.Definition.Key" TValue="StructureNodeFieldValue" Label="@row.Definition.Label" Field="row.Scalar!"
+                            Format="row.Definition.Format" ShowUnchanged="@(showAll || row.HasPendingInput || row.Scalar!.Choice == MergeChoice.Custom)" Changed="@(() => ChoiceChanged(row))"
+                            TestId="@($"structure-node-field-{row.Definition.Key.Value}")">
+                <ResultEditor Context="value">
+                    @if (row.Definition.Kind == StructureNodeFieldKind.Choice) {
+                        <DropDown TValue="string" Data="row.Definition.Options" TextProperty="@nameof(StructureNodeFieldOption.Label)"
+                                  ValueProperty="@nameof(StructureNodeFieldOption.Key)" Value="@row.ResultInput" AllowClear="@(!row.Definition.IsRequired)"
+                                  ValueChanged="@(value => SetResult(row, value ?? string.Empty))" />
+                        @if (!row.Definition.IsValid(value)) {
+                            <SmallText Text="@($"Retained choice: {row.ResultInput}. Choose an available result.")" />
+                        }
+                    } else {
+                        <TextBox Value="@row.ResultInput" Immediate="true" ValueChanged="@(value => SetResult(row, value))"
+                                 Placeholder="@(row.Definition.Kind == StructureNodeFieldKind.Date ? "yyyy-MM-dd" : row.Definition.Kind == StructureNodeFieldKind.DateTime ? "yyyy-MM-ddTHH:mm" : "Number")"
+                                 data-testid="@($"structure-node-result-{row.Definition.Key.Value}")" />
+                    }
+                    @if (row.HasPendingInput) {
+                        <SmallText Text="Finish or clear this result input before applying. Your entry is retained." />
+                    }
+                </ResultEditor>
+            </MergeFieldView>
+        }
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public StructureNodeFormReview Review { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+    private bool showAll;
+
+    private Task SetText(MergeField<string> target, string value) {
+        target.SetResult(value);
+        return NotifyChanged();
+    }
+
+    private Task SetResult(StructureNodeFieldReview row, string value) {
+        row.SetResultInput(value);
+        return NotifyChanged();
+    }
+
+    private Task ChoiceChanged(StructureNodeFieldReview row) {
+        row.SynchronizeInput();
+        return NotifyChanged();
+    }
+
+    private Task NotifyChanged() {
+        Review.RecordInput();
+        return Changed.InvokeAsync();
+    }
+}

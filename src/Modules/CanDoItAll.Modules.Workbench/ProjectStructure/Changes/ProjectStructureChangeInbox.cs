@@ -82,6 +82,21 @@ public sealed class ProjectStructureChangeInbox {
         : items.SingleOrDefault(item => item.Sequence == sequence)?.Nodes.Select(node => node.NodeId)
             .Distinct(StringComparer.Ordinal).ToArray() ?? [];
 
+    public ProjectStructureChangeCursor? LatestFor(string nodeId) {
+        if (replayLost || items.Count == MaximumItems) {
+            return Cursor;
+        }
+        var change = items.FirstOrDefault(item => item.Nodes.Any(node => node.NodeId == nodeId));
+        return change is not null && Cursor is { } cursor ? new(cursor.StreamId, change.Sequence) : null;
+    }
+
+    public static IReadOnlyList<string> ResolveNodeIds(IReadOnlyCollection<string> targets, IReadOnlyList<ProjectStructureNode> nodes) {
+        var requested = targets.ToHashSet(StringComparer.Ordinal);
+        return nodes.Where(node => requested.Contains(node.Id) || node.ProjectRole != ProjectStructureProjectRole.None &&
+                node.RelatedProjectId is { } projectId && requested.Contains(ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId)))
+            .Select(node => node.Id).Distinct(StringComparer.Ordinal).ToArray();
+    }
+
     public void CompleteRefresh(ProjectStructureChangeCursor? through, string? message = null) {
         if (through?.StreamId == Cursor?.StreamId) {
             acknowledged = Math.Max(acknowledged, through?.Sequence ?? 0);

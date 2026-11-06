@@ -57,17 +57,17 @@ public interface ICrmHrCrmWorkspaceView : ICrmHrWorkspaceView
     Task CloseConnectionPartyPickerAsync();
     Task ConfirmConnectionPartyAsync(Guid partyId);
     void ClearConnectionParty(int index);
-    void UpdateConnectedRecordProjects(int index, IReadOnlyList<Guid> projectIds);
+    Task UpdateConnectedRecordProjects(int index, IReadOnlyList<Guid> projectIds);
     string ResolveConnectionPartyLabel(Guid partyId);
     Task SaveConnectedRecordsAsync();
     Task SaveInteractionAsync();
     Task SelectOpportunityAsync(Guid opportunityId);
     Task SaveOpportunityAsync(CrmOpportunityEditorModel model);
-    Task AdvanceOpportunityStageAsync(Guid opportunityId);
-    void OpenOpportunityCreateDialog();
+    Task AdvanceOpportunityStageAsync(CrmOpportunityStageAdvance intent);
+    Task OpenOpportunityCreateDialog();
     Task CloseOpportunityCreateDialogAsync();
     Task CloseOpportunityDetailDialogAsync();
-    void OpenOpportunityEditDialog();
+    Task OpenOpportunityEditDialog();
     Task CloseOpportunityEditDialogAsync();
     Task OpenConversionDialogAsync();
     Task CloseOpportunityConversionDialogAsync();
@@ -76,6 +76,5 @@ public interface ICrmHrCrmWorkspaceView : ICrmHrWorkspaceView
     Task HandleAccountBrowserLoadFailedAsync(Exception exception);
     Task HandleOpportunityPickerLoadFailedAsync(Exception exception);
     Task OpenLinkedProjectAsync();
-    void ToggleInteractionParticipant(Guid partyId, ChangeEventArgs args);
     void OpenAgentChats();
 }

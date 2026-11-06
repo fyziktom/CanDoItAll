@@ -106,6 +106,8 @@ public sealed class DatabaseProfileRuntimeMetadata
 
 public sealed class DatabaseProfileAuditMetadata
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Guid ConfigurationRevision { get; set; }
     public DateTimeOffset CreatedUtc { get; set; }
 
     public DateTimeOffset? LastUsedUtc { get; set; }
@@ -164,6 +166,7 @@ public sealed record DatabaseProfileSchemaHealth(
 public sealed class DatabaseProfileEditorModel
 {
     public Guid? Id { get; set; }
+    public Guid? ExpectedConfigurationRevision { get; set; }
 
     public string DisplayName { get; set; } = "PostgreSQL workspace";
 
@@ -287,7 +290,7 @@ public interface IDatabaseProfileService
 
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default);
+    Task<Result> DeleteEditorAsync(Guid id, Guid? expectedConfigurationRevision, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default);
 
     Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default);
 

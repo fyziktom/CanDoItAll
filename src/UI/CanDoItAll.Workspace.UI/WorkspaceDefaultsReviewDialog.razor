@@ -1,0 +1,40 @@
+@using CanDoItAll.Editing.UI
+@using CanDoItAll.SharedKernel
+@using System.Globalization
+
+<Dialog IsOpen="true" Title="Compare Workspace settings" Subtitle="Apply the reviewed values to your draft, then save when ready."
+        Size="ModalSize.Wide" DenseChrome="true" CloseOnBackdrop="false" OnClose="State.CloseComparison" TestId="defaults-review-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Small">
+            <MergeFieldView Label="Workspace name" Field="Review.Name" Format="Text" ShowUnchanged="false" Changed="StateHasChanged" TestId="defaults-review-name" />
+            <MergeFieldView Label="Default provider" Field="Review.Provider" Format="Provider" ShowUnchanged="false" Changed="StateHasChanged" />
+            <MergeFieldView Label="Output format" Field="Review.OutputFormat" Format="Text" ShowUnchanged="false" Changed="StateHasChanged" />
+            <MergeFieldView Label="Currency and culture" Field="Review.Currency" Format="Currency" ShowUnchanged="false" Changed="StateHasChanged" />
+            <MergeFieldView Label="Workspace notes" Field="Review.Notes" Format="Text" ShowUnchanged="false" Changed="StateHasChanged" />
+            <MergeFieldView Label="Decision data policy" Field="Review.Policy" Format="Policy" ShowUnchanged="false"
+                            HasPendingInput="Review.HasUnfinishedPolicy" Changed="StateHasChanged" TestId="defaults-review-policy" />
+            @if (Review.HasUnfinishedPolicy) {
+                <FormField Text="Keep unfinished policy input">
+                    <CheckBox TValue="bool" @bind-Value="Review.KeepUnfinishedPolicy" data-testid="defaults-review-keep-policy" />
+                </FormField>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="State.CloseComparison" />
+        <Button Text="Apply choices to draft" Disabled="@(!State.CanCompare || !Review.CanApply(State.Draft))" Click="State.ApplyComparison" data-testid="defaults-review-apply" />
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public WorkspaceDefaultsReview Review { get; set; } = default!;
+    [Parameter, EditorRequired] public IWorkspaceDefaultsState State { get; set; } = default!;
+
+    private static string Text(string value) => string.IsNullOrEmpty(value) ? "Empty" : value;
+    private string Provider(Guid? id) => id is null ? "None" : State.Providers.FirstOrDefault(option => option.Id == id)?.Name ?? $"Unavailable provider ({id})";
+    private static string Currency((string Code, string Culture) value) => $"{value.Code} · {value.Culture}";
+    private static string Policy(DecisionDataPolicy? value) => value is null ? "Unconfigured" :
+        $"{value.ReadBasisMode} · {value.PublicationFreshness} · {value.OnBasisChange}\n" +
+        $"Replans {value.Budget.MaximumReplans}\nWork {value.Budget.MaximumWorkDuration.ToString("c", CultureInfo.InvariantCulture)}\n" +
+        $"Basis age {value.Budget.MaximumBasisAge.ToString("c", CultureInfo.InvariantCulture)}";
+}

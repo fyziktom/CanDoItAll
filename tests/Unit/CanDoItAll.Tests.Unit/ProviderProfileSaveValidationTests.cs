@@ -31,7 +31,7 @@ public sealed class ProviderProfileSaveValidationTests
         var store = CreateCatalogStore();
         var registry = new WorkspaceBackedProviderProfileRegistry(
             store.Service,
-            new ProviderProfileService());
+            new ProviderProfileService(), AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(WorkspaceScopeDescriptor.Sandbox));
         var editor = CreateValidEditor();
         ApplyInvalidScenario(editor, scenario);
 
@@ -51,7 +51,7 @@ public sealed class ProviderProfileSaveValidationTests
         var store = CreateCatalogStore();
         var registry = new WorkspaceBackedProviderProfileRegistry(
             store.Service,
-            new ProviderProfileService());
+            new ProviderProfileService(), AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(WorkspaceScopeDescriptor.Sandbox));
         var editor = CreateValidEditor();
         editor.BaseUrl = baseUrl;
 
@@ -372,7 +372,8 @@ public sealed class ProviderProfileSaveValidationTests
                     SandboxWorkspaceCatalog> update)
             {
                 Interlocked.Increment(ref updateCatalogCallCount);
-                Catalog = update(Catalog);
+                var accepted = update(Catalog);
+                Catalog = accepted with { CatalogDataRevision = Catalog.CatalogDataRevision.IsAssigned ? Catalog.CatalogDataRevision.Next() : CatalogDataRevision.Initial };
                 return Task.FromResult(Catalog);
             }
 

@@ -83,6 +83,11 @@ public partial class ProviderProfilesSurface : IDisposable {
             View.Editor.Notify(nameof(providerModel.Tags));
         }
     }
+    private void SetPendingTag(ProviderEditorTarget target, ProviderEditorDraft editor, string value) {
+        if (Current(target) && View.CanEdit && !View.SourceManaged) {
+            editor.PendingTag = value;
+        }
+    }
     private void ChangeSuggestedModels(ProviderEditorTarget target, string? value) {
         if (Current(target) && View.CanEdit && !View.SourceManaged) {
             View.Editor.SuggestedModelsText = value ?? string.Empty;

@@ -25,9 +25,11 @@ public partial class CrmHrDirectoryPage : ICrmHrDirectoryWorkspaceView
     IReadOnlyList<PartyOrganizationAffiliationEditorModel> ICrmHrDirectoryWorkspaceView.AffiliationEditors => affiliationEditors;
     IReadOnlyDictionary<Guid, string> ICrmHrDirectoryWorkspaceView.AffiliationPartyDisplayNames => affiliationPartyDisplayNames;
     List<PartyRelationshipEditorModel> ICrmHrDirectoryWorkspaceView.Relationships => relationships;
+    Task ICrmHrDirectoryWorkspaceView.HandleRelationshipsChangedAsync(IReadOnlyList<PartyRelationshipEditorModel> rows) => HandleRelationshipsChangedAsync(rows);
     IReadOnlyList<PartyDuplicateCandidateModel> ICrmHrDirectoryWorkspaceView.DuplicateCandidates => duplicateCandidates;
     PartyProjectAssignmentPage ICrmHrDirectoryWorkspaceView.ProjectAssignmentsPage => projectAssignmentsPage;
     PartyDuplicateCandidateModel? ICrmHrDirectoryWorkspaceView.MergeCandidate => mergeCandidate;
+    PartyMergePresentation ICrmHrDirectoryWorkspaceView.Merge => mergeState;
     bool ICrmHrDirectoryWorkspaceView.IsEditorDialogOpen => isEditorDialogOpen;
     bool ICrmHrDirectoryWorkspaceView.IsMergeDialogOpen => isMergeDialogOpen;
     bool ICrmHrDirectoryWorkspaceView.IsImportExportDialogOpen => isImportExportDialogOpen;
@@ -50,6 +52,7 @@ public partial class CrmHrDirectoryPage : ICrmHrDirectoryWorkspaceView
     Task<Result<PartyCsvImportPreviewModel>> ICrmHrDirectoryWorkspaceView.PreviewPartyImportAsync(string csvContent) => PreviewPartyImportAsync(csvContent);
     Task<Result<int>> ICrmHrDirectoryWorkspaceView.ApplyPartyImportAsync(IReadOnlyList<PartyCsvImportPreviewRowModel> rows) => ApplyPartyImportAsync(rows);
     Task ICrmHrDirectoryWorkspaceView.HandleImportAppliedAsync() => HandleImportAppliedAsync();
+    void ICrmHrDirectoryWorkspaceView.HandleImportStatusChanged(PartyImportStatus status) => importStatus = status;
     void ICrmHrDirectoryWorkspaceView.OpenImportExportDialog() => OpenImportExportDialog();
     Task ICrmHrDirectoryWorkspaceView.CloseImportExportDialogAsync() => CloseImportExportDialogAsync();
     Task ICrmHrDirectoryWorkspaceView.HandleEditorTabChangedAsync(int index) => HandleEditorTabChangedAsync(index);
@@ -61,7 +64,9 @@ public partial class CrmHrDirectoryPage : ICrmHrDirectoryWorkspaceView
     void ICrmHrDirectoryWorkspaceView.AddConfidentialNote() => AddConfidentialNote();
     void ICrmHrDirectoryWorkspaceView.RemoveAdditionalRole(PartyRoleAssignmentEditorModel role) => RemoveAdditionalRole(role);
     void ICrmHrDirectoryWorkspaceView.RemoveConfidentialNote(PartyConfidentialNoteEditorModel note) => RemoveConfidentialNote(note);
-    void ICrmHrDirectoryWorkspaceView.OpenMergeDialog(PartyDuplicateCandidateModel candidate) => OpenMergeDialog(candidate);
+    Task ICrmHrDirectoryWorkspaceView.OpenMergeDialogAsync(PartyDuplicateCandidateModel candidate) => OpenMergeDialogAsync(candidate);
+    Task ICrmHrDirectoryWorkspaceView.RefreshMergePreviewAsync() => RefreshMergePreviewAsync();
+    void ICrmHrDirectoryWorkspaceView.HandleMergeNoteStatusChanged(PartyMergeNoteStatus status) => merge.Note = status;
     Task ICrmHrDirectoryWorkspaceView.HandleMergeCloseAsync() => HandleMergeCloseAsync();
     Task ICrmHrDirectoryWorkspaceView.HandleMergeConfirmAsync(string reason) => HandleMergeConfirmAsync(reason);
     Task ICrmHrDirectoryWorkspaceView.HandleAffiliationsChangedAsync(IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliations) => HandleAffiliationsChangedAsync(affiliations);

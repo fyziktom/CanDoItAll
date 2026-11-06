@@ -15,6 +15,9 @@ public sealed class AgentDecisionPolicyEditorState {
     public Guid AgentId { get; }
     public event Action? Changed;
     private AgentExecutionActivityWorkspaceIdentity? recoveryContext;
+    private long changeSequence;
+    private long readSequence;
+    private long submissionSequence;
     public AgentDecisionPolicyDraft Draft { get; } = new();
     public AgentDecisionDataPolicySnapshot? Original { get; private set; }
     public AgentDecisionDataPolicySnapshot? Current { get; private set; }
@@ -51,6 +54,7 @@ public sealed class AgentDecisionPolicyEditorState {
             return false;
         }
         Busy = true;
+        readSequence = changeSequence;
         NeedsReview = true;
         Current = null;
         Message = "Reading current policy…";
@@ -64,6 +68,17 @@ public sealed class AgentDecisionPolicyEditorState {
             return;
         }
         Busy = false;
+        if (readSequence != changeSequence) {
+            if (Original is null && Submitted is null) {
+                Original = snapshot;
+                Draft.Load(snapshot.Policy);
+            }
+            NeedsReview = true;
+            Current = null;
+            Message = "The saved configuration changed during the read. Read current policy again; your draft is retained.";
+            Changed?.Invoke();
+            return;
+        }
         if (Original is null && Submitted is null) {
             Original = snapshot;
             Draft.Load(snapshot.Policy);
@@ -202,6 +217,7 @@ public sealed class AgentDecisionPolicyEditorState {
         }
         var command = new ReplaceAgentDecisionDataPolicyCommand(Guid.NewGuid(), Original!.Expectation, Draft.Capture());
         Submitted = command;
+        submissionSequence = changeSequence;
         Historical = null;
         Busy = true;
         Current = null;
@@ -220,8 +236,10 @@ public sealed class AgentDecisionPolicyEditorState {
                 Unconfirmed = null;
                 RequireIdentity(accepted.Snapshot);
                 Original = accepted.Snapshot;
-                NeedsReview = false;
-                Message = accepted.FollowupRequired
+                NeedsReview = submissionSequence != changeSequence;
+                Message = NeedsReview
+                    ? "Policy saved, and a newer configuration change needs review. Read current policy; your later draft edits are retained."
+                    : accepted.FollowupRequired
                     ? "Policy saved. Some follow-up work failed; reload the catalog without repeating this save. Later draft edits are retained."
                     : "Policy saved for future work. Later draft edits are retained.";
                 break;
@@ -253,6 +271,17 @@ public sealed class AgentDecisionPolicyEditorState {
         NeedsReview = false;
         Message = keepDraft ? "Your draft is retained against the explicitly selected current version. Review it before saving."
             : "Current policy values loaded. No change was saved.";
+        Changed?.Invoke();
+    }
+
+    public void ObserveExternalChange() {
+        if (Retired) {
+            return;
+        }
+        changeSequence++;
+        NeedsReview = true;
+        Current = null;
+        Message = "Agent configuration changed elsewhere. Read current policy to compare; your draft and any retained save are preserved.";
         Changed?.Invoke();
     }
 

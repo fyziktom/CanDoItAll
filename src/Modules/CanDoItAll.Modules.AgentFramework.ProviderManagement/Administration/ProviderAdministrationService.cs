@@ -1,5 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Modules.Security;
@@ -31,6 +32,7 @@ public sealed record ProviderProfileSummary(
 public sealed class ProviderProfileEditorModel : CanDoItAll.AgentFramework.Models.IProviderModelPricingEditorModel
 {
     public Guid? Id { get; set; }
+    public Guid? ExpectedConcurrencyToken { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -77,7 +79,10 @@ internal sealed class ProviderAdministrationService(
     IActivityStream activityStream,
     IEnumerable<IProviderProfileDeletionGuard> providerProfileDeletionGuards,
     IEnumerable<IProviderProfileCommitObserver>
-        providerProfileCommitObservers) :
+        providerProfileCommitObservers,
+    ProviderMutationWitness witnesses,
+    ProviderEditingWrites editing,
+    ICanonicalRuntimeDatabase database) :
     IProviderAdministrationService
 {
     public IReadOnlyList<ConnectorPluginManifest> ListProviderManifests()
@@ -130,7 +135,7 @@ internal sealed class ProviderAdministrationService(
             .FirstOrDefaultAsync(item => item.Id == id.Value, cancellationToken);
         if (provider is null)
         {
-            return NewProvider();
+            throw new KeyNotFoundException("The provider profile is no longer available.");
         }
 
         var connectorPluginKey = providerConnectorCatalog.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey;
@@ -146,6 +151,7 @@ internal sealed class ProviderAdministrationService(
         return new ProviderProfileEditorModel
         {
             Id = provider.Id,
+            ExpectedConcurrencyToken = provider.ConcurrencyToken,
             Name = provider.Name,
             ConnectorPluginKey = connectorPluginKey,
             ConfigSchemaVersion = provider.ConfigSchemaVersion,
@@ -168,6 +174,19 @@ internal sealed class ProviderAdministrationService(
     public async Task<Result<Guid>> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
+        model = new() {
+            Id = model.Id, ExpectedConcurrencyToken = model.ExpectedConcurrencyToken, Name = model.Name,
+            ConnectorPluginKey = model.ConnectorPluginKey, ConfigSchemaVersion = model.ConfigSchemaVersion,
+            ApiKeySecretId = model.ApiKeySecretId, IsEnabled = model.IsEnabled,
+            SupportsStreaming = model.SupportsStreaming, SupportsToolCalling = model.SupportsToolCalling,
+            SupportsStructuredOutput = model.SupportsStructuredOutput, SupportsVision = model.SupportsVision,
+            Configuration = ConnectorConfigState.FromJson(model.Configuration.ToJson()), IsPrivateProvider = model.IsPrivateProvider,
+            ModelPrices = ProviderPricingDefaults.ToEditorModels(ProviderPricingDefaults.FromEditorModels(model.ModelPrices))
+        };
+        await editing.RequireAsync(database.Profile.Profile.Id, model.Id, cancellationToken);
+        if (model.Id == Guid.Empty) {
+            return Result<Guid>.Failure(Error.Validation("The provider identity cannot be empty."));
+        }
 
         if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
                 model.ConnectorPluginKey))
@@ -233,10 +252,15 @@ internal sealed class ProviderAdministrationService(
                 dbContext,
                 model.Id,
                 secretRecordId,
-                cancellationToken);
+                cancellationToken, requireTransaction: editing.IsActive);
         using var coordination = secretMutationScope.HasMutationScope ? transactions.Enter(dbContext) : null;
         var entity = secretMutationScope.Profile;
         var isNewProfile = entity is null;
+        if (entity is not null && model.ExpectedConcurrencyToken != entity.ConcurrencyToken ||
+            entity is null && (model.Id.HasValue && model.ExpectedConcurrencyToken != Guid.Empty ||
+                model.ExpectedConcurrencyToken is { } expected && expected != Guid.Empty)) {
+            throw new ProviderProfileConcurrencyException(model.Id ?? Guid.Empty);
+        }
         if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
                 entity?.ConnectorPluginKey))
         {
@@ -257,7 +281,7 @@ internal sealed class ProviderAdministrationService(
 
         if (entity is null)
         {
-            entity = new ProviderProfile();
+            entity = new ProviderProfile { Id = model.Id ?? Guid.NewGuid() };
             await dbContext.Set<ProviderProfile>().AddAsync(entity, cancellationToken);
         }
 
@@ -315,27 +339,36 @@ internal sealed class ProviderAdministrationService(
                                 model.SupportsVision;
         entity.ExtraSettingsJson = extraSettingsJson;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await secretMutationScope.CommitAsync(cancellationToken);
-        coordination?.Dispose();
-        await secretMutationScope.DisposeAsync();
-
-        foreach (var observer in providerProfileCommitObservers)
-        {
-            await observer.ProviderSavedAsync(
-                entity.Id,
-                CancellationToken.None);
+        var originalToken = isNewProfile ? (Guid?)null : entity.ConcurrencyToken;
+        var committed = false;
+        try {
+            await editing.RequireAsync(database.Profile.Profile.Id, model.Id, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            committed = dbContext.Database.CurrentTransaction is null;
+            await editing.RequireAsync(database.Profile.Profile.Id, model.Id, cancellationToken);
+            await secretMutationScope.CommitAsync(cancellationToken);
+            committed = true;
+            coordination?.Dispose();
+            await secretMutationScope.DisposeAsync();
+            await ProviderCommitEffects.RunAsync(providerProfileCommitObservers
+                .Select(observer => (Func<Task>)(() => observer.ProviderSavedAsync(entity.Id, CancellationToken.None)))
+                .Append(() => activityStream.RecordAsync(new ActivityWriteRequest(
+                    "providers", isNewProfile ? "create" : "update",
+                    $"{(isNewProfile ? "Created" : "Updated")} provider profile",
+                    $"{entity.Name} ({providerConnector.Manifest.DisplayName})",
+                    ArtifactKind: "provider-profile", ArtifactId: entity.Id, Route: "/agents?tab=providers"), CancellationToken.None)));
+            return Result<Guid>.Success(entity.Id);
+        } catch (Exception exception) when (committed) {
+            throw new ProviderMutationCommittedException(new(entity.Id, ProviderCatalogProjectionOperationKind.Upsert, entity.ConcurrencyToken),
+                "The provider is saved, but a secondary update needs reconciliation.", exception);
+        } catch (Exception exception) when (exception is DbUpdateConcurrencyException || SerializableMutationScope.IsConflict(exception)) {
+            throw new ProviderProfileConcurrencyException(entity.Id, exception);
+        } catch (UnauthorizedAccessException) {
+            throw;
+        } catch (Exception exception) {
+            throw new ProviderMutationUnconfirmedException(witnesses.Sign(new(Guid.NewGuid(), entity.Id,
+                isNewProfile ? ProviderMutationKind.Create : ProviderMutationKind.Update, originalToken, entity.ConcurrencyToken)), exception);
         }
-
-        await activityStream.RecordAsync(new ActivityWriteRequest(
-            "providers",
-            model.Id.HasValue ? "update" : "create",
-            $"{(model.Id.HasValue ? "Updated" : "Created")} provider profile",
-            $"{entity.Name} ({providerConnector.Manifest.DisplayName})",
-            ArtifactKind: "provider-profile",
-            ArtifactId: entity.Id,
-            Route: "/agents?tab=providers"), cancellationToken);
-        return Result<Guid>.Success(entity.Id);
     }
 
     public async Task<Result<ProviderModelPricingRefreshResult>> RefreshProviderModelPricesAsync(
@@ -438,10 +471,19 @@ internal sealed class ProviderAdministrationService(
         return Result<ProviderModelPricingRefreshResult>.Success(refreshResult);
     }
 
-    public async Task DeleteProviderAsync(Guid id, CancellationToken cancellationToken = default)
-    {
+    public Task DeleteProviderAsync(Guid id, CancellationToken cancellationToken = default)
+        => DeleteProviderCoreAsync(id, null, cancellationToken);
+
+    public Task DeleteProviderAsync(Guid id, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => DeleteProviderCoreAsync(id, expectedConcurrencyToken, cancellationToken);
+
+    private async Task DeleteProviderCoreAsync(Guid id, Guid? expectedConcurrencyToken, CancellationToken cancellationToken) {
+        await editing.RequireAsync(database.Profile.Profile.Id, id, cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await dbContext.Set<ProviderProfile>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        await using var mutation = await ProviderProfileSecretMutationScope.BeginAsync(dbContext, id, null, cancellationToken,
+            requireTransaction: editing.IsActive);
+        using var coordination = mutation.HasMutationScope ? transactions.Enter(dbContext) : null;
+        var entity = mutation.Profile;
         if (entity is null)
         {
             return;
@@ -454,23 +496,34 @@ internal sealed class ProviderAdministrationService(
                 entity.Id,
                 cancellationToken);
         }
-        dbContext.Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        foreach (var observer in providerProfileCommitObservers)
-        {
-            await observer.ProviderDeletedAsync(
-                entity.Id,
-                CancellationToken.None);
+        if (expectedConcurrencyToken != entity.ConcurrencyToken) {
+            throw new ProviderProfileConcurrencyException(id);
         }
-
-        await activityStream.RecordAsync(new ActivityWriteRequest(
-            "providers",
-            "delete",
-            "Deleted provider profile",
-            entity.Name,
-            ArtifactKind: "provider-profile",
-            ArtifactId: entity.Id,
-            Route: "/agents?tab=providers"), cancellationToken);
+        dbContext.Remove(entity);
+        try {
+            await editing.RequireAsync(database.Profile.Profile.Id, id, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await editing.RequireAsync(database.Profile.Profile.Id, id, cancellationToken);
+            await mutation.CommitAsync(cancellationToken);
+        } catch (Exception failure) when (failure is DbUpdateConcurrencyException || SerializableMutationScope.IsConflict(failure)) {
+            throw new ProviderProfileConcurrencyException(id, failure);
+        } catch (UnauthorizedAccessException) {
+            throw;
+        } catch (Exception failure) {
+            throw new ProviderMutationUnconfirmedException(witnesses.Sign(new(Guid.NewGuid(), id, ProviderMutationKind.Delete, expectedConcurrencyToken)), failure);
+        }
+        try {
+            coordination?.Dispose();
+            await mutation.DisposeAsync();
+            await ProviderCommitEffects.RunAsync(providerProfileCommitObservers
+                .Select(observer => (Func<Task>)(() => observer.ProviderDeletedAsync(entity.Id, CancellationToken.None)))
+                .Append(() => activityStream.RecordAsync(new ActivityWriteRequest(
+                    "providers", "delete", "Deleted provider profile", entity.Name,
+                    ArtifactKind: "provider-profile", ArtifactId: entity.Id, Route: "/agents?tab=providers"), CancellationToken.None)));
+        } catch (Exception failure) {
+            throw new ProviderMutationCommittedException(new(id, ProviderCatalogProjectionOperationKind.Delete),
+                "The provider is deleted, but a secondary update needs reconciliation.", failure);
+        }
     }
 
     public Task<ProviderHealthCheckResult> TestProviderAsync(Guid id, CancellationToken cancellationToken = default)

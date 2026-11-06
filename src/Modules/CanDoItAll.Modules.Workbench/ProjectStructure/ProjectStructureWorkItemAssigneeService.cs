@@ -64,16 +64,17 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         ProjectStructureTaskResourceSelection? selection,
         string source,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         await ReplaceCoreAsync(
             projectId,
             taskNodeId,
             selection,
             source,
-            expectedAssignments: null,
-            expectedDirectAssignmentRevision: null,
-            cancellationToken, mutationOwner);
+            expectedAssignments: [],
+            expectedDirectAssignmentRevision: new ProjectWorkItemDirectAssignmentRevision(0),
+            cancellationToken, mutationOwner, authorizeCommit);
     }
 
     public async Task ReplaceIfUnchangedAsync(
@@ -107,7 +108,9 @@ public sealed class ProjectStructureWorkItemAssigneeService(
             IReadOnlyList<ProjectPartyAssignmentDetail> expectedAssignments,
             long expectedDirectAssignmentRevision,
             CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        ProjectStructureNode? expectedTask = null)
     {
         ArgumentNullException.ThrowIfNull(expectedAssignments);
         return ReplaceCoreAsync(
@@ -118,7 +121,7 @@ public sealed class ProjectStructureWorkItemAssigneeService(
             expectedAssignments,
             new ProjectWorkItemDirectAssignmentRevision(
                 expectedDirectAssignmentRevision),
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, authorizeCommit, expectedTask);
     }
 
     public async Task<ProjectStructureTaskAssigneeMutationSnapshot>
@@ -219,7 +222,9 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         IReadOnlyList<ProjectPartyAssignmentDetail>? expectedAssignments,
         ProjectWorkItemDirectAssignmentRevision?
             expectedDirectAssignmentRevision,
-        CancellationToken cancellationToken, ProjectStructureAgentContext? mutationOwner)
+        CancellationToken cancellationToken, ProjectStructureAgentContext? mutationOwner,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        ProjectStructureNode? expectedTask = null)
     {
         var expected = ProjectAssignmentAdmission.Require(projectId, mutationOwner?.ExpectedProjectAdmission);
         expectedAssignments = expectedAssignments?.ToArray();
@@ -263,7 +268,7 @@ public sealed class ProjectStructureWorkItemAssigneeService(
                     .Select(ProjectPartyAssignmentConcurrencySnapshot.From)
                     .ToArray(),
                 expectedDirectAssignmentRevision,
-                cancellationToken, mutationOwner);
+                cancellationToken, mutationOwner, expectedTask, authorizeCommit);
         if (assignmentResult.IsFailure)
         {
             throw BuildAssignmentException(assignmentResult.Errors);
@@ -294,7 +299,8 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null,
         ProjectWorkItemDirectAssignmentRevision? expectedRevision = null, CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null, ProjectStructureNode? expectedTask = null) {
+        ProjectStructureAgentContext? mutationOwner = null, ProjectStructureNode? expectedTask = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         var expected = ProjectAssignmentAdmission.Require(projectId, mutationOwner?.ExpectedProjectAdmission);
         var requests = ProjectAssignmentAdmission.Snapshot(projectId, desiredAssignments, expected);
         var ids = requests.Select(_ => Guid.NewGuid()).ToArray();
@@ -306,20 +312,18 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         if (expectedTask is not null) {
             var task = await context.Set<ProjectObjectRecord>().SingleOrDefaultAsync(
                 item => item.ProjectId == projectId && item.NodeKey == expectedTask.Id, cancellationToken)
-                ?? throw new InvalidOperationException("The task disappeared before compensation.");
+                ?? throw Rejected(409, "TaskAssigneeConcurrentChange", "The original Task disappeared before its conditional assignment update.");
             await ProjectNodeBindingStorage.LoadAsync(context, [task], cancellationToken);
-            if (task.Title != expectedTask.Title || task.Subtitle != expectedTask.Subtitle ||
-                task.Status != expectedTask.Status || task.Notes != expectedTask.Notes ||
-                task.StartUtc != expectedTask.StartUtc || task.EndUtc != expectedTask.EndUtc ||
-                task.ProgressPercent != expectedTask.ProgressPercent || task.ProgressMode != expectedTask.ProgressMode ||
-                task.DurationSeconds != expectedTask.DurationSeconds || task.MetadataJson != expectedTask.MetadataJson) {
-                throw new InvalidOperationException("The task changed after persistence began. Its assignment and pricing were not compensated.");
+            if (!ProjectStructureNodeStateGuard.HasSameEditableContent(expectedTask, ProjectWorkbenchNodeMapper.MapStructureNode(task))) {
+                throw Rejected(409, "TaskAssigneeConcurrentChange", "The Task content changed before its conditional assignment update. The assignment set was preserved.");
             }
         }
         var result = await workAssignments.StageReplaceAsync(projectId, node, requests, ids, expectedAssignments,
             expectedRevision, cancellationToken, expected);
         if (result.IsSuccess) {
-            await scope.CommitAsync(cancellationToken);
+            var nodeChanges = await workAssignments.ReadExistingNodeChangesForMutationAsync([(projectId, node.NodeKey)], cancellationToken);
+            await scope.CommitAsync(cancellationToken, authorizeCommit);
+            workAssignments.PublishCommittedNodeChanges(nodeChanges);
         }
         return result;
     }

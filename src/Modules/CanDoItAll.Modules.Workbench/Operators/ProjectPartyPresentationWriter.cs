@@ -8,9 +8,13 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectPartyPresentationWriter(IDbContextFactory<WorkbenchDbContext> contexts,
     ProjectStructureMutationScopeFactory mutations, IClock clock) {
     public async Task<ProjectStructureNode> SaveAsync(ProjectWriteAdmission admission, ProjectStructureNode expected,
-        ProjectPartyOption? participant, string? meetingSummary, bool clearParticipant = false, CancellationToken cancellationToken = default) {
+        ProjectPartyOption? participant, string? meetingSummary, bool clearParticipant = false, CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         if (expected.ObjectType is not (ProjectObjectType.Participant or ProjectObjectType.Meeting)) {
             throw new ArgumentException("Party presentation requires a participant or meeting.", nameof(expected));
+        }
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
         }
         await using var context = await contexts.CreateDbContextAsync(cancellationToken);
         await using var scope = await mutations.BeginBindingWriteAsync(context,
@@ -44,7 +48,7 @@ public sealed class ProjectPartyPresentationWriter(IDbContextFactory<WorkbenchDb
         current.MetadataJson = root.ToJsonString();
         current.UpdatedAtUtc = clock.GetUtcNow();
         await context.SaveChangesAsync(cancellationToken);
-        await scope.CommitAsync(cancellationToken);
+        await scope.CommitAsync(cancellationToken, authorizeCommit);
         return ProjectWorkbenchNodeMapper.MapStructureNode(current);
     }
 

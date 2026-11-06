@@ -124,6 +124,22 @@ public partial class AgentChatPanel : IAsyncDisposable {
             _ => Task.CompletedTask
         };
 
+    private bool reportedDraftPending;
+    private bool HasComposerDraft => draftPrompt.Length > 0 || draftAttachmentPaths.Count > 0;
+    private void ProtectUnsentDraft() {
+        if (!IsFocusedFloating || ActiveChatHandleId is not { } handle || reportedDraftPending == HasComposerDraft) {
+            return;
+        }
+        FloatingChatCoordinator.SetDraftPending(handle, HasComposerDraft);
+        reportedDraftPending = HasComposerDraft;
+    }
+    private bool CanChangeThread() {
+        if (!HasComposerDraft) {
+            return true;
+        }
+        SetMessage("Draft retained", "warning", "Send or clear your draft before switching the current thread.");
+        return false;
+    }
     private string draftPrompt = string.Empty;
     private string pendingUserPrompt = string.Empty;
     private DateTimeOffset? pendingUserCreatedAtUtc;
@@ -260,6 +276,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         draftPrompt = "";
         draftAttachmentPaths = [];
         composerKey++;
+        ProtectUnsentDraft();
         isBusy = false;
         activeActivityStreamId = null;
         terminalWorkspaceRefreshRunId = null;
@@ -274,13 +291,15 @@ public partial class AgentChatPanel : IAsyncDisposable {
     }
 
     private Task SelectAgentAsync(Guid agentId)
-        => LoadTargetAsync(agentId, null, refreshCatalog: false, throwOnFailure: false);
+        => agentId != selectedAgentId && !CanChangeThread() ? Task.CompletedTask
+            : LoadTargetAsync(agentId, null, refreshCatalog: false, throwOnFailure: false);
 
     private Task SelectSessionAsync(Guid sessionId) => selectedAgentId is { } agentId
-        ? LoadTargetAsync(agentId, sessionId, refreshCatalog: false, throwOnFailure: false) : Task.CompletedTask;
+        ? sessionId != selectedSessionId && !CanChangeThread() ? Task.CompletedTask
+            : LoadTargetAsync(agentId, sessionId, refreshCatalog: false, throwOnFailure: false) : Task.CompletedTask;
 
     private async Task CreateThreadAsync() {
-        if (selectedAgentId is not { } agentId || isBusy) {
+        if (selectedAgentId is not { } agentId || isBusy || !IsFocusedFloating && !CanChangeThread()) {
             return;
         }
         var generation = chatSession.Generation;
@@ -360,12 +379,14 @@ public partial class AgentChatPanel : IAsyncDisposable {
             draftAttachmentPaths = retained.AttachmentPaths;
             composerGeneration++;
             composerKey++;
+            ProtectUnsentDraft();
         }
     }
 
     private Task HandleDraftPromptChangedAsync(string value) {
         draftPrompt = value;
         composerGeneration++;
+        ProtectUnsentDraft();
         return Task.CompletedTask;
     }
 
@@ -380,6 +401,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
             ? normalizedContent
             : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{normalizedContent}";
         composerKey++;
+        ProtectUnsentDraft();
         return Task.CompletedTask;
     }
 
@@ -443,6 +465,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         draftAttachmentPaths = [];
         var submittedComposerGeneration = ++composerGeneration;
         composerKey++;
+        ProtectUnsentDraft();
         runStateText = UpdatingWorkspaceContextRunState;
         runStateTone = "info";
         StateHasChanged();
@@ -1217,6 +1240,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
             }
             draftAttachmentPaths = detail.Artifacts.Select(item => RelativeAttachmentPath.NormalizeOrNull(item.RelativePath)).OfType<string>()
                 .Distinct(StringComparer.Ordinal).ToImmutableArray();
+            ProtectUnsentDraft();
             var omitted = detail.Artifacts.Count - draftAttachmentPaths.Count;
             SetMessage("Ready", omitted > 0 || draftAttachmentPaths.Count == 0 ? "warning" : "success", omitted > 0
                 ? $"Staged {draftAttachmentPaths.Count} artifact path(s). Unsafe or duplicate references were omitted."
@@ -1258,6 +1282,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 stagedPaths.Add(relativePath);
             }
             draftAttachmentPaths = stagedPaths.Distinct(StringComparer.Ordinal).ToImmutableArray();
+            ProtectUnsentDraft();
             SetMessage("Ready", "success", $"Staged {draftAttachmentPaths.Count} attachment path(s) for the next prompt.");
         } catch (Exception exception) {
             if (chatSession.IsCurrent(generation) && !request.IsCancellationRequested) {
@@ -1876,6 +1901,7 @@ Use these workspace artifacts as input:
 
             draftPrompt = result.Text;
             composerKey++;
+            ProtectUnsentDraft();
             SetVoiceStatus("Sending", "info");
             if (!IsVoiceOperationCurrent(operation)) {
                 return;

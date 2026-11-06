@@ -3,6 +3,8 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Editor.UI;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Editing;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -11,6 +13,23 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentEditorAccessLifetimeTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Editor_reads_no_configuration_during_prerender_or_without_current_actor_access(bool interactive) {
+        using var context = AgentDetailsDialogAvatarGenerationTests.CreateContext(new UnavailableAgentImageGenerationService());
+        context.Services.AddSingleton<IEditingUiAccess>(new EditingUiTestAccess { Allowed = false });
+        var reads = context.Services.GetRequiredService<AgentEditorReadFixture>();
+        var calls = 0;
+        reads.Load = (_, _) => {
+            calls++;
+            return Task.FromResult(reads.Result(new() { Name = "Protected configuration" }));
+        };
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo(interactive ? "Server" : "Static", interactive));
+        context.Render<AgentDetailsDialog>();
+        Assert.Equal(0, calls);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -54,6 +73,7 @@ public sealed class AgentEditorAccessLifetimeTests {
         using var context = AgentDetailsDialogAvatarGenerationTests.CreateContext(new UnavailableAgentImageGenerationService());
         var reads = context.Services.GetRequiredService<AgentEditorReadFixture>();
         reads.Load = (_, _) => Task.FromException<AgentEditorLoadResult>(new IOException("Initial controlled failure"));
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var cut = context.Render<AgentDetailsDialog>();
         var retry = cut.FindComponent<AgentEditorCoreSurface>().Instance.State.RetryLoad;
         var first = new TaskCompletionSource<AgentEditorLoadResult>(TaskCreationOptions.RunContinuationsAsynchronously);

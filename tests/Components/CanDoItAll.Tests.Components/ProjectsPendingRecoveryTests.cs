@@ -48,7 +48,11 @@ public sealed class ProjectsPendingRecoveryTests {
         Assert.NotEqual(draft.InspectedDefinition!.Expectation.Revision, historical!.Revision);
         await cut.InvokeAsync(() => modal.Instance.PendingAction.InvokeAsync(new(operation, ProjectPendingEditorAction.ClearResolved)));
         Assert.Empty(store.Records);
-        Assert.True(draft.CanMutate);
+        cut.WaitForAssertion(() => Assert.True(draft.Definition.IsOutdated));
+        Assert.False(draft.CanMutate);
+        Assert.True(draft.CanCompare);
+        Assert.Equal("Accepted historical definition", draft.Original!.Scalars.Name);
+        Assert.Equal("Unsaved typing after acceptance", draft.Model.Name);
         Assert.Equal(1, store.DispatchClaims);
     }
 

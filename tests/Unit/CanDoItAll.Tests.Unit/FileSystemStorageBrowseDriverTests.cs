@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 namespace CanDoItAll.Tests.Unit.Storage;
 
 [Trait("Category", "UnixPortabilityCore")]
-public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
+public sealed partial class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 {
     [Fact]
     public async Task Save_allocates_distinct_names_for_generated_name_and_occupied_suffix_collisions()

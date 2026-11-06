@@ -253,7 +253,7 @@ public sealed class WorkflowOwnershipTests {
         Task old;
         switch (lane) {
             case DelayedReadLane.Catalog:
-                fixture.Probe.Catalog = token => Read(catalogRows, token);
+                fixture.Probe.Catalog = token => Read(new WorkflowCatalogSearchPage(catalogRows, 0, 25, catalogRows.Count), token);
                 old = fixture.Emit(WorkflowAction.Refresh);
                 break;
             case DelayedReadLane.Definition:
@@ -650,6 +650,7 @@ public sealed class WorkflowOwnershipTests {
             var probe = new Probe();
             var harness = await WorkflowsPageTests.CreateInMemoryWorkflowHarnessAsync(environment, services => {
                 Decorate<IWorkflowCatalogService>(services, probe);
+                Decorate<IWorkflowCatalogSearchService>(services, probe);
                 Decorate<IWorkflowRunStore>(services, probe);
                 Decorate<IWorkflowRuntimeManager>(services, probe);
                 Decorate<IWorkflowTestRunner>(services, probe);
@@ -706,7 +707,7 @@ public sealed class WorkflowOwnershipTests {
         public Func<CancellationToken, Task<IReadOnlyList<LlmCallComponent>>>? Components { get; set; }
         public Func<CancellationToken, Task<IReadOnlyList<WorkflowProviderOption>>>? Providers { get; set; }
         public Func<CancellationToken, Task<WorkflowStructureAuthority>>? Authority { get; set; }
-        public Func<CancellationToken, Task<IReadOnlyList<WorkflowCatalogItem>>>? Catalog { get; set; }
+        public Func<CancellationToken, Task<WorkflowCatalogSearchPage>>? Catalog { get; set; }
         public Func<WorkflowId, CancellationToken, Task<WorkflowDefinitionDetail?>>? Definition { get; set; }
         public Func<Guid, Task<ActiveAgentChat>>? Launch { get; set; }
         public Func<WorkflowTestRunRequest, Task<WorkflowTestRunResult>>? Test { get; set; }
@@ -727,7 +728,7 @@ public sealed class WorkflowOwnershipTests {
                 nameof(IWorkflowComponentLibraryService.ListComponentsAsync) when Probe.Components is { } components => components(args.OfType<CancellationToken>().Single()),
                 nameof(IWorkflowComponentLibraryService.ListProviderOptionsAsync) when Probe.Providers is { } providers => providers(args.OfType<CancellationToken>().Single()),
                 nameof(IWorkflowStructureAuthorityFactory.CaptureLocalOperatorAsync) when Probe.Authority is { } authority => authority(args.OfType<CancellationToken>().Single()),
-                nameof(IWorkflowCatalogService.ListDefinitionsAsync) when Probe.Catalog is { } catalog => catalog(args.OfType<CancellationToken>().Single()),
+                nameof(IWorkflowCatalogSearchService.SearchDefinitionsAsync) when Probe.Catalog is { } catalog => catalog(args.OfType<CancellationToken>().Single()),
                 nameof(IWorkflowCatalogService.GetDefinitionAsync) when Probe.Definition is { } definition => definition((WorkflowId)args[0]!, args.OfType<CancellationToken>().Single()),
                 nameof(IAgentChatLauncher.StartNewChatAsync) when Probe.Launch is { } launch => launch((Guid)args[0]!),
                 nameof(IWorkflowTestRunner.RunAsync) when Probe.Test is { } run => run((WorkflowTestRunRequest)args[0]!),

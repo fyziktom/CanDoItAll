@@ -17,8 +17,11 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
     public bool HasPendingReconciliation => pending is { } commit && session.IsCurrentSelection(commit.Version);
     public bool IsWriteUnconfirmed => Unresolved is { RetryAllowed: false };
     public bool HasVerifiedRetry => Unresolved is { RetryAllowed: true };
+    public bool CanAcknowledgeDiagnostic => Unresolved is { Attempt.Kind: ProviderMutationKind.HealthPersistence };
+    public bool CanReviewCurrent => !HasPendingReconciliation && (session.MissingAcceptedSnapshot ||
+        Unresolved is { Attempt.Kind: ProviderMutationKind.Create or ProviderMutationKind.Update });
     public Guid? CandidateProviderId => Unresolved?.Attempt.ProviderId;
-    public bool WritesBlocked => IsBusy || HasPendingReconciliation || IsWriteUnconfirmed;
+    public bool WritesBlocked => IsBusy || HasPendingReconciliation || IsWriteUnconfirmed || session.NeedsComparison;
 
     public async Task<ProviderEditorFeedback?> SaveAsync() {
         if (WritesBlocked || !session.CanEdit || session.IsSourceManaged) {
@@ -46,6 +49,7 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
                 return Rejection(operation, result);
             }
             session.BindCommittedIdentity(result.ProviderId!.Value, result.ConcurrencyToken);
+            session.AcceptCommitted(submission, result.Accepted);
             pending = new(operation.Version, result.ProviderId.Value, submission, Deleted: false, RepairProjection: result.Message is not null);
             if (result.Message is not null) {
                 return new(ProviderFeedbackKind.Warning, "Provider saved", result.Message);
@@ -69,9 +73,10 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
         if (WritesBlocked || !session.CanEdit || session.IsSourceManaged || session.State.ProviderId is not { } providerId) {
             return null;
         }
-        var operation = Begin(new(Guid.NewGuid(), providerId, ProviderMutationKind.Delete, session.Draft.ExpectedConcurrencyToken));
+        var attempt = new ProviderMutationAttempt(Guid.NewGuid(), providerId, ProviderMutationKind.Delete, session.Draft.ExpectedConcurrencyToken);
+        var operation = Begin(attempt);
         try {
-            var result = await commands.DeleteAsync(providerId, operation.Token);
+            var result = await commands.DeleteAsync(attempt, operation.Token);
             TrackResult(operation, result);
             if (!IsCurrent(operation)) {
                 return null;
@@ -117,7 +122,7 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
                 return Rejection(operation, failed);
             }
             if (result.Persistence is { } committed) {
-                pending = new(operation.Version, providerId, null, Deleted: false, RepairProjection: committed.Message is not null);
+                pending = new(operation.Version, providerId, null, Deleted: false, RepairProjection: committed.Message is not null, ReadEditor: false);
                 if (committed.Message is not null) {
                     return new(ProviderFeedbackKind.Warning, "Provider health saved", committed.Message);
                 }
@@ -211,7 +216,7 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
             if (!IsCurrent(operation)) {
                 return null;
             }
-            var editorRead = commit.Deleted || await session.ReconcileCommittedAsync(commit.Submission, operation.Token);
+            var editorRead = commit.Deleted || !commit.ReadEditor || await session.ReconcileCommittedAsync(commit.Submission, operation.Token);
             if (!IsCurrent(operation)) {
                 return null;
             }
@@ -232,6 +237,9 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
 
     private ProviderEditorFeedback Rejection(Operation operation, ProviderWriteResult result) {
         TrackResult(operation, result);
+        if (result.Disposition == ProviderWriteDisposition.Conflict) {
+            session.RequireComparison();
+        }
         return new(ProviderFeedbackKind.Error, "Provider operation not completed", result.Message ?? "The provider request was rejected.");
     }
 
@@ -242,10 +250,11 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
         if (result.Disposition == ProviderWriteDisposition.Unconfirmed ||
             (result.Disposition == ProviderWriteDisposition.Conflict && attempt.IsCreate &&
                 session.Recovery.Find(attempt.ProviderId) is not null)) {
-            if (result.Attempt is { } receipt && receipt.ProviderId == attempt.ProviderId) {
-                attempt = receipt with { AttemptId = attempt.AttemptId, Kind = attempt.Kind };
+            var dispatchId = attempt.AttemptId;
+            if (result.Attempt is { } receipt && receipt.ProviderId == attempt.ProviderId && receipt.Kind == attempt.Kind) {
+                attempt = receipt;
             }
-            session.Recovery.Retain(new(attempt, operation.Submission, operation.Context, operation.Section));
+            session.Recovery.Retain(new(attempt, operation.Submission, operation.Context, operation.Section, DispatchId: dispatchId));
         } else {
             session.Recovery.Complete(attempt);
         }
@@ -265,7 +274,8 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
                 session.Recovery.Find(session.State.ProviderId) != unresolved) {
                 return null;
             }
-            if (result.Disposition == ProviderVerificationDisposition.StillUnconfirmed) {
+            if (result.Disposition == ProviderVerificationDisposition.StillUnconfirmed ||
+                result.Disposition == ProviderVerificationDisposition.DefinitelyNotCommitted && unresolved.Attempt.IsCreate) {
                 return new(ProviderFeedbackKind.Warning, "Provider verification unresolved",
                     "Canonical state could not establish this attempt's outcome. No write was repeated.");
             }
@@ -278,10 +288,11 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
             var deleted = unresolved.Attempt.Kind == ProviderMutationKind.Delete;
             if (deleted) {
                 session.MarkTargetUnavailable("This provider is deleted. Select another provider or create a new draft.");
-            } else {
+            } else if (unresolved.Attempt.Kind != ProviderMutationKind.HealthPersistence) {
                 session.BindCommittedIdentity(result.ProviderId, result.ConcurrencyToken);
             }
-            pending = new(operation.Version, result.ProviderId, unresolved.Submission, deleted, RepairProjection: true);
+            pending = new(operation.Version, result.ProviderId, unresolved.Submission, deleted, RepairProjection: true,
+                ReadEditor: unresolved.Attempt.Kind != ProviderMutationKind.HealthPersistence);
             return await ReconcileAsync(operation, repair: true);
         } catch (OperationCanceledException) when (operation.Token.IsCancellationRequested) {
             return null;
@@ -291,6 +302,48 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
         } finally {
             End(operation);
         }
+    }
+
+    public async Task<ProviderEditorFeedback?> AcknowledgeDiagnosticAsync() {
+        if (IsBusy || Unresolved is not { Attempt.Kind: ProviderMutationKind.HealthPersistence } unresolved) {
+            return null;
+        }
+        var operation = Begin();
+        try {
+            if (!await session.RefreshMetadataAsync(operation.Token) || !IsCurrent(operation) ||
+                !session.Recovery.AcknowledgeDiagnostic(unresolved)) {
+                return null;
+            }
+            return new(ProviderFeedbackKind.Warning, "Diagnostic outcome remains unconfirmed",
+                "Current metadata was read. Your original draft is retained; no diagnostic was repeated and no configuration version was adopted.");
+        } catch (OperationCanceledException) when (operation.Token.IsCancellationRequested) {
+            return null;
+        } finally {
+            End(operation);
+        }
+    }
+
+    public async Task ReviewCurrentAsync() {
+        if (IsBusy || !CanReviewCurrent || (Unresolved?.Attempt.ProviderId ?? session.State.ProviderId) is not { } providerId) {
+            return;
+        }
+        var operation = Begin();
+        try {
+            await session.ReviewCurrentAsync(providerId, operation.Token);
+        } finally {
+            End(operation);
+        }
+    }
+
+    public ProviderEditorFeedback? ApplyCurrentReview() {
+        if (IsBusy || !CanReviewCurrent || !session.ApplyCurrentReview()) {
+            return null;
+        }
+        if (Unresolved is { } unresolved) {
+            session.Recovery.AcknowledgeCurrentReview(unresolved);
+        }
+        return new(ProviderFeedbackKind.Warning, "Current version reviewed",
+            "Your draft is retained against the reviewed current version. The earlier outcome is unchanged; no write was repeated. Review the draft and Save separately.");
     }
 
     public Task<ProviderEditorFeedback?> RetryVerifiedAsync() => Unresolved is { RetryAllowed: true } entry
@@ -321,5 +374,5 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
         ProviderMutationAttempt? Attempt, ProviderEditorSubmission? Submission, EditContext Context, ProviderEditorSection Section) {
         public CancellationToken Token { get; } = Cancellation.Token;
     }
-    private sealed record PendingCommit(long Version, Guid ProviderId, ProviderEditorSubmission? Submission, bool Deleted, bool RepairProjection);
+    private sealed record PendingCommit(long Version, Guid ProviderId, ProviderEditorSubmission? Submission, bool Deleted, bool RepairProjection, bool ReadEditor = true);
 }

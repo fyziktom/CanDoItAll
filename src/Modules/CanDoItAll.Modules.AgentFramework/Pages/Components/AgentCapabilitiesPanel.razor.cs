@@ -6,10 +6,11 @@ using CanDoItAll.AgentFramework.Capabilities.Templates;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-public partial class AgentCapabilitiesPanel : IDisposable {
+public partial class AgentCapabilitiesPanel : IAsyncDisposable {
     [Parameter] public Guid? PreferredAgentId { get; set; }
     [Parameter] public EventCallback<AgentDefinition?> SelectedAgentChanged { get; set; }
     [Parameter] public EventCallback<AgentChatContextAccessState> ContextAccessStateChanged { get; set; }
@@ -19,6 +20,8 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     [Inject] public CapabilityCuratorLaunch CuratorLaunch { get; set; } = default!;
     [Inject] public NotificationService NotificationService { get; set; } = default!;
     [Inject] public DialogService DialogService { get; set; } = default!;
+    [Inject] public AgentConfigurationChanges ConfigurationChanges { get; set; } = default!;
+    [Inject] public ILogger<AgentCapabilitiesPanel> Logger { get; set; } = default!;
 
     private AgentCapabilitiesSession session = default!;
     private readonly CancellationTokenSource lifetime = new();
@@ -36,6 +39,10 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     private bool wizardOpen;
     private Guid? detailsOpen;
     private AgentCapabilityPreview? preview;
+    private AgentCapabilityCatalogOpening? catalogOpening;
+    private bool admissionAttempted;
+    private bool admitted;
+    private string? accessError;
 
     private AgentCapabilitiesSnapshot Snapshot {
         get {
@@ -57,7 +64,8 @@ public partial class AgentCapabilitiesPanel : IDisposable {
     }
 
     protected override void OnInitialized() {
-        session = new(Reads);
+        session = new(new AuthorizedReads(Reads, () => catalogOpening
+            ?? throw new UnauthorizedAccessException("The original capability catalog is unavailable.")));
         Operations.Changed += HandleOperationsChanged;
         CuratorLaunch.Changed += HandleOperationsChanged;
     }
@@ -68,22 +76,44 @@ public partial class AgentCapabilitiesPanel : IDisposable {
         }
     }
 
-    protected override Task OnParametersSetAsync() {
+    protected override async Task OnParametersSetAsync() {
+        if (!RendererInfo.IsInteractive || disposed) {
+            return;
+        }
+        if (!admissionAttempted) {
+            admissionAttempted = true;
+            catalogOpening = new(ConfigurationChanges, () => !disposed);
+            try {
+                await catalogOpening.StartAsync(() => InvokeAsync(StateHasChanged), () => InvokeAsync(RetireAccessAsync));
+                admitted = true;
+            } catch (Exception) {
+                await catalogOpening.DisposeAsync();
+                accessError = "Capability workspace access is unavailable. Reopen it with current access.";
+                await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
+            }
+        }
+        if (!admitted) {
+            return;
+        }
         if (preferredAgentApplied && appliedPreferredAgentId == PreferredAgentId) {
-            return Task.CompletedTask;
+            return;
         }
 
         var initial = !preferredAgentApplied;
         preferredAgentApplied = true;
         appliedPreferredAgentId = PreferredAgentId;
         if (!initial && hasPublishedAgent && PreferredAgentId == publishedAgent?.Id) {
-            return Task.CompletedTask;
+            return;
         }
 
-        return RunReadAsync(() => initial ? session.LoadAsync(PreferredAgentId) : session.SelectAsync(PreferredAgentId));
+        await RunReadAsync(() => initial ? session.LoadAsync(PreferredAgentId) : session.SelectAsync(PreferredAgentId), coversCatalog: initial);
     }
 
-    private async Task<bool> RunReadAsync(Func<Task<bool>> read, Action<long>? started = null) {
+    private async Task<bool> RunReadAsync(Func<Task<bool>> read, Action<long>? started = null, bool coversCatalog = true) {
+        if (!admitted || catalogOpening is not { IsReady: true } original) {
+            return false;
+        }
+        var observedSequence = original.Sequence;
         CancelPreview();
         var pending = read();
         var generation = session.Generation;
@@ -105,6 +135,9 @@ public partial class AgentCapabilitiesPanel : IDisposable {
 
         await PublishAccessStateAsync(session.LoadState == AgentCapabilitiesLoadState.Ready
             ? AgentChatContextAccessState.Ready : AgentChatContextAccessState.Failed);
+        if (coversCatalog && session.LoadState == AgentCapabilitiesLoadState.Ready) {
+            original.Acknowledge(observedSequence);
+        }
         return session.IsCurrent(generation);
     }
 
@@ -117,22 +150,51 @@ public partial class AgentCapabilitiesPanel : IDisposable {
         await ContextAccessStateChanged.InvokeAsync(state);
     }
 
-    private Task HandleIntentAsync(AgentCapabilitiesIntent intent) => intent switch {
-        AgentCapabilitiesIntent.SelectAgent selected => RunReadAsync(() => session.SelectAsync(selected.AgentId)),
-        AgentCapabilitiesIntent.ToggleAssignment assignment => ToggleCapabilityAsync(assignment.CapabilityId),
-        AgentCapabilitiesIntent.VerifyCapability verification => VerifyCapabilityAsync(verification.CapabilityId),
-        AgentCapabilitiesIntent.OpenDetails details => OpenCapabilityDetailsDialogAsync(details.CapabilityId),
-        AgentCapabilitiesIntent.CreateCapability create => OpenCapabilityWizardAsync(create.Kind),
-        AgentCapabilitiesIntent.PreviewAccess access => PreviewAccessAsync(access.Draft),
-        AgentCapabilitiesIntent.OpenCurator => OpenCapabilityCuratorAsync(),
-        AgentCapabilitiesIntent.RetryLoad => RunReadAsync(session.RefreshAsync),
-        AgentCapabilitiesIntent.RecoverOperation => RecoverOperationAsync(),
-        AgentCapabilitiesIntent.RetryAssignment => RetryAssignmentAsync(),
-        AgentCapabilitiesIntent.AdoptCurrent => RecoverOperationAsync(adoptCurrent: true),
-        AgentCapabilitiesIntent.AcknowledgeDiagnostic acknowledgement => AcknowledgeDiagnosticAsync(acknowledgement),
-        AgentCapabilitiesIntent.AcknowledgeCurator acknowledgement => AcknowledgeCuratorAsync(acknowledgement.AttemptId),
-        _ => throw new ArgumentOutOfRangeException(nameof(intent))
-    };
+    private async Task RetireAccessAsync() {
+        if (disposed) {
+            return;
+        }
+        admitted = false;
+        accessError = "Capability workspace access changed. Reopen it with current access.";
+        session.Dispose();
+        CancelPreview();
+        await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
+        StateHasChanged();
+    }
+
+    private async Task HandleIntentAsync(AgentCapabilitiesIntent intent) {
+        if (disposed || !admitted || catalogOpening is not { IsReady: true } original) {
+            return;
+        }
+        try {
+            await original.ReadAsync(_ => Task.FromResult(true), lifetime.Token);
+            await (intent switch {
+                AgentCapabilitiesIntent.SelectAgent selected => RunReadAsync(() => session.SelectAsync(selected.AgentId), coversCatalog: false),
+                AgentCapabilitiesIntent.ToggleAssignment assignment => ToggleCapabilityAsync(assignment.CapabilityId),
+                AgentCapabilitiesIntent.VerifyCapability verification => VerifyCapabilityAsync(verification.CapabilityId),
+                AgentCapabilitiesIntent.OpenDetails details => OpenCapabilityDetailsDialogAsync(details.CapabilityId),
+                AgentCapabilitiesIntent.CreateCapability create => OpenCapabilityWizardAsync(create.Kind),
+                AgentCapabilitiesIntent.PreviewAccess access => PreviewAccessAsync(access.Draft),
+                AgentCapabilitiesIntent.OpenCurator => OpenCapabilityCuratorAsync(),
+                AgentCapabilitiesIntent.RetryLoad => RunReadAsync(session.RefreshAsync),
+                AgentCapabilitiesIntent.RecoverOperation => RecoverOperationAsync(),
+                AgentCapabilitiesIntent.RetryAssignment => RetryAssignmentAsync(),
+                AgentCapabilitiesIntent.AdoptCurrent => RecoverOperationAsync(adoptCurrent: true),
+                AgentCapabilitiesIntent.AcknowledgeDiagnostic acknowledgement => AcknowledgeDiagnosticAsync(acknowledgement),
+                AgentCapabilitiesIntent.AcknowledgeCurator acknowledgement => AcknowledgeCuratorAsync(acknowledgement.AttemptId),
+                _ => throw new ArgumentOutOfRangeException(nameof(intent))
+            });
+        } catch (UnauthorizedAccessException) {
+            original.Stop();
+            await RetireAccessAsync();
+        } catch (OperationCanceledException) when (disposed || !admitted || !original.IsReady || lifetime.IsCancellationRequested) {
+        } catch (Exception error) {
+            Logger.LogWarning("Capability workspace intent {Intent} did not complete: {FailureType}", intent.GetType().Name, error.GetType().Name);
+            NotificationService.Error("Capability action incomplete", "Review the current state and any retained operation before another action. Your editor drafts are retained.");
+        }
+    }
+
+    private Task RefreshCatalogAsync() => HandleIntentAsync(new AgentCapabilitiesIntent.RetryLoad());
 
     private Task AcknowledgeDiagnosticAsync(AgentCapabilitiesIntent.AcknowledgeDiagnostic acknowledgement) {
         if (!disposed && session.TargetAgentId == acknowledgement.AgentId &&
@@ -158,7 +220,7 @@ public partial class AgentCapabilitiesPanel : IDisposable {
             return;
         }
         var generation = session.Generation;
-        var outcome = await Operations.AssignAsync(draft, capabilityId, request.Token);
+        var outcome = await catalogOpening!.WriteAsync(token => Operations.AssignAsync(draft, capabilityId, token), request.Token);
         await ApplyAssignmentOutcomeAsync(outcome, generation);
     }
 
@@ -182,7 +244,7 @@ public partial class AgentCapabilitiesPanel : IDisposable {
             return;
         }
         var generation = session.Generation;
-        var outcome = await Operations.RetryAsync(current.AgentId, current.AttemptId, request.Token);
+        var outcome = await catalogOpening!.WriteAsync(token => Operations.RetryAsync(current.AgentId, current.AttemptId, token), request.Token);
         await ApplyAssignmentOutcomeAsync(outcome, generation);
     }
 
@@ -196,7 +258,7 @@ public partial class AgentCapabilitiesPanel : IDisposable {
         }
         var generation = session.Generation;
         if (current.CanVerify) {
-            current = await Operations.VerifyAsync(current.AgentId, current.AttemptId, request.Token);
+            current = await catalogOpening!.ReadAsync(token => Operations.VerifyAsync(current.AgentId, current.AttemptId, token), request.Token);
         }
         if (current is null || !session.IsCurrent(generation) || session.TargetAgentId != current.AgentId) {
             return;
@@ -235,7 +297,7 @@ public partial class AgentCapabilitiesPanel : IDisposable {
             return;
         }
         var generation = session.Generation;
-        var outcome = await Operations.DiagnoseAsync(agentId, capabilityId, request.Token);
+        var outcome = await catalogOpening!.WriteAsync(token => Operations.DiagnoseAsync(agentId, capabilityId, token), request.Token);
         await ApplyAssignmentOutcomeAsync(outcome, generation);
     }
 
@@ -353,7 +415,7 @@ public partial class AgentCapabilitiesPanel : IDisposable {
         var owner = session.Generation;
         previewOwnerGeneration = owner;
         try {
-            var result = await CapabilitySetupFlowService.PreviewAccessAsync(new CapabilityAccessPreviewRequest {
+            var result = await catalogOpening!.ReadAsync(token => CapabilitySetupFlowService.PreviewAccessAsync(new CapabilityAccessPreviewRequest {
                 CapabilityIds = session.Snapshot.SelectedCapabilityIds,
                 Policy = new CapabilityAccessPolicyTemplateDto {
                     DefaultEffect = "inherit",
@@ -369,7 +431,7 @@ public partial class AgentCapabilitiesPanel : IDisposable {
                         Reason = draft.Reason
                     }]
                 }
-            }, cancellation.Token);
+            }, token), cancellation.Token);
             if (!session.IsCurrent(owner) || !ReferenceEquals(previewCancellation, cancellation) || cancellation.IsCancellationRequested) {
                 return;
             }
@@ -405,7 +467,7 @@ public partial class AgentCapabilitiesPanel : IDisposable {
         return JsonNamingPolicy.CamelCase.ConvertName(value.ToString());
     }
 
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
         if (disposed) {
             return;
         }
@@ -414,7 +476,17 @@ public partial class AgentCapabilitiesPanel : IDisposable {
         CuratorLaunch.Changed -= HandleOperationsChanged;
         CancelPreview();
         lifetime.Cancel();
+        if (catalogOpening is not null) {
+            await catalogOpening.DisposeAsync();
+        }
         lifetime.Dispose();
         session.Dispose();
+    }
+
+    private sealed class AuthorizedReads(IAgentCapabilitiesReads source, Func<AgentCapabilityCatalogOpening> original) : IAgentCapabilitiesReads {
+        public Task<AgentCapabilitiesCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default)
+            => original().ReadAsync(source.LoadCatalogAsync, cancellationToken);
+        public Task<AgentEditorModel> ReadEditorAsync(Guid agentId, CancellationToken cancellationToken = default)
+            => original().ReadAsync(token => source.ReadEditorAsync(agentId, token), cancellationToken);
     }
 }

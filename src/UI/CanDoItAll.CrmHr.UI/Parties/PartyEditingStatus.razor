@@ -1,0 +1,17 @@
+@if (State.IsOutdated || State.IsUnknown || Message is not null) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-party-freshness">
+        <TextBlock Value="@(Message ?? (State.IsUnknown ? "The save outcome is unknown. This draft is retained; automatic resubmission is blocked." : "The saved party changed. Review its current values before saving your draft."))" />
+        <Button Text="Review saved changes" ButtonStyle="ButtonStyle.Light" Disabled="@(ReadingReview || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-party-review-open" />
+    </Alert>
+}
+@if (State.CanUndo) {
+    <Button Text="Undo merge edits" Disabled="@(State.IsSaving || State.IsUnknown)" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" data-testid="crmhr-party-merge-undo" />
+}
+
+@code {
+    [Parameter, EditorRequired] public PartyEditorReconciliation State { get; set; } = default!;
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool ReadingReview { get; set; }
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback UndoRequested { get; set; }
+}

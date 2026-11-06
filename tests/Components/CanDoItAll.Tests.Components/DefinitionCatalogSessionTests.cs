@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
 using CanDoItAll.AgentFramework.UiSandbox;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using static CanDoItAll.Tests.Components.LlmChats.LlmChatDefinitionUiTests;
 using CatalogResult = CanDoItAll.AgentFramework.Llm.SimpleChats.Components.LlmChatUiResult<CanDoItAll.AgentFramework.Llm.SimpleChats.Common.LlmChatPage<CanDoItAll.AgentFramework.Llm.SimpleChats.Components.LlmChatDefinitionListItem, CanDoItAll.AgentFramework.Llm.SimpleChats.Common.LlmChatDefinitionCursor>>;
 
@@ -14,6 +15,44 @@ namespace CanDoItAll.Tests.Components.LlmChats;
 public sealed class DefinitionCatalogSessionTests {
     private static readonly Guid A = DefinitionCatalogSandboxFixture.DefinitionA;
     private static readonly Guid B = DefinitionCatalogSandboxFixture.DefinitionB;
+
+    [Fact]
+    public async Task Catalog_hint_reads_nothing_and_explicit_refresh_retains_filters_and_the_same_dirty_editor() {
+        var gateway = Gateway();
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var cut = context.Render<LlmChatDefinitionCatalogPanel>(p => p.Add(x => x.RequestedDefinitionId, A));
+        cut.WaitForElement("[data-testid='llm-chat-definition-name']").Change("Unfinished local definition");
+        cut.Find("[data-testid='llm-chat-definition-search']").Input("research");
+        cut.WaitForAssertion(() => Assert.Equal("research", gateway.ListQueries.Last().SearchText));
+        var editor = cut.FindComponent<LlmChatDefinitionEditorDialog>().Instance;
+        var before = gateway.ListQueries.Count;
+        await Assert.IsType<StubDefinitionEditorAccess>(context.Services.GetRequiredService<ILlmChatDefinitionEditorAccess>()).HintCatalogAsync();
+        cut.WaitForElement("[data-testid='llm-chat-definition-updates']");
+        Assert.Equal(before, gateway.ListQueries.Count);
+        Assert.Equal(1, gateway.GetEditorCalls);
+        cut.Find("[data-testid='llm-chat-definition-refresh']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(before + 1, gateway.ListQueries.Count));
+        Assert.Empty(cut.FindAll("[data-testid='llm-chat-definition-updates']"));
+        Assert.Same(editor, cut.FindComponent<LlmChatDefinitionEditorDialog>().Instance);
+        Assert.Equal("Unfinished local definition", cut.Find("[data-testid='llm-chat-definition-name']").GetAttribute("value"));
+        Assert.Equal("research", gateway.ListQueries.Last().SearchText);
+        Assert.Null(gateway.UpdatedMutation);
+    }
+
+    [Fact]
+    public async Task Catalog_hint_during_refresh_is_not_acknowledged_by_the_older_read() {
+        var gateway = Gateway();
+        using var session = Session(gateway);
+        var reply = new TaskCompletionSource<CatalogResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        gateway.ListHandler = (_, _) => reply.Task;
+        session.MarkChanged();
+        var read = session.ReloadAsync();
+        session.MarkChanged();
+        reply.SetResult(Page());
+        await read;
+        Assert.True(session.Presentation.NeedsRefresh);
+        Assert.Single(gateway.ListQueries);
+    }
 
     [Fact]
     public async Task Parameter_targets_replace_clear_and_reopen_once_while_parent_echo_is_inert() {
@@ -263,7 +302,7 @@ public sealed class DefinitionCatalogSessionTests {
     private static LlmChatDefinitionCatalogSession Session(StubDefinitionGateway gateway) {
         var session = new LlmChatDefinitionCatalogSession(gateway, item => new(item.DefinitionId, item.Name, item.Summary,
             item.AvatarImageUrl, LlmChatDefinitionStatusFilter.Draft, item.Revision, item.UpdatedAtUtc, item.Tags.ToImmutableArray()),
-            NullLogger<LlmChatDefinitionCatalogSession>.Instance);
+            NullLogger<LlmChatDefinitionCatalogSession>.Instance, _ => ValueTask.CompletedTask);
         session.AcceptAuthorization(new(true, true, false));
         return session;
     }

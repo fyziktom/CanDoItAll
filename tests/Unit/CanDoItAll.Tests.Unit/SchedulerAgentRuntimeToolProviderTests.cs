@@ -376,7 +376,7 @@ public sealed partial class SchedulerAgentRuntimeToolProviderTests
         public bool KnownCommitFollowupFailure { get; set; }
 
         public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
-            SchedulerHistoryQuery? historyQuery = null,
+            SchedulerWorkspaceQuery? query = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult(workspace);
 
@@ -429,13 +429,13 @@ public sealed partial class SchedulerAgentRuntimeToolProviderTests
         }
 
         public Task SetPlanEnabledAsync(
-            Guid planId,
+            SchedulerPlanCondition expected,
             bool isEnabled,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeletePlanAsync(
-            Guid planId,
+            SchedulerPlanCondition expected,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }

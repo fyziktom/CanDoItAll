@@ -11,6 +11,8 @@ public static class SimpleChatsComponentsServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.AddConversationShell();
         services.TryAddScoped<ILlmChatUiAuthorizationFacade, LlmChatUiAuthorizationFacade>();
+        services.TryAddScoped<ILlmChatDefinitionEditorAccess, UnavailableLlmChatDefinitionEditorAccess>();
+        services.TryAddScoped<ILlmChatConversationEditorAccess, UnavailableLlmChatConversationEditorAccess>();
         services.TryAddScoped<ILlmChatDefinitionCatalogInvalidator, LlmChatDefinitionCatalogInvalidationHub>();
         services.TryAddScoped<ILlmChatDefinitionUiGateway, LlmChatDefinitionUiGateway>();
         services.TryAddScoped<ILlmChatConversationUiGateway, LlmChatConversationUiGateway>();

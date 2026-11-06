@@ -16,14 +16,20 @@ public sealed class ProviderHistoryPolicyDraft : IValidatableObject {
     [Range(1, 1000)]
     public int BatchSize { get; set; }
 
-    public static ProviderHistoryPolicyDraft From(HistoryPolicy policy) => new() {
-        CaptureMode = policy.CaptureMode,
-        MetadataRetentionDays = policy.MetadataRetentionDays,
-        DetailRetentionDays = policy.DetailRetentionDays,
-        MaximumTextBytes = policy.MaximumTextBytes,
-        DetailQuotaBytes = policy.DetailQuotaBytes,
-        BatchSize = policy.BatchSize
-    };
+    public static ProviderHistoryPolicyDraft From(HistoryPolicy policy) {
+        var draft = new ProviderHistoryPolicyDraft();
+        draft.Apply(policy);
+        return draft;
+    }
+
+    public void Apply(HistoryPolicy policy) {
+        CaptureMode = policy.CaptureMode;
+        MetadataRetentionDays = policy.MetadataRetentionDays;
+        DetailRetentionDays = policy.DetailRetentionDays;
+        MaximumTextBytes = policy.MaximumTextBytes;
+        DetailQuotaBytes = policy.DetailQuotaBytes;
+        BatchSize = policy.BatchSize;
+    }
 
     public HistoryPolicy ToPolicy() => new() {
         CaptureMode = CaptureMode, MetadataRetentionDays = MetadataRetentionDays,

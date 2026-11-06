@@ -242,20 +242,25 @@ public partial class ProjectStructurePage
             ProjectStructureAuthoringResultKind.Rejected, "The original clipboard selection could not be pasted.") {
             SourceNodeId = opening.Node.Id
         };
+        await using var access = ObserveActionAccess();
         try {
+            await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
+            await AuthorizeActionAsync(opening.Context, access, write: true, deferredCompletionCts.Token);
             var owner = CreateProjectStructureUiAgentContext(capturedState.ProjectId) with { ExpectedProjectAdmission = opening.Context.Admission, ExpectedGraph = ProjectStructureGraphStateGuard.Capture(capturedState.Opening.Context.Surface) };
             var expected = capturedState.Roots.Append(destinationNode).ToArray();
             if (capturedState.Operation == CanvasWorkbenchClipboardAction.Copy) {
                 var copied = await ProjectWorkbenchService.CopySubtreesAsync(capturedState.ProjectId, capturedState.RootNodeIds, destinationNodeId,
-                    mutationOwner: owner, expectedNodes: expected);
+                    mutationOwner: owner, expectedNodes: expected,
+                    authorizeCommit: token => AuthorizeActionAsync(opening.Context, access, write: true, token));
                 outcome = outcome with { ClipboardCopy = copied, NodeIds = copied.RootNodeIds };
             } else {
                 var moved = await ProjectWorkbenchService.ReparentSubtreesAsync(capturedState.ProjectId, capturedState.RootNodeIds, destinationNodeId,
-                    mutationOwner: owner, expectedNodes: expected);
+                    mutationOwner: owner, expectedNodes: expected,
+                    authorizeCommit: token => AuthorizeActionAsync(opening.Context, access, write: true, token));
                 outcome = outcome with { Nodes = moved, NodeIds = moved.Select(node => node.Id).ToArray() };
             }
             if (outcome.NodeIds.Count == 0) {
-                RecordAuthoringOutcome(opening, outcome);
+                RecordCurrentAuthoringOutcome(opening, outcome);
                 return;
             }
             var operationLabel = capturedState.Operation == CanvasWorkbenchClipboardAction.Copy ? "Copied" : "Moved";
@@ -263,7 +268,7 @@ public partial class ProjectStructurePage
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
                 Message = $"{operationLabel} {outcome.NodeIds.Count} branches under {destinationNode.Title}." +
                     (omitted > 0 ? $" {omitted} boundary links were intentionally omitted." : string.Empty) };
-            RecordAuthoringOutcome(opening, outcome);
+            RecordCurrentAuthoringOutcome(opening, outcome);
             if (!IsCurrentAction(opening.Context) || !ReferenceEquals(clipboardState, capturedState)) {
                 return;
             }
@@ -278,12 +283,12 @@ public partial class ProjectStructurePage
                     (selectionRevision == insightsSelectionRevision || selectedNodeIds.SequenceEqual(outcome.NodeIds, StringComparer.Ordinal)) &&
                     (clipboardState is null || ReferenceEquals(clipboardState, capturedState)), preferredSelectionIds: outcome.NodeIds);
             } catch (Exception failure) {
-                RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                RecordCurrentAuthoringOutcome(opening, outcome with { Failure = failure,
                     Message = $"{outcome.Message} Canvas readback failed. Reload the original project; do not repeat the paste." });
             }
         } catch (Exception failure) {
             opening.RequiresObservation = !IsKnownGraphRejection(failure);
-            RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+            RecordCurrentAuthoringOutcome(opening, outcome with { Failure = failure,
                 Kind = opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
                 Message = opening.RequiresObservation ? "The original paste is unconfirmed. Observe the original project before pasting again." : failure.Message });
         } finally {

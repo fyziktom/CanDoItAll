@@ -1,3 +1,5 @@
+@using System.Collections.Frozen
+@using CanDoItAll.Editing.UI
 @{
     var state = View.Presentation;
     var viewId = state.ViewId;
@@ -6,20 +8,29 @@
         Subtitle="Connect another CanDoItAll instance and import its shared providers."
         Size="ModalSize.Wide" OnClose="@(() => View.CloseAsync(viewId))" TestId="shared-provider-connections-dialog">
     <ChildContent>
+        @if (state.CatalogChanged) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="shared-sources-changed">Connections changed. Refresh the list or compare the open source; your draft is retained.</Alert>
+        }
         @if (state.Recovery is { } unresolved) {
             <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-source-unresolved">
                 @if (unresolved.DeliveryPending) {
                     <text>The source write is resolved; workspace reconciliation delivery is pending.</text>
-                } else if (unresolved.RetryAllowed) {
-                    <text>The source write was not applied. A deliberate retry keeps the same attempt identity.</text>
                 } else {
-                    <text>Source attempt @unresolved.SourceId requires verification before another operation.</text>
+                    <text>The earlier source outcome is unconfirmed. Read current state and review it before a separate operation.</text>
                 }
                 <Button Text="@(unresolved.DeliveryPending ? "Retry source delivery" : "Verify source attempt")"
                         Click="@(() => View.VerifyAsync(unresolved.AttemptId))" Disabled="state.OperationBusy" data-testid="shared-provider-source-verify" />
-                @if (unresolved.RetryAllowed) {
-                    <Button Text="Retry verified source operation" Click="@(() => View.RetryVerifiedAsync(unresolved.AttemptId))"
-                            Disabled="state.OperationBusy" data-testid="shared-provider-source-retry-verified" />
+                @if (unresolved.CanAcknowledge) {
+                    <Button Text="Acknowledge current state" Click="@(() => View.AcknowledgeCurrentAsync(unresolved.AttemptId))"
+                            Disabled="state.OperationBusy" data-testid="shared-provider-source-acknowledge-current" />
+                }
+                @if (unresolved.CanReview) {
+                    <Button Text="Review current source and retain draft" Click="@(() => View.ReviewPendingSourceAsync(unresolved.AttemptId))"
+                            Disabled="state.OperationBusy" data-testid="shared-source-review-pending" />
+                }
+                @if (unresolved.CanReviewCatalog) {
+                    <Button Text="Review current selection and retain choices" Click="@(() => View.ReviewPendingCatalogAsync(unresolved.AttemptId))"
+                            Disabled="state.OperationBusy" data-testid="shared-provider-source-review-catalog" />
                 }
             </Alert>
         }
@@ -103,10 +114,18 @@
 </Dialog>
 
 @if (state.Editor is { } draft) {
-    <Dialog IsOpen="true" Title="@(draft.ExpectedToken.HasValue ? "Edit shared provider source" : "Add shared provider source")"
-            Eyebrow="Shared providers" Subtitle="Use the base URL of another CanDoItAll instance." Size="ModalSize.Medium"
+    <Dialog IsOpen="true" Title="@(draft.ExpectedToken is { } token && token != Guid.Empty ? "Edit shared provider source" : "Add shared provider source")"
+            Eyebrow="Shared providers" Subtitle="Use the base URL of another CanDoItAll instance." Size="@(draft.Comparison is null ? ModalSize.Medium : ModalSize.Wide)"
             OnClose="@(() => View.CloseEditor(draft.Id))" TestId="shared-provider-source-dialog">
         <ChildContent>
+            @if (draft.ReadbackConflict) {
+                <Alert AlertStyle="AlertStyle.Warning">The saved source changed or its exact accepted values are unavailable. Your draft is retained.
+                    <Button Text="Compare current source" Disabled="state.OperationBusy" Click="@(() => View.CompareSourceAsync(draft.Id))" data-testid="shared-source-compare" />
+                </Alert>
+            }
+            @if (draft.Comparison is { } comparison) {
+                <SharedProviderSourceComparisonSurface Review="comparison" Changed="StateHasChanged" />
+            }
             <EditForm EditContext="draft.Context" OnSubmit="@(() => View.SaveAsync(draft.Capture()))">
                 <Button Type="submit" Text="Save source" Style="display: none" tabindex="-1" aria-hidden="true" />
                 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
@@ -149,6 +168,10 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                 <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CloseEditor(draft.Id))" data-testid="shared-provider-source-cancel" />
+                @if (draft.Comparison is { } footerReview) {
+                    <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CancelSourceComparison(draft.Id))" />
+                    <Button Text="Apply locally" Disabled="@(!footerReview.CanApply || state.OperationBusy)" Click="@(() => View.ApplySourceComparisonAsync(draft.Id))" data-testid="shared-source-comparison-apply" />
+                }
                 <Button Text="Save source" Disabled="@(state.WritesBlocked || draft.ReadbackConflict || state.MetadataError is not null)" IsBusy="state.OperationBusy"
                         Click="@(() => View.SaveAsync(draft.Capture()))" data-testid="shared-provider-source-save" />
             </Cluster>
@@ -162,8 +185,18 @@
             OnClose="@(() => View.CloseCatalog(catalog.Id))" TestId="shared-provider-catalog-dialog">
         <ChildContent>
             @if (catalog.ReadbackConflict) {
-                <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-catalog-conflict">The selection was saved, then its source changed or became unavailable. Your choices are retained. Close this catalog and discover it again to review the current state.</Alert>
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-catalog-conflict">The source or saved selection changed. Your choices are retained. Compare the current selection before a separate synchronization.</Alert>
             }
+            @if (catalog.Comparison is { } review) {
+                <Stack GapScale="LayoutGap.Small" data-testid="shared-provider-catalog-comparison">
+                    <TextBlock Value="Review the complete selection. Applying this review changes only your local draft; it never repeats synchronization or proves an earlier attempt committed." />
+                    @if (review.IsStale) {
+                        <Alert AlertStyle="AlertStyle.Warning">The source or your choices changed. Compare again.</Alert>
+                    }
+                    <MergeFieldView TValue="FrozenSet<SharedProviderPublicationId>" Label="Imported provider selection"
+                                    Field="review.Selection" Format="catalog.DescribeSelection" Changed="StateHasChanged" TestId="shared-provider-catalog-review-selection" />
+                </Stack>
+            } else {
             <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
                 @if (catalog.Publications.Count == 0) {
                     <EmptyState Eyebrow="Empty catalog" Title="This instance has no published providers"
@@ -189,12 +222,21 @@
                     </div>
                 }
             </Stack>
+            }
         </ChildContent>
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                 <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CloseCatalog(catalog.Id))" data-testid="shared-provider-catalog-cancel" />
+                <Button Text="Compare selection" ButtonStyle="ButtonStyle.Light" Disabled="state.OperationBusy"
+                        Click="@(() => View.CompareCatalogAsync(catalog.Id))" data-testid="shared-provider-catalog-compare" />
+                @if (catalog.Comparison is { } review) {
+                    <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CancelCatalogComparison(catalog.Id))" />
+                    <Button Text="Apply review locally" Disabled="@(state.OperationBusy || !review.CanApply || state.Recovery?.DeliveryPending == true)"
+                            Click="@(() => View.ApplyCatalogComparisonAsync(catalog.Id))" data-testid="shared-provider-catalog-review-apply" />
+                } else {
                 <Button Text="Apply selection" Disabled="@(state.WritesBlocked || catalog.ReadbackConflict)" IsBusy="state.OperationBusy"
                         Click="@(() => View.ApplyCatalogAsync(catalog.Capture()))" data-testid="shared-provider-catalog-apply" />
+                }
             </Cluster>
         </Footer>
     </Dialog>

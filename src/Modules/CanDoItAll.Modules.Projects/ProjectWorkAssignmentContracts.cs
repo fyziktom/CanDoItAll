@@ -18,6 +18,9 @@ public sealed record ProjectWorkAssignmentFact(
     string Notes,
     Guid? ProjectLifetimeId = null) {
     public ProjectPartyAssignmentRole Role => ProjectPartyAssignmentRole.WorkItemAssignee;
+
+    public ProjectAssignmentObservation Original => new(Id, ProjectId, ProjectLifetimeId, PartyId, PartyOrganizationAffiliationId,
+        Role, NodeKey, PhaseName, OpportunityId, IsPrimary, AllocationPercent, StartsAtUtc, EndsAtUtc, Source, Notes);
 }
 
 public sealed record ProjectWorkAssignmentCarryOver(Guid Id, string PhaseName, Guid? OpportunityId, Guid? ProjectLifetimeId);
@@ -34,7 +37,11 @@ public sealed record ProjectWorkAssignmentPartyMerge(
     Guid MergedPartyId,
     ProjectWorkAssignmentPartyFact RetainedParty,
     IReadOnlyDictionary<Guid, Guid> ReplacedAffiliations,
-    IReadOnlyCollection<Guid> LockedProjectIds);
+    IReadOnlyCollection<Guid> LockedProjectIds,
+    IReadOnlyCollection<Guid> ObservedAffiliationIds,
+    ProjectWorkPartyMergeObservation Original);
+
+public sealed record ProjectWorkAssignmentPartyMergeChange(Guid AssignmentId, Guid ProjectId, string NodeKey);
 
 public interface IProjectWorkAssignmentPartyFacts {
     Task<IReadOnlyDictionary<Guid, ProjectWorkAssignmentPartyFact>> ReadForMutationAsync(
@@ -45,9 +52,14 @@ public interface IProjectWorkAssignmentPartyFacts {
         CancellationToken cancellationToken = default);
 
     Task<Guid?> FindParticipationProjectForMutationAsync(Guid assignmentId, CancellationToken cancellationToken = default);
+
+    Task<ProjectAssignmentObservation?> ReadParticipationForMutationAsync(Guid assignmentId, CancellationToken cancellationToken = default);
 }
 
 public interface IProjectWorkAssignmentQueries {
+    Task<ProjectAssignmentPrimaryObservation> ReadPrimaryObservationAsync(ProjectWriteAdmission project, string nodeKey,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ProjectWorkAssignmentFact>> ListForProjectsAsync(
         IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken = default);
 
@@ -58,15 +70,21 @@ public interface IProjectWorkAssignmentQueries {
 }
 
 public interface IProjectWorkAssignmentCommands : IProjectWorkAssignmentQueries {
+    Task<IReadOnlyList<ProjectWorkAssignmentNodeChange>> ReadExistingNodeChangesForMutationAsync(
+        IReadOnlyCollection<(Guid ProjectId, string NodeKey)> nodes, CancellationToken cancellationToken = default);
+
+    void PublishCommittedNodeChanges(IReadOnlyList<ProjectWorkAssignmentNodeChange> nodes);
+
     Task<IReadOnlyList<ProjectWorkAssignmentFact>> ListForProjectsForMutationAsync(
         IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken = default);
 
     Task<ProjectWorkAssignmentFact?> GetForMutationAsync(Guid assignmentId, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<Guid>> ListPartyMergeProjectsAsync(Guid retainedPartyId, Guid mergedPartyId,
-        IReadOnlyCollection<Guid> affiliationIds, CancellationToken cancellationToken = default);
+    Task<ProjectWorkPartyMergeObservation> ReadPartyMergeForMutationAsync(Guid retainedPartyId, Guid mergedPartyId,
+        IReadOnlyCollection<Guid> affiliationIds, int maximumRows, CancellationToken cancellationToken = default);
 
-    Task<Result<Guid>> SaveAsync(ProjectPartyAssignmentUpsertRequest request, CancellationToken cancellationToken = default);
+    Task<Result<Guid>> SaveAsync(ProjectPartyAssignmentUpsertRequest request, CancellationToken cancellationToken = default,
+        Action<ProjectAssignmentSaveReceipt>? onCommitted = null);
 
     Task<Result<Guid>> StageSaveAsync(ProjectPartyAssignmentUpsertRequest request, Guid newAssignmentId,
         ProjectWorkAssignmentCarryOver? carryOver = null, CancellationToken cancellationToken = default);
@@ -87,10 +105,11 @@ public interface IProjectWorkAssignmentCommands : IProjectWorkAssignmentQueries 
         ProjectWriteAdmission? expectedProjectAdmission = null);
 
     Task DeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null);
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+        Action<ProjectAssignmentDeleteReceipt>? onCommitted = null);
 
     Task StageDeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null);
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null);
 
     Task StageDeleteForNodesAsync(Guid projectId, IReadOnlyCollection<ProjectNodeReference> nodes,
         CancellationToken cancellationToken = default,
@@ -104,7 +123,7 @@ public interface IProjectWorkAssignmentCommands : IProjectWorkAssignmentQueries 
         ProjectAssignmentReference? sourceReference = null,
         ProjectWriteAdmission? expectedTargetAdmission = null);
 
-    Task StagePartyMergeAsync(ProjectWorkAssignmentPartyMerge merge, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProjectWorkAssignmentPartyMergeChange>> StagePartyMergeAsync(ProjectWorkAssignmentPartyMerge merge, CancellationToken cancellationToken = default);
 }
 
 public static class ProjectAssignmentMutationKeys {

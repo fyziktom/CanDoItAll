@@ -126,7 +126,7 @@ public sealed class AgentEditorAdversarialTests {
         await using var harness = await AgentEditorSessionTests.CreateHarnessAsync(reads);
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters.Add(component => component.AgentId, first));
         if (dispose) {
-            await cut.InvokeAsync(cut.Instance.Dispose);
+            await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
         } else {
             cut.Render(parameters => parameters.Add(component => component.AgentId, second));
             cut.WaitForElement("[data-testid='agents-catalog-name']");

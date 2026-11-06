@@ -40,6 +40,16 @@ internal static class ProjectStructureNodeEditor
         ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode
     ];
 
+    internal static string BuildSimpleNoteTitle(string? text) {
+        if (string.IsNullOrWhiteSpace(text)) {
+            return "New note";
+        }
+        var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        normalized = string.IsNullOrWhiteSpace(normalized) ? text.Trim() : normalized.Trim();
+        return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
+    }
+
     public static bool SupportsEditingField(string key)
         => !string.IsNullOrWhiteSpace(key) && !NonEditableFieldKeys.Contains(key);
 

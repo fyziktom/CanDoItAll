@@ -22,13 +22,17 @@ public sealed class CapabilityAuthoringSession : IDisposable {
     private IReadOnlyList<CapabilityDiagnostic> setupDiagnostics = [];
     private IReadOnlyList<string> setupTools = [];
     private CancellationTokenSource? activeUpload;
+    private CapabilityAuthoringSubmission? original;
+    private long changeSequence;
 
     public CapabilityAuthoringSession(CapabilityAuthoringOperations operations, Guid? requestedId,
-        CapabilityKind initialKind, CancellationToken ownerToken, NotificationService notifications, ILogger logger) {
+        CapabilityKind initialKind, CancellationToken ownerToken, NotificationService notifications, ILogger logger,
+        long initialChangeSequence = 0) {
         this.operations = operations;
         this.requestedId = requestedId;
         this.notifications = notifications;
         this.logger = logger;
+        changeSequence = initialChangeSequence;
         ownerRegistration = ownerToken.Register(lifetime.Cancel);
         Draft = new(new() { Kind = initialKind }, wizard: !requestedId.HasValue);
         IsLoading = requestedId.HasValue;
@@ -44,6 +48,8 @@ public sealed class CapabilityAuthoringSession : IDisposable {
     public bool SetupUnknown { get; private set; }
     public string? Status { get; private set; }
     public Guid? AcceptedId { get; private set; }
+    public bool HasExternalChanges { get; private set; }
+    public CapabilityAuthoringComparison? Comparison { get; private set; }
     public bool? SetupSucceeded => setupRevision == Draft.Revision ? setupSucceeded : null;
     public bool SetupHistorical => setupRevision.HasValue && setupRevision != Draft.Revision;
     public IReadOnlyList<CapabilityDiagnostic> SetupDiagnostics => setupRevision == Draft.Revision ? setupDiagnostics : [];
@@ -66,6 +72,7 @@ public sealed class CapabilityAuthoringSession : IDisposable {
             }
             Draft.Dispose();
             Draft = new(loaded, wizard: false);
+            original = CapabilityAuthoringSubmission.Capture(loaded);
         } catch (Exception) when (!IsCurrent) {
         } catch (Exception error) {
             LoadFailed = true;
@@ -80,8 +87,75 @@ public sealed class CapabilityAuthoringSession : IDisposable {
 
     public bool ValidateStep(bool identityOnly) => Draft.Prepare(operations.EnvironmentNameComparer, identityOnly) is not null;
 
+    public void ObserveChanges(long sequence) {
+        if (sequence <= changeSequence) {
+            return;
+        }
+        changeSequence = sequence;
+        HasExternalChanges = true;
+        Comparison?.Invalidate();
+        StateChanged?.Invoke();
+    }
+
+    public async Task CompareAsync() {
+        if (!IsCurrent || Busy || SaveUnknown || original?.Id is not { } id) {
+            return;
+        }
+        var submitted = Draft.Prepare(operations.EnvironmentNameComparer);
+        var local = submitted ?? CapabilityAuthoringSubmission.Capture(Draft.Model);
+        var revision = Draft.Revision;
+        var sequence = changeSequence;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        Busy = true;
+        StateChanged?.Invoke();
+        try {
+            var current = await operations.Load(id, request.Token);
+            if (!IsCurrent) {
+                return;
+            }
+            Comparison = new(original, local, CapabilityAuthoringSubmission.Capture(current), revision, sequence, submitted is null);
+            if (revision != Draft.Revision || sequence != changeSequence) {
+                Comparison.Invalidate();
+            }
+        } catch (Exception error) when (IsCurrent) {
+            Status = "The saved capability could not be compared. Your draft and unfinished configuration are retained; retry the read.";
+            logger.LogWarning("Capability comparison read failed for {CapabilityId}: {FailureType}", id, error.GetType().Name);
+        } catch (Exception) when (!IsCurrent) {
+        } finally {
+            if (IsCurrent) {
+                Busy = false;
+                StateChanged?.Invoke();
+            }
+        }
+    }
+
+    public bool ApplyComparison() {
+        if (!IsCurrent || Comparison is not { } review || Busy) {
+            return false;
+        }
+        if (review.DraftRevision != Draft.Revision || review.ChangeSequence != changeSequence) {
+            review.Invalidate();
+            return false;
+        }
+        if (!review.CanApply) {
+            return false;
+        }
+        Draft.ApplyComparison(review.Result(), replaceConfiguration: !review.HasIncompleteConfiguration);
+        original = review.Current;
+        HasExternalChanges = false;
+        Comparison = null;
+        Status = "Comparison applied locally. Review the capability and Save separately. Setup has not been run.";
+        StateChanged?.Invoke();
+        return true;
+    }
+
+    public void CancelComparison() {
+        Comparison = null;
+        StateChanged?.Invoke();
+    }
+
     public async Task<bool> SaveAsync() {
-        if (!IsCurrent || Busy || IsLoading || LoadFailed || SaveUnknown) {
+        if (!IsCurrent || Busy || IsLoading || LoadFailed || SaveUnknown || HasExternalChanges || Comparison is not null) {
             return false;
         }
         var submission = Draft.Prepare(operations.EnvironmentNameComparer);
@@ -89,12 +163,14 @@ public sealed class CapabilityAuthoringSession : IDisposable {
             return false;
         }
         var revision = Draft.Revision;
+        var sequence = changeSequence;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         Busy = true;
         Status = null;
         StateChanged?.Invoke();
         CapabilityAuthoringSaveOutcome outcome;
         try {
-            outcome = await operations.Save(submission, CancellationToken.None);
+            outcome = await operations.Save(submission, request.Token);
         } catch (Exception error) {
             logger.LogWarning("Capability save acknowledgement unavailable for {CapabilityId}: {FailureType}", submission.Id, error.GetType().Name);
             outcome = new CapabilityAuthoringSaveOutcome.Unknown();
@@ -107,16 +183,26 @@ public sealed class CapabilityAuthoringSession : IDisposable {
             return false;
         }
         switch (outcome) {
-            case CapabilityAuthoringSaveOutcome.Accepted accepted when accepted.Definition.Id is { } id:
+            case CapabilityAuthoringSaveOutcome.Accepted accepted when accepted.Definition.Id is { } id &&
+                (submission.Id is null || submission.Id == id) && !string.IsNullOrWhiteSpace(accepted.Definition.ExpectedFingerprint):
                 AcceptedId = id;
                 Draft.Model.Id = id;
                 Draft.Model.ExpectedFingerprint = accepted.Definition.ExpectedFingerprint;
-                Status = revision == Draft.Revision ? "Capability saved." : "Capability saved. Later draft edits remain unsaved.";
-                notifications.Success("Capability saved", "Capability metadata was saved.");
-                return revision == Draft.Revision;
+                original = accepted.Definition;
+                HasExternalChanges = sequence != changeSequence;
+                var keepInput = revision != Draft.Revision || Draft.PendingTagInput.Length != 0;
+                Status = keepInput ? "Capability saved. Unsubmitted input remains in this editor." : "Capability saved.";
+                if (accepted.Warning is { } warning) {
+                    Status = $"{Status} {warning}";
+                    notifications.Warning("Capability saved with warning", warning);
+                } else {
+                    notifications.Success("Capability saved", Status);
+                }
+                return !keepInput && !HasExternalChanges;
             case CapabilityAuthoringSaveOutcome.Rejected rejected:
+                HasExternalChanges |= rejected.IsConflict;
                 Status = rejected.IsConflict
-                    ? "The capability changed after it was opened. Your draft is retained; reopen the saved definition before resolving this conflict."
+                    ? "The capability changed after it was opened. Your draft is retained; compare the saved definition before another write."
                     : "The owner rejected this save without committing it. Review the identity and configuration.";
                 notifications.Warning("Capability was not saved", Status);
                 return false;
@@ -129,7 +215,8 @@ public sealed class CapabilityAuthoringSession : IDisposable {
     }
 
     public async Task TestSetupAsync() {
-        if (!IsCurrent || Busy || IsLoading || LoadFailed || SetupUnknown || Draft.Model.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer)) {
+        if (!IsCurrent || Busy || IsLoading || LoadFailed || SetupUnknown || HasExternalChanges || Comparison is not null ||
+            Draft.Model.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer)) {
             return;
         }
         var submission = Draft.Prepare(operations.EnvironmentNameComparer);
@@ -172,6 +259,9 @@ public sealed class CapabilityAuthoringSession : IDisposable {
                 }
             }
         } catch (Exception) when (!IsCurrent) {
+        } catch (CapabilitySetupNotStartedException) {
+            HasExternalChanges = true;
+            Status = "Setup was not started. Review current access and compare the saved capability before another test.";
         } catch (Exception error) {
             SetupUnknown = true;
             setupRevision = revision;

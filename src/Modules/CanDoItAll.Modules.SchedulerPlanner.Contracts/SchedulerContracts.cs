@@ -67,7 +67,12 @@ public sealed record SchedulerPlanSummary(
     DateTimeOffset? NextPlannedFireAtUtc,
     DateTimeOffset? LastFiredAtUtc,
     string LastError,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc) {
+    public Guid DefinitionRevision { get; init; }
+    public SchedulerPlanCondition Condition => new(Id, DefinitionRevision);
+}
+
+public readonly record struct SchedulerPlanCondition(Guid PlanId, Guid DefinitionRevision);
 
 public sealed record SchedulerPlanRunSummary(
     Guid Id,
@@ -101,6 +106,11 @@ public sealed record SchedulerWorkflowInputValidationResult(
     bool Succeeded,
     string NormalizedInputJson,
     IReadOnlyList<SchedulerWorkflowInputValidationIssue> Issues);
+
+public sealed record SchedulerPlanQuery(int Offset = 0, int Take = 100, string? Search = null,
+    SchedulerPlanTargetKind? TargetKind = null, bool? IsEnabled = null, bool OrderByNextFire = false);
+
+public sealed record SchedulerWorkspaceQuery(SchedulerHistoryQuery History, SchedulerPlanQuery Plans);
 
 public sealed class SchedulerHistoryQuery {
     public string Search { get; set; } = string.Empty;

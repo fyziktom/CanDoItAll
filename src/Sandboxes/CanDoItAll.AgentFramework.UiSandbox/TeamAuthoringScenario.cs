@@ -67,10 +67,14 @@ public sealed class TeamAuthoringScenario {
         }
         var id = submission.Id ?? Guid.NewGuid();
         var previous = teams.GetValueOrDefault(id);
+        if (previous is not null && (submission.ExpectedMetadata is not { } expected || expected.CreatedAtUtc != previous.CreatedAtUtc ||
+            expected.Name != previous.Name || expected.Description != previous.Description || expected.Icon != AgentTeamIconCatalog.Normalize(previous.Icon))) {
+            return new TeamMetadataOutcome.Conflict();
+        }
         teams[id] = new(id, submission.Name.Trim(), submission.Description.Trim(), previous?.AgentIds ?? [],
             previous?.CreatedAtUtc ?? DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, AgentTeamIconCatalog.Normalize(submission.Icon));
         TeamId = id;
-        return new TeamMetadataOutcome.Accepted(id);
+        return new TeamMetadataOutcome.Accepted(id, AgentTeamEditorModel.FromDefinition(teams[id]));
     }
     public void SaveMembers(TeamMembershipSelection selection) {
         if (!teams.TryGetValue(selection.TeamId, out var team) || selection.AgentIds.Any(id => Agents.All(agent => agent.Id != id))) {

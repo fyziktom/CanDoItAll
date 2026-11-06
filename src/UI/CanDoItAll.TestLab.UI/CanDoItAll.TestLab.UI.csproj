@@ -4,6 +4,7 @@
     <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
     <SupportedPlatform Include="browser" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />

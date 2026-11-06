@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.Projects;
 
-public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
+public sealed partial class ProjectStructureLocalFileOpenerManagedFilesTests
 {
     [Fact]
     public async Task Projected_process_run_folder_uses_the_Process_owners_authorized_workspace_path()
@@ -487,6 +487,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
 
     private sealed class ProcessFileRoots(Guid? expectedProject = null, Guid? expectedRun = null,
         string? path = null) : IProcessRunFileScopeProvider {
+        public Action? AfterResolve { get; set; }
         public static readonly Guid ProfileId = Guid.Parse("f135b252-7616-4d8d-af8d-76eccb22d891");
         public ValueTask<ProcessRunFileScopeSet> ResolveAsync(Guid runId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -496,6 +497,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
             Assert.Equal(expectedProject, projectId);
             Assert.Equal(expectedRun, runId);
             Assert.Equal($"artifacts/process-runs/{runId:D}", directoryPath);
+            AfterResolve?.Invoke();
             return ValueTask.FromResult(new FileToolsStorageBinding(Guid.NewGuid(), "Process files",
                 new(50, 2_000, 50, 1, TimeSpan.FromSeconds(5)), new(path!), FileToolsHostBrowseCacheMode.Disabled));
         }

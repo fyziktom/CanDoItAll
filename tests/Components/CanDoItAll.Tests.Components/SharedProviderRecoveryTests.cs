@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class SharedProviderRecoveryTests {
     [Fact]
-    public async Task Unconfirmed_publish_retry_unlocks_authoritative_state() {
+    public async Task Unconfirmed_publish_requires_explicit_current_acknowledgement_without_claiming_history() {
         var service = DispatchProxy.Create<ISharedProviderManagementService, SharingProxy>();
         var proxy = (SharingProxy)(object)service;
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
@@ -19,7 +19,10 @@ public sealed class SharedProviderRecoveryTests {
         await cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         Assert.NotEmpty(cut.FindAll("[data-testid='shared-provider-warning']"));
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
-        Assert.Empty(cut.FindAll("[data-testid='shared-provider-warning']"));
+        Assert.True(cut.Find("[data-testid='shared-provider-unpublish']").HasAttribute("disabled"));
+        await cut.Find("[data-testid='shared-provider-acknowledge-current']").ClickAsync();
+        Assert.Contains("earlier outcome remains unconfirmed", cut.Markup, StringComparison.Ordinal);
+        Assert.Single(harness.Context.Services.GetRequiredService<SharedProviderRecovery>().ReviewedTargets);
         Assert.False(cut.Find("[data-testid='shared-provider-unpublish']").HasAttribute("disabled"));
         Assert.Equal(1, proxy.Writes);
     }
@@ -38,7 +41,8 @@ public sealed class SharedProviderRecoveryTests {
         Assert.Equal(1, proxy.Writes);
         proxy.Read = null;
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
-        Assert.Empty(cut.FindAll("[data-testid='shared-provider-warning']"));
+        await cut.Find("[data-testid='shared-provider-acknowledge-current']").ClickAsync();
+        Assert.Contains("earlier outcome remains unconfirmed", cut.Markup, StringComparison.Ordinal);
         Assert.False(cut.Find("[data-testid='shared-provider-unpublish']").HasAttribute("disabled"));
     }
 
@@ -78,6 +82,7 @@ public sealed class SharedProviderRecoveryTests {
         Assert.Equal(2, proxy.Writes);
         proxy.Read = null;
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
+        await cut.Find("[data-testid='shared-provider-acknowledge-current']").ClickAsync();
         Assert.False(cut.Find("[data-testid='shared-provider-unpublish']").HasAttribute("disabled"));
     }
 
@@ -93,7 +98,10 @@ public sealed class SharedProviderRecoveryTests {
         await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
         Assert.Equal(1, proxy.Writes);
-        Assert.Empty(cut.FindAll("[data-testid='shared-provider-warning']"));
+        await cut.Find("[data-testid='shared-provider-import-compare']").ClickAsync();
+        await cut.Find("[data-testid='shared-provider-import-review-apply']").ClickAsync();
+        await cut.Find("[data-testid='shared-provider-acknowledge-current']").ClickAsync();
+        Assert.Contains("earlier outcome remains unconfirmed", cut.Markup, StringComparison.Ordinal);
         Assert.False(cut.Find("[data-testid='shared-provider-import-save']").HasAttribute("disabled"));
         Assert.Equal(proxy.ImportToken, cut.FindComponent<SharedProviderImportedProfileContent>().Instance.Import.Baseline.ImportToken);
         Assert.Equal("Submitted alias", cut.Find("[data-testid='shared-provider-import-alias']").GetAttribute("value"));

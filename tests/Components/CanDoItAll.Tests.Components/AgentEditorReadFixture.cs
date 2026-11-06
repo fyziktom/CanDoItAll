@@ -1,8 +1,12 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
@@ -56,15 +60,28 @@ internal sealed class AgentEditorReadFixture : IAgentEditorReads {
 
 internal static class AgentEditorFixtureServices {
     public static IServiceCollection AddAgentEditorReadFixture(this IServiceCollection services) {
-        services.AddAgentFrameworkUi();
+        services.AddAgentConfigurationFixture();
         services.AddSingleton<AgentEditorReadFixture>();
         services.AddSingleton<IAgentEditorReads>(provider => provider.GetRequiredService<AgentEditorReadFixture>());
+        return services;
+    }
+
+    public static IServiceCollection AddAgentConfigurationFixture(this IServiceCollection services) {
+        services.AddAgentFrameworkUi();
+        services.AddSingleton<EditingChangeFeed>();
+        services.AddSingleton<IEditingUiAccess>(new EditingUiTestAccess());
+        services.AddSingleton<AgentConfigurationWriteContext>();
+        var scope = new EditingScope(EditingScopeKind.Dataset, Guid.NewGuid(), 1);
+        services.AddSingleton(provider => new AgentConfigurationChanges(provider.GetRequiredService<EditingChangeFeed>(),
+            () => scope, provider.GetRequiredService<IEditingUiAccess>(), provider.GetRequiredService<AgentConfigurationWriteContext>(),
+            NullLogger<EditingObservation>.Instance));
         return services;
     }
 
     public static IRenderedComponent<AgentDetailsDialog> RenderEditor(this BunitContext context,
         AgentEditorModel draft, AgentEditorSection section,
         IReadOnlyList<ProviderProfile>? providers = null, IReadOnlyList<CapabilityCatalogItem>? capabilities = null) {
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         var reads = context.Services.GetRequiredService<AgentEditorReadFixture>();
         reads.Draft = draft;
         reads.Providers = providers ?? [];

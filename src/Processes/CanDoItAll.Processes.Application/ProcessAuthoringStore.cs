@@ -73,3 +73,7 @@ public interface IProcessAuthoringStore {
 public interface IProcessAuthoringAdmissionPolicy {
     Task RequireAsync(ProcessAuthoringAddress address, string? callerId, bool underMutationGate, CancellationToken cancellationToken);
 }
+
+public interface IProcessAuthoringCommitObserver {
+    void Committed(ProcessAuthoringCommit command);
+}

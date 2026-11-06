@@ -80,6 +80,7 @@ public sealed class SharingRendererTests {
         public SharedProviderImportSubmission? Submitted { get; private set; }
         public SharedProviderConfirmation? Confirmed { get; private set; }
         public Task RetryAsync(SharedProviderSharingOrigin origin) => Task.CompletedTask;
+        public Task AcknowledgeCurrentAsync(SharedProviderSharingOrigin origin) => Task.CompletedTask;
         public Task PublishAsync(SharedProviderSharingOrigin origin) {
             Published = origin;
             return Task.CompletedTask;

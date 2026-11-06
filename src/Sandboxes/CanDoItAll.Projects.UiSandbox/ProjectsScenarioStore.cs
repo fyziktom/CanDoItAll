@@ -53,7 +53,7 @@ public sealed class ProjectsScenarioStore {
             throw new InvalidOperationException("The synthetic project read was rejected. Reset the scenario to acquire an editor.");
         }
         if (id is { } value) {
-            var acquired = new ProjectEditorDraft(new ProjectEditorDraft(projects[value]).Capture().Model);
+            var acquired = new ProjectEditorDraft(new ProjectEditorDraft(projects[value]).Capture().Model, original: Snapshot(projects[value]));
             if (Scenario == ProjectsScenario.DefinitionConflict && !conflictPrepared) {
                 conflictPrepared = true;
                 var current = projects[value];
@@ -79,13 +79,15 @@ public sealed class ProjectsScenarioStore {
 
     public async Task<ProjectDefinitionSnapshot> ReadDefinitionAsync(Guid id) {
         var model = (await AcquireAsync(id)).Model;
-        return new(model.ExpectedDefinition!,
+        return Snapshot(model);
+    }
+
+    private static ProjectDefinitionSnapshot Snapshot(ProjectEditorModel model) => new(model.ExpectedDefinition!,
             new(model.Name, model.Description, model.Objective, model.Status, model.CurrentPhase, model.TargetDateUtc),
             model.ExternalNamespace is not null && model.ExternalKey is not null ? new(model.ExternalNamespace, model.ExternalKey) : null,
             model.Phases.Select(row => new ProjectDefinitionPhase(row.Id!.Value, row.Name, row.Goal, row.Status, row.StartDateUtc, row.EndDateUtc)).ToArray(),
             model.Options.Where(row => !string.IsNullOrWhiteSpace(row.OptionName) || !string.IsNullOrWhiteSpace(row.Notes))
                 .Select(row => new ProjectDefinitionOption(row.Id!.Value, row.Category, row.OptionName, row.Notes)).ToArray());
-    }
 
     public void HoldNextRead() => readGate ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
 

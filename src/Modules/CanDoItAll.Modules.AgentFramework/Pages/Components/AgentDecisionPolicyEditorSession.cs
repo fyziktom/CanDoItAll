@@ -8,24 +8,27 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 internal sealed class AgentDecisionPolicyEditorSession(AgentDecisionPolicyEditorState state,
     IAgentFrameworkWorkspaceService workspace, IAgentDecisionPolicyPendingStore pending,
-    ILogger<AgentDecisionPolicyEditorSession> logger, CancellationToken ownerLifetime) {
+    ILogger<AgentDecisionPolicyEditorSession> logger, CancellationToken ownerLifetime, AgentConfigurationOpening opening) {
     public async Task ReadAsync(CancellationToken cancellationToken) {
         if (!state.BeginRead()) {
             return;
         }
         var initialize = !state.RecoveryReady;
         try {
-            AgentDecisionPolicyPendingRecord? retained = null;
+            var read = await opening.ReadAsync(async token => {
+                AgentDecisionPolicyPendingRecord? retained = null;
+                if (initialize) {
+                    await pending.InitializeAsync(token);
+                }
+                var snapshot = await workspace.ReadAgentDecisionDataPolicyAsync(state.AgentId, token);
+                if (initialize) {
+                    retained = await pending.ReadAsync(AgentDecisionPolicyPendingAddress.From(snapshot.Expectation), token);
+                }
+                return (Snapshot: snapshot, Retained: retained);
+            }, cancellationToken);
+            state.CompleteRead(read.Snapshot);
             if (initialize) {
-                await pending.InitializeAsync(cancellationToken);
-            }
-            var snapshot = await workspace.ReadAgentDecisionDataPolicyAsync(state.AgentId, cancellationToken);
-            if (initialize) {
-                retained = await pending.ReadAsync(AgentDecisionPolicyPendingAddress.From(snapshot.Expectation), cancellationToken);
-            }
-            state.CompleteRead(snapshot);
-            if (initialize) {
-                state.CompleteRecovery(retained, restoreSubmittedValues: true);
+                state.CompleteRecovery(read.Retained, restoreSubmittedValues: true);
             }
         } catch (Exception failure) when (failure is not OutOfMemoryException) {
             if (initialize) {
@@ -38,6 +41,7 @@ internal sealed class AgentDecisionPolicyEditorSession(AgentDecisionPolicyEditor
     }
 
     public async Task<AgentDecisionDataPolicySaveOutcome?> SaveAsync() {
+        await opening.AuthorizeAsync(true, ownerLifetime);
         ReplaceAgentDecisionDataPolicyCommand? command;
         try {
             command = state.BeginSave();
@@ -68,7 +72,10 @@ internal sealed class AgentDecisionPolicyEditorSession(AgentDecisionPolicyEditor
         }
         AgentDecisionDataPolicySaveOutcome outcome;
         try {
-            outcome = await workspace.ReplaceAgentDecisionDataPolicyAsync(command, ownerLifetime);
+            outcome = await opening.WriteAsync(token => workspace.ReplaceAgentDecisionDataPolicyAsync(command, token), ownerLifetime, command.OperationId);
+        } catch (UnauthorizedAccessException failure) {
+            outcome = new AgentDecisionDataPolicySaveOutcome.Rejected(AgentDecisionDataPolicyRejection.ContextChanged);
+            Log(failure);
         } catch (Exception failure) when (failure is not OutOfMemoryException) {
             outcome = new AgentDecisionDataPolicySaveOutcome.Unconfirmed(command);
             Log(failure);
@@ -108,7 +115,7 @@ internal sealed class AgentDecisionPolicyEditorSession(AgentDecisionPolicyEditor
             var earlier = state.Pending;
             var expectation = earlier?.Command.Expectation ?? state.Unconfirmed?.Expectation ?? state.Original?.Expectation
                 ?? throw new InvalidOperationException("The original recovery address is unavailable.");
-            var retained = await pending.ReadAsync(AgentDecisionPolicyPendingAddress.From(expectation), cancellationToken);
+            var retained = await opening.ReadAsync(async token => await pending.ReadAsync(AgentDecisionPolicyPendingAddress.From(expectation), token), cancellationToken);
             var command = retained?.Command ?? earlier?.Command ?? state.Unconfirmed;
             var needsResolution = retained?.Stage != AgentDecisionPolicyPendingStage.Prepared && command is not null;
             state.CompleteRecovery(retained, keepBusy: needsResolution);
@@ -118,7 +125,7 @@ internal sealed class AgentDecisionPolicyEditorSession(AgentDecisionPolicyEditor
             retained ??= earlier;
             var outcome = retained?.Outcome ?? (earlier?.Command == command ? earlier.Outcome : null);
             if (outcome is null) {
-                var lookup = await workspace.LookupAgentDecisionDataPolicyAsync(command!, cancellationToken);
+                var lookup = await opening.ReadAsync(token => workspace.LookupAgentDecisionDataPolicyAsync(command!, token), cancellationToken);
                 if (lookup is not AgentDecisionDataPolicyLookup.Accepted accepted || accepted.Receipt.Command != command) {
                     state.RecoveryUnresolved(lookup is AgentDecisionDataPolicyLookup.Accepted ? new AgentDecisionDataPolicyLookup.Unavailable() : lookup);
                     return;

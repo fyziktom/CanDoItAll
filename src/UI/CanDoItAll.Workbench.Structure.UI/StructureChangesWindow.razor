@@ -6,7 +6,8 @@
 @if (view.Window.IsVisible) {
     <CanvasFloatingWindow WindowId="project-structure.changes" TestId="project-structure-changes-window"
                           AriaLabel="Project structure updates" Kicker="Collaboration" Title="Structure updates"
-                          Summary="Changes from other editors" DefaultPlacement="top-left" DefaultWidth="420" DefaultHeight="350"
+                          Summary="Changes from other editors" DefaultPlacement="@DefaultPlacement" DefaultWidth="420" DefaultHeight="350"
+                          ContainerSelector="@ContainerSelector"
                           MinWidth="340" MinHeight="230" MaxWidth="580" MaxHeight="650" State="view.Window"
                           StateChanged="@(state => dispatch.InvokeAsync(new StructureChangesWindowIntent(view.ContextId, state)))">
         <Stack Class="structure-changes" GapScale="LayoutGap.Small" FillHeight="true" AlignItems="AlignItems.Stretch">
@@ -45,4 +46,6 @@
 @code {
     [Parameter, EditorRequired] public StructureChangesPresentation Presentation { get; set; } = default!;
     [Parameter] public EventCallback<StructureChangesIntent> Dispatch { get; set; }
+    [Parameter] public string ContainerSelector { get; set; } = ".cw-stage-surface";
+    [Parameter] public string DefaultPlacement { get; set; } = "top-left";
 }

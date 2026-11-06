@@ -53,9 +53,11 @@ public sealed partial class ProjectsOwnerPersistenceTests {
                 LastChangedBy = "summary-owner-test"
             });
             Assert.True(party.IsSuccess);
+            var primary = await services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, role, string.Empty);
             var assignment = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest {
                 ProjectId = target, ExpectedProjectAdmission = admission, PartyId = party.Value,
-                Role = role, IsPrimary = true, Source = "summary-owner-test"
+                Role = role, IsPrimary = true, PrimaryOriginal = primary, Source = "summary-owner-test"
             });
             Assert.True(assignment.IsSuccess);
         }

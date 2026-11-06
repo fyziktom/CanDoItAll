@@ -4,6 +4,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Workbench.Structure.UI;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Workbench.Structure.UI.Tests;
 
@@ -14,15 +15,21 @@ public sealed class StructureRendererTests {
         var first = Presentation("Original") with { Toolbox = new() { State = new() { IsVisible = false } } };
         var rendered = context.Render<StructureWorkspace>(parameters => parameters.Add(component => component.Presentation, first));
         var originalCanvas = rendered.FindComponent<CanvasWorkbench>().Instance;
+        RenderFragment editing = builder => builder.AddContent(0, "Undo retained comparison");
         var updated = first with {
             Canvas = new() { SurfaceId = first.Canvas!.SurfaceId, Mode = "dependency", Nodes = [new() { Id = "root", Title = "Updated" }] },
             Toolbox = new() { State = new() { IsVisible = true }, SourceLabel = "Updated" }
         };
-        rendered.Render(parameters => parameters.Add(component => component.Presentation, updated));
+        rendered.Render(parameters => parameters.Add(component => component.Presentation, updated)
+            .Add(component => component.EditorMessage, "The original node was deleted. The local draft is retained.")
+            .Add(component => component.EditorActions, editing));
         Assert.Same(originalCanvas, rendered.FindComponent<CanvasWorkbench>().Instance);
         Assert.Equal("dependency", originalCanvas.Surface.Mode);
         Assert.Single(rendered.FindComponents<ProjectStructureToolboxWindow>());
         Assert.Contains("Updated", rendered.Markup);
+        Assert.Contains("The original node was deleted.", rendered.Find("[data-testid='structure-node-compare-status']").TextContent, StringComparison.Ordinal);
+        Assert.Contains("Undo retained comparison", rendered.Find("[data-testid='structure-node-compare-status']").TextContent, StringComparison.Ordinal);
+        Assert.Null(rendered.Find("[data-testid='structure-node-compare-status']").Closest(".cw-toolbar"));
     }
 
     [Fact]
@@ -109,6 +116,35 @@ public sealed class StructureRendererTests {
         Assert.Empty(rendered.FindComponents<CanvasWorkbench>());
         await rendered.InvokeAsync(() => rendered.Find("[data-testid='structure-load-retry']").ClickAsync(new MouseEventArgs()));
         Assert.Equal(new StructureToolbarIntent(presentation.ContextId, StructureToolbarCommand.Retry), Assert.Single(commands));
+    }
+
+    [Fact]
+    public async Task Switching_native_views_retains_the_canvas_and_lazily_mounts_each_visited_panel() {
+        await using var context = Context();
+        var presentation = Presentation("Retained canvas");
+        RenderFragment planning = builder => builder.AddContent(0, "Planning opened lazily");
+        RenderFragment insights = builder => builder.AddContent(0, "Insights opened lazily");
+        var rendered = context.Render<StructureWorkspace>(parameters => parameters.Add(component => component.Presentation, presentation)
+            .Add(component => component.Planning, planning).Add(component => component.Insights, insights));
+        var canvas = rendered.FindComponent<CanvasWorkbench>().Instance;
+        Assert.DoesNotContain("Planning opened lazily", rendered.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Insights opened lazily", rendered.Markup, StringComparison.Ordinal);
+
+        rendered.Render(parameters => parameters.Add(component => component.SelectedView, 1));
+
+        Assert.Same(canvas, rendered.FindComponent<CanvasWorkbench>().Instance);
+        Assert.Contains("Planning opened lazily", rendered.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Insights opened lazily", rendered.Markup, StringComparison.Ordinal);
+        rendered.Render(parameters => parameters.Add(component => component.SelectedView, 0));
+        Assert.Same(canvas, rendered.FindComponent<CanvasWorkbench>().Instance);
+        Assert.Contains("Planning opened lazily", rendered.Markup, StringComparison.Ordinal);
+        rendered.Render(parameters => parameters.Add(component => component.SelectedView, 2));
+        Assert.Same(canvas, rendered.FindComponent<CanvasWorkbench>().Instance);
+        Assert.Contains("Insights opened lazily", rendered.Markup, StringComparison.Ordinal);
+        rendered.Render(parameters => parameters.Add(component => component.Presentation, Presentation("New scope")).Add(component => component.SelectedView, 0));
+        Assert.NotSame(canvas, rendered.FindComponent<CanvasWorkbench>().Instance);
+        Assert.DoesNotContain("Planning opened lazily", rendered.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Insights opened lazily", rendered.Markup, StringComparison.Ordinal);
     }
 
     private static BunitContext Context() {

@@ -8,5 +8,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="../../Modules/CanDoItAll.Modules.Projects.Contracts/CanDoItAll.Modules.Projects.Contracts.csproj" />
+    <ProjectReference Include="../CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj" />
+    <ProjectReference Include="../../Foundation/CanDoItAll.Editing/CanDoItAll.Editing.csproj" />
   </ItemGroup>
 </Project>

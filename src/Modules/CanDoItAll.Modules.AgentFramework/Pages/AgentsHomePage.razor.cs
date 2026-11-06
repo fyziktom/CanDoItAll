@@ -443,6 +443,10 @@ public partial class AgentsHomePage : IDisposable {
     }
 
     private void Go(AgentsUrlState next, UrlHistoryMode mode) {
+        if (route.Tab is AgentWorkspaceSection.SimpleChats or AgentWorkspaceSection.Voice or AgentWorkspaceSection.FloatingChat or AgentWorkspaceSection.Chat && next.Tab != route.Tab) {
+            Navigation.NavigateTo(url.Href(next), new NavigationOptions { ReplaceHistoryEntry = mode == UrlHistoryMode.Replace });
+            return;
+        }
         var previous = route;
         url.Navigate(next, mode);
         ApplyRouteChange(previous, route, initial: false);
@@ -533,6 +537,17 @@ public partial class AgentsHomePage : IDisposable {
             return;
         }
         Go(next, current.ConversationId is null || state.ConversationId is null ? UrlHistoryMode.Replace : UrlHistoryMode.Push);
+    }
+
+    private bool RetainsSimpleChatConversationNavigation(string location, Guid? conversationId) {
+        var current = Navigation.ToAbsoluteUri(Navigation.Uri);
+        if (!Uri.TryCreate(current, location, out var destination) || destination.Scheme != current.Scheme ||
+            destination.Authority != current.Authority || destination.AbsolutePath != current.AbsolutePath) {
+            return false;
+        }
+        var next = AgentsUrlCodec.Instance.Read(UrlQuery.Parse(destination.Query));
+        return next.Tab == AgentWorkspaceSection.SimpleChats && (next.SimpleChat.View == SimpleChatWorkspaceView.Definitions ||
+            next.SimpleChat.ConversationId == conversationId);
     }
 
     private async Task OpenUsageDialogAsync(AgentsOverviewDetail detail, ProviderUsageQuery query) {

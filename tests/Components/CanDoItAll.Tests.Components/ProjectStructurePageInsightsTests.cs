@@ -141,8 +141,11 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         await RecreateProjectAsync(harness, original);
         await cut.InvokeAsync(() => dialogs.ConfirmDelete.InvokeAsync(new(prompt, ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)));
         Assert.Same(prompt, cut.FindComponent<ProjectStructureSupportDialogs>().Instance.PendingDeletePrompt);
-        cut.WaitForAssertion(() => Assert.Contains(original.Admission.LifetimeId.ToString("D"), cut.Find("[data-testid=project-structure-delete-failure]").TextContent));
-        Assert.Contains((await Workbench(harness).GetStructureAsync(original.ProjectId)).Nodes, node => node.Id == original.Node.Id);
+        cut.WaitForAssertion(() => Assert.Contains("The original project is no longer admitted",
+            cut.Find("[data-testid=project-structure-delete-failure]").TextContent, StringComparison.Ordinal));
+        var replacement = await Workbench(harness).GetStructureAsync(original.ProjectId);
+        Assert.NotEqual(original.Admission, replacement.ExpectedProjectAdmission);
+        Assert.Contains(replacement.Nodes, node => node.Id == original.Node.Id);
     }
 
     [Fact]

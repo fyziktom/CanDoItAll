@@ -3,6 +3,7 @@ using AngleSharp.Html.Dom;
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Workbench.Content.UI;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,15 +27,16 @@ public sealed class ContentTextFormTests {
             entered.TrySetResult(submission);
             return await finish.Task;
         });
-        await cut.InvokeAsync(() => {
-            cut.Find("[data-testid='project-structure-text-asset-title']").Input("  Exact title  ");
-            cut.Find("[data-testid='project-structure-text-asset-subtitle']").Input("  Exact context  ");
-            cut.Find("[data-testid='project-structure-text-asset-notes']").Input("  Descriptive notes  ");
-            cut.Find("[data-testid='project-structure-text-asset-content']").Input("  Raw content\nnext line  ");
+        await cut.InvokeAsync(async () => {
+            await cut.Find("[data-testid='project-structure-text-asset-title']").InputAsync(new ChangeEventArgs { Value = "  Exact title  " });
+            await cut.Find("[data-testid='project-structure-text-asset-subtitle']").InputAsync(new ChangeEventArgs { Value = "  Exact context  " });
+            await cut.Find("[data-testid='project-structure-text-asset-notes']").InputAsync(new ChangeEventArgs { Value = "  Descriptive notes  " });
+            await cut.Find("[data-testid='project-structure-text-asset-content']").InputAsync(new ChangeEventArgs { Value = "  Raw content\nnext line  " });
         });
         var pending = Submit(cut);
         var accepted = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-text-asset-notes']").Input("Later attempted edit"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-text-asset-notes']")
+            .InputAsync(new ChangeEventArgs { Value = "Later attempted edit" }));
         await Submit(cut);
         Assert.Equal(1, calls);
         Assert.Equal(("Exact title", "Exact context", "Descriptive notes", "  Raw content\nnext line  "),
@@ -44,7 +46,7 @@ public sealed class ContentTextFormTests {
         await Submit(cut);
         Assert.Equal(1, calls);
         Assert.Contains("Observe original write", cut.Markup, StringComparison.Ordinal);
-        Assert.Equal("  Raw content\nnext line  ", ((IHtmlTextAreaElement)cut.Find("[data-testid='project-structure-text-asset-content']")).Value);
+        Assert.Equal("  Raw content\nnext line  ", cut.Find("[data-testid='project-structure-text-asset-content']").GetAttribute("value"));
     }
 
     [Theory]

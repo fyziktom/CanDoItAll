@@ -256,3 +256,8 @@ reservation payloads remain explicitly imported history. The Workbench coordinat
 owns its native collections and uses the same actual target transaction. Preflight
 and final inspections remain separate; final checks run under all existing owner
 locks before any replacement.
+
+Committed Project definition and hierarchy hints have a native `IProjectCommittedChangeSink`
+contribution port. It runs from the existing post-physical-commit publisher, alongside the
+neutral Project feed. Workbench contributes root metadata to its bounded Structure feed;
+Projects does not reference Workbench. This port carries no form body or replay authority.

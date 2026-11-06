@@ -12,9 +12,12 @@ public interface IWorkspaceHistoryState {
     ProviderHistoryPolicyDraft Draft { get; }
     EditContext EditContext { get; }
     PendingRetentionChange? Preview { get; }
+    WorkspaceHistoryPolicyReview? Comparison { get; }
     IReadOnlyList<SettingsReceipt> Receipts { get; }
     bool IsBusy { get; }
     bool CanApply { get; }
+    bool CanCompare { get; }
+    bool CanApplyComparison { get; }
     string? Error { get; }
     string? Message { get; }
     Task LoadAsync();
@@ -22,5 +25,8 @@ public interface IWorkspaceHistoryState {
     Task PreviewAsync();
     Task ConfirmShorterAsync();
     void ClosePreview();
+    void OpenComparison();
+    void CloseComparison();
+    void ApplyComparison();
     void DraftChanged();
 }

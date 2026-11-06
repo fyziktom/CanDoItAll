@@ -122,6 +122,7 @@ public sealed class ProjectEditorOperationSessionTests {
         var (_, frozen, _) = Values();
         var restored = ProjectEditorDraft.Restore(frozen.Submission);
         Assert.Equal("  Submitted  ", restored.Model.Name);
+        Assert.Null(restored.Original);
         Assert.Single(restored.Model.Phases);
         var option = Assert.Single(restored.Model.Options);
         Assert.Equal(ProjectOptionCategory.Other, option.Category);

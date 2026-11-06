@@ -441,7 +441,7 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
             => throw new NotSupportedException();
 
         public Task DeleteDefinitionAsync(
-            WorkflowId workflowId,
+            WorkflowDefinitionDeleteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 

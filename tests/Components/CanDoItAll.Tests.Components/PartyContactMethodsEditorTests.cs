@@ -146,6 +146,7 @@ public sealed class PartyContactMethodsEditorTests {
     private static BunitContext CreateContext() {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
         return context;
     }
 }

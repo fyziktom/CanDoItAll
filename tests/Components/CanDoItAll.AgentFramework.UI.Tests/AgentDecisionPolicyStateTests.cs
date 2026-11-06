@@ -6,6 +6,35 @@ using CanDoItAll.SharedKernel;
 namespace CanDoItAll.AgentFramework.UI.Tests;
 
 public sealed class AgentDecisionPolicyStateTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_newer_hint_survives_an_older_read_or_accepted_save(bool save) {
+        var state = Ready();
+        state.Draft.MaximumWorkDuration = "unfinished 東京";
+        if (save) {
+            state.Draft.MaximumWorkDuration = "00:04:00";
+            var command = state.BeginSave()!;
+            state.Draft.MaximumWorkDuration = "unfinished 東京";
+            state.ObserveExternalChange();
+            state.CompleteSave(command, Accepted(command));
+        } else {
+            Assert.True(state.BeginRead());
+            state.ObserveExternalChange();
+            state.CompleteRead(state.Original!);
+        }
+        Assert.True(state.NeedsReview);
+        Assert.False(state.CanSave);
+        Assert.False(state.CanAdopt);
+        Assert.Null(state.Current);
+        Assert.Equal("unfinished 東京", state.Draft.MaximumWorkDuration);
+        Assert.True(state.BeginRead());
+        state.CompleteRead(state.Original!);
+        state.AdoptCurrent(true);
+        Assert.False(state.NeedsReview);
+        Assert.Equal("unfinished 東京", state.Draft.MaximumWorkDuration);
+    }
+
     [Fact]
     public void Blank_fields_inherit_while_zero_and_exact_durations_are_preserved() {
         var draft = new AgentDecisionPolicyDraft();

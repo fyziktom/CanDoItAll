@@ -70,7 +70,8 @@ public sealed class CrmHrCommittedReadBackTests
         var notifications = harness.Context.Services.GetRequiredService<NotificationService>();
         var cut = harness.Context.Render<CrmHrDirectoryPage>();
         var view = (ICrmHrDirectoryWorkspaceView)cut.Instance;
-        await cut.InvokeAsync(view.CreateNewAsync);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-directory-new-button']").ClickAsync(new()));
+        cut.WaitForElement("[data-testid='crmhr-party-display-name']");
         var displayName = $"Read back created party {Suffix()}";
         view.Editor.DisplayName = displayName;
         view.Editor.Summary = "created while the read-back failed";
@@ -156,7 +157,11 @@ public sealed class CrmHrCommittedReadBackTests
         navigation.NavigateTo($"/crm-hr/recruiting?applicationId={application.Value:D}");
         var cut = harness.Context.Render<CrmHrRecruitingPage>();
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
-        cut.WaitForAssertion(() => Assert.Equal("Saved role", view.ApplicationEditor.DesiredRole));
+        cut.WaitForAssertion(() => {
+            Assert.Equal("Saved role", view.ApplicationEditor.DesiredRole);
+            Assert.True(view.IsRecruitmentDialogOpen);
+            Assert.False(cut.FindComponent<CanDoItAll.CrmHr.UI.Recruiting.CrmHrRecruitingWorkspaceSurface>().Instance.ApplicationSaveDisabled);
+        });
         var draft = view.ApplicationEditor;
         draft.DesiredRole = "committed while the read-back failed";
         notifications.Messages.Clear();
@@ -169,14 +174,14 @@ public sealed class CrmHrCommittedReadBackTests
         var committed = await recruiting.GetRecruitmentWorkspaceAsync(application.Value);
         Assert.Equal("committed while the read-back failed", committed.Application.DesiredRole);
         Assert.Contains(notifications.Messages, message =>
-            message.Severity == NotificationSeverity.Warning && message.Summary == "Saved, refresh failed");
+            message.Severity == NotificationSeverity.Warning && message.Summary == "Recruiting information unavailable" && message.Detail!.Contains("accepted write", StringComparison.Ordinal));
         // The application identity survives the failed read-back, so the next save is an update of the same record.
         Assert.Same(draft, view.ApplicationEditor);
         Assert.Equal(application.Value, view.ApplicationEditor.Id);
     }
 
     [Fact]
-    public async Task A_refused_connection_write_persists_nothing_and_keeps_the_draft_for_correction()
+    public async Task A_duplicate_connection_draft_blocks_submission_and_keeps_both_rows_for_correction()
     {
         CrmHrOwnerReadBackControl control = null!;
         await using var harness = await ComponentTestHarness.CreateAsync(
@@ -200,12 +205,13 @@ public sealed class CrmHrCommittedReadBackTests
         control.ResetCommits();
 
         await cut.InvokeAsync(view.SaveConnectedRecordsAsync);
+        cut.Find("[data-testid='crmhr-crm-tab-connections']").Click();
 
         Assert.Equal(0, control.Commits);
         Assert.Empty((await crm.GetAccountWorkspaceAsync(accountId))!.ConnectedRecords);
-        var refusal = Assert.Single(notifications.Messages);
-        Assert.Equal(NotificationSeverity.Error, refusal.Severity);
-        Assert.Contains("only be connected once", refusal.Detail, StringComparison.Ordinal);
+        Assert.Empty(notifications.Messages);
+        Assert.Contains("more than once", cut.Find("[data-testid='crmhr-connections-validation']").TextContent, StringComparison.Ordinal);
+        Assert.True(cut.FindComponent<CanDoItAll.CrmHr.UI.Crm.CrmHrCrmWorkspaceSurface>().Instance.ConnectionsSaveDisabled);
         // Nothing was written, so the draft keeps both rows exactly as typed and the operator can correct one.
         Assert.Same(rows, view.ConnectedRecordEditors);
         Assert.Equal(2, view.ConnectedRecordEditors.Count);

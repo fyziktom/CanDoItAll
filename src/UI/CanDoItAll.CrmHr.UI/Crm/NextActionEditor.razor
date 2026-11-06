@@ -3,7 +3,7 @@
     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
         <div>
             <label class="cda-field-label">Next action</label>
-            <InputText @bind-Value="Model.NextActionText"
+            <NativeValueInput TValue="string" @bind-Value="Model.NextActionText" PendingChanged="@(_ => SetTextAsync())"
                        class="cda-input"
                        data-testid="crmhr-next-action-text" />
         </div>
@@ -16,6 +16,9 @@
                 @foreach (var option in OwnerOptions)
                 {
                     <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
+                }
+                @if (Model.NextActionOwnerPartyId is Guid retained && !OwnerOptions.Any(option => option.Id == retained)) {
+                    <option value="@retained">@(SelectedOwnerLabel ?? $"Previously selected owner ({retained:D})")</option>
                 }
             </InputSelect>
         </div>
@@ -35,4 +38,9 @@
 
     [Parameter]
     public IReadOnlyList<PartyOptionModel> OwnerOptions { get; set; } = [];
+    [Parameter] public string? SelectedOwnerLabel { get; set; }
+    [Parameter] public EventCallback InputChanged { get; set; }
+    [CascadingParameter] private EditContext? Context { get; set; }
+
+    private Task SetTextAsync() => InputChanged.InvokeAsync();
 }

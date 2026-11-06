@@ -23,6 +23,7 @@
                                 ShowTagFilter="@ShowTagFilter"
                                 Selection="@pendingSelection"
                                 SelectionChanged="HandleSelectionChangedAsync"
+                                RefreshVersion="refreshVersion"
                                 LoadFailed="@LoadFailed"
                                 PageSize="@PageSize"
                                 MaximumTags="@MaximumTags"
@@ -51,6 +52,11 @@
                              Text="@(pendingSelection is null ? NoSelectionText : SelectionReadyText)"
                              data-testid="@($"{DataTestId}-selection-summary")" />
                 <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Refresh choices"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@IsConfirming"
+                            Click="RefreshChoices"
+                            data-testid="@($"{DataTestId}-refresh")" />
                     <Button Text="@CancelText"
                             ButtonStyle="ButtonStyle.Light"
                             Disabled="@IsConfirming"
@@ -71,6 +77,8 @@
 @code {
     private PagedRecordSelection<TKey>? pendingSelection;
     private bool wasOpen;
+    private long refreshVersion;
+    private void RefreshChoices() => refreshVersion++;
 
     [Parameter]
     public bool IsOpen { get; set; }

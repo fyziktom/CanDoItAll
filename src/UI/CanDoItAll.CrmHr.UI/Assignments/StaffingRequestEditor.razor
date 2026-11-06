@@ -127,7 +127,7 @@
                                             Icon="delete"
                                             aria-label="Delete staffing request"
                                             data-testid="crmhr-staffing-request-delete-button"
-                                            Click="@(() => DeleteRequest.InvokeAsync(request.Id))" />
+                                            Disabled="WritesDisabled" Click="@(() => DeleteRequest.InvokeAsync(request))" />
                                 </TooltipTarget>
                             </Cluster>
                         </CardActions>
@@ -167,24 +167,32 @@
 {
     <Dialog IsOpen="true"
             Eyebrow="Staffing request"
-            Title="Open a staffing request"
+            Title="@(Draft.Id.HasValue ? "Edit saved staffing request" : "Open a staffing request")"
             Subtitle="@ProjectName"
             Size="ModalSize.Wide"
             DenseChrome="true"
             TestId="crmhr-staffing-request-dialog"
             OnClose="CloseEditorAsync">
         <ChildContent>
+            <EditForm @key="Draft" EditContext="context" OnValidSubmit="HandleSaveAsync">
+            <ValidationSummary />
+            @if (StatusMessage is not null) {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="crmhr-editor-status">@StatusMessage</Alert>
+            }
+            @Recovery
+
+
             <Stack GapScale="LayoutGap.Medium">
                 <SmallText Text="Requests stay scoped to the selected project so demand and project allocations remain traceable to the same portfolio record." />
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Request title">
-                        <InputText @bind-Value="Draft.Title"
+                        <NativeValueInput TValue="string" @bind-Value="Draft.Title" PendingChanged="@(_ => TextAsync(StaffingField.Title))"
                                    class="cda-input"
                                    data-testid="crmhr-staffing-request-title" />
                     </FormField>
                     <FormField Text="Needed role">
-                        <InputText @bind-Value="Draft.NeededRole"
+                        <NativeValueInput TValue="string" @bind-Value="Draft.NeededRole" PendingChanged="@(_ => TextAsync(StaffingField.Role))"
                                    class="cda-input"
                                    data-testid="crmhr-staffing-request-role" />
                     </FormField>
@@ -192,22 +200,22 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                     <FormField Text="Allocation %">
-                        <InputNumber @bind-Value="Draft.AllocationPercent"
+                        <NativeValueInput DisplayName="allocation percentage" TValue="decimal" @bind-Value="Draft.AllocationPercent" PendingChanged="@(value => ReportAsync(StaffingField.Allocation, value))"
                                      class="cda-input"
                                      data-testid="crmhr-staffing-request-allocation" />
                     </FormField>
                     <FormField Text="Starts on">
-                        <InputDate @bind-Value="Draft.StartDate"
+                        <NativeValueInput DisplayName="start date" TValue="DateOnly?" @bind-Value="Draft.StartDate" PendingChanged="@(value => ReportAsync(StaffingField.Start, value))"
                                    class="cda-input"
                                    data-testid="crmhr-staffing-request-start-date" />
                     </FormField>
                     <FormField Text="Ends on">
-                        <InputDate @bind-Value="Draft.EndDate"
+                        <NativeValueInput DisplayName="end date" TValue="DateOnly?" @bind-Value="Draft.EndDate" PendingChanged="@(value => ReportAsync(StaffingField.End, value))"
                                    class="cda-input"
                                    data-testid="crmhr-staffing-request-end-date" />
                     </FormField>
                     <FormField Text="Status">
-                        <InputSelect @bind-Value="Draft.Status"
+                        <InputSelect @bind-Value="Draft.Status" @bind-Value:after="@(() => ReportAsync(StaffingField.Status))"
                                      class="cda-input"
                                      data-testid="crmhr-staffing-request-status">
                             @foreach (var status in Enum.GetValues<StaffingRequestStatus>())
@@ -222,28 +230,30 @@
                     <PartyPicker Label="Requested by"
                                  TestIdPrefix="crmhr-staffing-request-requested-by"
                                  SelectedPartyId="Draft.RequestedByPartyId"
-                                 SelectedPartyIdChanged="HandleRequestedByChanged" />
+                                 SelectedPartyIdChanged="HandleRequestedByChanged" PendingChanged="@(value => ReportAsync(StaffingField.Requester, value))" />
                     <PartyPicker Label="Delivery unit"
                                  TestIdPrefix="crmhr-staffing-request-delivery-unit"
                                  AllowedScope="PartyRecordScope.OrganizationUnits"
                                  InitialScope="PartyRecordScope.OrganizationUnits"
                                  SelectedPartyId="Draft.DeliveryUnitPartyId"
-                                 SelectedPartyIdChanged="HandleDeliveryUnitChanged" />
+                                 SelectedPartyIdChanged="HandleDeliveryUnitChanged" PendingChanged="@(value => ReportAsync(StaffingField.DeliveryUnit, value))" />
                 </Grid>
 
-                <div>
-                    <p class="cda-field-label">Needed skills</p>
-                    @if (SkillCatalog.Count == 0)
-                    {
+                <Stack GapScale="LayoutGap.Small">
+                    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+                        <TextBlock Value="Needed skills" TextStyle="TextStyle.Subtitle2" />
+                        <Button Text="Refresh skill choices" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(WritesDisabled || isSaving || RefreshSkillsDisabled)" Click="RefreshSkills"
+                            data-testid="crmhr-staffing-request-refresh-skills" />
+                    </Cluster>
+                    @if (!SkillCatalog.Any(skill => skill.IsActive)) {
                         <Alert AlertStyle="AlertStyle.Warning" Class="mt-2">
-                            Add skills on the workforce page first, then return here to request them.
+                            Add skills on the workforce page or refresh these choices after another editor updates them.
                         </Alert>
                     }
-                    else
-                    {
+                    else {
                         <Grid Gap="LayoutGap.Small" ColumnsMd="2" Class="mt-2">
-                            @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
-                            {
+                            @foreach (var skill in SkillCatalog.Where(item => item.IsActive).OrderBy(item => item.Category).ThenBy(item => item.Name)) {
                                 <label class="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-3 py-3 text-sm text-slate-700">
                                     <input type="checkbox"
                                            checked="@Draft.SkillIds.Contains(skill.Id)"
@@ -258,25 +268,36 @@
                             }
                         </Grid>
                     }
-                </div>
+                    @foreach (var id in Draft.SkillIds.Except(SkillCatalog.Where(skill => skill.IsActive).Select(skill => skill.Id))) {
+                        <SurfaceCard Soft="true" data-testid="crmhr-staffing-request-unavailable-skill">
+                            <Split Gap="LayoutGap.Small" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                <TextBlock Value="@($"Unavailable skill ({id.ToString("N")[..8]})")" />
+                                <Button Text="Remove unavailable skill" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                    Disabled="@(WritesDisabled || isSaving)" Click="@(() => RemoveUnavailableSkillAsync(id))"
+                                    data-testid="crmhr-staffing-request-remove-unavailable-skill" />
+                            </Split>
+                        </SurfaceCard>
+                    }
+                </Stack>
 
                 <FormField Text="Notes">
-                    <InputTextArea @bind-Value="Draft.Notes"
+                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(StaffingField.Notes))"
                                    class="cda-input cda-input--textarea min-h-[7rem]"
                                    data-testid="crmhr-staffing-request-notes" />
                 </FormField>
             </Stack>
+        </EditForm>
         </ChildContent>
         <Footer>
             <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
                 <Button Text="Reset"
                         ButtonStyle="ButtonStyle.Light"
-                        Disabled="@isSaving"
-                        Click="ResetRequest"
+                        Disabled="@(isSaving || WritesDisabled)"
+                        Click="ResetEditorAsync"
                         data-testid="crmhr-staffing-request-reset-button" />
-                <Button Text="Save staffing request"
+                <Button Text="@(Draft.Id.HasValue ? "Save changes" : "Save staffing request")"
                         Icon="save"
-                        Disabled="@isSaving"
+                        Disabled="@(isSaving || SaveDisabled || pending.Count > 0)"
                         IsBusy="@isSaving"
                         Click="HandleSaveAsync"
                         data-testid="crmhr-staffing-request-save-button" />
@@ -364,6 +385,41 @@
 }
 
 @code {
+    protected override void OnParametersSet() {
+        if (context is null || !ReferenceEquals(context.Model, Draft)) {
+            context = new(Draft);
+            pending.Clear();
+        }
+    }
+
+    private EditContext context = default!;
+    private readonly HashSet<StaffingField> pending = [];
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public bool WritesDisabled { get; set; }
+    [Parameter] public string? StatusMessage { get; set; }
+    [Parameter] public RenderFragment? Recovery { get; set; }
+    [Parameter, EditorRequired] public Func<bool> HasChanges { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<Task<bool>> RequestDiscard { get; set; } = default!;
+    [Parameter] public EventCallback<CanDoItAll.Editing.RecordInput<StaffingField>> InputChanged { get; set; }
+    private Task TextAsync(StaffingField field) {
+
+
+        return ReportAsync(field);
+    }
+    private Task ReportAsync(StaffingField field, bool incomplete = false) {
+        if (incomplete) {
+            pending.Add(field);
+        } else {
+            pending.Remove(field);
+        }
+        return InputChanged.InvokeAsync(new(field, incomplete));
+    }
+    private async Task ResetEditorAsync() {
+        if (!WritesDisabled && !isSaving && (!HasChanges() || await RequestDiscard())) {
+            await ResetRequest.InvokeAsync();
+        }
+    }
+
     [Parameter, EditorRequired]
     public string ProjectName { get; set; } = string.Empty;
 
@@ -375,6 +431,8 @@
 
     [Parameter]
     public IReadOnlyList<SkillCatalogItemModel> SkillCatalog { get; set; } = [];
+    [Parameter] public EventCallback RefreshSkills { get; set; }
+    [Parameter] public bool RefreshSkillsDisabled { get; set; }
 
     [Parameter]
     public IReadOnlyList<StaffingRequestItemModel> Requests { get; set; } = [];
@@ -413,7 +471,7 @@
     public EventCallback ResetRequest { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> DeleteRequest { get; set; }
+    public EventCallback<StaffingRequestItemModel> DeleteRequest { get; set; }
 
     private StaffingRequestItemModel? selectedRequest;
     private bool isEditorOpen;
@@ -472,16 +530,18 @@
         return StatusFilterChanged.InvokeAsync(status);
     }
 
-    private Task HandleRequestedByChanged(Guid? partyId)
+    private async Task HandleRequestedByChanged(Guid? partyId)
     {
         Draft.RequestedByPartyId = partyId;
-        return Task.CompletedTask;
+        context.NotifyFieldChanged(new(Draft, nameof(Draft.RequestedByPartyId)));
+        await ReportAsync(StaffingField.Requester, pending.Contains(StaffingField.Requester));
     }
 
-    private Task HandleDeliveryUnitChanged(Guid? partyId)
+    private async Task HandleDeliveryUnitChanged(Guid? partyId)
     {
         Draft.DeliveryUnitPartyId = partyId;
-        return Task.CompletedTask;
+        context.NotifyFieldChanged(new(Draft, nameof(Draft.DeliveryUnitPartyId)));
+        await ReportAsync(StaffingField.DeliveryUnit, pending.Contains(StaffingField.DeliveryUnit));
     }
 
     private async Task OpenCreateAsync()
@@ -505,19 +565,22 @@
         }
     }
 
-    private Task CloseEditorAsync()
-    {
-        if (!isSaving)
-        {
-            isEditorOpen = false;
+    private async Task CloseEditorAsync() {
+        if (isSaving) {
+            return;
         }
-
-        return Task.CompletedTask;
+        if (HasChanges()) {
+            if (!await RequestDiscard()) {
+                return;
+            }
+            await ResetRequest.InvokeAsync();
+        }
+        isEditorOpen = false;
     }
 
     private async Task HandleSaveAsync()
     {
-        if (isSaving)
+        if (isSaving || SaveDisabled || pending.Count > 0 || !context.Validate())
         {
             return;
         }
@@ -525,7 +588,7 @@
         isSaving = true;
         try
         {
-            if (await SaveRequest())
+            if (await SaveRequest() && !HasChanges() && pending.Count == 0)
             {
                 isEditorOpen = false;
             }
@@ -547,21 +610,17 @@
         return Task.CompletedTask;
     }
 
-    private void ToggleSkill(Guid skillId, ChangeEventArgs args)
-    {
-        var isSelected = bool.TryParse(args.Value?.ToString(), out var parsed) && parsed;
-        if (isSelected)
-        {
-            if (!Draft.SkillIds.Contains(skillId))
-            {
-                Draft.SkillIds.Add(skillId);
-            }
-
-            return;
+    private async Task ToggleSkill(Guid skillId, ChangeEventArgs args) {
+        var selected = bool.TryParse(args.Value?.ToString(), out var value) && value;
+        if (selected && !Draft.SkillIds.Contains(skillId)) {
+            Draft.SkillIds.Add(skillId);
+        } else if (!selected) {
+            Draft.SkillIds.Remove(skillId);
         }
-
-        Draft.SkillIds.Remove(skillId);
+        await ReportAsync(StaffingField.Skills);
     }
+    private Task RemoveUnavailableSkillAsync(Guid skillId) => Draft.SkillIds.Remove(skillId)
+        ? ReportAsync(StaffingField.Skills) : Task.CompletedTask;
 
     private static string BuildMeta(StaffingRequestItemModel request)
     {

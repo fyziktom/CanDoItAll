@@ -5,6 +5,8 @@ namespace CanDoItAll.Modules.Prompts;
 public static class PromptGalleryLimits
 {
     public const int MaximumContentLength = 64_000;
+    public const int MaximumTags = 50;
+    public const int MaximumSupportedModels = 100;
 }
 
 public sealed record PromptGalleryQuery(
@@ -398,7 +400,8 @@ public sealed record PromptGalleryImportRequest(
     string SourceKey,
     string SourceCatalog,
     PromptGalleryDraft Draft,
-    PromptImportVersionRequest Version);
+    PromptImportVersionRequest Version,
+    DateTimeOffset? ExpectedUpdatedAtUtc = null);
 
 /// <summary>
 /// An immutable version of a Prompt Gallery item with its content, as created or read.

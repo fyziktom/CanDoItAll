@@ -234,6 +234,16 @@
     pointer-events: none;
 }
 
+.project-structure-page ::deep .project-structure-node-editor-status {
+    position: absolute;
+    z-index: 44;
+    bottom: 6rem;
+    left: 1rem;
+    width: min(26rem, calc(100% - 2rem));
+    max-height: min(12rem, 35%);
+    overflow: auto;
+}
+
 .project-structure-audio-preview,
 .project-structure-preview-dialog__audio {
     width: 100%;

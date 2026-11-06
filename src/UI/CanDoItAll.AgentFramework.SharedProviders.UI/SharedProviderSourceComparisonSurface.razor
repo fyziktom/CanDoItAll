@@ -1,0 +1,42 @@
+@using CanDoItAll.Editing.UI
+
+<Stack GapScale="LayoutGap.Small" data-testid="shared-source-comparison">
+    <TextBlock Value="Review the current source. Apply locally, then Save separately. This never repeats a connection test or synchronization." />
+    <TextBlock Value="An earlier unconfirmed outcome stays unconfirmed. Current matching values are not a historical commit receipt." />
+    @if (Review.IsStale) {
+        <Alert AlertStyle="AlertStyle.Warning">The source or your draft changed. Compare again.</Alert>
+    }
+    @if (Review.Name is { } name && Review.Connection is { } connection) {
+        @if (Review.Incomplete) {
+            <FormField Text="Keep my unfinished source settings locally">
+                <CheckBox TValue="bool" Value="Review.KeepIncomplete" ValueChanged="KeepIncomplete" />
+            </FormField>
+        }
+        <MergeFieldView TValue="string" Label="Source name" Field="name" Format="@(value => value)" Changed="Changed" TestId="shared-source-review-name" />
+        <MergeFieldView TValue="SharedProviderSourceConnection" Label="Source connection and access" Field="connection"
+                        HasPendingInput="Review.Incomplete" Format="SharedProviderSourceComparison.Describe" Changed="Changed" TestId="shared-source-review-connection" />
+    } else {
+        <Alert AlertStyle="AlertStyle.Warning">The original saved version is unavailable. This current-state review cannot establish the earlier write's outcome. Keeping the complete draft may replace the reviewed settings after a separate conditional Save.</Alert>
+        <Grid ColumnsXl="2" Gap="LayoutGap.Small">
+            <FormField Text="My complete draft"><TextBlock Value="@Review.LocalDescription" /></FormField>
+            <FormField Text="Current saved source"><TextBlock Value="@Review.CurrentDescription" /></FormField>
+        </Grid>
+        <FormField Text="Keep my complete draft against this reviewed source">
+            <CheckBox TValue="bool" Value="Review.KeepWholeDraft" ValueChanged="KeepWhole" />
+        </FormField>
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public SharedProviderSourceComparison Review { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private async Task KeepIncomplete(bool value) {
+        Review.KeepIncomplete = value;
+        await Changed.InvokeAsync();
+    }
+    private async Task KeepWhole(bool value) {
+        Review.KeepWholeDraft = value;
+        await Changed.InvokeAsync();
+    }
+}

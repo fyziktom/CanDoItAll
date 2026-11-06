@@ -1,3 +1,4 @@
+@{ var rendered = Presentation; }
 @if (Presentation.IsAuthorizing) {
     <LoadingState Eyebrow="Simple Chats"
                   Title="Loading conversations"
@@ -14,6 +15,18 @@
                             : null)"
              data-testid="llm-chat-conversation-workspace"
              data-conversation-context="none">
+        @if (Presentation.RequiresDiscard) {
+            <SurfaceCard Soft="true">
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock Value="An unfinished draft is still open. Keep editing or explicitly discard it to continue." />
+                    <Cluster Gap="LayoutGap.Small">
+                        <Button Text="Keep editing" Click="@(() => Emit(rendered, ConversationWorkspaceAction.KeepEditing))" />
+                        <Button Text="Discard draft and continue" ButtonStyle="ButtonStyle.Danger" Disabled="@Presentation.IsMutating"
+                                Click="@(() => Emit(rendered, ConversationWorkspaceAction.DiscardDraft))" data-testid="llm-chat-draft-discard" />
+                    </Cluster>
+                </Stack>
+            </SurfaceCard>
+        }
         <Grid ColumnTemplateXl="@(Presentation.Focused ? "minmax(0,1fr)" : "minmax(16rem,22rem) minmax(0,1fr)")"
               Gap="LayoutGap.Large"
               FillHeight="true"
@@ -25,14 +38,17 @@
                                     IsLoading="@Presentation.IsLoading"
                                     ErrorText="@ThreadErrorText"
                                     SearchTestId="llm-chat-thread-search"
-                                    Selected="SelectConversationAsync">
+                                    Selected="key => SelectConversationAsync(rendered, key)">
                 <HeaderActions>
                     <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                        <Button Text="@(Presentation.UpdatesAvailable ? "Updates available — refresh list" : "Refresh list")" Icon="refresh"
+                                Variant="Variant.Outlined" Disabled="@(Presentation.IsLoading || Presentation.IsMutating)"
+                                Click="@(() => Emit(rendered, ConversationWorkspaceAction.RefreshConversations))" data-testid="llm-chat-list-refresh" />
                         @if (Presentation.CanManage) {
                             <Button Text="New chat"
                                     Icon="add"
                                     ButtonStyle="ButtonStyle.Primary"
-                                    Click="OpenStartDialog"
+                                    Click="@(() => Emit(rendered, ConversationWorkspaceAction.NewConversation))"
                                     Disabled="@Presentation.IsMutating"
                                     data-testid="llm-chat-new" />
                         }
@@ -41,7 +57,7 @@
                                     Icon="expand_more"
                                     Variant="Variant.Outlined"
                                     Size="ButtonSize.Small"
-                                    Click="LoadMoreConversationsAsync"
+                                    Click="@(() => Emit(rendered, ConversationWorkspaceAction.LoadMoreConversations))"
                                     Disabled="@Presentation.IsLoading"
                                     IsBusy="@Presentation.IsLoading"
                                     data-testid="llm-chat-thread-load-more" />
@@ -55,7 +71,7 @@
                             <Button Icon="edit"
                                     Variant="Variant.Text"
                                     Size="ButtonSize.Small"
-                                    Click="@(() => OpenRenameDialogAsync(conversationId))"
+                                    Click="@(() => Emit(rendered, ConversationWorkspaceAction.Rename, conversationId))"
                                     Disabled="@Presentation.IsMutating"
                                     aria-label="@($"Rename {thread.Title}")"
                                     data-testid="@($"llm-chat-rename-{conversationId:D}")" />
@@ -63,7 +79,7 @@
                                     Variant="Variant.Text"
                                     ButtonStyle="ButtonStyle.Danger"
                                     Size="ButtonSize.Small"
-                                    Click="@(() => OpenArchiveDialogAsync(conversationId))"
+                                    Click="@(() => Emit(rendered, ConversationWorkspaceAction.Archive, conversationId))"
                                     Disabled="@Presentation.IsMutating"
                                     aria-label="@($"Archive {thread.Title}")"
                                     data-testid="@($"llm-chat-archive-{conversationId:D}")" />
@@ -86,11 +102,11 @@
                         </TitleContent>
                         <Actions>
                             @if (Presentation.CanReloadSelected) {
-                                <Button Text="Reload"
+                                <Button Text="@(Presentation.Focused && Presentation.UpdatesAvailable ? "Updates available — reload" : "Reload")"
                                         Icon="refresh"
                                         Variant="Variant.Outlined"
                                         Size="ButtonSize.Small"
-                                        Click="ReloadSelectedAsync"
+                                        Click="@(() => Emit(rendered, ConversationWorkspaceAction.ReloadSelected))"
                                         Disabled="@Presentation.IsLoading"
                                         data-testid="llm-chat-reload-selected" />
                             }
@@ -113,7 +129,7 @@
                                         Icon="expand_more"
                                         Variant="Variant.Outlined"
                                         Size="ButtonSize.Small"
-                                        Click="LoadMoreMessagesAsync"
+                                        Click="@(() => Emit(rendered, ConversationWorkspaceAction.LoadMoreMessages))"
                                         Disabled="@Presentation.IsLoading"
                                         IsBusy="@Presentation.IsLoading"
                                         data-testid="llm-chat-transcript-load-more" />
@@ -135,7 +151,7 @@
                                             ButtonStyle="ButtonStyle.Danger"
                                             Variant="Variant.Outlined"
                                             Size="ButtonSize.Small"
-                                            Click="CancelActiveOperationAsync"
+                                            Click="@(() => Emit(rendered, ConversationWorkspaceAction.CancelResponse))"
                                             Disabled="@Presentation.IsMutating"
                                             data-testid="llm-chat-operation-cancel" />
                                 }
@@ -144,7 +160,7 @@
                                             Icon="sync"
                                             Variant="Variant.Outlined"
                                             Size="ButtonSize.Small"
-                                            Click="ReconcileActiveOperationAsync"
+                                            Click="@(() => Emit(rendered, ConversationWorkspaceAction.Reconcile))"
                                             Disabled="@Presentation.IsMutating"
                                             data-testid="llm-chat-operation-reconcile" />
                                 }
@@ -154,7 +170,7 @@
                                             ButtonStyle="ButtonStyle.Danger"
                                             Variant="Variant.Outlined"
                                             Size="ButtonSize.Small"
-                                            Click="AbandonActiveOperationAsync"
+                                            Click="@(() => Emit(rendered, ConversationWorkspaceAction.Abandon))"
                                             Disabled="@Presentation.IsMutating"
                                             data-testid="llm-chat-operation-abandon" />
                                 }
@@ -172,8 +188,8 @@
             </MiddleContent>
             <Composer>
                 <ConversationComposer @key="Presentation.Generation" DraftPrompt="@Presentation.DraftPrompt"
-                                      DraftPromptChanged="HandleDraftChanged"
-                                      SendRequested="SendAsync"
+                                      DraftPromptChanged="value => Emit(rendered, ConversationWorkspaceAction.DraftChanged, text: value ?? string.Empty)"
+                                      SendRequested="@(() => Emit(rendered, ConversationWorkspaceAction.Send))"
                                       IsBusy="@Presentation.IsMutating"
                                       IsSendDisabled="@Presentation.IsSendDisabled"
                                       ComposerKey="@Presentation.ComposerKey"
@@ -206,19 +222,10 @@
         ErrorEyebrow: "Conversations unavailable");
 
 
-    private Task Emit(ConversationWorkspaceAction action, Guid? id = null, string? text = null)
-        => Intent.InvokeAsync(new(Presentation.Generation, action, id, text));
-    private Task SelectConversationAsync(ConversationPresentationKey key) => ConversationWorkspaceMapping.TryGetConversationId(key, out var id)
-        ? Emit(ConversationWorkspaceAction.Select, id) : Task.CompletedTask;
-    private Task LoadMoreConversationsAsync() => Emit(ConversationWorkspaceAction.LoadMoreConversations);
-    private Task LoadMoreMessagesAsync() => Emit(ConversationWorkspaceAction.LoadMoreMessages);
-    private Task ReloadSelectedAsync() => Emit(ConversationWorkspaceAction.ReloadSelected);
-    private Task OpenStartDialog() => Emit(ConversationWorkspaceAction.NewConversation);
-    private Task OpenRenameDialogAsync(Guid id) => Emit(ConversationWorkspaceAction.Rename, id);
-    private Task OpenArchiveDialogAsync(Guid id) => Emit(ConversationWorkspaceAction.Archive, id);
-    private Task HandleDraftChanged(string? value) => Emit(ConversationWorkspaceAction.DraftChanged, text: value ?? "");
-    private Task SendAsync() => Emit(ConversationWorkspaceAction.Send);
-    private Task CancelActiveOperationAsync() => Emit(ConversationWorkspaceAction.CancelResponse);
-    private Task ReconcileActiveOperationAsync() => Emit(ConversationWorkspaceAction.Reconcile);
-    private Task AbandonActiveOperationAsync() => Emit(ConversationWorkspaceAction.Abandon);
+    private Task Emit(ConversationWorkspacePresentation origin, ConversationWorkspaceAction action, Guid? id = null, string? text = null)
+        => Intent.InvokeAsync(new(origin.Generation, action, id, text,
+            action is ConversationWorkspaceAction.CancelResponse or ConversationWorkspaceAction.Reconcile or ConversationWorkspaceAction.Abandon
+                ? origin.ActiveOperationId : null));
+    private Task SelectConversationAsync(ConversationWorkspacePresentation origin, ConversationPresentationKey key)
+        => ConversationWorkspaceMapping.TryGetConversationId(key, out var id) ? Emit(origin, ConversationWorkspaceAction.Select, id) : Task.CompletedTask;
 }

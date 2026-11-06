@@ -77,11 +77,15 @@ public sealed class ProjectStructureTaskApplicationService(
             ProjectStructureTaskEstimateRefreshResult,
             CancellationToken,
             Task<ProjectStructureNode?>> createTask,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ValidateCreateRequest(request);
         ProjectAssignmentAdmission.Require(request.ProjectId, request.MutationOwner?.ExpectedProjectAdmission);
         ArgumentNullException.ThrowIfNull(createTask);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
 
         var pricing = await estimateRefreshService.RefreshAsync(
             request.ProjectId,
@@ -91,6 +95,9 @@ public sealed class ProjectStructureTaskApplicationService(
             ProjectStructureTaskMissingResourcePricingPolicy
                 .PreserveManualEstimate,
             cancellationToken);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
         ProjectStructureNode? createdTask = null;
         try
         {
@@ -109,7 +116,7 @@ public sealed class ProjectStructureTaskApplicationService(
                 createdTask.Id,
                 request.Assignee,
                 request.AssignmentSource,
-                cancellationToken, request.MutationOwner);
+                cancellationToken, request.MutationOwner, authorizeCommit);
             var committed = await assigneeService.ReadAsync(
                 request.ProjectId,
                 createdTask.Id,
@@ -146,11 +153,16 @@ public sealed class ProjectStructureTaskApplicationService(
                 ProjectStructureTaskEditCommitContext,
                 CancellationToken,
                 Task<TResult>> persist,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            ProjectStructureNode? expectedTask = null)
     {
         ValidateEditRequest(request);
         ProjectAssignmentAdmission.Require(request.ProjectId, request.MutationOwner?.ExpectedProjectAdmission);
         ArgumentNullException.ThrowIfNull(persist);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
 
         var current = await assigneeService.ReadAsync(
             request.ProjectId,
@@ -158,6 +170,9 @@ public sealed class ProjectStructureTaskApplicationService(
             cancellationToken, request.MutationOwner!.ExpectedProjectAdmission);
         var originalState =
             ProjectStructureTaskEditStatePolicy.Read(current.Task);
+        if (expectedTask is not null && !ProjectStructureNodeStateGuard.HasSameEditableContent(expectedTask, current.Task)) {
+            throw ConcurrencyConflict("The original Task content changed before save. Compare its current values before submitting again.");
+        }
         if (originalState != request.ExpectedState)
         {
             throw ConcurrencyConflict(
@@ -241,7 +256,7 @@ public sealed class ProjectStructureTaskApplicationService(
                         request.AssignmentSource,
                         current.DirectAssignments,
                         originalState.DirectAssignmentRevision,
-                        cancellationToken, request.MutationOwner);
+                        cancellationToken, request.MutationOwner, authorizeCommit, current.Task);
                 assignmentCommitted = true;
                 commitTask = replacement.Task;
                 commitAssignments = replacement.DirectAssignments;

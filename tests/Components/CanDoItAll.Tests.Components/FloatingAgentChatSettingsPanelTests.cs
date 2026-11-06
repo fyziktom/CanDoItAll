@@ -16,18 +16,20 @@ public sealed class FloatingAgentChatSettingsPanelTests
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSettingsOpeningFixture();
         var settingsService = new RecordingSettingsService(new(10, 12, 3, true, 15));
         var coordinator = DispatchProxy.Create<IFloatingAgentChatCoordinator, RecordingCoordinatorProxy>();
         context.Services.AddSingleton<IFloatingAgentChatSettingsService>(settingsService);
         context.Services.AddSingleton(coordinator);
 
+        context.SetRendererInfo(new("Server", isInteractive: true));
         var cut = context.Render<FloatingAgentChatSettingsPanel>();
         cut.WaitForElement("[data-testid='floating-agent-chat-retention']");
 
-        cut.Find("[data-testid='floating-agent-chat-retention']").Change("25");
-        cut.Find("[data-testid='floating-agent-chat-maximum-active']").Change("9");
-        cut.Find("[data-testid='floating-agent-chat-maximum-prepared']").Change("7");
-        cut.Find("[data-testid='floating-agent-chat-prepared-retention']").Change("30");
+        cut.Find("[data-testid='floating-agent-chat-retention']").Input("25");
+        cut.Find("[data-testid='floating-agent-chat-maximum-active']").Input("9");
+        cut.Find("[data-testid='floating-agent-chat-maximum-prepared']").Input("7");
+        cut.Find("[data-testid='floating-agent-chat-prepared-retention']").Input("30");
         cut.Find("[data-testid='floating-agent-chat-settings-save']").Click();
 
         cut.WaitForAssertion(() => Assert.NotNull(settingsService.SavedSettings));

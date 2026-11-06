@@ -3,7 +3,8 @@
 
 <PageTitle>Agents</PageTitle>
 
-<AgentsShellSurface State="ShellPresentation" Intent="HandleShellIntentAsync">
+<AgentsShellSurface State="ShellPresentation" Intent="HandleShellIntentAsync"
+                    FillHeight="@(route.Tab == AgentWorkspaceSection.SimpleChats)">
         @if (route.Tab == AgentWorkspaceSection.Providers)
         {
             <AgentProviderProfilesPanel ProviderId="@route.ProviderId"
@@ -50,7 +51,8 @@
             <SimpleChatsWorkspace View="@simpleChatRouteState.View"
                                   DefinitionId="@simpleChatRouteState.DefinitionId"
                                   ConversationId="@simpleChatRouteState.ConversationId"
-                                  RouteStateChanged="HandleSimpleChatRouteStateChangedAsync" />
+                                  RouteStateChanged="HandleSimpleChatRouteStateChangedAsync"
+                                  RetainsConversationNavigation="RetainsSimpleChatConversationNavigation" />
         }
         else if (route.Tab == AgentWorkspaceSection.Chat)
         {

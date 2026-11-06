@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages.Components;
@@ -29,6 +30,7 @@ public partial class ProjectStructurePage
     private string? projectCreateMessage;
     private int projectCreateWizardStep;
     private bool showProjectCreateModal;
+    private ProjectModalHost? projectCreateModal;
 
     private IReadOnlyList<SecondaryTabItem> ProjectCreateWizardTabs => ProjectCreateWizardSteps
         .Select((step, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {step}"))
@@ -49,10 +51,22 @@ public partial class ProjectStructurePage
         projectHierarchyDialogBeforeCreate = dialog;
         projectHierarchyDialog = null;
         try {
-            var acquired = await ProjectCreateDefinitions.AcquireEditorAsync(null, deferredCompletionCts.Token);
-            var (context, pending) = await ReadProjectCreatePendingAsync(acquired.Scope);
-            var summaries = await ProjectsService.ListAsync();
+            if (projectCreateAccess is { } previous) {
+                previous.Stop();
+                await previous.DisposeAsync();
+            }
             if (!IsCurrentAuthoring(opening, projectCreateOpening) || !ReferenceEquals(parent, hierarchyOpening)) {
+                return;
+            }
+            var access = new ProjectRootCreationAccess(ProjectCreateChanges, ProjectCreateUiAccess,
+                ProjectCreateProjectChanges, ProjectCreateObservationLogger);
+            projectCreateAccess = access;
+            await access.OpenAsync();
+            var acquired = await access.ReadAsync(token => ProjectCreateDefinitions.AcquireEditorAsync(null, token), deferredCompletionCts.Token);
+            var (context, pending) = await ReadProjectCreatePendingAsync(acquired.Scope, access);
+            var summaries = await access.ReadAsync(_ => ProjectsService.ListAsync(), deferredCompletionCts.Token);
+            if (!IsCurrentAuthoring(opening, projectCreateOpening) || !ReferenceEquals(parent, hierarchyOpening)) {
+                access.Stop();
                 return;
             }
             projectCreateDraft = new(acquired.Model, acquired.Scope);
@@ -71,6 +85,16 @@ public partial class ProjectStructurePage
             }
         }
         await RenderAuthoringOutcomeAsync();
+    }
+
+    private bool IsProjectCreateRoute(string location) {
+        var absolute = Navigation.ToAbsoluteUri(location);
+        if (!new Uri(Navigation.BaseUri).IsBaseOf(absolute)) {
+            return false;
+        }
+        var path = Navigation.ToBaseRelativePath(absolute.AbsoluteUri).Split('?', '#')[0].TrimEnd('/');
+        return string.Equals(path, ProjectStructureUrlCodec.Route(ProjectId).TrimStart('/'), StringComparison.OrdinalIgnoreCase) &&
+            AgentChatNavigationIdentity.CreateForLocation(Navigation.BaseUri, absolute.AbsoluteUri, OwnedQueryRemovals) == StructureNavigationFence;
     }
 
     private async Task CloseProjectCreateDialogAsync(ProjectStructureAuthoringOpening? opening) {

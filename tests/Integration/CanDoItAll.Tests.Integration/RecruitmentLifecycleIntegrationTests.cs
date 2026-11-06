@@ -105,7 +105,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
         var buddyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Bela Buddy");
         var mentorId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Miro Mentor");
         var unitId = await CreatePartyAsync(partyDirectoryService, PartyType.OrganizationUnit, "Delivery North");
-        var projectId = await CreateProjectAsync(projectsService, "Recruitment Integration Project");
+        var project = (await projectsService.CreateWithAdmissionAsync(new() { Name = "Recruitment Integration Project" })).Value!;
 
         var partyCountBeforeConvert = (await partyDirectoryService.ListDirectoryAsync()).Count;
 
@@ -126,6 +126,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
         var moveStageResult = await recruitingService.SaveRecruitmentApplicationAsync(new RecruitmentApplicationEditorModel
         {
             Id = applicationId,
+            Original = (await recruitingService.GetRecruitmentWorkspaceAsync(applicationId)).Application.Original,
             PartyId = candidateId,
             RecruiterPartyId = recruiterId,
             HiringManagerPartyId = hiringManagerId,
@@ -151,14 +152,15 @@ public sealed class RecruitmentLifecycleIntegrationTests
         });
         Assert.True(saveInterviewResult.IsSuccess);
 
-        Assert.True((await recruitingService.SaveSupportAssignmentsAsync(new RecruitmentSupportAssignmentsEditorModel
-        {
+        var supportAssignments = new RecruitmentSupportAssignmentsEditorModel {
             PartyId = candidateId,
             ManagerPartyId = hiringManagerId,
             BuddyPartyId = buddyId,
             MentorPartyId = mentorId,
             LastChangedBy = "integration-tests"
-        })).IsSuccess);
+        };
+        supportAssignments.SetOriginal(new([]));
+        Assert.True((await recruitingService.SaveSupportAssignmentsAsync(supportAssignments)).IsSuccess);
 
         var saveTaskResult = await recruitingService.SaveLifecycleTaskAsync(new LifecycleTaskEditorModel
         {
@@ -168,7 +170,8 @@ public sealed class RecruitmentLifecycleIntegrationTests
             OwnerPartyId = hiringManagerId,
             DueDate = new DateOnly(2026, 4, 20),
             Status = LifecycleTaskStatus.NotStarted,
-            RelatedProjectId = projectId,
+            RelatedProjectId = project.ProjectId,
+            RelatedProjectAdmission = project,
             Notes = "Recheck platform access practices after completion."
         });
         Assert.True(saveTaskResult.IsSuccess);
@@ -176,6 +179,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
         var convertResult = await recruitingService.ConvertCandidateAsync(new RecruitmentConversionEditorModel
         {
             ApplicationId = applicationId,
+                Original = (await recruitingService.GetRecruitmentWorkspaceAsync(applicationId)).Conversion.Original,
             WorkforceKind = WorkforceKind.Employee,
             JobTitle = "Senior Platform Engineer",
             Discipline = "Platform",
@@ -296,6 +300,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
             new RecruitmentApplicationEditorModel
             {
                 Id = saveResult.Value,
+                Original = workspace.Application.Original,
                 PartyId = candidateId,
                 RecruiterPartyId = aiSupervisorId,
                 DesiredRole = "Architecture assessment agent",
@@ -308,6 +313,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
             new RecruitmentApplicationEditorModel
             {
                 Id = saveResult.Value,
+                Original = workspace.Application.Original,
                 PartyId = candidateId,
                 RecruiterPartyId = recruiterId,
                 HiringManagerPartyId = aiSupervisorId,
@@ -330,6 +336,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
             new RecruitmentApplicationEditorModel
             {
                 Id = saveResult.Value,
+                Original = workspace.Application.Original,
                 PartyId = candidateId,
                 RecruiterPartyId = recruiterId,
                 DesiredRole = "Architecture assessment agent",
@@ -343,6 +350,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
             new RecruitmentConversionEditorModel
             {
                 ApplicationId = saveResult.Value,
+                Original = (await recruitingService.GetRecruitmentWorkspaceAsync(saveResult.Value)).Conversion.Original,
                 JobTitle = "Architecture assessment agent",
                 LastChangedBy = "integration-tests"
             });
@@ -417,6 +425,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
             new RecruitmentConversionEditorModel
             {
                 ApplicationId = applicationResult.Value,
+                Original = (await recruitingService.GetRecruitmentWorkspaceAsync(applicationResult.Value)).Conversion.Original,
                 JobTitle = "Platform engineer",
                 LastChangedBy = "integration-tests"
             });
@@ -431,6 +440,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
             new RecruitmentApplicationEditorModel
             {
                 Id = applicationResult.Value,
+                Original = (await recruitingService.GetRecruitmentWorkspaceAsync(applicationResult.Value)).Application.Original,
                 PartyId = candidateId,
                 DesiredRole = "Platform engineer",
                 Stage = RecruitmentStage.Rejected,
@@ -443,6 +453,7 @@ public sealed class RecruitmentLifecycleIntegrationTests
             new RecruitmentConversionEditorModel
             {
                 ApplicationId = applicationResult.Value,
+                Original = (await recruitingService.GetRecruitmentWorkspaceAsync(applicationResult.Value)).Conversion.Original,
                 JobTitle = "Platform engineer",
                 LastChangedBy = "integration-tests"
             });
@@ -452,20 +463,6 @@ public sealed class RecruitmentLifecycleIntegrationTests
         Assert.DoesNotContain(
             await hrService.ListWorkforceProfilesAsync(),
             profile => profile.PartyId == candidateId);
-    }
-
-    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
-    {
-        var result = await projectsService.SaveAsync(new ProjectEditorModel
-        {
-            Name = name,
-            Description = $"{name} description",
-            Objective = $"{name} objective",
-            CurrentPhase = "Discovery"
-        });
-
-        Assert.True(result.IsSuccess);
-        return result.Value;
     }
 
     private static async Task<Guid> CreatePartyAsync(

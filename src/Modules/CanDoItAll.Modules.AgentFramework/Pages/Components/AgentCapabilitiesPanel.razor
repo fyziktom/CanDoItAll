@@ -1,4 +1,16 @@
+@if (!admitted) {
+    <Alert AlertStyle="@(accessError is null ? AlertStyle.Info : AlertStyle.Warning)" data-testid="capabilities-access-unavailable">
+        @(accessError ?? "Initializing capability workspace access.")
+    </Alert>
+} else {
+@if (catalogOpening?.HasChanges == true) {
+    <Alert AlertStyle="AlertStyle.Info" data-testid="capabilities-catalog-changed">
+        Agent or capability configuration changed. Refresh this workspace when ready; open editors retain their drafts.
+        <Button Text="Refresh capabilities" ButtonStyle="ButtonStyle.Light" Click="RefreshCatalogAsync" data-testid="capabilities-catalog-refresh" />
+    </Alert>
+}
 <AgentCapabilitiesSurface Snapshot="@Snapshot"
                           Selection="@session.Selection"
                           LoadState="@session.LoadState"
                           Intent="HandleIntentAsync" />
+}

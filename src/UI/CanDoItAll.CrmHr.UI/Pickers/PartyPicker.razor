@@ -1,4 +1,5 @@
 @inject IPartyRecordQueryService PartyRecordQueryService
+@implements IDisposable
 
 <Stack GapScale="LayoutGap.Medium">
     <FormField Text="@Label">
@@ -63,6 +64,10 @@
     private ResolvedParty? resolvedSelectedParty;
     private Guid? resolvedPartyId;
     private long resolveGeneration;
+    private bool disposed;
+
+    [Parameter]
+    public EventCallback<bool> PendingChanged { get; set; }
 
     [Parameter]
     public string Label { get; set; } = "Party";
@@ -121,7 +126,7 @@
         }
 
         var party = await PartyRecordQueryService.GetAsync(selectedPartyId.Value);
-        if (generation != resolveGeneration ||
+        if (disposed || generation != resolveGeneration ||
             resolvedPartyId != EffectiveSelectedPartyId)
         {
             return;
@@ -132,26 +137,43 @@
             : new ResolvedParty(party.DisplayName, party.PartyType.ToString(), party.IsSensitive);
     }
 
-    private void OpenPicker()
-    {
+    private Task OpenPicker() {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
         isPickerOpen = true;
+        return PendingChanged.InvokeAsync(true);
     }
 
     private Task ClosePickerAsync()
     {
         isPickerOpen = false;
-        return Task.CompletedTask;
+        return disposed ? Task.CompletedTask : PendingChanged.InvokeAsync(false);
     }
 
     private async Task ConfirmSelectionAsync(Guid partyId)
     {
+        if (disposed) {
+            return;
+        }
         isPickerOpen = false;
-        await SelectedPartyIdChanged.InvokeAsync(partyId);
+        try {
+            await SelectedPartyIdChanged.InvokeAsync(partyId);
+        } finally {
+            if (!disposed) {
+                await PendingChanged.InvokeAsync(false);
+            }
+        }
     }
 
     private Task ClearSelectionAsync()
     {
-        return SelectedPartyIdChanged.InvokeAsync(null);
+        return disposed ? Task.CompletedTask : SelectedPartyIdChanged.InvokeAsync(null);
+    }
+
+    public void Dispose() {
+        disposed = true;
+        resolveGeneration++;
     }
 
     // What the picker shows about the resolved selection: the owner's display name, its party type and the

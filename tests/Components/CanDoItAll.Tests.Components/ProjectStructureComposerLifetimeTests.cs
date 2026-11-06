@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
@@ -66,7 +67,7 @@ public sealed class ProjectStructureComposerLifetimeTests {
     [InlineData(true, false)]
     [InlineData(true, true)]
     public async Task Accepted_edit_keeps_original_outcome_after_close_or_replacement(bool loseReply, bool replace) {
-        var gate = new ProjectStructureHierarchyLifetimeTests.OwnerWriteGate { LoseCommitReply = loseReply };
+        var gate = new ProjectStructureHierarchyLifetimeTests.OwnerWriteGate { LoseCommitReply = loseReply, HoldAfterCommit = true };
         await using var harness = await ProjectStructureHierarchyLifetimeTests.CreateHarnessAsync(gate);
         harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -82,18 +83,22 @@ public sealed class ProjectStructureComposerLifetimeTests {
         var request = new CanvasWorkbenchNodeEditRequest(note.Id, "Accepted", "Accepted original body") {
             ComposerOpeningId = id, ComposerSubmissionId = submissionId
         };
-        await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(id, null, request))));
+        await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(id, null, new(note.Id, note.Title, note.Notes)))));
         gate.ArmNode(project, note.Id);
         var pending = page.InvokeAsync(() => canvas.Instance.OnNodeEdited(JsonSerializer.Serialize(request)));
         Guid? replacementId = null;
         try {
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await using (var canonical = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync()) {
+                Assert.Equal(request.Notes, (await canonical.Set<ProjectObjectRecord>().AsNoTracking().SingleAsync(record =>
+                    record.ProjectId == project && record.NodeKey == note.Id)).Notes);
+            }
             await page.InvokeAsync(() => canvas.Instance.OnNodeEdited(JsonSerializer.Serialize(request)));
             await page.InvokeAsync(() => canvas.Instance.OnComposerClosed(id));
             if (replace) {
                 replacementId = Guid.NewGuid();
                 await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(replacementId.Value, null,
-                    new(neighbor.Id, neighbor.Title, "Replacement draft")))));
+                    new(neighbor.Id, neighbor.Title, neighbor.Notes)))));
             }
         } finally {
             gate.Release.TrySetResult();
@@ -134,7 +139,7 @@ public sealed class ProjectStructureComposerLifetimeTests {
         var canvas = page.FindComponent<CanvasWorkbench>();
         var id = Guid.NewGuid();
         var edit = new CanvasWorkbenchNodeEditRequest(note.Id, "Stale", "Should not write") { ComposerOpeningId = id };
-        await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(id, null, edit))));
+        await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(id, null, new(note.Id, note.Title, note.Notes)))));
         if (recreate) {
             var native = harness.Context.Services.GetRequiredService<ProjectNativeLifecycleOperations>();
             var context = await native.GetContextAsync();

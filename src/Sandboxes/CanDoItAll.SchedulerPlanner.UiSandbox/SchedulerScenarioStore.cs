@@ -76,7 +76,8 @@ public sealed class SchedulerScenarioStore : ISchedulerWorkspaceOwner {
         Entered.TrySetResult();
         await gate.Task.WaitAsync(IgnoreCancellation ? CancellationToken.None : token);
     }
-    public async Task<SchedulerWorkspaceData> ReadAsync(SchedulerHistoryQuery query, CancellationToken token) {
+    public async Task<SchedulerWorkspaceData> ReadAsync(SchedulerWorkspaceQuery request, CancellationToken token) {
+        var query = request.History;
         Reads++;
         if (ReadOverride is not null) {
             return await ReadOverride(query, token);
@@ -85,14 +86,14 @@ public sealed class SchedulerScenarioStore : ISchedulerWorkspaceOwner {
         if (FailReads || Scenario == SchedulerScenario.ReadUnavailable) {
             throw new IOException("Scenario workspace read unavailable.");
         }
-        var plans = Plans.Values.Select(Summary).OrderBy(plan => plan.Name).ToArray();
+        var plans = Plans.Values.Select(Summary).OrderBy(plan => plan.Name).Skip(request.Plans.Offset).Take(request.Plans.Take).ToArray();
         var history = History.Where(run => (query.Status is null || query.Status == run.Status)
             && (query.TargetKind is null || query.TargetKind == run.TargetKind)
             && (query.FromUtc is null || run.FiredAtUtc >= query.FromUtc)
             && (query.ToUtc is null || run.FiredAtUtc <= query.ToUtc)
             && (query.Search.Length == 0 || run.PlanName.Contains(query.Search, StringComparison.OrdinalIgnoreCase)))
             .Take(Math.Clamp(query.Take, 1, 250)).ToArray();
-        return new(plans, history, Targets(), Calendar(plans, history));
+        return new(plans, history, Targets(), Calendar(plans, history)) { PlanCount = Plans.Count };
     }
     public async Task<SchedulerDraftValues> DefaultAsync(CancellationToken token) {
         await WaitAsync(SchedulerWait.Default, token);
@@ -146,14 +147,16 @@ public sealed class SchedulerScenarioStore : ISchedulerWorkspaceOwner {
             _ => new(SchedulerMutationKind.Save, SchedulerMutationStatus.Committed, id, SchedulerMutationStage.ProjectionSynchronized, "Scenario storage updated; projection is fixture data.", saved)
         };
     }
-    public async Task<SchedulerMutationReceipt> ToggleAsync(Guid id, bool enabled) {
+    public async Task<SchedulerMutationReceipt> ToggleAsync(SchedulerPlanCondition expected, bool enabled) {
+        var id = expected.PlanId;
         await WaitAsync(SchedulerWait.Save);
         Plans[id] = Plans[id] with { IsEnabled = enabled };
         Writes++;
         return new(enabled ? SchedulerMutationKind.Enable : SchedulerMutationKind.Disable, SchedulerMutationStatus.Committed,
             id, SchedulerMutationStage.ProjectionSynchronized, "Scenario enabled state updated.");
     }
-    public async Task<SchedulerMutationReceipt> DeleteAsync(Guid id) {
+    public async Task<SchedulerMutationReceipt> DeleteAsync(SchedulerPlanCondition expected) {
+        var id = expected.PlanId;
         await WaitAsync(SchedulerWait.Save);
         Plans.Remove(id);
         History.RemoveAll(run => run.PlanId == id);

@@ -8,11 +8,229 @@ using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using CanDoItAll.Editing;
+using CanDoItAll.Tests.Support;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 [Trait("Category", "HostPlatform")]
 public sealed class SharedProviderSourceSeamTests {
+    [Fact]
+    public async Task A_peer_retirement_without_a_source_hint_preserves_the_peer_and_requires_catalog_review_before_remote_work() {
+        var remote = new CatalogResponse();
+        NativeSourceProxy? proxy = null;
+        await using var harness = await HarnessAsync(value => proxy = value, remote);
+        var seed = await SharedProviderLocalConcurrencyTests.CreateImportAsync(harness.Context.Services);
+        remote.Catalog = seed.Catalog;
+        var cut = harness.Context.Render<SharedProviderSourcesDialog>(p => p.Add(c => c.ProvidersChanged,
+            (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
+        await cut.WaitForElement("[data-testid='shared-provider-source-discover']").ClickAsync();
+        var dialog = Assert.IsType<SharedProviderCatalogSelection>(cut.Instance.Presentation.Catalog);
+        var original = dialog.Origin;
+        var peer = (await proxy!.Owner.ListSourcesAsync()).Single().Imports[1];
+        await proxy.Owner.RetireImportedProfileAsync(new(peer.ImportId, peer.ProviderProfileId,
+            peer.ImportConcurrencyToken, peer.ProviderConcurrencyToken));
+        Assert.Equal(original.ConcurrencyToken, (await proxy.Owner.ListSourcesAsync()).Single().Source.ConcurrencyToken);
+        Assert.Equal(1, remote.Fetches);
+        await cut.Find("[data-testid='shared-provider-catalog-apply']").ClickAsync();
+        Assert.True(dialog.ReadbackConflict);
+        Assert.Equal(original, dialog.Origin);
+        Assert.Equal(1, remote.Fetches);
+        Assert.Equal(SharedProviderSelectionState.Retired, (await proxy.Owner.ListSourcesAsync()).Single().Imports
+            .Single(import => import.ImportId == peer.ImportId).SelectionState);
+        Assert.NotNull(cut.Find("[data-testid='shared-provider-catalog-compare']"));
+        Assert.Single(proxy.Synchronizations);
+    }
+
+    [Fact]
+    public async Task Catalog_receipt_uses_exact_accepted_source_versions_when_a_peer_commits_before_acknowledgment() {
+        var remote = new CatalogResponse();
+        NativeSourceProxy? proxy = null;
+        await using var harness = await HarnessAsync(value => proxy = value, remote);
+        var seed = await SharedProviderLocalConcurrencyTests.CreateImportAsync(harness.Context.Services);
+        remote.Catalog = seed.Catalog;
+        var cut = harness.Context.Render<SharedProviderSourcesDialog>(p => p.Add(c => c.ProvidersChanged,
+            (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
+        await cut.WaitForElement("[data-testid='shared-provider-source-discover']").ClickAsync();
+        var dialog = Assert.IsType<SharedProviderCatalogSelection>(cut.Instance.Presentation.Catalog);
+        cut.FindAll("[data-testid='shared-provider-catalog-selection']")[1].Change(false);
+        proxy!.HoldSync = true;
+        var applying = cut.Find("[data-testid='shared-provider-catalog-apply']").ClickAsync();
+        await proxy.SyncCommitted.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        var accepted = Assert.IsType<SharedProviderSourceObservation>(proxy.AcceptedSync!.AcceptedObservation);
+        cut.FindAll("[data-testid='shared-provider-catalog-selection']")[1].Change(true);
+        var native = harness.Context.Services.GetRequiredService<SharedProviderSourceService>();
+        var source = await native.GetAsync(seed.SourceId);
+        await native.UpdateAsync(source.Id, source.ConcurrencyToken, new("Peer source after synchronization", source.BaseUri,
+            source.ApiTokenSecretId, true, false));
+        proxy.Release.SetResult();
+        await applying;
+        Assert.Same(dialog, cut.Instance.Presentation.Catalog);
+        Assert.True(dialog.IsSelected(seed.Catalog.Providers[1].PublicationId));
+        Assert.Equal(accepted.ConcurrencyToken, dialog.Origin.ConcurrencyToken);
+        Assert.True(dialog.ReadbackConflict);
+        Assert.Single(proxy.Synchronizations);
+    }
+
+    [Fact]
+    public async Task Targeted_source_hints_do_not_query_bodies_and_invalidate_a_review_without_replacing_raw_input() {
+        NativeSourceProxy? proxy = null;
+        await using var harness = await HarnessAsync(value => proxy = value);
+        var credential = await CredentialAsync(harness);
+        var native = harness.Context.Services.GetRequiredService<SharedProviderSourceService>();
+        var created = await native.CreateAsync(new("Original source", new("https://source.example.test/"), credential.Id, true, false));
+        var cut = Render(harness, credential);
+        await cut.WaitForElement("[data-testid='shared-provider-source-edit']").ClickAsync();
+        cut.Find("[data-testid='shared-provider-source-name']").Input("My source draft");
+        cut.Find("[data-testid='shared-provider-source-uri']").Input("https://[unfinished");
+        var context = cut.Instance.Presentation.Editor!.Context;
+        var reads = proxy!.ListReads;
+        var peer = await native.GetAsync(created.Id);
+        await native.UpdateAsync(peer.Id, peer.ConcurrencyToken, new("Peer source name", peer.BaseUri, peer.ApiTokenSecretId, true, false));
+        cut.WaitForElement("[data-testid='shared-sources-changed']");
+        Assert.Equal(reads, proxy.ListReads);
+        Assert.Equal("https://[unfinished", cut.Find("[data-testid='shared-provider-source-uri']").GetAttribute("value"));
+        await cut.Find("[data-testid='shared-source-compare']").ClickAsync();
+        cut.WaitForElement("[data-testid='shared-source-comparison']");
+        Assert.Contains("Peer source name", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(reads + 1, proxy.ListReads);
+        peer = await native.GetAsync(created.Id);
+        await native.UpdateAsync(peer.Id, peer.ConcurrencyToken, new("Newer source name", peer.BaseUri, peer.ApiTokenSecretId, true, false));
+        cut.WaitForAssertion(() => Assert.True(cut.Instance.Presentation.Editor!.Comparison!.IsStale));
+        Assert.True(cut.Find("[data-testid='shared-source-comparison-apply']").HasAttribute("disabled"));
+        Assert.Equal(reads + 1, proxy.ListReads);
+        Assert.Same(context, cut.Instance.Presentation.Editor!.Context);
+        Assert.Equal("https://[unfinished", cut.Find("[data-testid='shared-provider-source-uri']").GetAttribute("value"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Source_workspace_does_not_read_or_reveal_credentials_during_prerender_or_without_access(bool interactive) {
+        NativeSourceProxy? proxy = null;
+        var access = new EditingUiTestAccess { Allowed = !interactive };
+        await using var harness = await HarnessAsync(value => proxy = value, access: access);
+        harness.Context.SetRendererInfo(new RendererInfo(interactive ? "Server" : "Static", interactive));
+        var cut = Render(harness, new(Guid.NewGuid(), "Protected source credential", SecretKind.Token, "workspace", DateTimeOffset.UtcNow));
+        Assert.Equal(0, proxy!.ListReads);
+        Assert.DoesNotContain("Protected source credential", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("form"));
+    }
+
+    [Fact]
+    public async Task A_held_source_read_cannot_reveal_its_payload_to_a_different_actor() {
+        NativeSourceProxy? proxy = null;
+        var access = new EditingUiTestAccess();
+        await using var harness = await HarnessAsync(value => proxy = value, access: access);
+        var credential = await CredentialAsync(harness);
+        var native = harness.Context.Services.GetRequiredService<SharedProviderSourceService>();
+        var created = await native.CreateAsync(new("Protected held source", new("https://source.example.test/"), credential.Id, true, false));
+        var source = await native.GetAsync(created.Id);
+        _ = harness.Context.Services.GetRequiredService<ISharedProviderManagementService>();
+        var pending = new TaskCompletionSource<IReadOnlyList<SharedProviderSourceManagementSnapshot>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        proxy!.PendingSources = pending.Task;
+        var cut = Render(harness, credential);
+        cut.WaitForAssertion(() => Assert.Equal(1, proxy.ListReads));
+        access.Principal = "different-source-actor";
+        await cut.InvokeAsync(() => pending.SetResult([new(source, [])]));
+        cut.WaitForElement("[data-testid='shared-provider-sources-error']");
+        Assert.DoesNotContain(source.Name, cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(credential.Name, cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("form"));
+    }
+
+    [Fact]
+    public async Task Actor_loss_before_source_dispatch_retains_the_local_draft_without_starting_a_write_or_attempt() {
+        NativeSourceProxy? proxy = null;
+        var access = new EditingUiTestAccess();
+        await using var harness = await HarnessAsync(value => proxy = value, access: access);
+        var credential = await CredentialAsync(harness);
+        var cut = Render(harness, credential);
+        await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();
+        cut.Find("[data-testid='shared-provider-source-name']").Input("Retained source draft");
+        cut.Find("[data-testid='shared-provider-source-uri']").Input("https://source.example.test/");
+        var draft = cut.Instance.Presentation.Editor!;
+        access.Principal = "different-source-actor";
+
+        await cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
+
+        Assert.Empty(proxy!.Writes);
+        Assert.Null(harness.Context.Services.GetRequiredService<SharedProviderRecovery>().Source);
+        Assert.Equal("Retained source draft", draft.Name);
+        Assert.Empty(cut.FindAll("form"));
+        Assert.DoesNotContain(credential.Name, cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Pending_shared_recovery_cannot_bind_to_a_new_actor_or_dataset(bool actor) {
+        var recovery = new SharedProviderRecovery();
+        var address = new ProviderRecoveryAddress(new(EditingScopeKind.Dataset, Guid.NewGuid()), "source-original-actor");
+        recovery.Bind(address);
+        var attempt = new SharedProviderSourceMutationAttempt(Guid.NewGuid(), SharedProviderSourceMutationKind.Create);
+        recovery.BeginSource(attempt);
+        var other = actor ? address with { PrincipalStamp = "another-source-actor" }
+            : address with { Scope = address.Scope with { Id = Guid.NewGuid() } };
+        Assert.Throws<UnauthorizedAccessException>(() => recovery.Bind(other));
+        recovery.Bind(address);
+        Assert.Same(attempt, recovery.Source);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Unconfirmed_source_can_review_a_later_peer_without_losing_its_retained_context_or_replaying(bool recreate) {
+        NativeSourceProxy? proxy = null;
+        await using var harness = await HarnessAsync(value => proxy = value);
+        var credential = await CredentialAsync(harness);
+        var cut = Render(harness, credential);
+        await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();
+        cut.Find("[data-testid='shared-provider-source-name']").Input("Owned submitted source");
+        cut.Find("[data-testid='shared-provider-source-uri']").Input("https://source.example.test/");
+        var draft = cut.Instance.Presentation.Editor!;
+        var context = draft.Context;
+        proxy!.HoldWrite = true;
+        proxy.LoseAcknowledgement = true;
+        var saving = cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
+        var committed = await proxy.Committed.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        cut.Find("[data-testid='shared-provider-source-name']").Input("Retained source after dispatch");
+        cut.Find("[data-testid='shared-provider-source-uri']").Input("https://[unfinished");
+        proxy.Release.SetResult();
+        await saving;
+        var current = Assert.Single(await proxy.Owner.ListSourcesAsync()).Source;
+        var peer = await proxy.Owner.SaveSourceAsync(new(current.Id, current.ConcurrencyToken, "Current peer source",
+            current.BaseUri, current.ApiTokenSecretId, current.IsEnabled, false));
+        if (recreate) {
+            await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+            cut.Dispose();
+            cut = Render(harness, credential);
+        }
+        await cut.WaitForElement("[data-testid='shared-provider-source-verify']").ClickAsync();
+        Assert.NotNull(harness.Context.Services.GetRequiredService<SharedProviderRecovery>().Source);
+        await cut.Find("[data-testid='shared-source-review-pending']").ClickAsync();
+        cut.WaitForElement("[data-testid='shared-source-comparison']");
+        Assert.Same(context, cut.Instance.Presentation.Editor!.Context);
+        Assert.Equal("https://[unfinished", cut.Find("[data-testid='shared-provider-source-uri']").GetAttribute("value"));
+        cut.Find("[data-testid='shared-source-comparison'] input[type='checkbox']").Change(true);
+        await cut.Find("[data-testid='shared-source-comparison-apply']").ClickAsync();
+        var recovery = harness.Context.Services.GetRequiredService<SharedProviderRecovery>();
+        Assert.Null(recovery.Source);
+        Assert.Single(recovery.ReviewedSources);
+        Assert.Equal(peer.ConcurrencyToken, draft.ExpectedToken);
+        Assert.Single(proxy.Writes);
+        await cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
+        Assert.Single(proxy.Writes);
+        Assert.Same(context, cut.Instance.Presentation.Editor!.Context);
+        proxy.HoldWrite = false;
+        proxy.LoseAcknowledgement = false;
+        cut.Find("[data-testid='shared-provider-source-uri']").Input("https://source.example.test/");
+        await cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
+        Assert.Equal(2, proxy.Writes.Count);
+        Assert.Equal("Retained source after dispatch", Assert.Single(await proxy.Owner.ListSourcesAsync()).Source.Name);
+    }
+
     [Theory]
     [InlineData(CatalogRecovery.Readback)]
     [InlineData(CatalogRecovery.Delivery)]
@@ -41,6 +259,13 @@ public sealed class SharedProviderSourceSeamTests {
         failDelivery = failure == CatalogRecovery.Delivery;
         proxy.Release.SetResult();
         await applying;
+        if (failure == CatalogRecovery.Unknown) {
+            await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+            cut.Dispose();
+            cut = harness.Context.Render<SharedProviderSourcesDialog>(p => p.Add(c => c.ProvidersChanged,
+                (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
+            cut.WaitForElement("[data-testid='shared-provider-source-verify']");
+        }
         Assert.Same(dialog, cut.Instance.Presentation.Catalog);
         Assert.True(dialog.IsSelected(changed));
         Assert.Single(proxy.Synchronizations);
@@ -54,6 +279,19 @@ public sealed class SharedProviderSourceSeamTests {
         var native = Assert.Single(await proxy.Owner.ListSourcesAsync());
         Assert.Equal(SharedProviderSelectionState.Retired, native.Imports.Single(item => item.RemotePublicationId == changed).SelectionState);
         Assert.Same(dialog, cut.Instance.Presentation.Catalog);
+        if (failure == CatalogRecovery.Unknown) {
+            Assert.Equal(firstOrigin, dialog.Origin);
+            Assert.NotNull(cut.Instance.Presentation.Recovery);
+            Assert.Null(harness.Context.Services.GetRequiredService<SharedProviderRecovery>().PendingDelivery(
+                cut.Instance.Presentation.Recovery!.AttemptId));
+            await cut.Find("[data-testid='shared-provider-catalog-compare']").ClickAsync();
+            cut.WaitForElement("[data-testid='shared-provider-catalog-comparison']");
+            await cut.Find("[data-testid='shared-provider-catalog-review-selection'] button").ClickAsync();
+            await cut.Find("[data-testid='shared-provider-catalog-review-apply']").ClickAsync();
+            Assert.Null(cut.Instance.Presentation.Recovery);
+            Assert.Single(harness.Context.Services.GetRequiredService<SharedProviderRecovery>().ReviewedSources);
+            Assert.Single(proxy.Synchronizations);
+        }
         Assert.Equal(native.Source.ConcurrencyToken, dialog.Origin.ConcurrencyToken);
         Assert.NotEqual(firstOrigin.SnapshotId, dialog.Origin.SnapshotId);
         Assert.Single(proxy.Synchronizations);
@@ -203,8 +441,12 @@ public sealed class SharedProviderSourceSeamTests {
         Assert.Empty(await proxy.Owner.ListSourcesAsync());
     }
 
-    private static Task<ComponentTestHarness> HarnessAsync(Action<NativeSourceProxy> capture, ISharedProviderCatalogClient? catalog = null) =>
+    private static Task<ComponentTestHarness> HarnessAsync(Action<NativeSourceProxy> capture, ISharedProviderCatalogClient? catalog = null,
+        EditingUiTestAccess? access = null) =>
         ComponentTestHarness.CreateAsync(services => {
+            if (access is not null) {
+                services.AddSingleton<IEditingUiAccess>(access);
+            }
             if (catalog is not null) {
                 services.AddSingleton(catalog);
             }
@@ -219,9 +461,12 @@ public sealed class SharedProviderSourceSeamTests {
 
     private sealed class CatalogResponse : ISharedProviderCatalogClient {
         public SharedProviderCatalogDocument Catalog { get; set; } = null!;
-        public ValueTask<SharedProviderCatalogFetchResult> FetchAsync(SharedProviderCatalogFetchRequest request, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult<SharedProviderCatalogFetchResult>(new SharedProviderCatalogFetchResult.Succeeded(
+        public int Fetches { get; private set; }
+        public ValueTask<SharedProviderCatalogFetchResult> FetchAsync(SharedProviderCatalogFetchRequest request, CancellationToken cancellationToken = default) {
+            Fetches++;
+            return ValueTask.FromResult<SharedProviderCatalogFetchResult>(new SharedProviderCatalogFetchResult.Succeeded(
                 Catalog, SharedProviderCatalogEntityTag.FromRevision(Catalog.CatalogRevision)));
+        }
     }
 
     private static async Task<SecretListItem> CredentialAsync(ComponentTestHarness harness) {
@@ -244,20 +489,29 @@ public sealed class SharedProviderSourceSeamTests {
         public bool HoldSync { get; set; }
         public bool FailReads { get; set; }
         public bool LoseAcknowledgement { get; set; }
+        public int ListReads { get; private set; }
+        public Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>>? PendingSources { get; set; }
         public TaskCompletionSource<SharedProviderSourceWriteResult> Committed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public List<IReadOnlySet<SharedProviderPublicationId>> Synchronizations { get; } = [];
         public TaskCompletionSource SyncCommitted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public SharedProviderSourceOperationResult? AcceptedSync { get; private set; }
         protected override object? Invoke(MethodInfo? method, object?[]? args) {
+            if (method!.Name == nameof(ISharedProviderManagementService.ListSourcesAsync)) {
+                ListReads++;
+                if (PendingSources is not null) {
+                    return PendingSources;
+                }
+            }
             if (method!.Name == nameof(ISharedProviderManagementService.SaveSourceAsync)) {
                 var request = (SharedProviderSourceEditorRequest)args![0]!;
                 Writes.Add(request);
                 return SaveAsync(request, (CancellationToken)args[1]!);
             }
             if (method.Name == nameof(ISharedProviderManagementService.SynchronizeSourceAsync)) {
-                var selected = (IReadOnlySet<SharedProviderPublicationId>)args![1]!;
+                var selected = (IReadOnlySet<SharedProviderPublicationId>)args![2]!;
                 Synchronizations.Add(selected);
-                return SynchronizeAsync((Guid)args[0]!, selected, (CancellationToken)args[2]!);
+                return SynchronizeAsync((Guid)args[0]!, (SharedProviderSourceObservation)args[1]!, selected, (CancellationToken)args[3]!);
             }
             if (method.Name == nameof(ISharedProviderManagementService.ListSourcesAsync) && FailReads) {
                 return Task.FromException<IReadOnlyList<SharedProviderSourceManagementSnapshot>>(new IOException("Fixture read-back unavailable."));
@@ -275,8 +529,10 @@ public sealed class SharedProviderSourceSeamTests {
             }
             return LoseAcknowledgement ? throw new IOException("Fixture acknowledgement lost after commit.") : result;
         }
-        private async Task<SharedProviderSourceOperationResult> SynchronizeAsync(Guid sourceId, IReadOnlySet<SharedProviderPublicationId> selected, CancellationToken token) {
-            var result = await Owner.SynchronizeSourceAsync(sourceId, selected, token);
+        private async Task<SharedProviderSourceOperationResult> SynchronizeAsync(Guid sourceId, SharedProviderSourceObservation original,
+            IReadOnlySet<SharedProviderPublicationId> selected, CancellationToken token) {
+            var result = await Owner.SynchronizeSourceAsync(sourceId, original, selected, token);
+            AcceptedSync = result;
             if (HoldSync) {
                 SyncCommitted.TrySetResult();
                 await Release.Task;

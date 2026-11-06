@@ -219,7 +219,7 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
         var generation = selectionGeneration;
         var target = PluginGrantTarget.From(grant);
         var request = new PluginGrantUpdateRequest(grant.Capability, state, grant.RecipeId?.Value,
-            grant.ScopeKind, grant.ScopeKey, grant.RiskKind, $"{state} from plugin settings UI.");
+            grant.ScopeKind, grant.ScopeKey, grant.RiskKind, $"{state} from plugin settings UI.") { ExpectedConcurrencyToken = grant.ConcurrencyToken };
         return operations.RunAsync(new PluginOperationTarget.Grant(target), () => owner.GrantAsync(plugin.PluginId, request),
             saved => {
                 reads.InvalidateSettings();

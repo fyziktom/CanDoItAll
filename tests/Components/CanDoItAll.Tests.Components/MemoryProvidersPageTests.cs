@@ -342,7 +342,7 @@ public sealed class MemoryProvidersPageTests
     {
         public List<MemoryProviderProfile> Profiles { get; } = seed.ToList();
 
-        public Task UpsertAsync(
+        public Task<MemoryProviderProfile> UpsertAsync(
             MemoryProviderProfile profile,
             DateTimeOffset updatedAtUtc,
             CancellationToken cancellationToken = default)
@@ -359,7 +359,7 @@ public sealed class MemoryProvidersPageTests
                 Profiles.Add(profile);
             }
 
-            return Task.CompletedTask;
+            return Task.FromResult(profile);
         }
 
         public Task<MemoryProviderProfile?> GetAsync(

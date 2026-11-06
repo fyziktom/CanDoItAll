@@ -9,7 +9,7 @@
 
     protected override void OnParametersSet() {
         state = new(state?.HandleId == Chat.HandleId ? state.Origin : Guid.NewGuid(), Chat.HandleId,
-            Chat.Agent.Name, Chat.CanStop, Chat.RunState == ActiveAgentChatRunState.AwaitingApproval);
+            Chat.Agent.Name, Chat.CanStop, Chat.RunState == ActiveAgentChatRunState.AwaitingApproval, Chat.HasUnsentDraft);
     }
 
     private Task DecideAsync(AgentFloatingCloseIntent intent) {

@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -240,11 +241,9 @@ public sealed class WorkflowDashboardActivityQueryTests
 
         factory.ResetTrackedEntityCount();
         var promptGallery = PromptGalleryTestSupport.CreateService(promptFactory);
-        var catalog = new PersistentWorkflowCatalogService(
-            factory,
-            new WorkflowDefinitionValidator(),
-            promptGallery,
-            promptGallery);
+        var mutation = PromptGalleryTestSupport.CreateMutations(promptFactory, promptGallery, databaseName);
+        var catalog = new PersistentWorkflowCatalogService(WorkflowObservationTestSupport.Create(),
+            factory, new WorkflowDefinitionValidator(), promptGallery, mutation.Mutations, mutation.Transactions);
 
         var result = await catalog.LookupDefinitionsAsync(new WorkflowCatalogLookupQuery(
             [requestedWorkflowId, missingWorkflowId]));

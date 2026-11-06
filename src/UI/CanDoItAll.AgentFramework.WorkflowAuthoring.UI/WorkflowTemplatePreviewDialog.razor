@@ -89,7 +89,7 @@
                             <Button Text="Add to my drafts"
                                     Icon="add"
                                     Click="AddDraft"
-                                    Disabled="@Busy"
+                                    Disabled="@(Busy || CreationBlocked)"
                                     IsBusy="@Busy"
                                     data-testid="workflows-template-add-draft" />
                         </Cluster>
@@ -102,6 +102,7 @@
     [Parameter] public IReadOnlyList<WorkflowExecutorDescriptor> Executors { get; set; } = [];
     [Parameter] public string Error { get; set; } = string.Empty;
     [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool CreationBlocked { get; set; }
     [Parameter] public EventCallback Closed { get; set; }
     [Parameter] public EventCallback AddDraft { get; set; }
     private readonly string instanceId = $"workflow-template-{Guid.NewGuid():N}";

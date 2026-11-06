@@ -1,4 +1,6 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using Microsoft.EntityFrameworkCore;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +12,16 @@ namespace CanDoItAll.Modules.Prompts;
 public static class PromptsModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddPromptsModule(this IServiceCollection services) {
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<EditingOperationContext>();
+        services.TryAddScoped<IPromptGalleryUiAccess, UnavailablePromptGalleryUiAccess>();
+        services.TryAddScoped(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            var feed = provider.GetRequiredService<EditingChangeFeed>();
+            return new PromptGalleryChanges(feed, feed,
+                new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<EditingOperationContext>());
+        });
         services.AddPooledDbContextFactory<PromptsDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });

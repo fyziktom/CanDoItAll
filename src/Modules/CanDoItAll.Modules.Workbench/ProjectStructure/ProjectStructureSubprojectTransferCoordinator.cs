@@ -58,7 +58,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
         string sourceNodeId,
         CancellationToken cancellationToken = default,
         ProjectStructureAgentContext? mutationOwner = null,
-        ProjectMutationAuthorization? authorization = null)
+        ProjectMutationAuthorization? authorization = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceNodeId);
         var normalizedSourceNodeId = sourceNodeId.Trim();
@@ -66,25 +67,26 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
             sourceProjectId,
             targetProjectId,
             targetProject,
-            (owner, cancellationToken) => operations.MoveDescendantsAsync(
+            (owner, cancellationToken, authorize) => operations.MoveDescendantsAsync(
                 sourceProjectId,
                 normalizedSourceNodeId,
                 targetProjectId,
-                cancellationToken, owner),
+                cancellationToken, owner, authorize),
             ProjectStructureTransferRejectionReason.DescendantsUnavailable,
             "The descendants could not be moved to the new subproject.",
-            cancellationToken, mutationOwner: mutationOwner, authorization: authorization);
+            cancellationToken, mutationOwner: mutationOwner, authorization: authorization, authorizeCommit: authorizeCommit);
     }
 
     public Task<ProjectStructureCreatedSubprojectTransferResult> MoveDescendantsToNewSubprojectAsync(
         Guid sourceProjectId, ProjectCreationReservation reservation, ProjectEditorModel targetProject, string sourceNodeId,
-        CancellationToken cancellationToken = default, ProjectStructureAgentContext? mutationOwner = null) {
+        CancellationToken cancellationToken = default, ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ArgumentNullException.ThrowIfNull(reservation);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceNodeId);
         return ExecuteAsync(sourceProjectId, reservation.ProjectId, targetProject,
-            (owner, token) => operations.MoveDescendantsAsync(sourceProjectId, sourceNodeId.Trim(), reservation.ProjectId, token, owner),
+            (owner, token, authorize) => operations.MoveDescendantsAsync(sourceProjectId, sourceNodeId.Trim(), reservation.ProjectId, token, owner, authorize),
             ProjectStructureTransferRejectionReason.DescendantsUnavailable,
-            "The descendants could not be moved to the new subproject.", cancellationToken, reservation, mutationOwner);
+            "The descendants could not be moved to the new subproject.", cancellationToken, reservation, mutationOwner, authorizeCommit: authorizeCommit);
     }
 
     public Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectAsync(
@@ -105,20 +107,22 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
 
     public Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectAsync(Guid sourceProjectId, Guid targetProjectId,
         ProjectEditorModel targetProject, IReadOnlyCollection<string> sourceNodeIds, bool includeDescendants,
-        CancellationToken cancellationToken = default, ProjectStructureAgentContext? mutationOwner = null, ProjectMutationAuthorization? authorization = null)
-        => MoveNodesToNewSubprojectCoreAsync(sourceProjectId, targetProjectId, null, targetProject, sourceNodeIds, includeDescendants, cancellationToken, mutationOwner, authorization);
+        CancellationToken cancellationToken = default, ProjectStructureAgentContext? mutationOwner = null, ProjectMutationAuthorization? authorization = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
+        => MoveNodesToNewSubprojectCoreAsync(sourceProjectId, targetProjectId, null, targetProject, sourceNodeIds, includeDescendants, cancellationToken, mutationOwner, authorization, authorizeCommit);
 
     public Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectAsync(Guid sourceProjectId, ProjectCreationReservation reservation,
         ProjectEditorModel targetProject, IReadOnlyCollection<string> sourceNodeIds, bool includeDescendants,
-        CancellationToken cancellationToken = default, ProjectStructureAgentContext? mutationOwner = null, ProjectMutationAuthorization? authorization = null) {
+        CancellationToken cancellationToken = default, ProjectStructureAgentContext? mutationOwner = null, ProjectMutationAuthorization? authorization = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ArgumentNullException.ThrowIfNull(reservation);
-        return MoveNodesToNewSubprojectCoreAsync(sourceProjectId, reservation.ProjectId, reservation, targetProject, sourceNodeIds, includeDescendants, cancellationToken, mutationOwner, authorization);
+        return MoveNodesToNewSubprojectCoreAsync(sourceProjectId, reservation.ProjectId, reservation, targetProject, sourceNodeIds, includeDescendants, cancellationToken, mutationOwner, authorization, authorizeCommit);
     }
 
     private Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectCoreAsync(Guid sourceProjectId, Guid targetProjectId,
         ProjectCreationReservation? reservation, ProjectEditorModel targetProject, IReadOnlyCollection<string> sourceNodeIds,
         bool includeDescendants, CancellationToken cancellationToken, ProjectStructureAgentContext? mutationOwner,
-        ProjectMutationAuthorization? authorization) {
+        ProjectMutationAuthorization? authorization, Func<CancellationToken, ValueTask>? authorizeCommit) {
         ArgumentNullException.ThrowIfNull(sourceNodeIds);
         var normalizedSourceNodeIds = sourceNodeIds
             .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
@@ -138,36 +142,38 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
             sourceProjectId,
             targetProjectId,
             targetProject,
-            (owner, cancellationToken) => operations.MoveNodesAsync(
+            (owner, cancellationToken, authorize) => operations.MoveNodesAsync(
                 sourceProjectId,
                 normalizedSourceNodeIds,
                 targetProjectId,
                 includeDescendants,
-                cancellationToken, owner),
+                cancellationToken, owner, authorize),
             ProjectStructureTransferRejectionReason.SelectedNodesUnavailable,
             "The selected nodes could not be moved to the new subproject.",
             cancellationToken,
-            reservation, mutationOwner, authorization);
+            reservation, mutationOwner, authorization, authorizeCommit);
     }
 
     private async Task<ProjectStructureCreatedSubprojectTransferResult> ExecuteAsync(
         Guid sourceProjectId,
         Guid targetProjectId,
         ProjectEditorModel targetProject,
-        Func<ProjectStructureAgentContext?, CancellationToken, Task<ProjectStructureSubprojectTransferResult?>> transferAsync,
+        Func<ProjectStructureAgentContext?, CancellationToken, Func<CancellationToken, ValueTask>?, Task<ProjectStructureSubprojectTransferResult?>> transferAsync,
         ProjectStructureTransferRejectionReason unavailableReason,
         string unavailableMessage,
         CancellationToken cancellationToken,
         ProjectCreationReservation? reservation = null, ProjectStructureAgentContext? mutationOwner = null,
-        ProjectMutationAuthorization? authorization = null)
-    {
+        ProjectMutationAuthorization? authorization = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ValidateProjectIds(sourceProjectId, targetProjectId);
         ArgumentNullException.ThrowIfNull(targetProject);
         ArgumentNullException.ThrowIfNull(transferAsync);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
 
         ProjectCreationReceipt? creationReceipt = null;
-        try
-        {
+        try {
             var createResult = await operations.CreateSubprojectAsync(sourceProjectId, targetProjectId,
                 reservation, targetProject, cancellationToken, authorization);
             if (createResult.IsFailure) {
@@ -188,9 +194,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
                         mutationOwner.ProcessMutationAdmission?.WithCreatedProject(reservation)
                 };
             }
-            var transfer = await transferAsync(mutationOwner, cancellationToken);
-            if (transfer is null || transfer.MovedNodeCount == 0)
-            {
+            var transfer = await transferAsync(mutationOwner, cancellationToken, authorizeCommit);
+            if (transfer is null || transfer.MovedNodeCount == 0) {
                 throw new ProjectStructureTransferRejectedException(
                     unavailableReason,
                     unavailableMessage,
@@ -198,8 +203,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
                     targetProjectId);
             }
 
-            if (transfer.TargetProjectId != targetProjectId)
-            {
+            if (transfer.TargetProjectId != targetProjectId) {
                 throw new ProjectStructureTransferRejectedException(
                     ProjectStructureTransferRejectionReason.TargetProjectMismatch,
                     $"The node transfer returned target '{transfer.TargetProjectId:D}' instead of reserved target '{targetProjectId:D}'.",
@@ -211,15 +215,14 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
             return new ProjectStructureCreatedSubprojectTransferResult(
                 sourceProjectId,
                 transfer) { CreationReceipt = creationReceipt };
-        }
-        catch (ProjectStructureTransferPartialCommitException exception)
-        {
+        } catch (ProjectStructureTransferPartialCommitException exception) {
             exception.CreationReceipt = creationReceipt;
             throw;
-        }
-        catch (Exception transferFailure)
-        {
+        } catch (Exception transferFailure) {
             if (creationReceipt is null) {
+                if (transferFailure is ProjectCreationWriteRejectedException) {
+                    throw;
+                }
                 if (ProjectStructureExceptionGraph.TryFind(transferFailure,
                         (ProjectStructureProjectCreationRejectedException _) => true, out _)) {
                     throw;
@@ -230,8 +233,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
             var emptyChildRemoved = await CompensateEmptyCreatedSubprojectAsync(
                 creationReceipt,
                 transferFailure);
-            if (emptyChildRemoved)
-            {
+            if (emptyChildRemoved) {
                 throw new ProjectStructureCompensatedSubprojectTransferException(
                     targetProjectId,
                     transferFailure) { CreationReceipt = creationReceipt };
@@ -295,8 +297,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
 
 internal sealed record ProjectStructureSubprojectTransferOperations(
     Func<Guid, Guid, ProjectCreationReservation?, ProjectEditorModel, CancellationToken, ProjectMutationAuthorization?, Task<Result<ProjectCreationReceipt>>> CreateSubprojectAsync,
-    Func<Guid, string, Guid, CancellationToken, ProjectStructureAgentContext?, Task<ProjectStructureSubprojectTransferResult?>> MoveDescendantsAsync,
-    Func<Guid, IReadOnlyCollection<string>, Guid, bool, CancellationToken, ProjectStructureAgentContext?, Task<ProjectStructureSubprojectTransferResult?>> MoveNodesAsync,
+    Func<Guid, string, Guid, CancellationToken, ProjectStructureAgentContext?, Func<CancellationToken, ValueTask>?, Task<ProjectStructureSubprojectTransferResult?>> MoveDescendantsAsync,
+    Func<Guid, IReadOnlyCollection<string>, Guid, bool, CancellationToken, ProjectStructureAgentContext?, Func<CancellationToken, ValueTask>?, Task<ProjectStructureSubprojectTransferResult?>> MoveNodesAsync,
     Func<ProjectCreationReceipt, CancellationToken, Task<bool>> TryCompensateCreationAsync) {
     public static ProjectStructureSubprojectTransferOperations Create(ProjectsService projects, ProjectWorkbenchService workbench) {
         ArgumentNullException.ThrowIfNull(projects);

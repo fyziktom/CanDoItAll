@@ -348,7 +348,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
             string sourceNodeId,
             Guid receivedTargetProjectId,
             CancellationToken cancellationToken,
-            ProjectStructureAgentContext? owner)
+            ProjectStructureAgentContext? owner,
+            Func<CancellationToken, ValueTask>? authorizeCommit)
         {
             Assert.Equal(sourceProjectId, receivedSourceProjectId);
             Assert.Equal(targetProjectId, receivedTargetProjectId);
@@ -364,7 +365,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
             Guid receivedTargetProjectId,
             bool includeDescendants,
             CancellationToken cancellationToken,
-            ProjectStructureAgentContext? owner)
+            ProjectStructureAgentContext? owner,
+            Func<CancellationToken, ValueTask>? authorizeCommit)
         {
             Assert.Equal(sourceProjectId, receivedSourceProjectId);
             Assert.Equal(targetProjectId, receivedTargetProjectId);

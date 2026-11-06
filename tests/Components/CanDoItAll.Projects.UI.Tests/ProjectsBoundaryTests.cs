@@ -72,6 +72,7 @@ public sealed class ProjectsBoundaryTests {
     private static bool Allowed(string name) => Framework(name) || AllowedFeatureAssemblies.Contains(name);
     private static readonly HashSet<string> AllowedFeatureAssemblies = [
         "CanDoItAll.Projects.UI", "CanDoItAll.Projects.UiSandbox", "CanDoItAll.Modules.Projects.Contracts", "CanDoItAll.SharedKernel",
+        "CanDoItAll.Editing", "CanDoItAll.Editing.UI",
 
         "CanDoItAll.Components.BaseLib", "CanDoItAll.Components.Common"
     ];

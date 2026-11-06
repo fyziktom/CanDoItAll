@@ -12,11 +12,14 @@ public sealed class SharedProviderSourceDraft {
     private SharedProviderSourceValues values;
     private readonly Dictionary<string, long> revisions = [];
     private readonly ValidationMessageStore validation;
+    private SharedProviderSourceSubmission? comparisonSubmission;
 
     public SharedProviderSourceDraft(Guid sourceId, Guid? expectedToken, SharedProviderSourceValues initial) {
         SourceId = sourceId;
         ExpectedToken = expectedToken;
         values = initial;
+        Original = expectedToken is { } token && token != Guid.Empty ? new(token, initial) : null;
+        Latest = Original;
         Context = new(this);
         validation = new(Context);
         Context.OnValidationRequested += (_, _) => Validate();
@@ -27,6 +30,9 @@ public sealed class SharedProviderSourceDraft {
     public Guid? ExpectedToken { get; private set; }
     public EditContext Context { get; }
     public bool ReadbackConflict { get; set; }
+    public SharedProviderSourceBaseline? Original { get; private set; }
+    public SharedProviderSourceBaseline? Latest { get; private set; }
+    public SharedProviderSourceComparison? Comparison { get; private set; }
     public string Name {
         get => values.Name;
         set {
@@ -77,6 +83,8 @@ public sealed class SharedProviderSourceDraft {
 
     public bool Accept(SharedProviderSourceSubmission submission, Guid token, SharedProviderSourceValues accepted) {
         AcceptIdentity(submission, submission.SourceId, token);
+        Original = new(token, accepted);
+        Latest = Original;
         var current = Capture().Revisions;
         values = new(current.Name == submission.Revisions.Name ? accepted.Name : values.Name,
             current.BaseUri == submission.Revisions.BaseUri ? accepted.BaseUri : values.BaseUri,
@@ -105,9 +113,50 @@ public sealed class SharedProviderSourceDraft {
         return false;
     }
 
+    public void Observe(Guid token, SharedProviderSourceValues current) {
+        if (token == Guid.Empty) {
+            throw new ArgumentException("The current source has no saved version.", nameof(token));
+        }
+        Latest = new(token, current);
+        if (token != ExpectedToken) {
+            ReadbackConflict = true;
+            Comparison?.Invalidate();
+        }
+    }
+
+    public void Compare() {
+        if (Latest is null) {
+            return;
+        }
+        comparisonSubmission = Capture();
+        Comparison = new(Original, values, Latest, !Context.Validate());
+    }
+
+    public bool ApplyComparison() {
+        if (Comparison is not { CanApply: true } review || comparisonSubmission is null) {
+            return false;
+        }
+        if (Capture() != comparisonSubmission || Latest != review.Current) {
+            review.Invalidate();
+            return false;
+        }
+        values = review.Result();
+        ExpectedToken = review.Current.Token;
+        Original = review.Current;
+        ReadbackConflict = false;
+        CancelComparison();
+        return true;
+    }
+
+    public void CancelComparison() {
+        Comparison = null;
+        comparisonSubmission = null;
+    }
+
     private long Revision(string field) => revisions.GetValueOrDefault(field);
     private void Touch([CallerMemberName] string field = "") {
         revisions[field] = Revision(field) + 1;
+        Comparison?.Invalidate();
         Context.NotifyFieldChanged(new(this, field));
     }
 

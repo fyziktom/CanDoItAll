@@ -10,6 +10,61 @@ using CanonicalProviderRuntimeProfile = CanDoItAll.Modules.AgentFramework.Provid
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderProfilesReadsTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Unavailable_runtime_metadata_is_read_only_for_source_managed_profiles_and_keeps_the_native_revision(bool imported) {
+        var profile = UnavailableProfile(imported);
+        var unavailable = new CanDoItAll.AgentFramework.Core.ProviderRuntimeProfileUnavailableException(profile.Id);
+        using var owner = new CancellationTokenSource();
+        var runtime = Port<IProviderRuntimeAdministrationService>((_, args) => {
+            Assert.Equal(profile.Id, args![0]);
+            Assert.Equal(owner.Token, args[1]);
+            return Task.FromException<ProviderProfileEditorModel>(unavailable);
+        });
+        var revision = new CanDoItAll.AgentFramework.Core.ProviderConfigurationRevision(Guid.NewGuid());
+        var snapshots = Port<IProviderRuntimeProfileSnapshotLoader>((method, args) => {
+            Assert.Equal(nameof(IProviderRuntimeProfileSnapshotLoader.LoadAsync), method.Name);
+            Assert.Equal(profile.Id, args![0]);
+            Assert.Equal(owner.Token, args[1]);
+            return Task.FromResult<CanonicalProviderRuntimeProfile?>(new(profile, revision));
+        });
+        var reads = new ProviderProfilesReads(runtime, Port<IProviderAdministrationService>((_, _) => throw new NotSupportedException()), snapshots);
+        if (!imported) {
+            Assert.Same(unavailable, await Assert.ThrowsAsync<CanDoItAll.AgentFramework.Core.ProviderRuntimeProfileUnavailableException>(
+                () => reads.LoadEditorAsync(profile.Id, owner.Token)));
+            return;
+        }
+        var metadata = await reads.LoadEditorAsync(profile.Id, owner.Token);
+        Assert.Equal(profile.Id, metadata.Id);
+        Assert.Equal(profile.Name, metadata.Name);
+        Assert.False(metadata.IsEnabled);
+        Assert.Equal(revision.Value, metadata.ExpectedConcurrencyToken);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task An_unavailable_import_cannot_fabricate_a_missing_metadata_body_or_original(bool missingBody) {
+        var profile = UnavailableProfile(true);
+        var runtime = Port<IProviderRuntimeAdministrationService>((_, _) => Task.FromException<ProviderProfileEditorModel>(
+            new CanDoItAll.AgentFramework.Core.ProviderRuntimeProfileUnavailableException(profile.Id)));
+        var snapshots = Port<IProviderRuntimeProfileSnapshotLoader>((_, _) => Task.FromResult<CanonicalProviderRuntimeProfile?>(
+            missingBody ? null : new(profile, null)));
+        var reads = new ProviderProfilesReads(runtime, Port<IProviderAdministrationService>((_, _) => throw new NotSupportedException()), snapshots);
+        if (missingBody) {
+            await Assert.ThrowsAsync<CanDoItAll.AgentFramework.Core.ProviderRuntimeProfileUnavailableException>(() => reads.LoadEditorAsync(profile.Id));
+        } else {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => reads.LoadEditorAsync(profile.Id));
+        }
+    }
+
+    private static ProviderProfile UnavailableProfile(bool imported) => new(Guid.NewGuid(), "Unavailable owned profile", ProviderKind.OpenAi,
+        "https://source.example.test/", "", "route", ProviderTransportKind.Responses, false, true, true, false, true, "{}", "", "Unavailable", null, ["route"]) {
+        ConnectorPluginKey = imported ? CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.SharedImport
+            : CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi
+    };
+
     [Fact]
     public async Task Secret_failure_is_explicit_partial_result_without_hiding_core_failure() {
         var runtime = Port<IProviderRuntimeAdministrationService>((method, _) => method.Name switch {

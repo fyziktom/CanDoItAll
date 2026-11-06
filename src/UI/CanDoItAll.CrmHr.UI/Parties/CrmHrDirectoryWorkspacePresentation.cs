@@ -66,6 +66,9 @@ public static class CrmHrDirectoryWorkspacePresentation
 
 public sealed class PartyEditorViewModel
 {
+    private readonly Guid primaryRoleDraftId = Guid.NewGuid();
+    private readonly Guid primaryEmailDraftId = Guid.NewGuid();
+    private readonly Guid primaryPhoneDraftId = Guid.NewGuid();
     public Guid? Id { get; set; }
 
     public PartyType PartyType { get; set; } = PartyType.Person;
@@ -110,6 +113,11 @@ public sealed class PartyEditorViewModel
 
     private PartyContactPointEditorModel? PrimaryPhoneContactPoint { get; set; }
 
+    private PartyRoleAssignmentEditorModel? PrimaryRole { get; set; }
+    public Guid PrimaryRoleIdentity => PrimaryRole?.Id ?? primaryRoleDraftId;
+    public Guid PrimaryEmailIdentity => PrimaryEmailContactPoint?.Id ?? primaryEmailDraftId;
+    public Guid PrimaryPhoneIdentity => PrimaryPhoneContactPoint?.Id ?? primaryPhoneDraftId;
+
     public List<PartyRoleAssignmentEditorModel> AdditionalRoles { get; set; } = [];
 
     public List<PartyContactPointEditorModel> AdditionalContactPoints { get; set; } = [];
@@ -131,6 +139,7 @@ public sealed class PartyEditorViewModel
         ArgumentNullException.ThrowIfNull(owner);
         PrimaryEmailContactPoint = owner.PrimaryEmailContactPoint;
         PrimaryPhoneContactPoint = owner.PrimaryPhoneContactPoint;
+        PrimaryRole = owner.PrimaryRole;
     }
 
     public static PartyEditorViewModel FromEditorModel(PartyEditorModel model)
@@ -163,6 +172,7 @@ public sealed class PartyEditorViewModel
             LastChangedBy = string.IsNullOrWhiteSpace(model.LastChangedBy) ? "crm-hr-ui" : model.LastChangedBy,
             UpdatedAtUtc = model.UpdatedAtUtc,
             PrimaryRoleKindText = primaryRole?.RoleKind.ToString() ?? string.Empty,
+            PrimaryRole = primaryRole is null ? null : CloneRole(primaryRole),
             PrimaryEmail = primaryEmailIndex >= 0 ? contactPoints[primaryEmailIndex].Value : string.Empty,
             PrimaryPhone = primaryPhoneIndex >= 0 ? contactPoints[primaryPhoneIndex].Value : string.Empty,
             PrimaryEmailContactPoint = primaryEmailIndex >= 0
@@ -182,6 +192,98 @@ public sealed class PartyEditorViewModel
             Addresses = model.Addresses.Select(CloneAddress).ToList(),
             ConfidentialNotes = model.ConfidentialNotes.Select(CloneConfidentialNote).ToList()
         };
+    }
+
+    public void EnsureChildIdentities() {
+        foreach (var row in AdditionalRoles) {
+            row.Id ??= Guid.NewGuid();
+        }
+        foreach (var row in AdditionalContactPoints) {
+            row.Id ??= Guid.NewGuid();
+        }
+        foreach (var row in Addresses) {
+            row.Id ??= Guid.NewGuid();
+        }
+        foreach (var row in ConfidentialNotes) {
+            row.Id ??= Guid.NewGuid();
+        }
+    }
+
+    public void Apply(PartyEditorModel values) {
+        var source = FromEditorModel(values);
+        Id = source.Id;
+        PartyType = source.PartyType;
+        LifecycleStatus = source.LifecycleStatus;
+        DisplayName = source.DisplayName;
+        LegalName = source.LegalName;
+        PreferredName = source.PreferredName;
+        ExternalCode = source.ExternalCode;
+        Summary = source.Summary;
+        Notes = source.Notes;
+        Tags = source.Tags;
+        Region = source.Region;
+        CountryCode = source.CountryCode;
+        TimeZone = source.TimeZone;
+        IsSensitive = source.IsSensitive;
+        ExtendedDataJson = source.ExtendedDataJson;
+        LastChangedBy = source.LastChangedBy;
+        UpdatedAtUtc = source.UpdatedAtUtc;
+        PrimaryRoleKindText = source.PrimaryRoleKindText;
+        PrimaryEmail = source.PrimaryEmail;
+        PrimaryPhone = source.PrimaryPhone;
+        PrimaryEmailContactPoint = source.PrimaryEmailContactPoint;
+        PrimaryPhoneContactPoint = source.PrimaryPhoneContactPoint;
+        PrimaryRole = source.PrimaryRole;
+        ApplyRows(AdditionalRoles, source.AdditionalRoles, row => row.Id, (row, value) => {
+            row.RoleKind = value.RoleKind;
+            row.Title = value.Title;
+            row.IsPrimary = value.IsPrimary;
+            row.ValidFromUtc = value.ValidFromUtc;
+            row.ValidToUtc = value.ValidToUtc;
+            row.Notes = value.Notes;
+        });
+        ApplyRows(AdditionalContactPoints, source.AdditionalContactPoints, row => row.Id, (row, value) => {
+            row.ContactType = value.ContactType;
+            row.Label = value.Label;
+            row.Value = value.Value;
+            row.NormalizedValue = value.NormalizedValue;
+            row.IsPrimary = value.IsPrimary;
+            row.IsPublic = value.IsPublic;
+            row.Tags = value.Tags;
+            row.Notes = value.Notes;
+        });
+        ApplyRows(Addresses, source.Addresses, row => row.Id, (row, value) => {
+            row.AddressType = value.AddressType;
+            row.Line1 = value.Line1;
+            row.Line2 = value.Line2;
+            row.City = value.City;
+            row.Region = value.Region;
+            row.PostalCode = value.PostalCode;
+            row.CountryCode = value.CountryCode;
+            row.IsPrimary = value.IsPrimary;
+            row.Notes = value.Notes;
+        });
+        ApplyRows(ConfidentialNotes, source.ConfidentialNotes, row => row.Id, (row, value) => {
+            row.Category = value.Category;
+            row.NoteText = value.NoteText;
+            row.CreatedBy = value.CreatedBy;
+            row.CreatedAtUtc = value.CreatedAtUtc;
+            row.UpdatedAtUtc = value.UpdatedAtUtc;
+        });
+    }
+
+    private static void ApplyRows<TRow>(List<TRow> current, List<TRow> source, Func<TRow, Guid?> identity,
+        Action<TRow, TRow> apply) {
+        var retained = current.Where(row => identity(row).HasValue).ToDictionary(row => identity(row)!.Value);
+        current.Clear();
+        foreach (var value in source) {
+            if (identity(value) is Guid id && retained.TryGetValue(id, out var row)) {
+                apply(row, value);
+                current.Add(row);
+            } else {
+                current.Add(value);
+            }
+        }
     }
 
     public PartyEditorModel ToEditorModel()
@@ -225,9 +327,13 @@ public sealed class PartyEditorViewModel
         {
             roles.Add(new PartyRoleAssignmentEditorModel
             {
+                Id = PrimaryRole?.Id ?? primaryRoleDraftId,
                 RoleKind = primaryRole,
-                Title = primaryRole.ToString(),
-                IsPrimary = true
+                Title = PrimaryRole?.RoleKind == primaryRole ? PrimaryRole.Title : primaryRole.ToString(),
+                IsPrimary = PrimaryRole?.RoleKind == primaryRole ? PrimaryRole.IsPrimary : true,
+                ValidFromUtc = PrimaryRole?.ValidFromUtc,
+                ValidToUtc = PrimaryRole?.ValidToUtc,
+                Notes = PrimaryRole?.Notes ?? string.Empty
             });
         }
 
@@ -237,11 +343,11 @@ public sealed class PartyEditorViewModel
             {
                 Id = role.Id,
                 RoleKind = role.RoleKind,
-                Title = string.IsNullOrWhiteSpace(role.Title) ? role.RoleKind.ToString() : role.Title.Trim(),
-                IsPrimary = false,
+                Title = role.Title,
+                IsPrimary = role.IsPrimary,
                 ValidFromUtc = role.ValidFromUtc,
                 ValidToUtc = role.ValidToUtc,
-                Notes = role.Notes.Trim()
+                Notes = role.Notes
             }));
 
         return roles;
@@ -255,27 +361,28 @@ public sealed class PartyEditorViewModel
             PartyContactType.Email,
             PrimaryEmail,
             "Primary email",
-            PrimaryEmailContactPoint);
+            PrimaryEmailContactPoint,
+            primaryEmailDraftId);
         AddPrimaryContactPoint(
             contactPoints,
             PartyContactType.Phone,
             PrimaryPhone,
             "Primary phone",
-            PrimaryPhoneContactPoint);
+            PrimaryPhoneContactPoint,
+            primaryPhoneDraftId);
 
         contactPoints.AddRange(AdditionalContactPoints
-            .Where(contactPoint => !string.IsNullOrWhiteSpace(contactPoint.Value))
             .Select(contactPoint => new PartyContactPointEditorModel
             {
                 Id = contactPoint.Id,
                 ContactType = contactPoint.ContactType,
-                Label = string.IsNullOrWhiteSpace(contactPoint.Label) ? contactPoint.ContactType.ToString() : contactPoint.Label.Trim(),
-                Value = contactPoint.Value.Trim(),
+                Label = contactPoint.Label,
+                Value = contactPoint.Value,
                 NormalizedValue = NormalizeContactValue(contactPoint.ContactType, contactPoint.Value),
-                IsPrimary = false,
+                IsPrimary = contactPoint.IsPrimary,
                 IsPublic = contactPoint.IsPublic,
                 Tags = contactPoint.Tags.ToList(),
-                Notes = contactPoint.Notes.Trim()
+                Notes = contactPoint.Notes
             }));
 
         return contactPoints;
@@ -286,26 +393,25 @@ public sealed class PartyEditorViewModel
         PartyContactType contactType,
         string value,
         string defaultLabel,
-        PartyContactPointEditorModel? existingContactPoint)
+        PartyContactPointEditorModel? existingContactPoint,
+        Guid draftId)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (existingContactPoint is null && value.Length == 0)
         {
             return;
         }
 
         contactPoints.Add(new PartyContactPointEditorModel
         {
-            Id = existingContactPoint?.Id,
+            Id = existingContactPoint?.Id ?? draftId,
             ContactType = contactType,
-            Label = string.IsNullOrWhiteSpace(existingContactPoint?.Label)
-                ? defaultLabel
-                : existingContactPoint.Label.Trim(),
-            Value = value.Trim(),
+            Label = existingContactPoint?.Label ?? defaultLabel,
+            Value = value,
             NormalizedValue = NormalizeContactValue(contactType, value),
-            IsPrimary = true,
+            IsPrimary = existingContactPoint?.IsPrimary ?? true,
             IsPublic = existingContactPoint?.IsPublic ?? true,
             Tags = existingContactPoint?.Tags.ToList() ?? [],
-            Notes = existingContactPoint?.Notes.Trim() ?? string.Empty
+            Notes = existingContactPoint?.Notes ?? string.Empty
         });
     }
 

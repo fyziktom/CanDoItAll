@@ -1,59 +1,259 @@
 @implements IAsyncDisposable
+@using CanDoItAll.Editing
+@using CanDoItAll.Infrastructure.Editing
+@using CanDoItAll.AppComponents.Navigation
+@using CanDoItAll.Modules.Prompts.Pages
+@using Microsoft.AspNetCore.Components.Routing
 @inject IPromptGalleryService Gallery
+@inject PromptGalleryChanges Changes
+@inject IPromptGalleryUiAccess Access
 @inject NotificationService Notifications
+@inject NavigationManager Navigation
+@inject Microsoft.Extensions.Logging.ILogger<PromptGalleryObservation> ObserverLog
 
-<PromptGalleryItemEditorSurface Presentation="@session.Presentation" Intent="HandleIntentAsync" />
+<NavigationLock OnBeforeInternalNavigation="BeforeNavigationAsync" ConfirmExternalNavigation="@(surface?.IsDirty == true || !session.CanLeave)" />
+@if (preMerge is not null && !session.IsReviewing) {
+    <Button Text="Restore my draft from before this merge" ButtonStyle="ButtonStyle.Light" Click="UndoMerge" data-testid="prompt-editor-undo-merge" />
+}
+<PromptGalleryItemEditorSurface @ref="surface" Presentation="@session.Presentation" IsReviewing="@session.IsReviewing"
+    ReviewRequested="ReadReviewAsync" DirtyChanged="StateHasChanged" Intent="HandleIntentAsync" />
+
+<Dialog IsOpen="@session.IsReviewing" Title="Review saved changes" Eyebrow="Prompt gallery" Size="ModalSize.Full"
+    DenseChrome="true" CloseOnBackdrop="false" TestId="prompt-merge-dialog" OnClose="CancelReviewAsync">
+    <ChildContent>
+        @if (session.Review is { } review) {
+            <PromptMergeReviewSurface Review="@review.Fields" StaleMessage="@ReviewStaleMessage" Changed="StateHasChanged" />
+        } else {
+            <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="@(session.Presentation.Warning ?? "Reading the current saved revision. Your draft is retained.")" /></Alert>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="CancelReviewAsync" data-testid="prompt-merge-cancel" />
+            <Cluster Gap="LayoutGap.Small">
+                @if (session.Review?.Fields.Current.IsArchived == true) {
+                    <Button Text="Restore archived item" ButtonStyle="ButtonStyle.Warning" Click="RestoreReviewedAsync" data-testid="prompt-merge-restore" />
+                }
+                <Button Text="Read current again" ButtonStyle="ButtonStyle.Light" Click="ReadReviewAsync" data-testid="prompt-merge-retry" />
+                <Button Text="Apply to my draft" Disabled="@(!IsDraftReviewCurrent || session.Review?.Fields.CanApply != true)"
+                    Click="ApplyReviewAsync" data-testid="prompt-merge-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+<Dialog IsOpen="@(closeDecision is not null)" Title="Keep your unsaved draft?" Size="ModalSize.Compact" CloseOnBackdrop="false"
+    OnClose="ContinueEditing" TestId="prompt-dirty-close-dialog">
+    <ChildContent><TextBlock Value="This editor contains unsaved input. Continue editing or discard this draft and leave." /></ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Continue editing" Click="ContinueEditing" data-testid="prompt-dirty-continue" />
+            <Button Text="Discard draft and leave" ButtonStyle="ButtonStyle.Danger" Click="DiscardDraft" data-testid="prompt-dirty-discard" />
+        </Cluster>
+    </Footer>
+</Dialog>
 
 @code {
     private PromptGalleryEditorSession session = default!;
+    private PromptGalleryItemEditorSurface? surface;
+    private PromptGalleryObservation? observation;
     private Guid? observedItemId;
+    private Guid? subscribedItemId;
     private bool observed;
+    private bool disposed;
+    private Guid editorId = Guid.NewGuid();
+    private readonly Queue<Guid> ownOperations = new();
+    private TaskCompletionSource<bool>? closeDecision;
+    private long? approvedDiscard;
+    private PromptGalleryDraftCapture? submitted;
+    private PromptGalleryDraftCapture? preMerge;
+    private DialogReference? guardedDialog;
+    private Func<Task<bool>>? priorGuard;
 
-    [Parameter]
-    public Guid? ItemId { get; set; }
-
-    [Parameter]
-    public EventCallback<PromptGalleryEditorCommit> Committed { get; set; }
-
-    [Parameter]
-    public EventCallback Cancelled { get; set; }
-
-    // The identity this instance currently edits, including one adopted from a first save before the owner echoes it.
+    [Parameter] public Guid? ItemId { get; set; }
+    [Parameter] public EventCallback<PromptGalleryEditorCommit> Committed { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [CascadingParameter] public DialogReference? Dialog { get; set; }
     public Guid? CurrentTarget => session.Target;
-
     public PromptGalleryEditorPresentation Presentation => session.Presentation;
+    public PromptGalleryItemEditorSurface? Surface => surface;
+    private bool IsDraftReviewCurrent => session.IsReviewCurrent && surface?.CurrentForm?.Revision == session.Review?.Fields.Local.Revision;
+    private string? ReviewStaleMessage => session.Review?.Fields.Current.IsArchived == true
+        ? "This item is archived. Cancel review and restore it explicitly; your draft has been retained."
+        : session.Review is not null && surface?.CurrentForm?.Revision != session.Review.Fields.Local.Revision
+            ? "Your draft changed during review. Cancel review and reopen it to compare the latest local input."
+        : !session.IsReviewCurrent ? "Another change arrived during review. Read current again before applying." : null;
 
-    protected override void OnInitialized()
-    {
-        session = new PromptGalleryEditorSession(Gallery)
-        {
+    protected override void OnInitialized() {
+        session = new(Gallery) {
             Changed = () => InvokeAsync(StateHasChanged),
-            NoticeRaised = notice =>
-            {
+            Authorize = (write, token) => observation?.AuthorizeAsync(write, token)
+                ?? ValueTask.FromException(new UnauthorizedAccessException("Gallery access is unavailable.")),
+            NoticeRaised = notice => {
                 PromptGalleryNotices.Show(Notifications, notice);
                 return Task.CompletedTask;
             },
-            Committed = commit => Committed.InvokeAsync(commit)
+            Acknowledged = _ => {
+                if (submitted is not null) {
+                    surface?.Acknowledge(submitted);
+                }
+                preMerge = null;
+                return Task.CompletedTask;
+            },
+            Committed = async commit => {
+                await ObserveTargetAsync(commit.ItemId);
+                await Committed.InvokeAsync(commit);
+            }
         };
     }
 
-    protected override Task OnParametersSetAsync()
-    {
-        // Only a changed requested target is a transition; the owner echoing the same value is inert.
-        if (observed && observedItemId == ItemId)
-        {
-            return Task.CompletedTask;
+    protected override async Task OnParametersSetAsync() {
+        if (Dialog is not null && !ReferenceEquals(guardedDialog, Dialog)) {
+            guardedDialog = Dialog;
+            priorGuard = Dialog.BeforeClose;
+            Dialog.BeforeClose = RequestCloseAsync;
         }
-
+        if (observed && observedItemId == ItemId) {
+            return;
+        }
+        if (observed && session.Target == ItemId) {
+            observedItemId = ItemId;
+            return;
+        }
+        if (observed && session.Target != ItemId && !await RequestCloseAsync()) {
+            return;
+        }
         observed = true;
         observedItemId = ItemId;
-        return session.SetTargetAsync(ItemId);
+        editorId = Guid.NewGuid();
+        ownOperations.Clear();
+        preMerge = null;
+        approvedDiscard = null;
+        try {
+            await ObserveTargetAsync(ItemId);
+            await session.SetTargetAsync(ItemId);
+        } catch (Exception exception) when (exception is UnauthorizedAccessException or InvalidOperationException) {
+            await session.RetireAccessAsync();
+        }
     }
 
-    private Task HandleIntentAsync(PromptGalleryEditorIntent intent)
-        => intent is PromptGalleryEditorIntent.Cancel
-            ? Cancelled.InvokeAsync()
-            : session.ApplyAsync(intent);
+    private async Task ObserveTargetAsync(Guid? id) {
+        if (observation is not null && subscribedItemId == id) {
+            return;
+        }
+        if (observation is not null) {
+            await observation.DisposeAsync();
+        }
+        subscribedItemId = id;
+        var opening = editorId;
+        observation = new(Changes, Access, ObserverLog);
+        await observation.StartAsync(id, batch => InvokeAsync(async () => {
+            if (disposed || opening != editorId) {
+                return;
+            }
+            var relevant = batch.Changes.Any(change => !(change.OriginEditorId == editorId && ownOperations.Contains(change.OperationId)) &&
+                change.Kind != EditingChangeKind.MetadataChanged);
+            var alreadyStale = session.Presentation.HasExternalChange;
+            await session.ObserveAsync(relevant || batch.RequiresResync);
+            if (!alreadyStale && (relevant || batch.RequiresResync)) {
+                Notifications.Warning("Prompt changed elsewhere", "Review the saved changes before saving your draft.");
+            }
+        }), () => InvokeAsync(() => session.RetireAccessAsync()));
+    }
 
-    public ValueTask DisposeAsync() => session.DisposeAsync();
+    private async Task HandleIntentAsync(PromptGalleryEditorIntent intent) {
+        if (intent is PromptGalleryEditorIntent.Cancel) {
+            if (await RequestCloseAsync()) {
+                await Cancelled.InvokeAsync();
+            }
+            return;
+        }
+        if (session.IsReviewing || disposed) {
+            return;
+        }
+        submitted = surface?.Capture();
+        await RunOperationAsync(() => session.ApplyAsync(intent));
+    }
+    private async Task RunOperationAsync(Func<Task> action) {
+        var operation = Guid.NewGuid();
+        ownOperations.Enqueue(operation);
+        if (ownOperations.Count > 64) {
+            ownOperations.Dequeue();
+        }
+        using var origin = Changes.Enter(new EditingOperationIdentity(editorId, operation));
+        using var admission = Changes.EnterUiWrite(token => observation!.AuthorizeAsync(write: true, token));
+        await action();
+    }
+
+    private Task RestoreReviewedAsync() => RunOperationAsync(session.RestoreReviewedAsync);
+
+    private Task ReadReviewAsync() => surface?.Capture() is { } draft ? session.ReadReviewAsync(draft) : Task.CompletedTask;
+    private Task CancelReviewAsync() => session.CancelReviewAsync();
+    private async Task ApplyReviewAsync() {
+        if (surface?.Capture() is not { } live || session.Review is not { } review) {
+            return;
+        }
+        if (await session.ApplyReviewAsync(review, live.Revision, patch => {
+            if (surface.CurrentForm?.Revision != live.Revision) {
+                throw new InvalidOperationException("The draft changed during review.");
+            }
+            surface.Apply(patch);
+        })) {
+            preMerge = review.OriginalLocal;
+        }
+    }
+    private void UndoMerge() {
+        if (preMerge is not null && !session.Presentation.IsBusy && !session.IsReviewing) {
+            surface?.Apply(preMerge);
+            preMerge = null;
+        }
+    }
+
+    public async Task<bool> RequestCloseAsync() {
+        if (!session.CanLeave) {
+            Notifications.Warning("Draft retained", "Wait for the operation to finish. An unknown result must be resolved before leaving this editor.");
+            return false;
+        }
+        if (priorGuard is not null && !await priorGuard()) {
+            return false;
+        }
+        if (surface?.IsDirty != true || approvedDiscard == surface.CurrentForm?.Revision) {
+            return true;
+        }
+        closeDecision ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+        StateHasChanged();
+        var allowed = await closeDecision.Task;
+        if (allowed) {
+            approvedDiscard = surface.CurrentForm?.Revision;
+        }
+        return allowed;
+    }
+    private void ContinueEditing() => CompleteClose(false);
+    private void DiscardDraft() => CompleteClose(true);
+    private void CompleteClose(bool allowed) {
+        var decision = closeDecision;
+        closeDecision = null;
+        decision?.TrySetResult(allowed);
+    }
+    private async Task BeforeNavigationAsync(LocationChangingContext context) {
+        var destination = Navigation.ToAbsoluteUri(context.TargetLocation);
+        var current = new Uri(Navigation.Uri);
+        if (destination.AbsolutePath == current.AbsolutePath &&
+            UrlQuery.FromUri(destination.AbsoluteUri).GetId(PromptGalleryUrlCodec.PromptKey) == session.Target) {
+            return;
+        }
+        if (!await RequestCloseAsync()) {
+            context.PreventNavigation();
+        }
+    }
+    public async ValueTask DisposeAsync() {
+        disposed = true;
+        closeDecision?.TrySetResult(false);
+        if (guardedDialog?.BeforeClose == RequestCloseAsync) {
+            guardedDialog.BeforeClose = priorGuard;
+        }
+        await session.DisposeAsync();
+        if (observation is not null) {
+            await observation.DisposeAsync();
+        }
+    }
 }

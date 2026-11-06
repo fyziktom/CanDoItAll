@@ -487,7 +487,9 @@ public sealed class StorageCatalogServiceTests
                 existingRuleId = previous.Id;
             }
 
-            await catalog.ApplyDefaultPurposesAsync(storage.Id, [StorageUsagePurpose.ProjectAsset, StorageUsagePurpose.PromptExport]);
+            var revision = StorageWorkspaceDefaults.Observe(await catalog.ListRulesAsync());
+            await catalog.ApplyDefaultPurposesAsync(storage.Id,
+                new StorageDefaultRoutingWrite(revision, [StorageUsagePurpose.ProjectAsset, StorageUsagePurpose.PromptExport]));
             var recommendation = await new DefaultStorageRoutingService(catalog).RecommendAsync(new StorageSelectionContext(
                 "synthetic.png", "image/png", StorageUsagePurpose.ProjectAsset, StorageContentKind.Image, PreviewRequired: true));
 

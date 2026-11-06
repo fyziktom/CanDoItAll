@@ -19,6 +19,9 @@ public sealed record AgentEditorCoreState(AgentEditorOrigin Origin, EditContext 
     public string? CommitWarning { get; init; }
     public string? PendingRefreshMessage { get; init; }
     public bool HasUnconfirmedWrite { get; init; }
+    public bool HasExternalChanges { get; init; }
+    public string? ComparisonMessage { get; init; }
+    public EventCallback Compare { get; init; }
     public string? VerificationMessage { get; init; }
     public bool CanReviewVerification { get; init; }
     public Guid? LinkedPartyId { get; init; }
@@ -30,6 +33,7 @@ public sealed record AgentEditorCoreState(AgentEditorOrigin Origin, EditContext 
     public int AutoApprovalInputVersion { get; init; }
     public bool HasIncompatibleThinkingEffort { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
+    public string PendingTagInput { get; init; } = string.Empty;
     public IReadOnlyList<string> TagSuggestions { get; init; } = [];
     public bool AreProvidersLoaded { get; init; }
     public string? ProviderLoadError { get; init; }
@@ -44,6 +48,7 @@ public sealed record AgentEditorCoreState(AgentEditorOrigin Origin, EditContext 
     public string ImageProviderPolicy { get; init; } = string.Empty;
     public string? ImageWarning { get; init; }
     public EventCallback<AgentEditorCoreIntent> Changed { get; init; }
+    public EventCallback<ChangeEventArgs> InputObserved { get; init; }
     public EventCallback<AgentEditorSection> SectionChanged { get; init; }
     public EventCallback<EditContext> Save { get; init; }
     public EventCallback Clear { get; init; }
@@ -60,6 +65,7 @@ public abstract record AgentEditorCoreIntent {
     public sealed record Summary(string? Value) : AgentEditorCoreIntent;
     public sealed record Instructions(string? Value) : AgentEditorCoreIntent;
     public sealed record Tags(IReadOnlyList<string> Value) : AgentEditorCoreIntent;
+    public sealed record PendingTags(string Value) : AgentEditorCoreIntent;
     public sealed record RuntimeProvider(ConversationPresentationKey? Value) : AgentEditorCoreIntent;
     public sealed record RuntimeModel(string? Value) : AgentEditorCoreIntent;
     public sealed record ThinkingEffort(AgentReasoningEffortLevel? Value) : AgentEditorCoreIntent;

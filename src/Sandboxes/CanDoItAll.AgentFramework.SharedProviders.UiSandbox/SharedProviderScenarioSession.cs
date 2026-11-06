@@ -4,6 +4,51 @@ using CanDoItAll.SharedProviders.Abstractions;
 namespace CanDoItAll.AgentFramework.SharedProviders.UiSandbox;
 
 public sealed class SharedProviderScenarioSession : ISharedProviderSharingView, ISharedProviderSourcesView, ISharedProviderRefreshView {
+    public Task ReviewPendingCatalogAsync(Guid attemptId) => sourceRecovery?.AttemptId == attemptId && catalog is { } retained
+        ? CompareCatalogAsync(retained.Id) : Task.CompletedTask;
+    public Task CompareCatalogAsync(Guid dialogId) {
+        if (catalog?.Id == dialogId) {
+            ReadSources();
+            catalog.Compare(sources.Single(source => source.Origin.SourceId == catalog.Origin.SourceId).Origin, Store.Selected);
+        }
+        return Task.CompletedTask;
+    }
+    public Task ApplyCatalogComparisonAsync(Guid dialogId) {
+        if (catalog?.Id == dialogId) {
+            catalog.ApplyComparison();
+        }
+        return Task.CompletedTask;
+    }
+    public void CancelCatalogComparison(Guid dialogId) {
+        if (catalog?.Id == dialogId) {
+            catalog.CancelComparison();
+        }
+    }
+    public Task ReviewPendingSourceAsync(Guid attemptId) => sourceRecovery?.AttemptId == attemptId && sourceDraft is { } draft
+        ? CompareSourceAsync(draft.Id) : Task.CompletedTask;
+    public Task CompareSourceAsync(Guid draftId) {
+        if (Sources.Editor is { } draft && draft.Id == draftId) {
+            draft.Compare();
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task ApplySourceComparisonAsync(Guid draftId) {
+        if (Sources.Editor is { } draft && draft.Id == draftId) {
+            if (draft.ApplyComparison()) {
+                sourceRecovery = null;
+                pendingSource = null;
+                Outcome = "The earlier fixture outcome remains unconfirmed. Review applied locally without a write.";
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    public void CancelSourceComparison(Guid draftId) {
+        if (Sources.Editor is { } draft && draft.Id == draftId) {
+            draft.CancelComparison();
+        }
+    }
     private readonly Guid viewId = Guid.NewGuid();
     private Guid sharingSnapshot = Guid.NewGuid();
     private Guid sourceSnapshot = Guid.NewGuid();
@@ -87,6 +132,8 @@ public sealed class SharedProviderScenarioSession : ISharedProviderSharingView, 
         Outcome = "Stored remote metadata changed; local alias/enabled settings did not.";
         Notify();
     }
+
+    public Task AcknowledgeCurrentAsync(SharedProviderSharingOrigin origin) => Task.CompletedTask;
 
     public Task RetryAsync(SharedProviderSharingOrigin origin) {
         if (origin != SharingOrigin || busy) {
@@ -280,12 +327,16 @@ public sealed class SharedProviderScenarioSession : ISharedProviderSharingView, 
 
     public Task VerifyAsync(Guid attemptId) {
         if (sourceRecovery?.AttemptId == attemptId && !busy) {
+            if (Scenario is SharingScenario.Unknown or SharingScenario.UnknownBeforeCommit) {
+                ReadSources();
+                sourceError = "Current fixture state was read; the earlier outcome remains unconfirmed. No write was repeated.";
+                return Task.CompletedTask;
+            }
             if (pendingSource is { } submitted) {
                 var accepted = Store.Sources.GetValueOrDefault(submitted.SourceId);
                 var expected = submitted.Values with { Name = submitted.Values.Name.Trim(), BaseUri = new Uri(submitted.Values.BaseUri.Trim()).AbsoluteUri };
                 if (accepted is null || accepted.Values != expected) {
-                    sourceRecovery = sourceRecovery with { RetryAllowed = accepted?.Token == submitted.ExpectedToken };
-                    sourceError = sourceRecovery.RetryAllowed ? string.Empty : "The source differs from both the original and submitted values. Keep this attempt unresolved.";
+                    sourceError = "The source differs from the submitted values. Retain the unresolved attempt.";
                     return Task.CompletedTask;
                 }
                 AcceptSource(submitted, accepted);
@@ -306,17 +357,7 @@ public sealed class SharedProviderScenarioSession : ISharedProviderSharingView, 
         }
         return Task.CompletedTask;
     }
-    public Task RetryVerifiedAsync(Guid attemptId) {
-        if (sourceRecovery?.AttemptId == attemptId && sourceRecovery.RetryAllowed && !busy && pendingSource is { } submitted) {
-            var accepted = Store.SaveSource(submitted);
-            AcceptSource(submitted, accepted);
-            pendingSource = null;
-            sourceRecovery = null;
-            ReadSources();
-            Outcome = "Verified retry used the original source candidate and immutable submitted values.";
-        }
-        return Task.CompletedTask;
-    }
+    public Task AcknowledgeCurrentAsync(Guid attemptId) => Task.CompletedTask;
     public void CloseCatalog(Guid dialogId) {
         if (catalog?.Id == dialogId) {
             catalog = null;

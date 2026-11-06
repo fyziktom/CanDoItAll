@@ -14,7 +14,9 @@ public enum ProviderProfilesLoadState { Loading, Ready, Failed }
 public sealed record ProviderProfilesState(
     Guid? ProviderId = null,
     ProviderEditorSection Section = ProviderEditorSection.Connection,
-    bool SharedConnectionsOpen = false);
+    bool SharedConnectionsOpen = false) {
+    public bool SharingActivated { get; init; }
+}
 
 public sealed record ProviderEditorSectionDefinition(ProviderEditorSection Section, string Label, string Icon);
 

@@ -305,7 +305,8 @@ public sealed class ResourceFileBrowsePaneTests
 
         public ValueTask<FileToolsBrowseSession> CreateAsync(
             FileToolsSemanticScope scope,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             CreateCount++;
             return ValueTask.FromResult(new FileToolsBrowseSession(
@@ -556,7 +557,8 @@ public sealed class ResourceFileBrowsePaneTests
             FileToolsSemanticScope scope,
             FileBrowserItemKey itemKey,
             FileToolsLocalFileAction action,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             LaunchCount++;
             LastItemKey = itemKey;
@@ -567,7 +569,8 @@ public sealed class ResourceFileBrowsePaneTests
         public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
             FileToolsSemanticScope scope,
             FileBrowserItemKey itemKey,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => ValueTask.FromException<IFileToolsDownloadLease>(
                 new InvalidOperationException("Downloads are not expected in this test."));
     }
@@ -664,7 +667,9 @@ public sealed class ResourceFileBrowsePaneTests
     {
         public ValueTask<FileToolsKnownFileSession> CreateAsync(
             FileToolsKnownFileRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null,
+            Func<CancellationToken, ValueTask>? authorizeWrite = null)
             => throw new NotSupportedException();
     }
 

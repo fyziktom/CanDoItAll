@@ -88,6 +88,7 @@ public sealed class CapabilityAuthoringRegressionTests {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddAgentConfigurationFixture();
         context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, Owner>();
         owner = (Owner)(object)service;
@@ -95,12 +96,14 @@ public sealed class CapabilityAuthoringRegressionTests {
         var setupService = DispatchProxy.Create<IAgentCapabilitySetupFlowService, Setup>();
         setup = (Setup)(object)setupService;
         context.Services.AddSingleton(setupService);
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
         return context;
     }
 
     public class Owner : DispatchProxy {
         public CapabilityEditorModel Model { get; } = new() {
             Id = Guid.NewGuid(), Name = "Fixture", Key = "fixture", Kind = CapabilityKind.McpServer,
+            ExpectedFingerprint = "original-regression-capability-fingerprint",
             ConfigurationJson = """{"transport":"logical","serverName":"fixture-server","allowedTools":["fixture"]}"""
         };
         public int SaveCalls { get; private set; }
