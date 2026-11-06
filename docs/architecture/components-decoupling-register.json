@@ -11591,7 +11591,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "sha256_lf": "a65406aedae7f87039e320a4c8704634727af2a113816e6afa170913ccc32bc4",
+      "sha256_lf": "22ddc19a1fcac843733e12bba69b3241e4ecc6ad80084570d8aa564f1778500f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Collaboration.Pages.CollaborationHomePage",
@@ -11608,12 +11608,12 @@
       "assets": "CanDoItAll.Modules.Collaboration",
       "scenario": "CanDoItAll.Modules.Collaboration",
       "evidence": "CanDoItAll.Modules.Collaboration",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Native route supplies the Collaboration workspace boundary to the shared draft exit guard. The owner session remains responsible for reads and writes."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "sha256_lf": "d03ffa697953d91e1d59adf12d5ce1e971e712dc87d5d80efd5fa7d6b8b0dddb",
+      "sha256_lf": "60419bb4eac65d72898a731c9ab65cbedf2f5e5b10e74277ab68371ba2d607e8",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Collaboration.Pages.CollaborationHomePage",
@@ -11628,7 +11628,7 @@
       "assets": "CanDoItAll.Modules.Collaboration",
       "scenario": "CanDoItAll.Modules.Collaboration",
       "evidence": "CanDoItAll.Modules.Collaboration",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "The host treats Collaboration query navigation as the same workspace and keeps the draft guard active for departures."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Collaboration/_Imports.razor",
@@ -28217,7 +28217,7 @@
     {
       "identity": "src/UI/CanDoItAll.Collaboration.UI/CanDoItAll.Collaboration.UI.csproj",
       "path": "src/UI/CanDoItAll.Collaboration.UI/CanDoItAll.Collaboration.UI.csproj",
-      "sha256_lf": "31e9ecb2a164eb40a89ab7caf15187c867a478badb58b02f639de44bf9dcf609",
+      "sha256_lf": "deef9f6a0a8c41111141d7ed4911bf9336b633405f5a1ce7a2e5394791aa2e75",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -28232,12 +28232,12 @@
       "assets": "CanDoItAll.Collaboration.UI",
       "scenario": "CanDoItAll.Collaboration.UI",
       "evidence": "CanDoItAll.Collaboration.UI",
-      "rationale": "Evaluated build/import input; no rendering body. Dependency evaluation is recorded separately."
+      "rationale": "The renderer depends on Editing.UI for the shared navigation guard. The Collaboration boundary test verifies the permitted dependency."
     },
     {
       "identity": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
-      "sha256_lf": "7f53a2319394c15dd550c3ea9521d0033cd779bd554b7ceec903c2fe3c881488",
+      "sha256_lf": "c3bb59d73faee8a9b1c5553c5a6939fa5eee9a16c64009354241bb53854152b9",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Collaboration.UI.CollaborationWorkspaceSurface",
@@ -28249,16 +28249,18 @@
       ],
       "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
       "visual_owner": "CanDoItAll.Collaboration.UI",
-      "descendants": [],
+      "descendants": [
+        "DraftNavigationGuard"
+      ],
       "assets": "CanDoItAll.Collaboration.UI",
       "scenario": "CanDoItAll.Collaboration.UI",
       "evidence": "CanDoItAll.Collaboration.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "The shared draft exit guard uses current and retained draft status from the host. List paging renders the bounded owner response and canonical aggregate counts."
     },
     {
       "identity": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
       "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
-      "sha256_lf": "6a296f149c54e9064a8173b7e95e71547285db4f319b0a5ea7d81f7d2b83c311",
+      "sha256_lf": "a7ced1d454fe86ec830ce5d68e8d2ddaddbdc9de4dfa6dcd6ee9f311385ef269",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Collaboration.UI.CollaborationWorkspaceSurface",
@@ -28273,7 +28275,7 @@
       "assets": "CanDoItAll.Collaboration.UI",
       "scenario": "CanDoItAll.Collaboration.UI",
       "evidence": "CanDoItAll.Collaboration.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "The renderer records raw composer input against its original draft and dispatches typed list and navigation choices through the workspace view."
     },
     {
       "identity": "src/UI/CanDoItAll.Collaboration.UI/_Imports.razor",
@@ -31344,7 +31346,7 @@
     {
       "identity": "src/UI/CanDoItAll.Editing.UI/DraftNavigationGuard.razor",
       "path": "src/UI/CanDoItAll.Editing.UI/DraftNavigationGuard.razor",
-      "sha256_lf": "820bf6d5cb272ca3021133757eb7a59bcb49accedf84423e32753a24c47832dc",
+      "sha256_lf": "60abecda7216c6547d0c254c21c5c67bf0e64bc47bdfce124c57b33e703de82f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Editing.UI.DraftNavigationGuard",
@@ -31365,7 +31367,7 @@
       "assets": "CanDoItAll.Editing.UI",
       "scenario": "CanDoItAll.Editing.UI",
       "evidence": "CanDoItAll.Editing.UI",
-      "rationale": "NavigationLock and the local discard confirmation retain the active editor until an explicit decision."
+      "rationale": "The host can identify navigation that keeps the same editor alive. Explicit discard permits the exact pending navigation once. Chromium and Firefox verified the Collaboration consumer."
     },
     {
       "identity": "src/UI/CanDoItAll.Editing.UI/MergeFieldView.razor",
@@ -34285,7 +34287,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor",
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor",
-      "sha256_lf": "a0e41c90a60e62eb48b795b1db4910ce6ebbdda621f686fd100b67c6f16751ad",
+      "sha256_lf": "943fc6e58acc163cfd3851db4034cff01de987281719b7b399b6d5ca8cc28860",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Content.UI.ContentFileInteractionDialog",
@@ -34297,11 +34299,13 @@
       ],
       "native_owner": "ILogger<ContentFileInteractionDialog> Logger",
       "visual_owner": "CanDoItAll.Workbench.Content.UI",
-      "descendants": [],
+      "descendants": [
+        "FileInteraction"
+      ],
       "assets": "CanDoItAll.Workbench.Content.UI",
       "scenario": "CanDoItAll.Workbench.Content.UI",
       "evidence": "CanDoItAll.Workbench.Content.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "rationale": "The governed editor opts into FileTools saved-text review. The native authorized source supplies the compared revision and the save target remains authoritative. Chromium and Firefox verified a second stale save and explicit dirty close.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ContentFileInteractionDialog",
@@ -36645,7 +36649,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj",
       "path": "src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj",
-      "sha256_lf": "801e25a973fd9c548fa15bdec2fdfa8e8ea6c02ec59a472d6269aa37661d054f",
+      "sha256_lf": "367f59d8014aafca7aa96e95fe479cc58d4e7d7997f2d5735215020c8acc68c1",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -36660,7 +36664,7 @@
       "assets": "CanDoItAll.Workspace.UI",
       "scenario": "CanDoItAll.Workspace.UI",
       "evidence": "CanDoItAll.Workspace.UI",
-      "rationale": "Evaluated build/import input; no rendering body. Dependency evaluation is recorded separately."
+      "rationale": "The renderer depends on Editing.UI for typed merge field presentation. The Workspace boundary test verifies the permitted dependency."
     },
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/PolicyNumber.razor",
@@ -36746,9 +36750,32 @@
       "rationale": "Read-only six-field value comparison with explicit immutable inputs; no owner services, storage, tokens or mutations. Shared FormSection, Stack, TextBlock and TextArea provide rendering. WorkspaceScenarioStore covers the scenario; WorkspaceDefaultsConcurrencyTests and WorkspaceSettingsBrowserTests provide the test sources. Provider labels come from the already-loaded reference catalog; saved IDs and owner expectations remain unchanged. Proposed complete-policy/legacy-absence and raw retained-draft comparison remains read-only; WorkspaceDecisionPolicyTests is source-only until execution."
     },
     {
+      "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsReviewDialog.razor",
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsReviewDialog.razor",
+      "sha256_lf": "ec53e990bfa479b495ddeb56fd1da543d8f992ac048c22f6814898662d024e2b",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Workspace.UI.WorkspaceDefaultsReviewDialog",
+      "project": "src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsSurface.razor"
+      ],
+      "native_owner": "WorkspaceDefaultsController owns the original head, current read, draft application and conditional Save.",
+      "visual_owner": "CanDoItAll.Workspace.UI",
+      "descendants": [
+        "Dialog",
+        "MergeFieldView"
+      ],
+      "assets": "CanDoItAll.Workspace.UI",
+      "scenario": "CanDoItAll.Workspace.UI",
+      "evidence": "CanDoItAll.Workspace.UI",
+      "rationale": "Typed conflict choices render through the shared dialog and merge fields. Applying updates the current draft. The Workspace component checks and two browser circuits verified the behavior."
+    },
+    {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsSurface.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsSurface.razor",
-      "sha256_lf": "6f53ea67d39754c4ce160a66f5778a3a8c201dfef329d4dbbe5cc86815537c4f",
+      "sha256_lf": "983afcb06a9ac7b02ab399c7d16b7f95d7990e1175a660bec909dc5d4d22fc99",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.UI.WorkspaceDefaultsSurface",
@@ -36762,12 +36789,13 @@
       "descendants": [
         "SettingsReceipts",
         "WorkspaceDefaultsComparison",
-        "PolicyNumber"
+        "PolicyNumber",
+        "WorkspaceDefaultsReviewDialog"
       ],
       "assets": "CanDoItAll.Workspace.UI",
       "scenario": "CanDoItAll.Workspace.UI",
       "evidence": "CanDoItAll.Workspace.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects. Provider labels come from the already-loaded reference catalog; saved IDs and owner expectations remain unchanged. Proposed complete root-policy fields reuse FormSection/FormRow/FormField, InputSelect, TextBox and PolicyNumber. WorkspaceDecisionPolicyTests adds six source-only Facts; actual execution is pending. Controller retains original head and typed outcomes; no producer activation."
+      "rationale": "The host owns the original snapshot, current read, reviewed choices and separate Save. The renderer keeps the existing EditContext and opens a typed comparison dialog."
     },
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceFilesSurface.razor",
@@ -36794,7 +36822,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceHistorySurface.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceHistorySurface.razor",
-      "sha256_lf": "7b5597f6415e42f8dd97920372b87692b0daa68ad9010c2bca7b85e03806f3bb",
+      "sha256_lf": "ad538facd920a0d33eda4e37e2bd6ffa36c9d567077b10a44cdbd1fce04b5472",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.UI.WorkspaceHistorySurface",
@@ -36809,17 +36837,41 @@
       "descendants": [
         "Dialog",
         "PolicyNumber",
-        "SettingsReceipts"
+        "SettingsReceipts",
+        "MergeFieldView"
       ],
       "assets": "CanDoItAll.Workspace.UI",
       "scenario": "CanDoItAll.Workspace.UI",
       "evidence": "CanDoItAll.Workspace.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "The renderer reuses the shared comparison fields and dialog. The controller owns the policy revision and clears old previews before accepting reviewed draft values."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretReviewDialog.razor",
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretReviewDialog.razor",
+      "sha256_lf": "82346608c1ef83830ebd43d7bcec78bebf1c2ec27b7013beb2306d90cf1e1128",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Workspace.UI.WorkspaceSecretReviewDialog",
+      "project": "src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretsSurface.razor"
+      ],
+      "native_owner": "WorkspaceSecretsController owns the original record and revision, safe metadata read, pending replacement intent and conditional Save.",
+      "visual_owner": "CanDoItAll.Workspace.UI",
+      "descendants": [
+        "Dialog",
+        "MergeFieldView"
+      ],
+      "assets": "CanDoItAll.Workspace.UI",
+      "scenario": "CanDoItAll.Workspace.UI",
+      "evidence": "CanDoItAll.Workspace.UI",
+      "rationale": "Typed conflict choices render through the shared dialog and merge fields. Applying updates the current draft. The Workspace component checks and two browser circuits verified the behavior."
     },
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretsSurface.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretsSurface.razor",
-      "sha256_lf": "6af94d825855981b0414870f5b54b7d9e85449b8e4294dab1be3c3cab1e6d516",
+      "sha256_lf": "8df23cd661a45f8d79c297f5e387627f89ab5293f786ff9e594b07778c1eed6b",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.UI.WorkspaceSecretsSurface",
@@ -36832,12 +36884,13 @@
       "visual_owner": "CanDoItAll.Workspace.UI",
       "descendants": [
         "SecretReceiptReview",
-        "SettingsReceipts"
+        "SettingsReceipts",
+        "WorkspaceSecretReviewDialog"
       ],
       "assets": "CanDoItAll.Workspace.UI",
       "scenario": "CanDoItAll.Workspace.UI",
       "evidence": "CanDoItAll.Workspace.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "The controller owns metadata reads, typed comparison and sensitive replacement lifetime. Input callbacks remain bound to the original draft and the dialog receives no replacement value."
     },
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSettingsSurface.razor",
