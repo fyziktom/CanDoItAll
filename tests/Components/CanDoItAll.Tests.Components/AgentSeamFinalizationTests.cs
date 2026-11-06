@@ -69,7 +69,9 @@ public sealed class AgentSeamFinalizationTests {
         AgentEditorSection section, bool replaceSession) {
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddAgentEditorReadFixture());
         var reads = harness.Context.Services.GetRequiredService<AgentEditorReadFixture>();
-        reads.Load = (target, _) => Task.FromResult(reads.Result(new() { Id = target.AgentId, Name = "Nested dialog owner" }));
+        reads.Load = (target, _) => Task.FromResult(reads.Result(new() {
+            Id = target.AgentId, ExpectedUpdatedAtUtc = DateTimeOffset.UnixEpoch, Name = "Nested dialog owner"
+        }));
         var dialogs = harness.Context.Services.GetRequiredService<DialogService>();
         var unrelated = dialogs.OpenAsync<AgentTeamDetailsDialog>("Independent team editor");
         var editor = harness.Context.Render<AgentDetailsDialog>(parameters => parameters

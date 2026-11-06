@@ -20,7 +20,7 @@ public sealed class ConversationDialogSurfaceTests {
         Assert.Contains("No matching definitions", cut.Markup, StringComparison.Ordinal);
         cut.Find("[data-testid='llm-chat-start-definition-search']").Input("research");
         await cut.Find($"[data-testid='llm-chat-start-definition-{DefinitionCatalogSandboxFixture.DefinitionA:D}']").ClickAsync();
-        cut.Find("[data-testid='llm-chat-start-title']").Change("Exact draft");
+        cut.Find("[data-testid='llm-chat-start-title']").Input("Exact draft");
         await cut.Find("[data-testid='llm-chat-start-definitions-load-more']").ClickAsync();
         Assert.Equal(new[] { ConversationDialogAction.SelectDefinition, ConversationDialogAction.TitleChanged, ConversationDialogAction.LoadMoreDefinitions },
             intents.Select(intent => intent.Action));
@@ -82,7 +82,7 @@ public sealed class ConversationDialogSurfaceTests {
     }
 
     [Fact]
-    public async Task Empty_and_busy_start_states_keep_confirm_disabled_and_refuse_mutation_callbacks() {
+    public async Task Empty_and_busy_start_states_disable_confirmation_and_retain_queued_title_input() {
         using var context = Context();
         var state = new ConversationDialogPresentation(new(1, ConversationDialogKind.Start));
         var intents = new List<ConversationDialogIntent>();
@@ -92,10 +92,13 @@ public sealed class ConversationDialogSurfaceTests {
         cut.Render(p => p.Add(c => c.Presentation, state with { Title = "Busy", IsMutating = true, IsLoading = true, HasMoreDefinitions = true }));
         Assert.True(cut.Find("[data-testid='llm-chat-start-title']").HasAttribute("disabled"));
         Assert.True(cut.Find("[data-testid='llm-chat-start-definitions-load-more']").HasAttribute("disabled"));
-        await cut.InvokeAsync(() => cut.FindComponents<TextBox>().Last().Instance.ValueChanged.InvokeAsync("Do not mutate"));
-        Assert.Empty(intents);
+        await cut.InvokeAsync(() => cut.FindComponents<TextBox>().Last().Instance.ValueChanged.InvokeAsync("Queued title"));
+        Assert.Equal(new(state.Origin, ConversationDialogAction.TitleChanged, "Queued title"), Assert.Single(intents));
         await cut.InvokeAsync(() => cut.FindComponent<Dialog>().Instance.OnClose.InvokeAsync());
-        Assert.Equal(ConversationDialogAction.Close, Assert.Single(intents).Action);
+        Assert.Single(intents);
+        cut.Render(p => p.Add(c => c.Presentation, state with { Title = "Queued title" }));
+        await cut.InvokeAsync(() => cut.FindComponent<Dialog>().Instance.OnClose.InvokeAsync());
+        Assert.Equal(ConversationDialogAction.Close, intents[^1].Action);
     }
 
     private static BunitContext Context() {

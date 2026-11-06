@@ -22,8 +22,7 @@ public sealed class AgentEditorMemoryRuntimeTests : AgentMemorySettingsPanelTest
         });
         var services = harness.Context.Services;
         var profiles = services.GetRequiredService<IMemoryProviderProfileStore>();
-        var profile = CreateProvider("editor.runtime-memory", "Editor runtime memory", true);
-        await profiles.UpsertAsync(profile, DateTimeOffset.UtcNow);
+        var profile = await profiles.UpsertAsync(CreateProvider("editor.runtime-memory", "Editor runtime memory", true), DateTimeOffset.UtcNow);
         var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var id = await workspace.SaveAgentAsync(new() {
             Name = "UI memory runtime proof",

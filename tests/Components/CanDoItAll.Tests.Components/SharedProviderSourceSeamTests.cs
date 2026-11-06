@@ -9,6 +9,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
 
@@ -29,7 +30,9 @@ public sealed class SharedProviderSourceSeamTests {
         var dialog = Assert.IsType<SharedProviderCatalogSelection>(cut.Instance.Presentation.Catalog);
         var original = dialog.Origin;
         var peer = (await proxy!.Owner.ListSourcesAsync()).Single().Imports[1];
-        await proxy.Owner.RetireImportedProfileAsync(new(peer.ImportId, peer.ProviderProfileId,
+        var peerChanges = ActivatorUtilities.CreateInstance<ProviderEditingChanges>(harness.Context.Services, new EditingChangeFeed());
+        var peerOwner = ActivatorUtilities.CreateInstance<SharedProviderManagementService>(harness.Context.Services, peerChanges);
+        await peerOwner.RetireImportedProfileAsync(new(peer.ImportId, peer.ProviderProfileId,
             peer.ImportConcurrencyToken, peer.ProviderConcurrencyToken));
         Assert.Equal(original.ConcurrencyToken, (await proxy.Owner.ListSourcesAsync()).Single().Source.ConcurrencyToken);
         Assert.Equal(1, remote.Fetches);

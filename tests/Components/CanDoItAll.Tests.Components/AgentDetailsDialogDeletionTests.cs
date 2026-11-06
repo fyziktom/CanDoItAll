@@ -145,6 +145,7 @@ public sealed class AgentDetailsDialogDeletionTests
         return new AgentEditorModel
         {
             Id = Guid.NewGuid(),
+            ExpectedUpdatedAtUtc = DateTimeOffset.UnixEpoch,
             Name = "Gardener deletion probe"
         };
     }
@@ -162,15 +163,16 @@ public sealed class AgentDetailsDialogDeletionTests
             return targetMethod?.Name switch
             {
                 nameof(IAgentFrameworkWorkspaceService.DeleteAgentAsync) =>
-                    DeleteAgent((Guid)args![0]!),
+                    DeleteAgent((Guid)args![0]!, Assert.IsType<DateTimeOffset>(args[1])),
                 "add_ExecutionUpdated" or "remove_ExecutionUpdated" => null,
                 _ => throw new InvalidOperationException(
                     $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
             };
         }
 
-        private Task DeleteAgent(Guid agentId)
+        private Task DeleteAgent(Guid agentId, DateTimeOffset expectedUpdatedAtUtc)
         {
+            Assert.Equal(DateTimeOffset.UnixEpoch, expectedUpdatedAtUtc);
             DeleteCallCount++;
             DeletedAgentId = agentId;
             return DeleteFailure is null
@@ -187,7 +189,7 @@ public sealed class AgentDetailsDialogDeletionTests
         {
             context.JSInterop.Mode = JSRuntimeMode.Loose;
             context.Services.AddCanDoItAllBaseLib();
-        context.Services.AddStubProviderRuntimeAdministration();
+            context.Services.AddStubProviderRuntimeAdministration();
             context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new ExternalTargetPathRegistryFactory());
             context.Services.AddSingleton<IStorageCatalogSelectionSource>(new EmptyStorageCatalogSelectionSource());
             var avatarGenerationService = new AgentAvatarGenerationService(
@@ -202,8 +204,9 @@ public sealed class AgentDetailsDialogDeletionTests
             context.Services.AddSingleton(workspaceService);
             context.Services.AddSingleton<IAvatarGenerationGateway>(
                 new AgentAvatarGenerationGateway(workspaceService, avatarGenerationService));
-        context.Services.AddAgentEditorReadFixture();
+            context.Services.AddAgentEditorReadFixture();
 
+            context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
             DialogService = context.Services.GetRequiredService<DialogService>();
             Host = context.Render<DialogHost>();
         }

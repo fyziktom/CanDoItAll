@@ -74,7 +74,7 @@ public sealed class SharedDeliveryReconstructionTests {
     }
 
     [Fact]
-    public async Task Exact_before_state_allows_deliberate_action_without_replay() {
+    public async Task Exact_before_state_still_requires_acknowledgement_before_a_separate_write() {
         var service = DispatchProxy.Create<ISharedProviderManagementService, SharedProviderRecoveryTests.SharingProxy>();
         var proxy = (SharedProviderRecoveryTests.SharingProxy)(object)service;
         var before = proxy.State(proxy.Id);
@@ -83,7 +83,9 @@ public sealed class SharedDeliveryReconstructionTests {
         await cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         proxy.Read = (_, _) => Task.FromResult(before);
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
-        Assert.Contains("write was not applied", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("earlier outcome remains unconfirmed", cut.Markup, StringComparison.Ordinal);
+        Assert.True(cut.Find("[data-testid='shared-provider-publish']").HasAttribute("disabled"));
+        await cut.Find("[data-testid='shared-provider-acknowledge-current']").ClickAsync();
         Assert.False(cut.Find("[data-testid='shared-provider-publish']").HasAttribute("disabled"));
         Assert.Equal(1, proxy.Writes);
     }

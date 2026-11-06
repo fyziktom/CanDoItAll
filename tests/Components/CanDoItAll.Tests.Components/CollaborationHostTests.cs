@@ -41,7 +41,7 @@ public sealed class CollaborationHostTests {
     }
 
     [Fact]
-    public async Task Real_host_same_target_parameters_preserve_validation_and_target_switch_discards_reply() {
+    public async Task Real_host_retains_validation_and_restores_a_reply_when_returning_to_its_thread() {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var owner = harness.Context.Services.GetRequiredService<CollaborationService>();
         var first = await owner.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new() { Subject = "First", MessageBody = "One" }));
@@ -58,9 +58,12 @@ public sealed class CollaborationHostTests {
         Assert.Same(reply, view.Reply);
         Assert.NotEmpty(reply.Context.GetValidationMessages());
         await cut.InvokeAsync(() => cut.Find("[data-testid=collaboration-reply-message]").Change("Unsent on First"));
-        await cut.InvokeAsync(() => navigation.NavigateTo($"/collaboration?threadId={second.Value:D}"));
+        await cut.InvokeAsync(() => view.SelectAsync(second.Value));
         cut.WaitForAssertion(() => Assert.Equal("Second", cut.Find("[data-testid=collaboration-thread-title]").TextContent));
         Assert.NotSame(reply, view.Reply);
         Assert.Empty(view.Reply.Model.MessageBody);
+        await cut.InvokeAsync(() => view.SelectAsync(first.Value));
+        Assert.Same(reply, view.Reply);
+        Assert.Equal("Unsent on First", view.Reply.Model.MessageBody);
     }
 }

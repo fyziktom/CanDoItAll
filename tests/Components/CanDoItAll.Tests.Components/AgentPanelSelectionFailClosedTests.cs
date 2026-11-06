@@ -175,11 +175,12 @@ public sealed class AgentPanelSelectionFailClosedTests
         IAgentChatLauncher? launcher = null)
     {
         var context = CreateBaseTestContext(workspace.Service);
-        context.Services.AddAgentFrameworkUi();
+        context.Services.AddAgentConfigurationFixture();
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentCapabilitySetupFlowService, UnexpectedCallProxy>());
         context.Services.AddSingleton(
             launcher ?? DispatchProxy.Create<IAgentChatLauncher, UnexpectedCallProxy>());
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
     }
 

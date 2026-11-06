@@ -51,7 +51,7 @@ public sealed class AgentDetailsDialogProjectStructureAccessTests
         };
         var cut = RenderProjectStructureTab(context, editor);
 
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
         {
@@ -62,7 +62,7 @@ public sealed class AgentDetailsDialogProjectStructureAccessTests
         });
     }
 
-    private static BunitContext CreateContext(out RecordingWorkspaceServiceProxy workspaceProxy)
+    private static BunitContext CreateContext(out AgentEditorSaveProbe workspaceProxy)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -74,8 +74,8 @@ public sealed class AgentDetailsDialogProjectStructureAccessTests
             new UnavailableAgentImageGenerationService(),
             NullLogger<AgentAvatarGenerationService>.Instance));
 
-        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
-        workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;
+        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, AgentEditorSaveProbe>();
+        workspaceProxy = (AgentEditorSaveProbe)(object)workspaceService;
         context.Services.AddSingleton(workspaceService);
         context.Services.AddAgentEditorReadFixture();
         return context;
@@ -86,32 +86,5 @@ public sealed class AgentDetailsDialogProjectStructureAccessTests
         AgentEditorModel editor)
     {
         return context.RenderEditor(editor, AgentEditorSection.ProjectStructureAccess);
-    }
-
-    public class RecordingWorkspaceServiceProxy : DispatchProxy
-    {
-        public List<AgentEditorModel> SavedModels { get; } = [];
-
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
-        {
-            return targetMethod?.Name switch
-            {
-                nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) =>
-                    SaveAgent((AgentEditorModel)args![0]!),
-                nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) =>
-                    Task.FromResult<IReadOnlyList<AgentDefinition>>([]),
-                nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) =>
-                    Task.FromResult<IReadOnlyList<CapabilityCatalogItem>>([]),
-                "add_ExecutionUpdated" or "remove_ExecutionUpdated" => null,
-                _ => throw new InvalidOperationException(
-                    $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
-            };
-        }
-
-        private Task<Guid> SaveAgent(AgentEditorModel model)
-        {
-            SavedModels.Add(model);
-            return Task.FromResult(model.Id ?? Guid.NewGuid());
-        }
     }
 }

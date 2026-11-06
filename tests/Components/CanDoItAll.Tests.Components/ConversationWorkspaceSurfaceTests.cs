@@ -47,10 +47,13 @@ public sealed class ConversationWorkspaceSurfaceTests {
         var cut = context.Render<LlmChatConversationSurface>(p => p.Add(x => x.Presentation, presentation).Add(x => x.Intent, value => intents.Add(value)));
         var id = ConversationWorkspaceSandboxFixture.ConversationId;
         await cut.InvokeAsync(() => cut.FindComponent<ConversationThreadRail>().Instance.Selected.InvokeAsync(ConversationWorkspaceMapping.ToKey(id)));
-        foreach (var testId in new[] { "llm-chat-thread-load-more", "llm-chat-transcript-load-more", "llm-chat-reload-selected", "llm-chat-new", $"llm-chat-rename-{id:D}", $"llm-chat-archive-{id:D}", "llm-chat-send", "llm-chat-operation-cancel", "llm-chat-operation-reconcile", "llm-chat-operation-abandon" }) {
+        foreach (var testId in new[] { "llm-chat-thread-load-more", "llm-chat-transcript-load-more", "llm-chat-reload-selected", "llm-chat-new", $"llm-chat-rename-{id:D}", $"llm-chat-archive-{id:D}", "llm-chat-send", "llm-chat-operation-cancel", "llm-chat-operation-reconcile", "llm-chat-operation-abandon", "llm-chat-list-refresh" }) {
             cut.Find($"[data-testid='{testId}']").Click();
         }
         await cut.InvokeAsync(() => cut.FindComponent<ConversationComposer>().Instance.DraftPromptChanged.InvokeAsync("Changed draft"));
+        cut.Render(parameters => parameters.Add(component => component.Presentation, presentation with { RequiresDiscard = true }));
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Keep editing").Click();
+        cut.Find("[data-testid='llm-chat-draft-discard']").Click();
         Assert.Equal(Enum.GetValues<ConversationWorkspaceAction>().Order(), intents.Select(x => x.Action).Order());
         Assert.All(intents, intent => Assert.Equal(27, intent.Generation));
         Assert.All(intents.Where(x => x.Action is ConversationWorkspaceAction.Select or ConversationWorkspaceAction.Rename or ConversationWorkspaceAction.Archive), intent => Assert.Equal(id, intent.ConversationId));

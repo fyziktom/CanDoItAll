@@ -5,10 +5,13 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Tests.Components.Memory;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -93,6 +96,9 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         context.Services.AddSingleton<IAvatarGenerationGateway>(
             new AgentAvatarGenerationGateway(workspaceService, generationService));
         context.Services.AddAgentEditorReadFixture();
+        context.Services.AddSingleton<ICanonicalRuntimeDatabase>(new MemoryTestDatabase());
+        context.Services.AddSingleton<ProviderEditingWrites>();
+        context.Services.AddSingleton<ProviderEditingChanges>();
         return context;
     }
 

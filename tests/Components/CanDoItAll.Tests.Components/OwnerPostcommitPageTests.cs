@@ -232,15 +232,22 @@ public sealed class OwnerPostcommitPageTests {
         var original = OwnerPostcommitTestProbe.Plan(admission);
         var saved = await owner.SaveAsync(original);
         Assert.True(saved.IsSuccess);
-        var page = Render(harness, PostcommitOwner.TestPlan, admission.ProjectId, saved.Value);
-        var oldIds = ChildIds(page);
-        Assert.Equal(3, oldIds.Length);
+        var oldIds = new[] { RequiredId(Assert.Single(original.Cases).Id),
+            RequiredId(Assert.Single(original.Evidence).Id), RequiredId(Assert.Single(original.Runs).Id) };
         await using (var database = await services.GetRequiredService<IDbContextFactory<TestLabDbContext>>().CreateDbContextAsync()) {
             database.RemoveRange(await database.Set<TestCaseRecord>().Where(item => item.TestPlanId == saved.Value).ToListAsync());
             database.RemoveRange(await database.Set<TestEvidenceRecord>().Where(item => item.TestPlanId == saved.Value).ToListAsync());
             database.RemoveRange(await database.Set<TestRunRecord>().Where(item => item.TestPlanId == saved.Value).ToListAsync());
             await database.SaveChangesAsync();
         }
+        var page = Render(harness, PostcommitOwner.TestPlan, admission.ProjectId, saved.Value);
+        var replacements = OwnerPostcommitTestProbe.Plan(admission);
+        await page.InvokeAsync(() => {
+            var draft = Assert.IsType<TestPlanEditorModel>(Editor(page));
+            draft.Cases = replacements.Cases;
+            draft.Evidence = replacements.Evidence;
+            draft.Runs = replacements.Runs;
+        });
         probe.ArmFault(PostcommitOwner.TestPlan, PostcommitFault.Search, new InvalidOperationException("Postcommit replacement fault"));
         await SubmitAsync(page);
         Assert.Equal(saved.Value, EditorId(page));

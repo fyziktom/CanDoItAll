@@ -1,4 +1,6 @@
+using System.Reflection;
 using Bunit;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Editing;
 using CanDoItAll.Infrastructure.Editing;
@@ -89,5 +91,36 @@ internal static class AgentEditorFixtureServices {
         return context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.AgentId, draft.Id)
             .Add(component => component.Section, section));
+    }
+}
+
+public class AgentEditorSaveProbe : DispatchProxy {
+    private AgentDefinition? acceptedAgent;
+    public IReadOnlyList<CapabilityCatalogItem> Capabilities { get; set; } = [];
+    public List<AgentEditorModel> SavedModels { get; } = [];
+
+    protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => targetMethod?.Name switch {
+        nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) => Task.FromResult(Capabilities),
+        nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) =>
+            Task.FromResult<IReadOnlyList<AgentDefinition>>(acceptedAgent is { } agent ? [agent] : []),
+        nameof(IAgentFrameworkWorkspaceService.SaveAgentDefinitionAsync) => Save((AgentEditorModel)args![0]!),
+        "add_ExecutionUpdated" or "remove_ExecutionUpdated" => null,
+        _ => throw new InvalidOperationException($"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
+    };
+
+    private Task<AgentDefinition> Save(AgentEditorModel model) {
+        SavedModels.Add(model);
+        var accepted = AgentCatalogPanelTests.CreateAgent(model.Id ?? Guid.NewGuid(), model.Name, "editor-test") with {
+            ProviderProfileId = model.ProviderProfileId,
+            Model = model.Model,
+            ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(model.ConfigurationJson, model.WorkspaceToolAccess),
+            Permissions = model.Permissions,
+            Capabilities = Capabilities.Where(capability => model.SelectedCapabilityIds.Contains(capability.Id))
+                .Select(capability => new AgentCapabilityAssignment(capability.Id, capability.Key, capability.Kind,
+                    CapabilityProofStatus.NotRun, null, string.Empty))
+                .ToArray()
+        };
+        acceptedAgent = accepted;
+        return Task.FromResult(accepted);
     }
 }

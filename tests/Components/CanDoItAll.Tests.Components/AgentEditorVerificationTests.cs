@@ -155,7 +155,7 @@ public sealed class AgentEditorVerificationTests {
     }
 
     [Fact]
-    public async Task Another_editor_keeps_its_version_and_native_conflict_after_own_proof_update() {
+    public async Task Another_editor_retains_its_original_draft_and_blocks_save_after_a_peer_proof_update() {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var capabilityId = await workspace.SaveCapabilityAsync(new() {
@@ -174,13 +174,13 @@ public sealed class AgentEditorVerificationTests {
         await second.InvokeAsync(() => second.Find("[data-testid='agents-catalog-name']").Input("Other unsaved editor"));
         await first.InvokeAsync(() => first.FindAll("[data-testid='agents-details-capability-verify']")
             .Single(button => !button.HasAttribute("disabled")).ClickAsync());
+        second.WaitForElement("[data-testid='agents-editor-changed-elsewhere']");
+        Assert.True(second.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
         Assert.Equal(originalVersion, draft.ExpectedUpdatedAtUtc);
         await second.InvokeAsync(() => second.Find("form").SubmitAsync());
         Assert.Equal("Two editors", (await workspace.GetAgentEditorAsync(id)).Name);
         Assert.Same(context, second.FindComponent<EditForm>().Instance.EditContext);
         Assert.Equal("Other unsaved editor", draft.Name);
-        Assert.Contains(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
-            message => message.Summary == "Agent changed elsewhere");
     }
 
     [Theory]

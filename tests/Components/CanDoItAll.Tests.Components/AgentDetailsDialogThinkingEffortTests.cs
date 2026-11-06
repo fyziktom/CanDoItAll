@@ -41,12 +41,12 @@ public sealed class AgentDetailsDialogThinkingEffortTests
         Assert.Equal(AgentReasoningEffortLevel.High, editor.ThinkingEffortOverride);
         Assert.False(FindSaveButton(cut).HasAttribute("disabled"));
 
-        FindSaveButton(cut).Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
             Assert.Equal(
                 AgentReasoningEffortLevel.High,
-                Assert.Single(workspaceProxy.SavedThinkingEfforts)));
+                Assert.Single(workspaceProxy.SavedModels).ThinkingEffortOverride));
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public sealed class AgentDetailsDialogThinkingEffortTests
         Assert.Equal(AgentReasoningEffortLevel.High, editor.ThinkingEffortOverride);
         Assert.True(FindSaveButton(cut).HasAttribute("disabled"));
         Assert.False(FindSelect(cut, ThinkingEffortTestId).HasAttribute("disabled"));
-        Assert.Empty(workspaceProxy.SavedThinkingEfforts);
+        Assert.Empty(workspaceProxy.SavedModels);
 
         var guidance = cut.Find($"[data-testid='{ThinkingEffortSupportTestId}']").TextContent;
         Assert.Contains("cannot be applied", guidance, StringComparison.Ordinal);
@@ -91,10 +91,10 @@ public sealed class AgentDetailsDialogThinkingEffortTests
         Assert.True(editor.IsThinkingEffortOverrideEdited);
         Assert.False(FindSaveButton(cut).HasAttribute("disabled"));
 
-        FindSaveButton(cut).Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
-            Assert.Null(Assert.Single(workspaceProxy.SavedThinkingEfforts)));
+            Assert.Null(Assert.Single(workspaceProxy.SavedModels).ThinkingEffortOverride));
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class AgentDetailsDialogThinkingEffortTests
         Assert.Equal(UnknownModel, editor.Model);
         Assert.Equal(AgentReasoningEffortLevel.High, editor.ThinkingEffortOverride);
         Assert.True(FindSaveButton(cut).HasAttribute("disabled"));
-        Assert.Empty(workspaceProxy.SavedThinkingEfforts);
+        Assert.Empty(workspaceProxy.SavedModels);
 
         var guidance = cut.Find($"[data-testid='{ThinkingEffortSupportTestId}']").TextContent;
         Assert.Contains("cannot be applied", guidance, StringComparison.Ordinal);
@@ -144,7 +144,7 @@ public sealed class AgentDetailsDialogThinkingEffortTests
 
         Assert.Equal(AgentReasoningEffortLevel.High, editor.ThinkingEffortOverride);
         Assert.False(FindSaveButton(cut).HasAttribute("disabled"));
-        Assert.Empty(workspaceProxy.SavedThinkingEfforts);
+        Assert.Empty(workspaceProxy.SavedModels);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public sealed class AgentDetailsDialogThinkingEffortTests
             StringComparison.OrdinalIgnoreCase);
     }
 
-    private static BunitContext CreateContext(out RecordingWorkspaceServiceProxy workspaceProxy)
+    private static BunitContext CreateContext(out AgentEditorSaveProbe workspaceProxy)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -194,11 +194,11 @@ public sealed class AgentDetailsDialogThinkingEffortTests
             NullLogger<AgentAvatarGenerationService>.Instance));
 
         var workspaceService =
-            DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
-        workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;
+            DispatchProxy.Create<IAgentFrameworkWorkspaceService, AgentEditorSaveProbe>();
+        workspaceProxy = (AgentEditorSaveProbe)(object)workspaceService;
         context.Services.AddSingleton(workspaceService);
         context.Services.AddSingleton(
-            DispatchProxy.Create<IProviderRuntimeAdministrationService, RecordingWorkspaceServiceProxy>());
+            DispatchProxy.Create<IProviderRuntimeAdministrationService, AgentEditorSaveProbe>());
         context.Services.AddAgentEditorReadFixture();
         return context;
     }
@@ -284,32 +284,5 @@ public sealed class AgentDetailsDialogThinkingEffortTests
 
         return element.QuerySelector("button")
             ?? throw new InvalidOperationException($"Control '{SaveTestId}' does not contain a button element.");
-    }
-
-    public class RecordingWorkspaceServiceProxy : DispatchProxy
-    {
-        public List<AgentReasoningEffortLevel?> SavedThinkingEfforts { get; } = [];
-
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
-        {
-            return targetMethod?.Name switch
-            {
-                nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) =>
-                    SaveAgent((AgentEditorModel)args![0]!),
-                nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) =>
-                    Task.FromResult<IReadOnlyList<AgentDefinition>>([]),
-                nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) =>
-                    Task.FromResult<IReadOnlyList<CapabilityCatalogItem>>([]),
-                "add_ExecutionUpdated" or "remove_ExecutionUpdated" => null,
-                _ => throw new InvalidOperationException(
-                    $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
-            };
-        }
-
-        private Task<Guid> SaveAgent(AgentEditorModel model)
-        {
-            SavedThinkingEfforts.Add(model.ThinkingEffortOverride);
-            return Task.FromResult(model.Id ?? Guid.NewGuid());
-        }
     }
 }

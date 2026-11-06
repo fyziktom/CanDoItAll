@@ -66,6 +66,7 @@ public sealed class ProcessBoundaryTests {
 
     private static bool Allowed(string name) => Framework(name) || name is
         "CanDoItAll.Processes.UI" or "CanDoItAll.Processes.UiSandbox" or
+        "CanDoItAll.Editing" or "CanDoItAll.Editing.UI" or
         "CanDoItAll.AppComponents.RecordBrowsing" or "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.CanvasLib" or
         "CanDoItAll.Components.Common" or "CanDoItAll.Components.OverlayLib" or "CanDoItAll.AgentFramework.Models" or
         "CanDoItAll.AgentFramework.Capabilities.Abstractions" or "CanDoItAll.Memory.Abstractions" or

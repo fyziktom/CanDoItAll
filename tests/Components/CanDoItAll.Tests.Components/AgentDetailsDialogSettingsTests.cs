@@ -31,7 +31,7 @@ public sealed class AgentDetailsDialogSettingsTests
 
         Assert.Equal(!enabled, cut.Find("[data-testid='agents-catalog-can-use-tools']").HasAttribute("checked"));
         cut.Find("[data-testid='agents-catalog-can-use-tools']").Change(enabled);
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() => {
             var saved = Assert.Single(workspaceProxy.SavedModels);
@@ -63,7 +63,7 @@ public sealed class AgentDetailsDialogSettingsTests
             Assert.Contains("external-target/v1/", selectionText, StringComparison.Ordinal);
         });
 
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
         {
@@ -108,7 +108,7 @@ public sealed class AgentDetailsDialogSettingsTests
         editor.WorkspaceToolAccess.AllowedExternalTargetAliases = [legacyAlias];
         var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
 
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
         {
@@ -161,7 +161,7 @@ public sealed class AgentDetailsDialogSettingsTests
 
         cut.Find("[data-testid='agents-catalog-workspace-profile']")
             .Change(selectedProfile.ToString());
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
         {
@@ -264,7 +264,7 @@ public sealed class AgentDetailsDialogSettingsTests
             Assert.Contains(archiveCatalog.Id.ToString("D"), selected.TextContent, StringComparison.Ordinal);
         });
 
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
         {
@@ -290,7 +290,7 @@ public sealed class AgentDetailsDialogSettingsTests
 
         cut.Find("[data-testid='agents-catalog-workspace-external-roots-table'] button")
             .Click();
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
         {
@@ -313,7 +313,7 @@ public sealed class AgentDetailsDialogSettingsTests
         cut.WaitForElement(
                 $"[data-testid='agents-catalog-storage-selection-selected-row-{catalog.Id:N}-remove']")
             .Click();
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
         {
@@ -486,7 +486,7 @@ public sealed class AgentDetailsDialogSettingsTests
         => CreateContext(out _, out _);
 
     private static BunitContext CreateContext(
-        out RecordingWorkspaceServiceProxy workspaceProxy,
+        out AgentEditorSaveProbe workspaceProxy,
         out IExternalTargetPathRegistryFactory externalTargetRegistryFactory,
         IStorageCatalogSelectionSource? storageCatalogSource = null)
     {
@@ -495,8 +495,8 @@ public sealed class AgentDetailsDialogSettingsTests
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddStubProviderRuntimeAdministration();
 
-        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
-        workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;
+        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, AgentEditorSaveProbe>();
+        workspaceProxy = (AgentEditorSaveProbe)(object)workspaceService;
         externalTargetRegistryFactory = new ExternalTargetPathRegistryFactory();
         context.Services.AddSingleton(workspaceService);
         context.Services.AddSingleton(externalTargetRegistryFactory);
@@ -558,33 +558,6 @@ public sealed class AgentDetailsDialogSettingsTests
             CancellationToken cancellationToken = default) {
             ListCalls++;
             return Task.FromResult(catalogs);
-        }
-    }
-
-    public class RecordingWorkspaceServiceProxy : DispatchProxy
-    {
-        public List<AgentEditorModel> SavedModels { get; } = [];
-
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
-        {
-            return targetMethod?.Name switch
-            {
-                nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) =>
-                    SaveAgent((AgentEditorModel)args![0]!),
-                nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) =>
-                    Task.FromResult<IReadOnlyList<AgentDefinition>>([]),
-                nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) =>
-                    Task.FromResult<IReadOnlyList<CapabilityCatalogItem>>([]),
-                "add_ExecutionUpdated" or "remove_ExecutionUpdated" => null,
-                _ => throw new InvalidOperationException(
-                    $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
-            };
-        }
-
-        private Task<Guid> SaveAgent(AgentEditorModel model)
-        {
-            SavedModels.Add(model);
-            return Task.FromResult(model.Id ?? Guid.NewGuid());
         }
     }
 }

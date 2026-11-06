@@ -51,6 +51,7 @@ public sealed class EditorBoundaryTests {
         (name is "mscorlib" or "netstandard" || name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft.", StringComparison.Ordinal));
     private static bool Allowed(string name) => Framework(name) || name is
         "CanDoItAll.AgentFramework.Editor.UI" or "CanDoItAll.AgentFramework.Editor.UiSandbox" or
+        "CanDoItAll.Editing" or "CanDoItAll.Editing.UI" or
         "CanDoItAll.AppComponents.RecordBrowsing" or "CanDoItAll.Workspace.StorageSelection.UI" or
         "CanDoItAll.Modules.Workspace.StorageSelection.Contracts" or "CanDoItAll.AgentFramework.UI" or
         "CanDoItAll.AgentFramework.Usage" or "CanDoItAll.Components.Charts" or "Blazor-ApexCharts" or

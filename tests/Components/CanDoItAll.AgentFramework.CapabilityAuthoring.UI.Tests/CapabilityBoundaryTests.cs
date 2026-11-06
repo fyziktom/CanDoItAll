@@ -52,6 +52,7 @@ public sealed class CapabilityBoundaryTests {
         (name is "mscorlib" or "netstandard" || name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft.", StringComparison.Ordinal));
     private static bool Allowed(string name) => Framework(name) || name is
         "CanDoItAll.AgentFramework.CapabilityAuthoring.UI" or "CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox" or
+        "CanDoItAll.Editing" or "CanDoItAll.Editing.UI" or
         "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common" or "CanDoItAll.AgentFramework.Models" or
         "CanDoItAll.AgentFramework.Mcp.Abstractions" or "CanDoItAll.AgentFramework.Capabilities.Abstractions" or "CanDoItAll.Memory.Abstractions" or
         "CanDoItAll.AgentFramework.ProviderHistory.Abstractions" or "CanDoItAll.Infrastructure.Abstractions" or "CanDoItAll.SharedKernel";

@@ -502,14 +502,11 @@ public sealed partial class ProjectStructureSecretReferenceTests {
             }
             return ValueTask.FromResult(result);
         }
-        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default) {
+        public Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) {
             if (LoseSecretCommitReply && eventData.Context is SecurityDbContext) {
                 LoseSecretCommitReply = false;
                 throw new IOException("Owned lost commit reply");
             }
-            return ValueTask.FromResult(result);
-        }
-        public Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) {
             if (ReferenceEquals(referenceContext, eventData.Context) && referenceContext is not null) {
                 referenceContext = null;
                 FailAfterReferenceCommit = false;

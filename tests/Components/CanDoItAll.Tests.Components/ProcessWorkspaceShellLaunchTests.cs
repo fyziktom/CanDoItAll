@@ -58,8 +58,10 @@ public sealed partial class ProcessWorkspaceShellTests {
         client.FeedCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var feeding = cut.InvokeAsync(() => cut.Find("[data-testid='processes-feed-defaults']").ClickAsync(new MouseEventArgs()));
         cut.WaitForAssertion(() => Assert.Equal(1, client.FeedDefaultsCommandCount));
+        var initialRequests = client.Requests.Count;
         client.DeferShellRequests = true;
         await cut.InvokeAsync(() => cut.Render(p => p.Add(c => c.ProjectId, Guid.NewGuid())));
+        cut.WaitForAssertion(() => Assert.Equal(initialRequests + 1, client.Requests.Count));
         var requestCount = client.Requests.Count;
         if (fail) {
             client.FeedCompletion.SetException(new InvalidOperationException("Retired feed details"));

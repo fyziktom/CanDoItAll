@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProviderUiAdmissionTests {
     [Fact]
     public async Task A_source_child_cannot_capture_a_new_actor_and_expose_its_parents_credential_metadata() {

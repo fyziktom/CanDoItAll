@@ -255,8 +255,14 @@ public sealed class AgentChatEffectOwnershipTests {
         await cut.InvokeAsync(() => Workspace(cut).DraftPromptChanged.InvokeAsync("Old composer"));
         await cut.InvokeAsync(() => Workspace(cut).VoiceRecordingToggled.InvokeAsync());
         var generation = Workspace(cut).SelectionGeneration;
-        await cut.InvokeAsync(() => Workspace(cut).NavigationIntent.InvokeAsync(new(generation,
+        Task OpenThreadAsync() => cut.InvokeAsync(() => Workspace(cut).NavigationIntent.InvokeAsync(new(generation,
             CanDoItAll.AgentFramework.UI.Chat.AgentChatNavigationAction.NewThread)));
+        await OpenThreadAsync();
+        Assert.Equal(first.Id, Workspace(cut).Session!.Id);
+        Assert.Equal("Old composer", Workspace(cut).DraftPrompt);
+        Assert.Equal(0, creates);
+        await cut.InvokeAsync(() => Workspace(cut).DraftPromptChanged.InvokeAsync(string.Empty));
+        await OpenThreadAsync();
         Assert.Equal(second.Id, Workspace(cut).Session!.Id);
         Assert.True(Workspace(cut).SelectionGeneration > generation);
         Assert.Empty(Workspace(cut).DraftPrompt);

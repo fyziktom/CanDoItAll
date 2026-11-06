@@ -78,16 +78,16 @@ public sealed class AgentEditorLoadCharacterizationTests {
         probe.Failure = AgentEditorProbeFailure.RefreshAfterSave;
         cut.Find("[data-testid='agents-catalog-name']").Input("Refresh characterization");
 
-        cut.Find("form").Submit();
+        await cut.Find("form").SubmitAsync();
 
-        cut.WaitForAssertion(() => Assert.Equal(1, probe.AcceptedSaves));
+        Assert.Equal(1, probe.AcceptedSaves);
         cut.WaitForAssertion(() => Assert.Contains(
             harness.Context.Services.GetRequiredService<NotificationService>().Messages,
             message => message.Summary == "Agent saved, but the editor refresh failed"));
         Assert.Empty(completed);
         Assert.NotNull(Assert.IsType<AgentEditorModel>(cut.FindComponent<EditForm>().Instance.EditContext!.Model).Id);
         Assert.True(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
-        cut.Find("form").Submit();
+        await cut.Find("form").SubmitAsync();
         Assert.Equal(1, probe.AcceptedSaves);
         Assert.NotNull(cut.Find("[data-testid='agents-editor-retry-refresh']"));
     }
