@@ -73,11 +73,12 @@ public sealed class AgentTeamCatalogIntegrationTests
         var updatedDeliveryTeam = await workspaceService.UpdateAgentTeamMembersAsync(
             deliveryTeamId,
             [reviewerId, reviewerId, Guid.Empty],
-            CancellationToken.None);
+            deliveryTeam.UpdatedAtUtc);
 
         Assert.Equal([reviewerId], updatedDeliveryTeam.AgentIds);
 
-        await workspaceService.DeleteAgentAsync(reviewerId);
+        var reviewer = await workspaceService.GetAgentEditorAsync(reviewerId);
+        await workspaceService.DeleteAgentAsync(reviewerId, reviewer.ExpectedUpdatedAtUtc!.Value);
 
         teams = await workspaceService.ListAgentTeamsAsync();
         deliveryTeam = Assert.Single(teams, item => item.Id == deliveryTeamId);

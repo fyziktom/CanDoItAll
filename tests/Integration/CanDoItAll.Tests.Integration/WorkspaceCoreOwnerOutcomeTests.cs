@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
@@ -99,8 +100,11 @@ public sealed class WorkspaceCoreOwnerOutcomeTests {
         var activity = new ActivityBoundary { Fail = activityFailure };
         var owner = ActivatorUtilities.CreateInstance<SecretService>(services, vault, activity);
         var value = Guid.NewGuid().ToString("N");
+        var editor = Assert.IsType<SecretEditorModel>(await real.GetEditorAsync(created.Value));
+        editor.Name = "Changed stage fixture";
+        editor.SecretValue = value;
         var failure = await Assert.ThrowsAsync<SecretCommittedException>(() => delete ? owner.DeleteAsync(created.Value)
-            : owner.SaveEditorAsync(new() { Id = created.Value, Name = "Changed stage fixture", SecretValue = value }));
+            : owner.SaveEditorAsync(editor));
         Assert.Equal(created.Value, failure.SecretId);
         Assert.Equal(delete, failure.Deleted);
         Assert.Equal(activityFailure ? SecretCommittedStage.PayloadCleanup : SecretCommittedStage.Metadata, failure.Stage);
@@ -140,6 +144,7 @@ public sealed class WorkspaceCoreOwnerOutcomeTests {
         var refused = await owner.SaveEditorAsync(command);
         Assert.False(refused.IsSuccess);
         Assert.Null(await owner.GetAsync(missing));
+        command.ExpectedUpdatedAtUtc = null;
         Assert.True((await owner.SaveAsync(command)).IsSuccess);
     }
 
@@ -193,7 +198,7 @@ public sealed class WorkspaceCoreOwnerOutcomeTests {
         Assert.Equal(value, observed.SecretValue);
     }
 
-    private sealed class CommitBoundary : SaveChangesInterceptor {
+    private sealed class CommitBoundary : SaveChangesInterceptor, IDbTransactionInterceptor {
         public bool RefuseDefaults { get; set; }
         public bool LoseSecretAcknowledgement { get; set; }
 
@@ -215,13 +220,13 @@ public sealed class WorkspaceCoreOwnerOutcomeTests {
             return ValueTask.FromResult(result);
         }
 
-        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData,
-            int result, CancellationToken cancellationToken = default) {
+        public Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData,
+            CancellationToken cancellationToken = default) {
             if (eventData.Context is SecurityDbContext && LoseSecretAcknowledgement) {
                 LoseSecretAcknowledgement = false;
                 throw new IOException("Owned acknowledgement failure.");
             }
-            return ValueTask.FromResult(result);
+            return Task.CompletedTask;
         }
     }
 

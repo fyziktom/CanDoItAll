@@ -650,6 +650,7 @@ public sealed partial class ProjectStructureGeneratedImageAttachmentIntegrationT
         });
         Assert.True(secret.IsSuccess);
         var editor = ProviderProfileEditorModel.FromDefinition(provider);
+        editor.ExpectedConcurrencyToken = Guid.Empty;
         if (purpose == ProviderProfilePurpose.Chat) {
             editor.ModelPrices = [Assert.Single(ProviderPricingDefaults.CreateDefaultEditorModels(provider.Kind, provider.DefaultModel),
                 price => price.Model == provider.DefaultModel)];

@@ -53,18 +53,18 @@ public sealed class ProviderVerificationHardeningTests {
         var before = Source([]);
         var attempt = new SharedProviderSourceMutationAttempt(before.Source.Id,
             SharedProviderSourceMutationKind.Synchronize, before, selection: [b.RemotePublicationId, a.RemotePublicationId, a.RemotePublicationId]);
-        Assert.Equal(ProviderVerificationDisposition.Committed,
-            SharedProviderSourceVerification.Evaluate(attempt, [Applied(before, [a, b])]).Disposition);
-        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed,
-            SharedProviderSourceVerification.Evaluate(attempt, [Applied(before, [a])]).Disposition);
+        var matching = SharedProviderSourceVerification.Evaluate(attempt, [Applied(before, [a, b])]);
+        Assert.True(matching.CurrentStateMatchesIntent);
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, matching.Disposition);
+        Assert.Null(matching.Change);
+        Assert.False(SharedProviderSourceVerification.Evaluate(attempt, [Applied(before, [a])]).CurrentStateMatchesIntent);
     }
 
     [Fact]
     public void Synchronize_verification_accepts_exact_empty_selection() {
         var before = Source([]);
         var attempt = new SharedProviderSourceMutationAttempt(before.Source.Id, SharedProviderSourceMutationKind.Synchronize, before);
-        Assert.Equal(ProviderVerificationDisposition.Committed,
-            SharedProviderSourceVerification.Evaluate(attempt, [Applied(before, [])]).Disposition);
+        Assert.True(SharedProviderSourceVerification.Evaluate(attempt, [Applied(before, [])]).CurrentStateMatchesIntent);
     }
 
     [Fact]
@@ -74,18 +74,16 @@ public sealed class ProviderVerificationHardeningTests {
         var before = Source([]);
         var attempt = new SharedProviderSourceMutationAttempt(before.Source.Id,
             SharedProviderSourceMutationKind.Synchronize, before, selection: [a.RemotePublicationId]);
-        Assert.Equal(ProviderVerificationDisposition.Committed,
-            SharedProviderSourceVerification.Evaluate(attempt, [Applied(before, [a, retired])]).Disposition);
+        Assert.True(SharedProviderSourceVerification.Evaluate(attempt, [Applied(before, [a, retired])]).CurrentStateMatchesIntent);
         var empty = new SharedProviderSourceMutationAttempt(before.Source.Id, SharedProviderSourceMutationKind.Synchronize, before);
-        Assert.Equal(ProviderVerificationDisposition.Committed,
-            SharedProviderSourceVerification.Evaluate(empty, [Applied(before, [retired])]).Disposition);
+        Assert.True(SharedProviderSourceVerification.Evaluate(empty, [Applied(before, [retired])]).CurrentStateMatchesIntent);
     }
 
     [Theory]
     [InlineData(true, false, false)]
     [InlineData(false, true, false)]
     [InlineData(false, false, true)]
-    public void Synchronize_verification_keeps_existing_revision_and_time_evidence(bool unchangedRevision, bool unchangedTime, bool neverSynchronized) {
+    public void Synchronize_readback_uses_runtime_evidence_independent_of_configuration_revision(bool unchangedRevision, bool unchangedTime, bool neverSynchronized) {
         var before = Source([]);
         var attempt = new SharedProviderSourceMutationAttempt(before.Source.Id, SharedProviderSourceMutationKind.Synchronize, before);
         var current = Applied(before, []);
@@ -93,7 +91,9 @@ public sealed class ProviderVerificationHardeningTests {
             ConcurrencyToken = unchangedRevision ? before.Source.ConcurrencyToken : current.Source.ConcurrencyToken,
             LastSyncAtUtc = unchangedTime ? before.Source.LastSyncAtUtc : current.Source.LastSyncAtUtc,
             Status = neverSynchronized ? SharedProviderSourceStatus.NeverSynchronized : current.Source.Status } };
-        Assert.NotEqual(ProviderVerificationDisposition.Committed, SharedProviderSourceVerification.Evaluate(attempt, [current]).Disposition);
+        var observed = SharedProviderSourceVerification.Evaluate(attempt, [current]);
+        Assert.Equal(!unchangedTime && !neverSynchronized, observed.CurrentStateMatchesIntent);
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, observed.Disposition);
     }
 
     [Fact]
@@ -102,8 +102,7 @@ public sealed class ProviderVerificationHardeningTests {
         var attempt = new SharedProviderSourceMutationAttempt(before.Source.Id, SharedProviderSourceMutationKind.Synchronize, before);
         var current = Applied(before, []);
         current = current with { Source = current.Source with { Id = Guid.NewGuid() } };
-        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed,
-            SharedProviderSourceVerification.Evaluate(attempt, [current]).Disposition);
+        Assert.False(SharedProviderSourceVerification.Evaluate(attempt, [current]).CurrentStateMatchesIntent);
     }
 
     [Fact]

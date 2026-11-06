@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.Workflows.UI;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
@@ -38,6 +39,7 @@ public sealed class AgentUiCompiledBoundaryTests {
         Assert.Contains(typeof(IProviderProfilesReads), injections);
         Assert.All(injections, dependency => Assert.True(dependency == typeof(IProviderEditorCommands)
             || dependency == typeof(IProviderProfilesReads) || dependency == typeof(ProviderEditorRecovery)
+            || dependency == typeof(ProviderEditingChanges)
             || dependency == typeof(CanDoItAll.Components.BaseLib.NotificationService), dependency.FullName));
         foreach (var adapter in new[] { typeof(ProviderEditorCommands), typeof(ProviderProfilesReads) }) {
             var dependencies = adapter.GetConstructors().SelectMany(constructor => constructor.GetParameters()).Select(parameter => parameter.ParameterType);

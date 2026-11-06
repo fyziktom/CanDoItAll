@@ -155,7 +155,8 @@ public sealed class ExistingDatabaseProfileReaderTests {
         storage["workspaceRoot"] = fixture.WorkspaceRoot;
         fixture.Write(fixture.CatalogPath, "\n" + legacy.ToJsonString() + "\n");
         Assert.Single(await fixture.Native.ListAsync());
-        Assert.True((await fixture.Native.SaveAsync(fixture.Editor(fixture.ProfileId))).IsSuccess);
+        var reviewed = await fixture.Native.GetEditorAsync(fixture.ProfileId);
+        Assert.True((await fixture.Native.SaveAsync(reviewed)).IsSuccess);
         using ServiceProvider provider = fixture.CreateReadProvider();
         ExistingDatabaseProfileReader reader = fixture.Reader(provider);
         string[] before = fixture.FileState();

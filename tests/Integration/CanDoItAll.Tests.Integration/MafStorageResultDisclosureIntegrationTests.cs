@@ -203,7 +203,7 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
                 agent with { ConfigurationJson = Configuration(agent.ConfigurationJson, [other.Id]) });
             Assert.DoesNotContain(target.Id, AgentWorkspaceToolAccessMetadata.Read(currentAgent.ConfigurationJson).AllowedStorageCatalogIds);
         } else {
-            await catalogs.SaveAsync(StorageCatalogSaveRequest.FromSnapshot(target) with { IsEnabled = false });
+            target = await catalogs.SaveAsync(StorageCatalogSaveRequest.FromSnapshot(target) with { IsEnabled = false });
         }
         var beforeDenied = await CatalogRowsAsync(services.ServiceProvider);
         first.Reset();

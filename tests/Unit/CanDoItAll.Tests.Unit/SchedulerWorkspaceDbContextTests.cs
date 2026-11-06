@@ -23,7 +23,9 @@ public sealed class SchedulerWorkspaceDbContextTests {
         var relationship = Assert.Single(run.GetForeignKeys());
         Assert.Equal(plan, relationship.PrincipalEntityType);
         Assert.Equal(DeleteBehavior.Cascade, relationship.DeleteBehavior);
-        Assert.DoesNotContain(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()), property => property.IsConcurrencyToken);
+        var token = Assert.Single(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()).Where(property => property.IsConcurrencyToken));
+        Assert.Same(plan, token.DeclaringType);
+        Assert.Equal(nameof(SchedulerPlan.DefinitionRevision), token.Name);
         Assert.Throws<InvalidOperationException>(() => context.Set<ConnectorCommandRecord>().ToList());
     }
 

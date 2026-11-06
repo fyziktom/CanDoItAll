@@ -347,7 +347,11 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
 
             return targetMethod.Name switch
             {
-                nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) or
+                nameof(IAgentFrameworkWorkspaceService.SaveAgentDefinitionAsync)
+                    => Task.FromResult(new AgentDefinition(CommittedId, "Saved agent", "", "", "",
+                        AgentLifecycleStatus.Active, null, "", AgentWorkloadKind.General,
+                        AgentChatHistoryMode.FrameworkManaged, 0.2, false, false, "{}", false, "saved-agent",
+                        AgentPermissionsPolicy.Default, [], [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch)),
                 nameof(IAgentFrameworkWorkspaceService.CloneAgentAsync) or
                 nameof(IAgentFrameworkWorkspaceService.ConvertToTemplateAsync) or
                 nameof(IAgentFrameworkWorkspaceService.ImportAgentAsync) or

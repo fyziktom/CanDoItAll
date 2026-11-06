@@ -38,7 +38,7 @@ public sealed class MafMemoryResultDisclosureIntegrationTests {
             [], MemoryProviderProfilePolicy.Default, new(MemoryProviderKind.Parse("memory.mock"), MemoryProtocolVersion.Current,
                 [new(MemoryCapabilityIds.ContextQuerySync, "v1", true), new(MemoryCapabilityIds.OperationStatus, "v1", true)],
                 MemoryProviderInteractionSupport.SyncQueryOnly, [], MemoryProviderLimits.Default, MemoryExtensionData.Empty));
-        await profiles.UpsertAsync(provider, DateTimeOffset.UtcNow);
+        provider = await profiles.UpsertAsync(provider, DateTimeOffset.UtcNow);
         var access = new AgentMemoryAccessSettings {
             InvocationMode = AgentMemoryInvocationMode.Automatic, CanUseMemoryTools = true,
             ProviderBindings = [new(AgentMemoryProviderAlias.Parse("journal"), provider.InstanceId)],
@@ -72,7 +72,7 @@ public sealed class MafMemoryResultDisclosureIntegrationTests {
                 agent with { ConfigurationJson = AgentMemoryAccessMetadata.Write(agent.ConfigurationJson, narrowed) });
             Assert.Empty(AgentMemoryAccessMetadata.Read(deniedAgent.ConfigurationJson).AllowedSourceScopes);
         } else {
-            await profiles.UpsertAsync(provider with { IsEnabled = false }, DateTimeOffset.UtcNow);
+            provider = await profiles.UpsertAsync(provider with { IsEnabled = false }, DateTimeOffset.UtcNow);
         }
         first.Reset();
         var failure = await Assert.ThrowsAnyAsync<Exception>(execute);
@@ -82,7 +82,7 @@ public sealed class MafMemoryResultDisclosureIntegrationTests {
         var afterDenial = (await fixture.NewStore().GetExecutionRunAsync(fixture.Session.ExecutionRunId))!.ToolAdmission!;
         Assert.Equal(proposals.Select(item => item.Result), afterDenial.Batches.SelectMany(batch => batch.Proposals).Select(item => item.Result));
         if (!revokeSourceScope) {
-            await profiles.UpsertAsync(provider, DateTimeOffset.UtcNow);
+            await profiles.UpsertAsync(provider with { IsEnabled = true }, DateTimeOffset.UtcNow);
         }
         await SaveCanonicalAgentAsync(services, agent);
         first.Reset();

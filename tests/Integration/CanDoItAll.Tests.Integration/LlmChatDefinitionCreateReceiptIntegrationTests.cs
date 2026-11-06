@@ -139,7 +139,8 @@ public sealed partial class LlmChatDefinitionCreateReceiptIntegrationTests {
             await using var scope = before.Services.CreateAsyncScope();
             var service = scope.ServiceProvider.GetRequiredService<ILlmChatDefinitionCreateReceiptService>();
             var thrown = await Record.ExceptionAsync(() => service.CreateOnceAsync(admission));
-            Assert.Same(failure, thrown);
+            var committed = Assert.IsType<LlmChatCommittedException<Result<LlmChatDefinitionCreateResponse>>>(thrown);
+            Assert.Same(failure, committed.InnerException);
             original = (await service.FindReceiptAsync(admission.Key)).Value!;
             Assert.NotNull(original);
             await AssertCountsAsync(before, 1, 1);

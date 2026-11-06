@@ -21,8 +21,11 @@ public sealed class WorkflowDbContextTests {
         var tokens = context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties())
             .Where(property => property.IsConcurrencyToken)
             .Select(property => (property.DeclaringType.ClrType, property.Name)).ToArray();
-        Assert.Equal(3, tokens.Length);
+        Assert.Equal(6, tokens.Length);
+        Assert.Contains((typeof(WorkflowDefinitionRecord), nameof(WorkflowDefinitionRecord.InstructionSnapshotSchemaVersion)), tokens);
         Assert.Contains((typeof(WorkflowDefinitionHeadRecord), nameof(WorkflowDefinitionHeadRecord.VersionId)), tokens);
+        Assert.Contains((typeof(WorkflowComponentRecord), nameof(WorkflowComponentRecord.Revision)), tokens);
+        Assert.Contains((typeof(WorkflowSettingsRecord), nameof(WorkflowSettingsRecord.UpdatedAtUtc)), tokens);
         Assert.Contains((typeof(WorkflowExternalRequestBoundaryEntity), nameof(WorkflowExternalRequestBoundaryEntity.ConcurrencyToken)), tokens);
         Assert.Contains((typeof(WorkflowExternalResponseOperationEntity), nameof(WorkflowExternalResponseOperationEntity.ConcurrencyToken)), tokens);
         Assert.Empty(context.Model.FindEntityType(typeof(WorkflowComponentRecord))!.GetForeignKeys());

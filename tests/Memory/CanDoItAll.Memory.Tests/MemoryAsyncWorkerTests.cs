@@ -402,8 +402,10 @@ public sealed class MemoryAsyncWorkerTests
 
     private static async Task SeedProviderProfileAsync(IServiceProvider provider)
     {
-        await provider.GetRequiredService<IMemoryProviderProfileStore>()
-            .UpsertAsync(CreateProviderProfile(), Now);
+        var store = provider.GetRequiredService<IMemoryProviderProfileStore>();
+        if (await store.GetAsync(ProviderId) is null) {
+            await store.UpsertAsync(CreateProviderProfile(), Now);
+        }
     }
 
     private static MemoryProviderProfile CreateProviderProfile()

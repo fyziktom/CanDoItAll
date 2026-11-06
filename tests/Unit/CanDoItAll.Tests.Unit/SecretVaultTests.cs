@@ -238,6 +238,7 @@ public sealed class SecretVaultTests
             var updateResult = await sut.SaveAsync(new SecretEditorModel
             {
                 Id = secretId,
+                ExpectedUpdatedAtUtc = oldRecord.UpdatedAtUtc,
                 Name = "Provider",
                 SecretValue = "new-value"
             });

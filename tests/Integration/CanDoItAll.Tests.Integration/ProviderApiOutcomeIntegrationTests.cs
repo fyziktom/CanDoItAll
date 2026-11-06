@@ -24,11 +24,12 @@ public sealed class ProviderApiOutcomeIntegrationTests(ProviderApiOutcomeFixture
         await using var scope = fixture.Host.App.Services.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
         var id = delete ? await registry.SaveProviderAsync(model) : Guid.Empty;
+        var original = delete ? (await registry.GetProviderEditorAsync(id)).ExpectedConcurrencyToken : null;
         fixture.Observer.Fail = true;
         HttpResponseMessage response;
         try {
             response = delete
-                ? await fixture.Host.Client.DeleteAsync($"/api/agents/providers/{id:D}")
+                ? await fixture.Host.Client.DeleteAsync($"/api/agents/providers/{id:D}?expectedConcurrencyToken={original:D}")
                 : await fixture.Host.Client.PostAsJsonAsync("/api/agents/providers", model);
         } finally {
             fixture.Observer.Fail = false;
@@ -78,7 +79,7 @@ public sealed class ProviderApiOutcomeIntegrationTests(ProviderApiOutcomeFixture
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Local_health_diagnostic_persists_the_health_update_and_new_revision(bool healthy) {
+    public async Task Local_health_diagnostic_persists_metadata_without_changing_configuration_revision(bool healthy) {
         await using var scope = fixture.Host.App.Services.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
         var id = await registry.SaveProviderAsync(NewEditor());
@@ -89,7 +90,7 @@ public sealed class ProviderApiOutcomeIntegrationTests(ProviderApiOutcomeFixture
         Assert.Equal(healthy, result.Success);
         Assert.Equal(1, diagnostics.Calls);
         var after = await registry.GetProviderEditorAsync(id);
-        Assert.NotEqual(before.ExpectedConcurrencyToken, after.ExpectedConcurrencyToken);
+        Assert.Equal(before.ExpectedConcurrencyToken, after.ExpectedConcurrencyToken);
         await using var db = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         var profile = await db.Set<Entity>().AsNoTracking().SingleAsync(x => x.Id == id);
         Assert.NotNull(profile.LastHealthCheckAtUtc);

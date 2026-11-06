@@ -273,7 +273,8 @@ public sealed partial class AgentDecisionDataPolicyOwnerIntegrationTests {
                     throw new IOException("Owned interruption after retained deletion target publication.");
                 }
             });
-        await Assert.ThrowsAsync<IOException>(() => failing.DeleteAgentWorkspaceDataAsync(fixture.OtherAgentId, fixture.Token));
+        var original = before.Agents.Single(agent => agent.Id == fixture.OtherAgentId);
+        await Assert.ThrowsAsync<IOException>(() => failing.DeleteAgentWorkspaceDataAsync(fixture.OtherAgentId, original.UpdatedAtUtc, fixture.Token));
         var recovered = await fixture.NewStore().LoadCatalogAsync(fixture.Token);
         Assert.DoesNotContain(recovered.Agents, agent => agent.Id == fixture.OtherAgentId);
         Assert.Equal(retained, recovered.Agents.Single(agent => agent.Id == fixture.AgentId).ConfigurationJson);

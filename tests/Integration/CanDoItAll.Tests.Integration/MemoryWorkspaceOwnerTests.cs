@@ -29,6 +29,7 @@ public sealed class MemoryWorkspaceOwnerTests {
         await workspace.RefreshAsync();
         Assert.Same(result, workspace.QueryResult);
         Assert.Equal(original, workspace.Snapshot!.SelectedRevision);
+        editor = workspace.Editor.Capture();
         editor.DisplayName = "Replacement profile";
         await owner.SaveProviderAsync(editor);
         await workspace.RefreshAsync();
@@ -47,9 +48,9 @@ public sealed class MemoryWorkspaceOwnerTests {
         await using var scope = app.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var owner = services.GetRequiredService<IMemoryProviderManagementUiService>();
-        await owner.SaveProviderAsync(Editor("provider.original"));
         using var workspace = new MemoryProvidersPageController(owner);
         await workspace.RefreshAsync();
+        await owner.SaveProviderAsync(Editor("provider.original"));
         var store = services.GetRequiredService<ControlledProfiles>();
         workspace.Editor.InstanceId = "provider.destination";
         workspace.Editor.DisplayName = "Captured destination";

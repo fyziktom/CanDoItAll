@@ -21,6 +21,7 @@ using Kind = CanDoItAll.AgentFramework.Models.ProviderKind;
 
 namespace CanDoItAll.Tests.Integration.SharedProviders;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fixture) : IClassFixture<ProviderRecoveryFixture> {
     [Theory]
     [InlineData(0)]

@@ -115,7 +115,8 @@ public sealed class CapabilityCorrectnessIntegrationTests {
         var draft = await fixture.Catalog.GetAgentEditorAsync(fixture.Agent.Id);
         var attempt = new AgentCapabilityAssignmentAttempt(draft, fixture.Capability.Id);
         var before = await fixture.Store.LoadCatalogAsync();
-        await fixture.Catalog.DeleteCapabilityAsync(fixture.Capability.Id);
+        var original = await fixture.Catalog.GetCapabilityEditorAsync(fixture.Capability.Id);
+        await fixture.Catalog.DeleteCapabilityAsync(fixture.Capability.Id, original.ExpectedFingerprint!);
         var canonical = await fixture.Catalog.GetAgentEditorAsync(fixture.Agent.Id);
         Assert.True(canonical.ExpectedUpdatedAtUtc > draft.ExpectedUpdatedAtUtc);
         Assert.Equal(AgentCapabilityOperationStatus.DesiredStateSatisfied, attempt.Classify(canonical));

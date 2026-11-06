@@ -106,6 +106,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             var model = new AgentFrameworkProviderProfileEditorModel
             {
                 Id = providerId,
+                ExpectedConcurrencyToken = Guid.Empty,
                 Name = "Canonical scenario provider",
                 BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
@@ -116,7 +117,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             };
 
             var upsertException = await Assert.ThrowsAsync<
-                ProviderCatalogProjectionException>(
+                ProviderMutationCommittedException>(
                 () => registry.SaveProviderAsync(model));
 
             AssertProjectionFailure(
@@ -143,9 +144,10 @@ public sealed class ProviderCatalogProjectionFailureTests
                 logger.LastMessage,
                 StringComparison.Ordinal);
 
+            var original = await registry.GetProviderEditorAsync(providerId);
             var deleteException = await Assert.ThrowsAsync<
-                ProviderCatalogProjectionException>(
-                () => registry.DeleteProviderAsync(providerId));
+                ProviderMutationCommittedException>(
+                () => registry.DeleteProviderAsync(providerId, original.ExpectedConcurrencyToken!.Value));
 
             AssertProjectionFailure(
                 deleteException,
@@ -643,6 +645,7 @@ public sealed class ProviderCatalogProjectionFailureTests
         var model = new AgentFrameworkProviderProfileEditorModel
         {
             Id = providerId,
+            ExpectedConcurrencyToken = Guid.Empty,
             Name = "Stale projected provider",
             BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
             DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
@@ -654,14 +657,13 @@ public sealed class ProviderCatalogProjectionFailureTests
 
         await registry.SaveProviderAsync(model);
         Assert.True(store.ContainsCatalogProvider(providerId));
+        var original = await registry.GetProviderEditorAsync(providerId);
         store.FailCatalogUpdates = true;
 
         var exception = await Assert.ThrowsAsync<
-            ProviderCatalogProjectionException>(
-            () => registry.DeleteProviderAsync(providerId));
-        Assert.Equal(
-            ProviderCatalogProjectionOperationKind.Delete,
-            exception.OperationKind);
+            ProviderMutationCommittedException>(
+            () => registry.DeleteProviderAsync(providerId, original.ExpectedConcurrencyToken!.Value));
+        AssertProjectionFailure(exception, providerId, ProviderCatalogProjectionOperationKind.Delete, "ReconcileAsync");
         await using (var dbContext =
             await dbContextFactory.CreateDbContextAsync())
         {
@@ -755,11 +757,16 @@ public sealed class ProviderCatalogProjectionFailureTests
     }
 
     private static void AssertProjectionFailure(
-        ProviderCatalogProjectionException exception,
+        ProviderMutationCommittedException committed,
         Guid providerId,
         ProviderCatalogProjectionOperationKind operationKind,
         string repairOperation)
     {
+        Assert.True(committed.CanonicalCommitSucceeded);
+        Assert.Equal(providerId, committed.ProviderId);
+        Assert.Equal(operationKind, committed.OperationKind);
+        var warnings = Assert.IsType<AggregateException>(committed.InnerException);
+        var exception = Assert.IsType<ProviderCatalogProjectionException>(Assert.Single(warnings.InnerExceptions));
         Assert.Equal(providerId, exception.ProviderId);
         Assert.Equal(operationKind, exception.OperationKind);
         Assert.True(exception.CanonicalCommitSucceeded);

@@ -20,7 +20,7 @@ public sealed class MemoryDbContextTests {
             .Select(entity => entity.ClrType).OrderBy(type => type.Name));
         Assert.False(lease.ClrType.IsPublic);
         Assert.Equal(typeof(MemoryDbContext).Namespace, lease.ClrType.Namespace);
-        Assert.False(context.Model.FindEntityType(typeof(MemoryProviderProfileEntity))!
+        Assert.True(context.Model.FindEntityType(typeof(MemoryProviderProfileEntity))!
             .FindProperty(nameof(MemoryProviderProfileEntity.ConcurrencyToken))!.IsConcurrencyToken);
         Assert.Throws<InvalidOperationException>(() => context.Set<Project>().ToQueryString());
     }

@@ -110,9 +110,10 @@ public sealed partial class WorkflowHttpSecretAdmissionIntegrationTests {
             DownloadToWorkspace = download, OutputPath = "downloads/credential-response.json"
         });
         if (credentialKind != HttpCredentialFixture.Plain) {
-            Assert.True((await fixture.Scope.ServiceProvider.GetRequiredService<SecretService>().SaveAsync(new SecretEditorModel {
-                Id = fixture.SecretId, Name = "workflow-http-admission", SecretValue = credential, Scope = "workflow-test"
-            })).IsSuccess);
+            var owner = fixture.Scope.ServiceProvider.GetRequiredService<SecretService>();
+            var editor = Assert.IsType<SecretEditorModel>(await owner.GetEditorAsync(fixture.SecretId));
+            editor.SecretValue = credential;
+            Assert.True((await owner.SaveAsync(editor)).IsSuccess);
         }
         fixture.Server.ResponseBody = HttpResponseBody(credentialKind, "useful response");
         fixture.Server.ResponseReason = $"OK {credential}";

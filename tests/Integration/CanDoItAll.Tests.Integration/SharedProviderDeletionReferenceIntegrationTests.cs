@@ -115,12 +115,12 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
         Assert.True(preview.IsAvailable);
         Assert.Null(preview.Warning);
 
-        await scope.ServiceProvider
-            .GetRequiredService<IProviderAdministrationService>()
-            .DeleteProviderAsync(workspaceProviderId);
-        await scope.ServiceProvider
-            .GetRequiredService<IProviderProfileRegistry>()
-            .DeleteProviderAsync(registryProviderId);
+        var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
+        var workspaceOriginal = await registry.GetProviderEditorAsync(workspaceProviderId);
+        var registryOriginal = await registry.GetProviderEditorAsync(registryProviderId);
+        await scope.ServiceProvider.GetRequiredService<IProviderAdministrationService>()
+            .DeleteProviderAsync(workspaceProviderId, workspaceOriginal.ExpectedConcurrencyToken!.Value);
+        await registry.DeleteProviderAsync(registryProviderId, registryOriginal.ExpectedConcurrencyToken!.Value);
 
         await using var verification = await dbContextFactory.CreateDbContextAsync();
         Assert.False(await verification.Set<ProviderProfile>()

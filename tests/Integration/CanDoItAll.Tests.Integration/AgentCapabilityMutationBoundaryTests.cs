@@ -24,7 +24,7 @@ public sealed class AgentCapabilityMutationBoundaryTests {
             File.Move(index, preserved);
             Directory.CreateDirectory(index);
         };
-        Assert.Equal(AgentCapabilityOperationStatus.Unconfirmed, await commands.AssignAsync(attempt));
+        Assert.Equal(AgentCapabilityOperationStatus.CommittedWithWarning, await commands.AssignAsync(attempt));
         fixture.StoreProbe.BeforeCatalogWrite = null;
         Directory.Delete(index);
         File.Move(preserved, index);

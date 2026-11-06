@@ -238,7 +238,7 @@ public sealed class FileSandboxWorkspacePublicationRecoveryTests {
                         }, cancellation.Token);
                         break;
                     case PendingMutation.AgentDeletion:
-                        await owner.DeleteAgentWorkspaceDataAsync(scenario.Agent.Id, cancellation.Token);
+                        await owner.DeleteAgentWorkspaceDataAsync(scenario.Agent.Id, scenario.Agent.UpdatedAtUtc, cancellation.Token);
                         break;
                 }
                 accepted = true;
@@ -421,7 +421,7 @@ public sealed class FileSandboxWorkspacePublicationRecoveryTests {
                         });
                         break;
                     case RecoveryKind.AgentDeletion:
-                        await failing.DeleteAgentWorkspaceDataAsync(Agent.Id);
+                        await failing.DeleteAgentWorkspaceDataAsync(Agent.Id, Agent.UpdatedAtUtc);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(kind));

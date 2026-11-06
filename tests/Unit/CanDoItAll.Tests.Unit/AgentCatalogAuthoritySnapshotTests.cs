@@ -60,7 +60,7 @@ public sealed class AgentCatalogAuthoritySnapshotTests {
 
         async Task Change(CancellationToken token) {
             if (deleteAgent) {
-                await writer.DeleteAgentWorkspaceDataAsync(fixture.Source.Id, token);
+                await writer.DeleteAgentWorkspaceDataAsync(fixture.Source.Id, fixture.Source.UpdatedAtUtc, token);
             } else {
                 await writer.UpdateCatalogAsync(catalog => catalog with {
                     Capabilities = catalog.Capabilities.Select(item => item.Id == capability.Id ? item with { Description = "Changed" } : item).ToArray()

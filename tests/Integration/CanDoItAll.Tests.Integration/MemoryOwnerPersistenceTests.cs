@@ -70,7 +70,8 @@ public sealed class MemoryOwnerPersistenceTests {
             var feedback = services.GetRequiredService<IMemoryFeedbackLedgerStore>();
             var events = services.GetRequiredService<IMemoryEventLedgerStore>();
             var sources = services.GetRequiredService<IMemorySourceRequestLedgerStore>();
-            await profileStore.UpsertAsync(records.Profile with { DisplayName = "Edited through Memory owner" }, writtenAtUtc);
+            var original = Assert.IsType<MemoryProviderProfile>(await profileStore.GetAsync(records.Profile.InstanceId));
+            await profileStore.UpsertAsync(original with { DisplayName = "Edited through Memory owner" }, writtenAtUtc);
             await operations.TransitionAsync(records.Operation.OperationId, MemoryLedgerStatus.Running, writtenAtUtc, "owner resumed");
             await feedback.DeferAsync(records.Feedback.FeedbackRecordId, writtenAtUtc, incrementRetry: true);
             await events.DeferInboxAsync(records.Inbox.InboxRecordId, writtenAtUtc, "owner deferred", incrementRetry: true);

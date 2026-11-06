@@ -252,7 +252,7 @@ public sealed class FileSandboxWorkspaceProcessIndexIntegrationTests {
         await fixture.Store.SaveExecutionRunDetailAsync(new(run, null, [], []));
         await fixture.Store.SaveExecutionRunDetailAsync(new(survivor, null, [], []));
 
-        var deleted = await fixture.Store.DeleteAgentWorkspaceDataAsync(agent.Id);
+        var deleted = await fixture.Store.DeleteAgentWorkspaceDataAsync(agent.Id, agent.UpdatedAtUtc);
 
         Assert.True(deleted.Deleted);
         Assert.Equal(1, deleted.DeletedExecutionRunCount);

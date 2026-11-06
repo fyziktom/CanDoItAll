@@ -481,8 +481,10 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
 
     private static async Task<AgentRuntimeToolProviderContext> ProjectProducerContextAsync(IServiceProvider services, Fixture fixture, ExecutionRunRecord run) {
         var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var original = await workspace.GetAgentEditorAsync(run.AgentId);
         var id = await workspace.SaveAgentAsync(new() {
-            Id = run.AgentId, Name = "Assigned Process project executor", Status = AgentLifecycleStatus.Active,
+            Id = run.AgentId, ExpectedUpdatedAtUtc = original.ExpectedUpdatedAtUtc,
+            Name = "Assigned Process project executor", Status = AgentLifecycleStatus.Active,
             Model = "gpt-5-mini", Instructions = "Exercise the admitted project tools.", Permissions = AgentPermissionsPolicy.Default,
             ProjectStructureAccess = new() { CanRead = true, CanWrite = true, CanCreateProjects = true, CanCreateSubprojects = true,
                 AllowedProjectIds = [fixture.Project.ProjectId] }
