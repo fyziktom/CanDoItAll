@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Workflows.Templates;
+using CanDoItAll.AgentFramework.Workflows.UI;
 using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
@@ -3117,8 +3118,9 @@ public sealed class WorkflowsPageTests
         Assert.Contains(retained.Id.Value.ToString("D"), cut.Markup, StringComparison.Ordinal);
         Assert.Equal(originalDefinitions + (committed ? 1 : 0), (await catalog.ListDefinitionsAsync()).Count);
         await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-template-preview-close']").ClickAsync());
-        var item = cut.FindAll("[data-testid='workflows-template-catalogue-item']").First(row => row.TextContent.Contains(templateName, StringComparison.Ordinal));
-        await cut.InvokeAsync(() => item.QuerySelector("[data-testid='workflows-template-preview']")!.ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='workflows-template-catalogue-item']")
+            .First(row => row.TextContent.Contains(templateName, StringComparison.Ordinal))
+            .QuerySelector("[data-testid='workflows-template-preview']")!.ClickAsync());
         cut.WaitForAssertion(() => Assert.True(cut.Find("[data-testid='workflows-template-add-draft']").HasAttribute("disabled")));
         Assert.Equal(saves + 1, catalog.SaveCalls);
         Assert.Single((await library.ListComponentsAsync()).Where(component => !originalComponents.Contains(component.Id)));
@@ -3129,7 +3131,7 @@ public sealed class WorkflowsPageTests
         var unconfirmedId = catalog.LastSubmittedId!.Value;
         if (committed) {
             var name = (await catalog.GetDefinitionAsync(unconfirmedId))!.Definition.Name;
-            await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").ClickAsync());
+            await ChangeTabAsync(WorkflowTab.Catalog);
             cut.WaitForElement("[data-testid='workflows-tree-status-Draft']", TimeSpan.FromSeconds(10));
             await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tree-status-Draft']").ClickAsync());
             cut.WaitForAssertion(() => Assert.Contains(cut.FindAll("[data-testid='workflows-catalog-item']"),
@@ -3158,7 +3160,7 @@ public sealed class WorkflowsPageTests
             var observed = (await native.GetDefinitionAsync(unconfirmedId))!.Definition;
             var peer = await native.SaveDefinitionAsync(new(observed.Id, observed.VersionId, "Peer revised recovered workflow",
                 observed.Description, observed.Status, observed.Graph, observed.RuntimePolicy) { InputParameters = observed.InputParameters });
-            await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-dashboard']").ClickAsync());
+            await ChangeTabAsync(WorkflowTab.Dashboard);
             await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-open-inspected-draft']").ClickAsync());
             cut.WaitForAssertion(() => {
                 Assert.Empty(cut.FindAll("[data-testid='workflows-draft-recovery']"));
@@ -3168,6 +3170,11 @@ public sealed class WorkflowsPageTests
         } else {
             Assert.Contains("Not found", recovery, StringComparison.Ordinal);
         }
+
+        Task ChangeTabAsync(WorkflowTab tab) => cut.InvokeAsync(() => {
+            var shell = cut.FindComponent<WorkflowShellSurface>().Instance;
+            return shell.Intent.InvokeAsync(new(shell.Presentation.Revision, WorkflowAction.ChangeTab, Tab: tab));
+        });
     }
 
     private sealed class RacingWorkflowCatalogService(
