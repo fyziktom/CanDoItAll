@@ -646,7 +646,7 @@ public sealed class PersistentWorkflowCatalogService(
         };
 
         var providerResolution = await ResolveProviderAsync(componentCandidate, cancellationToken);
-        var validation = validator.Validate(CreateComponentValidationDefinition(componentCandidate), [componentCandidate]);
+        var validation = validator.Validate(WorkflowDefinitionValidator.CreateComponentValidationDefinition(componentCandidate), [componentCandidate]);
         var providerIssues = ValidateProviderCompatibility(componentCandidate, providerResolution);
         var issues = validation.Issues.Concat(providerIssues).ToArray();
         if (issues.Length > 0) {
@@ -1422,83 +1422,6 @@ public sealed class PersistentWorkflowCatalogService(
         return DbUpdateExceptionClassifier.GetConstraintName(exception) is
             WorkflowDefinitionPersistenceConstraints.HeadPrimaryKey or
             WorkflowDefinitionPersistenceConstraints.RevisionUniqueIndex;
-    }
-
-    private static WorkflowDefinition CreateComponentValidationDefinition(LlmCallComponent component)
-    {
-        var start = new WorkflowNodeId("start");
-        var llm = new WorkflowNodeId("llm");
-        var end = new WorkflowNodeId("end");
-        return new WorkflowDefinition(
-            WorkflowId.New(),
-            WorkflowVersionId.New(),
-            "Component validation",
-            "Internal component validation workflow.",
-            WorkflowLifecycleStatus.Draft,
-            new WorkflowGraph(
-                start,
-                [
-                    new WorkflowNode(
-                        start,
-                        WorkflowNodeKind.Start,
-                        "Start",
-                        [],
-                        new WorkflowNodeSettings(
-                            ComponentId: null,
-                            AgentId: null,
-                            SubworkflowId: null,
-                            ExternalRequestKind: null,
-                            Instructions: string.Empty,
-                            InputShape: component.InputShape,
-                            ResultShape: component.InputShape)),
-                    new WorkflowNode(
-                        llm,
-                        WorkflowNodeKind.LlmCall,
-                        "LLM",
-                        [],
-                        new WorkflowNodeSettings(
-                            component.Id,
-                            AgentId: null,
-                            SubworkflowId: null,
-                            ExternalRequestKind: null,
-                            Instructions: component.Instructions,
-                            InputShape: component.InputShape,
-                            ResultShape: component.ResultShape)),
-                    new WorkflowNode(
-                        end,
-                        WorkflowNodeKind.End,
-                        "End",
-                        [],
-                        new WorkflowNodeSettings(
-                            ComponentId: null,
-                            AgentId: null,
-                            SubworkflowId: null,
-                            ExternalRequestKind: null,
-                            Instructions: string.Empty,
-                            InputShape: component.ResultShape,
-                            ResultShape: component.ResultShape))
-                ],
-                [
-                    new WorkflowEdge(
-                        new WorkflowEdgeId("start-to-llm"),
-                        start,
-                        SourcePortId: null,
-                        llm,
-                        TargetPortId: null,
-                        WorkflowEdgeKind.Direct,
-                        ConditionExpression: string.Empty),
-                    new WorkflowEdge(
-                        new WorkflowEdgeId("llm-to-end"),
-                        llm,
-                        SourcePortId: null,
-                        end,
-                        TargetPortId: null,
-                        WorkflowEdgeKind.Direct,
-                        ConditionExpression: string.Empty)
-                ]),
-            WorkflowSettings.Default.DefaultRuntimePolicy,
-            DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow);
     }
 
     private static IQueryable<WorkflowDefinitionRecord> LatestDefinitionQuery(WorkflowDbContext dbContext)
