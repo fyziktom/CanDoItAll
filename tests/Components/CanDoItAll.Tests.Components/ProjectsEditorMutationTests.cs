@@ -230,6 +230,7 @@ public sealed class ProjectsEditorMutationTests {
         await cut.InvokeAsync(() => editor.Instance.Close.InvokeAsync());
         await NewAsync(cut, "Successor B", controls);
         var successor = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        controls.FailPortfolioReads = true;
         controls.Release.TrySetResult();
         await pending;
         Assert.Same(successor, cut.FindComponent<ProjectModalHost>().Instance.Draft);
@@ -242,11 +243,11 @@ public sealed class ProjectsEditorMutationTests {
         var committed = Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(retained.Accepted!.Accepted.Acknowledgement);
         Assert.Contains(committed.Completion.Obligations, item => item.Participant == participant.Id && item.RecoveryId == participant.RecoveryId);
         Assert.False(cut.FindComponent<ProjectLifecyclePendingSurface>().Instance.View!.CanApply);
-        Interlocked.Exchange(ref controls.FailNextRead, 1);
         await cut.InvokeAsync(() => cut.FindComponent<ProjectsAgentChatContextProvider>().Instance.RefreshRequested.InvokeAsync());
-        Assert.Contains("Unable to refresh the portfolio", cut.Markup);
+        Assert.Contains("Unable to refresh the portfolio", cut.Find("[data-testid='projects-read-error']").TextContent);
         Assert.Equal(retained, Assert.Single(store.Records));
         Assert.Same(successor, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+        controls.FailPortfolioReads = false;
         await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent == "Retry project reads").ClickAsync(new()));
         var cleanups = cut.FindComponent<ProjectDeletionStatusSurface>().Instance.Pending;
         var target = Assert.Single(cleanups, item => item.Target.ParticipantId == participant.Id).Target;
@@ -757,6 +758,7 @@ public sealed class ProjectsEditorMutationTests {
         public int FailNextRead;
         public int HoldNextRead;
         public int HeldPortfolioReads;
+        public volatile bool FailPortfolioReads;
         public int SeedCalls { get; set; }
         public int ProjectActivities { get; set; }
         public Exception? SeedFailure { get; set; }
@@ -866,6 +868,9 @@ public sealed class ProjectsEditorMutationTests {
 
     private sealed class HeldPortfolioContext(IProjectPartyIntegrationBridge inner, Controls controls) : IProjectPartyIntegrationBridge {
         public async Task<IReadOnlyDictionary<Guid, ProjectPortfolioPartyContext>> GetPortfolioContextsAsync(IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken = default) {
+            if (controls.FailPortfolioReads) {
+                throw new IOException("Injected Projects portfolio read failure after native deletion committed.");
+            }
             var result = await inner.GetPortfolioContextsAsync(projectIds, cancellationToken);
             if (controls.HeldPortfolioReads > 0) {
                 if (Interlocked.Decrement(ref controls.HeldPortfolioReads) == 0) {
@@ -943,7 +948,6 @@ public sealed class ProjectsEditorMutationTests {
             if (Completions == 1) {
                 controls.Started.TrySetResult();
                 await controls.Release.Task;
-                controls.FailNextRead = 1;
                 throw new IOException("Injected participant failure after native project deletion.");
             }
             pending = false;
