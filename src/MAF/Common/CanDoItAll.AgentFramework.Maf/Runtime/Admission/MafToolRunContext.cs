@@ -380,7 +380,12 @@ internal sealed class MafToolRunContext {
     }
 
     internal async ValueTask<object?> InvokeAsync(FunctionCallContent call, Func<CancellationToken, ValueTask<object?>> invoke,
-        AgentToolInvocationEffectScope effectScope, CancellationToken cancellationToken) {
+        AgentToolInvocationEffectScope effectScope, CancellationToken cancellationToken) =>
+        (await InvokeWithEffectAsync(call, invoke, effectScope, cancellationToken, toolPolicies.Classify(call.Name))).Result;
+
+    internal async ValueTask<(object? Result, AgentToolEffectState? Effect)> InvokeWithEffectAsync(FunctionCallContent call,
+        Func<CancellationToken, ValueTask<object?>> invoke, AgentToolInvocationEffectScope effectScope,
+        CancellationToken cancellationToken, ToolInvocationClassification resultClassification) {
         var payload = PrepareInvocation(call);
         var batch = dispatchBatch ?? FindContinuationBatch(await journal.ReadAsync(lease, cancellationToken), call, payload);
         var claim = await journal.ClaimInvocationAsync(lease, batch, call.CallId, payload, cancellationToken);
@@ -388,7 +393,8 @@ internal sealed class MafToolRunContext {
         if (claim.Proposal.State == AgentToolProposalState.Completed) {
             await PauseForPendingNativeApprovalAsync(cancellationToken);
             await using var disclosure = await AuthorizeDisclosureAsync(claim.Proposal, cancellationToken);
-            return MafToolResultCheckpointCodec.Restore(claim.Proposal.Result ?? throw Denied("The completed invocation has no saved result."), claim.Proposal.EffectState);
+            return (MafToolResultCheckpointCodec.Restore(claim.Proposal.Result ?? throw Denied("The completed invocation has no saved result."),
+                claim.Proposal.EffectState), claim.Proposal.EffectState);
         }
 
         var invocationEnteredAfterAuthorization = false;
@@ -438,8 +444,8 @@ internal sealed class MafToolRunContext {
 
             var checkpoint = MafToolResultCheckpointCodec.Capture(result, effectScope.PreDispatchFailure, effectScope.CommittedEffect);
             var effect = effectScope.CommittedEffect is not null ? AgentToolEffectState.Committed :
-                MafRuntimeToolInvocationResultClassifier.Assess(call.Name,
-                    toolPolicies.Classify(call.Name), result, effectScope.PreDispatchFailure, effectScope.RejectedBeforeEffect).EffectState;
+                MafRuntimeToolInvocationResultClassifier.Assess(call.Name, resultClassification, result,
+                    effectScope.PreDispatchFailure, effectScope.RejectedBeforeEffect, effectScope.ProhibitedBeforeEffect).EffectState;
             var requiresReconciliation = result is IAgentToolOwnerObservationEvidence { RequiresOwnerReconciliation: true };
             await journal.CompleteInvocationAsync(claim, checkpoint, effect, cancellationToken, requiresReconciliation,
                 effectScope.DisclosureEvidence);
@@ -447,7 +453,7 @@ internal sealed class MafToolRunContext {
                 completedInCurrentInvocation.Add(claim.Proposal.IntentId);
             }
             await PauseForPendingNativeApprovalAsync(cancellationToken);
-            return MafToolResultCheckpointCodec.Restore(checkpoint, effect);
+            return (MafToolResultCheckpointCodec.Restore(checkpoint, effect), effect);
         } catch {
             try {
                 await journal.PreserveUncertainInvocationAsync(claim, CancellationToken.None);

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-06T16:48:28.482231+00:00",
+  "generated_utc": "2026-11-07T13:22:45.464531+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15803,
+  "allowance_count": 15806,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -923,6 +923,18 @@
       "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
       "category": "shell-elevation",
       "source_fingerprint": "10215dc0da63f6107c1f10833a2ad0414ff5c011a503b4cca8c607b4c1e70bfe",
+      "count": 1
+    },
+    {
+      "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "9219489230b0a4a76afb0943f271e0428351a68045b0f7e9879828b286b95836",
+      "count": 1
+    },
+    {
+      "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
+      "category": "windows-executable",
+      "source_fingerprint": "137e283e43491784b3e1cb55bcf641eb42287cba0445701570d766f60eba34a5",
       "count": 1
     },
     {
@@ -30328,13 +30340,13 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/ToolCapabilityBuilder.Workspace.cs",
       "category": "shell-elevation",
-      "source_fingerprint": "da85c35c422adefbe9f62154abfa76562013bb69d081b44b7f2af5b0df3d7903",
+      "source_fingerprint": "f243fb201bb78547d778610c4a5c517fc9fca028607126579563e8009b67b247",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/ToolCapabilityBuilder.Workspace.cs",
       "category": "windows-executable",
-      "source_fingerprint": "aee875b38538eb6c1f1426088b64e288055bde6d9042a46a5af87f4e642f36dc",
+      "source_fingerprint": "f42f6cdc70ee760ef9e94601f395f46362923d027239c09660a5db89d7e2b687",
       "count": 1
     },
     {
@@ -31883,6 +31895,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolsetFingerprint.cs",
       "category": "mcp",
       "source_fingerprint": "3a6c50f0660e3ef01684c6cdbe296e3412e07baabaaffa8787a2e7637e9b1259",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafWorkspaceScriptIntent.cs",
+      "category": "case-policy",
+      "source_fingerprint": "5abe6161a39ddf4b2cd71a4060f610e663b409ed39dd6ed04000b4ce51538060",
       "count": 1
     },
     {

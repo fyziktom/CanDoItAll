@@ -525,6 +525,9 @@ internal sealed class MafRuntimeAgentFactory
                 .ComposeAndEvaluateAsync(neutralPolicyContext, auditScope, cancellationToken);
             var policyContext = policyEvaluation.EffectiveContext;
             var policyDecision = policyEvaluation.Decision;
+            var scriptIntent = MafWorkspaceScriptIntentResolver.Resolve(policyContext);
+            var resultClassification = scriptIntent is MafWorkspaceScriptIntent.Validation or MafWorkspaceScriptIntent.InvalidManifest
+                ? ToolInvocationClassification.Validation : classification;
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
             activity?.SetTag("agentframework.tool_name", functionName);
@@ -617,6 +620,13 @@ internal sealed class MafRuntimeAgentFactory
                         policyDecision,
                         policyContext.HasEffectiveApprovalPath);
 
+                    if (scriptIntent == MafWorkspaceScriptIntent.InvalidManifest) {
+                        return CapturePreDispatchFailure(new(false, AgentToolInputValidationException.FailureCode,
+                            $"The script side-effect manifest is invalid. {MafWorkspaceScriptIntentResolver.ManifestGuidance}", true) {
+                            EffectState = AgentToolEffectState.NotCommitted
+                        });
+                    }
+
                     if (MafToolArgumentBindingFailureMapper.TryCreatePreInvocationFailure(
                             context.Function as AIFunction,
                             invocationArguments,
@@ -638,12 +648,12 @@ internal sealed class MafRuntimeAgentFactory
                     return await next(context, token);
                 }
 
-                var result = MafToolRunContext.Current is { } admitted
-                    ? await admitted.InvokeAsync(context.CallContent, InvokeCurrentToolAsync, effectScope, cancellationToken)
-                    : await InvokeCurrentToolAsync(cancellationToken);
+                var (result, savedEffect) = MafToolRunContext.Current is { } admitted
+                    ? await admitted.InvokeWithEffectAsync(context.CallContent, InvokeCurrentToolAsync, effectScope, cancellationToken, resultClassification)
+                    : (await InvokeCurrentToolAsync(cancellationToken), (AgentToolEffectState?)null);
                 var assessment = MafRuntimeToolInvocationResultClassifier.Assess(
                     functionName,
-                    classification,
+                    resultClassification,
                     result,
                     effectScope.PreDispatchFailure,
                     effectScope.RejectedBeforeEffect,
@@ -651,7 +661,7 @@ internal sealed class MafRuntimeAgentFactory
                 directReceiptExecutionRunId = assessment.DirectReceiptExecutionRunId;
                 succeeded = assessment.Succeeded;
                 outcome = assessment.Outcome;
-                effectState = assessment.EffectState;
+                effectState = savedEffect ?? assessment.EffectState;
                 failureCode = assessment.FailureCode;
                 canRetryWithCorrectedInput = assessment.CanRetryWithCorrectedInput;
                 ApplyCommittedEffectCapture(
@@ -779,7 +789,8 @@ internal sealed class MafRuntimeAgentFactory
                     failureCode,
                     canRetryWithCorrectedInput,
                     effectSourceKind,
-                    effectSourceId);
+                    effectSourceId,
+                    effectState is AgentToolEffectState.None or AgentToolEffectState.NotCommitted ? resultClassification : classification);
             }
         });
         builder.UseOpenTelemetry(
