@@ -26,14 +26,14 @@ public sealed class CrmHrOpportunityConcurrentEditingTests {
         await cut.InvokeAsync(view.OpenOpportunityEditDialog);
         cut.WaitForElement("#crmhr-opportunity-edit-form");
         var model = view.OpportunityEditor;
-        var form = cut.FindComponents<EditForm>().Single(component => component.Instance.EditContext.Model == model).Instance.EditContext;
+        var form = ComponentTestHarness.FindEditContext(cut, model);
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-notes']").InputAsync(new ChangeEventArgs { Value = "  Unblurred local notes  " }));
         var peer = OpportunityEditorDrafts.FromDetail(original);
         peer.Summary = "Peer summary";
         Assert.True((await service.SaveOpportunityAsync(peer)).IsSuccess);
         cut.WaitForElement("[data-testid='crmhr-opportunity-freshness']");
         Assert.Same(model, view.OpportunityEditor);
-        Assert.Same(form, cut.FindComponents<EditForm>().Single(component => component.Instance.EditContext.Model == model).Instance.EditContext);
+        Assert.Same(form, ComponentTestHarness.FindEditContext(cut, model));
         Assert.Equal("  Unblurred local notes  ", model.Notes);
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-review-open']").ClickAsync(new()));
         cut.WaitForElement("[data-testid='crmhr-opportunity-review-dialog']");
@@ -42,7 +42,7 @@ public sealed class CrmHrOpportunityConcurrentEditingTests {
         Assert.Equal("Peer summary", model.Summary);
         Assert.Equal("  Unblurred local notes  ", model.Notes);
         Assert.Equal("", (await service.GetOpportunityAsync(original.Id))!.Notes);
-        Assert.Same(form, cut.FindComponents<EditForm>().Single(component => component.Instance.EditContext.Model == model).Instance.EditContext);
+        Assert.Same(form, ComponentTestHarness.FindEditContext(cut, model));
         await cut.InvokeAsync(() => view.SaveOpportunityAsync(model));
         Assert.Equal("Unblurred local notes", (await service.GetOpportunityAsync(original.Id))!.Notes);
         Assert.Equal("Peer summary", (await service.GetOpportunityAsync(original.Id))!.Summary);

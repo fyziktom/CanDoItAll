@@ -335,7 +335,7 @@ public sealed class ProcessDecisionRefreshPersistenceTests(ITestOutputHelper out
     }
 
     private sealed class ReadProbe : DbCommandInterceptor {
-        internal List<(string Sql, object[] Values)> Reads { get; } = [];
+        internal List<(string Sql, object?[] Values)> Reads { get; } = [];
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
             Reads.Add((command.CommandText, command.Parameters.Cast<DbParameter>().Select(item => item.Value).ToArray()));

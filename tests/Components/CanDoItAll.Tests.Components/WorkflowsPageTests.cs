@@ -3114,7 +3114,7 @@ public sealed class WorkflowsPageTests
             Assert.Contains("Draft creation could not be confirmed", cut.Markup, StringComparison.Ordinal);
             Assert.Contains(catalog.LastSubmittedId!.Value.Value.ToString("D"), cut.Markup, StringComparison.Ordinal);
         });
-        var retained = Assert.Single((await library.ListComponentsAsync()).Where(item => !originalComponents.Contains(item.Id)));
+        var retained = Assert.Single(await library.ListComponentsAsync(), item => !originalComponents.Contains(item.Id));
         Assert.Contains(retained.Id.Value.ToString("D"), cut.Markup, StringComparison.Ordinal);
         Assert.Equal(originalDefinitions + (committed ? 1 : 0), (await catalog.ListDefinitionsAsync()).Count);
         await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-template-preview-close']").ClickAsync());
@@ -3123,7 +3123,7 @@ public sealed class WorkflowsPageTests
             .QuerySelector("[data-testid='workflows-template-preview']")!.ClickAsync());
         cut.WaitForAssertion(() => Assert.True(cut.Find("[data-testid='workflows-template-add-draft']").HasAttribute("disabled")));
         Assert.Equal(saves + 1, catalog.SaveCalls);
-        Assert.Single((await library.ListComponentsAsync()).Where(component => !originalComponents.Contains(component.Id)));
+        Assert.Single(await library.ListComponentsAsync(), component => !originalComponents.Contains(component.Id));
         await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-template-preview-close']").ClickAsync());
         await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-template-catalogue-close']").ClickAsync());
         Assert.True(cut.Find("[data-testid='workflows-create-starter']").HasAttribute("disabled"));

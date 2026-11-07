@@ -36,7 +36,9 @@ public sealed class ProcessDecisionPersistenceTests {
         var blocked = await Assert.ThrowsAsync<ProcessDecisionException>(() => EnrollAsync(context, reconciling.State));
         Assert.Equal(ProcessDecisionRefusal.InvalidPhase, blocked.Reason);
         var accepted = new ProcessDecisionChildClosure(7, ProcessDecisionChildOutcome.Accepted, new(Guid.NewGuid()));
-        var closedFirst = await CloseAsync(context, reconciling.State, first.Decision!.Child!, accepted, 12);
+        var firstChild = first.Decision?.Child;
+        Assert.NotNull(firstChild);
+        var closedFirst = await CloseAsync(context, reconciling.State, firstChild, accepted, 12);
         Assert.Equal(1, closedFirst.Decision!.Current.UnclosedChildCount);
         var pending = await Assert.ThrowsAsync<ProcessDecisionException>(() => PhaseAsync(context, closedFirst.State, ProcessDecisionPhaseChange.Cancel));
         Assert.Equal(ProcessDecisionRefusal.UnclosedChildren, pending.Reason);
@@ -50,7 +52,7 @@ public sealed class ProcessDecisionPersistenceTests {
         Assert.Equal(30, next.DecisionBudget.Change.Balance.ConsumedWorkTicks);
         Assert.Equal(0, next.DecisionBudget.Change.Balance.ReservedWorkTicks);
         Assert.Equal(next.Decision.Previous, await store.ReadGenerationAsync(next.State.RunId, Step(next.State), started.Decision.Current.Reference));
-        var retained = await context.DecisionChildren.AsNoTracking().SingleAsync(child => child.ChildId == first.Decision.Child.ChildId.Value);
+        var retained = await context.DecisionChildren.AsNoTracking().SingleAsync(child => child.ChildId == firstChild.ChildId.Value);
         Assert.Equal(accepted.AcceptedReceipt!.Value.Value, retained.AcceptedReceiptId);
         Assert.Equal(2, await context.DecisionGenerations.CountAsync());
         Assert.Equal(4, await context.DecisionBudgetAllocations.CountAsync());

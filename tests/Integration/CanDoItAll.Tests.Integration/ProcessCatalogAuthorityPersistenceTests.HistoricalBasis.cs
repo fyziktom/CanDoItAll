@@ -143,7 +143,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         Assert.Equal(AgentHistoricalReceiptReviewStop.ReadDenied, denied.Stop);
         Assert.Empty(denied.Observations);
         Assert.Null(denied.NextCursor);
-        Assert.Equal(1, unexpected.CatalogBytes.Count);
+        Assert.Single(unexpected.CatalogBytes);
         Assert.Equal(1, unexpected.Sql.FinalTargets);
         Assert.Equal(originalRun, await HistoricalFileDigestAsync(seed.RunPath));
         Assert.Throws<InvalidOperationException>(() => unexpected.Basis.RequireCurrent());

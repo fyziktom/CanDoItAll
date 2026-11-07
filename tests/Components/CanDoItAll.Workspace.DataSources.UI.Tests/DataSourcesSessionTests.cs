@@ -204,9 +204,11 @@ public sealed class DataSourcesSessionTests {
         await transfer.TransferAsync();
         var result = Assert.Single(operations.Receipts).Result!;
         Assert.Equal(DataSourceOutcome.Partial, result.Outcome);
-        Assert.Equal(1, result.Groups!.Sum(item => item.RecordsCopied));
-        Assert.True(result.Groups[0].Success);
-        Assert.False(result.Groups[1].Success);
+        var groups = result.Groups;
+        Assert.NotNull(groups);
+        Assert.Equal(1, groups.Sum(item => item.RecordsCopied));
+        Assert.True(groups[0].Success);
+        Assert.False(groups[1].Success);
         Assert.Same(result, transfer.Result);
         session.CloseTransfer();
         await session.OpenTransferAsync(DataSourcesScenarioOwner.ProfileB);

@@ -54,10 +54,11 @@ public sealed class ProjectStructureProjectCreateRecoveryBrowserTests {
             await Assertions.Expect(modal.GetByTestId("project-save-button")).ToBeDisabledAsync();
             var reference = await recovery.GetByText("Save reference:", new() { Exact = false }).TextContentAsync();
             var created = await host.SeedAsync(async services => Assert.Single(
-                (await services.GetRequiredService<ProjectsService>().ListAsync()).Where(project => project.Id != parent)));
+                await services.GetRequiredService<ProjectsService>().ListAsync(), project => project.Id != parent));
             Assert.Equal("Accepted Workbench root", created.Name);
             await page.ScreenshotAsync(new() { Path = host.Artifact("workbench-root-accepted-browser-failure.png") });
             await modal.GetByTestId("project-create-recovery-open").ClickAsync();
+            await page.GetByTestId("project-dirty-discard").ClickAsync();
             await Assertions.Expect(page).ToHaveURLAsync($"{host.BaseUrl}/projects");
             await page.ReloadAsync();
             await page.GetByTestId("project-pending-open").ClickAsync();

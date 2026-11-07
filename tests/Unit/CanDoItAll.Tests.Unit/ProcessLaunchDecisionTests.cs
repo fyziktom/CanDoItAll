@@ -95,9 +95,12 @@ public sealed class ProcessLaunchDecisionTests {
             InitialRunDecisionAdmission = result.Initial.InitialRunDecisionAdmission,
             InitialAssignments = result.Initial.InitialAssignments
         }, result.Initial);
+        var assignments = result.Initial.InitialAssignments;
+        Assert.NotNull(assignments);
+        var assignment = Assert.Single(assignments);
         Assert.Equal(original.InitialCommit.InitialAssignments!.Single() with {
-            DecisionDataPolicy = result.Initial.InitialAssignments!.Single().DecisionDataPolicy
-        }, result.Initial.InitialAssignments.Single());
+            DecisionDataPolicy = assignment.DecisionDataPolicy
+        }, assignment);
         var preparation = original with { InitialCommit = result.Initial, Review = result.Review };
         var entity = ProcessPreparedLaunchCodec.ToEntity(preparation);
         var read = ProcessPreparedLaunchCodec.Read(entity).Preparation;

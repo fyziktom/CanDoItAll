@@ -67,8 +67,10 @@ public sealed class DataSourcesEditAdmissionTests {
         var original = owner.Context;
         var editor = await owner.ReadEditorAsync(b.Value, CancellationToken.None);
         Assert.True(editor.HasPassword);
-        var canary = Path.Combine(editor.Values.WorkspaceRoot, "retained.txt");
-        Directory.CreateDirectory(editor.Values.WorkspaceRoot);
+        var workspaceRoot = editor.Values.WorkspaceRoot;
+        Assert.NotNull(workspaceRoot);
+        var canary = Path.Combine(workspaceRoot, "retained.txt");
+        Directory.CreateDirectory(workspaceRoot);
         await File.WriteAllTextAsync(canary, "retained original files");
         held.Hold = true;
         using var password = new ProfilePasswordIntent(string.Empty);

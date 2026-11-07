@@ -146,7 +146,7 @@ public sealed class AffiliationReconciliationTests {
         Assert.Equal(2, values.Count);
         Assert.True(values.Single(row => row.Id == local.Id).IsNew);
         Assert.False(values.Single(row => row.Id == current.Id).IsNew);
-        Assert.Single(values.Where(row => row.IsPrimary));
+        Assert.Single(values, row => row.IsPrimary);
     }
 
     [Fact]

@@ -509,11 +509,12 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot, Age
             var dispatch = await store.AcquireToolDispatchLeaseAsync(workspace.Files.Detail.Run.Id, cancellationToken);
             IAgentCatalogReadLease? catalog = null;
             try {
+                var admission = workspace.Files.Detail.Run.ToolAdmission;
+                Assert.NotNull(admission);
                 catalog = guard == AgentPlanningPublicationGuard.CoarseCatalog
                     ? await store.AcquireAgentReadLeaseAsync(workspace.Files.Agent.Id, cancellationToken)
                     : await store.AcquirePlanningAuthoritySnapshotAsync(new(workspace.Files.StorageScope,
-                        workspace.Files.Detail.Run.ToolAdmission!.Session, workspace.Files.Detail.Run.Revision,
-                        workspace.Files.Detail.Run.ToolAdmission.Revision), cancellationToken);
+                        admission.Session, workspace.Files.Detail.Run.Revision, admission.Revision), cancellationToken);
                 Assert.Equal(workspace.Files.Agent.Id, catalog.Agent!.Id);
                 var path = workspace.Layout.RunPath(workspace.Files.Detail.Run.Id);
                 var run = catalog is IAgentPlanningPublicationSnapshotLease selected

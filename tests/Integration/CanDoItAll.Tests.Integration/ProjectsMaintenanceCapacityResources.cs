@@ -105,9 +105,10 @@ internal sealed class ProjectsMaintenanceCapacityResources {
             throw new InvalidDataException("The allocated profile does not belong to the pre-recorded capacity cell.");
         }
         var database = new NpgsqlConnectionStringBuilder(profile.ConnectionString);
-        RequireDatabaseName(ProfileKey, database.Database);
+        var databaseName = database.Database ?? throw new InvalidDataException("The capacity profile has no database name.");
+        RequireDatabaseName(ProfileKey, databaseName);
         return RecordAsync(CapacityResourcePhase.DatabaseAllocated, new {
-            profile.ProfileKey, DatabaseName = database.Database, FixtureHost = database.Host, FixturePort = database.Port,
+            profile.ProfileKey, DatabaseName = databaseName, FixtureHost = database.Host, FixturePort = database.Port,
             Root = profile.EnvironmentRootPath, profile.ProfileRootPath, profile.WorkspaceRootPath
         }, token);
     }

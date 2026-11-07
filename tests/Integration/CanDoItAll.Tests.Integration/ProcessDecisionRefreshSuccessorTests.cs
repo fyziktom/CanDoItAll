@@ -80,8 +80,8 @@ public sealed class ProcessDecisionRefreshSuccessorTests {
         var arrived = 0;
         TaskCompletionSource ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var results = await Task.WhenAll(AttemptAsync(), AttemptAsync());
-        Assert.Single(results.Where(item => item.CommittedNow));
-        Assert.Single(results.Where(item => !item.CommittedNow));
+        Assert.Single(results, item => item.CommittedNow);
+        Assert.Single(results, item => !item.CommittedNow);
         Assert.Equal(results[0].Decision, results[1].Decision);
         Assert.Equal(results[0].DecisionBudget, results[1].DecisionBudget);
         await using var context = Context(fixture.Services);

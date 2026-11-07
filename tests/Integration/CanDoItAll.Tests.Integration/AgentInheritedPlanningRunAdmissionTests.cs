@@ -190,8 +190,16 @@ public sealed class AgentInheritedPlanningRunAdmissionTests {
         var results = await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(20));
         Assert.Equal(1, preparations);
         Assert.Single(results, result => result.Created);
-        Assert.Equal(results[0].Run.ToolAdmission!.Session, results[1].Run.ToolAdmission!.Session);
-        Assert.Equal(results[0].Run.ToolAdmission.PlanningDecision!.InheritedOrigin, results[1].Run.ToolAdmission.PlanningDecision!.InheritedOrigin);
+        var firstAdmission = results[0].Run.ToolAdmission;
+        var secondAdmission = results[1].Run.ToolAdmission;
+        Assert.NotNull(firstAdmission);
+        Assert.NotNull(secondAdmission);
+        Assert.Equal(firstAdmission.Session, secondAdmission.Session);
+        var firstDecision = firstAdmission.PlanningDecision;
+        var secondDecision = secondAdmission.PlanningDecision;
+        Assert.NotNull(firstDecision);
+        Assert.NotNull(secondDecision);
+        Assert.Equal(firstDecision.InheritedOrigin, secondDecision.InheritedOrigin);
     }
 
     [Theory]

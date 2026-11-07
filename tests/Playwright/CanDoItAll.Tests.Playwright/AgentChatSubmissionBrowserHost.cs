@@ -206,9 +206,9 @@ internal sealed class AgentChatSubmissionBrowserHost : IAsyncDisposable {
                         Assert.Same(retention, current);
                     }
                     retention = current;
-                    var panel = Assert.Single(panels.Where(value => ReferenceEquals(value.ChatExecutionOrchestrator, orchestrator) &&
+                    var panel = Assert.Single(panels, value => ReferenceEquals(value.ChatExecutionOrchestrator, orchestrator) &&
                         !ReadField<bool>(value, "isDisposed") && ReadProperty<Guid?>(value, "selectedAgentId") == request.AgentId &&
-                        ReadProperty<Guid?>(value, "selectedSessionId") == request.ChatSessionId && value.ActiveChatHandleId == request.ConversationHandleId));
+                        ReadProperty<Guid?>(value, "selectedSessionId") == request.ChatSessionId && value.ActiveChatHandleId == request.ConversationHandleId);
                     var previous = ReadField<Task>(panel, "trackedChatOperation");
                     var renderer = SynchronizationContext.Current ?? throw new InvalidOperationException("The owned chat send requires its actual renderer context.");
                     nativeRenderer = renderer;

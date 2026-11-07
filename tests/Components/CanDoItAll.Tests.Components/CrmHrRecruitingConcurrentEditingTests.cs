@@ -5,7 +5,6 @@ using CanDoItAll.CrmHr.UI.Pickers;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
@@ -17,7 +16,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         var (cut, owner, id) = await OpenAsync(harness);
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var draft = view.ApplicationEditor;
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         var peer = (await owner.GetRecruitmentWorkspaceAsync(id)).Application;
         peer.DesiredRole = "Catalog peer recruiting role";
 
@@ -26,7 +25,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         cut.WaitForAssertion(() => Assert.Contains("Catalog peer recruiting role",
             cut.Find($"[data-testid='crmhr-recruiting-application-{id:N}']").TextContent, StringComparison.Ordinal));
         Assert.Same(draft, view.ApplicationEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Equal("Original role", draft.DesiredRole);
     }
 
@@ -36,7 +35,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         var (cut, _, _) = await OpenAsync(harness);
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var support = view.SupportEditor;
-        var supportContext = Context(cut, support);
+        var supportContext = ComponentTestHarness.FindEditContext(cut, support);
         var buddy = cut.FindComponents<PartyPicker>().Single(component => component.Instance.TestIdPrefix == "crmhr-recruiting-support-buddy").Instance;
         var task = view.TaskEditor;
         await cut.Find("[data-testid='crmhr-recruiting-tab-development']").ClickAsync(new());
@@ -45,7 +44,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
 
         Assert.NotSame(task, view.TaskEditor);
         Assert.Same(support, view.SupportEditor);
-        Assert.Same(supportContext, Context(cut, support));
+        Assert.Same(supportContext, ComponentTestHarness.FindEditContext(cut, support));
         Assert.Same(buddy, cut.FindComponents<PartyPicker>().Single(component => component.Instance.TestIdPrefix == "crmhr-recruiting-support-buddy").Instance);
     }
     [Fact]
@@ -57,7 +56,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         var buddy = (await parties.SavePartyAsync(new() { DisplayName = "Local buddy", PartyType = PartyType.Person })).Value;
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var draft = view.SupportEditor;
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         await cut.Find("[data-testid='crmhr-recruiting-tab-development']").ClickAsync(new());
         var picker = cut.FindComponents<PartyPicker>().Single(component => component.Instance.TestIdPrefix == "crmhr-recruiting-support-buddy");
         await cut.InvokeAsync(() => picker.Instance.SelectedPartyIdChanged.InvokeAsync(buddy));
@@ -68,7 +67,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await cut.WaitForElement("[data-testid='crmhr-recruiting-support-review-apply']").ClickAsync(new());
 
         Assert.Same(draft, view.SupportEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Equal(manager, draft.ManagerPartyId);
         Assert.Equal(buddy, draft.BuddyPartyId);
         Assert.Null((await owner.GetRecruitmentWorkspaceAsync(id)).SupportAssignments.BuddyPartyId);
@@ -83,7 +82,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         var (cut, owner, id) = await OpenAsync(harness);
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var draft = view.TaskEditor;
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         await cut.Find("[data-testid='crmhr-recruiting-tab-development']").ClickAsync(new());
         await cut.Find("[data-testid='crmhr-recruiting-task-title']").InputAsync(new() { Value = "Submitted task" });
         var picker = cut.FindComponents<PartyPicker>().Single(component => component.Instance.TestIdPrefix == "crmhr-recruiting-task-owner");
@@ -94,7 +93,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await cut.Find("[data-testid='crmhr-recruiting-refresh']").ClickAsync(new());
 
         Assert.Same(draft, view.TaskEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Equal("Later task", draft.Title);
         Assert.Contains("unknown", cut.Find("[data-testid='crmhr-recruiting-record-outcome']").TextContent, StringComparison.OrdinalIgnoreCase);
         Assert.True(cut.Find("[data-testid='crmhr-recruiting-task-save-button']").HasAttribute("disabled"));
@@ -113,7 +112,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await cut.Find("[data-testid='crmhr-recruiting-role']").InputAsync(new() { Value = "Submitted role" });
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var draft = view.ApplicationEditor;
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         control.HoldWriteIn(nameof(RecruitmentApplicationEditingService.SaveRecruitmentApplicationAsync));
         var saving = cut.Find("[data-testid='crmhr-recruiting-application-form']").SubmitAsync();
         try {
@@ -126,7 +125,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await saving.WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Same(draft, view.ApplicationEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.NotNull(draft.Id);
         Assert.Equal("Later candidate", draft.CandidateName);
         Assert.Equal("Later role", draft.DesiredRole);
@@ -143,7 +142,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         var (cut, owner, id) = await OpenAsync(harness);
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var draft = view.ApplicationEditor;
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-application-outcome']"));
         var peer = (await owner.GetRecruitmentWorkspaceAsync(id)).Application;
         peer.DesiredRole = "Peer role";
@@ -155,7 +154,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await cut.Find("[data-testid='crmhr-recruiting-refresh']").ClickAsync(new());
 
         Assert.Same(draft, view.ApplicationEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Equal("Peer role", draft.DesiredRole);
         Assert.False(cut.Find("[data-testid='crmhr-recruiting-save-button']").HasAttribute("disabled"));
     }
@@ -166,7 +165,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         var (cut, owner, id) = await OpenAsync(harness);
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var draft = view.ApplicationEditor;
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         await cut.Find("[data-testid='crmhr-recruiting-role']").InputAsync(new() { Value = "  Local unblurred role  " });
         var peer = (await owner.GetRecruitmentWorkspaceAsync(id)).Application;
         peer.Source = "Peer source";
@@ -175,7 +174,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await cut.WaitForElement("[data-testid='crmhr-recruiting-review-apply']").ClickAsync(new());
 
         Assert.Same(draft, view.ApplicationEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Equal("  Local unblurred role  ", draft.DesiredRole);
         Assert.Equal("Peer source", draft.Source);
         Assert.Equal("Original role", (await owner.GetRecruitmentWorkspaceAsync(id)).Application.DesiredRole);
@@ -191,7 +190,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await cut.Find("[data-testid='crmhr-recruiting-tab-interviews']").ClickAsync(new());
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var draft = view.InterviewEditor;
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         await cut.Find("[data-testid='crmhr-recruiting-interview-feedback']").InputAsync(new() { Value = "Submitted feedback" });
         control.HoldWriteIn(nameof(RecruitmentInterviewEditingService.SaveRecruitmentInterviewAsync));
         var saving = cut.Find("[data-testid='crmhr-recruiting-interview-form']").SubmitAsync();
@@ -206,7 +205,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await cut.Find("[data-testid='crmhr-recruiting-refresh']").ClickAsync(new());
 
         Assert.Same(draft, view.InterviewEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Equal("  Later feedback  ", draft.Feedback);
         Assert.Null(draft.Id);
         Assert.Contains(context.GetValidationMessages(), message => message.Contains("date", StringComparison.OrdinalIgnoreCase));
@@ -224,7 +223,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await cut.Find("[data-testid='crmhr-recruiting-tab-conversion']").ClickAsync(new());
         var conversion = view.ConversionEditor;
         var application = view.ApplicationEditor;
-        var context = Context(cut, conversion);
+        var context = ComponentTestHarness.FindEditContext(cut, conversion);
         await cut.Find("[data-testid='crmhr-recruiting-convert-job-title']").InputAsync(new() { Value = "Submitted title" });
         control.HoldWriteIn(nameof(RecruitmentConversionService.ConvertCandidateAsync));
         var saving = cut.Find("[data-testid='crmhr-recruiting-conversion-form']").SubmitAsync();
@@ -238,7 +237,7 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         await saving.WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Same(conversion, view.ConversionEditor);
-        Assert.Same(context, Context(cut, conversion));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, conversion));
         Assert.Same(application, view.ApplicationEditor);
         Assert.Equal("  Later title  ", conversion.JobTitle);
         Assert.Equal("  Later application role  ", application.DesiredRole);
@@ -275,19 +274,16 @@ public sealed class CrmHrRecruitingConcurrentEditingTests {
         var (cut, _, _) = await OpenAsync(harness);
         var view = (ICrmHrRecruitingWorkspaceView)cut.Instance;
         var draft = view.InterviewEditor;
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         var form = cut.FindComponent<InterviewSchedulePanel>().Instance;
         await cut.Find("[data-testid='crmhr-recruiting-interview-scheduled']").TriggerEventAsync("oncadnativeinput", new NativeInputEventArgs { Value = "incomplete", BadInput = true });
         await cut.Find("[data-testid='crmhr-recruiting-tab-development']").ClickAsync(new());
         await cut.Find("[data-testid='crmhr-recruiting-tab-interviews']").ClickAsync(new());
         Assert.Same(form, cut.FindComponent<InterviewSchedulePanel>().Instance);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Contains(context.GetValidationMessages(), message => message.Contains("date", StringComparison.OrdinalIgnoreCase));
         Assert.True(cut.Find("[data-testid='crmhr-recruiting-interview-save-button']").HasAttribute("disabled"));
     }
-
-    private static EditContext Context(IRenderedComponent<CrmHrRecruitingPage> cut, object model) =>
-        cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext;
 
     private static async Task<(IRenderedComponent<CrmHrRecruitingPage> Page, RecruitingService Owner, Guid Id)> OpenAsync(ComponentTestHarness harness) {
         var owner = harness.Context.Services.GetRequiredService<RecruitingService>();

@@ -67,7 +67,7 @@ public sealed class ProcessLaunchDecisionDiscoveryTests {
     [InlineData(ReadBasisMode.StepSnapshot, OnBasisChange.Fail)]
     public void Every_advertised_choice_is_admitted_and_its_ceiling_is_enforced(ReadBasisMode mode, OnBasisChange response) {
         var descriptor = ProjectTaskPlanProcessLaunchPolicyProvider.SupportedContract;
-        var advertised = Assert.Single(descriptor.SupportedPolicies.Where(item => item.ReadBasisMode == mode && item.OnBasisChange == response));
+        var advertised = Assert.Single(descriptor.SupportedPolicies, item => item.ReadBasisMode == mode && item.OnBasisChange == response);
         Assert.Equal(advertised, ProjectTaskPlanProcessLaunchPolicyProvider.ResolvePolicy(advertised, null));
         Assert.True(descriptor.Supports(new(mode, PublicationFreshness.RequireCurrent, response,
             new(0, TimeSpan.FromTicks(1), TimeSpan.FromTicks(1)))));

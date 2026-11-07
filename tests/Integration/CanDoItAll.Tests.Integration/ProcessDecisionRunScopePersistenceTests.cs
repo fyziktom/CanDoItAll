@@ -145,7 +145,9 @@ public sealed class ProcessDecisionRunScopePersistenceTests {
         Assert.Equal(2, await context.DecisionMaterials.CountAsync());
         Assert.Equal(2, await context.DecisionRunScopeMembers.CountAsync());
         Assert.Equal(1, (await Scopes(context, app.Services).ReadAsync(scope.Admission.ScopeId))!.CurrentMemberships);
-        Assert.Equal(joined.Decision.Current.MaterialId, (await new EfProcessDecisionStore(context).ReadGenerationAsync(state.RunId, Step(state), joined.Decision.Current.Reference))!.MaterialId);
+        var joinedDecision = joined.Decision;
+        Assert.NotNull(joinedDecision);
+        Assert.Equal(joinedDecision.Current.MaterialId, (await new EfProcessDecisionStore(context).ReadGenerationAsync(state.RunId, Step(state), joinedDecision.Current.Reference))!.MaterialId);
     }
 
     [Theory]

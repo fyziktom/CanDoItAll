@@ -155,6 +155,7 @@ public sealed class ProjectsMaintenanceCapacityTests(ITestOutputHelper output) {
             await Task.WhenAll(workers.Select(worker => worker.StopAsync(stop.Token)));
             residual = await storage.CountAsync(seed.Namespace, token);
             var activeAfter = await storage.CountAsync(load.Namespace, token);
+            Assert.NotNull(measured);
             AssertAcceptedRows(activeBefore, activeAfter, warm, control, measured);
             await load.VerifyOriginalReplayAsync(token);
             Assert.Equal(activeAfter, await storage.CountAsync(load.Namespace, token));

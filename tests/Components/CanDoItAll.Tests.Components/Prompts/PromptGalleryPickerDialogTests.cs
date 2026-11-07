@@ -164,8 +164,7 @@ public sealed class PromptGalleryPickerDialogTests
     }
 
     [Fact]
-    public void Disposing_the_picker_button_closes_only_its_own_dialog_and_never_reports_a_selection()
-    {
+    public async Task Disposing_the_picker_button_closes_only_its_own_dialog_and_never_reports_a_selection() {
         var gallery = new ScriptedPromptGalleryService();
         using var context = CreateContext(gallery);
         var dialogService = context.Services.GetRequiredService<DialogService>();
@@ -183,7 +182,7 @@ public sealed class PromptGalleryPickerDialogTests
         host.WaitForAssertion(() => Assert.Equal(2, dialogService.Dialogs.Count));
         var picker = dialogService.Dialogs.Single(dialog => dialog.ComponentType == typeof(PromptGalleryPickerDialog));
 
-        probe.InvokeAsync(() => probe.Instance.Hide()).GetAwaiter().GetResult();
+        await probe.InvokeAsync(() => probe.Instance.Hide());
 
         Assert.True(picker.Result.IsCanceled);
         Assert.Single(dialogService.Dialogs);

@@ -22,7 +22,7 @@ public sealed class SearchStorageDbContextTests {
             .UseInMemoryDatabase($"storage-model-{Guid.NewGuid():N}").Options);
         Assert.Equal([typeof(StorageCatalogRecord), typeof(StoragePlacementIntentRecord), typeof(StorageRoutingRule)],
             context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
-        var token = Assert.Single(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()).Where(property => property.IsConcurrencyToken));
+        var token = Assert.Single(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()), property => property.IsConcurrencyToken);
         Assert.Equal(typeof(StorageCatalogRecord), token.DeclaringType.ClrType);
         Assert.Equal(nameof(StorageCatalogRecord.UpdatedAtUtc), token.Name);
         Assert.Throws<InvalidOperationException>(() => context.Set<SearchDocument>().ToList());

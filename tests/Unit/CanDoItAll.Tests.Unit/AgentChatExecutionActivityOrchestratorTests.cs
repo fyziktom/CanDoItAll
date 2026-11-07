@@ -561,7 +561,7 @@ public sealed partial class AgentChatExecutionActivityOrchestratorTests
                 throw RecoveryFault;
             }
             var result = RecoveryCompletion is null
-                ? new ExecutionRunResult(executionRunId, SessionId, "Recovered", null, SendResult.Metric) { State = ExecutionState.Completed }
+                ? new ExecutionRunResult(executionRunId, SessionId, "Recovered", null, Assert.IsType<AgentRunMetric>(SendResult.Metric)) { State = ExecutionState.Completed }
                 : await RecoveryCompletion.Task;
             if (!LeaveRecoveryUnfinished) {
                 BindAndComplete(operation);

@@ -32,9 +32,13 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await Assertions.Expect(editor).Not.ToBeVisibleAsync();
         var afterTree = await TreeAsync(fixture, projectId, includeMetadata: true);
         var after = Assert.Single(afterTree.Nodes, node => node.Id == taskId);
-        var expectedMetadata = JsonNode.Parse(before.MetadataJson)!;
+        var originalMetadata = before.MetadataJson;
+        var savedMetadata = after.MetadataJson;
+        Assert.NotNull(originalMetadata);
+        Assert.NotNull(savedMetadata);
+        var expectedMetadata = JsonNode.Parse(originalMetadata)!;
         expectedMetadata["workItem"]!["description"] = description;
-        Assert.True(JsonNode.DeepEquals(expectedMetadata, JsonNode.Parse(after.MetadataJson)));
+        Assert.True(JsonNode.DeepEquals(expectedMetadata, JsonNode.Parse(savedMetadata)));
         Assert.Equal(before.StartUtc, after.StartUtc);
         Assert.Equal(before.EndUtc, after.EndUtc);
         Assert.Equal(before.ProgressPercent, after.ProgressPercent);

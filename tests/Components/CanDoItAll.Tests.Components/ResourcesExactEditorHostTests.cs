@@ -42,17 +42,17 @@ public sealed class ResourcesExactEditorHostTests {
         var context = services.GetRequiredService<IAgentChatContextRegistry>();
         if (failFirst) {
             owner.Release.TrySetException(new InvalidOperationException("Synthetic exact-read failure"));
-            cut.WaitForAssertion(() => Assert.Equal(AgentChatContextAccessState.Failed, context.Capture().Scope.AccessState));
+            cut.WaitForAssertion(() => Assert.Equal(AgentChatContextAccessState.Failed, context.Capture()?.Scope.AccessState));
         }
         await cut.InvokeAsync(() => cut.FindComponents<PageHeaderActionButton>().Single(c => c.Instance.Label == "Refresh").Find("button").ClickAsync());
-        cut.WaitForAssertion(() => Assert.Equal(failFirst ? AgentChatContextAccessState.Failed : AgentChatContextAccessState.Loading, context.Capture().Scope.AccessState));
+        cut.WaitForAssertion(() => Assert.Equal(failFirst ? AgentChatContextAccessState.Failed : AgentChatContextAccessState.Loading, context.Capture()?.Scope.AccessState));
         await Assert.ThrowsAsync<AgentChatContextUnavailableException>(async () => await context.CaptureAsync());
         if (failFirst) {
             await cut.InvokeAsync(() => cut.Find(".cda-selection-list-item__button").ClickAsync());
         } else {
             owner.Release.TrySetResult();
         }
-        cut.WaitForAssertion(() => Assert.Equal(AgentChatContextAccessState.Ready, context.Capture().Scope.AccessState));
+        cut.WaitForAssertion(() => Assert.Equal(AgentChatContextAccessState.Ready, context.Capture()?.Scope.AccessState));
         Assert.Equal(failFirst ? 2 : 1, owner.ExactReads);
         Assert.Equal("Exact stored editor", cut.Instance.Registry.Draft.Editor.Name);
     }

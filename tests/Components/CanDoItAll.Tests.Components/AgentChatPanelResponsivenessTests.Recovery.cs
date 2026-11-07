@@ -267,7 +267,8 @@ public sealed partial class AgentChatPanelResponsivenessTests {
     }
 
     private static ExecutionRunResult RecoveryResult(RecoveryPanelFixture fixture, ExecutionState state)
-        => new(fixture.Run.Id, fixture.Session.Id, "Recovered", null, CreateRunResult(fixture.Agent.Id, fixture.Session.Id).Metric) { State = state };
+        => new(fixture.Run.Id, fixture.Session.Id, "Recovered", null,
+            Assert.IsType<AgentRunMetric>(CreateRunResult(fixture.Agent.Id, fixture.Session.Id).Metric)) { State = state };
 
     private static ChatWorkspacePanel RecoveryWorkspace(IRenderedComponent<AgentChatPanel> cut)
         => cut.FindComponent<ChatWorkspacePanel>().Instance;

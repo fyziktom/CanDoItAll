@@ -23,7 +23,7 @@ internal static class OfflineMaintenanceCommandFixture {
             PostgresPort = connection.Port,
             PostgresDatabaseName = connection.Database!,
             PostgresUsername = connection.Username!,
-            PostgresPassword = connection.Password,
+            PostgresPassword = connection.Password ?? string.Empty,
             WorkspaceRoot = original.Profile.Storage.WorkspaceRoot
         });
         Assert.True(saved.IsSuccess);

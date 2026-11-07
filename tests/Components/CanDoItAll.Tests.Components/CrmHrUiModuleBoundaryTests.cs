@@ -93,9 +93,9 @@ public sealed class CrmHrUiModuleBoundaryTests
         Assert.Equal("CanDoItAll.Modules.CrmHr", host.Assembly.GetName().Name);
         Assert.True(view.IsAssignableFrom(host), $"{host.Name} does not implement {view.Name}");
 
-        Assert.Empty(surface
-            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(property => property.GetCustomAttribute<InjectAttribute>() is not null));
+        Assert.DoesNotContain(surface
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic),
+            property => property.GetCustomAttribute<InjectAttribute>() is not null);
 
         // Everything the contract exposes stays in the light graph.
         var exposed = view.GetProperties().Select(property => property.PropertyType)

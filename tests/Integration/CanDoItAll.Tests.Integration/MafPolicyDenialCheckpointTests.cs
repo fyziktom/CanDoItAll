@@ -296,8 +296,8 @@ public sealed class MafPolicyDenialCheckpointTests {
             return detail;
         }, default);
         var runDirectoryName = fixture.Session.ExecutionRunId.ToString("N");
-        var runFile = Assert.Single(Directory.EnumerateFiles(fixture.WorkspaceRoot, "run.json", SearchOption.AllDirectories)
-            .Where(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), runDirectoryName, StringComparison.OrdinalIgnoreCase)));
+        var runFile = Assert.Single(Directory.EnumerateFiles(fixture.WorkspaceRoot, "run.json", SearchOption.AllDirectories),
+            path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), runDirectoryName, StringComparison.OrdinalIgnoreCase));
         var document = JsonNode.Parse(await File.ReadAllTextAsync(runFile))!.AsObject();
         var proposalNode = document["toolAdmission"]!["batches"]![0]!["proposals"]![0]!.AsObject();
         Assert.Equal((int)AgentToolEffectState.NotCommitted, proposalNode["effectState"]!.GetValue<int>());

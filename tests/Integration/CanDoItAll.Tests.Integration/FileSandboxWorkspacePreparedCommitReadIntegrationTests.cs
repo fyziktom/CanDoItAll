@@ -33,7 +33,7 @@ public sealed class FileSandboxWorkspacePreparedCommitReadIntegrationTests(ITest
             } else {
                 Assert.Single(reads, read => read.Kind is FileSandboxWorkspaceJsonReadKind.Deserialization or FileSandboxWorkspaceJsonReadKind.SnapshotValidation);
             }
-            Assert.Empty(reads.Where(read => read.Kind == FileSandboxWorkspaceJsonReadKind.RawText));
+            Assert.DoesNotContain(reads, read => read.Kind == FileSandboxWorkspaceJsonReadKind.RawText);
         }
 
         Assert.Equal(logCount + 1, saved.ExecutionLog.Count);

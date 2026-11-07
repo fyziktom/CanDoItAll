@@ -649,8 +649,10 @@ public sealed partial class AgentChatPanelResponsivenessTests
         {
             Assert.False(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
             Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
+            var assistantMessage = orchestrator.Result.AssistantMessage;
+            Assert.NotNull(assistantMessage);
             Assert.DoesNotContain(
-                orchestrator.Result.AssistantMessage.Content,
+                assistantMessage.Content,
                 cut.Markup,
                 StringComparison.Ordinal);
             Assert.DoesNotContain(
@@ -824,6 +826,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         Assert.False(workspace.PostRunWorkspace.Task.IsCompleted);
 
         var assistantMessage = orchestrator.Result.AssistantMessage;
+        Assert.NotNull(assistantMessage);
         workspace.PostRunWorkspace.SetResult(CreateWorkspace(
             agent.Id,
             session with
@@ -945,16 +948,18 @@ public sealed partial class AgentChatPanelResponsivenessTests
             StringComparison.Ordinal);
 
         var result = CreateRunResult(agent.Id, session.Id);
+        var assistantMessage = result.AssistantMessage;
+        Assert.NotNull(assistantMessage);
         workspace.PostRunWorkspace.SetResult(CreateWorkspace(
             agent.Id,
             session with
             {
-                Messages = [result.AssistantMessage],
-                UpdatedAtUtc = result.AssistantMessage.CreatedAtUtc
+                Messages = [assistantMessage],
+                UpdatedAtUtc = assistantMessage.CreatedAtUtc
             }));
         workspace.SendResult.SetResult(result);
 
-        cut.WaitForAssertion(() => Assert.Contains(result.AssistantMessage.Content, cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Contains(assistantMessage.Content, cut.Markup, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -985,6 +990,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         Assert.False(workspace.PostRunWorkspace.Task.IsCompleted);
 
         var assistantMessage = orchestrator.Result.AssistantMessage;
+        Assert.NotNull(assistantMessage);
         workspace.PostRunWorkspace.SetResult(CreateWorkspace(
             agent.Id,
             session with
@@ -1014,6 +1020,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         using var context = CreateContext(workspaceService, orchestratorService);
         var cut = RenderFocusedChat(context, agent, session);
         var assistantMessage = orchestrator.Result.AssistantMessage;
+        Assert.NotNull(assistantMessage);
         var completedRun = externalRun with
         {
             State = ExecutionState.Completed,

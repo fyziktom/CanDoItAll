@@ -240,7 +240,9 @@ public sealed partial class ProjectLifecycleOperationTests {
             ? await projects.CreateWithReceiptAsync(Guid.NewGuid(), new() { Name = "Original compensable creation" })
             : await projects.CreateWithReceiptAsync(reservation, new() { Name = "Original compensable creation" });
         Assert.True(result.IsSuccess);
-        return ProjectCreationCompensationRequest.FromReceipt(result.Value);
+        var receipt = result.Value;
+        Assert.NotNull(receipt);
+        return ProjectCreationCompensationRequest.FromReceipt(receipt);
     }
 
     private static (ProjectCreationCompensationOwner Owner, ProjectCreationCompensationReader Reader) CompensationOwners(LifecycleFixture fixture) {

@@ -84,29 +84,40 @@ public sealed class ProcessRecoverySelectionIndexMigrationTests(ITestOutputHelpe
         await context.GetService<IMigrator>().MigrateAsync(Previous);
         await SeedAsync(context, 1, 16);
         var before = await RowsAsync(context);
-        var table = Table(decision);
-        var key = Key(decision);
+        using var identifiers = new NpgsqlCommandBuilder();
+        var table = identifiers.QuoteIdentifier(Table(decision));
+        var key = identifiers.QuoteIdentifier(Key(decision));
         var name = Index(decision);
+        var quotedName = identifiers.QuoteIdentifier(name);
+        var includedColumn = identifiers.QuoteIdentifier(decision ? "Revision" : "Status");
+        var drop = $"DROP INDEX {quotedName}";
         foreach (var definition in new[] {
-            $"(\"{key}\", \"RootRunId\")", $"(\"RootRunId\", \"{key}\" DESC)",
-            $"(\"RootRunId\", \"{key}\") WHERE \"RootRunId\" IS NOT NULL",
-            $"(\"RootRunId\", \"{key}\") INCLUDE (\"{(decision ? "Revision" : "Status")}\")"
+            $"({key}, \"RootRunId\")", $"(\"RootRunId\", {key} DESC)",
+            $"(\"RootRunId\", {key}) WHERE \"RootRunId\" IS NOT NULL",
+            $"(\"RootRunId\", {key}) INCLUDE ({includedColumn})"
         }) {
-            await context.Database.ExecuteSqlRawAsync($"CREATE INDEX \"{name}\" ON {table} {definition}");
+            var create = $"CREATE INDEX {quotedName} ON {table} {definition}";
+            await context.Database.ExecuteSqlRawAsync(create);
             await RequireRejectedAsync();
-            await context.Database.ExecuteSqlRawAsync($"DROP INDEX \"{name}\"");
+            await context.Database.ExecuteSqlRawAsync(drop);
         }
-        await context.Database.ExecuteSqlRawAsync($"CREATE UNIQUE INDEX \"{name}\" ON {table} (\"RootRunId\", \"{key}\")");
+        var createUnique = $"CREATE UNIQUE INDEX {quotedName} ON {table} (\"RootRunId\", {key})";
+        await context.Database.ExecuteSqlRawAsync(createUnique);
         await RequireRejectedAsync();
-        await context.Database.ExecuteSqlRawAsync($"DROP INDEX \"{name}\"");
+        await context.Database.ExecuteSqlRawAsync(drop);
+        var createConcurrently = $"CREATE UNIQUE INDEX CONCURRENTLY {quotedName} ON {table} (\"RootRunId\")";
         Assert.Equal(PostgresErrorCodes.UniqueViolation, (await Assert.ThrowsAsync<PostgresException>(() =>
-            context.Database.ExecuteSqlRawAsync($"CREATE UNIQUE INDEX CONCURRENTLY \"{name}\" ON {table} (\"RootRunId\")"))).SqlState);
+            context.Database.ExecuteSqlRawAsync(createConcurrently))).SqlState);
         Assert.False(await ValidAsync(context, name));
         await RequireRejectedAsync();
-        await context.Database.ExecuteSqlRawAsync($"DROP INDEX CONCURRENTLY \"{name}\"");
+        var dropConcurrently = $"DROP INDEX CONCURRENTLY {quotedName}";
+        await context.Database.ExecuteSqlRawAsync(dropConcurrently);
         var old = OldIndex(decision);
-        await context.Database.ExecuteSqlRawAsync($"DROP INDEX \"{old}\"");
-        await context.Database.ExecuteSqlRawAsync($"CREATE INDEX \"{old}\" ON {table} (\"{key}\")");
+        var quotedOld = identifiers.QuoteIdentifier(old);
+        var dropOld = $"DROP INDEX {quotedOld}";
+        await context.Database.ExecuteSqlRawAsync(dropOld);
+        var createOld = $"CREATE INDEX {quotedOld} ON {table} ({key})";
+        await context.Database.ExecuteSqlRawAsync(createOld);
         var failure = await Assert.ThrowsAsync<PostgresException>(() => UpgradeAsync(context));
         Assert.Contains(old, failure.MessageText, StringComparison.Ordinal);
         Assert.True(await ExistsAsync(context, old));
@@ -218,9 +229,9 @@ public sealed class ProcessRecoverySelectionIndexMigrationTests(ITestOutputHelpe
                 await SeedAsync(context, start, 256);
                 writeMs.Add(watch.Elapsed.TotalMilliseconds);
             }
-            var sizes = await context.Database.SqlQueryRaw<long>($"""
-                SELECT pg_relation_size('"{(composite ? RuntimeIndex : OldIndex(false))}"'::regclass) AS "Value"
-                UNION ALL SELECT pg_relation_size('"{(composite ? DecisionIndex : OldIndex(true))}"'::regclass) AS "Value"
+            var sizes = await context.Database.SqlQuery<long>($"""
+                SELECT pg_relation_size(format('%I', {(composite ? RuntimeIndex : OldIndex(false))})::regclass) AS "Value"
+                UNION ALL SELECT pg_relation_size(format('%I', {(composite ? DecisionIndex : OldIndex(true))})::regclass) AS "Value"
                 """).ToArrayAsync();
             return new { measurements, writeMs, medianBatchMs = writeMs.Order().ElementAt(3), indexBytes = sizes };
         }

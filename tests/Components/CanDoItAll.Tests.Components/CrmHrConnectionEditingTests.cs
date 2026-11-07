@@ -3,7 +3,6 @@ using CanDoItAll.CrmHr.UI.Crm;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
@@ -17,7 +16,7 @@ public sealed class CrmHrConnectionEditingTests {
         var crm = harness.Context.Services.GetRequiredService<CrmService>();
         var rows = view.ConnectedRecordEditors;
         var local = Assert.Single(rows);
-        var context = Context(cut, rows);
+        var context = ComponentTestHarness.FindEditContext(cut, rows);
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-connection-notes-0']").InputAsync(new ChangeEventArgs { Value = "  My local connection note  " }));
         var observed = (await crm.GetAccountWorkspaceAsync(account))!;
         var peer = observed.ConnectedRecords.Select(ConnectionValues.FromOwner).ToList();
@@ -31,7 +30,7 @@ public sealed class CrmHrConnectionEditingTests {
 
         Assert.Same(rows, view.ConnectedRecordEditors);
         Assert.Same(local, rows.Single(row => row.Id == local.Id));
-        Assert.Same(context, Context(cut, rows));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, rows));
         Assert.Equal("  My local connection note  ", local.Notes);
         Assert.Equal(CrmAccountConnectionRole.Sponsor, local.Role);
         Assert.Equal(2, rows.Count);
@@ -51,7 +50,7 @@ public sealed class CrmHrConnectionEditingTests {
         var view = (ICrmHrCrmWorkspaceView)cut.Instance;
         var rows = view.ConnectedRecordEditors;
         var first = rows[0];
-        var context = Context(cut, rows);
+        var context = ComponentTestHarness.FindEditContext(cut, rows);
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-connection-notes-0']").InputAsync(new ChangeEventArgs { Value = "Submitted connection" }));
         control.HoldWriteIn(nameof(CrmService.SaveConnectedRecordsAsync));
         var pending = cut.Find("[data-testid='crmhr-connections-form']").SubmitAsync();
@@ -65,14 +64,11 @@ public sealed class CrmHrConnectionEditingTests {
 
         Assert.Same(rows, view.ConnectedRecordEditors);
         Assert.Same(first, rows[0]);
-        Assert.Same(context, Context(cut, rows));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, rows));
         Assert.Equal("  Later raw connection note  ", first.Notes);
         Assert.Equal(2, rows.Count);
         Assert.Equal("Submitted connection", Assert.Single((await harness.Context.Services.GetRequiredService<CrmService>().GetAccountWorkspaceAsync(account))!.ConnectedRecords).Notes);
     }
-
-    private static EditContext Context(IRenderedComponent<CrmHrCrmPage> cut, List<CrmAccountConnectionEditorModel> rows) =>
-        cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, rows)).Instance.EditContext;
 
     private static async Task<(IRenderedComponent<CrmHrCrmPage> Page, Guid Account, Guid Person)> OpenAsync(ComponentTestHarness harness) {
         var directory = harness.Context.Services.GetRequiredService<PartyDirectoryService>();

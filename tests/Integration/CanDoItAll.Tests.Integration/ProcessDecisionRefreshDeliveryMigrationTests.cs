@@ -57,17 +57,31 @@ public sealed class ProcessDecisionRefreshDeliveryMigrationTests {
         await using var context = Context(app.Services);
         await SeedAsync(context);
         var before = await RowsAsync(context);
-        foreach (var assignment in new[] {
-            "\"ProtocolVersion\" = 2", "\"ProgressRevision\" = -1", "\"WakeRevision\" = -1", "\"LeaseGeneration\" = -1",
-            "\"LeaseToken\" = gen_random_uuid()", "\"LeaseExpiresAtUtc\" = clock_timestamp()", "\"Disposition\" = 4",
-            "\"Disposition\" = 1", "\"Disposition\" = 2", "\"Disposition\" = 3", "\"Reason\" = 13",
-            "\"LeaseToken\" = '00000000-0000-0000-0000-000000000000'", "\"RunId\" = '00000000-0000-0000-0000-000000000000'"
+        const string update = "UPDATE process_decision_refresh_delivery SET ";
+        foreach (var invalid in new[] {
+            update + "\"ProtocolVersion\" = 2",
+            update + "\"ProgressRevision\" = -1",
+            update + "\"WakeRevision\" = -1",
+            update + "\"LeaseGeneration\" = -1",
+            update + "\"LeaseToken\" = gen_random_uuid()",
+            update + "\"LeaseExpiresAtUtc\" = clock_timestamp()",
+            update + "\"Disposition\" = 4",
+            update + "\"Disposition\" = 1",
+            update + "\"Disposition\" = 2",
+            update + "\"Disposition\" = 3",
+            update + "\"Reason\" = 13",
+            update + "\"LeaseToken\" = '00000000-0000-0000-0000-000000000000'",
+            update + "\"RunId\" = '00000000-0000-0000-0000-000000000000'"
         }) {
-            var failure = await Assert.ThrowsAsync<PostgresException>(() => context.Database.ExecuteSqlRawAsync($"UPDATE process_decision_refresh_delivery SET {assignment}"));
+            var failure = await Assert.ThrowsAsync<PostgresException>(() => context.Database.ExecuteSqlRawAsync(invalid));
             Assert.Equal(PostgresErrorCodes.CheckViolation, failure.SqlState);
         }
-        foreach (var column in new[] { "RunId", "AdmissionCommandId", "RootRunId" }) {
-            var failure = await Assert.ThrowsAsync<PostgresException>(() => context.Database.ExecuteSqlRawAsync($"UPDATE process_decision_refresh_delivery SET \"{column}\" = gen_random_uuid()"));
+        foreach (var invalid in new[] {
+            update + "\"RunId\" = gen_random_uuid()",
+            update + "\"AdmissionCommandId\" = gen_random_uuid()",
+            update + "\"RootRunId\" = gen_random_uuid()"
+        }) {
+            var failure = await Assert.ThrowsAsync<PostgresException>(() => context.Database.ExecuteSqlRawAsync(invalid));
             Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, failure.SqlState);
         }
         Assert.Equal(before, await RowsAsync(context));

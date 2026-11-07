@@ -105,8 +105,8 @@ public sealed class ProcessDecisionRefreshAccountingTests {
         var state = await StateAsync(fixture.Services, fixture.State.RunId);
         var rendezvous = new Rendezvous();
         var results = await Task.WhenAll(AttemptAsync(), AttemptAsync());
-        Assert.Single(results.Where(result => result.CommittedNow));
-        Assert.Single(results.Where(result => !result.CommittedNow));
+        Assert.Single(results, result => result.CommittedNow);
+        Assert.Single(results, result => !result.CommittedNow);
         Assert.Equal(results[0].Decision, results[1].Decision);
         Assert.Equal(results[0].DecisionBudget, results[1].DecisionBudget);
         await using var database = Context(fixture.Services);

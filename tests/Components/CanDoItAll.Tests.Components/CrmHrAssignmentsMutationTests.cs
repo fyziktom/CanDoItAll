@@ -132,8 +132,7 @@ public sealed class CrmHrAssignmentsMutationTests
         var cut = harness.Context.Render<SavingAssignmentsPage>(parameters => parameters.Add(page => page.TestProjects, [project]));
         var view = await OpenStaffingAsync(cut);
         var draft = view.StaffingRequestDraft;
-        var form = cut.FindComponents<Microsoft.AspNetCore.Components.Forms.EditForm>()
-            .Single(component => ReferenceEquals(component.Instance.EditContext.Model, draft)).Instance.EditContext;
+        var form = ComponentTestHarness.FindEditContext(cut, draft);
         var input = cut.FindComponent<CanDoItAll.Components.BaseLib.NativeValueInput<decimal>>().Instance;
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-staffing-request-title']").InputAsync(
             new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "Retained staffing draft" }));
@@ -146,8 +145,7 @@ public sealed class CrmHrAssignmentsMutationTests
         cut.WaitForAssertion(() => Assert.Contains("New peer skill", cut.Find("[data-testid='crmhr-staffing-request-dialog']").TextContent));
         Assert.Same(draft, view.StaffingRequestDraft);
         Assert.Equal("Retained staffing draft", draft.Title);
-        Assert.Same(form, cut.FindComponents<Microsoft.AspNetCore.Components.Forms.EditForm>()
-            .Single(component => ReferenceEquals(component.Instance.EditContext.Model, draft)).Instance.EditContext);
+        Assert.Same(form, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Same(input, cut.FindComponent<CanDoItAll.Components.BaseLib.NativeValueInput<decimal>>().Instance);
         Assert.True(cut.Find("[data-testid='crmhr-staffing-request-save-button']").HasAttribute("disabled"));
     }

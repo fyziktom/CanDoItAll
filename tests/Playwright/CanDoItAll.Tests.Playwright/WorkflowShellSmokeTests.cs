@@ -51,7 +51,7 @@ public sealed class WorkflowShellSmokeTests : IAsyncLifetime {
             "Workflow.Smoke.Readback", TestSchemaBootstrapModules.Full)) {
             await using var scope = services.CreateAsyncScope();
             var library = scope.ServiceProvider.GetRequiredService<IWorkflowComponentLibraryService>();
-            var created = Assert.Single((await library.ListComponentsAsync()).Where(component => component.Name.StartsWith("Starter LLM call ", StringComparison.Ordinal)));
+            var created = Assert.Single(await library.ListComponentsAsync(), component => component.Name.StartsWith("Starter LLM call ", StringComparison.Ordinal));
             Assert.Equal(providerId, created.ProviderProfileId);
         }
         await page.GetByTestId("workflows-tab-history").ClickAsync();

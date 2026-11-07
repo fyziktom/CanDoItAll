@@ -6,7 +6,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace.ApiAccess;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 

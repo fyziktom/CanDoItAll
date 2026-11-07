@@ -323,7 +323,7 @@ public sealed class ProcessDecisionFinalizationIntegrationTests {
     }
 
     private sealed class QueryProbe : DbCommandInterceptor {
-        internal List<(string Sql, object[] Values)> Reads { get; } = [];
+        internal List<(string Sql, object?[] Values)> Reads { get; } = [];
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
             Reads.Add((command.CommandText, command.Parameters.Cast<DbParameter>().Select(parameter => parameter.Value).ToArray()));

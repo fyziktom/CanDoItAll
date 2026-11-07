@@ -47,7 +47,7 @@ public sealed class AgentSettingsConcurrentEditingTests {
         Assert.True(editor.Compare(current, editor.InputRevision));
         Assert.False(editor.CanApply);
         Assert.False(editor.Apply(false));
-        var conflict = Assert.Single(editor.Comparison!.Fields.Where(entry => !entry.IsResolved));
+        var conflict = Assert.Single(editor.Comparison!.Fields, entry => !entry.IsResolved);
         Assert.Equal("Sample text", conflict.Label);
         conflict.UseLocal();
         Assert.True(editor.Apply(false));

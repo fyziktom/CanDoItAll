@@ -33,7 +33,7 @@ public sealed partial class ResourceMetadataOwnerTests {
         Assert.IsType<ResourceProjectBinding.RetainedUnbound>(read.Expected.Project);
         Assert.Equal(ResourceMetadataReadOnlyReason.TooLarge, read.Reason);
         Assert.Equal(payload.Length, read.Lengths.ConfigJson);
-        var boundedRead = Assert.Single(probe.Reads.Where(sql => sql.Contains("WITH candidate AS", StringComparison.Ordinal)));
+        var boundedRead = Assert.Single(probe.Reads, sql => sql.Contains("WITH candidate AS", StringComparison.Ordinal));
         Assert.Contains("CASE WHEN \"FitsRaw\" THEN \"ConfigJson\" END", boundedRead, StringComparison.Ordinal);
         probe.Reads.Clear();
         var deleted = Assert.IsType<ResourceMetadataDeleteOutcome.Accepted>(await fixture.Service.DeleteAsync(new(read.Expected)));

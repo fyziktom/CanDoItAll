@@ -81,7 +81,7 @@ public sealed partial class ProjectLifecycleOperationTests {
 
         public ValueTask<ProjectLifecycleWriteAccessDecision> ObserveAsync(CancellationToken cancellationToken) {
             Assert.False(Held);
-            Assert.True(faults.OwnerDisposed);
+            Assert.True(Faults.OwnerDisposed);
             PostReleaseObservations++;
             return ValueTask.FromResult(ProjectLifecycleWriteAccessDecision.Denied);
         }

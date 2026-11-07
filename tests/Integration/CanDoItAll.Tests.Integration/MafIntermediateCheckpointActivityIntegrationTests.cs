@@ -37,7 +37,9 @@ public sealed class MafIntermediateCheckpointActivityIntegrationTests {
         var result = await execution.SendAsync(operation);
 
         Assert.Equal(ExecutionState.Completed, result.State);
-        Assert.Equal("completed", result.AssistantMessage.Content);
+        var assistant = result.AssistantMessage;
+        Assert.NotNull(assistant);
+        Assert.Equal("completed", assistant.Content);
         Assert.True(client.StreamingRequests > 0);
         var saved = (await fixture.NewStore().GetExecutionRunDetailAsync(result.ExecutionRunId))!;
         var journal = saved.Run.ToolAdmission!;

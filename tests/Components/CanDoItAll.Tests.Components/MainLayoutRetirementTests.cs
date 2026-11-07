@@ -86,8 +86,8 @@ public sealed class MainLayoutRetirementTests {
         var failure = await Record.ExceptionAsync(() => cut.Instance.FirstRender.WaitAsync(TimeSpan.FromSeconds(10)));
         Assert.True(failure is null or OperationCanceledException, failure?.ToString());
         cut.WaitForAssertion(() => {
-            var cleanup = Assert.Single(harness.Context.JSInterop.Invocations.Where(item =>
-                item.Identifier == "CanDoItAll.browserState.unregisterDatabaseSwitchListener"));
+            var cleanup = Assert.Single(harness.Context.JSInterop.Invocations, item =>
+                item.Identifier == "CanDoItAll.browserState.unregisterDatabaseSwitchListener");
             Assert.Equal(invocation.Arguments[0], Assert.Single(cleanup.Arguments));
             Assert.Throws<ObjectDisposedException>(() => callback.Value);
         });

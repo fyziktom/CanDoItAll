@@ -81,7 +81,7 @@ public sealed class ProcessPlanningLaunchApiTests {
         Assert.True(state.AppliedResults.Any(item => item.ExecutionRunId is not null),
             $"Queued launch did not produce a planning result. Status={state.Status}; " +
             string.Join("; ", state.AppliedResults.SelectMany(item => item.Diagnostics).Select(item => $"{item.Code}: {item.SafeSummary}")));
-        var waiting = Assert.Single(state.AppliedResults.Where(item => item.ExecutionRunId is not null));
+        var waiting = Assert.Single(state.AppliedResults, item => item.ExecutionRunId is not null);
         var child = await fixture.Entry.Files.Store.GetExecutionRunAsync(waiting.ExecutionRunId!.Value.Value);
         Assert.True(waiting.Outcome == StrategyOutcome.NeedsManager,
             $"Expected manager review; observed {waiting.Outcome}. {fixture.StartupFailure}; child={child?.State}; " +

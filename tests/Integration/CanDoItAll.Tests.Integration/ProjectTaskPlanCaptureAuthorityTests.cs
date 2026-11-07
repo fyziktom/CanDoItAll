@@ -24,7 +24,9 @@ public sealed class ProjectTaskPlanCaptureAuthorityTests {
         var capturer = fixture.Sql.Services.GetServices<IProcessDecisionMaterialCapturer>()
             .Single(item => item.ContentContract == ProjectTaskPlanProcessContract.Content);
         barrier.Armed = true;
-        var capture = capturer.CaptureAsync(new(fixture.Process.Source.SourceAuthority, parent.Scope,
+        var authority = fixture.Process.Source.SourceAuthority;
+        Assert.NotNull(authority);
+        var capture = capturer.CaptureAsync(new(authority, parent.Scope,
             ProjectTaskPlanProcessContract.Content, new(parent.Scope.Id, 1, new(Guid.NewGuid()))), token);
         try {
             await barrier.Entered.Task.WaitAsync(token);

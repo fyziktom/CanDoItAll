@@ -41,10 +41,13 @@ public sealed class WorkspaceCatalogNormalizationIntegrationTests {
         var changed = await first.LoadCatalogAsync();
 
         var changedAgent = Assert.Single(changed.Agents, candidate => candidate.Id == agent.Id);
-        Assert.Equal(replacementSecret, Assert.Single(changedAgent.Permissions.AllowedSecrets).SecretId);
+        var secrets = changedAgent.Permissions.AllowedSecrets;
+        Assert.NotNull(secrets);
+        Assert.Equal(replacementSecret, Assert.Single(secrets).SecretId);
         Assert.NotEqual(AgentConfigurationVersion.Create(oldAgent), AgentConfigurationVersion.Create(changedAgent));
         Assert.DoesNotContain((await second.LoadCatalogAsync()).Agents, candidate => candidate.Id == agent.Id);
-        Assert.Throws<NotSupportedException>(() => ((IList<AgentAllowedSecretReference>)changedAgent.Permissions.AllowedSecrets).Clear());
+        var exposedSecrets = Assert.IsAssignableFrom<IList<AgentAllowedSecretReference>>(secrets);
+        Assert.Throws<NotSupportedException>(exposedSecrets.Clear);
     }
 
     [Fact]

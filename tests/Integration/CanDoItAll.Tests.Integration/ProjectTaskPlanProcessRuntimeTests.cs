@@ -20,10 +20,10 @@ public sealed class ProjectTaskPlanProcessRuntimeTests {
         var waiting = await fixture.PrepareAsync();
         var original = waiting.ToolAdmission!.PlanningDecision!;
         Assert.Equal(source.Process.Material.PayloadJson, (await fixture.Participant.ReadOriginalBasisAsync(original.InheritedOrigin!, default)).Value.PayloadJson);
-        Assert.Single(source.Sql.Services.GetServices<IAgentRuntimeToolProvider>().Where(item => item.SupportsSavedEffect(
-            AgentToolJournalTransitions.RequireProposal(waiting.ToolAdmission, ProjectTaskPlanAgentFixture.Binding(waiting)).Payload)));
-        Assert.Single(source.Sql.Services.GetServices<IAgentToolReceiptReconciliationProvider>()
-            .Where(item => item.Supports(ProjectStructureToolPolicy.ProjectTaskPlanPublish)));
+        Assert.Single(source.Sql.Services.GetServices<IAgentRuntimeToolProvider>(), item => item.SupportsSavedEffect(
+            AgentToolJournalTransitions.RequireProposal(waiting.ToolAdmission, ProjectTaskPlanAgentFixture.Binding(waiting)).Payload));
+        Assert.Single(source.Sql.Services.GetServices<IAgentToolReceiptReconciliationProvider>(),
+            item => item.Supports(ProjectStructureToolPolicy.ProjectTaskPlanPublish));
         var result = ProjectTaskPlanAgentFixture.Result(await fixture.PublishAsync(waiting));
         Assert.Equal(ProjectTaskPlanAgentResultKind.Published, result.Kind);
         Assert.False(result.Replayed);

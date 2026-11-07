@@ -156,7 +156,9 @@ public sealed class LiveSpecialistAgentScenarioIntegrationTests
             request,
             new AgentChatRunOptions(AgentExecutionOperationId.New()),
             cancellationToken);
-        var content = result.AssistantMessage.Content;
+        var assistant = result.AssistantMessage;
+        Assert.NotNull(assistant);
+        var content = assistant.Content;
 
         foreach (var marker in requiredMarkers)
         {

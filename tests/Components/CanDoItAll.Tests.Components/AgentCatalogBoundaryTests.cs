@@ -414,8 +414,8 @@ public sealed class AgentCatalogBoundaryTests {
         Assert.Equal(typeof(AgentTeamDetailsDialog), Assert.Single(dialogs.Dialogs).ComponentType);
         var replacement = harness.Context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.RequestedAgentId, agent.Id));
-        replacement.WaitForAssertion(() => Assert.Single(dialogs.Dialogs.Where(dialog =>
-            dialog.ComponentType == typeof(AgentDetailsDialog))));
+        replacement.WaitForAssertion(() => Assert.Single(dialogs.Dialogs, dialog =>
+            dialog.ComponentType == typeof(AgentDetailsDialog)));
         await replacement.InvokeAsync(() => replacement.Instance.DisposeAsync().AsTask());
         Assert.Equal(typeof(AgentTeamDetailsDialog), Assert.Single(dialogs.Dialogs).ComponentType);
         await dialogs.CloseAsync();

@@ -59,7 +59,7 @@ public sealed class AgentChatAdmissionKnowledgeIntegrationTests {
                     throw expected;
                 }
             });
-        scenario.Start();
+        _ = scenario.Start();
         var failure = await Record.ExceptionAsync(() => scenario.ObserveAsync());
         Assert.Same(expected, failure);
         Assert.True(persistedJournalObserved);
@@ -79,7 +79,7 @@ public sealed class AgentChatAdmissionKnowledgeIntegrationTests {
             ? new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged)
             : new SandboxWorkspaceConcurrencyException(2, 3);
         scenario.Proxy.Failure = expected;
-        scenario.Start();
+        _ = scenario.Start();
         Assert.Same(expected, await Record.ExceptionAsync(() => scenario.ObserveAsync()));
         Assert.Equal(1, scenario.Proxy.Starts);
         Assert.Equal(0, scenario.Proxy.Callbacks);

@@ -6,7 +6,6 @@ using CanDoItAll.Modules.Projects;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.AspNetCore.Components.Forms;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
@@ -32,7 +31,7 @@ public sealed class CrmHrOpportunityConversionHostTests
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-name']").InputAsync(new ChangeEventArgs { Value = name }));
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-description']").InputAsync(new ChangeEventArgs { Value = "Submitted project description" }));
         var model = view.OpportunityConversionEditor;
-        var context = cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext;
+        var context = ComponentTestHarness.FindEditContext(cut, model);
         var saving = cut.InvokeAsync(() => view.SaveOpportunityConversionAsync(model));
         try {
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -44,7 +43,7 @@ public sealed class CrmHrOpportunityConversionHostTests
 
         Assert.True(view.IsOpportunityConversionDialogOpen);
         Assert.Same(model, view.OpportunityConversionEditor);
-        Assert.Same(context, cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext);
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, model));
         Assert.Equal("  Later unblurred target description  ", model.ProjectDescription);
         Assert.True(cut.Find("[data-testid='crmhr-opportunity-conversion-save']").HasAttribute("disabled"));
         var accepted = Assert.IsType<CrmOpportunityConversionResult>(gate.Accepted);
@@ -72,7 +71,7 @@ public sealed class CrmHrOpportunityConversionHostTests
         var model = view.OpportunityConversionEditor;
         model.ProjectName = seed.ProjectName + " explicit new target";
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-opportunity-conversion-description']").InputAsync(new ChangeEventArgs { Value = "  Retained raw request  " }));
-        var context = cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext;
+        var context = ComponentTestHarness.FindEditContext(cut, model);
         var crm = harness.Context.Services.GetRequiredService<CrmService>();
         var peer = OpportunityEditorDrafts.FromDetail((await crm.GetOpportunityAsync(seed.OpportunityId))!);
         peer.Summary = "Current peer conversion source";
@@ -85,7 +84,7 @@ public sealed class CrmHrOpportunityConversionHostTests
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-conversion-review-apply']").ClickAsync(new()));
 
         Assert.Same(model, view.OpportunityConversionEditor);
-        Assert.Same(context, cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext);
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, model));
         Assert.Equal("  Retained raw request  ", model.ProjectDescription);
         Assert.Equal((await crm.GetOpportunityAsync(seed.OpportunityId))!.UpdatedAtUtc, model.ExpectedUpdatedAtUtc);
         Assert.Equal(0, await CountProjectsAsync(harness, model.ProjectName));

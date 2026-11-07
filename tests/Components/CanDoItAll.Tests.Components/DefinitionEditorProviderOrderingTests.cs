@@ -56,7 +56,7 @@ public sealed class DefinitionEditorProviderOrderingTests {
         cut.Render(p => p.Add(x => x.Presentation, session.Presentation with { ProvidersLoading = false }));
         AssertModels(cut, "ollama");
         await ClickAsync(cut, "llm-chat-definition-editor-save");
-        var values = Assert.Single(intents.Where(intent => intent.Action == DefinitionEditorAction.Save)).Submission!;
+        var values = Assert.Single(intents, intent => intent.Action == DefinitionEditorAction.Save).Submission!;
         Assert.Equal("Unicode Žluťoučký", values.Name);
         Assert.Equal(SecondProvider, values.ProviderProfileId);
         Assert.Equal("ollama-secondary", values.Model);
@@ -80,7 +80,7 @@ public sealed class DefinitionEditorProviderOrderingTests {
         cut.Render(p => p.Add(x => x.Presentation, complete));
         AssertModels(cut, "ollama");
         await ClickAsync(cut, "llm-chat-definition-editor-save");
-        var values = Assert.Single(intents.Where(intent => intent.Action == DefinitionEditorAction.Save)).Submission!;
+        var values = Assert.Single(intents, intent => intent.Action == DefinitionEditorAction.Save).Submission!;
         Assert.Equal("Local edit", values.Name);
         Assert.Equal(SecondProvider, values.ProviderProfileId);
         Assert.Equal("ollama-default", values.Model);

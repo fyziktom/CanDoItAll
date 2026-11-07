@@ -6,6 +6,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Tests.Support;
 
@@ -35,6 +36,10 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
     public TestDatabaseProfile ActiveProfile { get; }
 
     public BunitContext Context { get; }
+
+    public static EditContext FindEditContext(IRenderedComponent<IComponent> cut, object model) =>
+        Assert.Single(cut.FindComponents<EditForm>().Select(form => form.Instance.EditContext).OfType<EditContext>(),
+            context => ReferenceEquals(context.Model, model));
 
     public static async Task<ComponentTestHarness> CreateAsync(
         Action<IServiceCollection>? configureServices = null,

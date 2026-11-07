@@ -57,12 +57,17 @@ public sealed class InheritedTaskPlanReceiptMigrationTests {
         await context.SaveChangesAsync();
         var before = await RowsAsync(context);
         var checks = await SchemaAsync(context, checks: true);
+        const string update = "UPDATE \"Workbench_TaskPlanReceipts\" SET ";
+        const string inheritedOnly = " WHERE \"CallerKind\" = 2";
         foreach (var invalid in new[] {
-            "\"CallerKind\" = 3", "\"SourceKind\" = 1", "\"SchemaVersion\" = 1",
-            "\"ResultVersion\" = 1", "\"SourceVersion\" = 1", "\"NormalizationVersion\" = 2"
+            update + "\"CallerKind\" = 3" + inheritedOnly,
+            update + "\"SourceKind\" = 1" + inheritedOnly,
+            update + "\"SchemaVersion\" = 1" + inheritedOnly,
+            update + "\"ResultVersion\" = 1" + inheritedOnly,
+            update + "\"SourceVersion\" = 1" + inheritedOnly,
+            update + "\"NormalizationVersion\" = 2" + inheritedOnly
         }) {
-            var failure = await Assert.ThrowsAsync<PostgresException>(() => context.Database.ExecuteSqlRawAsync(
-                $"UPDATE \"Workbench_TaskPlanReceipts\" SET {invalid} WHERE \"CallerKind\" = 2"));
+            var failure = await Assert.ThrowsAsync<PostgresException>(() => context.Database.ExecuteSqlRawAsync(invalid));
             Assert.Equal(PostgresErrorCodes.CheckViolation, failure.SqlState);
             Assert.Equal(before, await RowsAsync(context));
         }

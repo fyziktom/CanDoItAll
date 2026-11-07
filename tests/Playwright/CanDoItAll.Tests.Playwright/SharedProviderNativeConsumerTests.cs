@@ -385,7 +385,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await card.GetByTestId("project-card-files-button").ClickAsync();
         var dialog = fixture.Page.GetByTestId("project-files-dialog");
         await Assertions.Expect(dialog).ToBeVisibleAsync();
-        var storedName = Path.GetFileName(node.MediaRelativePath.Replace('\\', '/'));
+        var relativePath = node.MediaRelativePath;
+        Assert.NotNull(relativePath);
+        var storedName = Path.GetFileName(relativePath.Replace('\\', '/'));
         await dialog.GetByRole(AriaRole.Button, new() { Name = "Actions for " + storedName, Exact = true }).ClickAsync();
         var menu = dialog.GetByRole(AriaRole.Group, new() { Name = "Actions for " + storedName, Exact = true });
         var download = await fixture.Page.RunAndWaitForDownloadAsync(() => menu.GetByRole(AriaRole.Button, new() { Name = "Download", Exact = true }).ClickAsync());

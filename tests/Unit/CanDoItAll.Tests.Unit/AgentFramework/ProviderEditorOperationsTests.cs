@@ -51,7 +51,9 @@ public sealed class ProviderEditorOperationsTests {
         Assert.Equal(1, commands.Writes);
         session.Draft.ConfigurationJson = "{}";
         commands.Save = (submission, _) => {
-            Assert.Equal(ProviderMutationKind.Update, submission.Attempt.Kind);
+            var attempt = submission.Attempt;
+            Assert.NotNull(attempt);
+            Assert.Equal(ProviderMutationKind.Update, attempt.Kind);
             Assert.Equal(reads.Token, submission.CreateRequest().ExpectedConcurrencyToken);
             return Task.FromResult(new ProviderWriteResult(ProviderWriteDisposition.Conflict));
         };

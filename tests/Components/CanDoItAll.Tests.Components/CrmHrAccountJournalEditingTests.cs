@@ -3,7 +3,6 @@ using CanDoItAll.CrmHr.UI.Crm;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -39,13 +38,13 @@ public sealed class CrmHrAccountJournalEditingTests {
         var view = (ICrmHrCrmWorkspaceView)cut.Instance;
         var draft = view.InteractionEditor;
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-interaction-subject']").InputAsync(new ChangeEventArgs { Value = "  Accepted journal entry  " }));
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         control.FailReadIn(nameof(CrmService.GetAccountWorkspaceAsync), "ReloadSelectedAccountAsync");
 
         await cut.Find("[data-testid='crmhr-interaction-form']").SubmitAsync();
 
         Assert.Same(draft, view.InteractionEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Empty(draft.Subject);
         Assert.Contains("could not be refreshed", cut.Find("[data-testid='crmhr-interaction-outcome']").TextContent);
         cut.WaitForAssertion(() => {
@@ -67,7 +66,7 @@ public sealed class CrmHrAccountJournalEditingTests {
         var view = (ICrmHrCrmWorkspaceView)cut.Instance;
         var draft = view.InteractionEditor;
         await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-interaction-subject']").InputAsync(new ChangeEventArgs { Value = "Submitted journal" }));
-        var context = Context(cut, draft);
+        var context = ComponentTestHarness.FindEditContext(cut, draft);
         control.HoldWriteIn(nameof(CrmService.AddInteractionAsync));
         var save = cut.InvokeAsync(view.SaveInteractionAsync);
         await control.HoldReached.WaitAsync(TimeSpan.FromSeconds(30));
@@ -77,7 +76,7 @@ public sealed class CrmHrAccountJournalEditingTests {
         await save.WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Same(draft, view.InteractionEditor);
-        Assert.Same(context, Context(cut, draft));
+        Assert.Same(context, ComponentTestHarness.FindEditContext(cut, draft));
         Assert.Equal("  Later unblurred notes  ", draft.Notes);
         Assert.Contains(context.GetValidationMessages(), message => message.Contains("date", StringComparison.OrdinalIgnoreCase));
         await using var read = await harness.Context.Services.GetRequiredService<IDbContextFactory<CrmHrDbContext>>().CreateDbContextAsync();
@@ -85,9 +84,6 @@ public sealed class CrmHrAccountJournalEditingTests {
         Assert.Equal("Submitted journal", saved.Subject);
         Assert.Empty(saved.Notes);
     }
-
-    private static EditContext Context(IRenderedComponent<CrmHrCrmPage> cut, CrmInteractionEditorModel model) =>
-        cut.FindComponents<EditForm>().Single(form => ReferenceEquals(form.Instance.EditContext.Model, model)).Instance.EditContext;
 
     private static async Task<(IRenderedComponent<CrmHrCrmPage> Page, Guid AccountId)> OpenAsync(ComponentTestHarness harness) {
         var saved = await harness.Context.Services.GetRequiredService<PartyDirectoryService>().SavePartyAsync(new() {

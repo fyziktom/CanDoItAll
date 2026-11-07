@@ -171,7 +171,9 @@ public sealed class CapabilityConfigurationConcurrencyTests {
         Assert.Equal("Peer description", current.Description);
         Assert.Equal(accepted.ExpectedFingerprint, current.ExpectedFingerprint);
         Assert.Contains("\"future\":17", current.ConfigurationJson);
-        await workspace.DeleteCapabilityAsync(created.Id.Value, current.ExpectedFingerprint!);
+        var createdId = created.Id;
+        Assert.NotNull(createdId);
+        await workspace.DeleteCapabilityAsync(createdId.Value, current.ExpectedFingerprint!);
         Assert.DoesNotContain(await workspace.ListCapabilitiesAsync(), capability => capability.Id == created.Id);
     }
 

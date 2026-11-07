@@ -255,7 +255,9 @@ public sealed class OpportunityReconciliationTests {
         Assert.True(state.CanUndo);
         var removed = current.Snapshot();
         removed.Parties.Clear();
-        removed.ExpectedUpdatedAtUtc = removed.ExpectedUpdatedAtUtc.Value.AddSeconds(1);
+        var currentRevision = removed.ExpectedUpdatedAtUtc;
+        Assert.NotNull(currentRevision);
+        removed.ExpectedUpdatedAtUtc = currentRevision.Value.AddSeconds(1);
         state.Observe(removed);
         Assert.False(state.CanUndo);
         state.Undo();

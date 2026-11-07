@@ -197,12 +197,13 @@ public sealed class ProjectTaskPlanMigrationTests {
     }
 
     private static Task<string[]> ReadRetainedAsync(AppDbContext context, bool projectsOnly) {
-        var stateFilter = projectsOnly ? $"WHERE s.\"PoolId\" = '{ProjectFiniteOperationPool.Pool.Value:D}'::uuid" : "";
-        var epochFilter = projectsOnly ? $"WHERE e.\"PoolId\" = '{ProjectFiniteOperationPool.Pool.Value:D}'::uuid" : "";
-        return context.Database.SqlQueryRaw<string>($"""
+        var pool = ProjectFiniteOperationPool.Pool.Value;
+        return context.Database.SqlQuery<string>($"""
             SELECT "Value" FROM (
-                SELECT 'state:' || to_jsonb(s)::text AS "Value" FROM "Infrastructure_FiniteOperationState" s {stateFilter}
-                UNION ALL SELECT 'epoch:' || to_jsonb(e)::text FROM "Infrastructure_FiniteOperationEpochs" e {epochFilter}
+                SELECT 'state:' || to_jsonb(s)::text AS "Value" FROM "Infrastructure_FiniteOperationState" s
+                WHERE NOT {projectsOnly} OR s."PoolId" = {pool}
+                UNION ALL SELECT 'epoch:' || to_jsonb(e)::text FROM "Infrastructure_FiniteOperationEpochs" e
+                WHERE NOT {projectsOnly} OR e."PoolId" = {pool}
                 UNION ALL SELECT 'receipt:' || to_jsonb(r)::text FROM "Projects_DefinitionReceipts" r
                 UNION ALL SELECT 'project:' || to_jsonb(p)::text FROM "Projects_Projects" p
                 UNION ALL SELECT 'lifecycle:' || to_jsonb(d)::text FROM "Infrastructure_DatasetLifecycle" d

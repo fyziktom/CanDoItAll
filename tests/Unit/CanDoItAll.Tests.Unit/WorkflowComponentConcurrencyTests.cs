@@ -88,12 +88,18 @@ public sealed class WorkflowComponentConcurrencyTests {
         var submitted = new List<AgentAllowedSecretReference> { secret };
         var original = await catalog.SaveComponentAsync(CreateRequest() with { Permissions = AgentPermissionsPolicy.Default with { AllowedSecrets = submitted } });
         submitted.Clear();
-        Assert.Equal(secret, Assert.Single((await catalog.GetComponentAsync(original.Id))!.Permissions.AllowedSecrets));
+        var storedSecrets = (await catalog.GetComponentAsync(original.Id))?.Permissions.AllowedSecrets;
+        Assert.NotNull(storedSecrets);
+        Assert.Equal(secret, Assert.Single(storedSecrets));
         Assert.IsType<List<AgentAllowedSecretReference>>(original.Permissions.AllowedSecrets).Clear();
         var listed = Assert.Single(await catalog.ListComponentsAsync());
-        Assert.Equal(secret, Assert.Single(listed.Permissions.AllowedSecrets));
+        var listedSecrets = listed.Permissions.AllowedSecrets;
+        Assert.NotNull(listedSecrets);
+        Assert.Equal(secret, Assert.Single(listedSecrets));
         Assert.IsType<List<AgentAllowedSecretReference>>(listed.Permissions.AllowedSecrets).Clear();
-        Assert.Equal(secret, Assert.Single((await catalog.GetComponentAsync(original.Id))!.Permissions.AllowedSecrets));
+        storedSecrets = (await catalog.GetComponentAsync(original.Id))?.Permissions.AllowedSecrets;
+        Assert.NotNull(storedSecrets);
+        Assert.Equal(secret, Assert.Single(storedSecrets));
     }
 
     private static LlmCallComponentSaveRequest CreateRequest() => new(null, "Concurrent reusable step", null,

@@ -329,13 +329,15 @@ public sealed class AgentChatEffectOwnershipTests {
         var cut = Render(context, agent, first);
 
         var editor = cut.FindComponent<Editable<ChatThreadTitleDraft>>();
-        editor.Instance.Item.Title = "Proposed title";
-        await cut.InvokeAsync(() => editor.Instance.ItemChanged.InvokeAsync(editor.Instance.Item));
+        var draft = editor.Instance.Item;
+        Assert.NotNull(draft);
+        draft.Title = "Proposed title";
+        await cut.InvokeAsync(() => editor.Instance.ItemChanged.InvokeAsync(draft));
 
         Assert.Equal(1, calls);
         Assert.Equal(first.Title, reads.ExpectedRenameTitle);
         Assert.Equal(first.Title, Workspace(cut).Session!.Title);
-        Assert.Equal("Proposed title", editor.Instance.Item.Title);
+        Assert.Equal("Proposed title", editor.Instance.Item?.Title);
         Assert.Equal(1, reads.WorkspaceCalls);
         Assert.False(Workspace(cut).IsBusy);
         Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages,

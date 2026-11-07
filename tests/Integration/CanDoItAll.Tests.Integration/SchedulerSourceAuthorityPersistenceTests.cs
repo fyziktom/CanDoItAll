@@ -58,7 +58,7 @@ public sealed partial class SchedulerSourceAuthorityPersistenceTests {
         Assert.True(backend.Entered);
         Assert.Equal(fixture.Run.RunId, result.RunId);
         Assert.Equal(WorkflowRunState.Completed, result.State);
-        Assert.Single((await fixture.Store().ListEventsAsync(result.RunId)).Where(item => item.Kind == WorkflowEventKind.Started));
+        Assert.Single(await fixture.Store().ListEventsAsync(result.RunId), item => item.Kind == WorkflowEventKind.Started);
     }
 
     public enum AgentRevocation { Tools, Schedule, Inactive }

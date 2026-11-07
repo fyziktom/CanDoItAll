@@ -1019,7 +1019,9 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
         Assert.Equal(ExecutionState.Completed, detail!.Run.State);
         Assert.Equal(session.Id, result.ChatSessionId);
         Assert.Equal(result.ExecutionRunId, detail.ChatSession!.LatestExecutionRunId);
-        Assert.Equal(ChatMessageRole.Assistant, result.AssistantMessage.Role);
+        var assistant = result.AssistantMessage;
+        Assert.NotNull(assistant);
+        Assert.Equal(ChatMessageRole.Assistant, assistant.Role);
         Assert.Contains(detail.ChatSession.Messages, message => message.Role == ChatMessageRole.Assistant);
     }
 

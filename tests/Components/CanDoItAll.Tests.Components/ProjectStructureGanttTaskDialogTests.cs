@@ -111,7 +111,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
         var host = context.Render<DialogHost>();
         var model = new ProjectStructureGanttTaskEditModel(
             new("custom:execution-progress"), "Execution progress", StartUtc, StartUtc.AddHours(8),
-            hint, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, null), null,
+            hint, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, string.Empty), null,
             Execution: new ProjectTaskExecutionSnapshot(state, null, null));
 
         _ = OpenEditDialog(context, model, []);
@@ -127,7 +127,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
         var host = context.Render<DialogHost>();
         var model = new ProjectStructureGanttTaskEditModel(
             new("custom:execution-progress"), "Execution progress", StartUtc, StartUtc.AddHours(8),
-            40, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, null), null,
+            40, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, string.Empty), null,
             Execution: new ProjectTaskExecutionSnapshot(ProjectTaskExecutionState.Started, StartUtc, null));
         _ = OpenEditDialog(context, model, []);
 
@@ -151,7 +151,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
         var host = context.Render<DialogHost>();
         var model = new ProjectStructureGanttTaskEditModel(
             new("custom:execution-progress"), "Execution progress", StartUtc, StartUtc.AddHours(8),
-            28, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, null), null,
+            28, new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, string.Empty), null,
             Execution: ProjectTaskExecutionSnapshot.NotStarted);
         var resultTask = OpenEditDialog(context, model, []);
 

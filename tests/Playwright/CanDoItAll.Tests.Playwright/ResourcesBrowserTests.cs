@@ -104,7 +104,7 @@ public sealed class ResourcesBrowserTests(PlaywrightAppFixture fixture) {
             await page.GetByText("Browser edited resource", new() { Exact = true }).ClickAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Delete", Exact = true }).ClickAsync();
             await Assertions.Expect(page.GetByTestId("resource-name-input")).ToHaveValueAsync(string.Empty);
-            Assert.Empty((await owner.ListAsync()).Where(r => r.ProjectId == project.Value));
+            Assert.DoesNotContain(await owner.ListAsync(), r => r.ProjectId == project.Value);
             Assert.Empty(errors);
         } catch {
             await Shot(page, "production-failure");

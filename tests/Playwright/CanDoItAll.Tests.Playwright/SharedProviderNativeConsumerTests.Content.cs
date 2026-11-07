@@ -149,7 +149,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
         Assert.Equal(recording.Id, scaffold.ParentId);
         Assert.Equal(beforeCalls, (await fixture.ReadCapturesAsync()).GetProperty("requests").GetArrayLength());
         var marker = "WB4_TRANSCRIPT_" + Guid.NewGuid().ToString("N");
-        var metadata = System.Text.Json.Nodes.JsonNode.Parse(scaffold.MetadataJson)!.AsObject();
+        var scaffoldMetadata = scaffold.MetadataJson;
+        Assert.NotNull(scaffoldMetadata);
+        var metadata = System.Text.Json.Nodes.JsonNode.Parse(scaffoldMetadata)!.AsObject();
         metadata["transcript"]!["transcriptText"] = "Synthetic exact transcript " + marker;
         metadata["futureContent"] = "Preserved unknown metadata";
         await fixture.PostAsync<ProjectStructureNodeSummary>($"api/project-structure/projects/{projectId:D}/nodes/{Uri.EscapeDataString(scaffold.Id)}/metadata",
@@ -179,7 +181,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
             await fixture.AssertScriptCompleteAsync(1);
             var tree = await TreeAsync(fixture, projectId, includeMetadata: true);
             var current = Assert.Single(tree.Nodes, node => node.Id == scaffold.Id);
-            var stored = System.Text.Json.Nodes.JsonNode.Parse(current.MetadataJson)!;
+            var currentMetadata = current.MetadataJson;
+            Assert.NotNull(currentMetadata);
+            var stored = System.Text.Json.Nodes.JsonNode.Parse(currentMetadata)!;
             Assert.Equal(answer, stored["transcript"]![field]!.GetValue<string>());
             Assert.Equal("Preserved unknown metadata", stored["futureContent"]!.GetValue<string>());
             Assert.DoesNotContain(tree.Nodes, node => node.ObjectType == ProjectObjectType.WorkItem);
