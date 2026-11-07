@@ -228,7 +228,8 @@ public static class ApiServiceCollectionExtensions
             new ApiNotifyingProcessRuntimeProjector(
                 serviceProvider.GetRequiredService<ProcessRuntimeProjectionProjector>(),
                 serviceProvider.GetRequiredService<ProfileBoundedReplayEventStream<ProcessApiRunEvent>>(),
-                serviceProvider.GetRequiredService<ILogger<ApiNotifyingProcessRuntimeProjector>>())));
+                serviceProvider.GetRequiredService<ILogger<ApiNotifyingProcessRuntimeProjector>>(),
+                serviceProvider.GetRequiredService<ProjectStructureProcessChanges>().PublishAsync)));
         services.TryAddScoped<IAgentRecruitingTargetResolver, WorkspaceAgentRecruitingTargetResolver>();
         services.TryAddScoped<
             IInteractiveAccessPrincipalProvider,

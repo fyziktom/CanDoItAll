@@ -4,13 +4,58 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectStructureChangesHttpTests {
+    [Fact]
+    public async Task Projected_process_progress_uses_the_same_structure_SSE_and_poll_feed() {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var projectId = await CreateProjectAsync(services);
+        var unrelatedId = await CreateProjectAsync(services);
+        var admission = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var path = $"/api/project-structure/projects/{projectId:D}/changes";
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using var response = await host.Client.GetAsync(path + "/stream", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+        response.EnsureSuccessStatusCode();
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(timeout.Token));
+        var ready = await ReadEventAsync(reader, timeout.Token);
+
+        var runtime = services.GetRequiredService<IProcessRuntimeUnitOfWork>();
+        var created = await runtime.CommitAsync(ProcessProjectAdmissionFixture.Initial(new(admission.DatabaseProfileId, projectId, admission.LifetimeId)));
+        Assert.True(created.Succeeded);
+        var catchup = services.GetRequiredService<ProcessRuntimeProjectionCatchupService>();
+        Assert.Equal(ProcessProjectionReplayStatus.Completed, (await catchup.CatchUpAsync(timeout.Token)).Status);
+        var started = await ReadEventAsync(reader, timeout.Token);
+        var node = Assert.Single(Assert.Single(started.Batch.Changes).Nodes);
+        Assert.Equal($"process-run:{created.State.RunId.Value:D}", node.NodeId);
+        Assert.Equal(ProjectStructureChangeKind.Created, node.Kind);
+
+        Assert.True((await runtime.CommitAsync(ProcessProjectAdmissionFixture.Cancel(created.State))).Succeeded);
+        Assert.Equal(ProcessProjectionReplayStatus.Completed, (await catchup.CatchUpAsync(timeout.Token)).Status);
+        var finished = await ReadEventAsync(reader, timeout.Token);
+        var polled = await host.Client.GetFromJsonAsync<ProjectStructureChanges>($"{path}?after={Cursor(started.Batch.Cursor)}", timeout.Token);
+        Assert.NotNull(polled);
+        Assert.Equal(finished.Batch.Cursor, polled.Cursor);
+        var changed = Assert.Single(Assert.Single(polled.Changes).Nodes);
+        Assert.Equal(node.NodeId, changed.NodeId);
+        Assert.Equal(ProjectStructureChangeKind.Updated, changed.Kind);
+
+        var unrelated = await host.Client.GetFromJsonAsync<ProjectStructureChanges>(
+            $"/api/project-structure/projects/{unrelatedId:D}/changes?after={Cursor(ready.Batch.Cursor)}", timeout.Token);
+        Assert.NotNull(unrelated);
+        Assert.Empty(unrelated.Changes);
+    }
+
     [Fact]
     public async Task Native_project_definition_commit_reaches_the_same_structure_SSE_and_poll_cursor() {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();

@@ -11,6 +11,7 @@
     [Parameter] public ProjectWriteAdmission? Admission { get; set; }
     [Parameter] public ProjectStructureChangeCursor? InitialCursor { get; set; }
     [Parameter] public IReadOnlyCollection<Guid> ProjectIds { get; set; } = [];
+    [Parameter] public Func<ProjectStructureChange, bool>? CanAutoRefresh { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
     [CascadingParameter] public Task<AuthenticationState>? Authentication { get; set; }
 
@@ -67,7 +68,7 @@
                     if (contextId != Inbox.ContextId || cancellationToken.IsCancellationRequested) {
                         return;
                     }
-                    Inbox.Receive(batch, Session.Id);
+                    Inbox.Receive(batch, Session.Id, CanAutoRefresh);
                     if (batch.Changes.Count > 0 || batch.RequiresRefresh) {
                         await Changed.InvokeAsync();
                     }

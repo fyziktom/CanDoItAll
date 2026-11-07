@@ -150,6 +150,24 @@ public sealed class ProjectStructureChangeTests {
     }
 
     [Fact]
+    public void Visible_chat_changes_are_quiet_but_do_not_acknowledge_pending_peer_changes() {
+        var inbox = Inbox();
+        var origin = new ProjectStructureChatChangeOrigin(project, Guid.NewGuid());
+        bool IsCurrentChat(ProjectStructureChange change) => change.ChatOrigin == origin;
+        feed.Publish(profile, project, Guid.NewGuid(), "Agent", [new("agent", "Agent result", ProjectStructureChangeKind.Created)], origin);
+
+        inbox.Receive(Read(inbox.Cursor), actor.Id, IsCurrentChat);
+        Assert.True(inbox.CanAutoRefresh(IsCurrentChat));
+        Assert.False(inbox.Presentation.Window.IsVisible);
+
+        feed.Publish(profile, project, Guid.NewGuid(), "Peer", [new("peer", "Peer result", ProjectStructureChangeKind.Created)]);
+        inbox.Receive(Read(inbox.Cursor), actor.Id, IsCurrentChat);
+        Assert.False(inbox.CanAutoRefresh(IsCurrentChat));
+        Assert.True(inbox.Presentation.Window.IsVisible);
+        Assert.Equal(2, inbox.Presentation.Items.Count);
+    }
+
+    [Fact]
     public void Successful_refresh_removes_all_acknowledged_rows() {
         var inbox = Inbox();
         Publish("first");

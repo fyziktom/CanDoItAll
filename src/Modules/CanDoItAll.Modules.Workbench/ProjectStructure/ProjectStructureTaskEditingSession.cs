@@ -149,6 +149,8 @@ public sealed class ProjectStructureTaskEditingSessions(ProjectStructureTaskSnap
     internal ProjectStructureTaskEditorAccess CreateAccess(ProjectWriteAdmission project, Func<bool> isCurrent)
         => new(new(changes, access, new(projects.Scope, EditingOwner.ProjectStructure), logger), admissions, project, isCurrent);
 
+    internal bool HasOpenEditor(ProjectWriteAdmission? project) => openings.Any(opening => opening.Project == project);
+
     internal void ObserveHints(ProjectWriteAdmission? project, Func<string, ProjectStructureChangeCursor?> latest) {
         foreach (var opening in openings.Where(opening => opening.Project == project).ToArray()) {
             opening.ObserveHint(latest(opening.NodeId));

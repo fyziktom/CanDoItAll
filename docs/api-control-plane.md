@@ -151,9 +151,14 @@ SSE events are `project.structure.ready`, `project.structure.changed`,
 `project.structure.gap`, and `stream.heartbeat`, all carrying the polling response.
 The initial ready event can contain replayed changes. Idle heartbeats recheck the
 profile every 15 seconds; a profile switch emits a gap and closes the connection.
-Both transports expose node keys, labels, change kinds, editor session identities,
+Both transports expose node keys, labels, change kinds, editor session or execution identities,
 actor labels, and UTC timestamps. Change kinds are JSON integers: Created=0,
 Updated=1, Deleted=2, RelationshipChanged=3.
+
+Agent node commits use this feed. Project-scoped process lifecycle and step progress
+publish hints for the run node after projection, using the run's current project
+lifetime. The floating chat can refresh its own changes in place when Structure has
+no active editor or write. Other changes appear in Structure updates.
 
 The feed retains the latest 512 committed batches in one Web process. View-state saves
 and projection reads do not publish notifications. It is a refresh feed rather than a

@@ -169,12 +169,15 @@ public partial class ProjectStructurePage
         _ => Task.CompletedTask
     };
 
-    private Task HandleStructureInboxChangedAsync() {
+    private async Task HandleStructureInboxChangedAsync() {
         if (composerOpening?.Session is { } session) {
             session.ObserveHint(changeInbox.LatestFor(session.Baseline.Id));
         }
         TaskEditingSessions.ObserveHints(surface?.ExpectedProjectAdmission, changeInbox.LatestFor);
-        return InvokeAsync(StateHasChanged);
+        if (changeInbox.CanAutoRefresh(CanAutoRefreshAgentChange)) {
+            await RefreshStructureChangesAsync(new(changeInbox.ContextId, null), automatic: true);
+        }
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleStructureChangesAsync(StructureChangesIntent intent) {
@@ -185,7 +188,13 @@ public partial class ProjectStructurePage
             changeInbox.SetWindow(window.State);
             return;
         }
-        if (intent is not StructureChangesRefreshIntent refresh || !changeInbox.BeginRefresh(out var through)) {
+        if (intent is StructureChangesRefreshIntent refresh) {
+            await RefreshStructureChangesAsync(refresh);
+        }
+    }
+
+    private async Task RefreshStructureChangesAsync(StructureChangesRefreshIntent refresh, bool automatic = false) {
+        if (!changeInbox.BeginRefresh(out var through)) {
             return;
         }
         var contextId = changeInbox.ContextId;
@@ -194,7 +203,8 @@ public partial class ProjectStructurePage
         var requestedView = structureViewIndex;
         var published = false;
         try {
-            await ReloadSurfaceAsync(canPublish: () => contextId == changeInbox.ContextId && IsCurrentAction(context),
+            await ReloadSurfaceAsync(canPublish: () => contextId == changeInbox.ContextId && IsCurrentAction(context) &&
+                    (!automatic || changeInbox.CanAutoRefresh(CanAutoRefreshAgentChange)),
                 onPublished: () => published = true, preserveEditorDrafts: true);
             if (!published || contextId != changeInbox.ContextId || !IsCurrentAction(context)) {
                 return;
@@ -227,7 +237,11 @@ public partial class ProjectStructurePage
             }
         } finally {
             if (contextId == changeInbox.ContextId && changeInbox.IsBusy) {
-                changeInbox.FailRefresh("The workspace changed during refresh. Reopen the project before continuing.");
+                if (automatic) {
+                    changeInbox.DeferRefresh();
+                } else {
+                    changeInbox.FailRefresh("The workspace changed during refresh. Reopen the project before continuing.");
+                }
             }
         }
     }

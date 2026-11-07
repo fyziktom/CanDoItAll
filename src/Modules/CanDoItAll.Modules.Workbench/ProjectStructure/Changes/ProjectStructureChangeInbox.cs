@@ -38,7 +38,7 @@ public sealed class ProjectStructureChangeInbox {
         window = new() { IsVisible = false };
     }
 
-    public void Receive(ProjectStructureChanges batch, Guid ownSessionId) {
+    public void Receive(ProjectStructureChanges batch, Guid ownSessionId, Func<ProjectStructureChange, bool>? canAutoRefresh = null) {
         if (Cursor is not null && Cursor.StreamId != batch.Cursor.StreamId) {
             items.Clear();
             acknowledged = 0;
@@ -55,10 +55,17 @@ public sealed class ProjectStructureChangeInbox {
         if (items.Count > MaximumItems) {
             items.RemoveRange(MaximumItems, items.Count - MaximumItems);
         }
-        if (remote.Length > 0 || batch.RequiresRefresh) {
-            window.IsVisible = true;
-            window.IsMinimized = false;
+        if (batch.RequiresRefresh || remote.Length > 0 && !CanAutoRefresh(canAutoRefresh)) {
+            ShowUpdates();
         }
+    }
+
+    public bool CanAutoRefresh(Func<ProjectStructureChange, bool>? canRefresh) =>
+        !replayLost && items.Count is > 0 and < MaximumItems && canRefresh is not null && items.All(canRefresh);
+
+    public void ShowUpdates() {
+        window.IsVisible = true;
+        window.IsMinimized = false;
     }
 
     public void SetWindow(CanvasWorkbenchWindowState state) => window = CanvasWorkbenchWindowState.Normalize(state);
@@ -113,6 +120,11 @@ public sealed class ProjectStructureChangeInbox {
         IsBusy = false;
         Message = message;
         window.IsVisible = true;
+    }
+
+    public void DeferRefresh() {
+        IsBusy = false;
+        ShowUpdates();
     }
 
     private static string Label(ProjectStructureChangeKind kind) => kind switch {

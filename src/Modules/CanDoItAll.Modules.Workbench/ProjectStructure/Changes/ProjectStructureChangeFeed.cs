@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -20,14 +21,18 @@ public sealed record ProjectStructureChangedNode(
     [property: Description("Node display label captured at commit, including for a deleted node; this hint is not current node content.")] string Title,
     [property: Description("Committed change kind as a JSON integer: 0 Created, 1 Updated, 2 Deleted, 3 RelationshipChanged.")] ProjectStructureChangeKind Kind);
 
-[Description("One committed change, shared by polling and SSE. SessionId identifies its editor session, not authorization. Nodes can include deleted nodes.")]
+[Description("One committed structure or projection change, shared by polling and SSE. Nodes can include deleted nodes.")]
 public sealed record ProjectStructureChange(
     [property: Description("Server-issued sequence of this committed change within the current process feed.")] long Sequence,
     [property: Description("GUID of the project whose committed structure contribution produced this hint.")] Guid ProjectId,
-    [property: Description("Originating editor-session GUID for identifying own hints; it is not authentication or authorization.")] Guid SessionId,
+    [property: Description("Originating editor session or execution GUID for identifying the source of a change.")] Guid SessionId,
     [property: Description("Originating actor display label, intended only for the update notice and not as proof of authority.")] string Actor,
     [property: Description("Server commit-notification instant with UTC offset; this is not an audit-log ordering guarantee.")] DateTimeOffset OccurredAtUtc,
-    [property: Description("Changed node keys, labels and kinds captured for this commit; refresh canonical Structure before acting on current content.")] IReadOnlyList<ProjectStructureChangedNode> Nodes);
+    [property: Description("Changed node keys, labels and kinds captured for this commit; refresh canonical Structure before acting on current content.")] IReadOnlyList<ProjectStructureChangedNode> Nodes) {
+    internal ProjectStructureChatChangeOrigin? ChatOrigin { get; init; }
+}
+
+internal readonly record struct ProjectStructureChatChangeOrigin(Guid ProjectId, Guid ChatSessionId);
 
 [Description("A page of committed changes. Save Cursor for the next poll. RequiresRefresh means replay was lost or the server restarted. A request without a cursor starts at the current position without historical notifications.")]
 public sealed record ProjectStructureChanges(
@@ -77,14 +82,30 @@ public sealed class ProjectStructureChangeFeed {
 
     internal void Publish(Guid profileId, Guid projectId, ProjectStructureChangeSession session,
         IReadOnlyList<ProjectStructureChangedNode> nodes) {
+        if (WorkspaceExecutionAuditContext.Current is not { } execution) {
+            Publish(profileId, projectId, session.Id, session.Actor, nodes);
+            return;
+        }
+
+        var chat = execution.ChatSessionId is { } chatSessionId &&
+            execution.SourceKind == ProjectStructureAccessState.ProjectStructureSourceKind &&
+            Guid.TryParse(execution.SourceId, out var sourceProjectId)
+                ? new ProjectStructureChatChangeOrigin(sourceProjectId, chatSessionId)
+                : (ProjectStructureChatChangeOrigin?)null;
+        var actor = string.IsNullOrEmpty(execution.ProcessRunId) ? "Agent" : "Process agent";
+        Publish(profileId, projectId, execution.ExecutionRunId, actor, nodes, chat);
+    }
+
+    internal void Publish(Guid profileId, Guid projectId, Guid sourceId, string actor,
+        IReadOnlyList<ProjectStructureChangedNode> nodes, ProjectStructureChatChangeOrigin? chat = null) {
         if (nodes.Count == 0) {
             return;
         }
         TaskCompletionSource signal;
         lock (sync) {
-            var actor = string.IsNullOrWhiteSpace(session.Actor) ? "Another editor" : session.Actor.Trim();
-            entries.Enqueue((profileId, new(++sequence, projectId, session.Id, actor[..Math.Min(actor.Length, 160)],
-                DateTimeOffset.UtcNow, nodes.ToArray())));
+            var label = string.IsNullOrWhiteSpace(actor) ? "Another editor" : actor.Trim();
+            entries.Enqueue((profileId, new(++sequence, projectId, sourceId, label[..Math.Min(label.Length, 160)],
+                DateTimeOffset.UtcNow, nodes.ToArray()) { ChatOrigin = chat }));
             while (entries.Count > Capacity) {
                 entries.Dequeue();
             }

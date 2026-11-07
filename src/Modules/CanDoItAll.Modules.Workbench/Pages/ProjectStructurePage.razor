@@ -59,7 +59,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
 <ProjectStructureChangeObserver Inbox="@changeInbox" Admission="@(surface?.ProjectId == ProjectId ? surface.ExpectedProjectAdmission : null)"
                                 InitialCursor="@changeBaseline" ProjectIds="@(surface?.HierarchyAdmissions.Keys.ToArray() ?? [])"
-                                Changed="HandleStructureInboxChangedAsync" />
+                                CanAutoRefresh="CanAutoRefreshAgentChange" Changed="HandleStructureInboxChangedAsync" />
 
 <StructureComposerLeaveGuard @ref="composerLeaveGuard" IsOpen="@(composerOpening is not null)"
                              OpeningId="@(composerOpening?.Ownership.Id ?? Guid.Empty)" Review="@(composerOpening?.Session?.Review)"
@@ -72,12 +72,12 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                           SelectedNodes="@(surface is not null && structureViewIndex == CanvasViewIndex ? selectedNodes : [])"
                                           GanttObservation="@(structureViewIndex == GanttViewIndex ? ganttObservation : null)"
                                           ContextNavigationIdentity="@AgentChatNavigationFence"
-                                          ContextAccessState="@agentChatContextAccessState"
-                                          RefreshRequested="HandleAgentExecutionCompletedAsync" />
+                                          ContextAccessState="@agentChatContextAccessState" />
 
 @{
+    var hasVisibleAgentChat = FloatingAgentChats.Snapshot().VisibleChat is not null;
     RenderFragment updatesToggle = @<Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
-                                             aria-label="Structure updates" title="Show changes from other editors" data-testid="project-structure-changes-toggle"
+                                             aria-label="Structure updates" title="Show structure updates" data-testid="project-structure-changes-toggle"
                                              Click="@(() => changeInbox.ToggleWindow())" />;
 }
 <StructureWorkspace @ref="workbenchRef" @key="StructureContextId" Presentation="@BuildStructurePresentation()" SelectedView="@structureViewIndex" Dispatch="HandleStructureIntentAsync" ConfirmComposerClose="ConfirmComposerCloseAsync" Dialogs="@BuildStructureDialogs()" DialogIntent="HandleStructureDialogIntentAsync"
@@ -108,7 +108,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                     <OverlayContent>
                         @if (IsGanttViewVisible) {
                             <StructureChangesWindow Presentation="@changeInbox.Presentation" Dispatch="HandleStructureChangesAsync"
-                                                    ContainerSelector="[data-cda-overlay-container]" DefaultPlacement="top-right" />
+                                                    ContainerSelector="[data-cda-overlay-container]" DefaultPlacement="@(hasVisibleAgentChat ? "top-center" : "top-right")" />
                         }
                     </OverlayContent>
                 </ProjectStructureGanttPanel>
@@ -118,7 +118,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     </Insights>
     <SupportWindows>
                         @if (structureViewIndex == CanvasViewIndex) {
-                            <StructureChangesWindow Presentation="@changeInbox.Presentation" Dispatch="HandleStructureChangesAsync" />
+                            <StructureChangesWindow Presentation="@changeInbox.Presentation" Dispatch="HandleStructureChangesAsync"
+                                                    DefaultPlacement="@(hasVisibleAgentChat ? "top-center" : "top-left")" />
                         }
                         @if (ObjectIndexWindowState.IsVisible)
                         {

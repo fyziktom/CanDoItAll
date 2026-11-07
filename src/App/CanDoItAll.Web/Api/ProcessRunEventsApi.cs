@@ -39,7 +39,8 @@ public sealed record ProcessApiRunEvent(
 internal sealed class ApiNotifyingProcessRuntimeProjector(
     IProcessRuntimeProjector inner,
     ProfileBoundedReplayEventStream<ProcessApiRunEvent> eventStream,
-    ILogger<ApiNotifyingProcessRuntimeProjector> logger) : IProcessRuntimeProjector
+    ILogger<ApiNotifyingProcessRuntimeProjector> logger,
+    Func<ProcessStoredRuntimeEvent, CancellationToken, Task> publishStructureChange) : IProcessRuntimeProjector
 {
     public ProcessProjectorName ProjectorName => inner.ProjectorName;
 
@@ -64,6 +65,13 @@ internal sealed class ApiNotifyingProcessRuntimeProjector(
                 "Failed to publish process API event {ProcessEventId} at global sequence {GlobalSequence}.",
                 runtimeEvent.Envelope.EventId,
                 runtimeEvent.GlobalSequence);
+        }
+
+        try {
+            await publishStructureChange(runtimeEvent, cancellationToken).ConfigureAwait(false);
+        } catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested) {
+            logger.LogWarning(exception, "Failed to publish a Structure update for process event {ProcessEventId} at global sequence {GlobalSequence}.",
+                runtimeEvent.Envelope.EventId, runtimeEvent.GlobalSequence);
         }
     }
 

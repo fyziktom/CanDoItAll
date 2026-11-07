@@ -118,6 +118,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureTaskEditingSessions>();
         services.AddSingleton<ProjectStructureChangeFeed>();
         services.AddScoped<ProjectStructureChangeSession>();
+        services.AddScoped<ProjectStructureProcessChanges>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProjectCommittedChangeSink, ProjectDefinitionStructureChanges>());
         services.AddScoped<ProjectWorkAssignmentStructureChanges>();
         services.AddScoped<IProjectWorkAssignmentCommands, ProjectWorkAssignmentService>();

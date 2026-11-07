@@ -6,7 +6,7 @@
 @if (view.Window.IsVisible) {
     <CanvasFloatingWindow WindowId="project-structure.changes" TestId="project-structure-changes-window"
                           AriaLabel="Project structure updates" Kicker="Collaboration" Title="Structure updates"
-                          Summary="Changes from other editors" DefaultPlacement="@DefaultPlacement" DefaultWidth="420" DefaultHeight="350"
+                          Summary="Changes from editors, agents, and processes" DefaultPlacement="@DefaultPlacement" DefaultWidth="420" DefaultHeight="350"
                           ContainerSelector="@ContainerSelector"
                           MinWidth="340" MinHeight="230" MaxWidth="580" MaxHeight="650" State="view.Window"
                           StateChanged="@(state => dispatch.InvokeAsync(new StructureChangesWindowIntent(view.ContextId, state)))">
@@ -21,11 +21,11 @@
                 <TextBlock TextStyle="TextStyle.Note" Value="@view.Message" role="status" />
             }
             @if (view.Items.Count == 0) {
-                <TextBlock TextStyle="TextStyle.Body2" Value="Updates from other editors will appear here. Your own changes do not open this window." />
+                <TextBlock TextStyle="TextStyle.Body2" Value="Updates from other sessions and background work appear here." />
             } else {
                 <TextBlock TextStyle="TextStyle.Note" Value="Choose an update to refresh and select its changed nodes." />
                 <Stack Class="structure-changes__list" GapScale="LayoutGap.Tiny" AlignItems="AlignItems.Stretch"
-                       Style="min-height:0;overflow-y:auto;flex:1" role="log" aria-label="Changes from other editors" aria-live="polite">
+                       Style="min-height:0;overflow-y:auto;flex:1" role="log" aria-label="Structure updates" aria-live="polite">
                     @foreach (var item in view.Items) {
                         <Button @key="item.Sequence" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Class="structure-changes__item"
                                 Style="width:100%;justify-content:flex-start;text-align:left;white-space:normal;overflow-wrap:anywhere;flex-shrink:0"
