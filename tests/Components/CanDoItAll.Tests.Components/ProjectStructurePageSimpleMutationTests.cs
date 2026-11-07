@@ -59,14 +59,13 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
-    public async Task Agent_completion_reload_preserves_immediate_canvas_selection_without_capturing_javascript_state()
+    public async Task Visible_agent_commit_preserves_immediate_canvas_selection_without_capturing_javascript_state()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var registry = harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>();
-        var notificationHub = harness.Context.Services.GetRequiredService<IAgentChatExecutionNotificationHub>();
-        var projectId = await CreateProjectAsync(projectsService, "Agent completion selection refresh");
+        var chats = harness.Context.Services.GetRequiredService<IActiveAgentChatRegistry>();
+        var projectId = await CreateProjectAsync(projectsService, "Agent commit selection refresh");
         var rootNodeId = $"project:{projectId}";
         var selectedNode = await workbenchService.CreateObjectAsync(
             projectId,
@@ -79,6 +78,8 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
                 420,
                 240));
         await SaveSelectedNodeStateAsync(workbenchService, projectId, rootNodeId);
+        var agent = new AgentChatIdentity(Guid.NewGuid(), "Structure agent", null, null);
+        var chat = chats.Open(agent, Guid.NewGuid(), FloatingAgentChatSettings.Default);
 
         var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
@@ -89,32 +90,23 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
             JsonSerializer.Serialize(new[] { selectedNode.Id }),
             1));
 
-        var refreshedNode = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Note,
-                "Created by agent",
-                "Completion refresh",
-                "Authoritative data loaded after agent completion.",
-                rootNodeId,
-                660,
-                240));
-        var contextSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
-        var publishTask = notificationHub.PublishAsync(new AgentChatExecutionCompleted(
-            contextSnapshot.Scope.Id,
-            contextSnapshot.Scope.Source,
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            DateTimeOffset.UtcNow));
-
-        await publishTask.WaitAsync(TimeSpan.FromSeconds(10));
+        var now = DateTimeOffset.UtcNow;
+        ProjectStructureNode refreshedNode;
+        using (WorkspaceExecutionAuditContext.BeginScope(new ExecutionRunRecord(
+            Guid.NewGuid(), chat.Agent.AgentId, chat.ChatSessionId, "Structure commit",
+            AgentChatTrustedSourceKinds.ProjectStructure, projectId.ToString("D"),
+            string.Empty, string.Empty, string.Empty, string.Empty, "{}", string.Empty, string.Empty,
+            "fixture", "fixture", ExecutionState.Running, null, now, now, now, null, string.Empty, null, []))) {
+            refreshedNode = await workbenchService.CreateObjectAsync(projectId, new(
+                ProjectObjectType.Note, "Created by agent", "", "", rootNodeId, 660, 240));
+        }
 
         cut.WaitForAssertion(() =>
         {
             var reloadedWorkbench = cut.FindComponent<CanvasWorkbench>();
             Assert.Contains(reloadedWorkbench.Instance.Surface.Nodes, node => node.Id == refreshedNode.Id);
             Assert.Equal(new[] { selectedNode.Id }, reloadedWorkbench.Instance.Surface.UiState.SelectedNodeIds);
+            Assert.Empty(cut.FindAll("[data-testid='project-structure-changes-window']"));
         });
         Assert.DoesNotContain(
             harness.Context.JSInterop.Invocations,
