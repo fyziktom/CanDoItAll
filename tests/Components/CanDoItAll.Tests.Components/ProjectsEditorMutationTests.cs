@@ -337,6 +337,7 @@ public sealed class ProjectsEditorMutationTests {
             Assert.Equal(ProjectEditorMutationState.Ready, draft.Mutation);
             Assert.Empty(draft.StarterObjects);
             Assert.NotEmpty(cut.FindAll("[data-testid='projects-read-error']"));
+            controls.FailPortfolioReads = false;
             await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent == "Retry project reads").ClickAsync(new()));
         }
         Assert.Equal(1, controls.SeedCalls);
@@ -598,8 +599,14 @@ public sealed class ProjectsEditorMutationTests {
         Assert.Equal("not-a-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
         Assert.True(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled"));
 
-        controls.FailNextRead = 1;
-        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
+        await cut.InvokeAsync(async () => {
+            controls.FailActionReads.Value = true;
+            try {
+                await cut.Find("[data-testid='project-conflict-read']").ClickAsync(new());
+            } finally {
+                controls.FailActionReads.Value = false;
+            }
+        });
         Assert.Equal(ProjectEditorConflictReadState.Failed, original.Conflict.ReadState);
         Assert.Equal(originalExpectation, original.Model.ExpectedDefinition);
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
@@ -755,7 +762,7 @@ public sealed class ProjectsEditorMutationTests {
         public bool SeedSqlObserved { get; set; }
         public WorkbenchDbContext? SeedContext { get; set; }
         public Action? RevokeWriteAccess { get; set; }
-        public int FailNextRead;
+        public AsyncLocal<bool> FailActionReads { get; } = new();
         public int HoldNextRead;
         public int HeldPortfolioReads;
         public volatile bool FailPortfolioReads;
@@ -828,7 +835,7 @@ public sealed class ProjectsEditorMutationTests {
                 throw new IOException("Injected lost seed acknowledgement after the native transaction committed.");
             }
             if (controls.FailReadAfterSeed) {
-                Interlocked.Exchange(ref controls.FailNextRead, 1);
+                controls.FailPortfolioReads = true;
             }
         }
     }
@@ -859,8 +866,8 @@ public sealed class ProjectsEditorMutationTests {
                 controls.Started.TrySetResult();
                 await controls.Release.Task;
             }
-            if (Interlocked.Exchange(ref controls.FailNextRead, 0) == 1) {
-                throw new IOException("Injected optional Projects read failure after native effects committed.");
+            if (controls.FailActionReads.Value) {
+                throw new IOException("Injected Projects editor read failure.");
             }
             return await inner.CreateDbContextAsync(cancellationToken);
         }
@@ -869,7 +876,7 @@ public sealed class ProjectsEditorMutationTests {
     private sealed class HeldPortfolioContext(IProjectPartyIntegrationBridge inner, Controls controls) : IProjectPartyIntegrationBridge {
         public async Task<IReadOnlyDictionary<Guid, ProjectPortfolioPartyContext>> GetPortfolioContextsAsync(IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken = default) {
             if (controls.FailPortfolioReads) {
-                throw new IOException("Injected Projects portfolio read failure after native deletion committed.");
+                throw new IOException("Injected Projects portfolio read failure after native effects committed.");
             }
             var result = await inner.GetPortfolioContextsAsync(projectIds, cancellationToken);
             if (controls.HeldPortfolioReads > 0) {
