@@ -9,7 +9,7 @@ internal enum MafWorkspaceScriptIntent {
 }
 
 internal static class MafWorkspaceScriptIntentResolver {
-    internal const string ManifestGuidance = "Use sideEffectManifest {\"mode\":\"NoMutation\"} for a validation script with no writes. For scripts that write, declare the applicable write mode and exact declaredWritePaths.";
+    internal const string ManifestGuidance = "Use sideEffectManifest {\"mode\":\"NoMutation\"} for a read-only file or HTTP check, with no outputPaths. Keep runtime cleanup out of verification scripts: stop owned dotnet or static hosts separately with workspace_dotnet_stop and their startup.json receipt, even after a failed check. For scripts that write, use the applicable declared mode and exact declaredWritePaths; ProductMutation is not a validation mode.";
 
     public static MafWorkspaceScriptIntent Resolve(ToolInvocationPolicyContext context) {
         if (context.DeclaredCapability?.OperationRequirementKind != ToolCapabilityOperationRequirementKind.WorkspaceScript ||

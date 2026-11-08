@@ -38,6 +38,17 @@ and uses the existing stop tool. The host provides explicit SPA fallback and
 revalidation headers as disposable test infrastructure, without claiming to prove
 any separately requested production deployment.
 
+Keep supplemental HTTP/file verification separate from runtime cleanup. Script tools
+expose the typed side-effect manifest, reject unknown fields before execution, and
+accept `NoMutation` only when inspection proves the check has no side effects. A
+failed read-only check can be corrected and rerun; an uncertain product mutation
+still blocks completion. Startup results identify the exact
+`workspace_dotnet_stop(startupReceiptPath: ...)` call for that host. The stop tool
+supports both dotnet-run and static hosts, including cleanup after failed checks.
+Do not mix process termination into a validation script or substitute a PID for
+the owned startup receipt. The managed .NET delivery skill is versioned so existing
+catalogs receive this contract on their next seed normalization.
+
 The design composes a registered provider with command planning and the existing
 lifecycle. An arbitrary shell grant would widen QA authority; adding launch scripts
 or changing the sample application would transfer responsibility to the observer.

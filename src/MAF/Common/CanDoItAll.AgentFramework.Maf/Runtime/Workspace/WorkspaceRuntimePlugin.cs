@@ -148,7 +148,7 @@ internal sealed class WorkspaceRuntimePlugin(
                 targetFramework);
         }
 
-        public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, object? sideEffectManifest = null)
+        public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, GovernedScriptSideEffectManifest? sideEffectManifest = null)
         {
             var allowedPath = PrepareLocalScriptReadPath(path) ?? path;
             var allowedWorkingDirectory = PrepareLocalScriptReadPath(workingDirectory);
@@ -156,7 +156,7 @@ internal sealed class WorkspaceRuntimePlugin(
             return commandExecutionService.PythonRunFile(allowedPath, allowedArguments, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest), accessSettings.CanScriptsReadEnvironment);
         }
 
-        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, object? sideEffectManifest = null)
+        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, GovernedScriptSideEffectManifest? sideEffectManifest = null)
         {
             var allowedPath = PrepareLocalScriptReadPath(path) ?? path;
             var allowedWorkingDirectory = PrepareLocalScriptReadPath(workingDirectory);
@@ -547,19 +547,8 @@ internal sealed class WorkspaceRuntimePlugin(
             return string.IsNullOrWhiteSpace(fileName) ? "image" : fileName;
         }
 
-        private static string? NormalizeScriptSideEffectManifest(object? sideEffectManifest)
-        {
-            return sideEffectManifest switch
-            {
-                null => null,
-                string value => value,
-                JsonElement { ValueKind: JsonValueKind.Null } => null,
-                JsonElement { ValueKind: JsonValueKind.Undefined } => null,
-                JsonElement { ValueKind: JsonValueKind.String } value => value.GetString(),
-                JsonElement value => value.GetRawText(),
-                _ => JsonSerializer.Serialize(sideEffectManifest, sideEffectManifest.GetType(), ScriptManifestJsonOptions)
-            };
-        }
+        private static string? NormalizeScriptSideEffectManifest(GovernedScriptSideEffectManifest? sideEffectManifest)
+            => sideEffectManifest is null ? null : JsonSerializer.Serialize(sideEffectManifest, ScriptManifestJsonOptions);
 
         private static JsonSerializerOptions CreateScriptManifestJsonOptions()
         {

@@ -489,16 +489,16 @@ internal sealed class WorkspaceCommandPlanBuilder
         if (string.IsNullOrWhiteSpace(startupReceiptPath))
         {
             throw WorkspaceCommandInputException.Create(
-                "workspace_dotnet_stop requires the startup.json path returned by workspace_dotnet_run.",
-                "Provide the workspace-relative startup.json receipt path returned by workspace_dotnet_run.");
+                "workspace_dotnet_stop requires the startup.json path returned by workspace_dotnet_run or workspace_static_serve.",
+                "Provide the workspace-relative startup.json receipt path returned by the owned host's launch tool.");
         }
 
         var startupReceipt = ResolveExistingWorkspacePath(startupReceiptPath, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetFileName(startupReceipt.FullPath), "startup.json", StringComparison.OrdinalIgnoreCase))
         {
             throw WorkspaceCommandInputException.Create(
-                $"workspace_dotnet_stop requires a startup.json receipt produced by workspace_dotnet_run. Received '{startupReceipt.RelativePath}'.",
-                "The supplied path is not a startup.json receipt. Use the receipt returned by workspace_dotnet_run.");
+                $"workspace_dotnet_stop requires a startup.json receipt produced by workspace_dotnet_run or workspace_static_serve. Received '{startupReceipt.RelativePath}'.",
+                "The supplied path is not a startup.json receipt. Use the receipt returned by the owned host's launch tool.");
         }
 
         var boundedTimeoutSeconds = Math.Clamp(timeoutSeconds, 1, 120);

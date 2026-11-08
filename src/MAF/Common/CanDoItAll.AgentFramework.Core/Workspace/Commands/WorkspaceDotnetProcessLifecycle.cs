@@ -95,7 +95,7 @@ internal sealed class WorkspaceDotnetProcessLifecycle
                 var snapshot = session.CaptureOutput();
                 WriteOutputLogs(lifecycle, snapshot);
                 var message = lifecycle.KeepAlive
-                    ? $"Application started and {lifecycle.ProbeUrl} returned success. The owned process remains available through workspace_dotnet_stop."
+                    ? $"Application started and {lifecycle.ProbeUrl} returned success. Stop this owned host with workspace_dotnet_stop(startupReceiptPath: \"{lifecycle.StartupReceiptRelativePath}\"), even after a failed check. Keep verification scripts read-only; do not terminate this host by PID."
                     : $"Application started and {lifecycle.ProbeUrl} returned success. The owned process was stopped after smoke validation.";
 
                 WorkspaceProcessExecutionResult processResult;
@@ -149,7 +149,10 @@ internal sealed class WorkspaceDotnetProcessLifecycle
                 {
                     Stdout = AppendJson(processResult.Stdout, startupJson)
                 };
-                return processRunner.CreateExecutionResult(plan, processResult, environmentVariables.Keys);
+                var result = processRunner.CreateExecutionResult(plan, processResult, environmentVariables.Keys);
+                return result.Succeeded
+                    ? result with { Message = $"{result.Message} {SensitiveTextRedactor.Redact(message)}" }
+                    : result;
             }
 
             WorkspaceProcessExecutionResult failedResult;

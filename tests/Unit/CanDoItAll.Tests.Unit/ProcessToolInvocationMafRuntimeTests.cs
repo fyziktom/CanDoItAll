@@ -17,16 +17,21 @@ public sealed class ProcessToolInvocationMafRuntimeTests {
     private const string FinalContent = "Status: Completed\nCurrent execution evidence was recorded after review.";
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Failed_validation_allows_completion_only_with_an_inspected_no_mutation_declaration(bool declaresValidation) {
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    public async Task Failed_validation_allows_completion_only_with_an_inspected_no_mutation_declaration(bool declaresValidation, bool powerShell) {
         var directory = Directory.CreateTempSubdirectory(nameof(ProcessToolInvocationMafRuntimeTests));
         RuntimeCapabilityState? capabilities = null;
         try {
-            const string script = "artifacts/process-runs/run-a/verify.py";
+            var script = $"artifacts/process-runs/run-a/verify.{(powerShell ? "ps1" : "py")}";
+            var scriptTool = powerShell ? ToolContractCatalog.WorkspacePowerShellRunScript : ToolContractCatalog.WorkspacePythonRunFile;
             var scriptFile = Path.Combine(directory.FullName, script);
             Directory.CreateDirectory(Path.GetDirectoryName(scriptFile)!);
-            await File.WriteAllTextAsync(scriptFile, "raise AssertionError('validation did not pass')");
+            await File.WriteAllTextAsync(scriptFile, powerShell
+                ? "Invoke-WebRequest -Uri 'http://127.0.0.1:5000/missing.js' -ErrorAction Stop"
+                : "raise AssertionError('validation did not pass')");
             var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
             services.AddLogging();
             services.AddSingleton<IToolInvocationPolicyContextContributor, ProcessToolInvocationPolicyContextContributor>();
@@ -42,6 +47,13 @@ public sealed class ProcessToolInvocationMafRuntimeTests {
                 original.ArtifactToolService, original.ImageOperationService, commands, original.ExternalTargetPathRegistry, [commandService]);
             capabilities = await composer.CreateCapabilityStateAsync(agent, profile, [], [], workspace,
                 static (_, _, _) => Task.CompletedTask, CancellationToken.None, suppressApprovalRequirements: true);
+            var tool = Assert.IsAssignableFrom<AIFunction>(Assert.Single(capabilities.Tools, tool => tool.Name == scriptTool));
+            var manifestSchema = tool.JsonSchema.GetProperty("properties").GetProperty(GovernedScriptSideEffectManifest.ArgumentName);
+            var properties = manifestSchema.GetProperty("properties");
+            Assert.Contains(properties.GetProperty("mode").GetProperty("enum").EnumerateArray(),
+                item => item.GetString() == nameof(GovernedScriptSideEffectMode.NoMutation));
+            Assert.True(properties.TryGetProperty("declaredWritePaths", out _));
+            Assert.False(manifestSchema.GetProperty("additionalProperties").GetBoolean());
 
             Dictionary<string, object?> ScriptArguments(string? mode) {
                 var arguments = new Dictionary<string, object?> { ["path"] = script };
@@ -52,10 +64,16 @@ public sealed class ProcessToolInvocationMafRuntimeTests {
             }
 
             using var client = new ReadWriteReadClient(index => index switch {
-                0 => ReadWriteReadClient.Call("malformed", ToolContractCatalog.WorkspacePythonRunFile, ScriptArguments("ReadOnly")),
-                1 => ReadWriteReadClient.Call("validation", ToolContractCatalog.WorkspacePythonRunFile,
+                0 => ReadWriteReadClient.Call("malformed", scriptTool, ScriptArguments("ReadOnly")),
+                1 => ReadWriteReadClient.Call("unknown-field", scriptTool, new() {
+                    ["path"] = script,
+                    [GovernedScriptSideEffectManifest.ArgumentName] = JsonSerializer.SerializeToElement(new {
+                        mode = nameof(GovernedScriptSideEffectMode.ProductMutation), allowedWriteRoots = Array.Empty<string>()
+                    })
+                }),
+                2 => ReadWriteReadClient.Call("validation", scriptTool,
                     ScriptArguments(declaresValidation ? nameof(GovernedScriptSideEffectMode.NoMutation) : null)),
-                2 => ReadWriteReadClient.Call("write", ToolContractCatalog.WorkspaceWriteFile,
+                3 => ReadWriteReadClient.Call("write", ToolContractCatalog.WorkspaceWriteFile,
                     new() { ["path"] = PrimaryRef, ["content"] = FinalContent, ["overwrite"] = true }),
                 _ => new(new ChatMessage(ChatRole.Assistant, "completed"))
             });
@@ -78,13 +96,16 @@ public sealed class ProcessToolInvocationMafRuntimeTests {
             Assert.Equal("completed", result.Text);
             Assert.Equal(1, commands.Invocations);
             var traces = recorder.Snapshot();
-            Assert.Equal(3, traces.Count);
-            Assert.Equal(ToolInvocationClassification.Validation, traces[0].Classification);
-            Assert.Equal(AgentToolEffectState.NotCommitted, traces[0].EffectState);
-            Assert.Equal(AgentToolInvocationOutcome.Failed, traces[1].Outcome);
-            Assert.Equal(declaresValidation ? ToolInvocationClassification.Validation : ToolInvocationClassification.Mutation, traces[1].Classification);
-            Assert.Equal(declaresValidation ? AgentToolEffectState.None : AgentToolEffectState.Unknown, traces[1].EffectState);
-            Assert.Equal(AgentToolEffectState.Committed, traces[2].EffectState);
+            Assert.Equal(4, traces.Count);
+            Assert.All(traces.Take(2), trace => {
+                Assert.Equal(ToolInvocationClassification.Validation, trace.Classification);
+                Assert.Equal(AgentToolEffectState.NotCommitted, trace.EffectState);
+                Assert.Equal(AgentToolInvocationOutcome.Failed, trace.Outcome);
+            });
+            Assert.Equal(AgentToolInvocationOutcome.Failed, traces[2].Outcome);
+            Assert.Equal(declaresValidation ? ToolInvocationClassification.Validation : ToolInvocationClassification.Mutation, traces[2].Classification);
+            Assert.Equal(declaresValidation ? AgentToolEffectState.None : AgentToolEffectState.Unknown, traces[2].EffectState);
+            Assert.Equal(AgentToolEffectState.Committed, traces[3].EffectState);
             Assert.Equal(declaresValidation ? ExecutionState.Completed : ExecutionState.Failed,
                 AgentToolCompletionAssessment.Create(traces, 0, portableOutputValid: true).State);
         } finally {

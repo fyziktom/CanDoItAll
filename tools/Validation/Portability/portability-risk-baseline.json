@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-07T13:22:45.464531+00:00",
+  "generated_utc": "2026-11-08T15:41:54.525600+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15806,
+  "allowance_count": 15805,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -916,6 +916,12 @@
     {
       "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
       "category": "absolute-path-field",
+      "source_fingerprint": "3d387a71d0fd9464e20a9bde876909090cf0f2d8da36b96bb86d13d9f00c1c7e",
+      "count": 1
+    },
+    {
+      "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
+      "category": "absolute-path-field",
       "source_fingerprint": "bf45d57ef3bb6d12c086506e540ce51eb040864c22285a3bcd3474b6878a4bf4",
       "count": 1
     },
@@ -928,25 +934,19 @@
     {
       "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
       "category": "shell-elevation",
-      "source_fingerprint": "9219489230b0a4a76afb0943f271e0428351a68045b0f7e9879828b286b95836",
+      "source_fingerprint": "916c0f3267a1e1b627b79bfab4f4cb565a00a1df785514acf697f9d6ca6feeea",
       "count": 1
     },
     {
       "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
       "category": "windows-executable",
-      "source_fingerprint": "137e283e43491784b3e1cb55bcf641eb42287cba0445701570d766f60eba34a5",
+      "source_fingerprint": "686c52f49bcb4eec3c92383311946f17fe333b3a6401cada2c344ae6da83a0fd",
       "count": 1
     },
     {
       "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
       "category": "windows-executable",
       "source_fingerprint": "8cb4e9665ac20f7ab960a4a20d26db56a2dd52eb00f8730d18aec51a3141895f",
-      "count": 1
-    },
-    {
-      "path": "Templates/Capabilities/skills/instructions/dotnet-app-delivery.md",
-      "category": "windows-path",
-      "source_fingerprint": "1bab28f51c644f4a32fb01461a21b1b2ddb7b912e2b008c9f87b66d722084cf8",
       "count": 1
     },
     {
@@ -30334,12 +30334,6 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/ToolCapabilityBuilder.Workspace.cs",
       "category": "shell-elevation",
-      "source_fingerprint": "122994d28fa923367c69cdaf177d883ac71745f951e5c46f3d60db56e88480af",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/ToolCapabilityBuilder.Workspace.cs",
-      "category": "shell-elevation",
       "source_fingerprint": "f243fb201bb78547d778610c4a5c517fc9fca028607126579563e8009b67b247",
       "count": 1
     },
@@ -32296,12 +32290,6 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "95e2304bc65c31d11620937899d2992b1fe1dbe5d65d4264b66370d506d1b791",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
-      "category": "absolute-path-field",
       "source_fingerprint": "99b7e7954f6209034240d845e81efecd2f606b36d197da638b5d281e463234eb",
       "count": 1
     },
@@ -32327,12 +32315,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "af58e28d34bb09315017f8f297f0907e5c956d7db2c8f867600206ed3a518993",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "b6f331adc1ae84ebf794f55457e4ce560b6e4c50f2a5270370aa73054968bf0e",
       "count": 1
     },
     {
@@ -32380,19 +32362,31 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "d6279dc928cad0bd29d2f58602bdd5b93f21c1058039c3b54e351a2c0748b68e",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "f6d73f56d771c5cc1105877ad3c8388be95d4ba28abf36bc0818245c1fe2fa57",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
-      "category": "shell-elevation",
-      "source_fingerprint": "2e58a8262db25efc2630785620c22a45396bdc68e1b3a0c15bf718f9419fe3f4",
+      "category": "absolute-path-field",
+      "source_fingerprint": "ff472356f0d8ee5cf1d835dea5eb4630c258bd070a82c0b8c278a977520066c1",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
       "category": "shell-elevation",
       "source_fingerprint": "4b1062ec4c3832f62a827aa631af2a01d35d21f1a7e4c9e2de06a588db6a9274",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs",
+      "category": "shell-elevation",
+      "source_fingerprint": "4ec5297ee609a49b7c5e57b58c83c589adbf5f1e0cc866e1c9b2fe5065876ec5",
       "count": 1
     },
     {

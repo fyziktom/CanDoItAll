@@ -23,7 +23,7 @@ namespace CanDoItAll.Tests.Integration.Processes;
 [Trait("Category", "HostPlatform")]
 public sealed class BlazorDeliveryLiveTests(ITestOutputHelper output) {
     private const string DefinitionKey = "blazor-app-delivery";
-    private const string Model = "gpt-6-sol";
+    private const string Model = "gpt-6.1-sol";
 
     [LiveBrowserQaFact]
     public Task Builtin_delivery_builds_Blazor_and_completes_browser_QA_and_structure_writeback()
@@ -95,7 +95,7 @@ public sealed class BlazorDeliveryLiveTests(ITestOutputHelper output) {
         var agents = roles.ToDictionary(role => role, role => seeds[role] with {
             Id = Guid.NewGuid(), Name = $"Owned {role}", RoleTitle = role, Status = AgentLifecycleStatus.Active,
             IsTemplate = false, TemplateKey = string.Empty, ProviderProfileId = provider.Id,
-            Model = deliveryBlock && role == "blazor-qa-lead" ? "gpt-5.6-terra" : Model,
+            Model = Model,
             Workload = AgentWorkloadKind.Programming, ChatHistoryMode = AgentChatHistoryMode.FrameworkManaged,
             EnableBackgroundResponses = false, Permissions = AgentPermissionsPolicy.Default, Tags = [.. seeds[role].Tags, role],
             ConfigurationJson = configuration
