@@ -1232,6 +1232,12 @@ Playwright hosts infer the active build configuration from the test output path.
 
 ## Live-Process Gates
 
+`BlazorDeliveryLiveTests` gives the complete multi-agent delivery 90 minutes, including
+implementation, independent browser QA, any bounded repair and result writeback. The
+former 40-minute harness deadline canceled a PWA run during screenshot review after its
+build and tests passed and QA collected gameplay, host cleanup and offline evidence.
+This test-only budget does not change production step deadlines or completion requirements.
+
 Run the application integration slice:
 
 ```powershell

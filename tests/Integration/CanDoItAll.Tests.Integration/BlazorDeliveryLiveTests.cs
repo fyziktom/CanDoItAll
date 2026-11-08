@@ -134,7 +134,7 @@ public sealed class BlazorDeliveryLiveTests(ITestOutputHelper output) {
             projectId, runId = launched.RunId, models = agents.Values.Select(agent => agent.Model).Distinct(),
             fixture = environment.RootPath, productRoot, selectedNodeId = task.Id, deliveryBlock
         }, JsonSerializerOptions.Web));
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(40));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(90));
         try {
             await services.GetRequiredService<ProcessRuntimeDispatchApplicationService>()
                 .ExecuteReadyAsync(launched.RunId.Value, "live-delivery-regression", timeout.Token);
