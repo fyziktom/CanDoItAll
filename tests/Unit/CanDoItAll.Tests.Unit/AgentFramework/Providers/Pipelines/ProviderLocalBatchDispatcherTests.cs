@@ -166,19 +166,27 @@ public sealed class ProviderLocalBatchDispatcherTests
         var cancellationKey = CreateKey("cancel-model", "chat");
         await using var cancellationHub = new ProviderLocalBatchDispatcherHub<int, int>();
         using var canceledRequest = new CancellationTokenSource();
+        var releaseCanceledBatch = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var canceledTask = cancellationHub.DispatchAsync(
             new ProviderBatchEnvelope<int>(cancellationKey, 1, Guid.NewGuid()),
             CreatePolicy(cancellationKey, maxBatchSize: 2, maxQueueDelay: TimeSpan.FromMilliseconds(40)),
-            SuccessfulBatchAsync,
+            async (items, cancellationToken) => {
+                await releaseCanceledBatch.Task.WaitAsync(cancellationToken);
+                return await SuccessfulBatchAsync(items, cancellationToken);
+            },
             canceledRequest.Token);
-        await canceledRequest.CancelAsync();
-        var unrelatedResult = await cancellationHub.DispatchAsync(
-            new ProviderBatchEnvelope<int>(cancellationKey, 42, Guid.NewGuid()),
-            CreatePolicy(cancellationKey, maxBatchSize: 2, maxQueueDelay: TimeSpan.FromMilliseconds(40)),
-            SuccessfulBatchAsync);
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => canceledTask);
-        Assert.Equal(42, unrelatedResult);
+        try {
+            await canceledRequest.CancelAsync();
+            var unrelatedTask = cancellationHub.DispatchAsync(
+                new ProviderBatchEnvelope<int>(cancellationKey, 42, Guid.NewGuid()),
+                CreatePolicy(cancellationKey, maxBatchSize: 2, maxQueueDelay: TimeSpan.FromMilliseconds(40)),
+                SuccessfulBatchAsync);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => canceledTask).WaitAsync(TimeSpan.FromSeconds(5));
+            releaseCanceledBatch.TrySetResult();
+            Assert.Equal(42, await unrelatedTask.WaitAsync(TimeSpan.FromSeconds(5)));
+        } finally {
+            releaseCanceledBatch.TrySetResult();
+        }
 
         var timeoutKey = CreateKey("timeout-model", "chat");
         await using var timeoutHub = new ProviderLocalBatchDispatcherHub<int, int>();
