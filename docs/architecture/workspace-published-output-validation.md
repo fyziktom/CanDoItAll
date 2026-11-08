@@ -49,6 +49,12 @@ Do not mix process termination into a validation script or substitute a PID for
 the owned startup receipt. The managed .NET delivery skill is versioned so existing
 catalogs receive this contract on their next seed normalization.
 
+Automatic startup-smoke cleanup also persists the advertised `cleanup.json`, including
+when readiness fails or the host exits early. Its process identity and startup path
+match the corresponding startup receipt; cleanup success is independent of whether
+the application passed readiness. A consumer can read or copy the returned evidence
+without inventing a later stop operation for an already terminated host.
+
 The design composes a registered provider with command planning and the existing
 lifecycle. An arbitrary shell grant would widen QA authority; adding launch scripts
 or changing the sample application would transfer responsibility to the observer.

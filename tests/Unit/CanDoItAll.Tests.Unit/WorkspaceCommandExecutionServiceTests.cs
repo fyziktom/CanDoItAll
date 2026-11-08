@@ -973,14 +973,16 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
     }
 
-    [Fact]
-    public async Task DotnetRun_http_smoke_uses_project_directory_and_returns_launch_evidence_targets()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DotnetRun_http_smoke_uses_project_directory_and_returns_launch_evidence_targets(bool exitedEarly)
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
-        var processHost = new FakeWorkspaceProcessHost();
+        var processHost = new FakeWorkspaceProcessHost(exitCode: exitedEarly ? 1 : 0);
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
@@ -991,7 +993,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 startupTimeoutSeconds: 5,
                 timeoutSeconds: 20);
 
-            Assert.True(result.Succeeded);
+            Assert.Equal(!exitedEarly, result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
             Assert.Equal("workspace_dotnet_run", processHost.LastRequest!.ToolName);
             Assert.Equal(projectDirectory, processHost.LastRequest.WorkingDirectory);
@@ -1009,10 +1011,19 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.True(argumentLength < 8191);
             using var startup = await ReadStartupReceiptAsync(workspaceRoot, result);
             Assert.Equal(3, startup.RootElement.GetProperty("schemaVersion").GetInt32());
-            Assert.True(startup.RootElement.GetProperty("succeeded").GetBoolean());
+            Assert.Equal(!exitedEarly, startup.RootElement.GetProperty("succeeded").GetBoolean());
             Assert.False(startup.RootElement.GetProperty("keepAlive").GetBoolean());
             Assert.True(startup.RootElement.GetProperty("cleanupAttempted").GetBoolean());
             Assert.Equal("http://127.0.0.1:5123/", startup.RootElement.GetProperty("probeUrl").GetString());
+            var cleanupPath = startup.RootElement.GetProperty("cleanupReceiptPath").GetString()!;
+            Assert.Contains(cleanupPath, result.Receipt.TargetPaths);
+            using var cleanup = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(workspaceRoot, cleanupPath)));
+            Assert.True(cleanup.RootElement.GetProperty("succeeded").GetBoolean());
+            Assert.False(cleanup.RootElement.GetProperty("residualProcessPossible").GetBoolean());
+            Assert.Equal(startup.RootElement.GetProperty("appProcessId").GetInt32(), cleanup.RootElement.GetProperty("processId").GetInt32());
+            Assert.Equal(startup.RootElement.GetProperty("startupReceiptPath").GetString(), cleanup.RootElement.GetProperty("startupReceiptPath").GetString());
+            Assert.Equal((int)(exitedEarly ? WorkspaceProcessTerminationStatus.AlreadyExited : WorkspaceProcessTerminationStatus.Terminated),
+                cleanup.RootElement.GetProperty("terminationStatus").GetInt32());
         }
         finally
         {
