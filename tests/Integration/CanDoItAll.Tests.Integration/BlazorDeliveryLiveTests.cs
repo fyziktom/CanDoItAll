@@ -65,14 +65,16 @@ public sealed class BlazorDeliveryLiveTests(ITestOutputHelper output) {
                 "use native browser_click for Start/Pause, resume and Reset and browser_press_key for keyboard controls; " +
                 "verify the board changes and pieces stack, pause stops it, and Reset clears it; inspect console/page errors, " +
                 "inspect ordered screenshots, and verify PWA registration and offline reload after caching. " +
-                "Stop the proof host, register a verified screenshot ImageAsset and record the accepted result under this selected delivery block."
+                "Stop the proof host and register a verified screenshot ImageAsset under the current process-run node. " +
+                "Record the accepted result and runtime node under this selected delivery block."
             : "Build a small standalone .NET 10 Blazor WebAssembly application (not PWA). " +
             "At / show heading 'Delivery counter', counter initially 0, Increment adds one, Reset returns to 0. " +
             "Use a small independently testable C# counter model and meaningful automated tests for increment/reset. " +
             "No backend, authentication, database, persistence, offline behavior, external deployment or external services. " +
             "Publish and validate the real application through a disposable loopback static host. " +
             "QA must exercise both buttons in a real browser at 1920x1080, capture a screenshot and inspect console errors. " +
-            "Stop the proof server, register the verified screenshot as a managed ImageAsset and write the accepted result below this work item. " +
+            "Stop the proof server and register the verified screenshot as a managed ImageAsset under the current process-run node. " +
+            "Write the accepted result and runtime node below this work item. " +
             "Implementation hands off to the separate QA step; each step performs only its assigned work.";
         var block = await workbench.CreateObjectAsync(projectId, new(ProjectObjectType.ProjectBlock,
             "Approved product folder", "Owned test output", deliveryBlock ? requirements : "The application belongs in this output root.",
@@ -184,7 +186,8 @@ public sealed class BlazorDeliveryLiveTests(ITestOutputHelper output) {
         var structure = await workbench.GetStructureAsync(projectId);
         await File.WriteAllTextAsync(Path.Combine(evidence, "structure.json"), JsonSerializer.Serialize(structure, JsonSerializerOptions.Web));
         Assert.Contains(structure.Nodes, node => node.ParentId == task.Id && node.ObjectType == ProjectObjectType.Note);
-        Assert.Contains(structure.Nodes, node => node.ObjectType == ProjectObjectType.ImageAsset);
+        var runNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(launched.RunId.Value.Value);
+        Assert.Contains(structure.Nodes, node => node.ObjectType == ProjectObjectType.ImageAsset && node.ParentId == runNodeId);
         var runtimeNode = Assert.Single(structure.Nodes, node => node.ParentId == task.Id && node.ObjectType == ProjectObjectType.Environment);
         Assert.Equal("dotnet-runtime", runtimeNode.ObjectSubtype);
         var runtimeMetadata = ProjectObjectMetadataSerializer.Parse(runtimeNode.MetadataJson).Environment;

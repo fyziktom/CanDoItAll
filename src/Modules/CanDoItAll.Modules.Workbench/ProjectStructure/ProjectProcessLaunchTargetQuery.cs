@@ -31,21 +31,25 @@ public sealed class ProjectProcessLaunchTargetQuery(
 
         var native = await database.Set<ProjectObjectRecord>().AsNoTracking()
             .SingleOrDefaultAsync(node => node.ProjectId == projectId && node.NodeKey == parentNodeId, cancellationToken);
+        // Projected records receive fresh in-memory IDs; their key and binding identify the target.
+        var persistedObjectId = native?.Id;
         if (native is null) {
             var assembly = await projectStructureAssemblyService.LoadAsync(database, projectId, cancellationToken);
             native = assembly.Nodes.SingleOrDefault(node => node.NodeKey == parentNodeId)
                 ?? throw new ProjectStructureAgentException(404, "ParentNodeNotFound", "The prepared workflow output parent no longer exists.");
         }
 
-        var binding = await database.Set<ProjectNodeBindingRecord>().AsNoTracking()
-            .SingleOrDefaultAsync(item => item.ProjectObjectId == native.Id, cancellationToken);
+        var binding = persistedObjectId is { } objectId
+            ? await database.Set<ProjectNodeBindingRecord>().AsNoTracking()
+                .SingleOrDefaultAsync(item => item.ProjectObjectId == objectId, cancellationToken)
+            : null;
         if (binding is not null) {
             native.Binding = new(binding.Route, binding.ExternalArtifactKind, binding.ExternalArtifactId, binding.MediaRelativePath,
                 binding.MediaContentType, binding.MediaOriginalFileName, binding.StorageObjectReferenceJson);
         }
 
         return ProjectWorkflowContributionFingerprint.Hash(JsonSerializer.Serialize(new {
-            Target = ProjectWorkflowContributionFingerprint.Target(native),
+            Target = ProjectWorkflowContributionFingerprint.Target(native, persistedObjectId),
             Binding = binding is null ? null : new {
                 binding.Id, binding.Route, binding.ExternalArtifactKind, binding.ExternalArtifactId,
                 binding.MediaRelativePath, binding.MediaContentType, binding.MediaOriginalFileName, binding.StorageObjectReferenceJson

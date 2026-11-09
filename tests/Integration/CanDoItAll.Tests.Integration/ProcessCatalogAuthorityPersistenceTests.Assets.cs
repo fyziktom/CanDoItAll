@@ -26,6 +26,61 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Process_asset_under_a_projected_run_survives_reassembly_but_rejects_reparenting(bool reparent) {
+        var clock = new NativeClock();
+        var driver = new AssetDriverProbe();
+        await using var app = await TestApplication.CreateAsync(AssetHarness(clock, driver));
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var test = await CreateAssetCaseAsync(services, clock, false);
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var parent = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(test.Invocation.Execution.Evidence.RunId.Value);
+        var link = new ProjectObjectLinkRecord {
+            ProjectId = test.Owner.Project.ProjectId,
+            SourceNodeKey = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(test.Owner.Project.ProjectId),
+            TargetNodeKey = parent,
+            LinkKind = ProjectObjectLinkKind.Uses
+        };
+        await using (var database = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync()) {
+            database.Add(link);
+            await database.SaveChangesAsync();
+        }
+        var input = new ProjectProcessAssetProposalCodec().Read(test.Payload).Create! with { ParentNodeKey = parent };
+        var payload = new ProjectProcessAssetProposalCodec().Prepare(ProjectStructureToolPolicy.ProjectStructureAssetCreate,
+            JsonSerializer.SerializeToElement(new ProjectProcessAssetCreateProposal(test.Owner.Project.ProjectId, input),
+                ProjectProcessAssetProposalCodec.Json));
+        var invocation = new ProjectProcessAssetInvocation(
+            test.Invocation.Admitted with { Payload = payload, ApprovedDigest = payload.Digest }, test.Invocation.Execution, parent);
+        Assert.Equal(link.SourceNodeKey, Assert.Single((await workbench.GetStructureAsync(test.Owner.Project.ProjectId)).Nodes,
+            node => node.Id == parent).ParentId);
+        var prepared = await workbench.PrepareProcessAssetAsync(invocation, default);
+        if (reparent) {
+            await using var database = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
+            var savedLink = await database.Set<ProjectObjectLinkRecord>().SingleAsync(item => item.Id == link.Id);
+            savedLink.SourceNodeKey = test.Invocation.ParentNodeKey;
+            await database.SaveChangesAsync();
+            Assert.Equal(savedLink.SourceNodeKey, Assert.Single((await workbench.GetStructureAsync(test.Owner.Project.ProjectId)).Nodes,
+                node => node.Id == parent).ParentId);
+            var failure = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => workbench.RequireProcessAssetMediaReadAsync(prepared, default));
+            Assert.Equal("ProcessAssetIntentConflict", failure.ErrorCode);
+            Assert.Equal(0, driver.StableWrites);
+            await AssertAssetRowsAsync(services, prepared, 0, 0, 0);
+            return;
+        }
+        await workbench.RequireProcessAssetMediaReadAsync(prepared, default);
+        prepared = await workbench.MaterializeProcessAssetAsync(prepared, AssetMedia(), default);
+        var committed = await workbench.CommitProcessAssetAsync(prepared, default);
+        Assert.Equal(parent, committed.Node.ParentId);
+        var replay = await workbench.CommitProcessAssetAsync(prepared, default);
+        Assert.Equal(committed.Observation.Receipt, replay.Observation.Receipt);
+        Assert.True(replay.Observation.WasReplay);
+        Assert.Equal(1, driver.StableWrites);
+        await AssertAssetRowsAsync(services, prepared, 1, 1, 0);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Background_approval_checkpoint_rechecks_current_Process_claim_while_session_is_persisting(bool expireClaim) {
         var clock = new NativeClock();
         await using var app = await TestApplication.CreateAsync(AssetHarness(clock, new AssetDriverProbe()));

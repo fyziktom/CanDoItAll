@@ -5,6 +5,52 @@ namespace CanDoItAll.Tests.Playwright.Smoke;
 public sealed partial class AppSmokeTests
 {
     [Fact]
+    public async Task Project_structure_Tab_note_Enter_confirms_and_Shift_Enter_keeps_a_newline() {
+        await using var context = await fixture.Browser.NewContextAsync(new() {
+            ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1
+        });
+        var page = await context.NewPageAsync();
+        var projectId = await CreateProjectAsync(page, "Keyboard note confirmation", "Validation");
+        var rootId = $"project:{projectId}";
+        await FocusCanvasRootAsync(page);
+        await page.Keyboard.PressAsync("Tab");
+        var editor = page.Locator(".cw-note-editor__input");
+        await Assertions.Expect(editor).ToBeFocusedAsync();
+        await page.Keyboard.TypeAsync("test");
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(editor).ToBeHiddenAsync();
+        await WaitForSceneNodeTitleAsync(page, "test", selectedOnly: true, timeoutMs: 15_000);
+
+        await FocusCanvasNodeAsync(page, rootId);
+        var rootCenter = await TryResolveCanvasHotZoneCenterAsync(page, SelectorForNodeId(rootId), "node-body");
+        Assert.NotNull(rootCenter);
+        await page.Mouse.ClickAsync((float)rootCenter.X, (float)rootCenter.Y);
+        await Assertions.Expect(page.GetByText("Leave this node editor?", new() { Exact = true })).ToBeHiddenAsync();
+        await page.Keyboard.PressAsync("Tab");
+        await Assertions.Expect(editor).ToBeFocusedAsync();
+        await page.Keyboard.TypeAsync("First line");
+        await page.Keyboard.PressAsync("Shift+Enter");
+        await page.Keyboard.TypeAsync("Second line");
+        await Assertions.Expect(editor).ToHaveValueAsync("First line\nSecond line");
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(editor).ToBeHiddenAsync();
+        var noteId = (await WaitForCanvasFocusStateAsync(page,
+            state => state.SelectedId is not null && state.SelectedId != rootId, "selected saved note")).SelectedId!;
+        await WaitForWorkbenchNodeStateAsync(page, noteId,
+            node => NormalizeLineEndings(node.InlineText) == "First line\nSecond line", "saved multiline note");
+
+        await page.ReloadAsync();
+        await page.GetByTestId("project-structure-canvas-loaded").WaitForAsync();
+        await WaitForSceneNodeTitleAsync(page, "test", selectedOnly: false, timeoutMs: 15_000);
+        await WaitForWorkbenchNodeStateAsync(page, noteId,
+            node => NormalizeLineEndings(node.InlineText) == "First line\nSecond line", "persisted multiline note");
+        await Assertions.Expect(editor).ToBeHiddenAsync();
+        var evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "structure-note-enter");
+        Directory.CreateDirectory(evidence);
+        await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "confirmed-notes.png") });
+    }
+
+    [Fact]
     public async Task Project_structure_concurrent_edit_preserves_the_newer_commit_and_unsaved_draft() {
         await using var firstContext = await fixture.Browser.NewContextAsync(new() {
             ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1
