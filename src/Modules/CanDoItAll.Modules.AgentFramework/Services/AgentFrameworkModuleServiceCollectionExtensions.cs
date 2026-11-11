@@ -354,6 +354,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         });
         services.AddScoped<IAgentConversationContextService, AgentConversationContextService>();
         services.AddScoped<IAgentTurnContextCaptureService, AgentTurnContextCaptureService>();
+        services.AddScoped<IAgentChatOperationExecutor, AgentChatOperationExecutor>();
+        services.TryAddSingleton<IAgentChatExecutionScopeFactory, AgentChatExecutionScopeFactory>();
+        services.TryAddSingleton<AgentChatBackgroundExecution>();
+        services.TryAddSingleton<IAgentChatExecutionCatalog>(provider => provider.GetRequiredService<AgentChatBackgroundExecution>());
+        services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AgentChatBackgroundExecution>());
+        services.AddScoped<AgentChatRecoveryService>();
         services.AddScoped<IAgentChatExecutionOrchestrator, AgentChatExecutionOrchestrator>();
         services.AddScoped<ActiveAgentChatRegistry>();
         services.AddScoped<IActiveAgentChatRegistry>(serviceProvider =>

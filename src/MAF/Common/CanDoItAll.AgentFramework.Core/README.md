@@ -38,6 +38,13 @@ The activity stream is bounded, process-local UI/transport feedback. It is not d
 execution truth. Consumers must use persisted run/session state, approvals, receipts,
 artifacts, logs, and metrics for canonical decisions.
 
+`IAgentChatExecutionCatalog` exposes owner/profile-filtered reconnect metadata, while
+`IAgentChatOwnerProvider` supplies verified stable caller identity at the host boundary.
+The product module owns execution scopes and their lifetime. Turn capture can consume
+a frozen strict observation without a live browser registry; canonical authority is
+resolved again before runtime dispatch. Retained return locations are navigation data,
+not authority or replacement tool context.
+
 ## Execution Preparation
 
 `AgentExecutionPreparationService` and its scoped

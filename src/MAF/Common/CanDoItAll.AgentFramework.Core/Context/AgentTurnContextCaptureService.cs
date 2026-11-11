@@ -98,6 +98,10 @@ public sealed record AgentTurnContextCaptureResult(
     AgentContextTransition? Transition = null,
     AgentConversationContextBinding? ConversationBinding = null);
 
+public sealed record AgentTurnContextObservation(
+    AgentChatContextSnapshot? Context,
+    AgentConversationContextBinding? ConversationBinding);
+
 /// <summary>
 /// Owns the ordered turn admission pipeline: strict route-fenced observation
 /// capture, database-generation fencing, canonical authority resolution,
@@ -108,6 +112,12 @@ public sealed record AgentTurnContextCaptureResult(
 /// </summary>
 public interface IAgentTurnContextCaptureService
 {
+    Task<AgentTurnContextCaptureResult> CaptureAsync(
+        AgentTurnContextCaptureCommand command,
+        AgentTurnContextObservation observation,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This capture service does not support frozen observations.");
+
     Task<AgentTurnContextCaptureResult> CaptureAsync(
         AgentTurnContextCaptureCommand command,
         CancellationToken cancellationToken = default);
@@ -125,6 +135,24 @@ public sealed class AgentTurnContextCaptureService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        var binding = command.ConversationKey is { } key
+            ? conversationContextService?.GetOrCreateBinding(key)
+            : null;
+        var context = binding?.Mode == AgentConversationContextMode.Detached
+            ? null
+            : await contextRegistry.CaptureAsync(cancellationToken).ConfigureAwait(false);
+        return await CaptureAsync(command, new AgentTurnContextObservation(context, binding), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<AgentTurnContextCaptureResult> CaptureAsync(
+        AgentTurnContextCaptureCommand command,
+        AgentTurnContextObservation observation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(observation);
+        cancellationToken.ThrowIfCancellationRequested();
         if (command.AgentId == Guid.Empty)
         {
             throw new ArgumentException("An agent id is required.", nameof(command));
@@ -133,9 +161,7 @@ public sealed class AgentTurnContextCaptureService(
         ArgumentException.ThrowIfNullOrWhiteSpace(command.Prompt);
         ArgumentNullException.ThrowIfNull(command.Behavior);
 
-        var binding = command.ConversationKey is { } conversationKey
-            ? conversationContextService?.GetOrCreateBinding(conversationKey)
-            : null;
+        var binding = observation.ConversationBinding;
 
         // An explicitly detached conversation receives no application context
         // and no context-derived authority; the observation is not consulted.
@@ -153,9 +179,7 @@ public sealed class AgentTurnContextCaptureService(
         }
 
         // 1. One strict, route-fenced live observation.
-        var context = await contextRegistry
-            .CaptureAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var context = observation.Context;
 
         // 2. Database profile generation fence.
         EnsureCurrentProfileGeneration(command.ExpectedDatabaseProfileGeneration);

@@ -115,6 +115,8 @@ public sealed record ConversationShellWindowDescriptor
 
     public string? Summary { get; }
 
+    public ConversationAvatarPresentation? Avatar { get; init; }
+
     public Type ComponentType { get; }
 
     public IDictionary<string, object> Parameters { get; }

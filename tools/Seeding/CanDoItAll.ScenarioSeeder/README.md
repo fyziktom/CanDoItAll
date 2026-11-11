@@ -33,6 +33,8 @@ The authoritative project and package dependency list is in [CanDoItAll.Scenario
 
 This is a local development or operations tool. Keep it explicit about ports, file paths, side effects, and runtime assumptions.
 
+The host validates the complete runtime service graph, but deliberately grants no interactive Agent chat owner. Chat execution or recovery through the seeder fails explicitly; use the application host for those operations.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

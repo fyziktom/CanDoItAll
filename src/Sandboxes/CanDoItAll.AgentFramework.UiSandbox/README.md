@@ -60,6 +60,13 @@ The build chooses the mode. A contradictory runtime launch profile fails explici
 
 ## Specimen and evidence
 
+`/floating-chat` composes the real floating window, compact chat and context controls.
+At a large desktop viewport, resize the window between 520 and 1100 pixels, edit a draft,
+minimize it, change the simulated activity, and restore it. The avatar and live status
+remain in the header; scope, thread title and actions share the next row when they fit.
+The Long scope control and context dialog cover truncation and constrained wrapping.
+The scenario has no provider calls or database effects.
+
 This host references only the lightweight UI project and renders the real AgentCatalogPanel, AgentSelectionCard, TreeView, Avatar and Tooltip. Its embedded snapshot has 40 agents, six teams, private-provider metadata, managed chat actions, long text and bundled avatars. Search `catalog-fixture` to isolate 12 custom cards. Selection is controlled local state; editor, membership, deletion and chat intents appear in the output line. There is no database, provider runtime or production effect graph.
 
 Loading, empty and card states use the same components. Avatar fallback demonstrates the card's seeded image and BaseLib's explicit initials mode. A broken image URL is not the Avatar missing-value fallback contract.

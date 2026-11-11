@@ -61,30 +61,21 @@ public sealed class FloatingAgentContextBaselineCharacterizationTests
             root,
             @"src\Modules\CanDoItAll.Modules.AgentFramework\Services\AgentChatExecutionOrchestrator.cs"));
 
-        // Strict capture is owned by the turn-context capture service and is
-        // invoked from the send path only. The continuation path resolves the
-        // original leased context by run identifier
-        // (AgentTurnContextLeaseRegistry.Resolve, SB15 rename) and never captures the
-        // current registry state.
-        Assert.DoesNotContain("contextRegistry", orchestratorSource, StringComparison.Ordinal);
-        var captureServiceCallCount = CountOccurrences(orchestratorSource, ".CaptureAsync(");
-        Assert.Equal(1, captureServiceCallCount);
+        var executorSource = File.ReadAllText(TestRepositoryPath.Resolve(root,
+            "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentChatOperationExecutor.cs"));
+        Assert.DoesNotContain("contextRegistry", executorSource, StringComparison.Ordinal);
+        Assert.Contains(".CaptureAsync(command, observation, cancellationToken)", executorSource, StringComparison.Ordinal);
 
-        var continuationStart = orchestratorSource.IndexOf(
-            "ContinueApprovalCoreAsync",
-            StringComparison.Ordinal);
-        Assert.True(continuationStart >= 0, "Continuation entry point not found.");
-        var continuationSection = orchestratorSource[continuationStart..];
-        var sendSectionStart = continuationSection.IndexOf(
-            "SendMessageCoreAsync",
-            StringComparison.Ordinal);
-        if (sendSectionStart >= 0)
-        {
-            continuationSection = continuationSection[..sendSectionStart];
+        var admission = Between(orchestratorSource, "public AgentChatOperationHandle StartApprovalContinuation(",
+            "public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunResult> Completion) StartRunRecovery(");
+        var execution = Between(executorSource, "private async Task<AgentChatRunResult> ContinueApprovalCoreAsync(",
+            "private async Task<ExecutionRunResult> RecoverRunCoreAsync(");
+        foreach (var continuation in new[] { admission, execution }) {
+            Assert.DoesNotContain("CaptureAsync", continuation, StringComparison.Ordinal);
+            Assert.DoesNotContain("CaptureObservation", continuation, StringComparison.Ordinal);
+            Assert.DoesNotContain("contextRegistry", continuation, StringComparison.Ordinal);
+            Assert.DoesNotContain("turnContextCaptureService", continuation, StringComparison.Ordinal);
         }
-
-        Assert.DoesNotContain("CaptureAsync", continuationSection, StringComparison.Ordinal);
-        Assert.DoesNotContain("turnContextCaptureService", continuationSection, StringComparison.Ordinal);
 
         // The capture service itself performs exactly one strict registry capture.
         var captureServiceSource = File.ReadAllText(TestRepositoryPath.Resolve(
@@ -92,6 +83,14 @@ public sealed class FloatingAgentContextBaselineCharacterizationTests
             @"src\MAF\Common\CanDoItAll.AgentFramework.Core\Context\AgentTurnContextCaptureService.cs"));
         Assert.Equal(1, CountOccurrences(captureServiceSource, ".CaptureAsync(cancellationToken)"));
         Assert.DoesNotContain("RespondToPendingApprovals", captureServiceSource, StringComparison.Ordinal);
+    }
+
+    private static string Between(string source, string start, string end) {
+        var first = source.IndexOf(start, StringComparison.Ordinal);
+        Assert.True(first >= 0, $"Entry point not found: {start}");
+        var last = source.IndexOf(end, first + start.Length, StringComparison.Ordinal);
+        Assert.True(last > first, $"Next entry point not found: {end}");
+        return source[first..last];
     }
 
     private static AgentChatContextPublication CreateViewPublication(

@@ -54,6 +54,7 @@ public static class ApiServiceCollectionExtensions
         services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<MemoryProviderApiService>();
         services.TryAddScoped<WebCurrentPrincipalResolver>();
+        services.AddScoped<IAgentChatOwnerProvider, WebAgentChatOwnerProvider>();
         services.TryAddScoped<ProjectDefinitionHttpAccess>();
         services.TryAddScoped<ProcessPlanningReviewHttpAccess>();
         services.TryAddScoped<ProcessCancellationHttpAccess>();

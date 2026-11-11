@@ -47,14 +47,14 @@ public sealed class AgentsAdjunctSurfaceTests {
         Assert.Equal(new(origin, AgentConversationContextMode.Detached), Assert.Single(intents));
         Assert.Contains("Owned conversation", cut.Markup, StringComparison.Ordinal);
         var decisions = new List<AgentFloatingCloseIntent>();
-        var close = context.Render<AgentFloatingCloseSurface>(p => p.Add(c => c.State, new(origin.Activation, origin.HandleId, "Same name", true, true))
+        var close = context.Render<AgentFloatingCloseSurface>(p => p.Add(c => c.State, new(origin.Activation, origin.HandleId, "Same name", true, false))
             .Add(c => c.Intent, decisions.Add));
-        Assert.Contains("does not reject the durable pending approval", close.Markup, StringComparison.Ordinal);
         var stop = close.FindComponents<Button>().Single(button => button.Instance.Text == "Stop chat").Instance.Click;
-        close.Render(p => p.Add(c => c.State, new(Guid.NewGuid(), new(Guid.NewGuid()), "Same name", false, false)));
+        close.Render(p => p.Add(c => c.State, new(Guid.NewGuid(), new(Guid.NewGuid()), "Same name", false, true)));
         await close.InvokeAsync(() => stop.InvokeAsync());
         Assert.Equal(new(origin.Activation, origin.HandleId, AgentFloatingCloseChoice.Stop), Assert.Single(decisions));
         Assert.True(close.Find("[data-testid='floating-agent-chat-stop']").HasAttribute("disabled"));
+        Assert.Contains("resolve or cancel the run", close.Markup, StringComparison.Ordinal);
     }
 
     [Fact]

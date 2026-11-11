@@ -61,6 +61,9 @@ public interface IAgentConversationContextService
 
     AgentConversationContextBinding? TryGetBinding(AgentConversationKey key);
 
+    void RestoreBinding(AgentConversationKey key, AgentConversationContextBinding binding)
+        => throw new NotSupportedException("This conversation context service does not support recovery.");
+
     /// <summary>
     /// Records that an admitted turn adopted the captured source. Returns
     /// <c>false</c> when the expected revision no longer matches (a newer turn
@@ -101,6 +104,28 @@ public sealed class AgentConversationContextService(TimeProvider timeProvider)
     private readonly Dictionary<AgentConversationKey, AgentConversationContextBinding> bindings = [];
 
     public event EventHandler? Changed;
+
+    public void RestoreBinding(AgentConversationKey key, AgentConversationContextBinding binding) {
+        ValidateKey(key);
+        ArgumentNullException.ThrowIfNull(binding);
+        if (binding.ChatSessionId != key.ChatSessionId || binding.HandleId != key.HandleId) {
+            throw new InvalidOperationException("The recovered context belongs to another conversation.");
+        }
+        lock (gate) {
+            if (bindings.TryGetValue(key, out var current)) {
+                if (current.Revision.Value > binding.Revision.Value || current == binding) {
+                    return;
+                }
+                if (current.Revision == binding.Revision) {
+                    throw new InvalidOperationException("The recovered context conflicts with the current conversation revision.");
+                }
+            } else if (bindings.Count >= MaximumBindings) {
+                throw new InvalidOperationException("The maximum number of conversation context bindings has been reached.");
+            }
+            bindings[key] = binding;
+        }
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
 
     public AgentConversationContextBinding GetOrCreateBinding(AgentConversationKey key)
     {

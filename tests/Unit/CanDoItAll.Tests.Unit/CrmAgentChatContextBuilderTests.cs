@@ -1,10 +1,35 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.CrmHr.Pages;
 
 namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class CrmAgentChatContextBuilderTests
 {
+    [Fact]
+    public void Return_location_restores_selected_records_and_section_without_free_text() {
+        var account = CreateAccount();
+        var opportunity = new CrmAgentChatOpportunityContext(account.AccountId, Guid.NewGuid(),
+            "Confidential opportunity label", OpportunityStage.Negotiation, OpportunitySource.Direct, []);
+        var interaction = new CrmAgentChatInteractionContext(account.AccountId, Guid.NewGuid(),
+            "Confidential interaction label", InteractionType.Meeting, opportunity.OpportunityId);
+        var scope = CrmAgentChatContextBuilder.BuildScope(AgentChatContextScopeId.Create(), account, opportunity,
+            interaction: interaction, section: CrmSection.Financials);
+
+        var location = Assert.IsType<AgentChatReturnLocation>(
+            AgentChatReturnLocation.FromContext(new(scope, [], 1, DateTimeOffset.UtcNow)));
+        var restored = CrmUrlCodec.Instance.Read(location.Route);
+
+        Assert.Equal(account.AccountId, restored.AccountId);
+        Assert.Equal(opportunity.OpportunityId, restored.OpportunityId);
+        Assert.Equal(interaction.InteractionId, restored.InteractionId);
+        Assert.Equal(CrmSection.Financials, restored.Section);
+        Assert.Equal(CrmUrlCodec.Catalog.Default, restored.Catalog);
+        Assert.DoesNotContain("Confidential", location.Route, StringComparison.Ordinal);
+        Assert.DoesNotContain(account.DisplayLabel, location.Route, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Workspace_context_identifies_the_crm_surface_without_inventing_an_account_selection()
     {

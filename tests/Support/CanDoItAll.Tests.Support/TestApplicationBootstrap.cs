@@ -66,6 +66,7 @@ public static class TestApplicationBootstrap
 
         services.TryAddSingleton<IJSRuntime, UnsupportedJsRuntime>();
         services.TryAddScoped<NavigationManager, TestNavigationManager>();
+        services.TryAddSingleton<IAgentChatOwnerProvider, TestAgentChatOwnerProvider>();
         services.TryAddScoped<IAgentRecruitingTargetResolver, UnavailableAgentRecruitingTargetResolver>();
         services.AddCanDoItAllBaseLib();
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
@@ -123,6 +124,20 @@ public static class TestApplicationBootstrap
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             throw new NotSupportedException($"JavaScript interop '{identifier}' is not available in this test harness.");
+        }
+    }
+
+    private sealed class TestAgentChatOwnerProvider : IAgentChatOwnerProvider {
+        private static readonly AgentChatOwnerId Owner = new(new string('a', 64));
+
+        public event EventHandler? Changed {
+            add { }
+            remove { }
+        }
+
+        public ValueTask<AgentChatOwnerId> GetOwnerAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(Owner);
         }
     }
 

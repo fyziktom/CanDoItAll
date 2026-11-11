@@ -2516,6 +2516,8 @@ public sealed class ActiveAgentChatRegistryTests
         registry.Stop(opened.HandleId);
 
         Assert.Empty(registry.Snapshot());
+        registry.Stop(opened.HandleId);
+        Assert.Empty(registry.Snapshot());
     }
 
     [Fact]
@@ -2528,20 +2530,22 @@ public sealed class ActiveAgentChatRegistryTests
         var exception = Assert.Throws<InvalidOperationException>(() =>
             registry.Stop(opened.HandleId));
 
-        Assert.Contains("cannot be stopped", exception.Message);
+        Assert.Contains("Resolve or cancel", exception.Message);
         Assert.Single(registry.Snapshot());
     }
 
-    [Fact]
-    public void Stop_allows_an_approval_waiting_chat()
+    [Theory]
+    [InlineData(ActiveAgentChatRunState.AwaitingApproval)]
+    [InlineData(ActiveAgentChatRunState.AwaitingContinuation)]
+    public void Stop_preserves_a_chat_with_a_pending_decision(ActiveAgentChatRunState runState)
     {
         var registry = CreateRegistry();
         var opened = registry.Open(CreateAgent(), Guid.NewGuid(), TestSettings);
-        registry.SetRunState(opened.HandleId, ActiveAgentChatRunState.AwaitingApproval);
+        registry.SetRunState(opened.HandleId, runState);
 
-        registry.Stop(opened.HandleId);
+        Assert.Throws<InvalidOperationException>(() => registry.Stop(opened.HandleId));
 
-        Assert.Empty(registry.Snapshot());
+        Assert.Equal(runState, Assert.Single(registry.Snapshot()).RunState);
     }
 
     [Fact]

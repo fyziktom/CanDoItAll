@@ -21,11 +21,13 @@ internal sealed class AgentResponseFixture : IAsyncDisposable {
     internal IReadOnlyList<Func<JsonElement, ScriptedTurn>>? Steps { get; set; }
     internal Func<int, Task>? BeforeResponse { get; set; }
     internal bool HoldReply { get; set; } = true;
+    internal TimeSpan ReplyHoldTimeout { get; set; } = TimeSpan.FromSeconds(60);
     internal sealed record ScriptedCall(string Name, string Arguments);
     internal sealed record ScriptedTurn(IReadOnlyList<ScriptedCall> Calls, string? Text = null);
     internal int Requests => Volatile.Read(ref requests);
     internal TaskCompletionSource PrefixFlushed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal TaskCompletionSource ReleaseReply { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal TaskCompletionSource HeldReplyAborted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     internal static async Task<AgentResponseFixture> StartAsync(string toolName) {
         var fixture = new AgentResponseFixture();
@@ -72,7 +74,8 @@ internal sealed class AgentResponseFixture : IAsyncDisposable {
                     await context.Response.Body.FlushAsync(context.RequestAborted);
                     fixture.PrefixFlushed.TrySetResult();
                     if (fixture.HoldReply) {
-                        await fixture.ReleaseReply.Task.WaitAsync(TimeSpan.FromSeconds(60), context.RequestAborted);
+                        using var aborted = context.RequestAborted.Register(() => fixture.HeldReplyAborted.TrySetResult());
+                        await fixture.ReleaseReply.Task.WaitAsync(fixture.ReplyHoldTimeout, context.RequestAborted);
                     }
                 }
                 await WriteAsync("response.output_item.done", new { type = "response.output_item.done", sequence_number = sequence++, output_index = index, item = items[index] });

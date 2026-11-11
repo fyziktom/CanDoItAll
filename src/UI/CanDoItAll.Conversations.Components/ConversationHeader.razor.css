@@ -61,10 +61,20 @@
 }
 
 .chat-panel-header--compact .chat-panel-header__row {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0.35rem;
 }
 
 .chat-panel-header--compact .chat-panel-header__identity {
-    flex-basis: 0;
+    flex: 1 1 12rem;
+}
+
+.chat-panel-header__context {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.chat-panel-header--compact .chat-panel-header__actions {
+    margin-left: auto;
 }

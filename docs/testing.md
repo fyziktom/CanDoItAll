@@ -1215,6 +1215,20 @@ ownership behavior.
 
 ## Browser Gate
 
+`AgentChatRefreshBrowserTests` runs explicitly in the Linux CI job after Chromium
+installation. It holds a real agent operation at the deterministic provider fixture,
+disposes the disconnected circuit, performs normal and cache-bypassing refreshes,
+reopens the original chat and restores its Project Structure view. It asserts the
+same run and session complete with one provider request. The CI step requires exactly
+one discovered test and uploads its screenshots and execution evidence.
+
+The associated unit topics are `AgentChatBackgroundExecutionTests`,
+`AgentChatRecoveryServiceTests`, `AgentChatRecoveryProjectionTests`,
+`AgentChatReturnLocationTests` and the frozen-observation cases in
+`AgentTurnContextCaptureServiceTests`. `AgentChatOwnerProviderTests` exercises the Web
+identity adapter. Component disposal inside a reused bUnit service provider does not
+substitute for disposing the whole submitting circuit scope.
+
 Build the Playwright project and install Chromium once per machine:
 
 ```powershell

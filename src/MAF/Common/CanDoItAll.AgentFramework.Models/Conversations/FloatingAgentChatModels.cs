@@ -1078,9 +1078,17 @@ public sealed record ActiveAgentChat(
 {
     public bool HasUnsentDraft { get; init; }
 
+    public AgentExecutionActivityStreamId? ActivityStreamId { get; init; }
+
+    public Guid? ExecutionRunId { get; init; }
+
+    public long ExecutionRevision { get; init; }
+
+    public AgentChatReturnLocation? ReturnLocation { get; init; }
+
     public bool IsVisible => Visibility == ActiveAgentChatVisibility.Visible;
 
-    public bool CanStop => RunState != ActiveAgentChatRunState.Running;
+    public bool CanStop => RunState == ActiveAgentChatRunState.Idle;
 }
 
 public sealed record FloatingAgentChatSettings(

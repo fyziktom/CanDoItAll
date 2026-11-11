@@ -14,10 +14,12 @@
     <link rel="stylesheet" href="@Assets["sandbox.css"]" />
     <link rel="stylesheet" href="@Assets["CanDoItAll.AgentFramework.UiSandbox.styles.css"]" />
     <ImportMap />
+    <CanDoItAll.Components.OverlayLib.OverlayLibHeadAssets />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 <body>
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <CanDoItAll.Components.OverlayLib.OverlayLibBodyAssets IncludeRuntimeAssets="true" />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 </html>
