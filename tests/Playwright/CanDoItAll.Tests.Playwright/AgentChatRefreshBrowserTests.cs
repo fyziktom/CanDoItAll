@@ -44,8 +44,9 @@ public sealed class AgentChatRefreshBrowserTests {
             var circuit = await circuits.NextAsync();
             await Assertions.Expect(page.GetByRole(AriaRole.Tab, new() { Name = "Gantt", Exact = true }))
                 .ToHaveAttributeAsync("aria-selected", "true");
-            var chat = await OpenFloatingChatFromCatalogAsync(page, "project-structure-agents-toggle", host.AgentId,
+            var chat = await OpenFloatingChatFromCatalogAsync(page, "project-structure-gantt-agent-chats", host.AgentId,
                 Path.Combine(host.Evidence, "agent-chat-refresh-catalog-failure.png"));
+            await Assertions.Expect(page).ToHaveURLAsync(host.BaseUrl + originalRoute);
             await SendAsync(chat, "Keep working on this project while I refresh the browser.");
             await wire.PrefixFlushed.Task.WaitAsync(TimeSpan.FromSeconds(60));
             var original = await ReadOnlyRunAsync();
