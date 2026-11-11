@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Conversations.Components;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,11 +18,24 @@ public sealed class AgentAdjunctOwnershipTests {
         var bindings = new AgentConversationContextService(TimeProvider.System);
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton<IAgentConversationContextService>(bindings);
-        var first = Chat();
-        var second = Chat();
-        var firstKey = AgentConversationKey.ForHandle(first.HandleId);
+        context.ComponentFactories.AddStub<AgentChatPanel>(parameters => builder => {
+            builder.OpenComponent<ChatWorkspaceSurface>(0);
+            builder.AddAttribute(1, nameof(ChatWorkspaceSurface.Compact), true);
+            builder.AddAttribute(2, nameof(ChatWorkspaceSurface.HeaderContext), parameters.Get(component => component.HeaderContext));
+            builder.CloseComponent();
+        });
+        var first = Chat() with { ChatSessionId = Guid.NewGuid() };
+        var second = Chat() with { ChatSessionId = Guid.NewGuid() };
+        var firstKey = AgentConversationKey.ForSession(first.ChatSessionId.Value);
         var initial = bindings.GetOrCreateBinding(firstKey);
-        var cut = context.Render<AgentFloatingConversationContent>(p => p.Add(c => c.Chat, first));
+        var window = context.Render<ConversationFloatingWindow>(parameters => parameters
+            .Add(component => component.WindowId, "context-ownership")
+            .Add(component => component.Title, first.Agent.Name)
+            .Add(component => component.AriaLabel, "Agent context ownership")
+            .Add(component => component.State, new() { IsVisible = true })
+            .AddChildContent<AgentFloatingConversationContent>(content => content.Add(component => component.Chat, first)));
+        var cut = window.FindComponent<AgentFloatingConversationContent>();
+        Assert.Single(window.FindAll("header [data-testid='floating-agent-chat-run-state']"));
         await cut.Find("[data-testid='floating-agent-chat-context-details']").ClickAsync();
         var queued = cut.FindComponents<Button>().Single(c => c.Markup.Contains("floating-agent-chat-affinity-toggle", StringComparison.Ordinal)).Instance.Click;
         cut.Render(p => p.Add(c => c.Chat, second));
@@ -37,7 +51,7 @@ public sealed class AgentAdjunctOwnershipTests {
         Assert.Equal(detached, bindings.TryGetBinding(firstKey));
         await cut.Find("[data-testid='floating-agent-chat-affinity-toggle']").ClickAsync();
         Assert.Equal(AgentConversationContextMode.FollowCurrentSurface, bindings.TryGetBinding(firstKey)!.Mode);
-        Assert.Null(bindings.TryGetBinding(AgentConversationKey.ForHandle(second.HandleId)));
+        Assert.Null(bindings.TryGetBinding(AgentConversationKey.ForSession(second.ChatSessionId.Value)));
     }
 
     [Fact]
