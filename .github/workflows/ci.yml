@@ -153,6 +153,13 @@ jobs:
         with:
           global-json-file: CanDoItAll/global.json
 
+      - name: Select the Ubuntu archive mirror
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo sed -i 's#^URIs:.*#URIs: https://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update --error-on=any
+
       - name: Start PostgreSQL for the stable integration gate
         id: postgres
         uses: ikalnytskyi/action-setup-postgres@v8
@@ -386,6 +393,12 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           global-json-file: CanDoItAll/global.json
+
+      - name: Select the Ubuntu archive mirror
+        shell: bash
+        run: |
+          sudo sed -i 's#^URIs:.*#URIs: https://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update --error-on=any
 
       - name: Start PostgreSQL for the stable integration gate
         uses: ikalnytskyi/action-setup-postgres@v8
