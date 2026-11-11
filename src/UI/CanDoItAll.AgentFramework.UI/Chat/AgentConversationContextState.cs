@@ -16,4 +16,6 @@ public sealed record AgentFloatingCloseState(Guid Origin, AgentChatHandleId Hand
 
 public sealed record AgentFloatingCloseIntent(Guid Origin, AgentChatHandleId HandleId, AgentFloatingCloseChoice Choice);
 
-public sealed record AgentActivityState(AgentExecutionOperationId OperationId, string Label, string Tone, string Message, bool HasSequenceGap);
+public sealed record AgentActivityState(AgentExecutionOperationId OperationId, string Label, string Tone, string Message, bool HasSequenceGap) {
+    public bool IsUnavailable { get; init; }
+}

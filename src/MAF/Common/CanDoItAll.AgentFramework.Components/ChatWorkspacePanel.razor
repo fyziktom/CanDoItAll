@@ -492,15 +492,24 @@
         old.Dispose();
     }
 
+    private PresentationBadge? ResolveRunStatus() {
+        var hasSettledRun = !IsBusy && ActiveRun?.State is (ExecutionState.Completed or ExecutionState.Failed) &&
+            !string.IsNullOrWhiteSpace(RunStateText);
+        if (activity is not null && ActivityStreamId?.OperationId == activity.OperationId &&
+            (!activity.IsUnavailable || !hasSettledRun)) {
+            return new(activity.Label, AgentConversationPresentationMapper.MapTone(activity.Tone));
+        }
+
+        return string.IsNullOrWhiteSpace(RunStateText) ? null
+            : new(RunStateText, AgentConversationPresentationMapper.MapTone(RunStateTone));
+    }
+
     private ChatWorkspacePresentation MapPresentation() {
         var entries = ResolveActiveExecutionEntries();
         return new() {
             Revision = presentationRevision,
             Header = HeaderPresentation,
-            RunStatus = ActivityStreamId?.OperationId == activity?.OperationId && activity is not null
-                ? new PresentationBadge(activity.Label, AgentConversationPresentationMapper.MapTone(activity.Tone))
-                : string.IsNullOrWhiteSpace(RunStateText) ? null
-                : new(RunStateText, AgentConversationPresentationMapper.MapTone(RunStateTone)),
+            RunStatus = ResolveRunStatus(),
             Session = Session is null ? null : new(Session.Id, Session.Title),
             Messages = MessagePresentations.ToImmutableArray(),
             TransientMessages = TransientMessagePresentations.ToImmutableArray(),

@@ -3,6 +3,7 @@ using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components;
@@ -20,6 +21,41 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed partial class AgentChatPanelResponsivenessTests
 {
+    [Theory]
+    [InlineData(ExecutionState.Completed, false, "Completed")]
+    [InlineData(ExecutionState.Failed, false, "Failed")]
+    [InlineData(ExecutionState.Completed, true, "Updates unavailable")]
+    [InlineData(ExecutionState.Failed, true, "Updates unavailable")]
+    [InlineData(ExecutionState.Running, false, "Updates unavailable")]
+    [InlineData(ExecutionState.WaitingOnTool, false, "Updates unavailable")]
+    public async Task Unavailable_activity_keeps_a_settled_run_status_without_hiding_current_work(
+        ExecutionState state, bool isBusy, string expectedStatus) {
+        using var context = CreateContext(
+            DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnexpectedCallProxy>(),
+            DispatchProxy.Create<IAgentChatExecutionOrchestrator, UnexpectedCallProxy>());
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var run = CreateRunningRun(agent.Id, session.Id) with { State = state };
+        var stream = CreateActivityStreamId();
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
+            .Add(component => component.DraftPrompt, string.Empty)
+            .Add(component => component.Session, session)
+            .Add(component => component.ActiveRun, run)
+            .Add(component => component.RunStateText, state.ToString())
+            .Add(component => component.IsBusy, isBusy)
+            .Add(component => component.ActivityStreamId, stream));
+
+        cut.WaitForAssertion(() => {
+            Assert.Equal(expectedStatus, cut.FindComponent<AgentChatSurface>().Instance.Presentation.RunStatus?.Text);
+            Assert.Contains("Updates unavailable", cut.Find("[data-testid='agent-execution-activity-status']").TextContent);
+        });
+
+        var activity = cut.FindComponent<AgentExecutionActivityStatus>();
+        await cut.InvokeAsync(() => activity.Instance.StateChanged.InvokeAsync(
+            new AgentActivityState(stream.OperationId, "Agent responding", "info", "Generating the response.", false)));
+        Assert.Equal("Agent responding", cut.FindComponent<AgentChatSurface>().Instance.Presentation.RunStatus?.Text);
+    }
+
     [Theory]
     [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, false)]
     [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, true)]
@@ -332,7 +368,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
             .WaitAsync(TimeSpan.FromSeconds(2));
 
         await workspace.PostRunRefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        window.WaitForAssertion(() => {
+        cut.WaitForAssertion(() => {
             Assert.Equal(
                 "Failed",
                 window.Find("header [data-testid='floating-agent-chat-run-state']").TextContent.Trim());
@@ -533,7 +569,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
             .WaitAsync(TimeSpan.FromSeconds(2));
 
         await orchestrator.ApprovalStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        window.WaitForAssertion(() => {
+        cut.WaitForAssertion(() => {
             Assert.Equal(
                 "Failed",
                 window.Find("header [data-testid='floating-agent-chat-run-state']").TextContent.Trim());

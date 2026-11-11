@@ -7300,7 +7300,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentExecutionActivityStatus.razor.cs",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentExecutionActivityStatus.razor.cs",
-      "sha256_lf": "a500a0d99121a1aebf5604fcfbfe8fc9284496e6176c3894454858058ddb1ef3",
+      "sha256_lf": "27ab18fca27ab4e18279a9900815485a27bc6c69d2c4a7463a2423b4419ee265",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.AgentExecutionActivityStatus",
@@ -7540,7 +7540,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
-      "sha256_lf": "3dfff5918442af3174d730ee850d776175a7f0a84ce97c836634390c46b8390d",
+      "sha256_lf": "a5e8a028c360e6c667db86feec9602a2e61b01c6a8f7a9e9d43031f28d96b839",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.ChatWorkspacePanel",

@@ -28,7 +28,9 @@ public partial class AgentExecutionActivityStatus : IAsyncDisposable
 
     [Parameter] public bool Headless { get; set; }
     [Parameter] public EventCallback<AgentActivityState> StateChanged { get; set; }
-    private AgentActivityState Presentation => new(StreamId.OperationId, StatusLabel, StatusTone, StatusMessage, HasSequenceGap);
+    private AgentActivityState Presentation => new(StreamId.OperationId, StatusLabel, StatusTone, StatusMessage, HasSequenceGap) {
+        IsUnavailable = isUnavailable
+    };
 
     [Inject]
     public IAgentExecutionActivityReader ActivityReader { get; set; } = default!;
