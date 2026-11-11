@@ -1,7 +1,7 @@
 .agent-floating-conversation-content {
     display: flex;
     min-height: 0;
-    height: 100%;
+    min-width: 0;
     flex-direction: column;
     gap: 0.35rem;
     overflow: hidden;
@@ -21,9 +21,5 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.agent-floating-conversation-content ::deep .agents-chat-panel-shell {
-    min-height: 0;
-    flex: 1 1 auto;
+    text-align: left;
 }

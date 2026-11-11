@@ -3,8 +3,10 @@ using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Conversations.Components;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -19,6 +21,41 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed partial class AgentChatPanelResponsivenessTests
 {
+    [Theory]
+    [InlineData(ExecutionState.Completed, false, "Completed")]
+    [InlineData(ExecutionState.Failed, false, "Failed")]
+    [InlineData(ExecutionState.Completed, true, "Updates unavailable")]
+    [InlineData(ExecutionState.Failed, true, "Updates unavailable")]
+    [InlineData(ExecutionState.Running, false, "Updates unavailable")]
+    [InlineData(ExecutionState.WaitingOnTool, false, "Updates unavailable")]
+    public async Task Unavailable_activity_keeps_a_settled_run_status_without_hiding_current_work(
+        ExecutionState state, bool isBusy, string expectedStatus) {
+        using var context = CreateContext(
+            DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnexpectedCallProxy>(),
+            DispatchProxy.Create<IAgentChatExecutionOrchestrator, UnexpectedCallProxy>());
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var run = CreateRunningRun(agent.Id, session.Id) with { State = state };
+        var stream = CreateActivityStreamId();
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
+            .Add(component => component.DraftPrompt, string.Empty)
+            .Add(component => component.Session, session)
+            .Add(component => component.ActiveRun, run)
+            .Add(component => component.RunStateText, state.ToString())
+            .Add(component => component.IsBusy, isBusy)
+            .Add(component => component.ActivityStreamId, stream));
+
+        cut.WaitForAssertion(() => {
+            Assert.Equal(expectedStatus, cut.FindComponent<AgentChatSurface>().Instance.Presentation.RunStatus?.Text);
+            Assert.Contains("Updates unavailable", cut.Find("[data-testid='agent-execution-activity-status']").TextContent);
+        });
+
+        var activity = cut.FindComponent<AgentExecutionActivityStatus>();
+        await cut.InvokeAsync(() => activity.Instance.StateChanged.InvokeAsync(
+            new AgentActivityState(stream.OperationId, "Agent responding", "info", "Generating the response.", false)));
+        Assert.Equal("Agent responding", cut.FindComponent<AgentChatSurface>().Instance.Presentation.RunStatus?.Text);
+    }
+
     [Theory]
     [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, false)]
     [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, true)]
@@ -321,7 +358,8 @@ public sealed partial class AgentChatPanelResponsivenessTests
             AgentProviderFailureCategory.RequestCompatibility);
 
         using var context = CreateContext(workspaceService, orchestratorService);
-        var cut = RenderFocusedChat(context, agent, session);
+        var window = RenderFocusedChatWindow(context, agent, session);
+        var cut = window.FindComponent<AgentChatPanel>();
         cut.WaitForElement("[data-testid='chat-prompt-input']")
             .Input("Use the selected project structure.");
 
@@ -330,13 +368,13 @@ public sealed partial class AgentChatPanelResponsivenessTests
             .WaitAsync(TimeSpan.FromSeconds(2));
 
         await workspace.PostRunRefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Equal(
                 "Failed",
-                cut.Find("[data-testid='agent-chat-run-state']").TextContent.Trim());
+                window.Find("header [data-testid='floating-agent-chat-run-state']").TextContent.Trim());
+            Assert.Equal(failedRun.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.ActiveRun?.Id);
             Assert.Contains(failedRun.Id, workspace.ExecutionRunDetailRequests);
-            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("provider-secret", window.Markup, StringComparison.Ordinal);
         });
     }
 
@@ -523,20 +561,21 @@ public sealed partial class AgentChatPanelResponsivenessTests
             AgentProviderFailureCategory.ProviderError);
 
         using var context = CreateContext(workspaceService, orchestratorService);
-        var cut = RenderFocusedChat(context, agent, session);
+        var window = RenderFocusedChatWindow(context, agent, session);
+        var cut = window.FindComponent<AgentChatPanel>();
 
         await cut.WaitForElement("[data-testid='chat-approve-once-button']")
             .ClickAsync(new MouseEventArgs())
             .WaitAsync(TimeSpan.FromSeconds(2));
 
         await orchestrator.ApprovalStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Equal(
                 "Failed",
-                cut.Find("[data-testid='agent-chat-run-state']").TextContent.Trim());
+                window.Find("header [data-testid='floating-agent-chat-run-state']").TextContent.Trim());
+            Assert.Equal(failedRun.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.ActiveRun?.Id);
             Assert.Contains(failedRun.Id, workspace.ExecutionRunDetailRequests);
-            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("provider-secret", window.Markup, StringComparison.Ordinal);
         });
     }
 
@@ -1146,6 +1185,21 @@ public sealed partial class AgentChatPanelResponsivenessTests
             .Add(component => component.PreferredAgent, agent)
             .Add(component => component.PreferredSessionId, session.Id)
             .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating));
+
+    private static IRenderedComponent<ConversationFloatingWindow> RenderFocusedChatWindow(
+        BunitContext context,
+        AgentDefinition agent,
+        ChatSessionRecord session)
+        => context.Render<ConversationFloatingWindow>(parameters => parameters
+            .Add(component => component.WindowId, session.Id.ToString("N"))
+            .Add(component => component.Title, agent.Name)
+            .Add(component => component.AriaLabel, "Agent chat")
+            .Add(component => component.State, new() { IsVisible = true })
+            .AddChildContent<AgentChatPanel>(chat => chat
+                .Add(component => component.PreferredAgentId, agent.Id)
+                .Add(component => component.PreferredAgent, agent)
+                .Add(component => component.PreferredSessionId, session.Id)
+                .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating)));
 
     private static Task RerenderFocusedChatAsync(
         IRenderedComponent<AgentChatPanel> cut,

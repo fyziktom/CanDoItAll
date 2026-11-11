@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AppComponents.Navigation;
+using CanDoItAll.Modules.CrmHr.Pages;
 using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.CrmHr;
@@ -140,8 +142,12 @@ public static class CrmHrAgentChatSurfaceBuilder
     public static AgentChatSurfacePosition BuildCrmPosition(
         CrmAgentChatAccountContext? account,
         CrmAgentChatOpportunityContext? opportunity,
-        CrmAgentChatInteractionContext? interaction = null)
+        CrmAgentChatInteractionContext? interaction = null,
+        CrmSection? section = null)
     {
+        if (section.HasValue && !Enum.IsDefined(section.Value)) {
+            throw new ArgumentOutOfRangeException(nameof(section));
+        }
         if (account is null)
         {
             if (opportunity is not null || interaction is not null)
@@ -194,7 +200,12 @@ public static class CrmHrAgentChatSurfaceBuilder
             Module,
             "crm",
             "accounts",
-            CrmRoute,
+            CrmUrlCodec.Instance.Href(CrmRoute, new CrmUrlState(
+                account.AccountId,
+                opportunity?.OpportunityId,
+                interaction?.InteractionId,
+                section ?? CrmUrlState.DefaultSectionFor(opportunity?.OpportunityId, interaction?.InteractionId),
+                CrmUrlCodec.Catalog.Default)),
             primarySelection,
             selectedEntities,
             facts);

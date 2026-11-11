@@ -1,5 +1,6 @@
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Modules.CrmHr.Pages
 @implements IDisposable
 @inject IAgentChatContextRegistry ContextRegistry
 @inject IAgentChatExecutionNotificationHub ExecutionNotificationHub
@@ -17,6 +18,9 @@
 
     [Parameter]
     public CrmAgentChatInteractionContext? Interaction { get; set; }
+
+    [Parameter]
+    public CrmSection? Section { get; set; }
 
     [Parameter]
     public AgentChatNavigationIdentity? ContextNavigationIdentity { get; set; }
@@ -82,13 +86,7 @@
         activeAccount = Account;
         activeOpportunity = Opportunity;
         activeInteraction = Interaction;
-        if (accountChanged ||
-            opportunityChanged ||
-            interactionChanged ||
-            publishedAccessState != EffectiveAccessState)
-        {
-            UpdateScope();
-        }
+        UpdateScope();
 
         if (accountChanged)
         {
@@ -178,14 +176,16 @@
             account,
             opportunity,
             accessState: EffectiveAccessState,
-            interaction: interaction);
+            interaction: interaction,
+            section: Section);
         scopeLease = ContextRegistry.ActivateScope(scope);
         publishedAccessState = EffectiveAccessState;
         scopeStateKey = BuildScopeStateKey(
             account,
             opportunity,
             interaction,
-            EffectiveAccessState);
+            EffectiveAccessState,
+            Section);
         var accountFragment = CrmAgentChatContextBuilder.BuildAccountFragment(account);
         accountFragmentLease = ContextRegistry.RegisterFragment(scopeId, accountFragment);
         accountFragmentContent = accountFragment.Content;
@@ -208,7 +208,8 @@
             activeAccount,
             activeOpportunity,
             activeInteraction,
-            EffectiveAccessState);
+            EffectiveAccessState,
+            Section);
         if (string.Equals(scopeStateKey, nextScopeStateKey, StringComparison.Ordinal))
         {
             return;
@@ -219,7 +220,8 @@
             activeAccount,
             activeOpportunity,
             EffectiveAccessState,
-            activeInteraction));
+            activeInteraction,
+            Section));
         scopeStateKey = nextScopeStateKey;
         publishedAccessState = EffectiveAccessState;
     }
@@ -366,7 +368,8 @@
         CrmAgentChatAccountContext account,
         CrmAgentChatOpportunityContext? opportunity,
         CrmAgentChatInteractionContext? interaction,
-        AgentChatContextAccessState accessState)
+        AgentChatContextAccessState accessState,
+        CrmSection? section)
         => string.Join(
             "\u001F",
             account.AccountId,
@@ -383,7 +386,8 @@
             interaction?.DisplayLabel,
             interaction?.InteractionType,
             interaction?.RelatedOpportunityId,
-            accessState);
+            accessState,
+            section);
 
     private void DisposeContext()
     {

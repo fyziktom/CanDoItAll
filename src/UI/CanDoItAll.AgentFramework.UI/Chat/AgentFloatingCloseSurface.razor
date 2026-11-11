@@ -8,11 +8,7 @@
     }
     @if (!rendered.CanStop) {
         <Alert AlertStyle="AlertStyle.Warning">
-            This chat is still working. Keep it active now; it can be stopped after the current model call completes.
-        </Alert>
-    } else if (rendered.AwaitingApproval) {
-        <Alert AlertStyle="AlertStyle.Warning">
-            Stopping removes the quick-access handle, but does not reject the durable pending approval. Reopen the saved thread from history to decide it later.
+            This chat has an active run or a pending decision. Keep it active, or resolve or cancel the run before removing the chat.
         </Alert>
     }
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.End">

@@ -159,6 +159,9 @@ public sealed partial class AgentChatPanelResponsivenessTests {
             reads.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, successor));
             if (dispose) {
                 await cut.Instance.DisposeAsync();
+                await submittedOperation.WaitAsync(TimeSpan.FromSeconds(2));
+                Assert.False(completion.Task.IsCompleted);
+                Assert.Equal(AgentChatSubmissionState.Pending, Assert.Single(retention.Snapshot()).State);
                 cut.Dispose();
                 cut = context.Render<AgentChatPanel>(parameters => parameters
                     .Add(component => component.PreferredAgentId, agent.Id)

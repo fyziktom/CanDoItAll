@@ -38,6 +38,7 @@
                             ComposerKey="@composerKey"
                             RunStateText="@runStateText"
                             RunStateTone="@runStateTone"
+                            HeaderContext="@HeaderContext"
                             PendingUserPrompt="@pendingUserPrompt"
                             PendingUserCreatedAtUtc="@pendingUserCreatedAtUtc"
                             ActivityStreamId="@activeActivityStreamId"
@@ -81,3 +82,7 @@
                 }
             </HeaderDetails>
         </ChatWorkspacePanel>
+
+@code {
+    [Parameter] public RenderFragment? HeaderContext { get; set; }
+}

@@ -15,6 +15,34 @@ public sealed class AgentTurnContextCaptureServiceTests
     private static readonly Guid ProfileId = Guid.NewGuid();
     private static readonly Guid LifetimeId = Guid.NewGuid();
 
+    [Fact]
+    public async Task Frozen_observation_is_used_when_the_new_execution_scope_has_no_live_surface() {
+        var projectScope = WorkspaceScopeDescriptor.Project(ProjectId.ToString("D"));
+        var observation = CreateProjectStructureSnapshot(projectScope);
+        var resolver = new RecordingAuthorityResolver(request => CreateAuthority(request, projectScope, mutationAllowed: true));
+        var service = CreateService(new FixedContextRegistry(null), resolver);
+
+        var result = await service.CaptureAsync(CreateCommand(Guid.NewGuid()), new AgentTurnContextObservation(observation, null));
+
+        Assert.Same(observation, result.Context);
+        Assert.Equal(observation.Scope.Source.Id, resolver.LastRequest!.SourceId);
+        Assert.Equal(observation.Version, result.TurnReference!.ObservationVersion);
+        Assert.Contains(observation.Fragments[0].Content, result.Invocation.Options.TransientContext!.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Frozen_observation_does_not_bypass_the_database_generation_fence() {
+        var projectScope = WorkspaceScopeDescriptor.Project(ProjectId.ToString("D"));
+        var resolver = new RecordingAuthorityResolver(request => CreateAuthority(request, projectScope, mutationAllowed: true));
+        var service = CreateService(new FixedContextRegistry(null), resolver);
+        var command = CreateCommand(Guid.NewGuid()) with { ExpectedDatabaseProfileGeneration = new(2) };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CaptureAsync(command,
+            new AgentTurnContextObservation(CreateProjectStructureSnapshot(projectScope), null)));
+
+        Assert.Null(resolver.LastRequest);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

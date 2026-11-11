@@ -15,11 +15,11 @@
     }
 } else {
 <AgentChatSurface Presentation="@MapPresentation()" Intent="HandleIntentAsync" Navigation="@Navigation" NavigationIntent="@NavigationIntent"
-                  HeaderActions="@HeaderActions" HeaderDetails="@HeaderDetails" ComposerActions="@ComposerActions">
+                  HeaderActions="@HeaderActions" HeaderDetails="@HeaderDetails" HeaderContext="@HeaderContext" ComposerActions="@ComposerActions">
     <ActivityContent>
         @if (ActivityStreamId is not null) {
             <AgentExecutionActivityStatus @key="ActivityStreamId"
-                                          StreamId="@ActivityStreamId" />
+                                          StreamId="@ActivityStreamId" StateChanged="UpdateActivity" />
         }
     </ActivityContent>
     <AttachmentPicker>
@@ -89,6 +89,7 @@
     public RenderFragment? HeaderActions { get; set; }
 
     [Parameter] public RenderFragment? HeaderDetails { get; set; }
+    [Parameter] public RenderFragment? HeaderContext { get; set; }
 
     [Parameter]
     public RenderFragment? ComposerActions { get; set; }
@@ -188,7 +189,7 @@
         var badges = new List<PresentationBadge> {
             new(ResolveSessionBadge(), AgentConversationPresentationMapper.MapTone(ResolveSessionTone()))
         };
-        if (!string.IsNullOrWhiteSpace(RunStateText)) {
+        if (!string.IsNullOrWhiteSpace(RunStateText) && Navigation?.Focused != true) {
             badges.Add(new(
                 RunStateText,
                 AgentConversationPresentationMapper.MapTone(RunStateTone),
@@ -491,11 +492,24 @@
         old.Dispose();
     }
 
+    private PresentationBadge? ResolveRunStatus() {
+        var hasSettledRun = !IsBusy && ActiveRun?.State is (ExecutionState.Completed or ExecutionState.Failed) &&
+            !string.IsNullOrWhiteSpace(RunStateText);
+        if (activity is not null && ActivityStreamId?.OperationId == activity.OperationId &&
+            (!activity.IsUnavailable || !hasSettledRun)) {
+            return new(activity.Label, AgentConversationPresentationMapper.MapTone(activity.Tone));
+        }
+
+        return string.IsNullOrWhiteSpace(RunStateText) ? null
+            : new(RunStateText, AgentConversationPresentationMapper.MapTone(RunStateTone));
+    }
+
     private ChatWorkspacePresentation MapPresentation() {
         var entries = ResolveActiveExecutionEntries();
         return new() {
             Revision = presentationRevision,
             Header = HeaderPresentation,
+            RunStatus = ResolveRunStatus(),
             Session = Session is null ? null : new(Session.Id, Session.Title),
             Messages = MessagePresentations.ToImmutableArray(),
             TransientMessages = TransientMessagePresentations.ToImmutableArray(),

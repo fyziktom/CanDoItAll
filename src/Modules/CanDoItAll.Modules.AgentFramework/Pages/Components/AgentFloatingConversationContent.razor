@@ -7,19 +7,23 @@
 @inject IAgentChatContextRegistry ContextRegistry
 @inject IAgentConversationContextService ConversationContextService
 
-<AgentConversationContextSurface State="Presentation" Intent="HandleContextIntent">
-    @if (Chat.ChatSessionId is { } sessionId) {
-        <AgentChatPanel PreferredAgentId="@Chat.Agent.AgentId"
-                        PreferredAgent="@PreferredAgent"
-                        PreferredSessionId="@sessionId"
-                        ActiveChatHandleId="@Chat.HandleId"
-                        PersistedActiveChatRunState="@Chat.RunState"
-                        DisplayMode="AgentChatPanelDisplayMode.FocusedFloating" />
-    } else {
-        <LoadingState Title="Preparing chat"
-                      Description="Reserving the agent and creating a durable conversation." />
-    }
-</AgentConversationContextSurface>
+@if (Chat.ChatSessionId is { } sessionId) {
+    <AgentChatPanel PreferredAgentId="@Chat.Agent.AgentId"
+                    PreferredAgent="@PreferredAgent"
+                    PreferredSessionId="@sessionId"
+                    ActiveChatHandleId="@Chat.HandleId"
+                    PersistedActiveChatRunState="@Chat.RunState"
+                    PersistedActivityStreamId="@Chat.ActivityStreamId"
+                    PersistedExecutionRunId="@Chat.ExecutionRunId"
+                    DisplayMode="AgentChatPanelDisplayMode.FocusedFloating">
+        <HeaderContext>
+            <AgentConversationContextSurface State="Presentation" Intent="HandleContextIntent" />
+        </HeaderContext>
+    </AgentChatPanel>
+} else {
+    <LoadingState Title="Preparing chat"
+                  Description="Reserving the agent and creating a durable conversation." />
+}
 
 @code {
     [Parameter, EditorRequired]

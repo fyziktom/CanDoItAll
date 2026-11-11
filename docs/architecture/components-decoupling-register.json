@@ -3,7 +3,7 @@
   "state": "COMPONENTS_DECOUPLING_COMPLETE",
   "entry_commit": "663fb1391e4acb12439173f1cb1d287fb1f24685",
   "implementation_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
-  "coverage": "1250 current rendering inputs. Workbench node comparison, retained view/control lifetime, bounded status and existing native orchestration reviewed; remaining Workbench surfaces and final R2 runtime gates stay open.",
+  "coverage": "1269 current rendering inputs. Workbench node comparison, retained view/control lifetime, bounded status and existing native orchestration reviewed; remaining Workbench surfaces and final R2 runtime gates stay open.",
   "limitations": [
     "Route declarations and reviewed source activations are complemented by evaluated consumer closure and actual compiled/native/browser proof. Excluded generic-type/name matches are retained explicitly; arbitrary reflection cannot be inferred from lexical callers.",
     "Assets/scenario/evidence fields refer to family entries; execution outcomes are recorded by dimension in the closure document."
@@ -3788,7 +3788,8 @@
       "proof": "docs/architecture/components-decoupling-evidence.json",
       "asset_inputs": [
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/TeamAuthoring.razor.css",
-        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/sandbox.css"
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/sandbox.css",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/FloatingChatSpecimen.razor.css"
       ],
       "evaluated_evidence": "802527014cf6ab76c84c16e66bb6ced3f5108e9edde93a8bde3f510f37a37cd0",
       "evaluated_project_references": [
@@ -7299,7 +7300,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentExecutionActivityStatus.razor.cs",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentExecutionActivityStatus.razor.cs",
-      "sha256_lf": "a500a0d99121a1aebf5604fcfbfe8fc9284496e6176c3894454858058ddb1ef3",
+      "sha256_lf": "27ab18fca27ab4e18279a9900815485a27bc6c69d2c4a7463a2423b4419ee265",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.AgentExecutionActivityStatus",
@@ -7539,7 +7540,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
-      "sha256_lf": "b2b67814f51f21e96ccf150c51e9c52cb0230ff49007662a92e57cf81f215615",
+      "sha256_lf": "a5e8a028c360e6c667db86feec9602a2e61b01c6a8f7a9e9d43031f28d96b839",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.ChatWorkspacePanel",
@@ -7560,7 +7561,7 @@
       "assets": "CanDoItAll.AgentFramework.Components",
       "scenario": "CanDoItAll.AgentFramework.Components",
       "evidence": "CanDoItAll.AgentFramework.Components",
-      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution. Active work masks consumed approval projections and reports Working; approval execution remains with the native host. Optional typed send-blocked presentation carries the native decision independently of busy state; draft editing and the native dispatch guard remain unchanged.",
+      "rationale": "Shared chat adapter projects the retained activity stream into the floating header; no execution lifetime moves into rendering.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ChatWorkspacePanel",
@@ -10005,7 +10006,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
-      "sha256_lf": "2dadcbacc02d4cb06e1189cae45c9283a7db290e734f30ce2ae2c94623ae20f0",
+      "sha256_lf": "bfd111a8dd9fab63677d254d84902990a0efabe34178b6c29d13fbdf69b28ac7",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel",
@@ -10033,7 +10034,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "sha256_lf": "1de50af32bcb52a6b29ccf1c7f0895a92a0cfa599ca16633accb5eaac96d7229",
+      "sha256_lf": "76fc050cce1eff483df49756c5c79b848cdeb785d237300a9caf07d1baf64964",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel, CanDoItAll.Modules.AgentFramework.Pages.Components.VoiceOperation",
@@ -10048,7 +10049,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. The native owner reconciles the first live run into its selected transcript and runtime detail; older execution entries cannot replace current activity. The native owner now retains bounded immutable submissions in its session service across navigation and disposal. Shared Alert, Stack, TextBlock and Button wrappers show original content and explicit restore/discard intents. Only proven prepublication refusal can restore a matching unchanged draft; uncertain outcomes block automatic resend. Provider, permission and mutation ownership remain outside the renderer. Rename captures the displayed session title before awaiting publication. A conflict preserves the displayed session and title draft; an explicit reload is required. The existing effect owner and session generation fence late responses."
+      "rationale": "Circuit host reconnects the original stream and refreshes persisted workspace state; execution and approval cancellation delegate to the application owner."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyDialog.razor",
@@ -10264,7 +10265,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor",
-      "sha256_lf": "f9002216be26094e3fa8d224c3f4ad4489c177449b9a41b40be9a51f1d2bacf1",
+      "sha256_lf": "f9fdf065d5f5184b32fe44463d0b0215238c4f44060032d09aeccb8250169d52",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentFloatingConversationContent",
@@ -10282,7 +10283,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf.",
+      "rationale": "Native floating host passes recovered stream/run identities while preserving the compact shared header context renderer.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "AgentFloatingConversationContent",
@@ -11467,7 +11468,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentConversationShellContributor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentConversationShellContributor.cs",
-      "sha256_lf": "2438206bce86697e334b895eabdb4cb62e67c7deb88812d9294474c1db30c394",
+      "sha256_lf": "b83fc7f60a63a025d6739b2367c48b9f32d9cc7a8c82875c67f78990e708bca9",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.AgentConversationShellContributor",
@@ -11484,12 +11485,12 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Native shell contributor revalidates owner-scoped recovery before navigating to a safe module return route and focuses the existing chat."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
-      "sha256_lf": "c67433f5498a55d5b0661a2bc9c13ee98b80adf71e5be27b5ea8d43e54fd9c40",
+      "sha256_lf": "9e9b55e46288f4645013589d64f1d3c3ecb1697a4f2c53c8b75e4c7a10424eb2",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions, CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleAssemblyMarker",
@@ -11504,7 +11505,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Reviewed composition-root registration of existing editing feed/operation context, scoped native WorkflowChanges and bounded WorkflowCatalogReader. Existing canonical runtime dataset supplies scope; Web replaces unavailable access boundary. No service locator added outside composition root and no reference direction changes. See docs/architecture/concurrent-editing-prompt-pilot.md. Component follow-up failures now use the explicitly injected ILogger<WorkflowChanges> at this existing composition root. Native tests and both browsers exercised this registration; no new rendering, assets, service location outside composition or project reference."
+      "rationale": "Module composition registers independently owned execution scopes and circuit recovery projections; no implementation dependency enters Core contracts."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/PromptGalleryLlmChatComposerActionContributor.cs",
@@ -11767,7 +11768,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Components/CrmAgentChatContextProvider.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Components/CrmAgentChatContextProvider.razor",
-      "sha256_lf": "4ebd8520f45b1a7a7bbb8bf9711936df8024b3a864c11baea4f12f8e34072e96",
+      "sha256_lf": "4befe2f3761f6d9452eb20edeebe2f09284fba9be750de43fe5efe5ec533fffd",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Components.CrmAgentChatContextProvider",
@@ -11782,7 +11783,7 @@
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Native CRM context publisher passes typed section and selected identities into the canonical bookmark codec, excluding free text."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Components/CrmFinancialsPanel.razor",
@@ -12043,7 +12044,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.razor",
-      "sha256_lf": "3f8dff2b405f9b5fbb7c8073353e829b6eda7dc2fd77ea6c5fe545a5b66216f9",
+      "sha256_lf": "8de9b570a34ec1a32f065d75789b42c773fe8bfa043c17bd688ad1f6357b9606",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrCrmPage",
@@ -12069,7 +12070,7 @@
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Native CRM host owns exact account-record grants, subscriptions, conditional connection writes, append receipts, project selection admission, and async lifetime fences. Typed states own B/L/R and S/L/A. No effects move into renderers. See docs/architecture/concurrent-editing-prompt-pilot.md.",
+      "rationale": "Routed CRM host publishes its typed section for safe chat return navigation; the host retains navigation and authority.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "CrmHrCrmPage",
@@ -16742,7 +16743,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/App.razor",
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/App.razor",
-      "sha256_lf": "db228c44aa62e4f38748c6530c18f72ebc9feedae7597da839e66d1cd444b687",
+      "sha256_lf": "42985d4a8fc15187a9883dbc34a712e0a2dc27f8ca591ec7ca1ac9ed3ba9b32c",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.AgentFramework.UiSandbox.Components.App",
@@ -17036,6 +17037,50 @@
       "scenario": "CanDoItAll.AgentFramework.UiSandbox",
       "evidence": "CanDoItAll.AgentFramework.UiSandbox",
       "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof."
+    },
+    {
+      "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/FloatingChatSpecimen.razor",
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/FloatingChatSpecimen.razor",
+      "sha256_lf": "5098620b58033387e8e913067f4643959b1c14f6be35c31b2bfe6310c3eb4c5a",
+      "kind": "RAZOR",
+      "role": "SCENARIO",
+      "type": "CanDoItAll.AgentFramework.UiSandbox.Components.FloatingChatSpecimen",
+      "project": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "Routed sandbox /floating-chat"
+      ],
+      "native_owner": "Deterministic scenario host only",
+      "visual_owner": "CanDoItAll.AgentFramework.UiSandbox",
+      "descendants": [
+        "ConversationFloatingWindow",
+        "AgentChatSurface",
+        "AgentConversationContextSurface"
+      ],
+      "assets": "CanDoItAll.AgentFramework.UiSandbox",
+      "scenario": "CanDoItAll.AgentFramework.UiSandbox",
+      "evidence": "CanDoItAll.AgentFramework.UiSandbox",
+      "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof."
+    },
+    {
+      "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/FloatingChatSpecimen.razor.css",
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/FloatingChatSpecimen.razor.css",
+      "sha256_lf": "dd7f33098d27dd82f6dd23a29ffa8787f80c4664f8ee5deb5eb09a59e26df2c3",
+      "kind": "ASSET",
+      "role": "SCENARIO",
+      "type": "Not a component type",
+      "project": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "classification": "NON_RENDERING",
+      "caller": [
+        "Partial/compile dependency of CanDoItAll.AgentFramework.UiSandbox"
+      ],
+      "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
+      "visual_owner": "No reusable rendering body",
+      "descendants": [],
+      "assets": "CanDoItAll.AgentFramework.UiSandbox",
+      "scenario": "CanDoItAll.AgentFramework.UiSandbox",
+      "evidence": "CanDoItAll.AgentFramework.UiSandbox",
+      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/GovernanceSpecimen.razor",
@@ -26128,7 +26173,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor",
-      "sha256_lf": "4f11eca6d93bde7346515fb09aaa89578c21ac146d716f8203fe4098435b3b1a",
+      "sha256_lf": "aea7f3ae249c2561903be577014be98ed7f41c97e808e96824b9648c7dfe1b8c",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Chat.AgentChatSurface",
@@ -26173,7 +26218,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentConversationContextSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentConversationContextSurface.razor",
-      "sha256_lf": "0ea8a8bb5a284240240cc03ec92813651f2edf6f15cecd10f41c611d76421e6e",
+      "sha256_lf": "55cd7549b711a2ec759536109c4db9359874cd2cae43eaf7c99440ba1605d0eb",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Chat.AgentConversationContextSurface",
@@ -26194,7 +26239,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentConversationContextSurface.razor.css",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentConversationContextSurface.razor.css",
-      "sha256_lf": "f3328be716b7da5529c228cb73d4ae1ad633b71016d11e067e3d8b43c6aa76a2",
+      "sha256_lf": "762bcfa8dc298fe74ec092cd3f7145c352b8716ad909cbb17e00923c5df317dd",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -26214,7 +26259,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentFloatingCloseSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentFloatingCloseSurface.razor",
-      "sha256_lf": "0082ab9ac30c0b6f5b36e901be3f6a78a53eae75755d75303387f85b546a41cc",
+      "sha256_lf": "dd3634c2b265e193723d3fc2031c869a188945a410cf7d9945a1d953a3483362",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Chat.AgentFloatingCloseSurface",
@@ -26230,7 +26275,7 @@
       "assets": "CanDoItAll.AgentFramework.UI",
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
-      "rationale": "Existing light value/intent or controlled-operation seam; no re-extraction."
+      "rationale": "Pure close renderer keeps unresolved runs discoverable and explains explicit resolution or cancellation; execution policy remains in the owner."
     },
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentImageAttachmentPicker.razor",
@@ -26276,7 +26321,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
-      "sha256_lf": "84765df2e1ae8d0bb18bebb6b0aebf69cc1e10e0cda98ace5e379d2d31c95fe0",
+      "sha256_lf": "4fe9571879c2abc8472d9d6f39cc440647c5a36597fd4bcd93cbecbc2660ff76",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Chat.ChatWorkspaceSurface",
@@ -26301,7 +26346,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor.css",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor.css",
-      "sha256_lf": "aa29d52c6e7231970dcb1ed37e7ed266501c81f31a574c8fbab4cbd89b5e6a07",
+      "sha256_lf": "1fead4b25c79536788d66f2726a79f6ef6cbf5e05e3f5c769abd911a5a8e4efa",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -28613,7 +28658,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor",
-      "sha256_lf": "9aa2d48c5945b42938a7841ede04b46e33edb9a6b6af6e25f269b832f16d93ae",
+      "sha256_lf": "e99e8bdb0c6ecbe673eed584591b27809719d5a62ea5dc6acf98f4f1387a8ae7",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Conversations.Components.ConversationFloatingWindow",
@@ -28628,7 +28673,7 @@
       "assets": "CanDoItAll.Conversations.Components",
       "scenario": "CanDoItAll.Conversations.Components",
       "evidence": "CanDoItAll.Conversations.Components",
-      "rationale": "Existing light value/intent or controlled-operation seam; no re-extraction."
+      "rationale": "Controlled window retains its chat and routes status through a per-window Blazor section; no mirrored execution state."
     },
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor.css",
@@ -28653,7 +28698,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationHeader.razor",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationHeader.razor",
-      "sha256_lf": "ab904f97f09a3ab42e29c9dc4c245653e2bfe9ead2c3e2bacceebfa02a3dede5",
+      "sha256_lf": "8ce64a2e4c24d21a98da3fd11bfd65c3f55bf616b9dd182ef23bbbcafadbd53e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Conversations.Components.ConversationHeader",
@@ -28674,7 +28719,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationHeader.razor.css",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationHeader.razor.css",
-      "sha256_lf": "34c84b9e709e703f9546d914a08ea5fa026a796753e01ec113d28c7fbefd853c",
+      "sha256_lf": "372a7b70598339e61c6caa789af1fcdff501d8fe417ab96318acdd22354643db",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -29344,7 +29389,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellContracts.cs",
       "path": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellContracts.cs",
-      "sha256_lf": "c06a6c7a69643ec126f029857ea877647ad58c50a57b3c0e379d9ed6c2af04c8",
+      "sha256_lf": "d917dea05b5efbb3552c40b8824695623c91db724f4308d54292ecae281f4680",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Conversations.Shell.ConversationParticipantKind, CanDoItAll.Conversations.Shell.ConversationCatalogKindFilter, CanDoItAll.Conversations.Shell.ConversationCatalogLifecycle, CanDoItAll.Conversations.Shell.ConversationShellWindowKey, CanDoItAll.Conversations.Shell.ConversationShellParticipant, CanDoItAll.Conversations.Shell.ConversationShellActiveItem, CanDoItAll.Conversations.Shell.ConversationShellWindowDescriptor, CanDoItAll.Conversations.Shell.ConversationShellContributorSnapshot, CanDoItAll.Conversations.Shell.IConversationShellContributor, CanDoItAll.Conversations.Shell.ConversationShellState, CanDoItAll.Conversations.Shell.IConversationShellLauncher, CanDoItAll.Conversations.Shell.IConversationShellCoordinator",
@@ -29359,12 +29404,12 @@
       "assets": "CanDoItAll.Conversations.Shell",
       "scenario": "CanDoItAll.Conversations.Shell",
       "evidence": "CanDoItAll.Conversations.Shell",
-      "rationale": "Generic window/lifecycle/contributor composition. Agent and Simple Chat contributors retain native content/session owners; neutral conversation children own visual rendering."
+      "rationale": "Source-neutral optional avatar presentation extends the window descriptor without agent-runtime dependencies."
     },
     {
       "identity": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellHost.razor",
       "path": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellHost.razor",
-      "sha256_lf": "18157961f8415e457f6839db625305af0b50da6a8030527398e476fcb2d2de1a",
+      "sha256_lf": "2c65601f0113fa1379ca9bdd7ede1cbb00be3a610089302ac870bf93d88d827e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Conversations.Shell.ConversationShellHost",

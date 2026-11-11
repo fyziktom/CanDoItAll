@@ -109,6 +109,8 @@ public sealed partial class AgentChatPanelResponsivenessTests {
                 cut.Find("[data-testid='chat-prompt-input']").Input("Current profile draft");
             } else {
                 await cut.Instance.DisposeAsync();
+                await operation.WaitAsync(TimeSpan.FromSeconds(2));
+                Assert.False(fixture.Writer.PlanningCompletion.Task.IsCompleted);
             }
             var reads = fixture.Reads.WorkspaceRequestCount;
             fixture.Writer.PlanningCompletion.SetResult(fixture.Detail);

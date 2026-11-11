@@ -19,6 +19,7 @@ public sealed record ChatWorkspaceIntent(long Revision, ChatWorkspaceAction Acti
 public sealed record ChatWorkspacePresentation {
     public long Revision { get; init; }
     public ConversationHeaderPresentation Header { get; init; } = new(new("Selected agent", null, "AI", "Selected agent"), []);
+    public PresentationBadge? RunStatus { get; init; }
     public ChatSessionHeader? Session { get; init; }
     public ImmutableArray<ConversationMessagePresentation> Messages { get; init; } = [];
     public ImmutableArray<ConversationMessagePresentation> TransientMessages { get; init; } = [];

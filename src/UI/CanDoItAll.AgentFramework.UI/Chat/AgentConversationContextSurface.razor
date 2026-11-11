@@ -1,7 +1,7 @@
 @{ var rendered = State; }
 
 <div class="agent-floating-conversation-content" data-testid="floating-agent-chat-content">
-    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap" Class="agent-floating-context-summary">
+    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="agent-floating-context-summary">
         <Button Icon="@(rendered.Detached ? "link_off" : "link")" Text="@(rendered.ContextLabel ?? "No module context")"
                 ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Class="agent-floating-context-button"
                 aria-label="Context details" title="@rendered.Affinity" Click="@(() => contextOpen = true)"

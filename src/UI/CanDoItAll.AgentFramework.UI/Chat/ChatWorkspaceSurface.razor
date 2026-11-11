@@ -1,9 +1,18 @@
 @using System.Collections.Immutable
+@using Microsoft.AspNetCore.Components.Sections
 @namespace CanDoItAll.AgentFramework.UI.Chat
+
+@if (Compact && WindowHeaderSlots is not null) {
+    <SectionContent SectionId="WindowHeaderSlots.Status">
+        <StatusBadge Tone="@PresentationToneResolver.Resolve(Presentation.RunStatus?.Tone ?? PresentationTone.Default)"
+                     Text="@(Presentation.RunStatus?.Text ?? "Ready")"
+                     role="status" data-testid="floating-agent-chat-run-state" />
+    </SectionContent>
+}
 
 <ConversationWorkspacePanel>
     <Header>
-        <ConversationHeader Presentation="@HeaderPresentation" Compact="Compact">
+        <ConversationHeader Presentation="@HeaderPresentation" Compact="Compact" ContextContent="@HeaderContext">
             <Actions>
                 @if (Compact) {
                     <Button Icon="info" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
@@ -16,13 +25,14 @@
                 @if (Session is null) {
                     <p class="chat-panel-header__empty-title">Select or create a thread</p>
                 } else {
+                    <div class="chat-thread-title-edit">
                     <Editable TItem="ChatThreadTitleDraft"
                               Item="@titleEditor"
                               ItemChanged="HandleSessionTitleChangedAsync"
                               ParameterName="@nameof(ChatThreadTitleDraft.Title)"
                               Placeholder="Thread title"
-                              EmptyText="Untitled thread"
-                              Class="chat-thread-title-edit" />
+                              EmptyText="Untitled thread" />
+                    </div>
                 }
             </TitleContent>
         </ConversationHeader>
@@ -270,6 +280,8 @@
 
 @code {
     [Parameter] public bool Compact { get; set; }
+    [Parameter] public RenderFragment? HeaderContext { get; set; }
+    [CascadingParameter] public ConversationWindowHeaderSlots? WindowHeaderSlots { get; set; }
     [Parameter] public RenderFragment? HeaderDetails { get; set; }
     private bool detailsOpen;
     [Parameter, EditorRequired] public ChatWorkspacePresentation Presentation { get; set; } = new();

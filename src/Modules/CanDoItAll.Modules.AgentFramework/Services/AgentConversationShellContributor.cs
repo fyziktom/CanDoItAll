@@ -6,6 +6,7 @@ using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.Conversations.Shell;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -18,7 +19,9 @@ public sealed class AgentConversationShellContributor(
     IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator,
     DialogService dialogService,
     NotificationService notificationService,
-    ILogger<AgentConversationShellContributor> logger) : IConversationShellContributor, IAsyncDisposable
+    ILogger<AgentConversationShellContributor> logger,
+    AgentChatRecoveryService? recovery = null,
+    NavigationManager? navigation = null) : IConversationShellContributor, IAsyncDisposable
 {
     public const string SourceIdentifier = "agents";
     private const string ParticipantKeyPrefix = "agent:";
@@ -73,7 +76,7 @@ public sealed class AgentConversationShellContributor(
             active,
             windows,
             BuildStatusBadges(visibleAgents.Length, state.ActiveChats.Count),
-            string.IsNullOrWhiteSpace(failureMessage) ? null : failureMessage);
+            string.IsNullOrWhiteSpace(failureMessage) ? recovery?.FailureMessage : failureMessage);
     }
 
     public async Task HandleParticipantActionAsync(
@@ -135,6 +138,11 @@ public sealed class AgentConversationShellContributor(
         var handleId = ResolveHandleId(request.ItemKey);
         if (request.ActionKey == OpenActionKey)
         {
+            if (recovery is not null && navigation is not null &&
+                    await recovery.GetReturnLocationAsync(handleId, cancellationToken) is { } location) {
+                var target = location.ResolveUri(new Uri(navigation.BaseUri));
+                navigation.NavigateTo(target.AbsoluteUri);
+            }
             coordinator.ShowChat(handleId);
             shell.FocusWindow(SourceIdentifier, BuildWindowId(handleId));
             return;
@@ -264,7 +272,9 @@ public sealed class AgentConversationShellContributor(
                 [nameof(AgentFloatingConversationContent.Chat)] = chat,
                 [nameof(AgentFloatingConversationContent.PreferredAgent)] = agents.FirstOrDefault(
                     agent => agent.Id == chat.Agent.AgentId)!
-            }, keepContentMounted: true);
+            }, keepContentMounted: true) {
+                Avatar = new(chat.Agent.Name, chat.Agent.AvatarImageUrl, string.Empty, chat.Agent.Name)
+            };
 
     private IReadOnlyList<PresentationBadge> BuildStatusBadges(
         int visibleAgentCount,
@@ -390,6 +400,9 @@ public sealed class AgentConversationShellContributor(
             }
             try
             {
+                if (recovery is not null) {
+                    await recovery.DismissAsync(handleId, owner.Token);
+                }
                 coordinator.Stop(handleId);
                 shell.ClearFocusedWindow(SourceIdentifier, BuildWindowId(handleId));
                 return;

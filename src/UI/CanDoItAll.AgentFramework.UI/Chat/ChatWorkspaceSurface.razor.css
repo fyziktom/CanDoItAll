@@ -9,6 +9,11 @@
     white-space: nowrap;
 }
 
+.chat-thread-title-edit {
+    min-width: 0;
+    width: 100%;
+}
+
 .chat-thread-title-edit ::deep .cda-editable__row {
     align-items: center;
     gap: 0.35rem;

@@ -33,7 +33,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
-  CANDOITALL_COMPONENTS_COMMIT: 58ed03d66ad47a613650ff123db62742ee1511d7
+  CANDOITALL_COMPONENTS_COMMIT: ccb643e6e6f383ca0e5260b6edf41b00a606ee28
   CANDOITALL_FILETOOLS_COMMIT: 18b12495db92f3c1c19a81a8a0a1f2a6a0a1d73c
 
 jobs:
@@ -153,6 +153,13 @@ jobs:
         with:
           global-json-file: CanDoItAll/global.json
 
+      - name: Select the Ubuntu archive mirror
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo sed -i 's#^URIs:.*#URIs: https://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update --error-on=any
+
       - name: Start PostgreSQL for the stable integration gate
         id: postgres
         uses: ikalnytskyi/action-setup-postgres@v8
@@ -261,6 +268,28 @@ jobs:
         shell: pwsh
         run: ./tests/Playwright/CanDoItAll.Tests.Playwright/bin/Release/net10.0/playwright.ps1 install chromium
 
+      - name: Verify floating agent execution survives browser refresh
+        if: runner.os == 'Linux'
+        timeout-minutes: 12
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: |
+          $project = './tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj'
+          $test = 'CanDoItAll.Tests.Playwright.AgentChatRefreshBrowserTests.Running_floating_chat_survives_soft_and_hard_reload_and_reopens_its_original_view'
+          $discovery = @(dotnet test $project --configuration Release --no-build --no-restore --list-tests --filter "FullyQualifiedName=$test" -p:UseLocalCanDoItAllLibraries=true /m:1)
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Agent chat refresh test discovery failed.'
+          }
+          $discovery | Write-Host
+          if (@($discovery | Where-Object { $_.Trim() -eq $test }).Count -ne 1) {
+            throw 'Expected exactly one agent chat refresh browser test.'
+          }
+          dotnet test $project --configuration Release --no-build --no-restore --filter "FullyQualifiedName=$test" --logger "trx;LogFilePrefix=agent-chat-refresh" --results-directory "${{ runner.temp }}/test-results" -p:UseLocalCanDoItAllLibraries=true /m:1
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Agent chat refresh browser regression failed.'
+          }
+
       - name: Run focused actual-host runtime portability gate
         shell: pwsh
         env:
@@ -303,6 +332,7 @@ jobs:
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/startup-*.log
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/browser-smoke.*
             CanDoItAll/output/playwright/b07-runtime-capabilities-*.png
+            CanDoItAll/output/playwright/processes-pc1/native-*/agent-chat-refresh-*
           if-no-files-found: warn
           retention-days: 14
 
@@ -363,6 +393,12 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           global-json-file: CanDoItAll/global.json
+
+      - name: Select the Ubuntu archive mirror
+        shell: bash
+        run: |
+          sudo sed -i 's#^URIs:.*#URIs: https://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update --error-on=any
 
       - name: Start PostgreSQL for the stable integration gate
         uses: ikalnytskyi/action-setup-postgres@v8

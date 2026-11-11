@@ -1,5 +1,4 @@
 using CanDoItAll.Infrastructure.Persistence;
-using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -16,17 +15,16 @@ public sealed class AgentChatExecutionOrchestrator(
     IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
     IAgentConversationContextService? conversationContextService = null,
     Func<IAgentHistoricalReceiptReviewService>? historicalReceipts = null,
-    IDatabaseRuntimeState? historicalRuntimeState = null)
-    : IAgentChatExecutionOrchestrator
-{
+    IDatabaseRuntimeState? historicalRuntimeState = null,
+    AgentChatBackgroundExecution? background = null,
+    IAgentChatOwnerProvider? ownerProvider = null,
+    IAgentChatContextRegistry? contextRegistry = null)
+    : IAgentChatExecutionOrchestrator {
     private const string SendAcceptedMessage = "Agent request accepted.";
     private const string ApprovalAcceptedMessage = "Approval response accepted.";
     private const string RecoveryAcceptedMessage = "Original run recovery accepted.";
-    private const string CapturingContextMessage = "Capturing the current workspace context.";
-    private const string PreparingInputMessage = "Preparing the agent invocation from the current workspace context.";
-    private const string ResolvingSessionMessage = "Loading the conversation awaiting an approval response.";
-    private const string CancelledMessage = "The agent operation was cancelled.";
-    private const string FailedMessage = "The agent operation failed.";
+    private readonly IAgentChatOperationExecutor inlineExecutor = new AgentChatOperationExecutor(
+        workspaceExecutionService, turnContextCaptureService, notificationHub, conversationContextService);
 
     public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPlanningAction(
         Guid agentId, AgentPlanningActionRequest request, CancellationToken cancellationToken = default) {
@@ -34,28 +32,9 @@ public sealed class AgentChatExecutionOrchestrator(
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
         var operation = AdmitOperation(agentId, request.ChatSessionId, "Planning action accepted.");
-        return (operation.StreamId, ApplyPlanningActionAsync(operation, request, cancellationToken));
-    }
-
-    private async Task<ExecutionRunDetail> ApplyPlanningActionAsync(IAgentExecutionActivityOperationLease operation,
-        AgentPlanningActionRequest request, CancellationToken cancellationToken) {
-        using (operation) {
-            try {
-                operation.Report(AgentExecutionActivityPhase.ResolvingSession, "Loading the original planning decision.");
-                await Task.Yield();
-                var result = await workspaceExecutionService.ApplyPlanningActionWithinOperationAsync(operation, request, cancellationToken)
-                    .ConfigureAwait(false);
-                EnsureTerminalized(operation);
-                await PublishCompletionAsync(AgentChatContextInvocationFactory.CreateCompletionNotification(result.Run)).ConfigureAwait(false);
-                return result;
-            } catch (OperationCanceledException) {
-                TerminalizeCancellation(operation);
-                throw;
-            } catch {
-                TerminalizeFailure(operation);
-                throw;
-            }
-        }
+        return (operation.StreamId, background is null
+            ? inlineExecutor.PlanAsync(operation, request, cancellationToken)
+            : background.PlanAsync(GetOwner(cancellationToken), operation, request));
     }
 
     public Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
@@ -67,8 +46,7 @@ public sealed class AgentChatExecutionOrchestrator(
 
     public AgentChatOperationHandle StartSendMessage(
         AgentChatSendRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
         ValidateAgentId(request.AgentId);
         ValidateOptionalSessionId(request.ChatSessionId);
@@ -76,21 +54,16 @@ public sealed class AgentChatExecutionOrchestrator(
         ArgumentNullException.ThrowIfNull(request.Behavior);
         cancellationToken.ThrowIfCancellationRequested();
 
+        var conversationKey = ResolveConversationKey(request);
+        var frozenRequest = request with { AttachmentPaths = request.AttachmentPaths?.ToArray() };
+        var observation = background is null ? null : CaptureObservation(conversationKey);
         var operation = AdmitOperation(
             request.AgentId,
             request.ChatSessionId,
             SendAcceptedMessage);
-        var conversationKey = ResolveConversationKey(request);
-        var completion = SendMessageCoreAsync(
-            operation,
-            request.AgentId,
-            request.ChatSessionId,
-            request.Prompt,
-            request.AttachmentPaths?.ToArray(),
-            request.Behavior,
-            conversationKey,
-            request.PlanningOwner,
-            cancellationToken);
+        var completion = background is null
+            ? inlineExecutor.SendAsync(operation, frozenRequest, observation, cancellationToken)
+            : background.SendAsync(GetOwner(cancellationToken), operation, frozenRequest, observation!);
         return new AgentChatOperationHandle(operation.StreamId, completion);
     }
 
@@ -99,14 +72,12 @@ public sealed class AgentChatExecutionOrchestrator(
         Guid? chatSessionId,
         string prompt,
         IReadOnlyList<string>? attachmentPaths = null,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         return StartSendMessage(
             new AgentChatSendRequest(
                 agentId,
                 chatSessionId,
-                prompt)
-            {
+                prompt) {
                 AttachmentPaths = attachmentPaths
             },
             cancellationToken);
@@ -114,8 +85,7 @@ public sealed class AgentChatExecutionOrchestrator(
 
     public Task<AgentChatRunResult> SendMessageAsync(
         AgentChatSendRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         return StartSendMessage(
             request,
             cancellationToken).Completion;
@@ -126,14 +96,12 @@ public sealed class AgentChatExecutionOrchestrator(
         Guid? chatSessionId,
         string prompt,
         IReadOnlyList<string>? attachmentPaths = null,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         return SendMessageAsync(
             new AgentChatSendRequest(
                 agentId,
                 chatSessionId,
-                prompt)
-            {
+                prompt) {
                 AttachmentPaths = attachmentPaths
             },
             cancellationToken);
@@ -144,8 +112,7 @@ public sealed class AgentChatExecutionOrchestrator(
         Guid chatSessionId,
         IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ValidateAgentId(agentId);
         ValidateSessionId(chatSessionId);
         ArgumentNullException.ThrowIfNull(decisions);
@@ -155,13 +122,10 @@ public sealed class AgentChatExecutionOrchestrator(
             agentId,
             chatSessionId,
             ApprovalAcceptedMessage);
-        var completion = ContinueApprovalCoreAsync(
-            operation,
-            agentId,
-            chatSessionId,
-            decisions,
-            autoApprovePendingToolCalls,
-            cancellationToken);
+        var frozenDecisions = decisions.ToArray();
+        var completion = background is null
+            ? inlineExecutor.ApproveAsync(operation, agentId, chatSessionId, frozenDecisions, autoApprovePendingToolCalls, cancellationToken)
+            : background.ApproveAsync(GetOwner(cancellationToken), operation, frozenDecisions, autoApprovePendingToolCalls);
         return new AgentChatOperationHandle(operation.StreamId, completion);
     }
 
@@ -176,7 +140,9 @@ public sealed class AgentChatExecutionOrchestrator(
         ArgumentNullException.ThrowIfNull(rejectedStreamId);
         cancellationToken.ThrowIfCancellationRequested();
         var operation = AdmitOperation(agentId, chatSessionId, RecoveryAcceptedMessage, rejectedStreamId);
-        return (operation.StreamId, RecoverRunCoreAsync(operation, executionRunId, cancellationToken));
+        return (operation.StreamId, background is null
+            ? inlineExecutor.RecoverAsync(operation, executionRunId, cancellationToken)
+            : background.RecoverAsync(GetOwner(cancellationToken), operation, executionRunId));
     }
 
     public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
@@ -184,8 +150,7 @@ public sealed class AgentChatExecutionOrchestrator(
         Guid chatSessionId,
         IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         return StartApprovalContinuation(
             agentId,
             chatSessionId,
@@ -194,165 +159,37 @@ public sealed class AgentChatExecutionOrchestrator(
             cancellationToken).Completion;
     }
 
-    private async Task<AgentChatRunResult> SendMessageCoreAsync(
-        IAgentExecutionActivityOperationLease operation,
-        Guid agentId,
-        Guid? chatSessionId,
-        string prompt,
-        IReadOnlyList<string>? attachmentPaths,
-        AgentChatExecutionBehavior behavior,
-        AgentConversationKey? conversationKey,
-        AgentPlanningOwner? planningOwner,
-        CancellationToken cancellationToken)
-    {
-        using (operation)
-        {
-            try
-            {
-                operation.Report(
-                    AgentExecutionActivityPhase.CapturingContext,
-                    CapturingContextMessage);
-                await Task.Yield();
-
-                var capture = await turnContextCaptureService
-                    .CaptureAsync(
-                        new AgentTurnContextCaptureCommand(
-                            agentId,
-                            chatSessionId,
-                            prompt,
-                            operation.StreamId.OperationId,
-                            operation.StreamId.DatabaseProfileGeneration,
-                            behavior,
-                            conversationKey,
-                            planningOwner),
-                        cancellationToken)
-                    .ConfigureAwait(false);
-                if (capture.Context is { } context)
-                {
-                    operation.BindContext(
-                        context.Scope.Source,
-                        context.Version);
-                }
-
-                operation.Report(
-                    AgentExecutionActivityPhase.PreparingInput,
-                    PreparingInputMessage);
-                var invocation = capture.Invocation;
-                var result = await workspaceExecutionService
-                    .SendMessageWithinOperationAsync(
-                        operation,
-                        agentId,
-                        chatSessionId,
-                        invocation.Prompt,
-                        invocation.Options,
-                        cancellationToken,
-                        attachmentPaths)
-                    .ConfigureAwait(false);
-                EnsureTerminalized(operation);
-                CommitConversationAdoption(conversationKey, capture);
-                await PublishCompletionAsync(result.ContextCompletionNotification).ConfigureAwait(false);
-                return result;
-            }
-            catch (OperationCanceledException)
-            {
-                TerminalizeCancellation(operation);
-                throw;
-            }
-            catch
-            {
-                TerminalizeFailure(operation);
-                throw;
-            }
+    public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPendingApprovalCancellation(
+        Guid agentId, Guid chatSessionId, Guid executionRunId, CancellationToken cancellationToken = default) {
+        ValidateAgentId(agentId);
+        ValidateSessionId(chatSessionId);
+        if (executionRunId == Guid.Empty) {
+            throw new ArgumentException("An execution run id is required.", nameof(executionRunId));
         }
+        cancellationToken.ThrowIfCancellationRequested();
+        var operation = AdmitOperation(agentId, chatSessionId, "Pending approval cancellation accepted.");
+        return (operation.StreamId, background is null
+            ? inlineExecutor.CancelPendingAsync(operation, executionRunId, cancellationToken)
+            : background.CancelPendingAsync(GetOwner(cancellationToken), operation, executionRunId));
     }
 
-    private async Task<AgentChatRunResult> ContinueApprovalCoreAsync(
-        IAgentExecutionActivityOperationLease operation,
-        Guid agentId,
-        Guid chatSessionId,
-        IReadOnlyList<PendingToolApprovalDecision> decisions,
-        bool autoApprovePendingToolCalls,
-        CancellationToken cancellationToken)
-    {
-        using (operation)
-        {
-            try
-            {
-                operation.Report(
-                    AgentExecutionActivityPhase.ResolvingSession,
-                    ResolvingSessionMessage);
-                await Task.Yield();
+    private async ValueTask<AgentChatOwnerId> GetOwner(CancellationToken cancellationToken)
+        => await (ownerProvider ?? throw new InvalidOperationException("Background chat execution requires an owner provider."))
+            .GetOwnerAsync(cancellationToken).ConfigureAwait(false);
 
-                var result = await workspaceExecutionService
-                    .RespondToPendingApprovalsWithinOperationAsync(
-                        operation,
-                        agentId,
-                        chatSessionId,
-                        decisions,
-                        autoApprovePendingToolCalls,
-                        cancellationToken)
-                    .ConfigureAwait(false);
-                EnsureTerminalized(operation);
-                await PublishCompletionAsync(result.ContextCompletionNotification).ConfigureAwait(false);
-                return result;
-            }
-            catch (OperationCanceledException)
-            {
-                TerminalizeCancellation(operation);
-                throw;
-            }
-            catch
-            {
-                TerminalizeFailure(operation);
-                throw;
-            }
-        }
-    }
-
-    private async Task<ExecutionRunResult> RecoverRunCoreAsync(IAgentExecutionActivityOperationLease operation,
-        Guid executionRunId, CancellationToken cancellationToken) {
-        ExecutionRunResult? result = null;
-        Exception? primary = null;
-        try {
-            operation.Report(AgentExecutionActivityPhase.ResolvingSession, "Loading the original run for recovery.");
-            await Task.Yield();
-            result = await workspaceExecutionService.RecoverExecutionRunWithinOperationAsync(
-                operation, executionRunId, cancellationToken).ConfigureAwait(false);
-        } catch (Exception exception) {
-            primary = exception;
-        }
-        if (result?.EffectContinuation is { } || AgentEffectActivityFinalization.IsEffectFailure(primary)) {
-            primary = AgentEffectActivityFinalization.Publish(operation, result?.EffectContinuation, primary);
-            primary = AgentEffectActivityFinalization.Dispose(operation, result?.EffectContinuation, primary);
-            if (primary is not null) {
-                ExceptionDispatchInfo.Capture(primary).Throw();
-            }
-            return result!;
-        }
-        using (operation) {
-            try {
-                if (primary is not null) {
-                    ExceptionDispatchInfo.Capture(primary).Throw();
-                }
-                EnsureTerminalized(operation);
-                await PublishCompletionAsync(result!.ContextCompletionNotification).ConfigureAwait(false);
-                return result;
-            } catch (OperationCanceledException) {
-                TerminalizeCancellation(operation);
-                throw;
-            } catch {
-                TerminalizeFailure(operation);
-                throw;
-            }
-        }
+    private AgentTurnContextObservation CaptureObservation(AgentConversationKey? key) {
+        var binding = key is { } conversation ? conversationContextService?.GetOrCreateBinding(conversation) : null;
+        var context = binding?.Mode == AgentConversationContextMode.Detached ? null
+            : (contextRegistry ?? throw new InvalidOperationException("Background chat execution requires a context registry."))
+                .CaptureForExecution();
+        return new(context, binding);
     }
 
     private IAgentExecutionActivityOperationLease AdmitOperation(
         Guid agentId,
         Guid? chatSessionId,
         string acceptedMessage,
-        AgentExecutionActivityStreamId? expectedStreamId = null)
-    {
+        AgentExecutionActivityStreamId? expectedStreamId = null) {
         var firstProfile = databaseProfileRuntimeAccessor
             .ResolveCurrentProfile()
             .Profile;
@@ -372,8 +209,7 @@ public sealed class AgentChatExecutionOrchestrator(
                 confirmedProfile.Runtime.Fingerprint,
                 StringComparison.Ordinal) ||
             firstProfileGeneration != confirmedProfileGeneration ||
-            workspaceScope != expectedScope)
-        {
+            workspaceScope != expectedScope) {
             throw new InvalidOperationException(
                 "The current database profile changed while the agent operation was being admitted.");
         }
@@ -391,8 +227,7 @@ public sealed class AgentChatExecutionOrchestrator(
             streamId,
             agentId,
             chatSessionId,
-            acceptedMessage) switch
-        {
+            acceptedMessage) switch {
             AgentExecutionActivityAdmitted admitted => admitted.Operation,
             AgentExecutionActivityRejected rejected =>
                 throw new AgentExecutionActivityAdmissionException(
@@ -403,22 +238,12 @@ public sealed class AgentChatExecutionOrchestrator(
         };
     }
 
-    private Task PublishCompletionAsync(AgentChatExecutionCompleted? notification)
-    {
-        return notification is not null
-            ? notificationHub.PublishAsync(notification)
-            : Task.CompletedTask;
-    }
-
-    private AgentConversationKey? ResolveConversationKey(AgentChatSendRequest request)
-    {
-        if (conversationContextService is null)
-        {
+    private AgentConversationKey? ResolveConversationKey(AgentChatSendRequest request) {
+        if (conversationContextService is null) {
             return null;
         }
 
-        if (request.ChatSessionId is { } sessionId && sessionId != Guid.Empty)
-        {
+        if (request.ChatSessionId is { } sessionId && sessionId != Guid.Empty) {
             return AgentConversationKey.ForSession(sessionId);
         }
 
@@ -427,87 +252,22 @@ public sealed class AgentChatExecutionOrchestrator(
             : null;
     }
 
-    private void CommitConversationAdoption(
-        AgentConversationKey? conversationKey,
-        AgentTurnContextCaptureResult capture)
-    {
-        // The binding advances only for an admitted, executed turn. A lost
-        // compare-and-swap means a newer turn or an explicit mode change
-        // already moved the conversation; the stale update is skipped.
-        if (conversationContextService is null ||
-            conversationKey is not { } key ||
-            capture.ConversationBinding is not { } binding ||
-            capture.TurnReference is not { } turnReference ||
-            capture.Context is not { } context)
-        {
-            return;
-        }
-
-        conversationContextService.TryCommitTurnAdoption(
-            key,
-            binding.Revision,
-            turnReference.ContextEpochId,
-            turnReference.SourceKind,
-            turnReference.SourceId,
-            context.Scope.DisplayName,
-            turnReference.Surface,
-            turnReference.View,
-            turnReference.ModelContextDigest,
-            context.Scope.SurfacePosition?.PrimarySelection?.Id ?? string.Empty);
-    }
-
-    private static void EnsureTerminalized(
-        IAgentExecutionActivityOperationLease operation)
-    {
-        if (!operation.IsTerminal)
-        {
-            throw new InvalidOperationException(
-                "The workspace execution completed without a terminal activity outcome.");
-        }
-    }
-
-    private static void TerminalizeCancellation(
-        IAgentExecutionActivityOperationLease operation)
-    {
-        if (!operation.IsTerminal)
-        {
-            operation.Cancel(CancelledMessage);
-        }
-    }
-
-    private static void TerminalizeFailure(
-        IAgentExecutionActivityOperationLease operation)
-    {
-        if (!operation.IsTerminal)
-        {
-            operation.Fail(
-                FailedMessage,
-                AgentExecutionActivityFailureCodes.UnhandledExecutionFailure);
-        }
-    }
-
-    private static void ValidateAgentId(Guid agentId)
-    {
-        if (agentId == Guid.Empty)
-        {
+    private static void ValidateAgentId(Guid agentId) {
+        if (agentId == Guid.Empty) {
             throw new ArgumentException("Agent id cannot be empty.", nameof(agentId));
         }
     }
 
-    private static void ValidateSessionId(Guid chatSessionId)
-    {
-        if (chatSessionId == Guid.Empty)
-        {
+    private static void ValidateSessionId(Guid chatSessionId) {
+        if (chatSessionId == Guid.Empty) {
             throw new ArgumentException(
                 "Chat session id cannot be empty.",
                 nameof(chatSessionId));
         }
     }
 
-    private static void ValidateOptionalSessionId(Guid? chatSessionId)
-    {
-        if (chatSessionId == Guid.Empty)
-        {
+    private static void ValidateOptionalSessionId(Guid? chatSessionId) {
+        if (chatSessionId == Guid.Empty) {
             throw new ArgumentException(
                 "Optional chat session id cannot be empty.",
                 nameof(chatSessionId));

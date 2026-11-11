@@ -69,6 +69,9 @@ public interface IAgentChatContextRegistry
 
     AgentChatContextSnapshot? Capture();
 
+    AgentChatContextSnapshot? CaptureForExecution()
+        => throw new NotSupportedException("This context registry does not support synchronous execution capture.");
+
     ValueTask<AgentChatContextSnapshot?> CaptureAsync(
         CancellationToken cancellationToken = default);
 }
@@ -186,6 +189,9 @@ public sealed class AgentChatContextRegistry(TimeProvider timeProvider) : IAgent
 
     public AgentChatContextSnapshot? Capture()
         => CaptureCore(requireMatchingPositionRoute: false);
+
+    public AgentChatContextSnapshot? CaptureForExecution()
+        => CaptureCore(requireMatchingPositionRoute: true);
 
     public ValueTask<AgentChatContextSnapshot?> CaptureAsync(
         CancellationToken cancellationToken = default)

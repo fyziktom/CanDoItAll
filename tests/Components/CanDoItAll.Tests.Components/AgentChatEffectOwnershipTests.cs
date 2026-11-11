@@ -527,21 +527,30 @@ public sealed class AgentChatEffectOwnershipTests {
     }
 
     public class EffectsProxy : DispatchProxy {
+        private readonly AgentExecutionActivityStreamId activityPartition = CreateActivityStreamId();
         public Queue<TaskCompletionSource<AgentChatRunResult>> Sends { get; } = [];
         public TaskCompletionSource<AgentChatRunResult> Approval { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Func<Guid, Guid, Guid, CancellationToken, (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion)>? CancelPending { get; set; }
         public TaskCompletionSource<AgentVoiceTranscriptionResult> Transcription { get; } = new();
         public Func<CancellationToken, Task<AgentVoiceTranscriptionResult>>? ReadTranscription { get; set; }
         public TaskCompletionSource<AgentChatAttachmentStagingResult> Upload { get; set; } = new();
         public int SendCalls { get; private set; }
         public List<AgentChatSendRequest> Requests { get; } = [];
+        public AgentExecutionActivityStreamId CreateOperationStream()
+            => new(activityPartition.DatabaseProfileId, activityPartition.WorkspaceScope,
+                activityPartition.DatabaseProfileGeneration, AgentExecutionOperationId.New());
+
         protected override object? Invoke(MethodInfo? method, object?[]? args) {
             switch (method?.Name) {
                 case nameof(IAgentChatExecutionOrchestrator.StartApprovalContinuation):
-                    return new AgentChatOperationHandle(CreateActivityStreamId(), Approval.Task);
+                    return new AgentChatOperationHandle(CreateOperationStream(), Approval.Task);
+                case nameof(IAgentChatExecutionOrchestrator.StartPendingApprovalCancellation):
+                    return (CancelPending ?? throw new NotSupportedException(method.Name))(
+                        (Guid)args![0]!, (Guid)args[1]!, (Guid)args[2]!, (CancellationToken)args[3]!);
                 case nameof(IAgentChatExecutionOrchestrator.StartSendMessage):
                     SendCalls++;
                     Requests.Add((AgentChatSendRequest)args![0]!);
-                    return new AgentChatOperationHandle(CreateActivityStreamId(), Sends.Dequeue().Task);
+                    return new AgentChatOperationHandle(CreateOperationStream(), Sends.Dequeue().Task);
                 case nameof(IAgentVoiceService.TranscribeAsync):
                     return ReadTranscription?.Invoke(args!.OfType<CancellationToken>().Single()) ?? Transcription.Task;
                 case nameof(IAgentChatAttachmentStagingService.StageImageAsync):

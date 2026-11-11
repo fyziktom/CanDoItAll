@@ -31,6 +31,14 @@ from installed resources, the application on port 5032 and retained manual-provi
 Leases create uniquely named databases and retain the existing bounded cleanup contract.
 CI records `server_version_num` before its database lanes.
 
+Linux CI selects the Kernel.org [Ubuntu archive mirror](https://mirrors.kernel.org/)
+before installing PostgreSQL dependencies. It replaces only the Ubuntu archive and
+security URLs, retaining the distribution suites and Ubuntu signing keys. This avoids
+the Canonical archive DNS outage that blocked dependency setup across fresh runners;
+HTTPS and package-signature verification remain enabled. Index retrieval fails on any
+error, so a partial update cannot silently reuse stale indexes. The application runtime
+image uses the same mirror; see [container operations](operations/containers.md).
+
 For local runs reuse a suitable explicitly isolated PostgreSQL 18 test server, or provision
 one temporary fixture for the development session if none exists. Reuse it across related
 lanes through the existing database leases. Set the connection variable privately for the
@@ -1214,6 +1222,20 @@ Do not replace it with an in-memory endpoint test when changing HTTP, SSE, migra
 ownership behavior.
 
 ## Browser Gate
+
+`AgentChatRefreshBrowserTests` runs explicitly in the Linux CI job after Chromium
+installation. It holds a real agent operation at the deterministic provider fixture,
+disposes the disconnected circuit, performs normal and cache-bypassing refreshes,
+reopens the original chat and restores its Project Structure view. It asserts the
+same run and session complete with one provider request. The CI step requires exactly
+one discovered test and uploads its screenshots and execution evidence.
+
+The associated unit topics are `AgentChatBackgroundExecutionTests`,
+`AgentChatRecoveryServiceTests`, `AgentChatRecoveryProjectionTests`,
+`AgentChatReturnLocationTests` and the frozen-observation cases in
+`AgentTurnContextCaptureServiceTests`. `AgentChatOwnerProviderTests` exercises the Web
+identity adapter. Component disposal inside a reused bUnit service provider does not
+substitute for disposing the whole submitting circuit scope.
 
 Build the Playwright project and install Chromium once per machine:
 

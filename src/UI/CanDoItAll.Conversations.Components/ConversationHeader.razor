@@ -2,6 +2,9 @@
 
 <div class="@(Compact ? "chat-panel-header chat-panel-header--compact" : "chat-panel-header")">
     <div class="chat-panel-header__row">
+        @if (ContextContent is not null) {
+            <div class="chat-panel-header__context">@ContextContent</div>
+        }
         <div class="chat-panel-header__identity">
             @if (!Compact) {
             <Avatar Alt="@Presentation.Avatar.Alt"
@@ -41,6 +44,7 @@
 </div>
 
 @code {
+    [Parameter] public RenderFragment? ContextContent { get; set; }
     [Parameter] public bool Compact { get; set; }
     private IReadOnlyList<PresentationBadge> VisibleBadges => Compact
         ? Presentation.Badges.Where(badge => badge.Tone is PresentationTone.Warning or PresentationTone.Danger).ToArray()

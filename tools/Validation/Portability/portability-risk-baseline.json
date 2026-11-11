@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-08T15:41:54.525600+00:00",
+  "generated_utc": "2026-11-11T16:03:32.606751+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15805,
+  "allowance_count": 15815,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -111,15 +111,33 @@
     },
     {
       "path": ".github/workflows/ci.yml",
+      "category": "manager-discovery",
+      "source_fingerprint": "306879f6c7810f5536c4a05f7adab92f21f6578bef8ed68f9c85496c9bf049bb",
+      "count": 1
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "category": "shell-elevation",
+      "source_fingerprint": "0fe8b411d1d6411c0944cab2e4711d819532559a06eeeedb10df1dea877604aa",
+      "count": 2
+    },
+    {
+      "path": ".github/workflows/ci.yml",
       "category": "shell-elevation",
       "source_fingerprint": "169474ed3ed740281cc4bb3d19b54beeaaef4f70b989caddbbb49e292d447a78",
-      "count": 35
+      "count": 36
     },
     {
       "path": ".github/workflows/ci.yml",
       "category": "shell-elevation",
       "source_fingerprint": "96113c18d2d4a367e223b911fc0adaeb97090d01a33bb505b4bbe3fb7a5c53ba",
       "count": 1
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "category": "shell-elevation",
+      "source_fingerprint": "d7205dc70bea545266b51a14d93c035b59b56d680c857435b39f5778bb3ed795",
+      "count": 2
     },
     {
       "path": ".github/workflows/ci.yml",
@@ -33179,6 +33197,30 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/AgentChatPositionModels.cs",
       "category": "case-policy",
       "source_fingerprint": "624bb22d0c9045e39e6e19660dcf3c06a929cf39f84930019a6f62bdb2193ee2",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/AgentChatReturnLocation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d67530f87e274cf4a866aa547c44279e552dc8e93ba613e09f6fe0a04fea46a6",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/AgentChatReturnLocation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f7da914f2cfbb960b60984d6204f11889aca82ce8c8e2d02ae173902533b39f0",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/AgentChatReturnLocation.cs",
+      "category": "windows-path",
+      "source_fingerprint": "0641df2295d51e3d895424f136b8a61965d1be60f08fc5218e41b8da70d6b3ba",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/AgentChatReturnLocation.cs",
+      "category": "windows-path",
+      "source_fingerprint": "325a50a9a1209845fedbd07d254ecfaa0552329e9a665c2e75f01c378d147db4",
       "count": 1
     },
     {

@@ -61,7 +61,7 @@ internal static partial class AgentUiJourneySupport {
         var open = page.GetByTestId("agents-hr-agent-open-header");
         await Assertions.Expect(open).ToBeEnabledAsync(new() { Timeout = 60_000 });
         await open.ClickAsync();
-        var chat = page.GetByTestId("floating-agent-chat-content");
+        var chat = page.GetByTestId("floating-agent-chat-window");
         await chat.GetByTestId("chat-prompt-input").WaitForAsync(new() { Timeout = 60_000 });
         await Assertions.Expect(chat.GetByTestId("chat-send-button")).ToBeVisibleAsync();
         return chat;
@@ -82,7 +82,7 @@ internal static partial class AgentUiJourneySupport {
         var start = catalog.GetByTestId($"floating-agent-chat-agent-list-new-chat-{agentId:N}");
         await Assertions.Expect(start).ToBeEnabledAsync(new() { Timeout = 30_000 });
         await start.ClickAsync();
-        var chat = page.GetByTestId("floating-agent-chat-content");
+        var chat = page.GetByTestId("floating-agent-chat-window");
         await chat.GetByTestId("chat-prompt-input").WaitForAsync(new() { Timeout = 60_000 });
         return chat;
     }

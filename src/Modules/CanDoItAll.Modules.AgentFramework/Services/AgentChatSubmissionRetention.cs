@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.AgentFramework;
@@ -91,6 +92,57 @@ public sealed class AgentChatSubmissionRetention {
             submissions[id] = current with {
                 State = definitelyNotSent ? AgentChatSubmissionState.NotSent : AgentChatSubmissionState.Unconfirmed
             };
+        }
+        Changed?.Invoke();
+    }
+
+    public Task<AgentChatRunResult> ObserveAsync(Guid id, Task<AgentChatRunResult> execution) {
+        ArgumentNullException.ThrowIfNull(execution);
+        if (ExecutionContext.IsFlowSuppressed()) {
+            return StartObservation(id, execution);
+        }
+        using (ExecutionContext.SuppressFlow()) {
+            return StartObservation(id, execution);
+        }
+    }
+
+    private Task<AgentChatRunResult> StartObservation(Guid id, Task<AgentChatRunResult> execution) {
+        var observation = ObserveCompletionAsync(id, execution);
+        _ = observation.ContinueWith(static completed => {
+            _ = completed.Exception;
+        }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        return observation;
+    }
+
+    private async Task<AgentChatRunResult> ObserveCompletionAsync(Guid id, Task<AgentChatRunResult> execution) {
+        AgentChatRunResult result;
+        try {
+            result = await execution.ConfigureAwait(false);
+        } catch (Exception failure) {
+            RecordFailure(id, failure);
+            throw;
+        }
+        Complete(id);
+        return result;
+    }
+
+    public void RecordFailure(Guid id, Exception failure) {
+        ArgumentNullException.ThrowIfNull(failure);
+        lock (gate) {
+            if (!submissions.TryGetValue(id, out var current)) {
+                return;
+            }
+            if (failure is AgentChatRunFailedException saved && saved.AgentId == current.AgentId &&
+                    (!current.SessionId.HasValue || saved.ChatSessionId == current.SessionId)) {
+                RemoveCore(current);
+            } else {
+                var notSent = failure switch {
+                    AgentChatAdmissionConflictException conflict => conflict.AgentId == current.AgentId && conflict.ChatSessionId == current.SessionId,
+                    AgentChatSessionBlockedException blocked => blocked.AgentId == current.AgentId && blocked.ChatSessionId == current.SessionId,
+                    _ => false
+                };
+                submissions[id] = current with { State = notSent ? AgentChatSubmissionState.NotSent : AgentChatSubmissionState.Unconfirmed };
+            }
         }
         Changed?.Invoke();
     }

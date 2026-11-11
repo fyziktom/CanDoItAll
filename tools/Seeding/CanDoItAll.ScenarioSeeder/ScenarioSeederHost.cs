@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Composition;
@@ -142,6 +143,7 @@ internal static class ScenarioSeederHost
         services.AddSingleton<IHostApplicationLifetime>(provider => provider.GetRequiredService<SeederHostApplicationLifetime>());
         services.AddCanDoItAllInfrastructure(configuration, environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
         services.AddCanDoItAllRuntimeModules(configuration, environment);
+        services.AddSingleton<IAgentChatOwnerProvider>(new SeederAgentChatOwnerProvider());
         services.AddCanDoItAllRuntimeDatabaseSwitching();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
         services.AddScoped<AgentFrameworkIntegrationSimulationSeeder>();
@@ -231,6 +233,18 @@ internal static class ScenarioSeederHost
         Directory.CreateDirectory(Path.Combine(options.WorkspaceRootPath, "exports"));
         Directory.CreateDirectory(Path.Combine(options.WorkspaceRootPath, "evidence"));
         Directory.CreateDirectory(options.ManagerArtifactsRootPath);
+    }
+
+    private sealed class SeederAgentChatOwnerProvider : IAgentChatOwnerProvider {
+        public event EventHandler? Changed {
+            add { }
+            remove { }
+        }
+
+        public ValueTask<AgentChatOwnerId> GetOwnerAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new NotSupportedException("Scenario seeding does not support interactive Agent chat execution or recovery.");
+        }
     }
 }
 

@@ -28,6 +28,15 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
+Floating agent operations use an application-owned execution scope. Browser refresh
+and circuit disposal detach the view without cancelling the accepted run. The scope
+also retains transient context while approval or continuation is pending. The scoped
+recovery service projects only the verified owner's current-profile executions into
+Active chats and reconnects their existing activity streams. Reopening uses the saved
+safe module route; normal route publication and canonical authority checks still apply.
+See [execution lifetime](../../../docs/architecture/agent-chat-execution-lifetime.md)
+for boundaries, retention and server-restart limits.
+
 Workflow catalog list, search and lookup project the current head's metadata without
 loading its graph JSON. Six provenance and external-identity columns are populated by
 the same version append as the complete immutable definition. Existing rows are backfilled

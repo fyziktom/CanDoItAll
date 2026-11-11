@@ -40,6 +40,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     private readonly AcceptedRunReadFault readFault = new();
     private ProcessAuthoringBrowserControl? authoring;
     private bool cancellationRecovery;
+    private Action<IServiceCollection>? configureServices;
     private TestDatabaseProfile profile = null!;
     private string pack = string.Empty;
     internal Task ReadFailure => readFault.Observed.Task;
@@ -51,8 +52,11 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     internal IReadOnlyDictionary<string, WorkflowDefinition> Workflows { get; private set; } = new Dictionary<string, WorkflowDefinition>();
 
     internal static async Task<ProcessNativeBrowserHost> StartAsync(string upstream, bool allowVoice = false, bool failFirstRunRead = false,
-        ProcessAuthoringBrowserControl? authoring = null, bool cancellationRecovery = false) {
-        var host = new ProcessNativeBrowserHost { authoring = authoring, cancellationRecovery = cancellationRecovery };
+        ProcessAuthoringBrowserControl? authoring = null, bool cancellationRecovery = false,
+        Action<IServiceCollection>? configureServices = null) {
+        var host = new ProcessNativeBrowserHost {
+            authoring = authoring, cancellationRecovery = cancellationRecovery, configureServices = configureServices
+        };
         try {
             await host.StartCoreAsync(upstream, allowVoice);
             host.readFault.Armed = failFirstRunRead;
@@ -100,7 +104,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
         StartApplication();
     }
     private void StartApplication() {
-        app = new(profile, pack, readFault, authoring, cancellationRecovery);
+        app = new(profile, pack, readFault, authoring, cancellationRecovery, configureServices);
         app.UseKestrel(0);
         client = app.CreateClient(new() { AllowAutoRedirect = false });
     }
@@ -201,7 +205,8 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
         await environment.DisposeAsync();
     }
     private sealed class NativeApplication(TestDatabaseProfile profile, string pack, AcceptedRunReadFault readFault,
-        ProcessAuthoringBrowserControl? authoring, bool cancellationRecovery) : WebApplicationFactory<CanDoItAll.Web.Components.App> {
+        ProcessAuthoringBrowserControl? authoring, bool cancellationRecovery,
+        Action<IServiceCollection>? configureServices) : WebApplicationFactory<CanDoItAll.Web.Components.App> {
         protected override void ConfigureWebHost(IWebHostBuilder builder) {
             builder.UseEnvironment("Development");
             builder.UseContentRoot(Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "App", "CanDoItAll.Web"));
@@ -218,6 +223,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
                 services.Replace(ServiceDescriptor.Singleton(new ProcessTemplatePackLoader(pack)));
                 services.Replace(ServiceDescriptor.Scoped<IProcessWorkspaceProjectionClient>(provider =>
                     new ObservedProjectionClient(ActivatorUtilities.CreateInstance<ProcessWorkspaceProjectionClient>(provider), readFault, authoring)));
+                configureServices?.Invoke(services);
             });
         }
     }
