@@ -561,6 +561,7 @@ jobs:
           -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&Category=HostPlatform"
           -ShardIndex ${{ matrix.shard }} -ShardCount 3
           -WeightsPath ./tools/Validation/TestShardWeights.json
+          -HangTimeoutMinutes 30
           -ResultsDirectory "${{ runner.temp }}/test-results"
           -LogPrefix "host-${{ matrix.name }}-${{ matrix.shard }}"
 
@@ -575,6 +576,7 @@ jobs:
           -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
           -ShardIndex ${{ matrix.shard }} -ShardCount 3
           -WeightsPath ./tools/Validation/TestShardWeights.json
+          -HangTimeoutMinutes 30
           -ResultsDirectory "${{ runner.temp }}/test-results"
           -LogPrefix "full-${{ matrix.name }}-${{ matrix.shard }}"
 

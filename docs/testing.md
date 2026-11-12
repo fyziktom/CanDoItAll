@@ -1053,6 +1053,17 @@ policy: shards add processes on separate runners, each with its own PostgreSQL s
 concurrency within one test process. The workflow policy test requires each sharded step's
 `-ShardCount` to match its matrix, so removing a matrix entry cannot silently drop classes.
 
+Shard execution prints normal per-case progress and xUnit diagnostic messages, including
+the active test after 60 seconds without progress. Host CI shards additionally opt into
+`-HangTimeoutMinutes 30`; the default is zero, so Linux and local calls retain their
+existing execution limits. This uses VSTest's per-case hang watchdog with dump type
+`none`: a stall terminates the test host, fails the shard, and retains sequence and
+available partial TRX evidence under the existing results directory for artifact upload.
+It does not retry tests or change the 180/240-minute host job limits. The bound is over
+three times the slowest completed host case observed in CI 132 and the successful CI 129
+macOS shard (526 seconds); that margin avoids treating normal slow integration work as
+the stalled Components execution seen in CI 132.
+
 Inspect a shard locally with `-ListOnly`, or run it with the same filter and shard arguments as
 CI. Refresh the weights from complete Linux runs of both assemblies when shard durations drift
 apart:
