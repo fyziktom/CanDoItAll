@@ -54,10 +54,21 @@ public partial class MainLayout
         }
     });
 
-    private Task HandleCloseTabAsync(string tabId) => RunLayoutWorkAsync(nameof(HandleCloseTabAsync), async () => {
+    private Task HandleCloseTabAsync(string tabId)
+        => CloseTabsAndNavigateAsync(nameof(HandleCloseTabAsync), () => Workbench.CloseAsync(tabId, layoutLifetime.Token));
+
+    private Task CloseTabsAndNavigateAsync(string operation, Func<Task> close) => RunLayoutWorkAsync(operation, async () => {
         var originalUri = CurrentUri;
-        await Workbench.CloseAsync(tabId, layoutLifetime.Token);
-        if (!IsLayoutCurrent || CurrentUri != originalUri) {
+        var originalNavigationGeneration = navigationGeneration;
+        var originalNavigation = NavigationCompletion;
+        var originalActiveTabId = Workbench.ActiveTabId;
+        await close();
+        if (!IsLayoutCurrent || CurrentUri != originalUri || navigationGeneration != originalNavigationGeneration ||
+            Workbench.ActiveTabId == originalActiveTabId) {
+            return;
+        }
+        await originalNavigation;
+        if (!IsLayoutCurrent || CurrentUri != originalUri || navigationGeneration != originalNavigationGeneration) {
             return;
         }
         var activeTab = Workbench.GetActiveTab();
@@ -75,11 +86,11 @@ public partial class MainLayout
 
     private Task HandleToggleSleepAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.ToggleSleepAsync), () => Workbench.ToggleSleepAsync(tabId, layoutLifetime.Token));
 
-    private Task HandleCloseOthersAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.CloseOthersAsync), () => Workbench.CloseOthersAsync(tabId, layoutLifetime.Token));
+    private Task HandleCloseOthersAsync(string tabId) => CloseTabsAndNavigateAsync(nameof(Workbench.CloseOthersAsync), () => Workbench.CloseOthersAsync(tabId, layoutLifetime.Token));
 
-    private Task HandleCloseRightAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.CloseRightAsync), () => Workbench.CloseRightAsync(tabId, layoutLifetime.Token));
+    private Task HandleCloseRightAsync(string tabId) => CloseTabsAndNavigateAsync(nameof(Workbench.CloseRightAsync), () => Workbench.CloseRightAsync(tabId, layoutLifetime.Token));
 
-    private Task HandleCloseBackgroundAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.CloseAllBackgroundAsync), () => Workbench.CloseAllBackgroundAsync(tabId, layoutLifetime.Token));
+    private Task HandleCloseBackgroundAsync(string tabId) => CloseTabsAndNavigateAsync(nameof(Workbench.CloseAllBackgroundAsync), () => Workbench.CloseAllBackgroundAsync(tabId, layoutLifetime.Token));
 
     private Task HandleReopenRecentAsync(string tabId) => RunLayoutWorkAsync(nameof(HandleReopenRecentAsync), async () => {
         var originalUri = CurrentUri;

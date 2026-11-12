@@ -98,7 +98,8 @@ public partial class MainLayout {
         }
     }
 
-    private sealed record NavigationRead(Uri Uri, long Generation, CancellationTokenSource Cancellation, bool ExplicitTab);
+    private sealed record NavigationRead(Uri Uri, long Generation, CancellationTokenSource Cancellation, bool ExplicitTab,
+        IReadOnlyList<WorkbenchTabState> OpenTabs);
 
     private Task RetryLayoutInitializationAsync()
         => RunLayoutWorkAsync(nameof(InitializeLayoutAsync), InitializeLayoutAsync);
@@ -107,7 +108,8 @@ public partial class MainLayout {
         navigationCancellation?.Cancel();
         navigationCancellation = CancellationTokenSource.CreateLinkedTokenSource(layoutLifetime.Token);
         return new(CurrentUri, ++navigationGeneration, navigationCancellation,
-            string.Equals(historyEntryState, WorkbenchNavigation.OpenTabHistoryState, StringComparison.Ordinal));
+            string.Equals(historyEntryState, WorkbenchNavigation.OpenTabHistoryState, StringComparison.Ordinal),
+            Workbench.Tabs.ToArray());
     }
 
     private bool IsCurrent(NavigationRead read) => IsLayoutCurrent && !read.Cancellation.IsCancellationRequested &&
@@ -129,7 +131,7 @@ public partial class MainLayout {
             EnsureCurrent(read);
             var descriptor = await ResolveCurrentTabDescriptorAsync(read);
             EnsureCurrent(read);
-            await Workbench.TrackTabAsync(descriptor, read.Cancellation.Token);
+            await Workbench.TrackTabAsync(descriptor, read.Cancellation.Token, originalTabs: read.OpenTabs);
             EnsureCurrent(read);
             StateHasChanged();
         } catch (OperationCanceledException) when (!IsCurrent(read)) {

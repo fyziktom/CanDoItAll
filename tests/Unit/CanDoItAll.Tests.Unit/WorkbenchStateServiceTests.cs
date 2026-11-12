@@ -7,6 +7,47 @@ namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class WorkbenchStateServiceTests
 {
+    public enum BulkCloseCommand { Others, Right, Background }
+
+    [Theory]
+    [InlineData(BulkCloseCommand.Others, false)]
+    [InlineData(BulkCloseCommand.Others, true)]
+    [InlineData(BulkCloseCommand.Right, false)]
+    [InlineData(BulkCloseCommand.Right, true)]
+    [InlineData(BulkCloseCommand.Background, false)]
+    [InlineData(BulkCloseCommand.Background, true)]
+    public async Task Bulk_close_persists_a_valid_active_tab_and_preserves_retained_selection_when_applicable(
+        BulkCloseCommand command, bool activeIsRetained) {
+        const string dashboardId = "dashboard";
+        const string keptId = "kept";
+        const string closedId = "closed";
+        var store = new TestWorkbenchStateStore();
+        var service = new WorkbenchStateService(store, Options.Create(new WorkbenchOptions()),
+            new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero)));
+        await service.InitializeAsync([
+            new WorkbenchTabState(dashboardId, "Dashboard", "/", IsPinned: true, Order: 0),
+            new WorkbenchTabState(keptId, "Kept", "/kept", Order: 1),
+            new WorkbenchTabState(closedId, "Closed", "/closed", Order: 2)
+        ]);
+        await service.ActivateAsync(activeIsRetained ? dashboardId : closedId);
+
+        await (command switch {
+            BulkCloseCommand.Others => service.CloseOthersAsync(keptId),
+            BulkCloseCommand.Right => service.CloseRightAsync(keptId),
+            BulkCloseCommand.Background => service.CloseAllBackgroundAsync(keptId),
+            _ => throw new ArgumentOutOfRangeException(nameof(command))
+        });
+
+        var expectedActive = activeIsRetained && command != BulkCloseCommand.Others ? dashboardId : keptId;
+        Assert.Equal(expectedActive, service.ActiveTabId);
+        Assert.Equal(expectedActive, service.GetActiveTab()!.TabId);
+        Assert.False(service.GetActiveTab()!.IsSleeping);
+        Assert.Equal(expectedActive, store.SavedSnapshot!.ActiveTabId);
+        Assert.Contains(service.Tabs, tab => tab.TabId == dashboardId && tab.IsPinned);
+        Assert.DoesNotContain(service.Tabs, tab => tab.TabId == closedId);
+        Assert.Contains(service.RecentTabs, tab => tab.TabId == closedId);
+    }
+
     [Fact]
     public async Task InitializeAsync_uses_defaults_and_auto_sleeps_background_tabs()
     {

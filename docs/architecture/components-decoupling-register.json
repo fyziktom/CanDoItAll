@@ -6376,7 +6376,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Lifetime.cs",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Lifetime.cs",
-      "sha256_lf": "c8649d772e2114f641638a0073bf3ddae880b201915b9566bc6452267c138f8e",
+      "sha256_lf": "f4fd77d28078f9b9079b9f45f7619a3d9253ab75e522df728d795fca40e9cb8e",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout, CanDoItAll.Web.Components.Layout.NavigationRead",
@@ -6396,7 +6396,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
-      "sha256_lf": "a936c15a79166d8247a036cc30072256857bafcb5e3912e8c59ccaaeda967e66",
+      "sha256_lf": "16d10e354896f4d48a363fefb5ac535c5f41fbf8d61279093a85d3fed3576bc4",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout",
@@ -6416,7 +6416,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Workbench.cs",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Workbench.cs",
-      "sha256_lf": "09a9917172875163cbf93f74d12cda4ba6551ef4f5e93f11cb8a2a8bc994a95f",
+      "sha256_lf": "1a072326d4746a393a6de8f04749b5bd10af429ee6215fd35ef19eb658cb90fc",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout",
